@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -15,16 +15,50 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import os.path
-
 import numpy
 
+from openquake.hazardlib.const import TRT
+from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import Site
+from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
+from openquake.hazardlib import sourceconverter
+
+DATA_PATH = os.path.dirname(__file__)
+
+
+class BuildDisaggDataTestCase(unittest.TestCase):
+
+    def test_magnitude_bins(self):
+        """ Testing build disaggregation matrix """
+        fname = os.path.join(DATA_PATH, 'data', 'ssm.xml')
+        converter = sourceconverter.SourceConverter(50., 1., 10, 0.1, 10)
+        groups = to_python(fname, converter)
+        sources = []
+        for g in groups:
+            sources += g.sources
+        site = Site(Point(172.63, -43.53), vs30=250, vs30measured=False,
+                    z1pt0=330)
+        imt = SA(3.0)
+        iml = 0.25612220
+        gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: Bradley2013()}
+        truncation_level = 3.0
+        n_epsilons = 1
+        mag_bin_width = 0.1
+        dist_bin_width = 100.
+        coord_bin_width = 100.
+        # Compute the disaggregation matrix
+        edges, mtx = disagg.disaggregation(sources, site, imt, iml,
+                                           gsim_by_trt, truncation_level,
+                                           n_epsilons, mag_bin_width,
+                                           dist_bin_width, coord_bin_width)
+        tm = disagg.mag_pmf(mtx[:, :, :, :, :, 0])
+        numpy.testing.assert_array_less(numpy.zeros_like(tm[2:]), tm[2:])
 
 
 class DigitizeLonsTestCase(unittest.TestCase):
@@ -54,7 +88,7 @@ class DisaggregateTestCase(unittest.TestCase):
         source_model = os.path.join(d, 'source_model/multi-point-source.xml')
         [self.sources] = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
-        self.site = Site(Point(0.1, 0.1), 800, True, z1pt0=100., z2pt5=1.)
+        self.site = Site(Point(0.1, 0.1), 800, z1pt0=100., z2pt5=1.)
         self.imt = PGA()
         self.iml = 0.1
         self.truncation_level = 1
@@ -84,7 +118,7 @@ class DisaggregateTestCase(unittest.TestCase):
 
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):
-        super(PMFExtractorsTestCase, self).setUp()
+        super().setUp()
         self.aae = numpy.testing.assert_almost_equal
 
         # test matrix is not normalized, but that's fine for test
@@ -146,8 +180,10 @@ class PMFExtractorsTestCase(unittest.TestCase):
         self.aae(pmf, [1.0, 1.0])
 
     def test_trt(self):
-        pmf = disagg.trt_pmf(self.matrix)
-        self.aae(pmf, [1.0, 1.0, 1.0])
+        pmf = disagg.trt_pmf(self.matrix[None])
+        # NB: self.matrix.shape -> (2, 2, 2, 2, 3)
+        # self.matrix[None].shape -> (1, 2, 2, 2, 2, 3)
+        self.aae(pmf, [1.0])
 
     def test_mag_dist(self):
         pmf = disagg.mag_dist_pmf(self.matrix)
@@ -171,3 +207,16 @@ class PMFExtractorsTestCase(unittest.TestCase):
                         [0.9993916, 0.98589012]],
                        [[0.99232001, 0.99965328],
                         [0.99700079, 0.99480979]]])
+
+    def test_mean(self):
+        # for doc purposes: the mean of PMFs is not the PMF of the mean
+        numpy.random.seed(42)
+        matrix = numpy.random.random(self.matrix.shape)
+        pmf1 = disagg.mag_pmf(self.matrix)
+        pmf2 = disagg.mag_pmf(matrix)
+        mean = (matrix + self.matrix) / 2
+        numpy.testing.assert_allclose(
+            (pmf1 + pmf2) / 2, [1, 1])
+        numpy.testing.assert_allclose(
+            disagg.mag_pmf(mean), [0.99999944, 0.99999999])
+

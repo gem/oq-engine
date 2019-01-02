@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,11 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
 from openquake.calculators import getters
 from openquake.commonlib import calc
+from openquake.commands import engine
 
 
 def make_figure(sitecol, imtls, poes, hmaps):
@@ -49,13 +48,15 @@ def plot_hmaps(calc_id):
     """
     Mean hazard maps plotter.
     """
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     oq = dstore['oqparam']
-    mean = getters.PmapGetter(dstore).get_mean()
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
     hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
     M, P = len(oq.imtls), len(oq.poes)
     array = hmaps.array.reshape(len(hmaps.array), M, P)
     plt = make_figure(dstore['sitecol'], oq.imtls, oq.poes, array)
     plt.show()
+
 
 plot_hmaps.arg('calc_id', 'a computation id', type=int)

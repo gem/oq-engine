@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -43,14 +46,13 @@
 # liability for use of the software.
 
 import unittest
-from collections import OrderedDict
 from openquake.hmtk.faults import mfd
 
 
 class TestAvailableMFDs(unittest.TestCase):
     '''
     Simple test of the module openquake.hmtk.faults.get_available_mfds(), which should
-    return an OrderedDict containing instances of all the available mfd classes
+    return a dict containing instances of all the available mfd classes
     '''
 
     def setUp(self):
@@ -68,7 +70,7 @@ class TestAvailableMFDs(unittest.TestCase):
         Characteristic
         '''
         self.mfds = mfd.get_available_mfds()
-        expected_dict = OrderedDict(
+        expected_dict = dict(
             [('AndersonLucoArbitrary',
               mfd.anderson_luco_arbitrary.AndersonLucoArbitrary),
              ('AndersonLucoAreaMmax',

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,6 @@ Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
 :class:`ZhaoEtAl2006SSlab`, :class:`ZhaoEtAl2006SInterNSHMP2008` and
 :class:`ZhaoEtAl2006SSlabNSHMP2014`
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -30,7 +28,7 @@ import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, SA
 
 
 class ZhaoEtAl2006Asc(GMPE):
@@ -432,8 +430,8 @@ class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
         new_rup = copy.deepcopy(rup)
         new_rup.hypo_depth = 20.
 
-        mean, stddevs = super(ZhaoEtAl2006SInterNSHMP2008, self). \
-            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, new_rup, dists, imt, stddev_types)
 
         return mean, stddevs
 
@@ -661,6 +659,5 @@ class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
         dists_mod = copy.deepcopy(dists)
         dists_mod.rrup[dists.rrup <= 5.] = 5.
 
-        return super(
-            ZhaoEtAl2006AscSGS, self).get_mean_and_stddevs(
-                sites, rup, dists_mod, imt, stddev_types)
+        return super().get_mean_and_stddevs(
+            sites, rup, dists_mod, imt, stddev_types)

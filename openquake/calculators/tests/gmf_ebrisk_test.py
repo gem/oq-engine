@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017 GEM Foundation
+# Copyright (C) 2017-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,7 @@ import sys
 import unittest
 import numpy
 from nose.plugins.attrib import attr
-from openquake.baselib.general import writetmp
-from openquake.hazardlib import InvalidFile
+from openquake.baselib.general import gettemp
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -42,105 +41,92 @@ def check_csm_info(calc1, calc2):
 
 
 class GmfEbRiskTestCase(CalculatorTestCase):
-    @attr('qa', 'risk', 'gmf_ebrisk')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job_risk.ini')
-        num_events = len(self.calc.datastore['agg_loss_table'])
+        num_events = len(self.calc.datastore['losses_by_event'])
         self.assertEqual(num_events, 10)
 
-    @attr('qa', 'risk', 'gmf_ebrisk')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         # case with 3 sites but gmvs only on 2 sites
         self.run_calc(case_2.__file__, 'job.ini')
-        alt = self.calc.datastore['agg_loss_table']
+        alt = self.calc.datastore['losses_by_event']
         self.assertEqual(len(alt), 3)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 1.5788584)
+        aae(totloss, 0.46601775)
 
-    @attr('qa', 'risk', 'gmf_ebrisk')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini')
-        alt = self.calc.datastore['agg_loss_table']
-        self.assertEqual(len(alt), 8)
+        alt = self.calc.datastore['losses_by_event']
+        self.assertEqual(len(alt), 10)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
-        aae(totloss, [7717694.], decimal=0)
+        val = 60.1378
+        aae(totloss / 1E6, [val], decimal=4)
 
         # avg_losses-rlzs has shape (A, R, LI)
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
-        aae(avglosses, [7717694.], decimal=0)
+        aae(avglosses / 1E6, [val], decimal=4)
 
-    @attr('qa', 'risk', 'gmf_ebrisk')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_ebr_2(self):
         self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
-        fname = writetmp(view('mean_avg_losses', self.calc.datastore))
+        fname = gettemp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/avg_losses.txt', fname)
-        alt = self.calc.datastore['agg_loss_table']
-        self.assertEqual(len(alt), 20)
+        alt = self.calc.datastore['losses_by_event']
+        self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 20210.27, decimal=2)
+        aae(totloss, 19281.387, decimal=2)
 
-    @attr('qa', 'risk', 'gmf_ebrisk')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # a simple test with 1 asset and two source models
+        # this is also a test with preimported exposure
         self.run_calc(case_4.__file__, 'job_haz.ini')
         calc0 = self.calc.datastore  # event_based
         self.run_calc(case_4.__file__, 'job_risk.ini',
-                      calculation_mode='event_based_risk',
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
-        self.run_calc(case_4.__file__, 'job_risk.ini',
-                      concurrent_tasks='0',  # avoid numeric issues
-                      hazard_calculation_id=str(calc0.calc_id))
-        calc2 = self.calc.datastore  # event_based_risk
         [fname] = export(('agg_loss_table', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
-        [fname] = export(('agg_loss_table', 'csv'), calc2)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-4)
 
-    @attr('qa', 'risk', 'gmf_ebrisk')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('macOS')
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
-        calc0 = self.calc.datastore  # event_based_risk
+        calc0 = self.calc.datastore  # single file event_based_risk
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
-                      calculation_mode='event_based',
-                      concurrent_tasks='0')
+                      calculation_mode='event_based')
         calc1 = self.calc.datastore  # event_based
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
-                      calculation_mode='gmf_ebrisk',
                       hazard_calculation_id=str(calc1.calc_id),
                       source_model_logic_tree_file='',
-                      gsim_logic_tree_file='',
-                      concurrent_tasks='0')  # to avoid numeric issues
-        calc2 = self.calc.datastore  # gmf_ebrisk
+                      gsim_logic_tree_file='')
+        calc2 = self.calc.datastore  # two files event_based_risk
 
+        check_csm_info(calc0, calc1)  # the csm_info arrays must be equal
         check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
 
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('MacOSX')
+
         # compare the average losses for an event_based_risk
-        # case_master calculation with an equivalent gmf_ebrisk calculation
-        f0 = writetmp(view('mean_avg_losses', calc0))
+        # case_master calculation from ruptures
+        f0 = gettemp(view('mean_avg_losses', calc0))
         self.assertEqualFiles('expected/avg_losses.txt', f0, delta=1E-5)
 
         # the two-lines below may break on Jenkins
-        f2 = writetmp(view('mean_avg_losses', calc2))
+        f2 = gettemp(view('mean_avg_losses', calc2))
         self.assertEqualFiles('expected/avg_losses.txt', f2, delta=1E-4)
 
-        # compare the event loss table generated by an event_based_risk
-        # case_master calculation with an equivalent gmf_ebrisk calculation
-        f0 = writetmp(view('elt', calc0))
+        # compare the event loss table generated by a event_based_risk
+        # case_master calculation from ruptures
+        f0 = gettemp(view('elt', calc0))
         self.assertEqualFiles('expected/elt.txt', f0, delta=1E-5)
-        f2 = writetmp(view('elt', calc2))
+        f2 = gettemp(view('elt', calc2))
         self.assertEqualFiles('expected/elt.txt', f2, delta=1E-5)
-
-        # test invalid job_risk
-        with self.assertRaises(InvalidFile):
-            self.run_calc(case_master.__file__, 'job.ini',
-                          calculation_mode='gmf_ebrisk',
-                          hazard_calculation_id=str(calc1.calc_id))

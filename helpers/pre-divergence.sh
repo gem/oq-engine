@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# pre-divergence.sh  Copyright (C) 2017 GEM Foundation
+# pre-divergence.sh  Copyright (C) 2017-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,18 +42,18 @@ fi
 
 version_new="$1"
 
-files="$(grep -ril 'engine.*2\.[0-9]\+\.[0-9]\+' doc/)"
+files="$(grep -ril 'engine.*[23]\.[0-9]\+\.[0-9]\+' doc/)"
 IFS='
 '
 for f in $files; do
-    url_lines="$(grep -ri 'engine.*2\.[0-9]\+\.[0-9]\+' $f)"
+    url_lines="$(grep -ri 'engine.*[23]\.[0-9]\+\.[0-9]\+' $f)"
     for url_line in $url_lines; do
         echo "UL:  $url_line"
         url="$(echo "$url_line" | sed 's/.*\(http[^ ]\+\) .*/\1/g')"
         echo "U:   [$url]"
         fex="$(echo "$url" | sed 's@.*/@@g')"
         echo "FEX: [$fex]"
-        fex_new="$(echo "$fex" | sed "s/2\.[0-9]\+\.[0-9]\+/$version_new/g")"
+        fex_new="$(echo "$fex" | sed "s/[23]\.[0-9]\+\.[0-9]\+/$version_new/g")"
         echo "FNW: [$fex_new]"
         fex_esc="$(echo "$fex" | sed 's/\./\\./g')"
         sed -i "s/$fex_esc/$fex_new/g" $f

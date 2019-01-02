@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,6 +18,8 @@ Module :mod:`openquake.hazardlib.pmf` implements :class:`PMF`.
 """
 import numpy as np
 from openquake.baselib.slots import with_slots
+
+PRECISION = 1E-12  # precision used when comparing sum(probs) to 1
 
 
 @with_slots
@@ -38,18 +40,15 @@ class PMF(object):
         those can be objects of any (mixed or homogeneous) type.
 
     :param epsilon:
-        the tolerance for the sum of the probabilities (default 1E-15)
+        the tolerance for the sum of the probabilities (default %e)
 
     :raises ValueError:
         If probabilities do not sum up to 1 or there is zero or negative
         probability.
-
-    NB: in the engine the sum is checked to be exactly one by using
-    Decimal numbers.
-    """
+    """ % PRECISION
     _slots_ = ['data']
 
-    def __init__(self, data, epsilon=1E-15):
+    def __init__(self, data, epsilon=PRECISION):
         probs, values = list(zip(*data))
         if any(prob < 0 for prob in probs):
             raise ValueError('a probability in %s is not positive'
@@ -82,3 +81,11 @@ class PMF(object):
         probs = np.cumsum([val[0] for val in self.data])
         sampler = np.random.uniform(0., 1., number_samples)
         return [self.data[ival] for ival in np.searchsorted(probs, sampler)]
+
+    def reduce(self, bin=0):
+        """
+        Reduce the original PMF to a single bin distribution.
+
+        :param bin: the bin to keep (default the first)
+        """
+        self.data = [(1, self.data[0][1])]

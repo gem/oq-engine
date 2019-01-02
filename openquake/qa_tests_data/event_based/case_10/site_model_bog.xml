@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <siteModel>
+        <site lat="4.6509700E+00" lon="-7.4134660E+01" vs30="2.2500000E+02" vs30Type="inferred" z1pt0="3.3504984E+02" z2pt5="1.7235042E+00"/>
+        <site lat="4.5852400E+00" lon="-7.4100520E+01" vs30="2.2500000E+02" vs30Type="inferred" z1pt0="3.3504984E+02" z2pt5="1.7235042E+00"/>
+        <site lat="4.7572200E+00" lon="-7.4089760E+01" vs30="1.7500000E+02" vs30Type="inferred" z1pt0="3.3718939E+02" z2pt5="1.7311958E+00"/>
+        <site lat="4.6447100E+00" lon="-7.4063520E+01" vs30="5.2500000E+02" vs30Type="inferred" z1pt0="9.3694776E+01" z2pt5="8.5583272E-01"/>
+        <site lat="4.7072300E+00" lon="-7.4036840E+01" vs30="1.7500000E+02" vs30Type="inferred" z1pt0="3.3718939E+02" z2pt5="1.7311958E+00"/>
+    </siteModel>
+</nrml>

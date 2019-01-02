@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Module exports :class:'ShahjoueiPezeshk2016'.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -169,7 +167,7 @@ class ShahjoueiPezeshk2016(GMPE):
         described on page 744, eq. 4
         """
         sigma_mean = 0.
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             psi = -6.898E-3
         else:
             psi = -3.054E-5

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Module exports :class:`Allen2012`
 """
-from __future__ import division
-
 import numpy as np
 from scipy.constants import g
 
@@ -59,8 +57,10 @@ class Allen2012(GMPE):
 
     #: No site parameters are needed, the GMPE is calibrated for average South
     #: East Australia site conditions (assumed consistent to Vs30 = 820 m/s)
-    #: see paragraph 'Executive Summary', page VII
+    #: see paragraph 'Executive Summary', page VII. (provisionally set to 800
+    #: for compatibility with SiteTerm class)
     REQUIRES_SITES_PARAMETERS = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
     #: Required rupture parameters are magnitude and hypocentral depth, see
     #: paragraph 'Regression of Model Coefficients', page 32 and tables 7 and

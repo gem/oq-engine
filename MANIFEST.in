@@ -6,7 +6,6 @@ include openquake/server/local_settings.py.standalone
 recursive-include openquake/server/db *.sql
 recursive-include openquake/server *.html *.css *.png *.js *.map *.ttf
 
-recursive-include openquake/*/tests *.* README
 recursive-include openquake/qa_tests_data *.* README
 
 recursive-include openquake/commonlib/nrml_examples *.xml *.csv *.geojson

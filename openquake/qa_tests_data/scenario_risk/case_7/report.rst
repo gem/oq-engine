@@ -3,8 +3,8 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2018-02-02T16:04:44
-engine_version 2.9.0-gitd6a3184   
+date           2018-10-05T03:04:33
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 27, num_levels = 8
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      None
 width_of_mfd_bin                None           
 area_source_discretization      None           
 ground_motion_correlation_model None           
+minimum_intensity               {}             
 random_seed                     42             
 master_seed                     0              
+ses_seed                        42             
 avg_losses                      True           
 =============================== ===============
 
@@ -41,11 +43,11 @@ structural_vulnerability `vulnerability_model_test1.xml <vulnerability_model_tes
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -54,6 +56,14 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,FromFile: [0]>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
@@ -64,23 +74,20 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   4         4         
-2        1.000 0.0    1   1   16        16        
-3        1.000 0.0    1   1   5         5         
-4        1.000 0.0    1   1   2         2         
-*ALL*    1.000 0.0    1   1   27        27        
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+2        1.00000 0.0    1   1   4         4         
+4        1.00000 0.0    1   1   16        16        
+3        1.00000 0.0    1   1   5         5         
+1        1.00000 0.0    1   1   2         2         
+*ALL*    1.00000 0.0    1   1   27        27        
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.040     0.0       1     
-assoc_assets_sites      0.009     0.0       2     
-reading exposure        0.005     0.0       1     
-building epsilons       6.690E-04 0.0       1     
-reading site collection 5.555E-05 0.0       1     
-======================= ========= ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+building riskinputs 0.03513   0.0       1     
+reading exposure    6.461E-04 0.0       1     
+=================== ========= ========= ======

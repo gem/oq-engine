@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -253,8 +253,7 @@ class Point(object):
         lons, lats, depths = geodetic.intervals_between(
             self.longitude, self.latitude, self.depth,
             point.longitude, point.latitude, point.depth,
-            distance
-        )
+            distance)
         return [Point(lons[i], lats[i], depths[i]) for i in range(len(lons))]
 
     def to_polygon(self, radius):
@@ -270,13 +269,15 @@ class Point(object):
         assert radius > 0
         # avoid circular imports
         from openquake.hazardlib.geo.polygon import Polygon
+
         # get a projection that is centered in the point
-        proj = geo_utils.get_orthographic_projection(
-            self.longitude, self.longitude, self.latitude, self.latitude
-        )
+        proj = geo_utils.OrthographicProjection(
+            self.longitude, self.longitude, self.latitude, self.latitude)
+        
         # create a shapely object from a projected point coordinates,
         # which are supposedly (0, 0)
         point = shapely.geometry.Point(*proj(self.longitude, self.latitude))
+    
         # extend the point to a shapely polygon using buffer()
         # and create openquake.hazardlib.geo.polygon.Polygon object from it
         return Polygon._from_2d(point.buffer(radius), proj)

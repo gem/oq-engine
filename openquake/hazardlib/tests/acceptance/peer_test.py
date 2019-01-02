@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,7 +20,6 @@ Norman Abrahamson, see
 http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`.
 """
 import unittest
-from decimal import Decimal
 
 import numpy
 
@@ -85,13 +84,10 @@ class Set1TestCase(unittest.TestCase):
                                atol=1e-4, rtol=1e-1)
 
     def test_case_11(self):
-        hypocenter_probability = (
-            Decimal(1) / len(test_data.SET1_CASE11_HYPOCENTERS)
-        )
+        hypocenter_probability = 1 / len(test_data.SET1_CASE11_HYPOCENTERS)
         hypocenter_pmf = PMF([
             (hypocenter_probability, hypocenter)
-            for hypocenter in test_data.SET1_CASE11_HYPOCENTERS
-        ])
+            for hypocenter in test_data.SET1_CASE11_HYPOCENTERS])
         # apart from hypocenter pmf repeats case 10
         sources = [AreaSource(
             source_id='area', name='area',
@@ -234,8 +230,7 @@ class Set1TestCase(unittest.TestCase):
                     data['hypo_depths'][i, j]
                 )
                 rup = BaseRupture(data['mag'], data['rake'],
-                                  data['tectonic_region_type'], hypo, surf,
-                                  data['source_typology'])
+                                  data['tectonic_region_type'], hypo, surf)
                 ruptures.append((rup, data['pmf']))
         npss = NonParametricSeismicSource(
             'id', 'name', data['tectonic_region_type'], ruptures

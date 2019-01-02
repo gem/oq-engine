@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,6 @@ import sqlite3
 import unittest
 import tempfile
 import importlib
-import urllib
 from contextlib import contextmanager
 
 from openquake.server.db.upgrade_manager import (
@@ -128,11 +127,10 @@ class UpgradeManagerTestCase(unittest.TestCase):
         self.assertEqual(db_version(conn, pkg), '0000')
 
     def check_message(self, html, expected):
-        if hasattr(urllib, 'urlopen'):  # Python 2
-            with mock.patch('urllib.urlopen') as urlopen:
-                urlopen().read.return_value = html
-                got = what_if_I_upgrade(conn, pkg)
-                self.assertEqual(got, expected)
+        with mock.patch('urllib.request.urlopen') as urlopen:
+            urlopen().read.return_value = html
+            got = what_if_I_upgrade(conn, pkg)
+            self.assertEqual(got, expected)
 
     def test_safe_upgrade(self):
         expected = '''\

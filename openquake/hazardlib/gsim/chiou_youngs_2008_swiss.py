@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,14 +22,11 @@ Module exports
 :class:`ChiouYoungs2008SWISS06`,
 :class:`ChiouYoungs2008SWISS04`.
 """
-from __future__ import division
-
 import numpy as np
 
+from openquake.hazardlib import const
 from openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs import (
-    COEFFS_FS_ROCK_SWISS01,
-    COEFFS_FS_ROCK_SWISS06,
-    COEFFS_FS_ROCK_SWISS04)
+    COEFFS_FS_ROCK_SWISS01, COEFFS_FS_ROCK_SWISS06, COEFFS_FS_ROCK_SWISS04)
 from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
@@ -58,19 +55,20 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         sites.vs30 = 620 * np.ones(len(sites.vs30))
 
-        mean, stddevs = super(ChiouYoungs2008SWISS01, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         log_phi_ss = 1
         tau = self.get_tau(ChiouYoungs2008.COEFFS[imt], rup)
 
-        ln_y_ref = super(ChiouYoungs2008SWISS01, self).\
-            _get_ln_y_ref(rup, dists, ChiouYoungs2008.COEFFS[imt])
+        ln_y_ref = super()._get_ln_y_ref(
+            rup, dists, ChiouYoungs2008.COEFFS[imt])
 
         exp1 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] *
                       (sites.vs30.clip(-np.inf, 1130) - 360))

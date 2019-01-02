@@ -1,30 +1,28 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2014-2016, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 Support for converting NRML source models to ESRI shapefiles and vice versa
 """
-from __future__ import print_function
 import os
 import numpy
 import operator
 import shapefile
-from collections import OrderedDict
 from openquake.baselib.general import groupby
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
@@ -61,6 +59,7 @@ MFD_PARAMS = [
     ('minMag', 'min_mag', 'f'), ('maxMag', 'max_mag', 'f'),
     ('aValue', 'a_val', 'f'), ('bValue', 'b_val', 'f'),
     ('binWidth', 'bin_width', 'f'),
+    ('characteristicMag', 'characteristic_mag','f')
 ]
 
 
@@ -113,7 +112,7 @@ def expand_src_param(values, shp_params):
         return dict([(key, None) for key, _ in shp_params])
     else:
         num_values = len(values)
-        return OrderedDict(
+        return dict(
             [(key, float(values[i]) if i < num_values else None)
                 for i, (key, _) in enumerate(shp_params)])
 
@@ -141,7 +140,7 @@ def extract_source_params(src):
                 data.append((param, None))
         else:
             data.append((param, None))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def parse_area_geometry(node):
@@ -264,7 +263,7 @@ def get_attrs_dict(attrs, params):
             data.append((param, attrs[key]))
         else:
             data.append((param, None))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def extract_geometry_params(src):
@@ -315,11 +314,9 @@ def extract_geometry_params(src):
         if dip and counter:
             dip /= counter
 
-        return OrderedDict([("usd", upper_depth),
-                            ("lsd", lower_depth),
-                            ("dip", dip)])
+        return dict([("usd", upper_depth), ("lsd", lower_depth), ("dip", dip)])
     else:
-        return OrderedDict()
+        return {}
 
 
 def extract_mfd_params(src):
@@ -329,8 +326,12 @@ def extract_mfd_params(src):
     tags = get_taglist(src)
     if "incrementalMFD" in tags:
         mfd_node = src.nodes[tags.index("incrementalMFD")]
-    elif "truncGutenbergRichterMFD":
+    elif "truncGutenbergRichterMFD" in tags:
         mfd_node = src.nodes[tags.index("truncGutenbergRichterMFD")]
+    elif "arbitraryMFD" in tags:
+        mfd_node = src.nodes[tags.index("arbitraryMFD")]
+    elif "YoungsCoppersmithMFD" in tags:
+        mfd_node = src.nodes[tags.index("YoungsCoppersmithMFD")]
     else:
         raise ValueError("Source %s contains no supported MFD type!" % src.tag)
     data = []
@@ -340,19 +341,22 @@ def extract_mfd_params(src):
             data.append((param, mfd_node.attrib[key]))
         else:
             data.append((param, None))
-    if "incrementalMFD" in mfd_node.tag:
+    if ("incrementalMFD" or "arbitraryMFD") in mfd_node.tag:
         # Extract Rates
         rates = ~mfd_node.occurRates
         n_r = len(rates)
         if n_r > MAX_RATES:
             raise ValueError("Number of rates in source %s too large "
                              "to be placed into shapefile" % src.tag)
-        rate_dict = OrderedDict([(key, rates[i] if i < n_r else None)
-                                 for i, (key, _) in enumerate(RATE_PARAMS)])
+        rate_dict = dict([(key, rates[i] if i < n_r else None)
+                          for i, (key, _) in enumerate(RATE_PARAMS)])
+    elif "YoungsCoppersmithMFD" in mfd_node.tag:
+        rate_dict = dict([(key, mfd_node.attrib['characteristicRate'])
+                          for i, (key, _) in enumerate(RATE_PARAMS)])
     else:
-        rate_dict = OrderedDict([(key, None)
-                                 for i, (key, _) in enumerate(RATE_PARAMS)])
-    return OrderedDict(data), rate_dict
+        rate_dict = dict([(key, None)
+                          for i, (key, _) in enumerate(RATE_PARAMS)])
+    return dict(data), rate_dict
 
 
 def extract_source_nodal_planes(src):
@@ -610,7 +614,7 @@ def record_to_dict(record, fields):
         value = attr.strip()
         if value:
             data.append((name, value))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def area_geometry_from_shp(shape, record):

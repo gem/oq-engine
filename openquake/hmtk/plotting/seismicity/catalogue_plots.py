@@ -1,4 +1,49 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#
+# LICENSE
+#
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# D. Monelli.
+#
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
+#
+# DISCLAIMER
+#
+# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
+#
+# It is distributed for the purpose of open collaboration and in the
+# hope that it will be useful to the scientific, engineering, disaster
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (https://www.globalquakemodel.org/tools-products) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 """
 Collection of tools for plotting descriptive statistics of a catalogue
@@ -11,9 +56,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm, Normalize
 
 from openquake.hmtk.seismicity.occurrence.utils import get_completeness_counts
-
-# Default the figure size
-DEFAULT_SIZE = (8., 6.)
 
 
 def build_filename(filename, filetype='png', resolution=300):
@@ -56,7 +98,6 @@ def _save_image(fig, filename, filetype='png', resolution=300):
         fig.savefig(filename, dpi=resolution, format=filetype)
     else:
         pass
-    return
 
 
 def _get_catalogue_bin_limits(catalogue, dmag):
@@ -69,13 +110,14 @@ def _get_catalogue_bin_limits(catalogue, dmag):
         dmag)
     counter = np.histogram(catalogue.data['magnitude'], mag_bins)[0]
     idx = np.where(counter > 0)[0]
-    mag_bins = mag_bins[idx[0]:idx[-1] + 3]
+    mag_bins = mag_bins[idx[0]:(idx[-1] + 2)]
     return mag_bins
 
 
 def plot_depth_histogram(
-        catalogue, bin_width, normalisation=False,
-        bootstrap=None, filename=None, filetype='png', dpi=300, ax=None):
+        catalogue, bin_width,
+        normalisation=False, bootstrap=None, filename=None,
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a histogram of the depths in the catalogue
 
@@ -90,11 +132,11 @@ def plot_depth_histogram(
         To sample depth uncertainty choose number of samples
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
     # Create depth range
-    if len(catalogue.data['depth']) == 0:
+    if len(catalogue.data['depth']) == 0:  # pylint: disable=len-as-condition
         raise ValueError('No depths reported in catalogue!')
     depth_bins = np.arange(0.,
                            np.max(catalogue.data['depth']) + bin_width,
@@ -106,22 +148,20 @@ def plot_depth_histogram(
            depth_hist,
            width=0.95 * bin_width,
            edgecolor='k')
-    ax.set_xlabel('Depth (km)', fontsize='large')
+    ax.set_xlabel('Depth (km)')
     if normalisation:
-        ax.set_ylabel('Probability Mass Function', fontsize='large')
+        ax.set_ylabel('Probability Mass Function')
     else:
         ax.set_ylabel('Count')
-    ax.set_title('Depth Histogram', fontsize='large')
+    ax.set_title('Depth Histogram')
 
     _save_image(fig, filename, filetype, dpi)
 
-    return
-
 
 def plot_magnitude_depth_density(
-        catalogue, mag_int, depth_int, logscale=False,
-        normalisation=False, bootstrap=None, filename=None, filetype='png',
-        dpi=300, ax=None):
+        catalogue, mag_int, depth_int,
+        logscale=False, normalisation=False, bootstrap=None, filename=None,
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a density plot of the magnitude and depth distribution
 
@@ -139,7 +179,7 @@ def plot_magnitude_depth_density(
     :param int bootstrap:
         To sample magnitude and depth uncertainties choose number of samples
     """
-    if len(catalogue.data['depth']) == 0:
+    if len(catalogue.data['depth']) == 0:  # pylint: disable=len-as-condition
         raise ValueError('No depths reported in catalogue!')
     depth_bins = np.arange(0.,
                            np.max(catalogue.data['depth']) + depth_int,
@@ -150,38 +190,37 @@ def plot_magnitude_depth_density(
                                                                 normalisation,
                                                                 bootstrap)
     vmin_val = np.min(mag_depth_dist[mag_depth_dist > 0.])
-    # Create plot
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figure_size)
+    else:
+        fig = ax.get_figure()
+
     if logscale:
         normaliser = LogNorm(vmin=vmin_val, vmax=np.max(mag_depth_dist))
     else:
         normaliser = Normalize(vmin=0, vmax=np.max(mag_depth_dist))
-    if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
-    else:
-        fig = ax.get_figure()
 
     im = ax.pcolor(mag_bins[:-1],
                    depth_bins[:-1],
                    mag_depth_dist.T,
                    norm=normaliser)
-    ax.set_xlabel('Magnitude', fontsize='large')
-    ax.set_ylabel('Depth (km)', fontsize='large')
+    ax.set_xlabel('Magnitude')
+    ax.set_ylabel('Depth (km)')
     ax.set_xlim(mag_bins[0], mag_bins[-1])
     ax.set_ylim(depth_bins[0], depth_bins[-1])
     fig.colorbar(im, ax=ax)
     if normalisation:
-        ax.set_title('Magnitude-Depth Density', fontsize='large')
+        ax.set_title('Magnitude-Depth Density')
     else:
-        ax.set_title('Magnitude-Depth Count', fontsize='large')
+        ax.set_title('Magnitude-Depth Count')
 
     _save_image(fig, filename, filetype, dpi)
 
-    return
-
 
 def plot_magnitude_time_scatter(
-        catalogue, plot_error=False, filename=None,
-        filetype='png', dpi=300, fmt_string='o', ax=None):
+        catalogue, plot_error=False, fmt_string='o', filename=None,
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a simple scatter plot of magnitude with time
 
@@ -194,11 +233,12 @@ def plot_magnitude_time_scatter(
         Symbology of plot
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
     dtime = catalogue.get_decimal_time()
+    # pylint: disable=len-as-condition
     if len(catalogue.data['sigmaMagnitude']) == 0:
         print('Magnitude Error is missing - neglecting error bars!')
         plot_error = False
@@ -211,19 +251,17 @@ def plot_magnitude_time_scatter(
                     fmt=fmt_string)
     else:
         ax.plot(dtime, catalogue.data['magnitude'], fmt_string)
-    ax.set_xlabel('Year', fontsize='large')
-    ax.set_ylabel('Magnitude', fontsize='large')
-    ax.set_title('Magnitude-Time Plot', fontsize='large')
+    ax.set_xlabel('Year')
+    ax.set_ylabel('Magnitude')
+    ax.set_title('Magnitude-Time Plot')
 
     _save_image(fig, filename, filetype, dpi)
 
-    return
-
 
 def plot_magnitude_time_density(
-        catalogue, mag_int, time_int,
-        normalisation=False, logscale=True, bootstrap=None, filename=None,
-        filetype='png', dpi=300, completeness=None, ax=None):
+        catalogue, mag_int, time_int, completeness=None,
+        normalisation=False, logscale=True, bootstrap=None, xlim=[], ylim=[],
+        filename=None, figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a plot of magnitude-time density
 
@@ -240,12 +278,12 @@ def plot_magnitude_time_density(
         To sample magnitude and depth uncertainties choose number of samples
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
     # Create the magnitude bins
-    if isinstance(mag_int, np.ndarray) or isinstance(mag_int, list):
+    if isinstance(mag_int, (np.ndarray, list)):
         mag_bins = mag_int
     else:
         mag_bins = np.arange(
@@ -253,7 +291,7 @@ def plot_magnitude_time_density(
             np.max(catalogue.data['magnitude']) + mag_int / 2.,
             mag_int)
     # Creates the time bins
-    if isinstance(time_int, np.ndarray) or isinstance(time_int, list):
+    if isinstance(time_int, (np.ndarray, list)):
         time_bins = time_int
     else:
         time_bins = np.arange(
@@ -281,86 +319,107 @@ def plot_magnitude_time_density(
                    mag_bins[:-1],
                    mag_time_dist.T,
                    norm=norm_data)
-    ax.set_xlabel('Time (year)', fontsize='large')
-    ax.set_ylabel('Magnitude', fontsize='large')
-    ax.set_xlim(time_bins[0], time_bins[-1])
+    ax.set_xlabel('Time (year)')
+    ax.set_ylabel('Magnitude')
+    if len(xlim) == 2:
+        ax.set_xlim(xlim[0], xlim[1])
+    else:
+        ax.set_xlim(time_bins[0], time_bins[-1])
+    if len(ylim) == 2:
+        ax.set_ylim(ylim[0], ylim[1])
+    else:
+        ax.set_ylim(mag_bins[0], mag_bins[-1] + (mag_bins[-1] - mag_bins[-2]))
     # Fix the title
     if normalisation:
         fig.colorbar(im, label='Event Density', shrink=0.9, ax=ax)
     else:
         fig.colorbar(im, label='Event Count', shrink=0.9, ax=ax)
-
+    ax.grid(True)
     # Plot completeness
     if completeness is not None:
         _plot_completeness(ax, completeness, time_bins[0], time_bins[-1])
 
     _save_image(fig, filename, filetype, dpi)
 
-    return
-
 
 def _plot_completeness(ax, comw, start_time, end_time):
+    '''
+    Adds completeness intervals to a plot
+    '''
     comw = np.array(comw)
     comp = np.column_stack([np.hstack([end_time, comw[:, 0], start_time]),
                             np.hstack([comw[0, 1], comw[:, 1], comw[-1, 1]])])
-    ax.step(comp[:-1, 0], comp[1:, 1], ls='--',
+    ax.step(comp[:-1, 0], comp[1:, 1], linestyle='-',
             where="post", linewidth=3, color='brown')
 
 
-def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
+def get_completeness_adjusted_table(catalogue, completeness, dmag,
+                                    offset=1.0E-5, end_year=None, plot=False,
+                                    figure_size=(8, 6), filename=None,
+                                    filetype='png', dpi=300, ax=None):
     """
     Counts the number of earthquakes in each magnitude bin and normalises
     the rate to annual rates, taking into account the completeness
     """
-    inc = 1E-7
+    if not end_year:
+        end_year = catalogue.end_year
     # Find the natural bin limits
     mag_bins = _get_catalogue_bin_limits(catalogue, dmag)
     obs_time = end_year - completeness[:, 0] + 1.
     obs_rates = np.zeros_like(mag_bins)
+    durations = np.zeros_like(mag_bins)
     n_comp = np.shape(completeness)[0]
-    for iloc in range(0, n_comp, 1):
+    for iloc in range(n_comp):
         low_mag = completeness[iloc, 1]
         comp_year = completeness[iloc, 0]
-        if iloc == n_comp - 1:
+        if iloc == (n_comp - 1):
             idx = np.logical_and(
-                catalogue.data['magnitude'] >= low_mag - (dmag / 2.),
+                catalogue.data['magnitude'] >= low_mag - offset,
                 catalogue.data['year'] >= comp_year)
-            high_mag = mag_bins[-1] + dmag
-            obs_idx = mag_bins >= (low_mag - dmag / 2.)
+            high_mag = mag_bins[-1]
+            obs_idx = mag_bins >= (low_mag - offset)
         else:
             high_mag = completeness[iloc + 1, 1]
             mag_idx = np.logical_and(
-                catalogue.data['magnitude'] >= low_mag - dmag / 2.,
-                catalogue.data['magnitude'] < high_mag)
+                catalogue.data['magnitude'] >= low_mag - offset,
+                catalogue.data['magnitude'] < (high_mag - offset))
 
             idx = np.logical_and(mag_idx,
-                                 catalogue.data['year'] >= comp_year - inc)
-            obs_idx = np.logical_and(mag_bins >= low_mag - dmag / 2.,
-                                     mag_bins < high_mag + dmag)
+                                 catalogue.data['year'] >= (comp_year - offset))
+            obs_idx = np.logical_and(mag_bins >= (low_mag - offset),
+                                     mag_bins < (high_mag + offset))
         temp_rates = np.histogram(catalogue.data['magnitude'][idx],
                                   mag_bins[obs_idx])[0]
         temp_rates = temp_rates.astype(float) / obs_time[iloc]
-        if iloc == n_comp - 1:
-            # TODO This hack seems to fix the error in Numpy v.1.8.1
-            obs_rates[np.where(obs_idx)[0]] = temp_rates
-        else:
-            obs_rates[obs_idx[:-1]] = temp_rates
+        obs_rates[obs_idx[:-1]] = temp_rates
+        durations[obs_idx[:-1]] = obs_time[iloc]
     selector = np.where(obs_rates > 0.)[0]
-    mag_bins = mag_bins[selector[0]:selector[-1] + 1]
-    obs_rates = obs_rates[selector[0]:selector[-1] + 1]
+    mag_bins = mag_bins[selector]
+    obs_rates = obs_rates[selector]
+    durations = durations[selector]
     # Get cumulative rates
     cum_rates = np.array([sum(obs_rates[iloc:])
                           for iloc in range(0, len(obs_rates))])
-    out_idx = cum_rates > 0.
-    return np.column_stack([mag_bins[out_idx],
-                            obs_rates[out_idx],
-                            cum_rates[out_idx],
-                            np.log10(cum_rates[out_idx])])
+    if plot:
+        plt.figure(figsize=figure_size)
+        plt.semilogy(mag_bins + dmag / 2., obs_rates, "bo",
+                     label="Incremental")
+        plt.semilogy(mag_bins + dmag / 2., cum_rates, "rs",
+                     label="Cumulative")
+        plt.xlabel("Magnitude (M)", fontsize=16)
+        plt.ylabel("Annual Rate", fontsize=16)
+        plt.grid(True)
+        plt.legend(fontsize=16)
+        if filename:
+            plt.savefig(filename, format=filetype, dpi=dpi,
+                        bbox_inches="tight")
+    return np.column_stack([mag_bins, durations, obs_rates, cum_rates,
+                            np.log10(cum_rates)])
 
 
 def plot_observed_recurrence(
-        catalogue, completeness, dmag, end_year=None, figure_size=DEFAULT_SIZE,
-        filename=None, filetype='png', dpi=300, ax=None):
+        catalogue, completeness, dmag, end_year=None, filename=None,
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Plots the observed recurrence taking into account the completeness
     """
@@ -380,15 +439,14 @@ def plot_observed_recurrence(
                               for i in range(len(obs_rates))])
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
     ax.semilogy(cent_mag, obs_rates, 'bo', label="Incremental")
     ax.semilogy(cent_mag, cum_obs_rates, 'rs', label="Cumulative")
     ax.set_xlim([cent_mag[0] - 0.1, cent_mag[-1] + 0.1])
-    ax.set_xlabel('Magnitude', fontsize=16)
-    ax.set_ylabel('Annual Rate', fontsize=16)
-    ax.legend(fontsize=14)
-    ax.tick_params(labelsize=12)
+    ax.set_xlabel('Magnitude')
+    ax.set_ylabel('Annual Rate')
+    ax.legend()
     _save_image(fig, filename, filetype, dpi)

@@ -2,9 +2,9 @@ scenario risk
 =============
 
 ============== ===================
-checksum32     1,697,824,437      
-date           2018-02-02T16:04:44
-engine_version 2.9.0-gitd6a3184   
+checksum32     818,655,088        
+date           2018-10-03T15:00:41
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     42                
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -46,11 +48,11 @@ structural_vulnerability            `structural_vulnerability_model.xml <structu
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  simple(2)       2/2             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 simple(2)       2/2             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -61,13 +63,6 @@ Realizations per (TRT, GSIM)
   0,BooreAtkinson2008(): [0]
   0,ChiouYoungs2008(): [1]>
 
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons True            
-================ ================
-
 Exposure model
 --------------
 =============== ========
@@ -77,23 +72,21 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   4         4         
-2        1.000 0.0    1   1   2         2         
-3        1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   7         7         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+tax1     1.00000 0.0    1   1   4         4         
+tax2     1.00000 0.0    1   1   2         2         
+tax3     1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   7         7         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.016     0.0       1     
-computing gmfs          0.012     0.0       1     
-saving gmfs             0.007     0.0       1     
-reading exposure        0.004     0.0       1     
-building epsilons       3.676E-04 0.0       1     
-reading site collection 5.484E-06 0.0       1     
-======================= ========= ========= ======
+=================== ======== ========= ======
+operation           time_sec memory_mb counts
+=================== ======== ========= ======
+building riskinputs 0.02285  0.0       1     
+computing gmfs      0.02132  0.23047   1     
+saving gmfs         0.01080  0.0       1     
+reading exposure    0.00135  0.0       1     
+=================== ======== ========= ======

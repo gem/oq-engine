@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -291,13 +291,19 @@ class PolygonEdgesTestCase(unittest.TestCase):
 
 class PolygonFromWktTestCase(unittest.TestCase):
     def test(self):
-        wkt_string = 'POLYGON((22.0 -15.0, 24.0 -15.0, 24.0 -10.0, 22.0 -15.0))'
-        poly = polygon.Polygon.from_wkt(wkt_string)
+        wktstring = 'POLYGON((22.0 -15.0, 24.0 -15.0, 24.0 -10.0, 22.0 -15.0))'
+        poly = polygon.Polygon.from_wkt(wktstring)
         self.assertEqual(list(poly.lats), [-15, -15, -10])
         self.assertEqual(list(poly.lons), [22, 24, 24])
         self.assertEqual(poly.lats.dtype, 'float')
         self.assertEqual(poly.lons.dtype, 'float')
-        self.assertEqual(poly.wkt, wkt_string)
+        self.assertEqual(poly.wkt, wktstring)
+
+    def test_bbox_with_idl(self):
+        poly = polygon.Polygon.from_wkt('''POLYGON((
+        -179.90958 30, 179.72225 31, -173.95184 30, -179.90958 30))''')
+        bbox = poly.get_bbox()
+        self.assertEqual(bbox, (179.72225, 30.0, 186.04816, 31.0))
 
 
 class PolygonFrom2dTestCase(unittest.TestCase):
@@ -305,7 +311,7 @@ class PolygonFrom2dTestCase(unittest.TestCase):
         polygon2d = shapely.geometry.Polygon([
             (-12, 0), (0, 14.5), (17.1, 3), (18, 0), (16.5, -3), (0, -10)
         ])
-        proj = geo_utils.get_orthographic_projection(0, 0, 0, 0)
+        proj = geo_utils.OrthographicProjection(0, 0, 0, 0)
         poly = polygon.Polygon._from_2d(polygon2d, proj)
         elons = [-0.10791866, 0., 0.1537842, 0.1618781, 0.14838825, 0.]
         elats = [0., 0.13040175, 0.02697965, 0., -0.02697965, -0.0899322]

@@ -4,12 +4,12 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
+    investigation_time="1.0"
     name="Test Source Model"
     >
         <sourceGroup
         rup_interdep="indep"
         src_interdep="indep"
-        srcs_weights="1.0"
         tectonicRegion="Some TRT"
         >
             <nonParametricSeismicSource

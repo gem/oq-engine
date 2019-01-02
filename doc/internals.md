@@ -10,6 +10,12 @@ The database is automatically created when running a calculation, but it can als
 $ python -m openquake.server.db.upgrade_manager ~/oqdata/db.sqlite3
 ```
 
+### Database commands
+
+- `oq db get_executing_jobs`
+- `oq db get_longest_jobs`
+- `oq db find <description>`
+
 ### Django management and migrations
 
 The OpenQuake server uses Django for the web/API application. Management can be done via:

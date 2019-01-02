@@ -124,27 +124,27 @@ recommended to set a reasonable search radius (in km) using the
 available hazard values, as shown in the job\_damage.ini example file above.
 
 The only new parameters introduced in risk configuration file for this example
-(Listing~\ref{lst:config_scenario_damage}) are the \Verb+region_constraint+,
+(Listing~\ref{lst:config_scenario_damage}) are the \Verb+region+,
 \Verb+asset_hazard_distance+, and \Verb+time_event+ parameters, which are
 described below; all other parameters have already been described in earlier
 examples.
 
 \begin{itemize}
 
-  \item \Verb+region_constraint+: this is an optional parameter, applicable
-    only to risk calculations, which defines the polygon that will be used for
+  \item \Verb+region+: this is an optional parameter which defines the polygon
+    that will be used for
     filtering the assets from the exposure model. Assets outside of this region
     will not be considered in the risk calculations. This region is defined
     using pairs of coordinates that indicate the vertices of the polygon, which
     should be listed in the Well-known text (WKT) format:
 
-    region\_constraint = lon\_1 lat\_1, lon\_2 lat\_2, ..., lon\_n lat\_n
+    region = lon\_1 lat\_1, lon\_2 lat\_2, ..., lon\_n lat\_n
 
     For each point, the longitude is listed first, followed by the latitude,
     both in decimal degrees. The list of points defining the polygon can be
     provided either in a clockwise or counter-clockwise direction.
 
-    If the \Verb+region_constraint+ is not provided, all assets in the exposure
+    If the \Verb+region+ is not provided, all assets in the exposure
     model are considered for the risk calculation.
 
     This parameter is useful in cases where the exposure model covers a region
@@ -161,7 +161,7 @@ examples.
     this parameter, the hazard input site with the shortest distance from the
     asset location is associated with the asset. It is possible that the
     associated hazard input site might be located outside the polygon defined
-    by the \Verb+region_constraint+.
+    by the \Verb+region+.
 
   \item \Verb+time_event+: this parameter indicates the time of day at which
     the event occurs. The values that this parameter can be set to are 
@@ -174,14 +174,7 @@ examples.
 
 
 Now, the above calculations described by the two configuration files
-``job\_hazard.ini'' and ``job\_damage.ini'' can be run sequentially using the
-command line as follows:
-
-\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
-user@ubuntu:~\$ oq engine --run job_hazard.ini,job_damage.ini
-\end{minted}
-
-The hazard and risk calculations can also be run separately. In that case, the
+``job\_hazard.ini'' and ``job\_damage.ini'' can be run separately. The
 calculation id for the hazard calculation should be
 provided to the \glsdesc{acr:oqe} while running the risk calculation using the
 option \Verb+--hazard-calculation-id+ (or \Verb+--hc+). This is shown below:
@@ -283,11 +276,13 @@ csv file, which provides the association between the site ids in the
     to the \glspl{acr:gmf} file in the csv format. This file must
     define \glspl{acr:gmf} for all of the intensity measure types used in the
     \gls{fragilitymodel}.
+    (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_gmfs.csv}{Download an example file here}).
 
   \item \Verb+sites_csv+: a parameter used to define the path
     to the sites file in the csv format. This file must
     define site id, longitude, and latitude for all of the sites for the
-    \glspl{acr:gmf} file provided using the \Verb+gmfs_csv+ parameter.
+    \glspl{acr:gmf} file provided using the \Verb+gmfs_csv+ parameter. 
+    (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_sites.csv}{Download an example file here}).
 
 \end{itemize}
 

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,47 +26,40 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.tests import assert_angles_equal
 from openquake.hazardlib.tests.geo import _mesh_test_data
 
-
-class _BaseMeshTestCase(unittest.TestCase):
-    def _make_mesh(self, lons, lats, depths=None):
-        mesh = Mesh(lons, lats, depths)
-        self.assertIs(mesh.lons, lons)
-        self.assertIs(mesh.lats, lats)
-        self.assertIs(mesh.depths, depths)
-        return mesh
+aac = numpy.testing.assert_allclose
 
 
-class MeshCreationTestCase(_BaseMeshTestCase):
+class MeshCreationTestCase(unittest.TestCase):
     def test_1d(self):
-        mesh = self._make_mesh(numpy.array([1, 2, 3, 5]),
-                               numpy.array([-1, -2, 4, 0]))
+        mesh = Mesh(numpy.array([1, 2, 3, 5]),
+                    numpy.array([-1, -2, 4, 0]))
         self.assertEqual(len(mesh), 4)
-        mesh = self._make_mesh(numpy.array([1, 2]), numpy.array([0, 0]),
-                               numpy.array([10, 10]))
+        mesh = Mesh(numpy.array([1, 2]), numpy.array([0, 0]),
+                    numpy.array([10, 10]))
         self.assertEqual(len(mesh), 2)
 
     def test_2d(self):
-        mesh = self._make_mesh(numpy.array([[1, 2], [3, 5]]),
-                               numpy.array([[-1, -2], [4, 0]]))
+        mesh = Mesh(numpy.array([[1, 2], [3, 5]]),
+                    numpy.array([[-1, -2], [4, 0]]))
         self.assertEqual(len(mesh), 4)
-        mesh = self._make_mesh(numpy.array([[1, 2], [5, 6]]),
-                               numpy.array([[0, 0], [10, 10]]),
-                               numpy.array([[10, 10], [30, 30]]))
+        mesh = Mesh(numpy.array([[1, 2], [5, 6]]),
+                    numpy.array([[0, 0], [10, 10]]),
+                    numpy.array([[10, 10], [30, 30]]))
         self.assertEqual(len(mesh), 4)
 
     def test_one_point(self):
         co = numpy.array([0])
-        mesh = self._make_mesh(co, co, co)
+        mesh = Mesh(co, co, co)
         self.assertEqual(len(mesh), 1)
 
     def test_wrong_arguments(self):
-        self.assertRaises(AssertionError, self._make_mesh, [1, 2], [2, 3])
-        self.assertRaises(AssertionError, self._make_mesh,
+        self.assertRaises(AttributeError, Mesh, [1, 2], [2, 3])
+        self.assertRaises(AssertionError, Mesh,
                           numpy.array([1, 2]), numpy.array([2, 3, 4]))
-        self.assertRaises(AssertionError, self._make_mesh,
+        self.assertRaises(AssertionError, Mesh,
                           numpy.array([1, 2]), numpy.array([2, 3]),
                           numpy.array([0]))
-        self.assertRaises(AssertionError, self._make_mesh,
+        self.assertRaises(AssertionError, Mesh,
                           numpy.array([[1], [2]]), numpy.array([[2], [3]]),
                           numpy.array([0, 1]))
 
@@ -77,7 +70,7 @@ class MeshCreationTestCase(_BaseMeshTestCase):
         self.assertTrue((mesh.lats == [1, 3, 7]).all())
         self.assertEqual(mesh.lons.dtype, numpy.float)
         self.assertEqual(mesh.lats.dtype, numpy.float)
-        self.assertIs(mesh.depths, None)
+        self.assertEqual(mesh.depths.sum(), 0)
 
     def test_from_points_list_with_depth(self):
         points = [Point(0, 1, 2), Point(2, 3, 4), Point(5, 7, 10)]
@@ -86,16 +79,16 @@ class MeshCreationTestCase(_BaseMeshTestCase):
         self.assertEqual(mesh.depths.dtype, numpy.float)
 
 
-class MeshIterTestCase(_BaseMeshTestCase):
+class MeshIterTestCase(unittest.TestCase):
     def test_1d(self):
-        mesh = self._make_mesh(numpy.array([1, 2, 3, 5]),
-                               numpy.array([-1, -2, 4, 0]))
+        mesh = Mesh(numpy.array([1, 2, 3, 5]),
+                    numpy.array([-1, -2, 4, 0]))
         self.assertEqual(list(mesh), [Point(1, -1), Point(2, -2),
                                       Point(3, 4), Point(5, 0)])
 
-        mesh = self._make_mesh(numpy.array([0.1, 0.2, 0.3]),
-                               numpy.array([0.9, 0.8, 0.7]),
-                               numpy.array([0.4, 0.5, 0.6]))
+        mesh = Mesh(numpy.array([0.1, 0.2, 0.3]),
+                    numpy.array([0.9, 0.8, 0.7]),
+                    numpy.array([0.4, 0.5, 0.6]))
         self.assertEqual(list(mesh),
                          [Point(0.1, 0.9, 0.4), Point(0.2, 0.8, 0.5),
                           Point(0.3, 0.7, 0.6)])
@@ -103,30 +96,30 @@ class MeshIterTestCase(_BaseMeshTestCase):
     def test_2d(self):
         lons = numpy.array([[1.1, 2.2], [2.2, 3.3]])
         lats = numpy.array([[-7, -8], [-9, -10]])
-        points = list(self._make_mesh(lons, lats))
+        points = list(Mesh(lons, lats))
         self.assertEqual(points, [Point(1.1, -7), Point(2.2, -8),
                                   Point(2.2, -9), Point(3.3, -10)])
 
         depths = numpy.array([[11, 12], [13, 14]])
-        points = list(self._make_mesh(lons, lats, depths))
+        points = list(Mesh(lons, lats, depths))
         self.assertEqual(points, [Point(1.1, -7, 11), Point(2.2, -8, 12),
                                   Point(2.2, -9, 13), Point(3.3, -10, 14)])
 
 
-class MeshSlicingTestCase(_BaseMeshTestCase):
+class MeshSlicingTestCase(unittest.TestCase):
     def test_1d(self):
         lons = numpy.array([1, 2, 3, 4, 5, 6])
         lats = numpy.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
-        mesh = self._make_mesh(lons, lats)
+        mesh = Mesh(lons, lats)
         submesh = mesh[1:4]
         self.assertIsNot(submesh, mesh)
         self.assertEqual(len(submesh), 3)
         self.assertTrue((submesh.lons == [2, 3, 4]).all())
         self.assertTrue((submesh.lats == [0.2, 0.3, 0.4]).all())
-        self.assertIs(submesh.depths, None)
+        self.assertEqual(submesh.depths.sum(), 0)
 
         depths = numpy.array([7.1, 7.2, 7.3, 7.4, 7.5, 7.6])
-        mesh = self._make_mesh(lons, lats, depths)
+        mesh = Mesh(lons, lats, depths)
         submesh = mesh[-4:]
         self.assertEqual(len(submesh), 4)
         self.assertTrue((submesh.lons == [3, 4, 5, 6]).all())
@@ -138,7 +131,7 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
 
     def test_2d(self):
         lons = lats = numpy.arange(100).reshape((10, 10))
-        mesh = self._make_mesh(lons, lats)
+        mesh = Mesh(lons, lats)
         submesh = mesh[:3, 5:7]
         self.assertEqual(submesh.lons.shape, (3, 2))
         self.assertEqual(submesh.lats.shape, (3, 2))
@@ -146,7 +139,7 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
         self.assertTrue((submesh.lats == submesh.lons).all())
 
         depths = lons + 3.1
-        mesh = self._make_mesh(lons, lats, depths)
+        mesh = Mesh(lons, lats, depths)
         submesh = mesh[2:4, 2:6]
         self.assertEqual(submesh.lons.shape, (2, 4))
         self.assertEqual(submesh.lats.shape, (2, 4))
@@ -156,11 +149,11 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
 
     def test_wrong_indexing(self):
         coords = numpy.arange(16)
-        mesh = self._make_mesh(coords, coords, coords)
+        mesh = Mesh(coords, coords, coords)
         with self.assertRaises(ValueError):
             mesh[1]
         coords = coords.reshape((4, 4))
-        mesh = self._make_mesh(coords, coords, coords)
+        mesh = Mesh(coords, coords, coords)
         with self.assertRaises(ValueError):
             mesh[1]
         with self.assertRaises(IndexError):
@@ -173,15 +166,15 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
         self.assertIsInstance(submesh, RectangularMesh)
 
 
-class MeshEqualityTestCase(_BaseMeshTestCase):
+class MeshEqualityTestCase(unittest.TestCase):
     def test_meshes_equal(self):
         """
         Tests if two meshes are equal
         """
-        mesh1 = self._make_mesh(lons=numpy.array([1., 2., 3., 4.]),
-                                lats=numpy.array([5., 6., 7., 8.]),
-                                depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
-        mesh2 = self._make_mesh(mesh1.lons, mesh1.lats, mesh1.depths)
+        mesh1 = Mesh(lons=numpy.array([1., 2., 3., 4.]),
+                     lats=numpy.array([5., 6., 7., 8.]),
+                     depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
+        mesh2 = Mesh(mesh1.lons, mesh1.lats, mesh1.depths)
         self.assertTrue(mesh1 == mesh2)
 
     def test_meshes_unequal(self):
@@ -189,17 +182,17 @@ class MeshEqualityTestCase(_BaseMeshTestCase):
         Checks unequal meshes
         """
         # Test 1 - depths present but values different
-        mesh1 = self._make_mesh(lons=numpy.array([1., 2., 3., 4.]),
-                                lats=numpy.array([5., 6., 7., 8.]),
-                                depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
-        mesh2 = self._make_mesh(lons=numpy.array([1., 2., 3., 4.]),
-                                lats=numpy.array([5.01, 6., 7., 8.3]),
-                                depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
+        mesh1 = Mesh(lons=numpy.array([1., 2., 3., 4.]),
+                     lats=numpy.array([5., 6., 7., 8.]),
+                     depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
+        mesh2 = Mesh(lons=numpy.array([1., 2., 3., 4.]),
+                     lats=numpy.array([5.01, 6., 7., 8.3]),
+                     depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
         self.assertFalse(mesh1 == mesh2)
         # Test 2 - depths present in the first case, missing in the second
-        mesh3 = self._make_mesh(lons=numpy.array([1., 2., 3., 4.]),
-                                lats=numpy.array([5., 6., 7., 8.]),
-                                depths=None)
+        mesh3 = Mesh(lons=numpy.array([1., 2., 3., 4.]),
+                     lats=numpy.array([5., 6., 7., 8.]),
+                     depths=None)
         self.assertFalse(mesh1 == mesh3)
         # Depths missing in first case, present in the second
         self.assertFalse(mesh3 == mesh2)
@@ -213,7 +206,7 @@ class MeshGetMinDistanceTestCase(unittest.TestCase):
         dists = mesh.get_min_distance(target_mesh)
         expected_dists = [mesh_points[mi].distance(target_points[ti])
                           for ti, mi in enumerate(expected_distance_indices)]
-        self.assertEqual(list(dists.flat), expected_dists)
+        aac(dists.flat, expected_dists, atol=1)
         closest_points_mesh = mesh.get_closest_points(target_mesh)
         numpy.testing.assert_equal(closest_points_mesh.lons.flat,
                                    mesh.lons.take(expected_distance_indices))
@@ -346,7 +339,7 @@ class RectangularMeshCreationTestCase(unittest.TestCase):
         mesh = RectangularMesh.from_points_list(points)
         self.assertTrue((mesh.lons == lons).all())
         self.assertTrue((mesh.lats == lats).all())
-        self.assertIsNone(mesh.depths)
+        self.assertEqual(mesh.depths.sum(), 0)
 
 
 class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
@@ -385,9 +378,8 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [
             0, Point(0.5, 1).distance(Point(0.5, 0)),
-            Point(0.5, 5).distance(Point(0.5, 0))
-        ]
-        numpy.testing.assert_almost_equal(dists, expected_dists)
+            Point(0.5, 5).distance(Point(0.5, 0))]
+        aac(dists, expected_dists, atol=1)
 
     def test_mesh_of_two_points(self):
         lons = numpy.array([[0, 0.5, 1]], float)
@@ -397,7 +389,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         target_mesh = Mesh.from_points_list([Point(0.5, 1), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [Point(0.5, 1).distance(Point(0.5, 0)), 0]
-        numpy.testing.assert_almost_equal(dists, expected_dists)
+        aac(dists, expected_dists, atol=.01)
 
     def test_mesh_of_one_point(self):
         lons = numpy.array([[1.]])
@@ -407,7 +399,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         target_mesh = Mesh.from_points_list([Point(1, 0), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [0, Point(0.5, 0).distance(Point(1, 0))]
-        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.2))
+        aac(dists, expected_dists, atol=0.2)
 
     def _test(self, points, site, expected_distance):
         lons, lats, depths = numpy.array(points).transpose()
@@ -699,11 +691,10 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
 
 class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
     def setUp(self):
-        super(RectangularMeshGetCellDimensionsTestCase, self).setUp()
+        super().setUp()
         self.original_spherical_to_cartesian = geo_utils.spherical_to_cartesian
         geo_utils.spherical_to_cartesian = lambda lons, lats, depths: (
-            self.points
-        )
+            self.points)
 
     def tearDown(self):
         geo_utils.spherical_to_cartesian = self.original_spherical_to_cartesian
@@ -713,7 +704,7 @@ class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
         self.points = numpy.array(points, dtype=float)
         mesh = RectangularMesh(fake_coords, fake_coords, fake_coords)
         cell_center, cell_length, cell_width, cell_area \
-                = mesh.get_cell_dimensions()
+            = mesh.get_cell_dimensions()
         self.assertTrue(numpy.allclose(cell_length, lengths),
                         '%s != %s' % (cell_length, lengths))
         self.assertTrue(numpy.allclose(cell_width, widths),
@@ -821,6 +812,22 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                               [8., 9.]])
         expected_coords = [(-0.1, -0.1), (-0.1, 0.1), (0.1, 0.1), (0.1, -0.1),
                            (-0.1, -0.1)]
+        polygon = self._test(lons, lats, depths, expected_coords)
+
+        coords2d = numpy.array(polygon.exterior.coords)
+        expected_coords2d = [(-11.12, -11.12), (-11.12, 11.12), (11.12, 11.12),
+                             (11.12, -11.12), (-11.12, -11.12)]
+        numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
+                                          decimal=2)
+    def test_idl(self):
+        lons = numpy.array([[179.9, -179.9],
+                            [179.9, -179.9]])
+        lats = numpy.array([[-0.1, -0.1],
+                            [0.1, 0.1]])
+        depths = numpy.array([[2., 3.],
+                              [8., 9.]])
+        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1), 
+                           (-179.9, -0.1), (179.9, -0.1)]
         polygon = self._test(lons, lats, depths, expected_coords)
 
         coords2d = numpy.array(polygon.exterior.coords)

@@ -2,12 +2,12 @@ Scenario Damage
 ===============
 
 ============== ===================
-checksum32     272,505,614        
-date           2018-02-02T16:02:35
-engine_version 2.9.0-gitd6a3184   
+checksum32     2,048,857,716      
+date           2018-10-05T03:04:43
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
-num_sites = 1, num_levels = 26
+num_sites = 7, num_levels = 26
 
 Parameters
 ----------
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -41,11 +43,11 @@ structural_fragility `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -55,12 +57,13 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008(): [0]>
 
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons False           
-================ ================
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
@@ -71,20 +74,18 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-1        1.000 NaN    1   1   1         1         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+Wood     1.00000 NaN    1   1   1         1         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-saving gmfs             0.007     0.0       1     
-building riskinputs     0.003     0.0       1     
-reading exposure        0.002     0.0       1     
-computing gmfs          0.002     0.0       1     
-assoc_assets_sites      0.002     0.0       1     
-reading site collection 2.153E-04 0.0       1     
-======================= ========= ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+building riskinputs 0.00183   0.0       1     
+computing gmfs      0.00172   0.0       1     
+saving gmfs         0.00168   0.0       1     
+reading exposure    5.772E-04 0.0       1     
+=================== ========= ========= ======

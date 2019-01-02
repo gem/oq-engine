@@ -13,7 +13,7 @@ converter = SourceConverter(
 )
 aaae = numpy.testing.assert_array_almost_equal
 
-planar = general.writetmp('''\
+planar = general.gettemp('''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">

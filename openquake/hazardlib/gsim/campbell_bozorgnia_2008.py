@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,11 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`CampbellBozorgnia2008`, and 
+Module exports :class:`CampbellBozorgnia2008`, and
 :class:'CampbellBozorgnia2008Arbitrary'
 """
-from __future__ import division
-
 import numpy as np
 from math import log, exp
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -98,7 +96,7 @@ class CampbellBozorgnia2008(GMPE):
         # For spectral accelerations at periods between 0.0 and 0.25 s, Sa (T)
         # cannot be less than PGA on soil, therefore if the IMT is in this
         # period range it is necessary to calculate PGA on soil
-        if isinstance(imt, SA) and (imt.period > 0.0) and (imt.period < 0.25):
+        if imt.name == 'SA' and imt.period > 0.0 and imt.period < 0.25:
             get_pga_site = True
         else:
             get_pga_site = False

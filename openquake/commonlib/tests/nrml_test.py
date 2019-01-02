@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,11 +18,9 @@
 
 import unittest
 import io
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import read, parse, node_to_xml, get_tag_version
-from openquake.risklib import read_nrml
-read_nrml.update_validators()
 
 
 class NrmlTestCase(unittest.TestCase):
@@ -99,7 +97,7 @@ xmlns:gml="http://www.opengis.net/gml"
         self.assertEqual(outfile.getvalue(), expected)
 
     def test_no_nrml(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="UTF-8"?>
 <fragilityModel id="Ethiopia" assetCategory="buildings"
 lossCategory="structural" />
@@ -110,7 +108,7 @@ lossCategory="structural" />
                       str(ctx.exception))
 
     def test_invalid(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
   <fragilityModel id="Ethiopia" assetCategory="buildings"
@@ -132,7 +130,7 @@ lossCategory="structural" />
                       "Invalid IMT: 'SA', line 8", str(ctx.exception))
 
     def test_invalid_srcs_weights_length(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
 xmlns="http://openquake.org/xmlns/nrml/0.5"
@@ -191,5 +189,5 @@ xmlns:gml="http://www.opengis.net/gml"
         converter = SourceConverter(50., 1., 10, 0.1, 10.)
         with self.assertRaises(ValueError) as ctx:
             parse(fname, converter)
-        self.assertEqual('There are 2 srcs_weights but 1 source(s)',
-                         str(ctx.exception))
+        self.assertIn('There are 2 srcs_weights but 1 source(s)',
+                      str(ctx.exception))

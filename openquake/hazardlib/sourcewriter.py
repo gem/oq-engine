@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ import operator
 import numpy
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
-from openquake.hazardlib import nrml, sourceconverter
+from openquake.hazardlib import nrml, sourceconverter, pmf
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -422,8 +422,8 @@ def build_characteristic_fault_source_node(source):
 @obj_to_node.add('NonParametricSeismicSource')
 def build_nonparametric_source_node(source):
     rup_nodes = []
-    for rup, pmf in source.data:
-        probs = [prob for (prob, no) in pmf.data]
+    for rup, p in source.data:
+        probs = [prob for (prob, no) in p.data]
         rup_nodes.append(build_rupture_node(rup, probs))
     return Node('nonParametricSeismicSource',
                 get_source_attributes(source), nodes=rup_nodes)
@@ -434,6 +434,9 @@ def build_rupture_node(rupt, probs_occur):
     :param rupt: a hazardlib rupture object
     :param probs_occur: a list of floats with sum 1
     """
+    s = sum(probs_occur)
+    if abs(s - 1) > pmf.PRECISION:
+        raise ValueError('The sum of %s is not 1: %s' % (probs_occur, s))
     h = rupt.hypocenter
     hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
     rupt_nodes = [Node('magnitude', {}, rupt.mag),
@@ -557,11 +560,25 @@ def build_source_group(source_group):
         attrs['src_interdep'] = source_group.src_interdep
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
-    if source_group.srcs_weights:
-        attrs['srcs_weights'] = ' '.join(map(str, source_group.srcs_weights))
     if source_group.grp_probability is not None:
         attrs['grp_probability'] = source_group.grp_probability
+    srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
+    if set(srcs_weights) != {1}:
+        attrs['srcs_weights'] = ' '.join(map(str, srcs_weights))
     return Node('sourceGroup', attrs, nodes=source_nodes)
+
+
+@obj_to_node.add('SourceModel')
+def build_source_model_node(source_model):
+    attrs = {}
+    if source_model.name:
+        attrs['name'] = source_model.name
+    if source_model.investigation_time:
+        attrs['investigation_time'] = source_model.investigation_time
+    if source_model.start_time:
+        attrs['start_time'] = source_model.start_time
+    nodes = [obj_to_node(sg) for sg in source_model.src_groups]
+    return Node('sourceModel', attrs, nodes=nodes)
 
 
 # usage: hdf5write(datastore.hdf5, csm)
@@ -577,13 +594,17 @@ def write_source_model(dest, sources_or_groups, name=None):
     """
     Writes a source model to XML.
 
-    :param str dest:
+    :param dest:
         Destination path
-    :param list sources_or_groups:
-        Source model as list of sources or a list of SourceGroups
-    :param str name:
+    :param sources_or_groups:
+        Source model in different formats
+    :param name:
         Name of the source model (if missing, extracted from the filename)
     """
+    if isinstance(sources_or_groups, nrml.SourceModel):
+        with open(dest, 'wb') as f:
+            nrml.write([obj_to_node(sources_or_groups)], f, '%s')
+        return
     if isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
         groups = sources_or_groups
     else:  # passed a list of sources

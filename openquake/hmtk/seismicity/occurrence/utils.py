@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -44,8 +44,6 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-# -*- coding: utf-8 -*-
 
 """
 """
@@ -229,6 +227,8 @@ def get_completeness_counts(catalogue, completeness, d_m):
         * n_obs - number of events in completeness period
     """
     mmax_obs = np.max(catalogue.data["magnitude"])
+    # thw line below was added by Nick Ackerley but it breaks the tests
+    # catalogue.data["dtime"] = catalogue.get_decimal_time()
     if mmax_obs > np.max(completeness[:, 1]):
         cmag = np.hstack([completeness[:, 1], mmax_obs])
     else:

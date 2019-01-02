@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import socket
 import getpass
 
 from openquake.baselib import config, datastore
@@ -100,7 +101,7 @@ USE_L10N = True
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
 )
@@ -164,6 +165,11 @@ LOGGING = {
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
+# A server name can be specified to customize the WebUI in case of
+# multiple installations of the Engine are available. This helps avoiding
+# confusion between different installations when the WebUI is used
+SERVER_NAME = socket.gethostname()
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE:
     INSTALLED_APPS += (
@@ -202,7 +208,7 @@ if LOCKDOWN:
         # 'dpam.backends.PAMBackend',
     )
 
-    MIDDLEWARE_CLASSES += (
+    MIDDLEWARE += (
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',

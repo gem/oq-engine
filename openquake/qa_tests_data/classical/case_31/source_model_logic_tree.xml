@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs1">
+                <logicTreeBranch branchID="b11">
+                    <uncertaintyModel>source_model.xml</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                applyToSources="1"
+                                branchSetID="bs21">
+                <logicTreeBranch branchID="b21">
+                    <uncertaintyModel>4.6 1.1</uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b22">
+                    <uncertaintyModel>4.5 1.0</uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b23">
+                    <uncertaintyModel>4.4 0.9</uncertaintyModel>
+                    <uncertaintyWeight>0.334</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                applyToSources="2"
+                                branchSetID="bs31">
+                <logicTreeBranch branchID="b31">
+                    <uncertaintyModel>3.3 1.0</uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b32">
+                    <uncertaintyModel>3.2 0.9</uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b33">
+                    <uncertaintyModel>3.1 0.8</uncertaintyModel>
+                    <uncertaintyWeight>0.334</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>

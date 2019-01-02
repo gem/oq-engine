@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,10 +20,10 @@ import os
 import copy
 import unittest
 import tempfile
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.sourcewriter import write_source_model, hdf5write
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.hazardlib.nrml import SourceModelParser
+from openquake.hazardlib import nrml
 
 NONPARAM = os.path.join(os.path.dirname(__file__),
                         'source_model/nonparametric-source.xml')
@@ -39,28 +39,36 @@ COLLECTION = os.path.join(os.path.dirname(__file__),
 MULTIPOINT = os.path.join(os.path.dirname(__file__),
                           'source_model/multi-point-source.xml')
 
+GRIDDED = os.path.join(os.path.dirname(__file__),
+                       'source_model/gridded.xml')
+
+conv = SourceConverter(50., 1., 10, 0.1, 10.)
+
 
 class SourceWriterTestCase(unittest.TestCase):
 
     def check_round_trip(self, fname):
-        parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
-        groups = parser.parse_src_groups(fname)
+        smodel = nrml.to_python(fname, conv)
         fd, name = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
-            write_source_model(name, groups, 'Test Source Model')
+            write_source_model(name, smodel)
         with hdf5.File.temporary() as f:
-            for group in groups:
+            for group in smodel.src_groups:
                 hdf5write(f, group)
         print('written %s' % f.path)
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
+        return smodel
 
     def test_mixed(self):
         self.check_round_trip(MIXED)
 
     def test_nonparam(self):
-        self.check_round_trip(NONPARAM)
+        [[src]] = self.check_round_trip(NONPARAM)
+
+        # test GriddedSource
+        self.assertFalse(src.is_gridded())
 
     def test_alt_mfds(self):
         self.check_round_trip(ALT_MFDS)
@@ -69,13 +77,29 @@ class SourceWriterTestCase(unittest.TestCase):
         self.check_round_trip(COLLECTION)
 
     def test_multipoint(self):
-        self.check_round_trip(MULTIPOINT)
+        smodel = self.check_round_trip(MULTIPOINT)
+
+        # test hdf5 round trip
+        temp = general.gettemp(suffix='.hdf5')
+        with hdf5.File(temp, 'w') as f:
+            f['/'] = smodel
+        with hdf5.File(temp, 'r') as f:
+            sm = f['/']
+        self.assertEqual(smodel.name, sm.name)
+        self.assertEqual(len(smodel.src_groups), len(sm.src_groups))
+
+    def test_gridded(self):
+        # test xml -> hdf5
+        smodel = nrml.to_python(GRIDDED, conv)
+        temp = general.gettemp(suffix='.hdf5')
+        with hdf5.File(temp, 'w') as f:
+            f['/'] = smodel
 
 
 class DeepcopyTestCase(unittest.TestCase):
     def test_is_writeable(self):
-        parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
-        groups = [copy.deepcopy(grp) for grp in parser.parse_groups(ALT_MFDS)]
+        groups = [copy.deepcopy(grp)
+                  for grp in nrml.to_python(ALT_MFDS, conv)]
         # there are a SimpleFaultSource and a CharacteristicFaultSource
         fd, fname = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):

@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -61,7 +61,8 @@ VALID_MARKERS = ['s', 'o', '^', 'D', 'p', 'h', '8',
                  '*', 'd', 'v', '<', '>', 'H']
 
 
-def create_stepp_plot(model, filename=None, filetype='png', dpi=300, ax=None):
+def create_stepp_plot(model, figure_size=(8, 6),
+                      filename=None, filetype='png', dpi=300, ax=None):
     '''
     Creates the classic Stepp (1972) plots for a completed Stepp analysis,
     and exports the figure to a file.
@@ -77,7 +78,7 @@ def create_stepp_plot(model, filename=None, filetype='png', dpi=300, ax=None):
         Resolution (dots per inch) of output file
     '''
     if ax is None:
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
