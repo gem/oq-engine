@@ -2,9 +2,9 @@ Scenario Calculation with Simple Fault Rupture
 ==============================================
 
 ============== ===================
-checksum32     2,386,609,726      
-date           2018-02-02T16:04:44
-engine_version 2.9.0-gitd6a3184   
+checksum32     1,419,232,840      
+date           2018-12-13T12:57:06
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 7, num_levels = 3
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -39,11 +41,11 @@ sites         `sites.csv <sites.csv>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -53,10 +55,17 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008(): [0]>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
+
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading site collection 1.574E-04 0.0       1     
-======================= ========= ========= ======
+========= ======== ========= ======
+operation time_sec memory_mb counts
+========= ======== ========= ======
+========= ======== ========= ======

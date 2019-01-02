@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,7 +20,7 @@ Youngs and Coppersmith 1985 MFD.
 """
 import numpy
 
-from openquake.baselib.python3compat import range, round
+from openquake.baselib.python3compat import round
 from openquake.hazardlib.mfd.base import BaseMFD
 
 # width of the boxcar function representing the characteristic

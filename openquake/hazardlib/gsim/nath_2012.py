@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,8 +23,6 @@ exports
 :class:`NathEtAl2012Lower`
 :class:`NathEtAl2012Upper`
 """
-
-from __future__ import division
 import numpy as np
 
 from openquake.hazardlib import const
@@ -84,6 +82,11 @@ class NathEtAl2012Lower(GMPE):
     #: It is noted that "r_rup is the fault-rupture distance in kilometers"
     #: following equation (11) on p. 484.
     REQUIRES_DISTANCES = set(('rrup',))
+
+    #: no site parameters are defined, the GMPE is calibrated for rock sites
+    #: m/s (provisionally set to 800 for compatibility with SiteTerm class)
+    REQUIRES_SITES_PARAMETERS = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # pylint: disable=too-many-arguments
@@ -179,9 +182,7 @@ class NathEtAl2012Upper(NathEtAl2012Lower):
 
         ``P' = P x Correction_factor``
         """
-
-        parent = super(NathEtAl2012Upper, self)
-        ln_mean, [ln_stddev] = parent.get_mean_and_stddevs(
+        ln_mean, [ln_stddev] = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
         # compute site corrections, equation (9)

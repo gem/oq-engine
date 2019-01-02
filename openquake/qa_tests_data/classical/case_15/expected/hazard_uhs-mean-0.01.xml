@@ -14,11 +14,11 @@ xmlns:gml="http://www.opengis.net/gml"
         <uhs>
             <gml:Point>
                 <gml:pos>
-                    -0.1 0.0
+                    -0.09999999999999432 0.0
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                2.0000000E-01 8.0000000E-01
+                2.0000000E-01 8.0000001E-01
             </IMLs>
         </uhs>
         <uhs>
@@ -28,17 +28,17 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                2.0000000E-01 8.0000000E-01
+                2.0000000E-01 8.0000001E-01
             </IMLs>
         </uhs>
         <uhs>
             <gml:Point>
                 <gml:pos>
-                    0.1 0.0
+                    0.09999999999999432 0.0
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                2.0000000E-01 8.0000000E-01
+                2.0000000E-01 8.0000001E-01
             </IMLs>
         </uhs>
     </uniformHazardSpectra>

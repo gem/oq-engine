@@ -1,57 +1,32 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2018, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import sys
-from openquake.baselib import sap, node
-from openquake.hazardlib import nrml
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from openquake.baselib import sap
+from openquake.commonlib import readinput
 
 
 @sap.Script
-def extract_source(source_id, source_model_xml):
-    """
-    Extracts a single source from the source model into a file source_id.xml
-    """
-    root = nrml.read(source_model_xml)
-    model = node.Node('sourceModel', root[0].attrib)
-    origmodel = root[0]
-    if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-        for src_node in origmodel:
-            if src_node['id'] == source_id:
-                model.nodes = [src_node]
-                break
-    else:  # nrml/0.5
-        for src_group in origmodel:
-            for src_node in src_group:
-                if src_node['id'] == source_id:
-                    src_group.nodes = [src_node]
-                    model.nodes = [src_group]
-                    break
-            if model:
-                break
-    if not model:
-        sys.exit('source "%s" not found in %s' % (source_id, source_model_xml))
-    fname = source_id + '.xml'
-    with open(fname, 'wb') as f:
-        nrml.write([model], f, xmlns=root['xmlns'])
-    print('Extracted %s' % fname)
+def extract_source(smlt_file, source_ids):
+    return readinput.reduce_source_model(smlt_file, source_ids.split())
 
-extract_source.arg('source_id', 'ID of the source to extract')
-extract_source.arg('source_model_xml', 'path to the model file')
+
+extract_source.arg('smlt_file', 'source model logic tree xml file')
+extract_source.arg('source_ids', 'IDs of the sources to extract')
 
 
 if __name__ == '__main__':

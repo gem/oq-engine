@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Module exports :class:`Geomatrix1993SSlabNSHMP2008`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -68,6 +66,10 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
 
     #: Required distance measure is rrup (closest distance to rupture)
     REQUIRES_DISTANCES = set(('rrup', ))
+
+    # Shear-wave velocity for reference soil conditions in [m s-1])
+    REQUIRES_SITES_PARAMETERS = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

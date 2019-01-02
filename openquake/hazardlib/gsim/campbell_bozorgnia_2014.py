@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,8 +24,6 @@ Module exports :class:`CampbellBozorgnia2014`
                :class:`CampbellBozorgnia2014HighQJapanSite`
                :class:`CampbellBozorgnia2014LowQJapanSite`
 """
-from __future__ import division
-
 import numpy as np
 from math import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -105,7 +103,7 @@ class CampbellBozorgnia2014(GMPE):
         pga1100 = np.exp(self.get_mean_values(C_PGA, sites, rup, dists, None))
         # Get mean and standard deviations for IMT
         mean = self.get_mean_values(C, sites, rup, dists, pga1100)
-        if isinstance(imt, SA) and (imt.period <= 0.25):
+        if imt.name == "SA" and imt.period <= 0.25:
             # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
             # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
             # Get PGA on soil

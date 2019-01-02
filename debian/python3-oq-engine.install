@@ -1,0 +1,7 @@
+openquake/engine/openquake.cfg             /etc/openquake
+debian/desktop/oq-engine-webui.desktop     /usr/share/applications
+debian/desktop/openquake.png               /usr/share/pixmaps
+debian/systemd/openquake-dbserver.service  /lib/systemd/system/
+debian/systemd/openquake-webui.service     /lib/systemd/system/
+demos                                      /usr/share/openquake/engine
+utils                                      /usr/share/openquake/engine

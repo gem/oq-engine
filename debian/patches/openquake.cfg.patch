@@ -1,17 +1,33 @@
 Index: oq-engine/openquake/engine/openquake.cfg
 ===================================================================
---- oq-engine.orig/openquake/engine/openquake.cfg	2017-10-13 07:49:34.110383342 +0200
-+++ oq-engine/openquake/engine/openquake.cfg	2017-10-13 08:24:07.242368866 +0200
-@@ -40,9 +40,9 @@
+--- a/openquake/engine/openquake.cfg
++++ b/openquake/engine/openquake.cfg
+@@ -44,10 +44,10 @@
+ celery_queue = celery
  
  [dbserver]
- # enable multi_user if you have a multiple user installation
+-# enable multi_user if you have a multiple user installation
 -multi_user = false
 -file = ~/oqdata/db.sqlite3
 -log = ~/oqdata/dbserver.log
++# run in multi_user mode
 +multi_user = true
 +file = /var/lib/openquake/db.sqlite3
 +log = /var/lib/openquake/dbserver.log
- host = 127.0.0.1
- # port 1908 has a good reputation:
- # https://isc.sans.edu/port.html?port=1908
+ # daemon bind address; must be a valid IP address
+ # example: 0.0.0.0
+ listen = 127.0.0.1
+@@ -56,9 +56,10 @@
+ # of the master node (on the master node cfg too)
+ # example: master.hpc
+ host = localhost
+-# port 1908 has a good reputation:
+-# https://isc.sans.edu/port.html?port=1908
+-port = 1908
++# for packages we use port 1907 to avoid conflicts
++# with local development installations
++# https://isc.sans.edu/port.html?port=1907
++port = 1907
+ # port range used by workers to send back results
+ # to the master node
+ receiver_ports = 1912-1920

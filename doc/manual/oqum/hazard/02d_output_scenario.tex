@@ -22,5 +22,15 @@ file with their latitude and longitude coordinates.
 
 \input{oqum/hazard/verbatim/output_gmf_scenario}
 
+In this example, the gmfs have been computed using two different GMPEs, so the
+realization indices ('rlzi') in the first column of the example gmfs file are
+either 0 or 1. The gmfs file lists the ground motion values for 100
+simulations of the scenario, so the event indices ('eid') in the third column
+go from 0–99. There are seven sites with indices 0–6 ('sid') which are
+repeated in the second column for each of the 100 simulations of the event and
+for each of the two GMPEs. Finally, the subsequent columns list the ground
+motion values for each of the intensity measure types specified in the job
+configuration file.
+
 \input{oqum/hazard/verbatim/output_sitemesh}
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,17 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import numpy
 from openquake.baselib import config
 
 F32 = numpy.float32
-
-# NB: using hdf5.vstr does not work with h5py <= 2.2.1
-asset_dt = numpy.dtype([('asset_ref', (bytes, 100)),
-                        ('taxonomy', (bytes, 100)),
-                        ('lon', F32), ('lat', F32)])
 
 
 def max_rel_diff(curve_ref, curve, min_value=0.01):
@@ -67,7 +60,7 @@ def max_rel_diff_index(curve_ref, curve, min_value=0.01):
     return maxdiff, maxindex
 
 
-def rmsep(array_ref, array, min_value=0.01):
+def rmsep(array_ref, array, min_value=0):
     """
     Root Mean Square Error Percentage for two arrays.
 
@@ -80,7 +73,7 @@ def rmsep(array_ref, array, min_value=0.01):
     ... [0.01, 0.02, 0.04, 0.06]])
     >>> curve = numpy.array([[0.011, 0.021, 0.031, 0.051],
     ... [0.012, 0.022, 0.032, 0.051]])
-    >>> str(round(rmsep(curve_ref, curve), 5))
+    >>> str(round(rmsep(curve_ref, curve, .01), 5))
     '0.11292'
     """
     bigvalues = array_ref > min_value
@@ -122,16 +115,20 @@ def compose_arrays(a1, a2, firstfield='etag'):
 def get_assets(dstore):
     """
     :param dstore: a datastore with keys 'assetcol'
-    :returns: an ordered array of records (asset_ref, taxonomy, lon, lat)
+    :returns: an array of records (asset_ref, tag1, ..., tagN, lon, lat)
     """
     assetcol = dstore['assetcol']
-    asset_refs = dstore['asset_refs'].value
-    taxo = dstore['assetcol/tagcol/taxonomy'].value
+    tag = {t: getattr(assetcol.tagcol, t) for t in assetcol.tagnames}
+    dtlist = [('asset_ref', (bytes, 100))]
+    for tagname in assetcol.tagnames:
+        dtlist.append((tagname, (bytes, 100)))
+    dtlist.extend([('lon', F32), ('lat', F32)])
     asset_data = []
-    for a, t in zip(assetcol.array, assetcol.taxonomies):
-        data = (asset_refs[a['idx']], '"%s"' % taxo[t], a['lon'], a['lat'])
-        asset_data.append(data)
-    return numpy.array(asset_data, asset_dt)
+    for aref, a in zip(assetcol.asset_refs, assetcol.array):
+        tup = tuple(b'"%s"' % tag[t][a[t]].encode('utf-8')
+                    for t in assetcol.tagnames)
+        asset_data.append((aref,) + tup + (a['lon'], a['lat']))
+    return numpy.array(asset_data, dtlist)
 
 
 def shared_dir_on():
@@ -139,12 +136,3 @@ def shared_dir_on():
     :returns: True if a shared_dir has been set in openquake.cfg, else False
     """
     return config.directory.shared_dir
-
-
-def reader(func):
-    """
-    Decorator used to mark functions that require read access to the
-    file system.
-    """
-    func.read_access = config.directory.shared_dir
-    return func

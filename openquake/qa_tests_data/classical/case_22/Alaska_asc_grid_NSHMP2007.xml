@@ -10,53 +10,52 @@ xmlns:gml="http://www.opengis.net/gml"
         name="group 1"
         tectonicRegion="Active Shallow Crust"
         >
-            
             <multiPointSource
-            id="mps-0"
+            id="1"
             name="multiPointSource-0"
             >
                 <multiPointGeometry>
                     <gml:posList>
-                        -144.4 60.9 -156.7 56.1
+                        -1.4440000E+02 6.0900000E+01 -1.5670000E+02 5.6100000E+01
                     </gml:posList>
                     <upperSeismoDepth>
-                        0.0
+                        0.0000000E+00
                     </upperSeismoDepth>
                     <lowerSeismoDepth>
-                        50.0
+                        5.0000000E+01
                     </lowerSeismoDepth>
                 </multiPointGeometry>
                 <magScaleRel>
                     WC1994
                 </magScaleRel>
                 <ruptAspectRatio>
-                    2.0
+                    2.0000000E+00
                 </ruptAspectRatio>
                 <multiMFD
-                    kind="incrementalMFD"
-                    size="2"
+                kind="incrementalMFD"
+                size="2"
                 >
                     <min_mag>
-                        5.05
+                        5.0500000E+00
                     </min_mag>
                     <bin_width>
-                        0.1
+                        1.0000000E-01
                     </bin_width>
                     <occurRates>
-                        6.1281025e-05 5.2568553e-05 4.5094754e-05 3.8683523e-05 3.3183792e-05 2.8465972e-05 2.4418895e-05 2.0947202e-05 1.7969087e-05 1.5414378e-05 1.3222879e-05 1.134295e-05 9.7302951e-06 8.3469154e-06 7.1602141e-06 6.1422291e-06 5.2689734e-06 4.5198706e-06 3.8772696e-06 3.3260288e-06 0.00014035055 0.00011918295 0.00010120783 8.5943718e-05 7.2981727e-05 6.1974658e-05 5.262767e-05 4.469039e-05 3.7950207e-05 3.2226575e-05 2.7366178e-05 2.3238824e-05 1.9733956e-05 1.675769e-05 1.4230303e-05 1.2084096e-05 1.0261578e-05 8.713932e-06 7.399701e-06 6.2836816e-06
+                        6.1281025E-05 5.2568553E-05 4.5094754E-05 3.8683523E-05 3.3183792E-05 2.8465972E-05 2.4418895E-05 2.0947202E-05 1.7969087E-05 1.5414378E-05 1.3222879E-05 1.1342950E-05 9.7302951E-06 8.3469154E-06 7.1602141E-06 6.1422291E-06 5.2689734E-06 4.5198706E-06 3.8772696E-06 3.3260288E-06 1.4035055E-04 1.1918295E-04 1.0120783E-04 8.5943718E-05 7.2981727E-05 6.1974658E-05 5.2627670E-05 4.4690390E-05 3.7950207E-05 3.2226575E-05 2.7366178E-05 2.3238824E-05 1.9733956E-05 1.6757690E-05 1.4230303E-05 1.2084096E-05 1.0261578E-05 8.7139320E-06 7.3997010E-06 6.2836816E-06
                     </occurRates>
                     <lengths>
                         20
                     </lengths>
                 </multiMFD>
                 <nodalPlaneDist>
-                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="0.0"/>
-                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="45.0"/>
-                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="90.0"/>
-                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="135.0"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="0.0000000E+00" strike="0.0000000E+00"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="0.0000000E+00" strike="4.5000000E+01"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="0.0000000E+00" strike="9.0000000E+01"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="0.0000000E+00" strike="1.3500000E+02"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="25.0" probability="1.0"/>
+                    <hypoDepth depth="2.5000000E+01" probability="1.0000000E+00"/>
                 </hypoDepthDist>
             </multiPointSource>
         </sourceGroup>

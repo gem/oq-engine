@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,10 +22,9 @@ classes for :class:`ASR <BaseASR>`, :class:`MSR <BaseMSR>`,
 :class:`ASRSigma <BaseASRSigma>`, and :class:`MSRSigma <BaseMSRSigma>`
 """
 import abc
-from openquake.baselib.python3compat import with_metaclass
 
 
-class BaseASR(with_metaclass(abc.ABCMeta)):
+class BaseASR(metaclass=abc.ABCMeta):
     """
     A base class for Area-Magnitude Scaling Relationship.
     Allows calculation of rupture magnitude from area.
@@ -50,7 +49,7 @@ class BaseASR(with_metaclass(abc.ABCMeta)):
         return "<%s>" % self.__class__.__name__
 
 
-class BaseASRSigma(with_metaclass(abc.ABCMeta, BaseASR)):
+class BaseASRSigma(BaseASR, metaclass=abc.ABCMeta):
     """
     Extend :class:`BaseASR` and allows to include uncertainties (sigma) in
     rupture magnitude estimation.
@@ -67,7 +66,7 @@ class BaseASRSigma(with_metaclass(abc.ABCMeta, BaseASR)):
         """
 
 
-class BaseMSR(with_metaclass(abc.ABCMeta)):
+class BaseMSR(metaclass=abc.ABCMeta):
     """
     A base class for Magnitude-Area Scaling Relationship.
     Allows calculation of rupture area from magnitude.
@@ -100,7 +99,7 @@ class BaseMSR(with_metaclass(abc.ABCMeta)):
         return "<%s>" % self.__class__.__name__
 
 
-class BaseMSRSigma(with_metaclass(abc.ABCMeta, BaseMSR)):
+class BaseMSRSigma(BaseMSR, metaclass=abc.ABCMeta):
     """
     Extends :class:`BaseMSR` and allows to include uncertainties (sigma) in
     rupture area estimation.

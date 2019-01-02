@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Module exports :class:`PankowPechmann2004`.
 """
-from __future__ import division
-
 import numpy as np
 from scipy.constants import g as gravity
 
@@ -31,9 +29,10 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 class PankowPechmann2004(GMPE):
     """
-    Implements GMPE developed by Kris L. Pankow and James C. Pechmann 
-    and published as "The SEA99 Ground-Motion Predictive Relations for Extensional
-    Tectonic Regimes: Revisions and a New Peak Ground Velocity Relation"
+    Implements GMPE developed by Kris L. Pankow and James C. Pechmann
+    and published as "The SEA99 Ground-Motion Predictive Relations for
+    Extensional Tectonic Regimes: Revisions and a New Peak Ground Velocity
+    Relation"
     Bulletin of the Seismological Society of America,
     Vol. 94, No. 1, pp. 341–348, February 2004
     """

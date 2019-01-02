@@ -7,8 +7,8 @@ run together to form a complete end-to-end demonstration of the workflow.
 
 **Hazard**  
 Expected runtime: 1 minute  
-Outputs: Hazard Curves
+Outputs: Hazard Curves, Seismic Source Groups
 
 **Risk**  
-Expected runtime: 1 minute  
-Outputs: Benefit Cost Ratio Maps
+Expected runtime: 10 seconds
+Outputs: Benefit Cost Ratios, Seismic Source Groups

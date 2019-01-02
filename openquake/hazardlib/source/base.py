@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,15 +17,14 @@
 Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
-from __future__ import division
 import abc
 import math
+import numpy
 from openquake.baselib.slots import with_slots
-from openquake.baselib.python3compat import with_metaclass
 
 
 @with_slots
-class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
+class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     Base class representing a seismic source, that is a structure generating
     earthquake ruptures.
@@ -39,10 +38,10 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
-               'src_group_id', 'num_ruptures', 'seed', 'id']
+               'src_group_id', 'num_ruptures', 'id', 'min_mag']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
-    nsites = 1  # FIXME: remove this and fix all hazardlib tests
     ngsims = 1
+    min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -63,18 +62,31 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
                 math.sqrt(self.nsites) * self.ngsims)
 
     @property
+    def nsites(self):
+        """
+        :returns: the number of sites affected by this source
+        """
+        try:
+            # the engine sets self.indices when filtering the sources
+            return len(self.indices)
+        except AttributeError:
+            # this happens in several hazardlib tests, therefore we return
+            # a fake number of affected sites to avoid changing all tests
+            return 1
+
+    @property
     def src_group_ids(self):
         """
         :returns: a list of source group IDs (usually of 1 element)
         """
-        grp_id = self.src_group_id
+        grp_id = getattr(self, 'src_group_id', [0])
         return [grp_id] if isinstance(grp_id, int) else grp_id
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-        self.src_group_id = None  # set by the engine
+        self.src_group_id = 0  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
         self.id = None  # set by the engine
@@ -90,6 +102,48 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
+    def sample_ruptures(self, eff_num_ses, ir_monitor):
+        """
+        :param eff_num_ses: number of stochastic event sets * number of samples
+        :param ir_monitor: a monitor object for .iter_ruptures()
+        :yields: pairs (rupture, num_occurrences[num_samples])
+        """
+        mutex_weight = getattr(self, 'mutex_weight', 1)
+        with ir_monitor:
+            ruptures = list(self.iter_ruptures())
+        tom = getattr(self, 'temporal_occurrence_model', None)
+        unsplit = isinstance(self.serial, int)
+        if unsplit:  # prefilter_sources=no was given
+            serials = numpy.arange(
+                self.serial, self.serial + self.num_ruptures)
+        else:  # the serials have been generated in prefiltering
+            serials = self.serial
+        if tom and unsplit:  # time-independent source
+            rates = numpy.array([rup.occurrence_rate for rup in ruptures])
+            numpy.random.seed(self.serial)
+            occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
+            for rup, serial, num_occ in zip(ruptures, serials, occurs):
+                if num_occ:
+                    rup.serial = serial  # used as seed
+                    yield rup, num_occ
+        else:  # time-dependent source
+            for rup, serial in zip(ruptures, serials):
+                numpy.random.seed(serial)
+                occurs = rup.sample_number_of_occurrences(eff_num_ses)
+                if mutex_weight < 1:
+                    # consider only the occurrencies below the mutex_weight
+                    occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
+                num_occ = occurs.sum()
+                if num_occ:
+                    rup.serial = serial  # used as seed
+                    yield rup, num_occ
+
+    def __iter__(self):
+        """
+        Override to implement source splitting
+        """
+        yield self
+
     @abc.abstractmethod
     def count_ruptures(self):
         """
@@ -102,76 +156,6 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         Return minimum and maximum magnitudes of the ruptures generated
         by the source.
         """
-
-    @abc.abstractmethod
-    def get_rupture_enclosing_polygon(self, dilation=0):
-        """
-        Get a polygon which encloses all the ruptures generated by the source.
-
-        The rupture enclosing polygon is meant to be used in all hazard
-        calculators to filter out sources whose ruptures the user wants
-        to be neglected because they are too far from the locations
-        of interest.
-
-        For performance reasons, the ``get_rupture_enclosing_polygon()``
-        should compute the polygon, without creating all the ruptures.
-        The rupture enclosing polygon may not be necessarily the *minimum*
-        enclosing polygon, but must guarantee that all ruptures are within
-        the polygon.
-
-        This method must be implemented by subclasses.
-
-        :param dilation:
-            A buffer distance in km to extend the polygon borders to.
-        :returns:
-            Instance of :class:`openquake.hazardlib.geo.polygon.Polygon`.
-        """
-
-    def get_bounding_box(self, dilation=0):
-        """
-        Returns the bounding box of all the ruptures generated by the source,
-        enlarged by the integration distance (dilation).
-        """
-        return self.get_rupture_enclosing_polygon(dilation).get_bbox()
-
-    def filter_sites_by_distance_to_source(self, integration_distance, sites):
-        """
-        Filter out sites from the collection that are further from the source
-        than some arbitrary threshold.
-
-        :param integration_distance:
-            Distance in km representing a threshold: sites that are further
-            than that distance from the closest rupture produced by the source
-            should be excluded.
-        :param sites:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`
-            to filter.
-        :returns:
-            Filtered :class:`~openquake.hazardlib.site.SiteCollection`.
-
-        Method can be overridden by subclasses in order to achieve
-        higher performance for a specific typology. Base class method calls
-        :meth:`get_rupture_enclosing_polygon` with ``integration_distance``
-        as a dilation value and then filters site collection by checking
-        :meth:
-        `containment <openquake.hazardlib.geo.polygon.Polygon.intersects>`
-        of site locations.
-
-        The main criteria for this method to decide whether a site should be
-        filtered out or not is the minimum distance between the site and all
-        the ruptures produced by the source. If at least one rupture is closer
-        (in terms of great circle distance between surface projections) than
-        integration distance to a site, it should not be filtered out. However,
-        it is important not to make this method too computationally intensive.
-        If short-circuits are taken, false positives are generally better than
-        false negatives (it's better not to filter a site out if there is some
-        uncertainty about its distance).
-        """
-        if integration_distance is None:  # no filtering
-            return sites
-        rup_enc_poly = self.get_rupture_enclosing_polygon(integration_distance)
-        mask = rup_enc_poly.intersects(sites.mesh)
-        return sites.filter(mask)
 
     def modify(self, modification, parameters):
         """
@@ -197,7 +181,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
 
 
 @with_slots
-class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
+class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     """
     Parametric Seismic Source generates earthquake ruptures from source
     parameters, and associated probabilities of occurrence are defined through
@@ -210,7 +194,7 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
         The desired distance between two adjacent points in source's
         ruptures' mesh, in km. Mainly this parameter allows to balance
         the trade-off between time needed to compute the :meth:`distance
-        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_min_distance>`
+        <openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance>`
         between the rupture surface and a site and the precision of that
         computation.
     :param magnitude_scaling_relationship:
@@ -239,8 +223,7 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model):
-        super(ParametricSeismicSource, self). \
-            __init__(source_id, name, tectonic_region_type)
+        super().__init__(source_id, name, tectonic_region_type)
 
         if rupture_mesh_spacing is not None and not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')
@@ -271,14 +254,16 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
         """
         return [(mag, occ_rate)
                 for (mag, occ_rate) in self.mfd.get_annual_occurrence_rates()
-                if min_rate is None or occ_rate > min_rate]
+                if (min_rate is None or occ_rate > min_rate) and
+                mag >= self.min_mag]
 
     def get_min_max_mag(self):
         """
         Get the minimum and maximum magnitudes of the ruptures generated
         by the source from the underlying MFD.
         """
-        return self.mfd.get_min_max_mag()
+        min_mag, max_mag = self.mfd.get_min_max_mag()
+        return max(self.min_mag, min_mag), max_mag
 
     def __repr__(self):
         """

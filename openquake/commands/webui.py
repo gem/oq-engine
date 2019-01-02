@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2016, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import sys
@@ -25,8 +25,7 @@ from openquake.baselib import sap, config
 from openquake.server import dbserver
 from openquake.server.utils import check_webserver_running
 
-# syncdb is left for backward compatibility with Django 1.6
-commands = ['start', 'migrate', 'syncdb', 'createsuperuser', 'collectstatic']
+commands = ['start', 'migrate', 'createsuperuser', 'collectstatic']
 
 
 def rundjango(subcmd, hostport=None, skip_browser=False):
@@ -63,6 +62,7 @@ def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
         rundjango('runserver', hostport, skip_browser)
     elif cmd in commands:
         rundjango(cmd)
+
 
 webui.arg('cmd', 'webui command', choices=commands)
 webui.arg('hostport', 'a string of the form <hostname:port>')

@@ -20,6 +20,14 @@ ceus2011
     :undoc-members:
     :show-inheritance:
 
+germany2018
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.scalerel.germany2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 gsc_offshore_thrusts
 --------------------------------------------------------
 
@@ -56,6 +64,14 @@ strasser2010
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.strasser2010
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+thingbaijam2017
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.scalerel.thingbaijam2017
     :members:
     :undoc-members:
     :show-inheritance:

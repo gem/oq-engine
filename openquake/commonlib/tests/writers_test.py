@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,12 +21,13 @@ import unittest
 import tempfile
 from io import BytesIO
 import psutil
-from openquake.baselib.performance import memory_info
 from openquake.commonlib.writers import write_csv
+from openquake.baselib.performance import memory_rss
 from openquake.baselib.node import Node, tostring, StreamingXMLWriter
 from xml.etree import ElementTree as etree
 
 import numpy
+I32 = numpy.int32
 
 
 def assetgen(n):
@@ -72,17 +73,17 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
     def test_memory(self):
         # make sure the memory occupation is low
         # (to protect against bad refactoring of the XMLWriter)
-        proc = psutil.Process(os.getpid())
+        pid = os.getpid()
         try:
-            rss = memory_info(proc).rss
+            rss = memory_rss(pid)
         except psutil.AccessDenied:
             raise unittest.SkipTest('Memory info not accessible')
         devnull = open(os.devnull, 'wb')
         with StreamingXMLWriter(devnull) as writer:
             for asset in assetgen(1000):
                 writer.serialize(asset)
-        allocated = memory_info(proc).rss - rss
-        self.assertLess(allocated, 204800)  # < 200 KB
+        allocated = memory_rss(pid) - rss
+        self.assertLess(allocated, 256000)  # < 250 KB
 
     def test_zero_node(self):
         s = BytesIO()
@@ -95,8 +96,6 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
     0
 </zero>
 ''')
-
-I32 = numpy.int32
 
 
 class WriteCsvTestCase(unittest.TestCase):

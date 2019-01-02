@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,6 @@
 Module exports :class:`DrouetBrazil2015`
                :class:`DrouetBrazil2015_with_depth`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -79,14 +77,11 @@ class DrouetBrazil2015(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        #assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        #           for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup, dists.rjb)
-        if isinstance(imt, (SA, PGA)): # Convert from m/s**2 to g
+        if imt.name in "SA PGA":  # Convert from m/s**2 to g
             mean -= np.log(g)
-        elif isinstance(imt, PGV): # Convert from m/s to cm/s
+        elif imt.name == "PGV":  # Convert from m/s to cm/s
             mean += np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.rjb.shape)

@@ -8,7 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
     sourceModelTreePath="b_1"
     >
         <gmfSet
-        stochasticEventSetId="0"
+        stochasticEventSetId="1"
         >
             <gmf
             IMT="PGA"

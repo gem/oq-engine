@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,6 @@ Module exports :class:`FrankelEtAl1996MblgAB1987NSHMP2008`,
 :class:`FrankelEtAl1996MblgJ1996NSHMP2008`,
 :class:`FrankelEtAl1996MwNSHMP2008`.
 """
-from __future__ import division
-
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
@@ -30,8 +28,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87,
     mblg_to_mw_johnston_96,
-    clip_mean
-)
+    clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -97,6 +94,10 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
 
     #: Required distance measure is rhypo
     REQUIRES_DISTANCES = set(('rhypo', ))
+
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

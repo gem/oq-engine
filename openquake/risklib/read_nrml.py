@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2014-2017, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4#
+#
+# Copyright (C) 2014-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import logging
 import itertools
@@ -103,6 +103,7 @@ def get_vulnerability_functions_05(node, fname):
             raise InvalidFile(
                 'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
                 (taxonomy, fname, vfun.lineno))
+        taxonomies.add(taxonomy)
         num_probs = None
         if vfun['dist'] == 'PM':
             loss_ratios, probs = [], []
@@ -197,7 +198,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
             array['stddev'][i] = node['stddev']
     elif ff['format'] == 'discrete':
         attrs['imls'] = ~imls
-        valid.check_levels(attrs['imls'], attrs['imt'])
+        valid.check_levels(attrs['imls'], attrs['imt'], min_iml)
         num_poes = len(attrs['imls'])
         array = numpy.zeros((LS, num_poes))
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
@@ -238,8 +239,7 @@ def get_fragility_model(node, fname):
     for ff in ffs:
         imt_taxo = ff.imls['imt'], ff['id']
         array, attrs = ffconvert(fname, limit_states, ff)
-        ffl = scientific.FragilityFunctionList(array)
-        vars(ffl).update(attrs)
+        ffl = scientific.FragilityFunctionList(array, **attrs)
         fmodel[imt_taxo] = ffl
     return fmodel
 

@@ -50,14 +50,6 @@ readinput module
     :show-inheritance:
 
 
-riskmodels module
--------------------------------------
-
-.. automodule:: openquake.commonlib.riskmodels
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 source module
 ---------------------------------
 

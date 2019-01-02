@@ -13,7 +13,7 @@
       <costType name="business_interruption" type="per_asset" unit="USD/month" />
     </costTypes>
   </conversions>
-  
+  <occupancyPeriods>day night transit</occupancyPeriods>
   <assets>
     <asset id="a1" number="1" area="100" taxonomy="tax1" >
       <location lon="-122.000" lat="38.113" />

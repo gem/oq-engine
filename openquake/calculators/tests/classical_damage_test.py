@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,9 +21,10 @@ from nose.plugins.attrib import attr
 from openquake.qa_tests_data.classical_damage import (
     case_1, case_2, case_1a, case_1b, case_1c, case_2a, case_2b, case_3a,
     case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
-    case_7c, case_8a)
+    case_7c, case_8a, case_master)
 from openquake.calculators.export import export
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import (
+    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 
 import numpy
 
@@ -34,23 +35,20 @@ class ClassicalDamageCase1TestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_continuous(self):
-        out = self.run_calc(case_1.__file__, 'job_continuous.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_1.__file__, 'job_continuous.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_discrete(self):
-        out = self.run_calc(case_1.__file__, 'job_discrete.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_1.__file__, 'job_discrete.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_interpolation(self):
-        out = self.run_calc(case_1.__file__, 'job_interpolation.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_1.__file__, 'job_interpolation.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
 
@@ -59,95 +57,92 @@ class ClassicalDamageCase2TestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_continuous(self):
-        out = self.run_calc(case_2.__file__, 'job_continuous.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_2.__file__, 'job_continuous.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_discrete(self):
-        out = self.run_calc(case_2.__file__, 'job_discrete.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        # a test producing NaNs
+        self.run_calc(case_2.__file__, 'job_discrete.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_interpolation(self):
-        out = self.run_calc(case_2.__file__, 'job_interpolation.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_2.__file__, 'job_interpolation.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
 
+class ClassicalDamageCase8TestCase(CalculatorTestCase):
+    @attr('qa', 'risk', 'classical_damage')
+    def test_case_8a(self):
+        self.run_calc(
+            case_8a.__file__, 'job_haz.ini,job_risk.ini')
+        f1, f2 = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/damages-rlzs-AkkarBommer2010().csv', f2)
+        self.assertEqualFiles(
+            'expected/damages-rlzs-SadighEtAl1997().csv', f1)
+        [f] = export(('damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/damages-stats.csv', f)
+
+
 class ClassicalDamageTestCase(CalculatorTestCase):
+    # all the tests here are similar
 
     def check(self, case):
-        out = self.run_calc(
-            case.__file__, 'job_haz.ini,job_risk.ini', exports='csv',
-            concurrent_tasks='0')  # avoid the usual fork issue
-        [fname] = out['damages-rlzs', 'csv']
-        self.assertEqualFiles('expected/damages.csv', fname)
+        self.run_calc(case.__file__, 'job_haz.ini')
+        self.run_calc(case.__file__, 'job_risk.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+        fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        if len(fnames) == 1:
+            self.assertEqualFiles('expected/damages.csv', fnames[0])
+        else:
+            for fname in fnames:
+                self.assertEqualFiles(
+                    'expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_1a(self):
-        self.run_calc(case_1a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.971702, 0.00488098, 0.0067176, 0.005205, 0.0114946], 6)
+        self.check(case_1a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_1b(self):
-        self.run_calc(case_1b.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.98269, 0.001039, 0.0028866, 0.0032857, 0.01009], 5)
+        self.check(case_1b)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_1c(self):
-        self.run_calc(case_1c.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        expected = [0.971993, 0.0047832, 0.006618, 0.0051539, 0.0114523]
-        aae(damages, expected, 5)
+        self.check(case_1c)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_2a(self):
-        self.run_calc(case_2a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, (0.97072, 0.004527, 0.008484, 0.0052885, 0.010976), 5)
+        self.check(case_2a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_2b(self):
-        self.run_calc(case_2b.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.970740, 0.004517, 0.00847858, 0.0052878, 0.0109759], 5)
+        self.check(case_2b)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_3a(self):
-        self.run_calc(case_3a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.972491, 0.008021, 0.010599, 0.0057342, 0.0031543], 5)
+        self.check(case_3a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_4a(self):
-        self.run_calc(case_4a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.970851, 0.0044304, 0.00841, 0.00529, 0.01102], 5)
+        self.check(case_4a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_4b(self):
-        self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.108756, 0.044266, 0.138326, 0.14414, 0.564511], 5)
+        self.check(case_4b)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_4c(self):
-        self.run_calc(case_4c.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.108756, 0.044266, 0.138326, 0.14414, 0.564511], 5)
+        self.check(case_4c)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_5a(self):
-        self.run_calc(case_5a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [4.85426, 0.02215, 0.042048, 0.02643, 0.055113], 5)
+        self.check(case_5a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_6a(self):
@@ -172,13 +167,6 @@ class ClassicalDamageTestCase(CalculatorTestCase):
         self.check(case_7c)
 
     @attr('qa', 'risk', 'classical_damage')
-    def test_case_8a(self):
-        self.run_calc(
-            case_8a.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
-        f1, f2 = export(('damages-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/damages-rlzs-AkkarBommer2010().csv', f2)
-        self.assertEqualFiles(
-            'expected/damages-rlzs-SadighEtAl1997().csv', f1)
-        [f] = export(('damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/damages-stats.csv', f)
+    def test_case_master(self):
+        if NOT_DARWIN:  # skip on macOS
+            self.check(case_master)

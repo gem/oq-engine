@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017 GEM Foundation
+# Copyright (C) 2017-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,18 +17,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, json, requests
-from openquake.baselib import sap, config
+import json
+import requests
+from openquake.baselib import sap
+
 
 @sap.Script
-def postzip(zipfile):
+def postzip(zipfile, port=8800):
     """Post a zipfile to the WebUI"""
     dic = dict(archive=open(zipfile, 'rb'))
     # NB: there is no WebUI port in openquake.cfg for the moment
-    resp = requests.post("http://localhost:8800/v1/calc/run", {}, files=dic)
-    print(json.loads(resp.content))
+    resp = requests.post("http://localhost:%d/v1/calc/run" % port, {},
+                         files=dic)
+    print(json.loads(resp.text))
+
 
 postzip.arg('zipfile', 'archive with the files of the computation')
+postzip.arg('port', 'port to use', type=int)
 
 if __name__ == '__main__':
     postzip.callfunc()

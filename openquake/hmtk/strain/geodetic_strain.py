@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -44,6 +44,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
+
 '''
 :class:`openquake.hmtk.strain.geodectic_strain.GeodeticStain` is a
 core class for storage and implementation of a geodetic strain rate

@@ -1,10 +1,9 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -45,7 +44,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
 '''
 Tests the methods of the module openquake.hmtk.sources.source_conversion_utils
 '''

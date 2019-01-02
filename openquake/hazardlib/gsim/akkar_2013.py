@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,10 +19,8 @@
 """
 Module exports :class:`AkkarEtAl2013`.
 """
-from __future__ import division
-
-import warnings
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
+
 
 class AkkarEtAl2013(AkkarEtAlRjb2014):
     """
@@ -30,4 +28,4 @@ class AkkarEtAl2013(AkkarEtAlRjb2014):
     the call AkkarEtAl2013 is retained as legacy. The AkkarEtAl2013 GMPE
     is now implemented as AkkarEtAlRjb2014
     """
-    deprecated = True
+    superseded_by = AkkarEtAlRjb2014

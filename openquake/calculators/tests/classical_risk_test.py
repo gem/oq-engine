@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,12 +20,10 @@ from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4, case_5, case_master)
-from openquake.baselib.general import writetmp
 from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
+    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.commonlib.writers import scientificformat
 from openquake.calculators.export import export
-from openquake.calculators.views import view
 
 
 class ClassicalRiskTestCase(CalculatorTestCase):
@@ -35,7 +33,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
 
         # check loss ratios
-        lrs = self.calc.datastore['composite_risk_model/VF/structural']
+        lrs = self.calc.datastore['vulnerability/VF/structural']
         got = scientificformat(lrs.mean_loss_ratios, '%.2f')
         self.assertEqual(got, '0.05 0.10 0.20 0.40 0.80')
 
@@ -70,6 +68,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_4(self):
         self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
+
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])
@@ -78,10 +77,11 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
-        [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/loss_maps-mean.csv', fname)
+        fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 3)  # mean, quantile-0.15, quantile-0.85
+        self.assertEqualFiles('expected/loss_maps-mean.csv', fnames[0])
 
-        [fname] = export(('loss_curves/stats/sid-1', 'csv'),
+        [fname] = export(('loss_curves/mean/sid-1', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-sid-1-mean.csv',
                               fname)
@@ -112,7 +112,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         assert fnames  # sanity check
         # FIXME: on macOS the generation of loss maps stats is terribly wrong,
         # the number of losses do not match, this must be investigated
-        if REFERENCE_OS:
+        if NOT_DARWIN:
             for fname in fnames:
                 self.assertEqualFiles(
                     'expected/' + strip_calc_id(fname), fname)
@@ -121,7 +121,3 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         for kind in ('rlzs', 'stats'):
             [fname] = export(('loss_maps-' + kind, 'npz'), self.calc.datastore)
             print('Generated ' + fname)
-
-        # check assetcol view
-        fname = writetmp(view('assetcol', self.calc.datastore))
-        self.assertEqualFiles('expected/assetcol.csv', fname)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 """
 Module exports :class:'ClimentEtAl1994'.
 """
-from __future__ import division
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -165,11 +164,11 @@ class ClimentEtAl1994(GMPE):
 
         # convert from m/s**2 to g for PGA and from m/s to g for PSV
         # and divided this value for the ratio(SA_larger/SA_geo_mean)
-        if isinstance(imt, PGA):
-            mean = (np.exp(mean) /g) / C['r_SA']
+        if imt.name == "PGA":
+            mean = (np.exp(mean) / g) / C['r_SA']
         else:
             W = (2. * np.pi)/imt.period
-            mean = ((np.exp(mean) * W) /g) / C['r_SA']
+            mean = ((np.exp(mean) * W) / g) / C['r_SA']
         return np.log(mean)
 
     #: Equation coefficients, described in Table 4.1 on pp. 22

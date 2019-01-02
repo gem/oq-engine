@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,12 +17,17 @@ import unittest
 import collections
 
 import numpy
+try:
+    import rtree
+except ImportError:
+    rtree = None
 import shapely.geometry
 
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
 
 Point = collections.namedtuple("Point",  'lon lat')
+aac = numpy.testing.assert_allclose
 
 
 class CleanPointTestCase(unittest.TestCase):
@@ -38,7 +43,7 @@ class CleanPointTestCase(unittest.TestCase):
 
 class LineIntersectsItselfTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(LineIntersectsItselfTestCase, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.func = utils.line_intersects_itself
 
     def test_too_few_points(self):
@@ -48,37 +53,37 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
             self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
     def test_doesnt_intersect(self):
-        lons = [-1, -2, -3, -5]
-        lats = [0,  2,  4,  6]
+        lons = numpy.array([-1, -2, -3, -5])
+        lats = numpy.array([0,  2,  4,  6])
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
     def test_intersects(self):
-        lons = [0, 0, 1, -1]
-        lats = [0, 1, 0,  1]
+        lons = numpy.array([0, 0, 1, -1])
+        lats = numpy.array([0, 1, 0,  1])
         self.assertEqual(True, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_on_a_pole(self):
-        lons = [45, 165, -150, 80]
-        lats = [-80, -80, -80, -70]
+        lons = numpy.array([45, 165, -150, 80])
+        lats = numpy.array([-80, -80, -80, -70])
         self.assertEqual(True, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_only_after_being_closed(self):
-        lons = [0, 0, 1, 1]
-        lats = [0, 1, 0, 1]
+        lons = numpy.array([0, 0, 1, 1])
+        lats = numpy.array([0, 1, 0, 1])
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_on_international_date_line(self):
-        lons = [178, 178, -178, 170]
+        lons = numpy.array([178, 178, -178, 170])
         lats = [0, 10, 0, 5]
         self.assertEqual(True, self.func(lons, lats))
 
     def test_doesnt_intersect_on_international_date_line(self):
-        lons = [178, 178, 179, -178]
-        lats = [0, 10, 5, 5]
+        lons = numpy.array([178, 178, 179, -178])
+        lats = numpy.array([0, 10, 5, 5])
         self.assertEqual(False, self.func(lons, lats))
 
 
@@ -101,29 +106,29 @@ class GetLongitudinalExtentTestCase(unittest.TestCase):
 
 class GetSphericalBoundingBox(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(GetSphericalBoundingBox, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.func = utils.get_spherical_bounding_box
 
     def test_one_point(self):
-        lons = [20]
-        lats = [-40]
+        lons = numpy.array([20])
+        lats = numpy.array([-40])
         self.assertEqual(self.func(lons, lats), (20, 20, -40, -40))
 
     def test_small_extent(self):
-        lons = [10, -10]
-        lats = [50,  60]
+        lons = numpy.array([10, -10])
+        lats = numpy.array([50,  60])
         self.assertEqual(self.func(lons, lats), (-10, 10, 60, 50))
 
     def test_international_date_line(self):
-        lons = [-20, 180, 179, 178]
-        lats = [-1,   -2,   1,   2]
+        lons = numpy.array([-20, 180, 179, 178])
+        lats = numpy.array([-1,   -2,   1,   2])
         self.assertEqual(self.func(lons, lats), (178, -20, 2, -2))
 
     def test_too_wide_longitudinal_extent(self):
         for lons, lats in [([-45, -135, 135, 45], [80] * 4),
                            ([0, 10, -175], [0] * 4)]:
             with self.assertRaises(ValueError) as ae:
-                self.func(lons, lats)
+                self.func(numpy.array(lons), numpy.array(lats))
                 self.assertEqual(str(ae.exception),
                                  'points collection has longitudinal '
                                  'extent wider than 180 deg')
@@ -132,29 +137,29 @@ class GetSphericalBoundingBox(unittest.TestCase):
 class GetOrthographicProjectionTestCase(unittest.TestCase):
     def test_projection(self):
         # values verified against pyproj's implementation
-        proj = utils.get_orthographic_projection(10, 16, -2, 30)
+        proj = utils.OrthographicProjection(10, 16, -2, 30)
         lons = numpy.array([10., 20., 30., 40.])
         lats = numpy.array([-1., -2., -3., -4.])
         xx, yy = proj(lons, lats)
         exx = [-309.89151465, 800.52541443, 1885.04014687, 2909.78079661]
         eyy = [-1650.93260348, -1747.79256663, -1797.62444771, -1802.28117183]
-        self.assertTrue(numpy.allclose(xx, exx, atol=0.01, rtol=0.005))
-        self.assertTrue(numpy.allclose(yy, eyy, atol=0.01, rtol=0.005))
+        aac(xx, exx, atol=0.01, rtol=0.005)
+        aac(yy, eyy, atol=0.01, rtol=0.005)
 
     def test_projecting_back_and_forth(self):
         lon0, lat0 = -10.4, 20.3
-        proj = utils.get_orthographic_projection(lon0, lat0, lon0, lat0)
+        proj = utils.OrthographicProjection(lon0, lat0, lon0, lat0)
         lons = lon0 + (numpy.random.random((20, 10)) * 50 - 25)
         lats = lat0 + (numpy.random.random((20, 10)) * 50 - 25)
         xx, yy = proj(lons, lats, reverse=False)
         self.assertEqual(xx.shape, (20, 10))
         self.assertEqual(yy.shape, (20, 10))
         blons, blats = proj(xx, yy, reverse=True)
-        self.assertTrue(numpy.allclose(blons, lons))
-        self.assertTrue(numpy.allclose(blats, lats))
+        aac(blons, lons)
+        aac(blats, lats)
 
     def test_points_too_far(self):
-        proj = utils.get_orthographic_projection(180, 180, 45, 45)
+        proj = utils.OrthographicProjection(180, 180, 45, 45)
         with self.assertRaises(ValueError) as ar:
             proj(90, -45)
         self.assertEqual(str(ar.exception),
@@ -169,7 +174,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         east = -179.8650
         north = 51.4320
         south = 50.8410
-        proj = utils.get_orthographic_projection(west, east, north, south)
+        proj = utils.OrthographicProjection(west, east, north, south)
 
         lons = numpy.array([179.8960, 179.9500, -179.9930, -179.9120,
                             -179.8650, -179.9380, 179.9130, 179.7800])
@@ -184,7 +189,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         east = -179.
         north = 1
         south = -1
-        proj = utils.get_orthographic_projection(west, east, north, south)
+        proj = utils.OrthographicProjection(west, east, north, south)
         lons = numpy.array([179.0, -179.0])
         lats = numpy.array([-1, 1])
         xx, yy = proj(lons, lats)
@@ -227,10 +232,9 @@ class GetMiddlePointTestCase(unittest.TestCase):
 
 class SphericalToCartesianAndBackTestCase(unittest.TestCase):
     def _test(self, lons_lats_depths, vectors):
-        (lons, lats, depths) = lons_lats_depths
+        lons, lats, depths = lons_lats_depths
         res_cart = utils.spherical_to_cartesian(lons, lats, depths)
-        self.assertIsInstance(res_cart, numpy.ndarray)
-        self.assertTrue(numpy.allclose(vectors, res_cart), str(res_cart))
+        aac(vectors, res_cart, atol=1E-7)
         res_sphe = utils.cartesian_to_spherical(res_cart)
         self.assertIsInstance(res_sphe, tuple)
         self.assertEqual(len(res_sphe), 3)
@@ -238,8 +242,7 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
             depths = numpy.zeros_like(lons)
         self.assertEqual(numpy.array(res_sphe).shape,
                          numpy.array([lons, lats, depths]).shape)
-        self.assertTrue(numpy.allclose([lons, lats, depths], res_sphe),
-                        str(res_sphe))
+        aac([lons, lats, depths], res_sphe)
 
     def test_zero_zero_zero(self):
         self._test((0, 0, 0), (6371, 0, 0))
@@ -262,19 +265,13 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
         self._test(([0], [0], [-10]), [(6381, 0, 0)])
 
     def test_arrays(self):
-        lons = numpy.array([10.0, 20.0, 30.0])
-        lats = numpy.array([-10.0, 0.0, 10.0])
-        depths = numpy.array([1.0, 10.0, 100.0])
+        lons = numpy.array([10.0, 20.0])
+        lats = numpy.array([-10.0, 0.0])
+        depths = numpy.array([1.0, 10.0])
         vectors = numpy.array([
             (6177.9209972, 1089.33415649, -1106.13889174),
-            (5977.38476082, 2175.59013169, 0.),
-            (5348.33856387, 3087.86470957, 1088.94772215)
-        ])
+            (5977.38476082, 2175.59013169, 0.)])
         self._test((lons, lats, depths), vectors)
-        self._test(([lons, lons], [lats, lats], [depths, depths]),
-                   [vectors, vectors])
-        self._test(([[lons, lons]], [[lats, lats]], [[depths, depths]]),
-                   ([[vectors, vectors]]))
 
 
 class TriangleAreaTestCase(unittest.TestCase):
@@ -293,7 +290,7 @@ class TriangleAreaTestCase(unittest.TestCase):
         bb = numpy.array([(0.5, 4., 3.), (0, 2, -2.)])
         cc = numpy.array([(-1.5, 0., 3.), (1, 2, -2)])
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, [4.0, 0.5]))
+        aac(areas, [4.0, 0.5])
 
         # 2d array
         aa = numpy.array([aa, aa * 2])
@@ -301,7 +298,7 @@ class TriangleAreaTestCase(unittest.TestCase):
         cc = numpy.array([cc, cc * 2])
         expected_area = [[4.0, 0.5], [16.0, 2.0]]
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+        aac(areas, expected_area)
 
         # 3d array
         aa = numpy.array([aa])
@@ -309,32 +306,32 @@ class TriangleAreaTestCase(unittest.TestCase):
         cc = numpy.array([cc])
         expected_area = numpy.array([expected_area])
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+        aac(areas, expected_area)
 
 
 class NormalizedTestCase(unittest.TestCase):
     def test_one_vector(self):
         v = numpy.array([0., 0., 2.])
-        self.assertTrue(numpy.allclose(utils.normalized(v), [0, 0, 1]))
+        aac(utils.normalized(v), [0, 0, 1])
         v = numpy.array([0., -1., -1.])
         n = utils.normalized(v)
-        self.assertTrue(numpy.allclose(n, [0, -2 ** 0.5 / 2., -2 ** 0.5 / 2.]))
+        aac(n, [0, -2 ** 0.5 / 2., -2 ** 0.5 / 2.])
 
     def test_arrays(self):
         # 1d array of vectors
         vv = numpy.array([(0., 0., -0.1), (10., 0., 0.)])
         nn = numpy.array([(0., 0., -1.), (1., 0., 0.)])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
         # 2d array
         vv = numpy.array([vv, vv * 2, vv * (-3)])
         nn = numpy.array([nn, nn, -nn])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
         # 3d array
         vv = numpy.array([vv])
         nn = numpy.array([nn])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
 
 class ConvexToPointDistanceTestCase(unittest.TestCase):
@@ -374,6 +371,54 @@ class ConvexToPointDistanceTestCase(unittest.TestCase):
             pyy = numpy.array([1.5, 2.0, 2.0])
             dist = utils.point_to_polygon_distance(polygon, pxx, pyy)
             numpy.testing.assert_almost_equal(dist, [0.5, 1, 2])
+
+
+class WithinTestCase(unittest.TestCase):
+    """
+    Test geo.utils.within(bbox, lonlat_index)
+    """
+
+    def test(self):
+        if rtree is None:  # not installed
+            raise unittest.SkipTest
+        self.lons = [
+            -179.75, -179.5, -179.25, -179.0, -178.75, -178.5, -178.25, -178.0,
+            -177.75, -177.5, -177.25, -177.0, -176.75, -176.5, -176.25, -176.0,
+            -175.75, -175.5, -175.25, 178.25, 178.5, 178.75, 179.0, 179.25,
+            179.5, 179.75, -180.0]
+        self.lats = [-30.5] * 27
+        self.index = rtree.index.Index(
+            (i, (x, y, x, y), None)
+            for i, (x, y) in enumerate(zip(self.lons, self.lats)))
+
+        all_sites = numpy.arange(27, dtype=numpy.uint32)
+        expected = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 20, 21, 22, 23,
+                    24, 25, 26]
+
+        # bounding box taking 20 of the 27 sites
+        indices = utils.within(
+            [176.73699, -39, -176.9016, -12], self.index)
+        numpy.testing.assert_equal(indices, expected)
+
+        # one can invert lon1, lon2
+        indices = utils.within(
+            [-176.9016, -39, 176.73699, -12], self.index)
+        numpy.testing.assert_equal(indices, expected)
+
+        # bounding box large enough to contain all sites
+        indices = utils.within(
+            [174.12916, -39, -169.9217, -12], self.index)
+        numpy.testing.assert_equal(indices, all_sites)
+
+        # lat on the edge from below is (strangely) taken
+        indices = utils.within(
+            [174.12916, -39, -169.9217, -30], self.index)
+        numpy.testing.assert_equal(indices, all_sites)
+
+        # lat on the edge from up is discarded
+        indices = utils.within(
+            [174.12916, -30, -169.9217, -12], self.index)
+        numpy.testing.assert_equal(indices, [])
 
 
 class PlaneFit(unittest.TestCase):
@@ -423,19 +468,4 @@ class PlaneFit(unittest.TestCase):
         self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)
 
 
-class GeographicObjectsTest(unittest.TestCase):
-    def setUp(self):
-        p1 = Point(0.0, 0.1)
-        p2 = Point(0.0, 0.2)
-        p3 = Point(0.0, 0.3)
-        self.points = utils.GeographicObjects([p1, p2, p3])
-
-    def test_closest(self):
-        point, dist = self.points.get_closest(0.0, 0.21)
-        self.assertEqual(point, Point(0.0, 0.2))
-        point, dist = self.points.get_closest(0.0, 0.29)
-        self.assertEqual(point, Point(0.0, 0.3))
-
-    def test_exact_point(self):
-        point, dist = self.points.get_closest(0.0, 0.2)
-        self.assertEqual(point, Point(0.0, 0.2))
+# NB: utils.assoc is tested in the engine

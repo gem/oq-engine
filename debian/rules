@@ -11,43 +11,50 @@ export DISTUTILS_DEBUG=1
 export DH_VERBOSE=1
 export DH_OPTIONS=-v
 export PREFIX=/opt/openquake
+export PATH:=/opt/openquake/bin:$(PATH)
 
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
 bd=openquake/bin
 
+BIONIC_DEP =
+BIONIC_REC =
 XENIAL_DEP =
 XENIAL_REC =
-TRUSTY_DEP =
-TRUSTY_REC =
-PRECISE_DEP =
-PRECISE_REC =
 
-ifeq ($(shell lsb_release --codename --short),xenial)
+ifeq ($(shell lsb_release --codename --short),bionic)
+	DEPENDS = -Vdist:Depends="$(BIONIC_DEP)"
+	RECOMMENDS = -Vdist:Recommends="$(BIONIC_REC)"
+else ifeq ($(shell lsb_release --codename --short),xenial)
 	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
-else ifeq ($(shell lsb_release --codename --short),trusty)
-	DEPENDS = -Vdist:Depends="$(TRUSTY_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(TRUSTY_REC)"
-else ifeq ($(shell lsb_release --codename --short),precise)
-	DEPENDS = -Vdist:Depends="$(PRECISE_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(PRECISE_REC)"
 else
 	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
 endif
 
+override_dh_auto_build:
+	/opt/openquake/bin/python3 setup.py build --force
+
 override_dh_auto_install:
-	python setup.py install --force --root=$(PWD)/debian/python-oq-engine --prefix=$(PREFIX) --no-compile -O0
+	/opt/openquake/bin/python3 setup.py install --force --install-layout=deb --root=$(PWD)/debian/python3-oq-engine --prefix=$(PREFIX) --no-compile -O0
+
+override_dh_auto_clean:
+	/opt/openquake/bin/python3 setup.py clean -a
 
 override_dh_install:
-	python2 -m compileall $(PWD)/debian/python-oq-engine$(PREFIX) || true
+	/opt/openquake/bin/python3 -m compileall $(PWD)/debian/python3-oq-engine$(PREFIX) || true
 	dh_install
+	sed -i 's@#!.*env \+python[23]\?@#!/opt/openquake/bin/python3@g' \
+	  $$(grep -l 'env python' $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/lib/python3/dist-packages/openquake -name '*.py') \
+          $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/bin -type f) \
+	  $$(find $(PWD)/debian/python3-oq-engine/usr/share/openquake/engine/utils -type f))
+
 	# Make a zipped copy of each demo
-	helpers/zipdemos.sh $(PWD)/debian/python-oq-engine/usr/share/openquake/engine/demos
-	mkdir -p $(PWD)/debian/python-oq-engine/usr/bin
-	ln -s $(PREFIX)/bin/oq $(PWD)/debian/python-oq-engine/usr/bin/oq
+	helpers/zipdemos.sh $(PWD)/debian/python3-oq-engine/usr/share/openquake/engine/demos
+	mkdir -p $(PWD)/debian/python3-oq-engine/usr/bin
+	ln -s $(PREFIX)/bin/oq $(PWD)/debian/python3-oq-engine/usr/bin/oq
 
 override_dh_quilt_patch:
 	dh_quilt_patch
@@ -58,4 +65,4 @@ override_dh_gencontrol:
 	dh_gencontrol -- $(DEPENDS) $(RECOMMENDS)
 
 %:
-	dh --with python2 --with quilt --buildsystem=python_distutils $@
+	dh --with python3 --with quilt,systemd $@

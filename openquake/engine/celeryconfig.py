@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,11 +29,6 @@ try:
 except ImportError:
     pass
 else:
-    if '--with-doctest' in sys.argv:  # horrible hack for nosetests
-        pass  # don't set OQ_DISTRIBUTE
-    else:
-        os.environ["OQ_DISTRIBUTE"] = "celery"
-
     # just in the case that are you using oq-engine from sources
     # with the rest of oq libraries installed into the system (or a
     # virtual environment) you must set this environment variable
@@ -43,39 +38,37 @@ else:
 
     from openquake.baselib import config
 
-    # RabbitMQ broker (default)
-    BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
-                 config.amqp
-    # Redis broker (works only on Trusty)
-    # BROKER_URL = 'redis://%(host)s:6379/0' % amqp
+    task_serializer = 'pickle'
+    result_serializer = 'pickle'
+    accept_content = ['pickle']
 
-    # BROKER_POOL_LIMIT enables a connections pool so Celery can reuse
+    # RabbitMQ broker (default)
+    broker_url = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
+                 config.amqp
+
+    # broker_pool_limit enables a connections pool so Celery can reuse
     # a single connection to RabbitMQ. Value 10 is the default from
     # Celery 2.5 where this feature is enabled by default.
     # Actually disabled because it's not stable in production.
     # See https://bugs.launchpad.net/oq-engine/+bug/1250402
-    BROKER_POOL_LIMIT = None
+    broker_pool_limit = None
 
     # AMQP result backend (default)
-    CELERY_RESULT_BACKEND = 'rpc://'
-    CELERY_RESULT_PERSISTENT = False
+    result_backend = 'rpc://'
+    result_persistent = False
 
-    # Redis result backend (works only on Trusty)
-    # CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
-
-    # CELERY_ACKS_LATE and CELERYD_PREFETCH_MULTIPLIER settings help evenly
+    # task_acks_late and worker_prefetch_multiplier settings help evenly
     # distribute tasks across the cluster. This configuration is intended
     # make worker processes reserve only a single task at any given time.
     # The default settings for prefetching define that each worker process will
     # reserve 4 tasks at once. For long running calculations with lots of long,
     # heavy tasks, this greedy prefetching is not recommended and can result in
     # performance issues with respect to cluster utilization.
-    # CELERY_MAX_CACHED_RESULTS disable the cache on the results: this means
+    # result_cache_max disable the cache on the results: this means
     # that map_reduce will not leak memory by keeping the intermediate results
-    CELERY_ACKS_LATE = True
-    CELERYD_PREFETCH_MULTIPLIER = 1
-    CELERY_MAX_CACHED_RESULTS = 1
+    task_acks_late = True
+    worker_prefetch_multiplier = 1
+    result_cache_max = 1
+    task_ignore_result = True
 
-    CELERY_ACCEPT_CONTENT = ['pickle', 'json']
-
-    CELERY_IMPORTS = ["openquake.baselib.parallel"]
+    imports = ["openquake.baselib.parallel"]
