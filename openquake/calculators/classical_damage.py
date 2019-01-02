@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,16 +19,16 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib.stats import compute_stats2
+from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk
 
 
-def classical_damage(riskinput, riskmodel, param, monitor):
+def classical_damage(riskinputs, riskmodel, param, monitor):
     """
     Core function for a classical damage computation.
 
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
@@ -36,14 +36,14 @@ def classical_damage(riskinput, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
-        a nested dictionary rlz_idx -> asset -> <damage array>
+        a nested dictionary lt_idx, rlz_idx -> asset_idx -> <damage array>
     """
-    R = riskinput.hazard_getter.num_rlzs
-    result = {i: AccumDict() for i in range(R)}
-    for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        for l, out in enumerate(outputs):
-            ordinals = [a.ordinal for a in outputs.assets]
-            result[outputs.rlzi] += dict(zip(ordinals, out))
+    result = AccumDict(accum=AccumDict())
+    for ri in riskinputs:
+        for outputs in riskmodel.gen_outputs(ri, monitor):
+            for l, out in enumerate(outputs):
+                ordinals = [a.ordinal for a in outputs.assets]
+                result[l, outputs.rlzi] += dict(zip(ordinals, out))
     return result
 
 
@@ -59,17 +59,12 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         Export the result in CSV format.
 
         :param result:
-            a dictionary asset -> fractions per damage state
+            a dictionary (l, r) -> asset_ordinal -> fractions per damage state
         """
         damages_dt = numpy.dtype([(ds, numpy.float32)
                                   for ds in self.riskmodel.damage_states])
-        damages = numpy.zeros((self.A, self.R), damages_dt)
-        for r in result:
-            for aid, fractions in result[r].items():
-                damages[aid, r] = tuple(fractions)
-        self.datastore['damages-rlzs'] = damages
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        if len(weights) > 1:  # compute stats
-            snames, sfuncs = zip(*self.oqparam.risk_stats())
-            dmg_stats = compute_stats2(damages, sfuncs, weights)
-            self.datastore['damages-stats'] = dmg_stats
+        damages = numpy.zeros((self.A, self.R, self.L * self.I), damages_dt)
+        for l, r in result:
+            for aid, fractions in result[l, r].items():
+                damages[aid, r, l] = tuple(fractions)
+        stats.set_rlzs_stats(self.datastore, 'damages', damages)

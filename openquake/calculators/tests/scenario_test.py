@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,16 +15,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import numpy
 from numpy.testing import assert_almost_equal as aae
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
-
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
+    case_9, case_10)
 from openquake.baselib.node import floatformat
+from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -73,7 +72,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
         out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance='0.1', exports='csv')
+                            maximum_distance='5.0', exports='csv')
         self.assertEqualFiles(
             'BooreAtkinson2008_gmf.csv', out['gmf_data', 'csv'][0])
 
@@ -94,6 +93,10 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_4(self):
         medians = self.medians(case_4)['PGA']
         aae(medians, [0.41615372, 0.22797466, 0.1936226], decimal=2)
+
+        # this is a case with a site model
+        [fname] = export(('site_model', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('site_model.xml', fname)
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_5(self):
@@ -145,3 +148,9 @@ class ScenarioTestCase(CalculatorTestCase):
             self.assertEqual(data1['PGA'].shape, (3, 10))
             self.assertEqual(data1.dtype.names, data2.dtype.names)
             self.assertEqual(data1.shape, data2.shape)
+
+    @attr('qa', 'hazard', 'scenario')
+    def test_case_10(self):
+        # test importing an exposure with automatic gridding
+        self.run_calc(case_10.__file__, 'job.ini')
+        self.assertEqual(len(self.calc.datastore['sitecol']), 66)

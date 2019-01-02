@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,12 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import numpy
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
 from openquake.hazardlib.stats import mean_curve, compute_pmap_stats
 from openquake.calculators import getters
+from openquake.commands import engine
 
 
 def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
@@ -57,11 +56,12 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
 
 
 def get_pmaps(dstore, indices):
-    getter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    getter = getters.PmapGetter(dstore, rlzs_assoc)
     getter.init()
     pmaps = getter.get_pmaps(indices)
-    weights = dstore['csm_info'].rlzs['weight']
-    mean = compute_pmap_stats(pmaps, [mean_curve], weights)
+    mean = compute_pmap_stats(
+        pmaps, [mean_curve], getter.weights, getter.imtls)
     return mean, pmaps
 
 
@@ -71,8 +71,8 @@ def plot(calc_id, other_id=None, sites='0'):
     Hazard curves plotter.
     """
     # read the hazard data
-    haz = datastore.read(calc_id)
-    other = datastore.read(other_id) if other_id else None
+    haz = engine.read(calc_id)
+    other = engine.read(other_id) if other_id else None
     oq = haz['oqparam']
     indices = numpy.array(list(map(int, sites.split(','))))
     n_sites = len(haz['sitecol'])
@@ -92,6 +92,7 @@ def plot(calc_id, other_id=None, sites='0'):
         plt = make_figure(valid, n_sites, oq.imtls, mean1,
                           [mean2], 'reference')
     plt.show()
+
 
 plot.arg('calc_id', 'a computation id', type=int)
 plot.arg('other_id', 'optional id of another computation', type=int)

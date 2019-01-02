@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,34 +19,43 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
+import io
 import os
 import re
 import sys
 import json
+import time
 import signal
+import getpass
+import logging
 import traceback
 import platform
+import numpy
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         "Do nothing"
-from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import urlopen, Request, decode
+from urllib.request import urlopen, Request
+from openquake.baselib.python3compat import decode
 from openquake.baselib import (
-    parallel, general, config, datastore, __version__, zeromq as z)
+    parallel, general, config, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, oqzip
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
-USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
+OQ_DISTRIBUTE = parallel.oq_distribute()
 
-if parallel.oq_distribute() == 'zmq':
+MB = 1024 ** 2
+_PID = os.getpid()  # the PID
+_PPID = os.getppid()  # the controlling terminal PID
 
-    def set_concurrent_tasks_default():
+if OQ_DISTRIBUTE == 'zmq':
+
+    def set_concurrent_tasks_default(job_id):
         """
         Set the default for concurrent_tasks based on the available
         worker pools .
@@ -61,44 +70,46 @@ if parallel.oq_distribute() == 'zmq':
                     continue
                 num_workers += sock.send('get_num_workers')
         OqParam.concurrent_tasks.default = num_workers * 3
-        logs.LOG.info('Using %d zmq workers', num_workers)
+        logs.LOG.warn('Using %d zmq workers', num_workers)
 
-elif USE_CELERY:
+elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control
 
-    def set_concurrent_tasks_default():
+    def set_concurrent_tasks_default(job_id):
         """
         Set the default for concurrent_tasks based on the number of available
         celery workers.
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
-            sys.exit("No live compute nodes, aborting calculation")
-        num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = num_cores * 3
-        logs.LOG.info(
-            'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
+            logs.LOG.critical("No live compute nodes, aborting calculation")
+            logs.dbcmd('finish', job_id, 'failed')
+            sys.exit(1)
+        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        OqParam.concurrent_tasks.default = ncores * 3
+        logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
-    def celery_cleanup(terminate, task_ids=()):
+    def celery_cleanup(terminate, tasks=()):
         """
         Release the resources used by an openquake job.
         In particular revoke the running tasks (if any).
 
         :param bool terminate: the celery revoke command terminate flag
-        :param task_ids: celery task IDs
+        :param tasks: celery tasks
         """
         # Using the celery API, terminate and revoke and terminate any running
         # tasks associated with the current job.
-        if task_ids:
-            logs.LOG.warn('Revoking %d tasks', len(task_ids))
+        if tasks:
+            logs.LOG.warn('Revoking %d tasks', len(tasks))
         else:  # this is normal when OQ_DISTRIBUTE=no
             logs.LOG.debug('No task to revoke')
-        for tid in task_ids:
+        for task in tasks:
+            tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
 
 
-def expose_outputs(dstore):
+def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -113,16 +124,12 @@ def expose_outputs(dstore):
     rlzs = dstore['csm_info'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
-    # expose gmf_data only if < 10 MB
-    if oq.ground_motion_fields and calcmode == 'event_based':
-        nbytes = dstore['gmf_data'].attrs['nbytes']
-        if nbytes < 10 * 1024 ** 2:
-            dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
     if (len(rlzs) == 1 and 'poes' in hdf5) or 'hcurves' in hdf5:
-        dskeys.add('hcurves')
+        if oq.hazard_stats():
+            dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
@@ -130,8 +137,10 @@ def expose_outputs(dstore):
     if 'avg_losses-stats' in dstore or (
             'avg_losses-rlzs' in dstore and len(rlzs)):
         dskeys.add('avg_losses-stats')
-    if 'curves-stats' in dstore:
-        logs.LOG.warn('loss curves are exportable with oq export')
+    if 'curves-rlzs' in dstore and len(rlzs) == 1:
+        dskeys.add('loss_curves-rlzs')
+    if 'curves-stats' in dstore and len(rlzs) > 1:
+        dskeys.add('loss_curves-stats')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
@@ -141,11 +150,30 @@ def expose_outputs(dstore):
         exportable.remove('ruptures')  # do not export, as requested by Vitor
     if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
         dskeys.remove('rup_loss_table')
-    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
+    if 'hmaps' in dskeys and not oq.hazard_maps:
+        dskeys.remove('hmaps')  # do not export the hazard maps
+    if logs.dbcmd('get_job', dstore.calc_id) is None:
+        # the calculation has not been imported in the db yet
+        logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,
+                   oq.description + ' [parent]', owner, status,
+                   oq.hazard_calculation_id, dstore.datadir)
+    keysize = []
+    for key in sorted(dskeys & exportable):
+        try:
+            size_mb = dstore.get_attr(key, 'nbytes') / MB
+        except (KeyError, AttributeError):
+            size_mb = None
+        keysize.append((key, size_mb))
+    ds_size = os.path.getsize(dstore.hdf5path) / MB
+    logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 
 class MasterKilled(KeyboardInterrupt):
     "Exception raised when a job is killed manually"
+
+
+def inhibitSigInt(signum, _stack):
+    logs.LOG.warn('Killing job, please wait')
 
 
 def raiseMasterKilled(signum, _stack):
@@ -156,17 +184,24 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
+    # Disable further CTRL-C to allow tasks revocation when Celery is used
+    if OQ_DISTRIBUTE.startswith('celery'):
+        signal.signal(signal.SIGINT, inhibitSigInt)
+
+    msg = 'Received a signal %d' % signum
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
-    else:
-        msg = 'Received a signal %d' % signum
-    if sys.version_info >= (3, 5, 0):
-        # Python 2 is buggy and this code would hang
-        for pid in parallel.executor.pids:  # when using futures
-            try:
-                os.kill(pid, signal.SIGKILL)  # SIGTERM is not enough :-(
-            except OSError:  # pid not found
-                pass
+
+    # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
+    # terminal died; in the workers, do nothing
+    # NB: there is no SIGHUP on Windows
+    if hasattr(signal, 'SIGHUP'):
+        if signum == signal.SIGHUP:
+            if os.getppid() == _PPID:
+                return
+            else:
+                msg = 'The openquake master lost its controlling terminal'
+
     raise MasterKilled(msg)
 
 
@@ -177,34 +212,54 @@ def raiseMasterKilled(signum, _stack):
 try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
     signal.signal(signal.SIGINT, raiseMasterKilled)
+    if hasattr(signal, 'SIGHUP'):
+        # Do not register our SIGHUP handler if running with 'nohup'
+        if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
+            signal.signal(signal.SIGHUP, raiseMasterKilled)
 except ValueError:
     pass
 
 
-def job_from_file(cfg_file, username, hazard_calculation_id=None):
+def job_from_file(job_ini, job_id, username, **kw):
     """
     Create a full job profile from a job config file.
 
-    :param str cfg_file:
-        Path to a job.ini file.
-    :param str username:
+    :param job_ini:
+        Path to a job.ini file
+    :param job_id:
+        ID of the created job
+    :param username:
         The user who will own this job profile and all results
-    :param str datadir:
-        Data directory of the user
-    :param hazard_calculation_id:
-        ID of a previous calculation or None
+    :param kw:
+         Extra parameters including `calculation_mode` and `exposure_file`
     :returns:
-        a pair (job_id, oqparam)
+        an oqparam instance
     """
-    oq = readinput.get_oqparam(cfg_file, hc_id=hazard_calculation_id)
-    job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.get_datadir(),
-                        hazard_calculation_id)
-    return job_id, oq
+    hc_id = kw.get('hazard_calculation_id')
+    try:
+        oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
+    except Exception:
+        logs.dbcmd('finish', job_id, 'failed')
+        raise
+    if 'calculation_mode' in kw:
+        oq.calculation_mode = kw.pop('calculation_mode')
+    if 'description' in kw:
+        oq.description = kw.pop('description')
+    if 'exposure_file' in kw:  # hack used in commands.engine
+        fnames = kw.pop('exposure_file').split()
+        if fnames:
+            oq.inputs['exposure'] = fnames
+        elif 'exposure' in oq.inputs:
+            del oq.inputs['exposure']
+    logs.dbcmd('update_job', job_id,
+               dict(calculation_mode=oq.calculation_mode,
+                    description=oq.description,
+                    user_name=username,
+                    hazard_calculation_id=hc_id))
+    return oq
 
 
-def run_calc(job_id, oqparam, log_level, log_file, exports,
-             hazard_calculation_id=None, **kw):
+def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     Run a calculation.
 
@@ -212,65 +267,75 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         ID of the current job
     :param oqparam:
         :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param str log_level:
-        The desired logging level. Valid choices are 'debug', 'info',
-        'progress', 'warn', 'error', and 'critical'.
-    :param str log_file:
-        Complete path (including file name) to file where logs will be written.
-        If `None`, logging will just be printed to standard output.
     :param exports:
         A comma-separated string of export types.
     """
     setproctitle('oq-job-%d' % job_id)
-    monitor = Monitor('total runtime', measuremem=True)
-    with logs.handle(job_id, log_level, log_file):  # run the job
-        if os.environ.get('OQ_DISTRIBUTE') in ('zmq', 'celery'):
-            set_concurrent_tasks_default()
-        msg = check_obsolete_version(oqparam.calculation_mode)
-        if msg:
-            logs.LOG.warn(msg)
-        calc = base.calculators(oqparam, monitor, calc_id=job_id)
-        monitor.hdf5path = calc.datastore.hdf5path
-        calc.from_engine = True
-        tb = 'None\n'
+    calc = base.calculators(oqparam, calc_id=job_id)
+    logging.info('%s running %s [--hc=%s]',
+                 getpass.getuser(),
+                 calc.oqparam.inputs['job_ini'],
+                 calc.oqparam.hazard_calculation_id)
+    logging.info('Using engine version %s', __version__)
+    msg = check_obsolete_version(oqparam.calculation_mode)
+    if msg:
+        logs.LOG.warn(msg)
+    if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
+        set_concurrent_tasks_default(job_id)
+    calc.from_engine = True
+    tb = 'None\n'
+    try:
+        if not oqparam.hazard_calculation_id:
+            if 'input_zip' in oqparam.inputs:  # starting from an archive
+                with open(oqparam.inputs['input_zip'], 'rb') as arch:
+                    data = numpy.array(arch.read())
+            else:
+                logs.LOG.info('zipping the input files')
+                bio = io.BytesIO()
+                oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
+                              logging.debug)
+                data = numpy.array(bio.getvalue())
+                del bio
+            calc.datastore['input/zip'] = data
+            calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
+            del data  # save memory
+
+        logs.dbcmd('update_job', job_id, {'status': 'executing',
+                                          'pid': _PID})
+        t0 = time.time()
+        calc.run(exports=exports,
+                 hazard_calculation_id=hazard_calculation_id,
+                 close=False, **kw)
+        logs.LOG.info('Exposing the outputs to the database')
+        expose_outputs(calc.datastore)
+        duration = time.time() - t0
+        calc._monitor.flush()
+        records = views.performance_view(calc.datastore)
+        logs.dbcmd('save_performance', job_id, records)
+        calc.datastore.close()
+        logs.LOG.info('Calculation %d finished correctly in %d seconds',
+                      job_id, duration)
+        logs.dbcmd('finish', job_id, 'complete')
+    except BaseException:
+        tb = traceback.format_exc()
         try:
-            logs.dbcmd('set_status', job_id, 'executing')
-            _do_run_calc(calc, exports, hazard_calculation_id, **kw)
-            duration = monitor.duration
-            expose_outputs(calc.datastore)
-            monitor.flush()
-            records = views.performance_view(calc.datastore)
-            logs.dbcmd('save_performance', job_id, records)
-            calc.datastore.close()
-            logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                          job_id, duration)
-            logs.dbcmd('finish', job_id, 'complete')
-        except:
-            tb = traceback.format_exc()
-            try:
-                logs.LOG.critical(tb)
-                logs.dbcmd('finish', job_id, 'failed')
-            except:  # an OperationalError may always happen
-                sys.stderr.write(tb)
-            raise
-        finally:
-            # if there was an error in the calculation, this part may fail;
-            # in such a situation, we simply log the cleanup error without
-            # taking further action, so that the real error can propagate
-            try:
-                if USE_CELERY:
-                    celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
-            except:
-                # log the finalization error only if there is no real error
-                if tb == 'None\n':
-                    logs.LOG.error('finalizing', exc_info=True)
+            logs.LOG.critical(tb)
+            logs.dbcmd('finish', job_id, 'failed')
+        except BaseException:  # an OperationalError may always happen
+            sys.stderr.write(tb)
+        raise
+    finally:
+        # if there was an error in the calculation, this part may fail;
+        # in such a situation, we simply log the cleanup error without
+        # taking further action, so that the real error can propagate
+        try:
+            if OQ_DISTRIBUTE.startswith('celery'):
+                celery_cleanup(TERMINATE, parallel.running_tasks)
+        except BaseException:
+            # log the finalization error only if there is no real error
+            if tb == 'None\n':
+                logs.LOG.error('finalizing', exc_info=True)
     return calc
-
-
-def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
-    with calc._monitor:
-        calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
-                 close=False, **kw)  # don't close the datastore too soon
 
 
 def version_triple(tag):
@@ -297,8 +362,9 @@ def check_obsolete_version(calculation_mode='WebUI'):
         # avoid flooding our API server with requests from CI systems
         return
 
-    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
-               (__version__, calculation_mode, platform.platform())}
+    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
+               (__version__, calculation_mode, platform.platform(),
+                config.distribution.oq_distribute)}
     try:
         req = Request(OQ_API + '/engine/latest', headers=headers)
         # NB: a timeout < 1 does not work
@@ -306,7 +372,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
         latest = version_triple(tag_name)
-    except:  # page not available or wrong version tag
+    except Exception:  # page not available or wrong version tag
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '

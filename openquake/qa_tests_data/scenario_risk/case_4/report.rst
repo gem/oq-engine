@@ -2,9 +2,9 @@ Scenario Risk for Nepal with 20 assets
 ======================================
 
 ============== ===================
-checksum32     2,254,713,843      
-date           2018-02-02T16:04:44
-engine_version 2.9.0-gitd6a3184   
+checksum32     486,158,159        
+date           2018-12-13T12:57:05
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 20, num_levels = 8
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      15.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -41,11 +43,11 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -55,12 +57,13 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008(): [0]>
 
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons True            
-================ ================
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
@@ -71,24 +74,22 @@ deductibile     relative
 insurance_limit relative
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   8         8         
-2        1.000 0.0    1   1   3         3         
-3        1.000 0.0    1   1   4         4         
-4        1.000 0.0    1   1   5         5         
-*ALL*    1.000 0.0    1   1   20        20        
-======== ===== ====== === === ========= ==========
+========================== ======= ====== === === ========= ==========
+taxonomy                   mean    stddev min max num_sites num_assets
+Wood                       1.00000 0.0    1   1   8         8         
+Adobe                      1.00000 0.0    1   1   3         3         
+Stone-Masonry              1.00000 0.0    1   1   4         4         
+Unreinforced-Brick-Masonry 1.00000 0.0    1   1   5         5         
+*ALL*                      1.00000 0.0    1   1   20        20        
+========================== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.040     0.0       1     
-saving gmfs             0.012     0.0       1     
-reading exposure        0.006     0.0       1     
-computing gmfs          0.001     0.0       1     
-building epsilons       5.612E-04 0.0       1     
-reading site collection 5.960E-06 0.0       1     
-======================= ========= ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+building riskinputs 0.02469   0.0       1     
+saving gmfs         0.00856   0.06250   1     
+computing gmfs      0.00164   0.03906   1     
+reading exposure    8.526E-04 0.0       1     
+=================== ========= ========= ======

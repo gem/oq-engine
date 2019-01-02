@@ -1,25 +1,25 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2016-2017 GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (c) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 Utilities to compute mean and quantile curves
 """
-from __future__ import division
 import numpy
+from openquake.baselib.python3compat import encode
 
 
 def mean_curve(values, weights=None):
@@ -28,9 +28,17 @@ def mean_curve(values, weights=None):
     """
     if weights is None:
         weights = [1. / len(values)] * len(values)
-    if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
-        return numpy.average(values, axis=0, weights=weights)
-    return sum(value * weight for value, weight in zip(values, weights))
+    if not isinstance(values, numpy.ndarray):
+        values = numpy.array(values)
+    return numpy.average(values, axis=0, weights=weights)
+
+
+def std_curve(values, weights=None):
+    if weights is None:
+        weights = [1. / len(values)] * len(values)
+    m = mean_curve(values, weights)
+    res = numpy.sqrt(numpy.einsum('i,i...', weights, (m - values) ** 2))
+    return res
 
 
 def quantile_curve(quantile, curves, weights=None):
@@ -73,19 +81,21 @@ def max_curve(values, weights=None):
     The values can be arrays and then the maximum is taken pointwise:
 
     >>> max_curve([numpy.array([.3, .2]), numpy.array([.1, .4])])
-    array([ 0.3,  0.4])
+    array([0.3, 0.4])
     """
     return numpy.max(values, axis=0)
 
 
-def compute_pmap_stats(pmaps, stats, weights):
+def compute_pmap_stats(pmaps, stats, weights, imtls):
     """
     :param pmaps:
         a list of R probability maps
     :param stats:
         a sequence of S statistic functions
     :param weights:
-        a list of R weights
+        a list of ImtWeights
+    :param imtls:
+        a DictArray of intensity measure types
     :returns:
         a probability map with S internal values
     """
@@ -103,11 +113,14 @@ def compute_pmap_stats(pmaps, stats, weights):
     for i, pmap in enumerate(pmaps):
         for j, sid in enumerate(sids):
             if sid in pmap:
-                curves[i][j] = pmap[sid].array[:, 0]
+                curves[i, j] = pmap[sid].array[:, 0]
     out = p0.__class__.build(L, nstats, sids)
-    for i, array in enumerate(compute_stats(curves, stats, weights)):
-        for j, sid in numpy.ndenumerate(sids):
-            out[sid].array[:, i] = array[j]
+    for imt in imtls:
+        slc = imtls(imt)
+        w = [weight[imt] for weight in weights]
+        for i, array in enumerate(compute_stats(curves[:, :, slc], stats, w)):
+            for j, sid in numpy.ndenumerate(sids):
+                out[sid].array[slc, i] = array[j]
     return out
 
 
@@ -167,8 +180,7 @@ def apply_stat(f, arraylist, *extra, **kw):
     >>> a1 = numpy.array([([1, 2], 3)], dt)
     >>> a2 = numpy.array([([4, 5], 6)], dt)
     >>> apply_stat(mean_curve, [a1, a2])
-    array([([2.5, 3.5], 4.5)], 
-          dtype=[('a', '<f8', (2,)), ('b', '<f8')])
+    array([([2.5, 3.5], 4.5)], dtype=[('a', '<f8', (2,)), ('b', '<f8')])
     """
     dtype = arraylist[0].dtype
     shape = arraylist[0].shape
@@ -179,3 +191,24 @@ def apply_stat(f, arraylist, *extra, **kw):
         return new
     else:  # simple array
         return f(arraylist, *extra, **kw)
+
+
+def set_rlzs_stats(dstore, prefix, arrayNR=None):
+    """
+    :param dstore: a DataStore object
+    :param prefix: dataset prefix
+    :param arrayNR: an array of shape (N, R, ...)
+    """
+    if arrayNR is None:
+        # assume the -rlzs array is already stored
+        arrayNR = dstore[prefix + '-rlzs'].value
+    else:
+        # store passed the -rlzs array
+        dstore[prefix + '-rlzs'] = arrayNR
+    R = arrayNR.shape[1]
+    if R > 1:
+        stats = dstore['oqparam'].risk_stats()
+        statnames, statfuncs = zip(*stats)
+        weights = dstore['csm_info'].rlzs['weight']
+        dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
+        dstore.set_attrs(prefix + '-stats', stats=encode(statnames))

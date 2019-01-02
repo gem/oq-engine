@@ -23,6 +23,14 @@ Use the **[self-installable binary distribution for macOS](macos.md)**. No root 
 
 Use the **[self-installable binary distribution for Windows](windows.md)**. Administrator level access may be required.
 
+### PyPI
+
+The OpenQuake Engine is also available on **[PyPI](https://pypi.python.org/pypi/openquake.engine)** and can be installed in any Python 3 environment via `pip`:
+
+```
+$ pip install openquake.engine
+```
+
 ## Multi users
 
 ### Linux
@@ -40,7 +48,7 @@ Multi-user is not supported on Windows.
 
 ## Cloud
 
-A [Docker container](docker.md) is available.
+A set of [Docker containers](docker.md) is available.
 
 ***
 

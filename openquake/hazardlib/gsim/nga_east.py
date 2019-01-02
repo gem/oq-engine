@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -61,19 +61,20 @@ Module exports :class:`NGAEastBaseGMPE`,
                :class:`HollenbackEtAl2015NGAEastEX`,
                :class:`HollenbackEtAl2015NGAEastEXTotalSigma`
 """
-from __future__ import division
 import os
 import h5py
 import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.gsim_table import GMPETable, hdf_arrays_to_dict
+from openquake.hazardlib.gsim.gmpe_table import GMPETable, hdf_arrays_to_dict
 from openquake.hazardlib.imt import PGV
 from openquake.hazardlib import const
 
+
 # Common interpolation function
-ITPL = lambda mag, tu, tl, ml, f: tl + (tu - tl) * ((mag - ml) / f)
+def ITPL(mag, tu, tl, ml, f):
+    return tl + (tu - tl) * ((mag - ml) / f)
 
 
 def _scaling(mean_tau, sd_tau2):
@@ -146,7 +147,7 @@ def global_tau(imt, mag, params):
     'Global' model of inter-event variability, as presented in equation 5.6
     (p103)
     """
-    if isinstance(imt, PGV):
+    if imt.name == "PGV":
         C = params["PGV"]
     else:
         C = params["SA"]
@@ -166,7 +167,7 @@ def cena_constant_tau(imt, mag, params):
     """
     Returns the inter-event tau for the constant tau case
     """
-    if isinstance(imt, PGV):
+    if imt.name == "PGV":
         return params["PGV"]["tau"]
     else:
         return params["SA"]["tau"]
@@ -176,7 +177,7 @@ def cena_tau(imt, mag, params):
     """
     Returns the inter-event standard deviation, tau, for the CENA case
     """
-    if isinstance(imt, PGV):
+    if imt.name == "PGV":
         C = params["PGV"]
     else:
         C = params["SA"]
@@ -451,7 +452,7 @@ class NGAEastBaseGMPE(GMPETable):
             deviation models. Float in the range 0 to 1, or None (mean value
             used)
         """
-        super(NGAEastBaseGMPE, self).__init__(gmpe_table=gmpe_table)
+        super().__init__(gmpe_table=gmpe_table)
         self.tau_model = tau_model
         self.phi_model = phi_model
         self.phi_s2ss_model = phi_s2ss_model
@@ -462,16 +463,17 @@ class NGAEastBaseGMPE(GMPETable):
             self.ergodic = True
         else:
             self.ergodic = False
-        self._setup_standard_deviations(tau_quantile,
-                                        phi_ss_quantile,
-                                        phi_s2ss_quantile)
+        self._setup_standard_deviations(
+            tau_quantile, phi_ss_quantile, phi_s2ss_quantile)
+        if os.path.exists(self.GMPE_TABLE):
+            with h5py.File(self.GMPE_TABLE, "r") as f:
+                self.init(f)
 
-    def _run_setup(self):
+    def init(self, fle):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        fle = h5py.File(self.GMPE_TABLE, "r")
         self.distance_type = fle["Distances"].attrs["metric"]
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
@@ -487,7 +489,6 @@ class NGAEastBaseGMPE(GMPETable):
         # Get the standard deviations
         if "Amplification" in fle:
             self._setup_amplification(fle)
-        fle.close()
 
     def _setup_standard_deviations(self, tau_quantile, phi_ss_quantile,
                                    phi_s2ss_quantile):
@@ -598,7 +599,7 @@ class NGAEastGMPE(NGAEastBaseGMPE):
         if not self.NGA_EAST_TABLE:
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
-        super(NGAEastGMPE, self).__init__(
+        super().__init__(
             gmpe_table=self.NGA_EAST_TABLE,
             tau_model=tau_model, phi_model=phi_model,
             phi_s2ss_model=phi_s2ss_model, tau_quantile=tau_quantile,
@@ -643,10 +644,10 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
             standard deviation. Should be float between 0 and 1, or None (mean
             value taken)
         """
-        super(NGAEastBaseGMPETotalSigma, self).__init__(gmpe_table=gmpe_table,
-            tau_model=tau_model, phi_model=phi_model,
-            phi_s2ss_model=phi_s2ss_model, tau_quantile=None,
-            phi_ss_quantile=None, phi_s2ss_quantile=None)
+        super().__init__(gmpe_table=gmpe_table,
+                         tau_model=tau_model, phi_model=phi_model,
+                         phi_s2ss_model=phi_s2ss_model, tau_quantile=None,
+                         phi_ss_quantile=None, phi_s2ss_quantile=None)
         # Upon instantiation the TAU, PHI_SS, and PHI_S2SS objects contain
         # the mean values
         self.SIGMA = None
@@ -798,8 +799,8 @@ class NGAEastGMPETotalSigma(NGAEastBaseGMPETotalSigma):
         if not self.NGA_EAST_TABLE:
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
-        super(NGAEastGMPETotalSigma, self).__init__(self.NGA_EAST_TABLE,
-            tau_model=tau_model, phi_model=phi_model,
+        super().__init__(
+            self.NGA_EAST_TABLE, tau_model=tau_model, phi_model=phi_model,
             phi_s2ss_model=phi_s2ss_model, sigma_quantile=sigma_quantile)
 
 

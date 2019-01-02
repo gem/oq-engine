@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import os
 import mock
 import logging
@@ -29,35 +27,34 @@ from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import get_pickled_sizes
 from openquake.hazardlib import gsim, nrml, InvalidFile
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 
 
-def source_model_info(node):
+def source_model_info(nodes):
     """
-    Extract information about a NRML/0.5 source model
+    Extract information about NRML/0.5 source models. Returns a table
+    with TRTs as rows and source classes as columns.
     """
-    trts = []
-    counters = []
-    src_classes = set()
-    for src_group in node:
-        c = collections.Counter()
-        trts.append(src_group['tectonicRegion'])
-        for src in src_group:
-            tag = src.tag.split('}')[1]
-            c[tag] += 1
-        counters.append(c)
-        src_classes.update(c)
-    dtlist = [('TRT', (bytes, 30))] + [
-        (name, int) for name in sorted(src_classes)]
-    out = numpy.zeros(len(node) + 1, dtlist)
-    for i, c in enumerate(counters):
-        out[i]['TRT'] = trts[i]
-        for name in src_classes:
-            out[i][name] = c[name]
+    c = collections.Counter()
+    for node in nodes:
+        for src_group in node:
+            trt = src_group['tectonicRegion']
+            for src in src_group:
+                src_class = src.tag.split('}')[1]
+                c[trt, src_class] += 1
+    trts, classes = zip(*c)
+    trts = sorted(set(trts))
+    classes = sorted(set(classes))
+    dtlist = [('TRT', (bytes, 30))] + [(name, int) for name in classes]
+    out = numpy.zeros(len(trts) + 1, dtlist)  # +1 for the totals
+    for i, trt in enumerate(trts):
+        out[i]['TRT'] = trt
+        for src_class in classes:
+            out[i][src_class] = c[trt, src_class]
     out[-1]['TRT'] = 'Total'
     for name in out.dtype.names[1:]:
         out[-1][name] = out[name][:-1].sum()
@@ -107,7 +104,8 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
-    logging.basicConfig(level=logging.INFO)
+    if not report:
+        logging.basicConfig(level=logging.INFO)
     if calculators:
         for calc in sorted(base.calculators):
             print(calc)
@@ -146,7 +144,11 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
                     '%s is in NRML 0.4 format, please run the following '
                     'command:\noq upgrade_nrml %s' % (
                         input_file, os.path.dirname(input_file) or '.'))
-            print(source_model_info(node[0]))
+            print(source_model_info([node[0]]))
+        elif node[0].tag.endswith('logicTree'):
+            nodes = [nrml.read(sm_path)[0]
+                     for sm_path in logictree.collect_info(input_file).smpaths]
+            print(source_model_info(nodes))
         else:
             print(node.to_str())
     elif input_file.endswith(('.ini', '.zip')):
@@ -159,6 +161,7 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
             print(mon)
     elif input_file:
         print("No info for '%s'" % input_file)
+
 
 info.flg('calculators', 'list available calculators')
 info.flg('gsims', 'list available GSIMs')

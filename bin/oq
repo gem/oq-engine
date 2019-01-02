@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,18 +16,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import sys
-import os
-
-# this is only executed when openquake is installed via linux binary packages
-if os.path.realpath(__file__) == '/opt/openquake/bin/oq':
-    # custom pythonpath is pushed in position 1 instead of 0 because
-    # sys.path[0] is populated at runtime by python itself. See:
-    # https://docs.python.org/2/library/sys.html#sys.path
-    sys.path.insert(1, '/opt/openquake/lib/python%d.%d/site-packages' %
-                    sys.version_info[:2])
-    os.environ['PYTHONPATH'] = ":".join(sys.path)
 
 import openquake.commands.__main__ as main
 

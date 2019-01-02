@@ -2,9 +2,9 @@ classical risk
 ==============
 
 ============== ===================
-checksum32     1,671,175,468      
-date           2018-02-02T16:02:35
-engine_version 2.9.0-gitd6a3184   
+checksum32     2,559,514,760      
+date           2018-10-05T03:04:21
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 7, num_levels = 40
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     24                
 master_seed                     0                 
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -48,12 +50,12 @@ structural_vulnerability            `structural_vulnerability_model.xml <structu
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        0.250  complex(2,2)    4/4             
-b2        0.750  complex(2,2)    4/4             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        0.25000 complex(2,2)    4/4             
+b2        0.75000 complex(2,2)    4/4             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -87,33 +89,17 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 482          482         
-source_model_1.xml 1      Stable Shallow Crust 5            4           
+source_model_1.xml 1      Stable Shallow Crust 4            4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
-source_model_2.xml 3      Stable Shallow Crust 5            1           
+source_model_2.xml 3      Stable Shallow Crust 1            1           
 ================== ====== ==================== ============ ============
 
-============= ===
-#TRT models   4  
-#eff_ruptures 974
-#tot_ruptures 969
-#tot_weight   0  
-============= ===
-
-Informational data
-------------------
-======================= ====================================================================================
-count_ruptures.received tot 13.61 KB, max_per_task 682 B                                                    
-count_ruptures.sent     sources 35.64 KB, srcfilter 23.56 KB, param 20.91 KB, monitor 7.17 KB, gsims 4.94 KB
-hazard.input_weight     969.0                                                                               
-hazard.n_imts           4                                                                                   
-hazard.n_levels         40                                                                                  
-hazard.n_realizations   8                                                                                   
-hazard.n_sites          7                                                                                   
-hazard.n_sources        4                                                                                   
-hazard.output_weight    1120.0                                                                              
-hostname                tstation.gem.lan                                                                    
-require_epsilons        True                                                                                
-======================= ====================================================================================
+============= =====
+#TRT models   4    
+#eff_ruptures 969  
+#tot_ruptures 969  
+#tot_weight   2,564
+============= =====
 
 Exposure model
 --------------
@@ -124,31 +110,33 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   4         4         
-2        1.000 0.0    1   1   2         2         
-3        1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   7         7         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+tax1     1.00000 0.0    1   1   4         4         
+tax2     1.00000 0.0    1   1   2         2         
+tax3     1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   7         7         
+======== ======= ====== === === ========= ==========
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========= =========
-source_id source_class              num_ruptures calc_time num_sites num_split
-========= ========================= ============ ========= ========= =========
-1         SimpleFaultSource         482          0.095     840       30       
-2         CharacteristicFaultSource 1            0.005     56        4        
-========= ========================= ============ ========= ========= =========
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         S    0     2     482          2.56570   0.00274    105       15        1,275  
+1      2         S    2     4     4            0.02882   9.537E-06  7.00000   1         10     
+2      1         S    0     2     482          3.02558   0.00187    105       15        1,275  
+3      2         X    2     398   1            0.02847   3.099E-06  7.00000   1         2.64575
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-========================= ========= ======
-source_class              calc_time counts
-========================= ========= ======
-CharacteristicFaultSource 0.005     1     
-SimpleFaultSource         0.095     1     
-========================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+S    5.62011   3     
+X    0.02847   1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -156,22 +144,69 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.005 0.002  0.002 0.012 23       
-================== ===== ====== ===== ===== =========
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.00812 0.00376   0.00546 0.01078 2      
+split_filter       0.02464 NaN       0.02464 0.02464 1      
+classical          0.43871 0.16961   0.06304 0.69365 13     
+build_hazard_stats 0.01129 5.908E-04 0.01053 0.01232 7      
+================== ======= ========= ======= ======= =======
+
+Fastest task
+------------
+taskno=13, weight=13, duration=0 s, sources="2"
+
+======== ======= ======= ======= === =
+variable mean    stddev  min     max n
+======== ======= ======= ======= === =
+nsites   7.00000 0.0     7       7   2
+weight   6.61438 5.61249 2.64575 10  2
+======== ======= ======= ======= === =
+
+Slowest task
+------------
+taskno=12, weight=203, duration=0 s, sources="1"
+
+======== ======= ====== ======= === =
+variable mean    stddev min     max n
+======== ======= ====== ======= === =
+nsites   7.00000 0.0    7       7   6
+weight   33      21     5.29150 63  6
+======== ======= ====== ======= === =
+
+Data transfer
+-------------
+================== ============================================================================= ========
+task               sent                                                                          received
+read_source_models monitor=736 B converter=638 B fnames=386 B                                    13.85 KB
+split_filter       srcs=12.14 KB monitor=381 B srcfilter=253 B sample_factor=21 B seed=14 B      18.73 KB
+classical          group=29.7 KB param=12.94 KB monitor=4.38 KB src_filter=2.79 KB gsims=2.79 KB 73.82 KB
+build_hazard_stats pgetter=32.53 KB monitor=2.42 KB hstats=1.68 KB                               16.38 KB
+================== ============================================================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.125     0.0       1     
-total count_ruptures           0.117     2.910     23    
-reading composite source model 0.019     0.0       1     
-store source_info              0.004     0.0       1     
-reading exposure               0.004     0.0       1     
-aggregate curves               2.685E-04 0.0       23    
-saving probability maps        3.052E-05 0.0       1     
-reading site collection        5.960E-06 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total classical          5.70324  2.34766   13    
+make_contexts            3.47782  0.0       969   
+get_poes                 1.91970  0.0       969   
+updating source_info     0.37020  0.0       1     
+iter_ruptures            0.23726  0.0       32    
+total build_hazard_stats 0.07904  1.66406   7     
+combine pmaps            0.04914  1.62891   7     
+store source_info        0.03667  0.0       13    
+building riskinputs      0.03653  0.0       1     
+total split_filter       0.02464  0.83594   1     
+saving statistics        0.02237  0.0       7     
+total read_source_models 0.01624  0.23438   2     
+managing sources         0.00617  0.01562   1     
+compute quantile-0.5     0.00594  0.0       7     
+compute quantile-0.15    0.00564  0.0       7     
+compute quantile-0.85    0.00546  0.0       7     
+aggregate curves         0.00490  0.0       13    
+saving probability maps  0.00480  0.0       1     
+compute mean             0.00242  0.03125   7     
+reading exposure         0.00132  0.06250   1     
+======================== ======== ========= ======

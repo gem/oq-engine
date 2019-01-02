@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ===================
 checksum32     1,751,642,476      
-date           2018-02-02T16:03:35
-engine_version 2.9.0-gitd6a3184   
+date           2018-12-13T12:57:50
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     23                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -34,21 +36,20 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
 Composite source model
 ----------------------
-============================================= ====== =============== ================
-smlt_path                                     weight gsim_logic_tree num_realizations
-============================================= ====== =============== ================
-b11_b21_b32_b41_b52_b61_b72_b81_b92_b101_b112 0.100  trivial(1)      1/1             
-b11_b22_b32_b42_b52_b62_b72_b82_b92_b102_b112 0.100  trivial(1)      4/1             
-b11_b23_b32_b43_b52_b63_b72_b83_b92_b103_b112 0.100  trivial(1)      1/1             
-b11_b23_b33_b43_b53_b63_b73_b83_b93_b103_b113 0.100  trivial(1)      3/1             
-b11_b24_b33_b44_b53_b64_b73_b84_b93_b104_b113 0.100  trivial(1)      1/1             
-============================================= ====== =============== ================
+============================================= ======= =============== ================
+smlt_path                                     weight  gsim_logic_tree num_realizations
+============================================= ======= =============== ================
+b11_b21_b32_b41_b52_b61_b72_b81_b92_b101_b112 0.10000 trivial(1)      1/1             
+b11_b22_b32_b42_b52_b62_b72_b82_b92_b102_b112 0.10000 trivial(1)      4/1             
+b11_b23_b32_b43_b52_b63_b72_b83_b92_b103_b112 0.10000 trivial(1)      1/1             
+b11_b23_b33_b43_b53_b63_b73_b83_b93_b103_b113 0.10000 trivial(1)      3/1             
+b11_b24_b33_b44_b53_b64_b73_b84_b93_b104_b113 0.10000 trivial(1)      1/1             
+============================================= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -79,55 +80,54 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 3,650        2,025       
-source_model.xml 1      Active Shallow Crust 7,435        2,025       
-source_model.xml 2      Active Shallow Crust 3,785        2,025       
-source_model.xml 3      Active Shallow Crust 7,015        2,025       
-source_model.xml 4      Active Shallow Crust 5,005        2,025       
+source_model.xml 0      Active Shallow Crust 2,025        2,025       
+source_model.xml 1      Active Shallow Crust 2,025        2,025       
+source_model.xml 2      Active Shallow Crust 2,025        2,025       
+source_model.xml 3      Active Shallow Crust 2,295        2,025       
+source_model.xml 4      Active Shallow Crust 2,295        2,025       
 ================ ====== ==================== ============ ============
 
 ============= ======
 #TRT models   5     
-#eff_ruptures 26,890
+#eff_ruptures 10,665
 #tot_ruptures 10,125
-#tot_weight   0     
+#tot_weight   1,067 
 ============= ======
-
-Informational data
-------------------
-======================= ================================================================================
-count_ruptures.received tot 4.96 KB, max_per_task 964 B                                                 
-count_ruptures.sent     sources 25.71 KB, srcfilter 4.23 KB, param 2.45 KB, monitor 1.87 KB, gsims 786 B
-hazard.input_weight     2133.0                                                                          
-hazard.n_imts           1                                                                               
-hazard.n_levels         3                                                                               
-hazard.n_realizations   10                                                                              
-hazard.n_sites          1                                                                               
-hazard.n_sources        25                                                                              
-hazard.output_weight    9.0                                                                             
-hostname                tstation.gem.lan                                                                
-require_epsilons        False                                                                           
-======================= ================================================================================
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-2         AreaSource   510          0.017     51        14       
-5         AreaSource   425          0.017     42        13       
-3         AreaSource   510          0.017     51        13       
-1         AreaSource   425          0.016     42        12       
-4         AreaSource   425          0.014     42        11       
-========= ============ ============ ========= ========= =========
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         A    0     4     375          0.0       0.24832    0.0       25        0.0   
+0      2         A    4     8     450          0.0       0.18861    0.0       30        0.0   
+0      3         A    8     12    450          0.0       0.13986    0.0       30        0.0   
+0      4         A    12    16    375          0.0       0.11345    0.0       25        0.0   
+0      5         A    16    20    375          0.0       0.07555    0.0       25        0.0   
+1      1         A    0     4     375          0.0       0.10520    0.0       25        0.0   
+1      2         A    4     8     450          0.0       0.14513    0.0       30        0.0   
+1      3         A    8     12    450          0.0       0.13285    0.0       30        0.0   
+1      4         A    12    16    375          0.0       0.10287    0.0       25        0.0   
+1      5         A    16    20    375          0.0       0.07585    0.0       25        0.0   
+2      1         A    0     4     375          0.0       0.10075    0.0       25        0.0   
+2      2         A    4     8     450          0.0       0.12870    0.0       30        0.0   
+2      3         A    8     12    450          0.0       0.12817    0.0       30        0.0   
+2      4         A    12    16    375          0.0       0.09921    0.0       25        0.0   
+2      5         A    16    20    375          0.0       0.07309    0.0       25        0.0   
+3      1         A    0     4     425          0.0       0.09950    0.0       25        0.0   
+3      2         A    4     8     510          0.0       0.12995    0.0       30        0.0   
+3      3         A    8     12    510          0.0       0.12619    0.0       30        0.0   
+3      4         A    12    16    425          0.0       0.09809    0.0       25        0.0   
+3      5         A    16    20    425          0.0       0.07394    0.0       25        0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-AreaSource   0.081     5     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    0.0       25    
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -135,21 +135,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.015 0.004  0.009 0.021 6        
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.04724 0.00886 0.03212 0.05475 5      
+split_filter       0.09219 0.09558 0.02461 0.15978 2      
+================== ======= ======= ======= ======= =======
+
+Data transfer
+-------------
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=1.89 KB fnames=535 B          26.32 KB
+split_filter       srcs=20.69 KB srcfilter=506 B seed=28 B 162.9 KB
+================== ======================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.122     0.0       1     
-total count_ruptures           0.089     0.0       6     
-managing sources               0.023     0.0       1     
-store source_info              0.004     0.0       1     
-aggregate curves               1.297E-04 0.0       6     
-reading site collection        4.506E-05 0.0       1     
-saving probability maps        2.599E-05 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.23621  0.0       5     
+total split_filter       0.18438  0.0       2     
+======================== ======== ========= ======

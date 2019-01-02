@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -57,8 +57,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
             polygon=Point(0., 0.).to_polygon(100.),
             area_discretization=9.0,
             rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(self.time_span)
-        )
+            temporal_occurrence_model=PoissonTOM(self.time_span))
 
         # area source of circular shape with radius of 100 km
         # centered at 1., 1.
@@ -76,8 +75,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
             polygon=Point(5., 5.).to_polygon(100.),
             area_discretization=9.0,
             rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(self.time_span)
-        )
+            temporal_occurrence_model=PoissonTOM(self.time_span))
 
         # non-parametric source
         self.np_src, _ = make_non_parametric_source()
@@ -86,14 +84,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         """
         Extract annual rates of occurence from stochastic event set
         """
-        mags = []
-        for r in ses:
-            mags.append(r.mag)
-
-        rates, _ = numpy.histogram(mags, bins=bins)
-        rates = rates / time_span
-
-        return rates
+        rates, _ = numpy.histogram([r.mag for r in ses], bins=bins)
+        return rates / time_span
 
     def test_ses_generation_from_parametric_source(self):
         # generate stochastic event set (SES) from area source with given
@@ -103,14 +95,10 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # approximately equal to the original MFD.
         numpy.random.seed(123)
         ses = stochastic_event_set([self.area1])
-
         rates = self._extract_rates(ses, time_span=self.time_span,
                                     bins=numpy.arange(5., 6.6, 0.1))
-
         expect_rates = numpy.array(
-            [r for m, r in self.mfd.get_annual_occurrence_rates()]
-        )
-
+            [r for m, r in self.mfd.get_annual_occurrence_rates()])
         numpy.testing.assert_allclose(rates, expect_rates, rtol=0, atol=1e-4)
 
     def test_ses_generation_from_parametric_source_with_filtering(self):
@@ -123,23 +111,17 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # to the one of area1 only.
         numpy.random.seed(123)
         sites = SiteCollection([
-            Site(
-                location=Point(0., 0.), vs30=760, vs30measured=True,
-                z1pt0=40., z2pt5=2.
-            )
-        ])
+            Site(location=Point(0., 0.), vs30=760, vs30measured=True,
+                 z1pt0=40., z2pt5=2.)])
         ses = stochastic_event_set(
             [self.area1, self.area2],
-            sites=sites,
-            source_site_filter=filters.SourceFilter(sites, {'default': 100.})
-        )
+            filters.SourceFilter(sites, {'default': 100.}))
 
         rates = self._extract_rates(ses, time_span=self.time_span,
                                     bins=numpy.arange(5., 6.6, 0.1))
 
         expect_rates = numpy.array(
-            [r for m, r in self.mfd.get_annual_occurrence_rates()]
-        )
+            [r for m, r in self.mfd.get_annual_occurrence_rates()])
 
         numpy.testing.assert_allclose(rates, expect_rates, rtol=0, atol=1e-4)
 
@@ -167,24 +149,24 @@ class StochasticEventSetTestCase(unittest.TestCase):
             for rup in ses:
                 if rup.mag == 5.:
                     n_rups1[i] += 1
-                if rup.mag == 6.:
+                elif rup.mag == 6.:
                     n_rups2[i] += 1
 
         # count how many SESs have 0,1 or 2 occurrences, and then normalize
         # by the total number of SESs generated. This gives the probability
         # of having 0, 1 or 2 occurrences
-        n_occs1 = numpy.array(list(n_rups1.values()))
-        n_occs2 = numpy.array(list(n_rups2.values()))
+        n_occs1 = numpy.fromiter(n_rups1.values(), int)
+        n_occs2 = numpy.fromiter(n_rups2.values(), int)
 
-        p_occs1_0 = float(len(n_occs1[n_occs1 == 0])) / num_sess
-        p_occs1_1 = float(len(n_occs1[n_occs1 == 1])) / num_sess
+        p_occs1_0 = (n_occs1 == 0).sum() / num_sess
+        p_occs1_1 = (n_occs1 == 1).sum() / num_sess
 
-        p_occs2_0 = float(len(n_occs2[n_occs2 == 0])) / num_sess
-        p_occs2_1 = float(len(n_occs2[n_occs2 == 1])) / num_sess
-        p_occs2_2 = float(len(n_occs2[n_occs2 == 2])) / num_sess
+        p_occs2_0 = (n_occs2 == 0).sum() / num_sess
+        p_occs2_1 = (n_occs2 == 1).sum() / num_sess
+        p_occs2_2 = (n_occs2 == 2).sum() / num_sess
 
-        self.assertAlmostEqual(p_occs1_0, 0.7, places=2)
-        self.assertAlmostEqual(p_occs1_1, 0.3, places=2)
-        self.assertAlmostEqual(p_occs2_0, 0.7, places=2)
-        self.assertAlmostEqual(p_occs2_1, 0.2, places=2)
-        self.assertAlmostEqual(p_occs2_2, 0.1, places=2)
+        self.assertAlmostEqual(p_occs1_0, 0.70, places=2)
+        self.assertAlmostEqual(p_occs1_1, 0.30, places=2)
+        self.assertAlmostEqual(p_occs2_0, 0.70, places=2)
+        self.assertAlmostEqual(p_occs2_1, 0.20, places=2)
+        self.assertAlmostEqual(p_occs2_2, 0.10, places=2)

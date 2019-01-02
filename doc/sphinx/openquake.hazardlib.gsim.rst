@@ -243,6 +243,14 @@ bradley_2013
     :undoc-members:
     :show-inheritance:
 
+campbell_1997
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.campbell_1997
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 campbell_2003
 ---------------------------------------------
 
@@ -395,6 +403,14 @@ drouet_2015_brazil
     :undoc-members:
     :show-inheritance:
 
+drouet_alpes_2015
+--------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.drouet_alpes_2015
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 edwards_fah_2013a
 -------------------------------------------------
 
@@ -467,6 +483,14 @@ geomatrix_1993
     :undoc-members:
     :show-inheritance:
 
+germany_2018
+----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.germany_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ghofrani_atkinson_2014
 ------------------------------------------------------
 
@@ -475,10 +499,10 @@ ghofrani_atkinson_2014
     :undoc-members:
     :show-inheritance:
 
-gsim_table
+gmpe_table
 ------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.gsim_table
+.. automodule:: openquake.hazardlib.gsim.gmpe_table
     :members:
     :undoc-members:
     :show-inheritance:
@@ -579,6 +603,23 @@ montalva_2016
     :undoc-members:
     :show-inheritance:
 
+montalva_2017
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.montalva_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+multi
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.multi
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 munson_thurber_1997
 ---------------------------------------------
 
@@ -599,6 +640,22 @@ nga_east
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.nga_east
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nrcan15_site_term
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mgmpe.nrcan15_site_term
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nrcan15_site_term_linear
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mgmpe.nrcan15_site_term_linear
     :members:
     :undoc-members:
     :show-inheritance:

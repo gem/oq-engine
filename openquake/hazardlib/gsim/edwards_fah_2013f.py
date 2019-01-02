@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,14 +27,11 @@ Module exports
 :class:`EdwardsFah2013Foreland90Bars`,
 :class:`EdwardsFah2013Foreland120Bars`
 """
-
-from __future__ import division
 import numpy as np
 from scipy.constants import g
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.edwards_fah_2013a import (
-    EdwardsFah2013Alpine10Bars
-)
+    EdwardsFah2013Alpine10Bars)
 from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
     COEFFS_FORELAND_10Bars,
     COEFFS_FORELAND_20Bars,
@@ -43,8 +40,7 @@ from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
     COEFFS_FORELAND_60Bars,
     COEFFS_FORELAND_75Bars,
     COEFFS_FORELAND_90Bars,
-    COEFFS_FORELAND_120Bars
-)
+    COEFFS_FORELAND_120Bars)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _compute_C1_term
 
 
@@ -71,7 +67,7 @@ class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log(mean / (g*100.))
         else:
             # PGV:

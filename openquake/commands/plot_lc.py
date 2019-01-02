@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,10 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import sys
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
+from openquake.commands import engine
 
 
 def make_figure(periods, losses):
@@ -44,7 +43,7 @@ def plot_lc(calc_id, aid=None):
     Plot loss curves given a calculation id and an asset ordinal.
     """
     # read the hazard data
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     dset = dstore['agg_curves-rlzs']
     if aid is None:  # plot the global curves
         plt = make_figure(dset.attrs['return_periods'], dset.value)

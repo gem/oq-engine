@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -45,20 +45,24 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
-
 """
 Tests for the catalogue module
 """
 
 import unittest
 import numpy as np
+import filecmp
+import os
+import tempfile
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from openquake.hmtk.seismicity.catalogue import Catalogue
+from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import CsvCatalogueParser
 from openquake.hmtk.seismicity.utils import decimal_time
 
+
+CURRENT_DIR = os.path.dirname(__file__)
 
 class CatalogueTestCase(unittest.TestCase):
     """
@@ -81,6 +85,15 @@ class CatalogueTestCase(unittest.TestCase):
             [1950, 5.5],
             [1960, 5.0],
         ])
+
+    def write_catalogue(self):
+        # Test the export of a catalogue in csv format
+        fi = os.path.join(CURRENT_DIR, 'data/simple.csv')
+        parser = CsvCatalogueParser(fi)
+        cat = parser.read_file()
+        with tempfile.NamedTemporaryFile() as fo:
+            cat.write_catalogue(fo.name)
+            self.assertTrue(filecmp.cmp(fi, fo.name))
 
     def test_load_from_array(self):
         # Tests the creation of a catalogue from an array and a key list

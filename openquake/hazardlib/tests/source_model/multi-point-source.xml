@@ -10,7 +10,6 @@ xmlns:gml="http://www.opengis.net/gml"
         name="group 1"
         rup_interdep="indep"
         src_interdep="indep"
-        srcs_weights="0.6 0.4"
         tectonicRegion="Stable Continental Crust"
         >
             <multiPointSource

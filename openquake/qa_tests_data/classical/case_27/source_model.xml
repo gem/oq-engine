@@ -4,7 +4,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
-    name="test"
+    name="test" investigation_time="50"
     >
         <sourceGroup
         name="Nankai"

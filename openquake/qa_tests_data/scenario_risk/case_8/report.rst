@@ -2,12 +2,12 @@ Scenario Risk Maule Mw 8.8 reduced
 ==================================
 
 ============== ===================
-checksum32     4,058,514,510      
-date           2018-02-02T16:04:43
-engine_version 2.9.0-gitd6a3184   
+checksum32     3,260,969,674      
+date           2018-10-05T03:04:32
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
-num_sites = 29, num_levels = 78
+num_sites = 258, num_levels = 78
 
 Parameters
 ----------
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      None
 width_of_mfd_bin                None           
 area_source_discretization      None           
 ground_motion_correlation_model None           
+minimum_intensity               {}             
 random_seed                     113            
 master_seed                     0              
+ses_seed                        42             
 avg_losses                      True           
 =============================== ===============
 
@@ -37,17 +39,16 @@ exposure                 `exposure_model.xml <exposure_model.xml>`_
 gmfs                     `GMFs_Mabe.xml <GMFs_Mabe.xml>`_                                                  
 job_ini                  `job.ini <job.ini>`_                                                              
 occupants_vulnerability  `occupants_vulnerabilityRes.xml <occupants_vulnerabilityRes.xml>`_                
-sites                    `sites.csv <sites.csv>`_                                                          
 structural_vulnerability `structural_vulnerability_model_Res.xml <structural_vulnerability_model_Res.xml>`_
 ======================== ==================================================================================
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -56,6 +57,14 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,FromFile: [0]>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
@@ -66,50 +75,47 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   2         2         
-2        1.000 NaN    1   1   1         1         
-3        1.000 0.0    1   1   3         3         
-4        1.000 0.0    1   1   3         3         
-5        1.000 0.0    1   1   3         3         
-6        1.000 0.0    1   1   2         2         
-7        1.000 0.0    1   1   2         2         
-8        1.000 NaN    1   1   1         1         
-9        1.000 0.0    1   1   2         2         
-10       1.000 0.0    1   1   3         3         
-11       2.000 NaN    2   2   1         2         
-12       1.000 NaN    1   1   1         1         
-13       1.000 0.0    1   1   2         2         
-14       1.000 0.0    1   1   2         2         
-15       1.000 0.0    1   1   3         3         
-16       1.000 NaN    1   1   1         1         
-17       1.000 0.0    1   1   4         4         
-18       1.500 0.707  1   2   2         3         
-19       1.000 NaN    1   1   1         1         
-21       1.000 0.0    1   1   2         2         
-22       1.000 NaN    1   1   1         1         
-23       1.000 0.0    1   1   2         2         
-24       1.000 NaN    1   1   1         1         
-25       1.000 NaN    1   1   1         1         
-26       1.000 0.0    1   1   2         2         
-27       1.000 NaN    1   1   1         1         
-28       1.000 NaN    1   1   1         1         
-29       1.000 NaN    1   1   1         1         
-30       1.000 NaN    1   1   1         1         
-32       1.000 NaN    1   1   1         1         
-33       1.000 NaN    1   1   1         1         
-*ALL*    0.217 0.743  0   6   258       56        
-======== ===== ====== === === ========= ==========
+============= ======= ======= === === ========= ==========
+taxonomy      mean    stddev  min max num_sites num_assets
+LWAL_H1       1.00000 0.0     1   1   2         2         
+LWAL_H8       1.00000 NaN     1   1   1         1         
+W+WLI_H1      1.00000 0.0     1   1   3         3         
+MR_H2_DNO     1.00000 0.0     1   1   3         3         
+MR_H1_DNO     1.00000 0.0     1   1   3         3         
+CR+PC_LWAL_H1 1.00000 0.0     1   1   2         2         
+LWAL_H1_DNO   1.00000 0.0     1   1   2         2         
+MCF_H2        1.00000 NaN     1   1   1         1         
+MR_H3_DNO     1.00000 0.0     1   1   2         2         
+MCF_H3        1.00000 0.0     1   1   3         3         
+LWAL_H2       2.00000 NaN     2   2   1         2         
+LWAL_H2_DNO   1.00000 NaN     1   1   1         1         
+LWAL_H7       1.00000 0.0     1   1   2         2         
+MCF_H1        1.00000 0.0     1   1   2         2         
+MR_H1         1.00000 0.0     1   1   3         3         
+MUR+ADO_H1    1.00000 NaN     1   1   1         1         
+MUR_H2        1.00000 0.0     1   1   4         4         
+LWAL_H5       1.50000 0.70711 1   2   2         3         
+MCF_H2_DNO    1.00000 NaN     1   1   1         1         
+UNK           1.00000 0.0     1   1   2         2         
+LWAL_H6       1.00000 NaN     1   1   1         1         
+W+WS          1.00000 0.0     1   1   2         2         
+CR+PC_LWAL_H2 1.00000 NaN     1   1   1         1         
+MCF_H3_DNO    1.00000 NaN     1   1   1         1         
+MUR_H3        1.00000 0.0     1   1   2         2         
+MUR+ST_H1     1.00000 NaN     1   1   1         1         
+CR+PC_LWAL_H3 1.00000 NaN     1   1   1         1         
+ER+ETR_H2     1.00000 NaN     1   1   1         1         
+MUR_H1        1.00000 NaN     1   1   1         1         
+MUR+ADO_H2    1.00000 NaN     1   1   1         1         
+W+WLI_H2      1.00000 NaN     1   1   1         1         
+*ALL*         0.21705 0.74292 0   6   258       56        
+============= ======= ======= === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-assoc_assets_sites      0.054    0.0       2     
-building riskinputs     0.043    0.0       1     
-reading exposure        0.015    0.0       1     
-building epsilons       0.002    0.0       1     
-reading site collection 0.001    0.0       1     
-======================= ======== ========= ======
+=================== ======== ========= ======
+operation           time_sec memory_mb counts
+=================== ======== ========= ======
+building riskinputs 0.03867  0.0       1     
+reading exposure    0.00859  0.0       1     
+=================== ======== ========= ======

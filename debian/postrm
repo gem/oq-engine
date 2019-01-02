@@ -16,16 +16,13 @@ set -e
 # the final step in the removal of this package, after the package's
 # conffiles have been removed.
 
-GEM_DEB_PACKAGE="python-oq-engine"
+GEM_DEB_PACKAGE="python3-oq-engine"
 
 case "$1" in
   remove)
     # This package has been removed, but its configuration has not yet
     # been purged.
     :
-    if pgrep supervisord 2>&1 > /dev/null; then
-        supervisorctl reload
-    fi
     for dir in /opt/openquake/lib/python2.7/site-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /opt/openquake/lib/python2.7/site-packages/openquake.engine-*egg-info
     do
         rm -rf $dir

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,8 +25,6 @@ exports
 :class:`RaghukanthIyengar2007Southern`
 :class:`RaghukanthIyengar2007WesternCentral`
 """
-
-from __future__ import division
 import warnings
 import numpy as np
 

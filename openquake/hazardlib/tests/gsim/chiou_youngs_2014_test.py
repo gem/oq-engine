@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -139,7 +139,6 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
             'surface': SimpleFaultSurface.from_fault_data(
                 fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
                 dip=dip, mesh_spacing=mesh_spacing),
-            'source_typology': object(),
             'rupture_slip_direction': 0.,
             'occurrence_rate': 0.01,
             'temporal_occurrence_model': PoissonTOM(50)
@@ -160,5 +159,5 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
             rupture, sites, [PGV()], ChiouYoungs2014NearFaultEffect(),
             truncation_level=0, realizations=1)
         gmf = fields[PGV()]
-        self.assertAlmostEquals(2.27328758, gmf[0], delta=1e-4)
-        self.assertAlmostEquals(3.38322998, gmf[1], delta=1e-4)
+        self.assertAlmostEquals(2.27395, gmf[0], delta=1e-4)
+        self.assertAlmostEquals(3.38409, gmf[1], delta=1e-4)

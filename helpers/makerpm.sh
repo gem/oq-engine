@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# makerpm.sh  Copyright (C) 2015-2017 GEM Foundation
+# makerpm.sh  Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,36 +29,32 @@ BRANCH='HEAD'
 STABLE=0
 EXTRA=''
 
-while (( "$#" )); do
-    case "$1" in
-        "-h")
-            echo "Usage: $0 [-c] [-l] [BRANCH]"
-            echo -e "\nOptions:\n\t-l: build RPM locally\n\t-c: clean build dir before starting a new build\n\t-r N: make a stable release"
+while getopts "r:lc" opt; do
+    case ${opt} in
+        \?)
+            echo "Usage: $0 [-c] [-l] [-r N] [BRANCH]"
+            echo -e "\\nOptions:\\n\\t-l: build RPM locally\\n\\t-c: clean build dir before starting a new build\\n\\t-r N: make a stable release"
             exit 0
             ;;
-        "-r")
+        r)
             STABLE=1
-            shift
-            if ! [[ $1 =~ ^[0-9]+$ ]] ; then
+            if ! [[ $OPTARG =~ ^[0-9]+$ ]] ; then
                echo "Error: please provide a valid PKG number" >&2; exit 1
             fi
-            PKG="$1"
-            shift
+            PKG="$OPTARG"
             ;;
-        "-l")
+        l)
             BUILD=1
-            shift
             ;;
-        "-c")
+        c)
             CLEAN=1
-            shift
-            ;;
-        *)
-            BRANCH="$1"
-            shift
             ;;
     esac
 done
+shift $((OPTIND -1))
+if [ "$1" ]; then
+    BRANCH="$1";
+fi
 
 if [ "$CLEAN" == "1" ]; then
     rm -Rf $BASE/build-rpm

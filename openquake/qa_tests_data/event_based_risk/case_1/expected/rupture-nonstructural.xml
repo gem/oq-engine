@@ -4,39 +4,64 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <singlePlaneRupture
-    id="14"
-    multiplicity="2"
+    id="56"
+    multiplicity="8"
     >
         <stochasticEventSets>
             <SES
-            id="2"
+            id="5"
             >
-                60129542144
+                240518168576 240518168583
             </SES>
             <SES
             id="16"
             >
-                60129542145
+                240518168577
+            </SES>
+            <SES
+            id="1"
+            >
+                240518168578
+            </SES>
+            <SES
+            id="3"
+            >
+                240518168579
+            </SES>
+            <SES
+            id="12"
+            >
+                240518168580
+            </SES>
+            <SES
+            id="15"
+            >
+                240518168581
+            </SES>
+            <SES
+            id="10"
+            >
+                240518168582
             </SES>
         </stochasticEventSets>
         <magnitude>
-            5.5500002e+00
+            5.8499999e+00
         </magnitude>
         <strike>
-            4.4977184e+01
+            4.4973133e+01
         </strike>
         <dip>
-            3.0001059e+01
+            3.0003034e+01
         </dip>
         <rake>
             9.0000000e+01
         </rake>
         <hypocenter depth="8.0000000E+00" lat="2.7901501E+01" lon="8.5747704E+01"/>
         <planarSurface>
-            <topLeft depth="6.9175835" lat="27.8927670" lon="85.7108459"/>
-            <topRight depth="6.9175835" lat="27.9340725" lon="85.7575760"/>
-            <bottomLeft depth="9.0824165" lat="27.8689270" lon="85.7378311"/>
-            <bottomRight depth="9.0824165" lat="27.9102230" lon="85.7845612"/>
+            <topLeft depth="6.4815712" lat="27.8892479" lon="85.6960068"/>
+            <topRight depth="6.4815712" lat="27.9471912" lon="85.7615585"/>
+            <bottomLeft depth="9.5184288" lat="27.8558064" lon="85.7338486"/>
+            <bottomRight depth="9.5184288" lat="27.9137344" lon="85.7994080"/>
         </planarSurface>
     </singlePlaneRupture>
 </nrml>

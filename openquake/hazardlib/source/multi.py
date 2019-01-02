@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,9 +18,24 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.point import (
-    PointSource, angular_distance, KM_TO_DEGREES)
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.mfd.multi_mfd import MultiMFD
+from openquake.hazardlib.geo import utils, NodalPlane
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.valid import SCALEREL
+from openquake.hazardlib.source.point import PointSource
+
+F32 = numpy.float32
+npd_dt = numpy.dtype([('probability', F32),
+                      ('strike', F32), ('dip', F32), ('rake', F32)])
+hdd_dt = numpy.dtype([('probability', F32), ('depth', F32)])
+mesh_dt = numpy.dtype([('lon', F32), ('lat', F32)])
+
+
+def get(arr, i):
+    if hasattr(arr, '__getitem__'):
+        return arr[i]
+    return arr
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -30,27 +45,28 @@ class MultiPointSource(ParametricSeismicSource):
     rupture_aspect_ratio, temporal_occurrence_model, upper_seismogenic_depth,
     lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution
     """
+    code = b'M'
     MODIFICATIONS = set(())
     RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, rupture_mesh_spacing,
-                 magnitude_scaling_relationship,
-                 rupture_aspect_ratio, temporal_occurrence_model,
+                 mfd, magnitude_scaling_relationship, rupture_aspect_ratio,
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 nodal_plane_distribution, hypocenter_distribution, mesh):
+                 nodal_plane_distribution, hypocenter_distribution,
+                 mesh, temporal_occurrence_model=None):
         assert len(mfd) == len(mesh), (len(mfd), len(mesh))
-        super(MultiPointSource, self).__init__(
-            source_id, name, tectonic_region_type, mfd,
-            rupture_mesh_spacing, magnitude_scaling_relationship,
-            rupture_aspect_ratio, temporal_occurrence_model)
+        rupture_mesh_spacing = None
+        super().__init__(
+            source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
+            magnitude_scaling_relationship,
+            rupture_aspect_ratio,
+            temporal_occurrence_model)
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
         self.mesh = mesh
-        self.max_radius = 0
 
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
@@ -59,14 +75,14 @@ class MultiPointSource(ParametricSeismicSource):
                 name, name, self.tectonic_region_type,
                 mfd, self.rupture_mesh_spacing,
                 self.magnitude_scaling_relationship,
-                self.rupture_aspect_ratio,
+                get(self.rupture_aspect_ratio, i),
                 self.temporal_occurrence_model,
-                self.upper_seismogenic_depth,
-                self.lower_seismogenic_depth,
+                get(self.upper_seismogenic_depth, i),
+                get(self.lower_seismogenic_depth, i),
                 point,
                 self.nodal_plane_distribution,
                 self.hypocenter_distribution)
-            ps.src_group_id = self.src_group_id
+            ps.num_ruptures = ps.count_ruptures()
             yield ps
 
     def __len__(self):
@@ -90,38 +106,71 @@ class MultiPointSource(ParametricSeismicSource):
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
 
-    def filter_sites_by_distance_to_source(self, integration_distance, sites):
-        """Filter on the bounding box"""
-        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box(
-            integration_distance)
-        n = len(sites)
-        mask = numpy.zeros(n, bool)
-        for i in range(n):
-            lon, lat = sites.lons[i], sites.lats[i]
-            if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat:
-                mask[i] = True
-        return sites.filter(mask)
-
-    def get_rupture_enclosing_polygon(self, dilation=0):
-        """No polygon"""
-
-    def get_bounding_box(self, integration_distance):
+    def get_bounding_box(self, maxdist):
         """
-        Bounding box containing all points, enlarged by the maximum distance
-        and the maximum rupture projection radius (upper limit).
+        Bounding box containing all the point sources, enlarged by the
+        maximum distance.
         """
-        maxradius = self._get_max_rupture_projection_radius()
-        min_lon = self.mesh.lons.min()
-        max_lon = self.mesh.lons.max()
-        if cross_idl(min_lon, max_lon):
-            min_lon, max_lon = max_lon, min_lon + 360
-        min_lat = self.mesh.lats.min()
-        max_lat = self.mesh.lats.max()
-        a1 = (integration_distance + maxradius) * KM_TO_DEGREES
-        a2 = max(angular_distance(integration_distance + maxradius, min_lat),
-                 angular_distance(integration_distance + maxradius, max_lat))
-        return min_lon - a2, min_lat - a1, max_lon + a2, max_lat + a1
+        return utils.get_bounding_box([ps.location for ps in self], maxdist)
 
-    _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
-    _get_max_rupture_projection_radius = PointSource.__dict__[
-        '_get_max_rupture_projection_radius']
+    @property
+    def polygon(self):
+        """
+        The polygon containing all points
+        """
+        return self.mesh.get_convex_hull()
+
+    def __toh5__(self):
+        npd = [(prob, np.strike, np.dip, np.rake)
+               for prob, np in self.nodal_plane_distribution.data]
+        hdd = self.hypocenter_distribution.data
+        points = [(p.x, p.y) for p in self.mesh]
+        mfd = self.mfd.kwargs.copy()
+        for k, vals in mfd.items():
+            if k in ('occurRates', 'magnitudes'):
+                mfd[k] = [numpy.array(lst, F32) for lst in vals]
+            else:
+                mfd[k] = numpy.array(vals, F32)
+        dic = {'nodal_plane_distribution': numpy.array(npd, npd_dt),
+               'hypocenter_distribution': numpy.array(hdd, hdd_dt),
+               'mesh': numpy.array(points, mesh_dt),
+               'rupture_aspect_ratio': self.rupture_aspect_ratio,
+               'upper_seismogenic_depth': self.upper_seismogenic_depth,
+               'lower_seismogenic_depth': self.lower_seismogenic_depth,
+               self.mfd.kind: mfd}
+        attrs = {'source_id': self.source_id,
+                 'name': self.name,
+                 'magnitude_scaling_relationship':
+                 self.magnitude_scaling_relationship.__class__.__name__,
+                 'tectonic_region_type': self.tectonic_region_type}
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        self.source_id = attrs['source_id']
+        self.name = attrs['name']
+        self.tectonic_region_type = attrs['tectonic_region_type']
+        self.magnitude_scaling_relationship = SCALEREL[
+            attrs['magnitude_scaling_relationship']]
+        npd = dic.pop('nodal_plane_distribution').value
+        hdd = dic.pop('hypocenter_distribution').value
+        mesh = dic.pop('mesh').value
+        self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio').value
+        self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth').value
+        self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth').value
+        [(mfd_kind, mfd)] = dic.items()
+        self.nodal_plane_distribution = PMF([
+            (prob, NodalPlane(strike, dip, rake))
+            for prob, strike, dip, rake in npd])
+        self.hypocenter_distribution = PMF(hdd)
+        self.mesh = Mesh(mesh['lon'], mesh['lat'])
+        kw = {k: dset.value for k, dset in mfd.items()}
+        kw['size'] = len(mesh)
+        kw['kind'] = mfd_kind
+        self.mfd = MultiMFD(**kw)
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(p.x, p.y, p.z) for p in self.mesh],
+                           numpy.float32)

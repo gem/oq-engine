@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,7 +18,7 @@ import numpy
 
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
-from openquake.hazardlib.geo import Point, Mesh
+from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 
@@ -37,7 +37,6 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
     CORNER_LONS = numpy.array([-1., 1., -1., 1.])
     CORNER_LATS = numpy.array([0., 0., 0., 0.])
     CORNER_DEPTHS = numpy.array([0., 0., 10., 10.])
-    MESH_SPACING = 1.0
     TOM = PoissonTOM(50.0)
 
     def _make_source(self):
@@ -49,32 +48,12 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
             tectonic_region_type=self.TRT,
             mfd=EvenlyDiscretizedMFD(self.MIN_MAG, self.BIN_WIDTH, self.RATES),
             temporal_occurrence_model=self.TOM,
-            surface=PlanarSurface(self.MESH_SPACING, self.STRIKE, self.DIP,
+            surface=PlanarSurface(self.STRIKE, self.DIP,
                                   points[0], points[1], points[3], points[2]),
             rake=self.RAKE
         )
         assert_pickleable(source)
         return source
-
-
-class CharacteristicFaultSourceGetRuptureEnclosingPolygon(
-        _BaseFaultSourceTestCase):
-
-    def test(self):
-        # relies on mesh.get_convex_hull() and polygon.dilate
-        source = self._make_source()
-        poly = source.get_rupture_enclosing_polygon(dilation=5.0)
-
-        mesh = Mesh(numpy.array([[-1., 1.], [-1., 1.]]),
-                    numpy.array([[0., 0.], [0., 0.]]),
-                    numpy.array([[0., 0.], [10., 10.]]))
-
-        numpy.testing.assert_equal(
-            poly.lons, mesh.get_convex_hull().dilate(5.0).lons
-        )
-        numpy.testing.assert_equal(
-            poly.lats, mesh.get_convex_hull().dilate(5.0).lats
-        )
 
 
 class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
@@ -93,14 +72,8 @@ class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
             self.assertTrue(ruptures[i].rake == self.RAKE)
             self.assertTrue(ruptures[i].tectonic_region_type == self.TRT)
             self.assertTrue(ruptures[i].hypocenter == Point(0., 0., 5.))
-            self.assertTrue(
-                ruptures[i].surface.mesh_spacing == self.MESH_SPACING
-            )
             self.assertTrue(ruptures[i].surface.strike == self.STRIKE)
             self.assertTrue(ruptures[i].surface.dip == self.DIP)
-            self.assertTrue(
-                ruptures[i].source_typology == CharacteristicFaultSource
-            )
             numpy.testing.assert_equal(ruptures[i].surface.corner_lons,
                                        self.CORNER_LONS)
             numpy.testing.assert_equal(ruptures[i].surface.corner_lats,
@@ -122,7 +95,7 @@ class ModifyCharacteristicFaultSurfaceTestCase(_BaseFaultSourceTestCase):
         new_corner_depths = numpy.array([0., 0., 15., 15.])
         points = [Point(lon, lat, depth) for lon, lat, depth in
                   zip(new_corner_lons, new_corner_lats, new_corner_depths)]
-        new_surface = PlanarSurface(self.MESH_SPACING, self.STRIKE, self.DIP,
+        new_surface = PlanarSurface(self.STRIKE, self.DIP,
                                     points[0], points[1], points[3], points[2])
         self.fault.modify_set_geometry(new_surface, "XYZ")
         self.assertEqual(self.fault.surface_node, "XYZ")
@@ -131,5 +104,4 @@ class ModifyCharacteristicFaultSurfaceTestCase(_BaseFaultSourceTestCase):
         numpy.testing.assert_array_almost_equal(self.fault.surface.corner_lats,
                                                 new_corner_lats)
         numpy.testing.assert_array_almost_equal(
-            self.fault.surface.corner_depths,
-            new_corner_depths)
+            self.fault.surface.corner_depths, new_corner_depths)

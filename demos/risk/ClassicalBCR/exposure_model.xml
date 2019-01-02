@@ -6,7 +6,7 @@
 	  </description>
 	  <conversions>
       <costTypes>
-        <costType name="structural" unit="USD" type="per_asset"/>
+        <costType name="structural" unit="USD" type="per_asset" retrofittedType="per_asset" retrofittedUnit="USD"/>
       </costTypes>
     </conversions>
     <assets>

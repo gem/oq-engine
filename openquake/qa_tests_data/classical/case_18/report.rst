@@ -2,9 +2,9 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ============== ===================
-checksum32     1,369,868,782      
-date           2018-02-02T16:03:34
-engine_version 2.9.0-gitd6a3184   
+checksum32     902,044,270        
+date           2018-12-13T12:58:17
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      5.0
 width_of_mfd_bin                0.1               
 area_source_discretization      50.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     23                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -35,24 +37,23 @@ Name                    File
 gsim_logic_tree         `nbc_asc_logic_tree.xml <nbc_asc_logic_tree.xml>`_          
 job_ini                 `job.ini <job.ini>`_                                        
 sites                   `vancouver_school_sites.csv <vancouver_school_sites.csv>`_  
-source                  `vancouver_area_source.xml <vancouver_area_source.xml>`_    
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  simple(3)       3/3             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        1.00000 simple(3)       3/3             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ========================================================================================================================================== ========= ========== ==========
 grp_id gsims                                                                                                                                      distances siteparams ruptparams
 ====== ========================================================================================================================================== ========= ========== ==========
-0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rhypo                mag       
+0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rrup                 mag       
 ====== ========================================================================================================================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -73,37 +74,21 @@ source_model              grp_id trt                  eff_ruptures tot_ruptures
 vancouver_area_source.xml 0      Active Shallow Crust 2,430        2,430       
 ========================= ====== ==================== ============ ============
 
-Informational data
-------------------
-======================= ====================================================================================
-count_ruptures.received tot 9.19 KB, max_per_task 629 B                                                     
-count_ruptures.sent     gsims 2.29 MB, sources 23.67 KB, srcfilter 12.16 KB, param 12.11 KB, monitor 4.67 KB
-hazard.input_weight     243.0                                                                               
-hazard.n_imts           3                                                                                   
-hazard.n_levels         36                                                                                  
-hazard.n_realizations   3                                                                                   
-hazard.n_sites          3                                                                                   
-hazard.n_sources        1                                                                                   
-hazard.output_weight    108.0                                                                               
-hostname                tstation.gem.lan                                                                    
-require_epsilons        False                                                                               
-======================= ====================================================================================
-
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-VICM      AreaSource   2,430        0.006     72        30       
-========= ============ ============ ========= ========= =========
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      VICM      A    0     8     2,430        0.0       0.28126    0.0       30        0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-AreaSource   0.006     1     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    0.0       1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -111,21 +96,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ========= ===== =========
-operation-duration mean  stddev    min       max   num_tasks
-count_ruptures     0.001 2.476E-04 8.559E-04 0.002 15       
-================== ===== ========= ========= ===== =========
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.01661 NaN    0.01661 0.01661 1      
+split_filter       0.01593 NaN    0.01593 0.01593 1      
+================== ======= ====== ======= ======= =======
+
+Data transfer
+-------------
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=388 B fnames=116 B           2.47 KB 
+split_filter       srcs=2.14 KB srcfilter=253 B seed=14 B 7.85 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.031     0.0       1     
-reading composite source model 0.029     0.0       1     
-total count_ruptures           0.020     0.199     15    
-store source_info              0.006     0.0       1     
-aggregate curves               2.890E-04 0.0       15    
-reading site collection        1.965E-04 0.0       1     
-saving probability maps        4.363E-05 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.01661  0.0       1     
+total split_filter       0.01593  0.0       1     
+======================== ======== ========= ======

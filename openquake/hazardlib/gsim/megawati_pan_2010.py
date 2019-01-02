@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation, Chung-Han Chan
+# Copyright (C) 2014-2018 GEM Foundation, Chung-Han Chan
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,9 +19,6 @@
 """
 Module exports :class:`megawatipan2010`.
 """
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 from scipy.constants import g
 
@@ -87,7 +84,7 @@ class MegawatiPan2010(GMPE):
         C = self.COEFFS[imt]
         mean = (self._get_magnitude_scaling(C, rup.mag) +
                 self._get_distance_scaling(C, rup.mag, dists.rhypo))
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log(np.exp(mean) / (100.0 * g))
         stddevs = self._compute_std(C, stddev_types, len(dists.rhypo))
         return mean, stddevs

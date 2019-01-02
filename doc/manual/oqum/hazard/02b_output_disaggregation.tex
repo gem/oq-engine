@@ -1,14 +1,21 @@
 The \glsdesc{acr:oqe} output of a disaggregation analysis corresponds to the
 combination of a hazard curve and a multidimensional matrix containing the
-results of the disaggregation.
+results of the disaggregation. For a typical disaggregation calculation the
+list of outputs are the following:
 
 \begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\small]
 user@ubuntu:~$ oq engine --lo <calc_id>
 id | name
 \textcolor{red}{3 | Disaggregation Outputs}
-\textcolor{black}{4 | Realizations}
+\textcolor{black}{4 | Disaggregation Statistics}
+\textcolor{black}{5 | Full Report}
+\textcolor{black}{6 | Realizations}
+\textcolor{black}{6 | Seismic Source Groups}
 \end{Verbatim}
 %\input{oqum/hazard/verbatim/output_disaggregation}
+
+Note that if the logic tree only contains one realization, then
+\texttt{Disaggregation Statistics} will not be computed nor listed in the output.
 
 Running \texttt{-{}-export-output} to export the disaggregation results will produce individual files for each IMT, probability of exceedence and logic tree realisation. In the following inset we show an example of the nrml file used to represent the different disaggregation matrices (highlighted in red) produced by
 \gls{acr:oqe}:

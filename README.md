@@ -5,9 +5,7 @@
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
 <!-- GEM BEGIN: apply the following patch with the proper values for the next release
--| Jenkins (Python 2) | Travis CI (Python 3) |
--|       :---:        |         :---:        |
--| [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/) | [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine) |
+-[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
  
 -### Current stable
 +## OpenQuake Engine version 2.6 (Gutenberg)
@@ -24,14 +22,15 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 -## Documentation (master tree)
 -->
 
-| Jenkins (Python 2) | Travis CI (Python 3) |
-|       :---:        |         :---:        |
-| [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/) | [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine) |
+[![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
+[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
+[![PyPI Version](https://img.shields.io/pypi/v/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 2.8** 'Imamura'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.8#openquake-engine.
-* [What's new](https://github.com/gem/oq-engine/blob/engine-2.8/doc/whats-new.md)
+Current stable version is the **OpenQuake Engine 3.2** 'Mucciarelli'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.2#openquake-engine.
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.2/doc/whats-new.md)
 
 ## Documentation (master tree)
 
@@ -43,14 +42,21 @@ Current stable version is the **OpenQuake Engine 2.8** 'Imamura'. The documentat
 * [FAQ](https://github.com/gem/oq-engine/blob/master/doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
 * [OQ Commands](https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md)
-* [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
-* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
-* [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
 * [Architecture](https://github.com/gem/oq-engine/blob/master/doc/sphinx/architecture.rst)
 * [Calculation Workflow](https://github.com/gem/oq-engine/blob/master/doc/calculation-workflow.md)
 * [Hardware Suggestions](https://github.com/gem/oq-engine/blob/master/doc/hardware-suggestions.md)
 * [Continuous integration and testing](https://github.com/gem/oq-engine/blob/master/doc/testing.md)
 * [Glossary of Terms](https://github.com/gem/oq-engine/blob/master/doc/glossary.md)
+
+#### For developers
+
+* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
+* [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
+* [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
+
+#### For scientists
+
+* [Implementing a new GSIM](https://github.com/gem/oq-engine/blob/master/doc/implementing-new-gsim.md)
 
 ### Installation
 
@@ -60,7 +66,7 @@ Current stable version is the **OpenQuake Engine 2.8** 'Imamura'. The documentat
 #### Linux
 
 * [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/master/doc/installing/ubuntu.md)
-* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
+* [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
 * [Installing on other flavors](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
 * [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
 * [Installing on a cluster](https://github.com/gem/oq-engine/blob/master/doc/installing/cluster.md)
@@ -88,6 +94,14 @@ Current stable version is the **OpenQuake Engine 2.8** 'Imamura'. The documentat
 * [Using the command line](https://github.com/gem/oq-engine/blob/master/doc/running/unix.md)
 * [Using the WebUI](https://github.com/gem/oq-engine/blob/master/doc/running/server.md)
 
+### Visualizing outputs via QGIS
+
+![IRMT Logo](https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png)
+
+* [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
+* [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
+* [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
+* [Source code](https://github.com/gem/oq-irmt-qgis)
 
 ## License
 
