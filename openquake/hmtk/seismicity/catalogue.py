@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -45,12 +45,11 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
-
 """
 Prototype of a 'Catalogue' class
 """
 
+import csv
 import numpy as np
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
@@ -79,6 +78,13 @@ class Catalogue(object):
             set(INT_ATTRIBUTE_LIST))).union(
                 set(STRING_ATTRIBUTE_LIST)))
 
+    SORTED_ATTRIBUTE_LIST = [
+        'eventID', 'Agency', 'year', 'month', 'day', 'hour',
+        'minute', 'second', 'timeError', 'longitude', 'latitude',
+        'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
+        'depth', 'depthError', 'magnitude', 'sigmaMagnitude',
+        'magnitudeType']
+
     def __init__(self):
         """
         Initialise the catalogue dictionary
@@ -104,11 +110,115 @@ class Catalogue(object):
     def get_number_events(self):
         return len(self.data['eventID'])
 
+    def __len__(self):
+        return self.get_number_events()
+    
+    def __str__(self):
+        """
+        Returns a shortened print of the catalogue
+        """
+        neq = self.get_number_events()
+        if not neq:
+            return "<Catalogue Object>No events"
+        elif neq > 20:
+            # Too many events to print, show 1st 10 and last 10
+            row_set = ["<Catalogue Object>{:g} events".format(neq)]
+            for i in range(10):
+                row_set.append(self._get_row_str(i))
+            row_set.append("...")
+            for i in range(-10, 0, 1):
+                row_set.append(self._get_row_str(i))
+        else:
+            # Show all events
+            row_set = ["<Catalogue Object>{:g} events".format(neq)]
+            for i in range(neq):
+                row_set.append(self._get_row_str(i))
+        return "\n".join(row_set)
+
+    def _get_row_str(self, i):
+        """
+        Returns a string representation of the key information in a row
+        """
+        row_data = ["{:s}".format(self.data['eventID'][i]),
+                    "{:g}".format(self.data['year'][i]),
+                    "{:g}".format(self.data['month'][i]),
+                    "{:g}".format(self.data['day'][i]),
+                    "{:g}".format(self.data['hour'][i]),
+                    "{:g}".format(self.data['minute'][i]),
+                    "{:.1f}".format(self.data['second'][i]),
+                    "{:.3f}".format(self.data['longitude'][i]),
+                    "{:.3f}".format(self.data['latitude'][i]),
+                    "{:.1f}".format(self.data['depth'][i]),
+                    "{:.1f}".format(self.data['magnitude'][i])]
+        return " ".join(row_data)
+
+    def __getitem__(self, key):
+        """
+        If the key is provided as an int, return a data for that index,
+        otherwise if it is a string then return the data column
+        """
+        if isinstance(key, int):
+            # Gets the row specied
+            row =[]
+            for attr in self.SORTED_ATTRIBUTE_LIST:
+                if len(self.data[attr]):
+                    row.append(self.data[attr][key])
+                else:
+                    # For empty columns just append None
+                    row.append(None)
+            return row
+        elif isinstance(key, str):
+            return self.data[key]
+        else:
+            raise ValueError("__getitem__ requires integer or string")
+
+    def __iter__(self):
+        """
+        Iteration yields for each event a list of data
+        """
+        for i in range(len(self)):
+            row =[]
+            for key in self.SORTED_ATTRIBUTE_LIST:
+                if len(self.data[key]):
+                    row.append(self.data[key][i])
+                else:
+                    # For empty columns just append None
+                    row.append(None)
+            yield row
+
     def add_event(self):
         raise NotImplementedError
 
-    def write_catalogue(self, output_file, filetype):
-        raise NotImplementedError
+    def write_catalogue(self, output_file, key_list=SORTED_ATTRIBUTE_LIST):
+        """
+        Writes the catalogue to file using HTMK format (CSV).
+
+        :param output_file:
+            Name of the output file
+        :param key_list:
+            Optional list of attribute keys to be exported
+        """
+
+        with open(output_file, 'w') as of:
+            writer = csv.DictWriter(of, fieldnames=key_list)
+            writer.writeheader()
+            for i in range(self.get_number_events()):
+                row_dict = {}
+                for key in key_list:
+                    if len(self.data[key]) > 0:
+                        data = self.data[key][i]
+                        if key in self.INT_ATTRIBUTE_LIST:
+                            if np.isnan(data):
+                                data = ''
+                            else:
+                                data = int(data)
+                        if key in self.FLOAT_ATTRIBUTE_LIST:
+                            if np.isnan(data):
+                                data = ''
+                            else:
+                                data = float(data)
+                    row_dict[key] = data
+                writer.writerow(row_dict)
 
     def load_to_array(self, keys):
         """

@@ -7,11 +7,15 @@ The OpenQuake Engine is available in the form of *rpm* binary packages for the f
 - CentOS 7
 - Scientific Linux 7
 
-The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
+For Fedora please check ["Installing the OpenQuake Engine on Fedora"](fedora.md).
+
+The [Extra Packages for Enterprise Linux (EPEL)](https://fedoraproject.org/wiki/EPEL) repository is required: 
 
 ```bash
 sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 ```
+
+The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
 
 ## Install packages from the OpenQuake repository
 If you want to upgrade an existing installation see **[upgrading](../upgrading/rhel.md)**.
@@ -23,21 +27,7 @@ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/g
 
 Then to install the OpenQuake Engine and its libraries run
 ```bash
-sudo yum install python-oq-engine
-```
-
-### Upgrade from a previous release
-
-As soon as a new version of the OpenQuake Engine and libraries are released you can upgrade it using `yum` or a graphical package manager:
-
-```bash
-sudo yum upgrade python-oq-engine
-```
-
-If a full upgrade is performed on the system, the OpenQuake software is upgraded to the latest version too:
-
-```bash
-sudo yum upgrade
+sudo yum install python3-oq-engine
 ```
 
 ## Configure the system services
@@ -75,12 +65,12 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 
 To uninstall the OpenQuake Engine and all its components run
 ```bash
-sudo yum erase python-oq-*
+sudo yum erase python3-oq-*
 ```
 If you want to remove all the dependencies installed by the OpenQuake Engine, you need to have a `yum` plugin called `yum-plugin-remove-with-leaves` first and then use the `--remove-leaves` yum's flag:
 ```bash
 sudo yum install yum-plugin-remove-with-leaves
-sudo yum erase --remove-leaves python-oq-*
+sudo yum erase --remove-leaves python3-oq-*
 ```
 
 ## Data cleanup

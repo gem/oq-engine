@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -53,7 +53,6 @@ to csv format.
 
 import csv
 import numpy as np
-from collections import OrderedDict
 from openquake.hmtk.strain.geodetic_strain import GeodeticStrain
 
 STRAIN_VARIABLES = ['exx', 'eyy', 'exy', 'var_exx', 'var_eyy', 'var_exy',
@@ -104,8 +103,7 @@ class ReadStrainCsv(object):
 
         datafile = open(self.filename, 'rU')
         reader = csv.DictReader(datafile)
-        self.strain.data = OrderedDict([(name, [])
-                                        for name in reader.fieldnames])
+        self.strain.data = dict([(name, []) for name in reader.fieldnames])
         for row in reader:
             for name in row.keys():
                 if 'region' in name.lower():

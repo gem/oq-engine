@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"> 
+  <exposureModel category="building" id="IR-9"> 
+    <description> Exposure Model Kish </description> 
+    <conversions> 
+        <area type="aggregated" unit="square meters"/> 
+      <costTypes> 
+        <costType name="structural" type="per_area" unit="USD"/> 
+      </costTypes> 
+    </conversions> 
+    <assets> 
+      <asset id="10002002001" number="1" area="1.075200e+03" taxonomy="RC1"> 
+        <location lon="5.392600e+01" lat="2.655133e+01"/> 
+        <costs> 
+          <cost type="structural" value="1"/> 
+        </costs> 
+        <occupancies> 
+          <occupancy occupants="1.200000e+00" period="day" /> 
+          <occupancy occupants="2.250000e+00" period="night" /> 
+        </occupancies> 
+      </asset> 
+      <asset id="10002003001" number="1" area="960" taxonomy="RC1"> 
+        <location lon="5.392615e+01" lat="2.655139e+01"/> 
+        <costs> 
+          <cost type="structural" value="1"/> 
+        </costs> 
+        <occupancies> 
+          <occupancy occupants="1.200000e+00" period="day" /> 
+          <occupancy occupants="2.250000e+00" period="night" /> 
+        </occupancies> 
+      </asset> 
+      <asset id="10002005001" number="1" area="960" taxonomy="RC1"> 
+        <location lon="5.392644e+01" lat="2.655152e+01"/> 
+        <costs> 
+          <cost type="structural" value="1"/> 
+        </costs> 
+        <occupancies> 
+          <occupancy occupants="1.200000e+00" period="day" /> 
+          <occupancy occupants="2.250000e+00" period="night" /> 
+        </occupancies> 
+      </asset> 
+      <asset id="10002008001" number="1" area="960" taxonomy="RC1"> 
+        <location lon="5.392684e+01" lat="2.655144e+01"/> 
+        <costs> 
+          <cost type="structural" value="1"/> 
+        </costs> 
+        <occupancies> 
+          <occupancy occupants="1.200000e+00" period="day" /> 
+          <occupancy occupants="2.250000e+00" period="night" /> 
+        </occupancies> 
+      </asset>  
+      <asset id="13191001002" number="2" area="77868" taxonomy="ST1"> 
+        <location lon="5.402337e+01" lat="2.652544e+01"/> 
+        <costs> 
+          <cost type="structural" value="1"/> 
+        </costs> 
+        <occupancies> 
+          <occupancy occupants="2.400000e+00" period="day" /> 
+          <occupancy occupants="4.500000e+00" period="night" /> 
+        </occupancies> 
+      </asset> 
+    </assets> 
+  </exposureModel> 
+</nrml> 
+

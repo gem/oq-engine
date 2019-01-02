@@ -20,8 +20,6 @@
 Module exports :class:`AfshariStewart2016`,
                :class:`AfshariStewart2016Japan`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE

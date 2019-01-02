@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,8 +27,6 @@ Module exports
 :class:`AtkinsonBoore2003SSlabJapan`
 :class:`AtkinsonBoore2003SSlabJapanNSHMP2008`
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -69,9 +67,9 @@ class AtkinsonBoore2003SInter(GMPE):
     ])
 
     #: Supported intensity measure component is the random horizontal
-    #component :
-    #attr:`~openquake.hazardlib.const.IMC.RANDOM_HORIZONTAL`, see
-    #paragraph 'Functional : Form', page 1706
+    #: component:
+    #: attr:`~openquake.hazardlib.const.IMC.RANDOM_HORIZONTAL`, see
+    #: paragraph 'Functional : Form', page 1706
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RANDOM_HORIZONTAL
 
     #: Supported standard deviation types are inter-event, intra-event
@@ -122,7 +120,7 @@ class AtkinsonBoore2003SInter(GMPE):
         # periods 0.4 s (2.5 Hz) and 0.2 s (5 Hz) need a special case because
         # of the erratum. SA for 0.4s and 0.2s is computed and a weighted sum
         # is returned
-        if isinstance(imt, SA) and imt.period in (0.2, 0.4):
+        if imt.period in (0.2, 0.4):
             C04 = self.COEFFS_SINTER[SA(period=0.4, damping=5.0)]
             C02 = self.COEFFS_SINTER[SA(period=0.2, damping=5.0)]
             mean04 = self._compute_mean(C04, G, mag, rup.hypo_depth,
@@ -141,7 +139,7 @@ class AtkinsonBoore2003SInter(GMPE):
         # convert from log10 to ln and units from cm/s**2 to g
         mean = np.log((10 ** mean) * 1e-2 / g)
 
-        if isinstance(imt, SA) and imt.period == 4.0:
+        if imt.period == 4.0:
             mean /= 0.550
 
         stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
@@ -207,7 +205,7 @@ class AtkinsonBoore2003SInter(GMPE):
         Compute soil linear factor as explained in paragraph 'Functional
         Form', page 1706.
         """
-        if isinstance(imt, SA) and imt.period >= 1:
+        if imt.period >= 1:
             return np.ones_like(pga_rock)
         else:
             sl = np.zeros_like(pga_rock)
@@ -215,9 +213,9 @@ class AtkinsonBoore2003SInter(GMPE):
             pga_between_100_500 = (pga_rock > 100) & (pga_rock < 500)
             pga_greater_equal_500 = pga_rock >= 500
 
-            is_SA_between_05_1 = isinstance(imt, SA) and 0.5 < imt.period < 1
+            is_SA_between_05_1 = 0.5 < imt.period < 1
 
-            is_SA_less_equal_05 = isinstance(imt, SA) and (imt.period <= 0.5)
+            is_SA_less_equal_05 = imt.period <= 0.5
 
             if is_SA_between_05_1:
                 sl[pga_between_100_500] = (1 - (1. / imt.period - 1) *
@@ -225,7 +223,7 @@ class AtkinsonBoore2003SInter(GMPE):
                                            100) / 400)
                 sl[pga_greater_equal_500] = 1 - (1. / imt.period - 1)
 
-            if is_SA_less_equal_05 or isinstance(imt, PGA):
+            if is_SA_less_equal_05 or imt.period == 0:
                 sl[pga_between_100_500] = (1 - (pga_rock[pga_between_100_500] -
                                            100) / 400)
 
@@ -310,7 +308,7 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
                                   sites.vs30, pga_rock, imt)
         mean = np.log((10 ** mean) * 1e-2 / g)
 
-        if isinstance(imt, SA) and imt.period == 4.0:
+        if imt.period == 4.0:
             mean /= 0.550
 
         stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
@@ -359,8 +357,8 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
         new_rup = copy.deepcopy(rup)
         new_rup.hypo_depth = 20.
 
-        mean, stddevs = super(AtkinsonBoore2003SInterNSHMP2008, self). \
-            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, new_rup, dists, imt, stddev_types)
 
         return mean, stddevs
 

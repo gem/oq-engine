@@ -1,0 +1,6 @@
+eventID,Agency,year,month,day,hour,minute,second,timeError,longitude,latitude,SemiMajor90,SemiMinor90,ErrorStrike,depth,depthError,magnitude,sigmaMagnitude,magnitudeType
+43184,ISC-REV|GCMT,2015,2,25,10,32,2.21,0.32,143.4796,39.3166,,,,11.0,,4.9,,
+43185,ISC-REV|GCMT,2015,2,26,1,11,24.37,0.47,142.0782,38.4507,,,,56.7,3.35,5.1,,
+43188,ISC-REV|JMA,2015,2,26,7,26,36.49,0.5,148.9844,43.7839,,,,35.0,,4.3,,
+43190,ISC-REV|IDC,2015,2,27,21,33,50.51,1.32,160.7738,53.7396,,,,32.4,10.3,4.71,0.25,0.25
+43191,ISC-REV|JMA,2015,2,28,0,40,43.67,0.47,144.3616,42.7593,,,,100.3,4.11,4.3,,

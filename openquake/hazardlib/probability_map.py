@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2016-2017 GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (c) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
 import numpy
 
@@ -49,7 +49,7 @@ class ProbabilityCurve(object):
     >>> poe = ProbabilityCurve(numpy.array([0.1, 0.2, 0.3, 0, 0]))
     >>> ~(poe | poe) * .5
     <ProbabilityCurve
-    [ 0.405  0.32   0.245  0.5    0.5  ]>
+    [0.405 0.32  0.245 0.5   0.5  ]>
     """
     def __init__(self, array):
         self.array = array
@@ -78,7 +78,7 @@ class ProbabilityCurve(object):
     def __invert__(self):
         return self.__class__(1. - self.array)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.array.any())
 
     def __repr__(self):
@@ -94,7 +94,7 @@ class ProbabilityCurve(object):
         """
         curve = numpy.zeros(1, imtls.dt)
         for imt in imtls:
-            curve[imt] = self.array[imtls.slicedic[imt], idx]
+            curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
 
@@ -117,7 +117,7 @@ class ProbabilityMap(dict):
     L the total number of hazard levels and I the number of GSIMs.
     """
     @classmethod
-    def build(cls, shape_y, shape_z, sids, initvalue=0.):
+    def build(cls, shape_y, shape_z, sids, initvalue=0., dtype=F64):
         """
         :param shape_y: the total number of intensity measure levels
         :param shape_z: the number of inner levels
@@ -127,7 +127,7 @@ class ProbabilityMap(dict):
         """
         dic = cls(shape_y, shape_z)
         for sid in sids:
-            dic.setdefault(sid, initvalue)
+            dic.setdefault(sid, initvalue, dtype)
         return dic
 
     @classmethod
@@ -152,18 +152,19 @@ class ProbabilityMap(dict):
         self.shape_y = shape_y
         self.shape_z = shape_z
 
-    def setdefault(self, sid, value):
+    def setdefault(self, sid, value, dtype=F64):
         """
         Works like `dict.setdefault`: if the `sid` key is missing, it fills
         it with an array and returns the associate ProbabilityCurve
 
         :param sid: site ID
         :param value: value used to fill the returned ProbabilityCurve
+        :param dtype: dtype used internally (F32 or F64)
         """
         try:
             return self[sid]
         except KeyError:
-            array = numpy.empty((self.shape_y, self.shape_z), F64)
+            array = numpy.empty((self.shape_y, self.shape_z), dtype)
             array.fill(value)
             pc = ProbabilityCurve(array)
             self[sid] = pc
@@ -207,33 +208,7 @@ class ProbabilityMap(dict):
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
-                curves_by_imt[sid] = self[sid].array[
-                    imtls.slicedic[imt], idx]
-        return curves
-
-    # used when exporting to npy
-    def convert_npy(self, imtls, nsites, idx=0):
-        """
-        Convert a probability map into a composite array of length `nsites`
-        and dtype `imtls.dt`.
-
-        :param imtls:
-            DictArray instance
-        :param nsites:
-            the total number of sites
-        :param idx:
-            index on the z-axis (default 0)
-        """
-        dtlist = [(imt, [(str(iml), F32) for iml in imtls[imt]])
-                  for imt in imtls]
-        curves = numpy.zeros(nsites, dtlist)
-        for sid in self:
-            array = self[sid].array
-            for imt in imtls:
-                imls = curves.dtype[imt].names
-                values = array[imtls.slicedic[imt], idx]
-                for iml, val in zip(imls, values):
-                    curves[sid][imt][iml] = val
+                curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
         return curves
 
     def convert2(self, imtls, sids):
@@ -258,7 +233,7 @@ class ProbabilityMap(dict):
                 except KeyError:
                     pass  # the poes will be zeros
                 else:
-                    curves_by_imt[i] = pcurve.array[imtls.slicedic[imt], 0]
+                    curves_by_imt[i] = pcurve.array[imtls(imt), 0]
         return curves
 
     def filter(self, sids):
@@ -332,13 +307,15 @@ class ProbabilityMap(dict):
         array = numpy.zeros(shape, F64)
         for i, sid in numpy.ndenumerate(sids):
             array[i] = self[sid].array
-        return array, dict(sids=sids)
+        return dict(array=array, sids=sids), {}
 
-    def __fromh5__(self, array, attrs):
+    def __fromh5__(self, dic, attrs):
         # rebuild the map from sids and probs arrays
+        array = dic['array']
+        sids = dic['sids']
         self.shape_y = array.shape[1]
         self.shape_z = array.shape[2]
-        for sid, prob in zip(attrs['sids'], array):
+        for sid, prob in zip(sids, array):
             self[sid] = ProbabilityCurve(prob)
 
 

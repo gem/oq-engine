@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -58,7 +58,7 @@ class EvenlyDiscretizedMFD(BaseMFD):
         if not self.bin_width > 0:
             raise ValueError('bin width must be positive')
 
-        if not self.occurrence_rates:
+        if len(self.occurrence_rates) == 0:
             raise ValueError('at least one bin must be specified')
 
         if not all(value >= 0 for value in self.occurrence_rates):

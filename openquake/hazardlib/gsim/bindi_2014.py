@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,10 +24,7 @@ Module exports :class:`BindiEtAl2014Rjb`,
                :class:`BindiEtAl2014RhypEC8`,
                :class:`BindiEtAl2014RhypEC8NoSOF`
 """
-from __future__ import division
-
 import numpy as np
-
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -89,6 +86,10 @@ class BindiEtAl2014Rjb(GMPE):
     #: Required distance measure is Rjb (eq. 1).
     REQUIRES_DISTANCES = set(('rjb', ))
 
+    def __init__(self, adjustment_factor=1.0):
+        super().__init__()
+        self.adjustment_factor = np.log(adjustment_factor)
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -100,7 +101,7 @@ class BindiEtAl2014Rjb(GMPE):
 
         C = self.COEFFS[imt]
         imean = self._get_mean(C, rup, dists, sites)
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             # Convert units to g,
             # but only for PGA and SA (not PGV):
             mean = np.log((10.0 ** (imean - 2.0)) / g)
@@ -110,7 +111,7 @@ class BindiEtAl2014Rjb(GMPE):
 
         istddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
         stddevs = np.log(10.0 ** np.array(istddevs))
-        return mean, stddevs
+        return mean + self.adjustment_factor, stddevs
 
     def _get_mean(self, C, rup, dists, sites):
         """

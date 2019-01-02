@@ -11,24 +11,19 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="active shallow crust"
         >
             <singlePlaneRupture
-            id="44"
+            id="149"
             multiplicity="4"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
-                    >
-                        188978561024 188978561025
-                    </SES>
-                    <SES
                     id="2"
                     >
-                        188978561026
+                        639950127104 639950127106 639950127107
                     </SES>
                     <SES
-                    id="3"
+                    id="1"
                     >
-                        188978561027
+                        639950127105
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -52,24 +47,24 @@ xmlns:gml="http://www.opengis.net/gml"
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
-            id="45"
+            id="150"
             multiplicity="5"
             >
                 <stochasticEventSets>
                     <SES
                     id="1"
                     >
-                        193273528320
-                    </SES>
-                    <SES
-                    id="2"
-                    >
-                        193273528321 193273528322 193273528323
+                        644245094400 644245094403
                     </SES>
                     <SES
                     id="3"
                     >
-                        193273528324
+                        644245094401 644245094404
+                    </SES>
+                    <SES
+                    id="2"
+                    >
+                        644245094402
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -93,19 +88,24 @@ xmlns:gml="http://www.opengis.net/gml"
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
-            id="46"
+            id="151"
             multiplicity="4"
             >
                 <stochasticEventSets>
                     <SES
                     id="1"
                     >
-                        197568495616 197568495618 197568495619
+                        648540061696
                     </SES>
                     <SES
                     id="3"
                     >
-                        197568495617
+                        648540061697
+                    </SES>
+                    <SES
+                    id="2"
+                    >
+                        648540061698 648540061699
                     </SES>
                 </stochasticEventSets>
                 <magnitude>

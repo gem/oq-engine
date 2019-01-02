@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Module exports :class:`CauzziFaccioli2008`.
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -166,9 +164,9 @@ class CauzziFaccioli2008(GMPE):
 
         # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
-        if isinstance(imt, PGA):
+        if imt.name == "PGA":
             mean = np.log((10 ** mean) / g)
-        elif isinstance(imt, SA):
+        elif imt.name == "SA":
             mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
                           1e-2 / g)
         else:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -146,9 +146,9 @@ import copy
 import types
 import warnings
 import pprint as pp
+import configparser
 from contextlib import contextmanager
-from openquake.baselib.python3compat import (
-    raise_, exec_, configparser, decode, unicode)
+from openquake.baselib.python3compat import raise_, decode, encode
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape, quoteattr
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
@@ -196,9 +196,11 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
     '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
     """
-    if isinstance(value, bytes):
+    if isinstance(value, numpy.bool_):
+        return '1' if value else '0'
+    elif isinstance(value, bytes):
         return value.decode('utf8')
-    elif isinstance(value, unicode):
+    elif isinstance(value, str):
         return value
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
@@ -334,7 +336,7 @@ class SourceLineParser(ElementTree.XMLParser):
     A custom parser managing line numbers: works for Python <= 3.3
     """
     def _start_list(self, tag, attrib_in):
-        elem = super(SourceLineParser, self)._start_list(tag, attrib_in)
+        elem = super()._start_list(tag, attrib_in)
         elem.lineno = self.parser.CurrentLineNumber
         # there is also CurrentColumnNumber available, if wanted
         return elem
@@ -378,9 +380,9 @@ def _displayattrs(attrib, expandattrs):
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
-    val = ' %s' % repr(node.text) \
-        if expandvals and node.text is not None else ''
-    output.write(decode((indent + striptag(node.tag) + attrs + val + '\n')))
+    val = (' %s' % repr(node.text) if expandvals and node.text is not None
+           else '')
+    output.write(encode(indent + striptag(node.tag) + attrs + val + '\n'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
 
@@ -427,7 +429,7 @@ class Node(object):
         """
         :param str tag: the Node name
         :param dict attrib: the Node attributes
-        :param unicode text: the Node text (default None)
+        :param str text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)
         """
         self.tag = fulltag
@@ -470,9 +472,9 @@ class Node(object):
         :param expandvals:
           print the values if True, else print only the tag names
         """
-        out = io.StringIO()
+        out = io.BytesIO()
         node_display(self, expandattrs, expandvals, out)
-        return out.getvalue()
+        return decode(out.getvalue())
 
     def __iter__(self):
         """Iterate over subnodes"""
@@ -531,16 +533,13 @@ class Node(object):
         """Return the number of subnodes"""
         return len(self.nodes)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         Return True if there are subnodes; it does not iter on the
         subnodes, so for lazy nodes it returns True even if the
         generator is empty.
         """
         return bool(self.nodes)
-
-    if sys.version > '3':
-        __bool__ = __nonzero__
 
     def __deepcopy__(self, memo):
         new = object.__new__(self.__class__)
@@ -656,7 +655,7 @@ def node_to_elem(root):
     generate_elem(output.append, root, 1)  # print "\n".join(output)
     namespace = {"Element": ElementTree.Element,
                  "SubElement": ElementTree.SubElement}
-    exec_("\n".join(output), globals(), namespace)
+    exec("\n".join(output), globals(), namespace)
     return namespace["e1"]
 
 
@@ -675,7 +674,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
             if filter_elem(el):
                 yield node_from_elem(el, nodefactory)
                 el.clear()  # save memory
-    except:
+    except Exception:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
         if not str(fname) in msg:
@@ -761,7 +760,7 @@ def context(fname, node):
     """
     try:
         yield node
-    except:
+    except Exception:
         etype, exc, tb = sys.exc_info()
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, getattr(node, 'lineno', '?'), fname)

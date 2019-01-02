@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,8 +27,6 @@ Module exports
 :class:`EdwardsFah2013Alpine90Bars`,
 :class:`EdwardsFah2013Alpine120Bars`.
 """
-
-from __future__ import division
 import numpy as np
 from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE
@@ -112,7 +110,7 @@ class EdwardsFah2013Alpine10Bars(GMPE):
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log(mean / (g*100.))
         else:
             # PGV:

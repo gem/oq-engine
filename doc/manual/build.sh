@@ -5,18 +5,26 @@ if [ $GEM_SET_DEBUG ]; then
 fi
 set -e
 
+CURPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+VERSION="$(cat $CURPATH/../../openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
+cd $CURPATH
+sed -i "s/Version X\.Y\.Z/Version $VERSION/" figures/oq_manual_cover.svg
+
 inkscape -A figures/oq_manual_cover.pdf figures/oq_manual_cover.svg
 
-(pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex
+sed -i "s/#PUBYEAR#/$(date +%Y)/g; s/#PUBMONTH#/$(date +%B)/g" oq-manual.tex
+sed -i "s/version X\.Y\.Z/version $VERSION/; s/ENGINE\.X\.Y\.Z/ENGINE\.$VERSION/" oq-manual.tex
+
+(pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex
 bibtex oq-manual
-pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex
+pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex
 makeindex oq-manual.idx
 makeglossaries oq-manual
-pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex
-makeglossaries oq-manual) | egrep -i "error|warning|missing"
+pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex
+makeglossaries oq-manual) | tee -a full_log.log | egrep -i "error|warning|missing"
 
 echo -e "\n\n=== FINAL RUN ===\n\n"
-pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex | egrep -i "error|warning|missing"
+pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex | tee -a full_log.log | egrep -i "error|warning|missing"
 
 if [ -f oq-manual.pdf ]; then
     ./clean.sh || true

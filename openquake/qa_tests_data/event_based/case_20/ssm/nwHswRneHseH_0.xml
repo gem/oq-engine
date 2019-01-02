@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="nwHswRneHseH_0"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        srcs_weights="1"
+        tectonicRegion="Active Shallow Offshore"
+        >
+            <areaSource
+            id="OFS"
+            name="OFS  -  OFFSHORE"
+            tectonicRegion="Active Shallow Offshore"
+            >
+                <areaGeometry
+                discretization="2.0000000E+01"
+                >
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -1.3090000E+02 5.1330000E+01 -1.2775000E+02 4.9640000E+01 -1.2850000E+02 4.9150000E+01 -1.2793000E+02 4.8760000E+01 -1.2820000E+02 4.7350000E+01 -1.2950000E+02 4.7350000E+01 -1.3150000E+02 5.1000000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        5.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="4.8500000E+00"
+                >
+                    <occurRates>
+                        8.6195600E-01 6.8567600E-01 5.4547500E-01 4.3396300E-01 3.4526400E-01 2.7470900E-01 2.1858300E-01 1.7393200E-01 1.3841000E-01 1.1014800E-01 8.7660700E-02 6.9768100E-02 5.5530400E-02 4.4200400E-02 3.5183800E-02 2.8008000E-02 2.2296800E-02 1.7751100E-02 1.4132800E-02 1.1252700E-02 8.9598900E-03 4.9942600E-03 5.6815100E-04 4.5245700E-04 3.6034000E-04 6.1204000E-10
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="7.0000000E+00" probability="5.0000000E-01"/>
+                    <hypoDepth depth="5.0000000E+00" probability="2.5000000E-01"/>
+                    <hypoDepth depth="1.0000000E+01" probability="2.5000000E-01"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
+

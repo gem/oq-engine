@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,13 +20,12 @@
 Module exports :class:`BooreAtkinson2011`,
                :class:`Atkinson2008prime`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
+
 
 class BooreAtkinson2011(BooreAtkinson2008):
     """
@@ -45,7 +44,7 @@ class BooreAtkinson2011(BooreAtkinson2008):
         """
 
         # get mean and std using the superclass
-        mean, stddevs = super(BooreAtkinson2011, self).get_mean_and_stddevs(
+        mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
         # correction factor (see Atkinson and Boore, 2011; equation 5 at
@@ -73,7 +72,7 @@ class Atkinson2008prime(BooreAtkinson2011):
         """
 
         # get mean and std using the superclass
-        mean, stddevs = super(Atkinson2008prime, self).get_mean_and_stddevs(
+        mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
         
         A08 = self.A08_COEFFS[imt]

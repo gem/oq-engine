@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -71,18 +71,16 @@ The Node class provides no facility to cast strings into Python types;
 this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
-from __future__ import print_function
 import io
 import re
 import sys
-import copy
-import decimal
 import logging
 import operator
 import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby, deprecated
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
@@ -98,6 +96,56 @@ PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
 
 class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
+
+
+class SourceModel(collections.Sequence):
+    """
+    A container of source groups with attributes name, investigation_time
+    and start_time. It is serialize on hdf5 as follows:
+
+    >> with openquake.baselib.hdf5.File('/tmp/sm.hdf5', 'w') as f:
+    ..    f['/'] = source_model
+    """
+    def __init__(self, src_groups, name='', investigation_time='',
+                 start_time=''):
+        self.src_groups = src_groups
+        self.name = name
+        self.investigation_time = investigation_time
+        self.start_time = start_time
+
+    def __getitem__(self, i):
+        return self.src_groups[i]
+
+    def __len__(self):
+        return len(self.src_groups)
+
+    def __toh5__(self):
+        dic = {}
+        for i, grp in enumerate(self.src_groups):
+            grpname = grp.name or 'group-%d' % i
+            srcs = [(src.source_id, src) for src in grp
+                    if hasattr(src, '__toh5__')]
+            if srcs:
+                dic[grpname] = hdf5.Group(srcs, {'trt': grp.trt})
+        attrs = dict(name=self.name,
+                     investigation_time=self.investigation_time or 'NA',
+                     start_time=self.start_time or 'NA')
+        if not dic:
+            raise ValueError('There are no serializable sources in %s' % self)
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.src_groups = []
+        for grp_name, grp in dic.items():
+            trt = grp.attrs['trt']
+            srcs = []
+            for src_id in sorted(grp):
+                src = grp[src_id]
+                src.num_ruptures = src.count_ruptures()
+                srcs.append(src)
+            grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
+            self.src_groups.append(grp)
 
 
 def get_tag_version(nrml_node):
@@ -118,6 +166,7 @@ def to_python(fname, *args):
     [node] = read(fname)
     return node_to_obj(node, fname, *args)
 
+
 parse = deprecated('Use nrml.to_python instead')(to_python)
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
@@ -128,7 +177,8 @@ node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
-default = sourceconverter.SourceConverter()
+
+default = sourceconverter.SourceConverter()  # rupture_mesh_spacing=10
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
@@ -136,19 +186,19 @@ def get_source_model_04(node, fname, converter=default):
     sources = []
     source_ids = set()
     converter.fname = fname
-    for no, src_node in enumerate(node, 1):
+    for src_node in node:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         sources.append(src)
         source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    return sorted(sourceconverter.SourceGroup(trt, srcs)
-                  for trt, srcs in groups.items())
+    src_groups = sorted(sourceconverter.SourceGroup(
+        trt, srcs, min_mag=converter.minimum_magnitude)
+                        for trt, srcs in groups.items())
+    return SourceModel(src_groups, node.get('name', ''))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -161,10 +211,21 @@ def get_source_model_05(node, fname, converter=default):
                 '%s: you have an incorrect declaration '
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
-        groups.append(converter.convert_node(src_group))
-    return sorted(groups)
+        sg = converter.convert_node(src_group)
+        if len(sg):
+            # a source group can be empty if the source_id filtering is on
+            groups.append(sg)
+    itime = node.get('investigation_time')
+    if itime is not None:
+        itime = valid.positivefloat(itime)
+    stime = node.get('start_time')
+    if stime is not None:
+        stime = valid.positivefloat(stime)
+    return SourceModel(sorted(groups), node.get('name'), itime, stime)
+
 
 validators = {
+    'backarc': valid.boolean,
     'strike': valid.strike_range,
     'dip': valid.dip_range,
     'rake': valid.rake_range,
@@ -193,9 +254,8 @@ validators = {
     'bin_width': valid.positivefloats,
     'probability': valid.probability,
     'occurRates': valid.positivefloats,  # they can be > 1
-    'probs_occur': valid.pmf,
     'weight': valid.probability,
-    'uncertaintyWeight': decimal.Decimal,
+    'uncertaintyWeight': float,
     'alongStrike': valid.probability,
     'downDip': valid.probability,
     'totalMomentRate': valid.positivefloat,
@@ -214,13 +274,9 @@ validators = {
     'poes': valid.positivefloats,
     'description': valid.utf8_not_empty,
     'noDamageLimit': valid.NoneOr(valid.positivefloat),
-    'investigationTime': valid.positivefloat,
     'poEs': valid.probabilities,
     'gsimTreePath': lambda v: v.split('_'),
     'sourceModelTreePath': lambda v: v.split('_'),
-    'poE': valid.probability,
-    'IMLs': valid.positivefloats,
-    'pos': valid.lon_lat,
     'IMT': str,
     'saPeriod': valid.positivefloat,
     'saDamping': valid.positivefloat,
@@ -228,10 +284,7 @@ validators = {
     'investigationTime': valid.positivefloat,
     'poE': valid.probability,
     'periods': valid.positivefloats,
-    'pos': valid.lon_lat,
     'IMLs': valid.positivefloats,
-    'lon': valid.longitude,
-    'lat': valid.latitude,
     'magBinEdges': valid.integers,
     'distBinEdges': valid.integers,
     'epsBinEdges': valid.integers,
@@ -239,14 +292,12 @@ validators = {
     'latBinEdges': valid.latitudes,
     'type': valid.simple_id,
     'dims': valid.positiveints,
-    'poE': valid.probability,
     'iml': valid.positivefloat,
     'index': valid.positiveints,
     'value': valid.positivefloat,
     'assetLifeExpectancy': valid.positivefloat,
     'interestRate': valid.positivefloat,
     'statistics': valid.Choice('mean', 'quantile'),
-    'pos': valid.lon_lat,
     'gmv': valid.positivefloat,
     'spacing': valid.positivefloat,
     'srcs_weights': valid.positivefloats,
@@ -254,67 +305,26 @@ validators = {
 }
 
 
-class SourceModelParser(object):
+def read_source_models(fnames, converter, monitor):
     """
-    A source model parser featuring a cache.
-
+    :param fnames:
+        list of source model files
     :param converter:
-        :class:`openquake.commonlib.source.SourceConverter` instance
+        a SourceConverter instance
+    :param monitor:
+        a :class:`openquake.performance.Monitor` instance
+    :yields:
+        SourceModel instances
     """
-    def __init__(self, converter):
-        self.converter = converter
-        self.groups = {}  # cache fname -> groups
-        self.fname_hits = collections.Counter()  # fname -> number of calls
-
-    def parse_src_groups(self, fname, apply_uncertainties=None):
-        """
-        :param fname:
-            the full pathname of the source model file
-        :param apply_uncertainties:
-            a function modifying the sources (or None)
-        """
-        try:
-            groups = self.groups[fname]
-        except KeyError:
-            groups = self.groups[fname] = self.parse_groups(fname)
-        # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in groups]
-        for group in groups:
-            nrup = 0
-            for src in group:
-                if apply_uncertainties:
-                    apply_uncertainties(src)
-                    src.num_ruptures = src.count_ruptures()
-                    nrup += src.num_ruptures
-            # NB: if the user sets a wrong discretization parameter
-            # the call to `.count_ruptures()` can be ultra-slow
-            logging.debug("%s, %s: parsed %d source(s) with %d ruptures",
-                          fname, group.trt, len(group), nrup)
-        self.fname_hits[fname] += 1
-        return groups
-
-    def parse_groups(self, fname):
-        """
-        Parse all the groups and return them ordered by number of sources.
-        It does not count the ruptures, so it is relatively fast.
-
-        :param fname:
-            the full pathname of the source model file
-        """
-        try:
-            return to_python(fname, self.converter)
-        except ValueError as e:
-            err = str(e)
-            e1 = 'Surface does not conform with Aki & Richards convention'
-            e2 = 'Edges points are not in the right order'
-            if e1 in err or e2 in err:
-                raise InvalidFile('''\
-        %s: %s. Probably you are using an obsolete model.
-        In that case you can fix the file with the command
-        %s -m openquake.engine.tools.correct_complex_sources %s
-        ''' % (fname, e, sys.executable, fname))
-            else:
-                raise
+    for fname in fnames:
+        if fname.endswith(('.xml', '.nrml')):
+            sm = to_python(fname, converter)
+        elif fname.endswith('.hdf5'):
+            sm = sourceconverter.to_python(fname, converter)
+        else:
+            raise ValueError('Unrecognized extension in %s' % fname)
+        sm.fname = fname
+        yield sm
 
 
 def read(source, chatty=True, stop=None):

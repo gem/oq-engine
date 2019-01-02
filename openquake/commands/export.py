@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,12 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import os
 import logging
 
-from openquake.baselib import general, performance, sap, datastore
+from openquake.baselib import general, performance, sap
+from openquake.commands import engine
 from openquake.calculators.export import export as export_
 
 
@@ -31,10 +30,10 @@ def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
     Export an output from the datastore.
     """
     logging.basicConfig(level=logging.INFO)
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
-        dstore.parent = datastore.read(parent_id)
+        dstore.parent = engine.read(parent_id)
     dstore.export_dir = export_dir
     with performance.Monitor('export', measuremem=True) as mon:
         for fmt in exports.split(','):
@@ -43,6 +42,7 @@ def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
             print('Exported %s in %s' % (general.humansize(nbytes), fnames))
     if mon.duration > 1:
         print(mon)
+    dstore.close()
 
 
 export.arg('datastore_key', 'datastore key')

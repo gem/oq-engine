@@ -41,6 +41,17 @@
     </logicTreeBranchSet>
   </logicTreeBranchingLevel>
   
+  <logicTreeBranchingLevel branchingLevelID="bl3">
+    <logicTreeBranchSet branchSetID="bs3" uncertaintyType="gmpeModel"  
+                        applyToTectonicRegionType="Deep Seismicity">
+      
+      <logicTreeBranch branchID="b31"> 
+        <uncertaintyModel>MontalvaEtAl2017SSlab</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>          
+    </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+
 </logicTree>
 
 </nrml>

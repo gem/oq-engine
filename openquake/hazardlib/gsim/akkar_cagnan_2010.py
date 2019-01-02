@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Module exports :class:`AkkarCagnan2010`.
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -113,7 +111,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
                                                             C_SR))
 
         # convert from cm/s**2 to g for SA (PGA is already computed in g)
-        if isinstance(imt, SA):
+        if imt.name == "SA":
             mean = np.log(np.exp(mean) * 1e-2 / g)
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))

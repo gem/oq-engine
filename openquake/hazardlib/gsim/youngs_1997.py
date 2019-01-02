@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,8 +22,6 @@ Module exports :class:`YoungsEtAl1997SInter`, :class:`YoungsEtAl1997SSlab`,
 :class:`YoungsEtAl1997GSCSSlabLowerLimit`,
 :class:`YoungsEtAl1997SInterNSHMP2008`.
 """
-from __future__ import division
-
 import numpy as np
 import copy
 
@@ -58,8 +56,8 @@ class YoungsEtAl1997SInter(GMPE):
 
     #: Supported intensity measure component is the average horizontal
     #: component
-    #attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see
-    #paragraph : 'Analysis of peak horizontal accelerations', p. 59.
+    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see
+    #: paragraph: 'Analysis of peak horizontal accelerations', p. 59.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, table 2, page 67.
@@ -218,8 +216,8 @@ class YoungsEtAl1997SInterNSHMP2008(YoungsEtAl1997SInter):
         new_rup = copy.deepcopy(rup)
         new_rup.hypo_depth = 20.
 
-        mean, stddevs = super(YoungsEtAl1997SInterNSHMP2008, self). \
-            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, new_rup, dists, imt, stddev_types)
 
         return mean, stddevs
 
@@ -248,8 +246,8 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = super(YoungsEtAl1997SSlab, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         idx_rock = sites.vs30 >= self.ROCK_VS30
         idx_soil = sites.vs30 < self.ROCK_VS30
@@ -278,8 +276,8 @@ class YoungsEtAl1997GSCSSlabBest(YoungsEtAl1997SSlab):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = super(YoungsEtAl1997GSCSSlabBest, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         # this is the firm ground adjustment
         mean += np.log(1.162)
@@ -301,8 +299,8 @@ class YoungsEtAl1997GSCSSlabUpperLimit(YoungsEtAl1997GSCSSlabBest):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = super(YoungsEtAl1997GSCSSlabUpperLimit, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         mean += 0.7
 
@@ -323,8 +321,8 @@ class YoungsEtAl1997GSCSSlabLowerLimit(YoungsEtAl1997GSCSSlabBest):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = super(YoungsEtAl1997GSCSSlabLowerLimit, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         mean -= 0.7
 

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ex1"
+    taxonomySource="GEM taxonomy"
+    >
+        <description>
+            Modelo residencial Bogotá
+        </description>
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="aggregated" unit="COP"/>
+            </costTypes>
+        </conversions>
+        <tagNames>
+            Localidad Barrio Estraro Material
+        </tagNames>
+        <assets>
+            <asset
+            id="asset_4350"
+            number="3.0000000E+00"
+            taxonomy="MCF/LWAL+DUC/HBET:3,6"
+            >
+                <location lat="4.6509700E+00" lon="-7.4134660E+01"/>
+                <costs>
+                    <cost type="structural" value="8.8718000E+02"/>
+                </costs>
+                <tags Barrio="VISION DE ORIENTE" Estraro="2" Localidad="KENNEDY" Material="Mamposteria_Ductil"/>
+            </asset>
+            <asset
+            id="asset_8308"
+            number="7.0000000E+00"
+            taxonomy="MUR/HBET:4,5"
+            >
+                <location lat="4.5852400E+00" lon="-7.4100520E+01"/>
+                <costs>
+                    <cost type="structural" value="5.4029000E+03"/>
+                </costs>
+                <tags Barrio="RESTREPO" Estraro="3" Localidad="RAFAEL URIBE URIBE" Material="Mamposteria_NoDuctil"/>
+            </asset>
+            <asset
+            id="asset_9809"
+            number="2.0000000E+00"
+            taxonomy="MCF/LWAL+DUC/HBET:3,6"
+            >
+                <location lat="4.7572200E+00" lon="-7.4089760E+01"/>
+                <costs>
+                    <cost type="structural" value="7.3742000E+02"/>
+                </costs>
+                <tags Barrio="VILLA HERMOSA" Estraro="3" Localidad="SUBA" Material="Mamposteria_Ductil"/>
+            </asset>
+            <asset
+            id="asset_13074"
+            number="3.1000000E+01"
+            taxonomy="CR/LDUAL+DUC"
+            >
+                <location lat="4.6447100E+00" lon="-7.4063520E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4855046E+05"/>
+                </costs>
+                <tags Barrio="CHAPINERO CENTRAL" Estraro="3" Localidad="CHAPINERO" Material="Concreto"/>
+            </asset>
+            <asset
+            id="asset_14473"
+            number="5.0000000E+01"
+            taxonomy="CR/LFINF+DUC"
+            >
+                <location lat="4.7072300E+00" lon="-7.4036840E+01"/>
+                <costs>
+                    <cost type="structural" value="5.2717325E+05"/>
+                </costs>
+                <tags Barrio="LA CAROLINA" Estraro="6" Localidad="USAQUEN" Material="Concreto"/>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,17 +20,9 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
-from __future__ import division
-
-import operator
-
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
-
-from openquake.baselib.python3compat import range, round
+from scipy.spatial.distance import cdist
+from openquake.baselib.python3compat import round
 
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
@@ -169,7 +161,7 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
             seglons[0], seglats[0], seg_azim, lons[idx_in], lats[idx_in])
     if len(idx_out[0]):
         dists[idx_out] = min_geodetic_distance(
-            seglons, seglats, lons[idx_out], lats[idx_out])
+            (seglons, seglats), (lons[idx_out], lats[idx_out]))
 
     # Finally we correct the sign of the distances in order to make sure that
     # the points on the right semispace defined using as a reference the
@@ -188,93 +180,80 @@ def _reshape(array, orig_shape):
     return array[0]  # scalar array
 
 
-def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
+def spherical_to_cartesian(lons, lats, depths=None):
     """
-    Small wrapper around :func:`pure_distances`, suitable
-    for calculating the minimum distance between first mesh and each point
-    of the second mesh when both are defined on the earth surface.
-    """
-    mlons, mlats, slons, slats = _prepare_coords(
-        mlons.flatten(), mlats.flatten(), slons, slats)
-    return pure_distances(mlons, mlats, slons, slats).min(axis=0) * diameter
+    Return the position vectors (in Cartesian coordinates) of list of spherical
+    coordinates.
 
+    For equations see: http://mathworld.wolfram.com/SphericalCoordinates.html.
 
-# used to compute distances site-rupture for all sites
-def pure_distances(mlons, mlats, slons, slats):
-    """
-    :param mlons: array of m longitudes (for the rupture)
-    :param mlats: array of m latitudes (for the rupture)
-    :param slons: array of s longitudes (for the sites)
-    :param slats: array of s latitudes (for the sites)
-    :returns: array of (m, s) distances to be multiplied by the Earth diameter
-    """
-    cos_mlats = numpy.cos(mlats)
-    cos_slats = numpy.cos(slats)
-    result = numpy.zeros(mlons.shape + slons.shape)
-    if len(mlons) < len(slons):  # lots of sites
-        for i in range(len(mlons)):
-            a = numpy.sin((mlats[i] - slats) / 2.0)
-            b = numpy.sin((mlons[i] - slons) / 2.0)
-            result[i, :] = numpy.arcsin(
-                numpy.sqrt(a * a + cos_mlats[i] * cos_slats * b * b))
-    else:  # few sites
-        for j in range(len(slons)):
-            a = numpy.sin((mlats - slats[j]) / 2.0)
-            b = numpy.sin((mlons - slons[j]) / 2.0)
-            result[:, j] = numpy.arcsin(
-                numpy.sqrt(a * a + cos_mlats * cos_slats[j] * b * b))
-    return result
+    Parameters are components of spherical coordinates in a form of scalars,
+    lists or numpy arrays. ``depths`` can be ``None`` in which case it's
+    considered zero for all points.
 
-
-def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
-                diameter=2*EARTH_RADIUS):
-    """
-    Calculate the minimum distance between a collection of points and a point.
-
-    This function allows to calculate a closest distance to a collection
-    of points for each point in another collection. Both collection can be
-    of any shape, although it doesn't make sense to use scalars for the first
-    one.
-
-    Implements the same formula as in :func:`geodetic_distance` for distance
-    along great circle arc and the same approach as in :func:`distance`
-    for combining it with depth distance.
-
-    :param mlons, mlats, mdepths:
-        Numpy arrays of the same shape representing a first collection
-        of points, the one distance to which is of interest -- longitudes,
-        latitudes (both in decimal degrees) and depths (in km).
-    :param slons, slats, sdepths:
-        Scalars, python lists or tuples or numpy arrays of the same shape,
-        representing a second collection: a list of points to find a minimum
-        distance from for.
     :returns:
-        Indices and distances in km of the closest points. The result value is
-        a scalar if ``slons``, ``slats`` and ``sdepths`` are scalars and numpy
-        array of the same shape of those three otherwise.
+        ``numpy.array`` of 3d vectors representing points' coordinates in
+        Cartesian space in km. The array has shape `lons.shape + (3,)`.
+        In particular, if ``lons`` and ``lats`` are scalars the result is a
+        3D vector and if they are vectors the result is a matrix of shape
+        (N, 3).
+
+    See also :func:`cartesian_to_spherical`.
     """
-    mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
-    mdepths = numpy.array(mdepths, float)
-    sdepths = numpy.array(sdepths, float)
-    assert mlons.shape == mdepths.shape
-    assert slons.shape == sdepths.shape
+    phi = numpy.radians(lons)
+    theta = numpy.radians(lats)
+    if depths is None:
+        rr = EARTH_RADIUS
+    else:
+        rr = EARTH_RADIUS - numpy.array(depths)
+    cos_theta_r = rr * numpy.cos(theta)
+    try:
+        shape = lons.shape
+    except AttributeError:  # a list/tuple was passed
+        try:
+            shape = (len(lons),)
+        except TypeError:  # a scalar was passed
+            shape = ()
+    arr = numpy.zeros(shape + (3,))
+    arr[..., 0] = cos_theta_r * numpy.cos(phi)
+    arr[..., 1] = cos_theta_r * numpy.sin(phi)
+    arr[..., 2] = rr * numpy.sin(theta)
+    return arr
 
-    orig_shape = slons.shape
 
-    mlons = mlons.reshape(-1)
-    mlats = mlats.reshape(-1)
-    mdepths = mdepths.reshape(-1)
-    slons = slons.reshape(-1)
-    slats = slats.reshape(-1)
-    sdepths = sdepths.reshape(-1)
+def min_geodetic_distance(a, b):
+    """
+    Compute the minimum distance between first mesh and each point
+    of the second mesh when both are defined on the earth surface.
 
-    dst = pure_distances(mlons, mlats, slons, slats) * diameter
-    delta = numpy.array([[mdepth - sdepth for sdepth in sdepths]
-                         for mdepth in mdepths])
-    dist_squares = dst ** 2 + delta ** 2
-    min_idx = dist_squares.argmin(axis=0)  # (m, s) -> s
-    min_dst = numpy.sqrt(dist_squares.min(axis=0))  # (m, s) -> s
-    return _reshape(min_idx, orig_shape), _reshape(min_dst, orig_shape)
+    :param a: a pair of (lons, lats) or an array of cartesian coordinates
+    :param b: a pair of (lons, lats) or an array of cartesian coordinates
+    """
+    if isinstance(a, tuple):
+        a = spherical_to_cartesian(a[0].flatten(), a[1].flatten())
+    if isinstance(b, tuple):
+        b = spherical_to_cartesian(b[0].flatten(), b[1].flatten())
+    return cdist(a, b).min(axis=0)
+
+
+def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
+    """
+    :param lons: array of m longitudes
+    :param lats: array of m latitudes
+    :returns: matrix of (m, m) distances
+    """
+    m = len(lons)
+    assert m == len(lats), (m, len(lats))
+    lons = numpy.radians(lons)
+    lats = numpy.radians(lats)
+    cos_lats = numpy.cos(lats)
+    result = numpy.zeros((m, m))
+    for i in range(len(lons)):
+        a = numpy.sin((lats[i] - lats) / 2.0)
+        b = numpy.sin((lons[i] - lons) / 2.0)
+        result[i, :] = numpy.arcsin(
+            numpy.sqrt(a * a + cos_lats[i] * cos_lats * b * b)) * diameter
+    return numpy.matrix(result, copy=False)
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):

@@ -10,9 +10,14 @@ calculation:
 This list in the inset above contains a set of ruptures (in blue) and their
 corresponding sets of ground motion fields (in red). Exporting the outputs
 from the ruptures will produce, for each realisation, an NRML file containing
-a collection of ruptures. Below is an example:
+a collection of ruptures. An example is shown below in Listing~\ref{lst:output_ruptures}.
 
 \input{oqum/hazard/verbatim/output_ses}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_ses.xml}
+  \caption{Example of NRML file containing a collection of ruptures}
+  \label{lst:output_ruptures}
+\end{listing}
 
 The text in red shows the part which describes the generated
 stochastic event sets and the investigation time covered. Inside the

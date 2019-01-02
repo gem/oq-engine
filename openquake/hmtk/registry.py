@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2017, GEM Foundation
+# Copyright (C) 2017-2018 GEM Foundation
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
@@ -43,12 +43,11 @@
 # liability for use of the software.
 
 import sys
-import collections
 import functools
 from decorator import decorator
 
 
-class CatalogueFunctionRegistry(collections.OrderedDict):
+class CatalogueFunctionRegistry(dict):
     """
     A collection of methods/functions working on catalogues.
 

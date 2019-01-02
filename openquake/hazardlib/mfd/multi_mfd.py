@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2017 GEM Foundation
+# Copyright (C) 2017-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -85,7 +85,7 @@ class MultiMFD(BaseMFD):
             _reshape(kwargs, lengths)
         return cls(kind, size, width_of_mfd_bin, **kwargs)
 
-    def __init__(self, kind, size, width_of_mfd_bin=None, **kwargs):
+    def __init__(self, kind, size, width_of_mfd_bin=numpy.nan, **kwargs):
         self.kind = kind
         self.size = size
         self.width_of_mfd_bin = width_of_mfd_bin

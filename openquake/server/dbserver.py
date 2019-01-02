@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (C) 2016-2017 GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import sys
@@ -36,6 +36,7 @@ from openquake.server import __file__ as server_path
 db = dbapi.Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
               isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
               timeout=20)
+db.cmd = lambda action, *args: getattr(actions, action)(db, *args)
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
@@ -56,21 +57,23 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        self.master = w.WorkerMaster(**config.zworkers)
+        self.master = w.WorkerMaster(config.dbserver.host,
+                                     **config.zworkers)
 
     def dworker(self, sock):
         # a database worker responding to commands
-        for cmd_ in sock:
-            cmd, args = cmd_[0], cmd_[1:]
-            if cmd == 'getpid':
-                sock.send((self.pid, None, None))
-                continue
-            try:
-                func = getattr(actions, cmd)
-            except AttributeError:
-                sock.send(('Invalid command ' + cmd, ValueError, None))
-            else:
-                sock.send(safely_call(func, (self.db,) + args))
+        with sock:
+            for cmd_ in sock:
+                cmd, args = cmd_[0], cmd_[1:]
+                if cmd == 'getpid':
+                    sock.send(self.pid)
+                    continue
+                try:
+                    func = getattr(actions, cmd)
+                except AttributeError:
+                    sock.send('Invalid command ' + cmd)
+                else:
+                    sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
         """
@@ -90,7 +93,7 @@ class DbServer(object):
             # start task_in->task_out streamer thread
             c = config.zworkers
             threading.Thread(
-                target=w.streamer,
+                target=w._streamer,
                 args=(self.master_host, c.task_in_port, c.task_out_port)
             ).start()
             logging.warn('Task streamer started from %s -> %s',
@@ -188,7 +191,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
     else:
-        addr = (config.dbserver.host, DBSERVER_PORT)
+        addr = (config.dbserver.listen, DBSERVER_PORT)
 
     # create the db directory if needed
     dirname = os.path.dirname(dbpath)
@@ -201,6 +204,9 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
     # the line below is needed to work around a very subtle bug of sqlite;
     # we need new connections, see https://github.com/gem/oq-engine/pull/3002
     db.close()
+
+    # reset any computation left in the 'executing' state
+    actions.reset_is_running(db)
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)

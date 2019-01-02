@@ -21,13 +21,8 @@ Module exports :class:`YuEtAl2013`, :class:`YuEtAl2013Tibet`,
 :class:`YuEtAl2013Eastern`, :class:`YuEtAl2013Stable`
 
 """
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
-
 from scipy.constants import g
-from scipy.optimize import minimize
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -73,7 +68,7 @@ def gc(coeff, mag):
 
 def rbf(ra, coeff, mag):
     """
-    Calculate the meadian ground motion for a given magnitude and distance
+    Calculate the median ground motion for a given magnitude and distance
 
     :param ra:
         Distance value [km]
@@ -114,12 +109,41 @@ def fnc(ra, *args):
     # coefficients
     coeff = args[3]
     #
-    #
+    # compute the difference between epicentral distances
     rb = rbf(ra, coeff, mag)
     t1 = ra**2 * (np.sin(np.radians(theta)))**2
     t2 = rb**2 * (np.cos(np.radians(theta)))**2
     xx = ra * rb / (t1+t2)**0.5
-    return abs(repi-xx)
+    return xx-repi
+
+
+def get_ras(repi, theta, mag, coeff):
+    """
+    Computes equivalent distance
+
+    :param repi:
+        Epicentral distance
+    :param theta:
+        Azimuth value
+    :param mag:
+        Magnitude
+    :param coeff:
+        GMPE coefficients
+    """
+    rx = 150.
+    ras = 300.
+    dff = 1.e0
+    while abs(dff) > 1e-5:
+        #
+        # calculate the difference between epicentral distances
+        dff = fnc(ras, repi, theta, mag, coeff)
+        #
+        # update the value of distance computed
+        ras -= np.sign(dff) * rx
+        rx = rx / 2.
+        if rx < 1e-3:
+            break
+    return ras
 
 
 class YuEtAl2013Ms(GMPE):
@@ -181,9 +205,8 @@ class YuEtAl2013Ms(GMPE):
         # the geometry of the ellipses
         ras = []
         for epi, theta in zip(dists.repi, dists.azimuth):
-            res = minimize(fnc, epi, args=(epi, theta, mag, coeff),
-                            method='Nelder-Mead', tol=0.1)
-            ras.append(res.x[0])
+            res = get_ras(epi, theta, mag, coeff)
+            ras.append(res)
         ras = np.array(ras)
         rbs = rbf(ras, coeff, mag)
         #
@@ -191,19 +214,19 @@ class YuEtAl2013Ms(GMPE):
         # 225 is hardcoded under the assumption that the hypocentral depth
         # corresponds to 15 km (i.e. 15**2)
         mean1 = (a1ca + a1cb * mag +
-                    a1cc * np.log((ras**2+225)**0.5 +
-                                a1cd * np.exp(a1ce * mag)))
+                 a1cc * np.log((ras**2+225)**0.5 +
+                               a1cd * np.exp(a1ce * mag)))
         mean2 = (a2ca + a2cb * mag +
-                    a2cc * np.log((rbs**2+225)**0.5 +
-                                a2cd * np.exp(a2ce * mag)))
+                 a2cc * np.log((rbs**2+225)**0.5 +
+                               a2cd * np.exp(a2ce * mag)))
         #
         # Get distances
         x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
         y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
         mean = mean1 * mean2 / np.sqrt(x+y)
-        if isinstance(imt, (PGA)):
+        if imt.name == "PGA":
             mean = np.exp(mean)/g/100
-        elif isinstance(imt, (PGV)):
+        elif imt.name == "PGV":
             mean = np.exp(mean)
         else:
             raise ValueError('Unsupported IMT')
@@ -248,6 +271,110 @@ PGV -0.8349 1.8193 -2.103 2.088 0.399 3.3051 1.1799 -2.103 2.088 0.399 -2.6381 1
 
 
 class YuEtAl2013MsStable(YuEtAl2013Ms):
+    #: Supported tectonic region type is stable part of China
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
+    #: Coefficient table
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
+PGA 5.5591 1.1454 -2.079 2.802 0.295 8.5238 0.6854 -2.079 2.802 0.295 3.9445 1.0833 -1.723 1.295 0.331 6.187 0.7383 -1.723 1.295 0.331 0.5428
+PGV 0.2139 1.4283 -1.889 2.802 0.295 3.772 0.8786 -1.889 2.802 0.295 -1.3547 1.3823 -1.559 1.295 0.331 1.5433 0.9361 -1.559 1.295 0.331 0.6233
+     """)
+
+
+class YuEtAl2013Mw(YuEtAl2013Ms):
+    """
+    This is a modified version of the original Yu et al. (2013) that supports
+    the use of Mw rather than Ms. The Mw to Ms conversion equation used is the
+    one proposed by Cheng et al. (2017). Note that this version does not
+    propagate the uncertainty related to the magnitude conversion process.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # Check that the requested standard deviation type is available
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                   for stddev_type in stddev_types)
+        #
+        # Set parameters
+        magn = rup.mag
+        epi = dists.repi
+        theta = dists.azimuth
+        #
+        # Convert Mw into Ms
+        if magn < 6.58:
+            mag = (magn - 0.59) / 0.86
+        else:
+            mag = (magn + 2.42) / 1.28
+        #
+        # Set coefficients
+        coeff = self.COEFFS[imt]
+        a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = \
+            gc(coeff, mag)
+        #
+        # Get correction coefficients. Here for each site we find the
+        # the geometry of the ellipses
+        ras = []
+        for epi, theta in zip(dists.repi, dists.azimuth):
+            res = get_ras(epi, theta, mag, coeff)
+            ras.append(res)
+        ras = np.array(ras)
+        rbs = rbf(ras, coeff, mag)
+        #
+        # Compute values of ground motion for the two cases. The value of
+        # 225 is hardcoded under the assumption that the hypocentral depth
+        # corresponds to 15 km (i.e. 15**2)
+        mean1 = (a1ca + a1cb * mag +
+                 a1cc * np.log((ras**2+225)**0.5 +
+                               a1cd * np.exp(a1ce * mag)))
+        mean2 = (a2ca + a2cb * mag +
+                 a2cc * np.log((rbs**2+225)**0.5 +
+                               a2cd * np.exp(a2ce * mag)))
+        #
+        # Get distances
+        x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
+        y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
+        mean = mean1 * mean2 / np.sqrt(x+y)
+        if imt.name == "PGA":
+            mean = np.exp(mean)/g/100
+        elif imt.name == "PGV":
+            mean = np.exp(mean)
+        else:
+            raise ValueError('Unsupported IMT')
+        #
+        # Get the standard deviation
+        stddevs = self._compute_std(coeff, stddev_types, len(dists.repi))
+        #
+        # Return results
+        return np.log(mean), stddevs
+
+
+class YuEtAl2013MwTibet(YuEtAl2013Mw):
+    #: Supported tectonic region type is Tibetan plateau
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+    #: Coefficient table
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
+PGA 5.4901 1.4835 -2.416 2.647 0.366 8.7561 0.9453 -2.416 2.647 0.366 2.3069 1.4007 -1.854 0.612 0.457 5.6511 0.8924 -1.854 0.612 0.457 0.5428
+PGV -0.1472 1.7618 -2.205 2.647 0.366 3.9422 1.1293 -2.205 2.647 0.366 -2.9923 1.7043 -1.696 0.612 0.457 1.0189 1.0902 -1.696 0.612 0.457 0.6233
+     """)
+
+
+class YuEtAl2013MwEastern(YuEtAl2013Mw):
+    #: Supported tectonic region type is eastern part of China
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
+    #: Coefficient table
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
+PGA 4.5517 1.5433 -2.315 2.088 0.399 8.1259 0.9936 -2.315 2.088 0.399 2.7048 1.518 -2.004 0.944 0.447 6.3319 0.9614 -2.004 0.944 0.447 0.5428
+PGV -0.8349 1.8193 -2.103 2.088 0.399 3.3051 1.1799 -2.103 2.088 0.399 -2.6381 1.8124 -1.825 0.944 0.447 1.6376 1.1546 -1.825 0.944 0.447 0.6233
+     """)
+
+
+class YuEtAl2013MwStable(YuEtAl2013Mw):
     #: Supported tectonic region type is stable part of China
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
     #: Coefficient table

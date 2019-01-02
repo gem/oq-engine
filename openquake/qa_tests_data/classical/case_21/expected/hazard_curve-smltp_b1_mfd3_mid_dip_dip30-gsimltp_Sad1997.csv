@@ -1,3 +1,3 @@
-# source_model_tree_path=('b1', 'mfd3', 'mid', 'dip', 'dip30'), gsim_tree_path=('Sad1997',), investigation_time=1.0,imt=PGA
-lon,lat,depth,PGA-0.01:float32,PGA-0.1:float32,PGA-0.3:float32,PGA-1.0:float32
--64.91005,0.00000,0.00000,2.660559E-02,1.181717E-02,4.769641E-03,9.437518E-05
+# source_model_tree_path=('b1', 'mfd3', 'mid', 'dip', 'dip30'), gsim_tree_path=('Sad1997',), investigation_time=1.0, imt="PGA"
+lon,lat,depth,poe-0.01,poe-0.1,poe-0.3,poe-1.0
+-64.91005,0.00000,0.00000,2.660685E-02,1.181916E-02,4.771201E-03,9.443852E-05

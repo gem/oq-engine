@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -52,7 +52,7 @@ class BaseMSRTestCase(unittest.TestCase):
     MSR_CLASS = None
 
     def setUp(self):
-        super(BaseMSRTestCase, self).setUp()
+        super().setUp()
         self.msr = self.MSR_CLASS()
 
     def _test_get_median_area(self, mag, rake, expected_value, places=7):

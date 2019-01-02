@@ -2,9 +2,9 @@ Classical PSHA QA test with sites_csv
 =====================================
 
 ============== ===================
-checksum32     762,001,888        
-date           2018-02-02T16:03:34
-engine_version 2.9.0-gitd6a3184   
+checksum32     891,055,717        
+date           2018-12-13T12:58:00
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 10, num_levels = 13
@@ -23,29 +23,31 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     23                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
 -----------
-======================= ============================================================
-Name                    File                                                        
-======================= ============================================================
-gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
-job_ini                 `job.ini <job.ini>`_                                        
-sites                   `qa_sites.csv <qa_sites.csv>`_                              
-source                  `simple_fault.xml <simple_fault.xml>`_                      
-source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
-======================= ============================================================
+========================= ============================================================
+Name                      File                                                        
+========================= ============================================================
+gsim_logic_tree           `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
+job_ini                   `job.ini <job.ini>`_                                        
+reqv:active shallow crust `lookup_asc.hdf5 <lookup_asc.hdf5>`_                        
+sites                     `qa_sites.csv <qa_sites.csv>`_                              
+source_model_logic_tree   `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+========================= ============================================================
 
 Composite source model
 ----------------------
-============ ====== =============== ================
-smlt_path    weight gsim_logic_tree num_realizations
-============ ====== =============== ================
-simple_fault 1.000  simple(2)       2/2             
-============ ====== =============== ================
+============ ======= =============== ================
+smlt_path    weight  gsim_logic_tree num_realizations
+============ ======= =============== ================
+simple_fault 1.00000 simple(2)       2/2             
+============ ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -72,37 +74,21 @@ source_model     grp_id trt                  eff_ruptures tot_ruptures
 simple_fault.xml 0      Active Shallow Crust 447          447         
 ================ ====== ==================== ============ ============
 
-Informational data
-------------------
-======================= ===================================================================================
-count_ruptures.received tot 7 KB, max_per_task 682 B                                                       
-count_ruptures.sent     srcfilter 14.19 KB, sources 12.91 KB, param 5.86 KB, monitor 3.74 KB, gsims 2.77 KB
-hazard.input_weight     447.0                                                                              
-hazard.n_imts           1                                                                                  
-hazard.n_levels         13                                                                                 
-hazard.n_realizations   2                                                                                  
-hazard.n_sites          10                                                                                 
-hazard.n_sources        1                                                                                  
-hazard.output_weight    130.0                                                                              
-hostname                tstation.gem.lan                                                                   
-require_epsilons        False                                                                              
-======================= ===================================================================================
-
 Slowest sources
 ---------------
-========= ================= ============ ========= ========= =========
-source_id source_class      num_ruptures calc_time num_sites num_split
-========= ================= ============ ========= ========= =========
-3         SimpleFaultSource 447          0.045     1,100     15       
-========= ================= ============ ========= ========= =========
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      3         S    0     2     447          0.0       0.00548    0.0       15        0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================= ========= ======
-source_class      calc_time counts
-================= ========= ======
-SimpleFaultSource 0.045     1     
-================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+S    0.0       1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -110,21 +96,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.004 0.003  0.002 0.014 12       
-================== ===== ====== ===== ===== =========
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.00753 NaN    0.00753 0.00753 1      
+split_filter       0.03208 NaN    0.03208 0.03208 1      
+================== ======= ====== ======= ======= =======
+
+Data transfer
+-------------
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=388 B fnames=107 B           1.46 KB 
+split_filter       srcs=1.08 KB srcfilter=253 B seed=14 B 4.44 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.076     0.0       1     
-total count_ruptures           0.054     0.0       12    
-reading composite source model 0.008     0.0       1     
-store source_info              0.004     0.0       1     
-reading site collection        2.618E-04 0.0       1     
-aggregate curves               1.636E-04 0.0       12    
-saving probability maps        3.147E-05 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total split_filter       0.03208  0.0       1     
+total read_source_models 0.00753  0.0       1     
+======================== ======== ========= ======

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,16 +22,13 @@ Module exports :class:`Campbell2003`, :class:`Campbell2003SHARE`,
 :class:`Campbell2003MblgJ1996NSHMP2008`,
 :class:`Campbell2003MwNSHMP2008`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87,
     mblg_to_mw_johnston_96,
-    clip_mean
-)
+    clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -190,6 +187,9 @@ class Campbell2003SHARE(Campbell2003):
     #: Required rupture parameters are magnitude and rake
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -200,8 +200,8 @@ class Campbell2003SHARE(Campbell2003):
         # given imt
         C_ADJ = self.COEFFS_FS_ROCK[imt]
 
-        mean, stddevs = super(Campbell2003SHARE, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         # apply faulting style and rock adjustment factor for mean and std
         mean = np.log(np.exp(mean) *
@@ -273,6 +273,10 @@ class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
 
     Coefficients are given for the B/C (firm rock) conditions.
     """
+
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -352,6 +356,7 @@ class Campbell2003MwNSHMP2008(Campbell2003MblgAB1987NSHMP2008):
     Extend :class:`Campbell2003MblgAB1987NSHMP2008` but assumes magnitude
     to be in Mw scale, so no converion is applied.
     """
+
     def _convert_magnitude(self, mag):
         """
         Return magnitude value unchanged

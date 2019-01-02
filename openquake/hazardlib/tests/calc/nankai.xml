@@ -4,6 +4,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
+    investigation_time="1."
     name="test"
     >
         <sourceGroup
@@ -25,7 +26,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         8.8
                     </magnitude>
                     <rake>
-                        90.0
+                        undefined
                     </rake>
                     <hypocenter depth="14.5" lat="33.272" lon="134.894"/>
                     <griddedSurface>

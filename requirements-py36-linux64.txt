@@ -1,30 +1,32 @@
 # Suggested versions for development based on
-# Ubuntu 16.04 stack
+# Ubuntu 18.04 stack
 # !! must update pip first! so wheels will be used !!
 
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
 # h5py, Shapely, psutil, Rtree, PyYAML, Basemap
 
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/pytz-2016.7-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/setuptools-28.8.0-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/pkgconfig-1.1.0-py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/mock-1.3.0-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/h5py-2.7.0-cp36-cp36m-manylinux1_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/nose-1.3.7-py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/numpy-1.11.1-cp36-cp36m-manylinux1_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/scipy-0.17.1-cp36-cp36m-manylinux1_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/pyzmq-16.0.2-cp36-cp36m-manylinux1_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/psutil-3.4.2-cp36-cp36m-manylinux1_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/Shapely-1.5.13-cp36-cp36m-manylinux1_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/docutils-0.12-py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/decorator-4.0.11-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/funcsigs-1.0.2-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/pbr-1.8.0-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/six-1.10.0-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/Django-1.8.17-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/requests-2.9.1-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/pyshp-1.2.3-py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/pytz-2018.3-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/setuptools-39.0.1-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/mock-2.0.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/h5py-2.8.0-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/nose-1.3.7-py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/numpy-1.14.2-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/scipy-1.0.1-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/pyzmq-17.0.0-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/psutil-5.4.3-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/Shapely-1.6.4.post1-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/docutils-0.14-py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/decorator-4.3.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/pbr-4.0.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/six-1.11.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/Django-2.0.4-py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/certifi-2018.1.18-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/urllib3-1.22-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/chardet-3.0.4-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/idna-2.6-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/requests-2.20.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/pyshp-1.2.3-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py36/PyYAML-3.12-cp36-cp36m-manylinux1_x86_64.whl
 
 ## Extra ##
@@ -42,23 +44,23 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py36/python_prctl-1.6.1-cp36-cp36m
 ### Rtree ###
 # comment the following lines to skip installation
 # of Rtree (experimental wheel, optional feature)
-#http://cdn.ftp.openquake.org/wheelhouse/linux/py36/Rtree-0.8.2-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/Rtree-0.8.3-cp36-cp36m-manylinux1_x86_64.whl
 
 ### Celery ###
 # comment the following lines to skip installation
 # of celery (optional feature)
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/anyjson-0.3.3-py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/amqp-1.4.9-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/kombu-3.0.33-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/billiard-3.3.0.22-py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/celery-3.1.20-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/vine-1.1.4-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/amqp-2.2.2-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/kombu-4.1.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/billiard-3.5.0.3-py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/celery-4.1.0-py2.py3-none-any.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/matplotlib-1.5.3-cp36-cp36m-manylinux1_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.1.10-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.6.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.7.2-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.2.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/cycler-0.10.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/matplotlib-2.1.2-cp36-cp36m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py36/pyproj-1.9.5.1-cp36-cp36m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py36/basemap-1.1.0-cp36-cp36m-manylinux1_x86_64.whl

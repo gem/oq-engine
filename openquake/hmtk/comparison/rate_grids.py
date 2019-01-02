@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 #
 # LICENSE
 #
-# Copyright (c) 2015-2017, GEM Foundation, G. Weatherill, M. Pagani
+# Copyright (C) 2015-2018 GEM Foundation, G. Weatherill, M. Pagani
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
@@ -43,14 +44,12 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
-
 """
 Python tools for calculating activity rates on a grid from a source model
 """
 import numpy as np
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.hazardlib.nrml import SourceModelParser
+from openquake.hazardlib import nrml
 from openquake.hazardlib.source.complex_fault import ComplexFaultSource
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
@@ -139,10 +138,8 @@ class RateGrid(object):
                                     complex_mesh_spacing,
                                     mfd_width,
                                     area_discretisation)
-
-        parser = SourceModelParser(converter)
         sources = []
-        for grp in parser.parse_groups(input_model):
+        for grp in nrml.to_python(input_model, converter):
             sources.extend(grp.sources)
         return cls(limits, sources, area_discretisation)
 

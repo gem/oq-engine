@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,9 +22,6 @@ Module exports :class:`AbrahamsonEtAl2014`
                :class:`AbrahamsonEtAl2014RegJPN`
                :class:`AbrahamsonEtAl2014RegTWN`
 """
-from __future__ import division
-from __future__ import print_function
-
 import copy
 import numpy as np
 
@@ -93,6 +90,7 @@ class AbrahamsonEtAl2014(GMPE):
         # compute median sa on rock (vs30=1180m/s). Used for site response
         # term calculation
         sa1180 = np.exp(self._get_sa_at_1180(C, imt, sites, rup, dists))
+
         # get the mean value
         mean = (self._get_basic_term(C, rup, dists) +
                 self._get_faulting_style_term(C, rup) +
@@ -190,7 +188,7 @@ class AbrahamsonEtAl2014(GMPE):
         This computes equations 8 and 9 at page 1034
         """
         # compute the v1 value (see eq. 9, page 1034)
-        if isinstance(imt, SA):
+        if imt.name == "SA":
             t = imt.period
             if t <= 0.50:
                 v1 = 1500.0
@@ -198,7 +196,7 @@ class AbrahamsonEtAl2014(GMPE):
                 v1 = np.exp(-0.35 * np.log(t / 0.5) + np.log(1500.))
             else:
                 v1 = 800.0
-        elif isinstance(imt, PGA):
+        elif imt.name == "PGA":
             v1 = 1500.0
         else:
             # This covers the PGV case

@@ -2,9 +2,9 @@ oq-test03, depth=15km
 =====================
 
 ============== ===================
-checksum32     3,074,586,051      
-date           2018-02-02T16:02:36
-engine_version 2.9.0-gitd6a3184   
+checksum32     1,635,481,027      
+date           2018-12-13T12:57:19
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 40
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      0.1
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     3                 
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -40,11 +42,11 @@ structural_fragility `fragility_model_test03.xml <fragility_model_test03.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -53,6 +55,14 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,SadighEtAl1997(): [0]>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
@@ -63,21 +73,20 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-1        1.000 NaN    1   1   1         1         
-2        1.000 NaN    1   1   1         1         
-3        1.000 NaN    1   1   1         1         
-4        1.000 NaN    1   1   1         1         
-5        1.000 NaN    1   1   1         1         
-*ALL*    5.000 NaN    5   5   1         5         
-======== ===== ====== === === ========= ==========
+============== ======= ====== === === ========= ==========
+taxonomy       mean    stddev min max num_sites num_assets
+MUR/LWAL/HEX:1 1.00000 NaN    1   1   1         1         
+MUR/LWAL/HEX:2 1.00000 NaN    1   1   1         1         
+MUR/LWAL/HEX:3 1.00000 NaN    1   1   1         1         
+MUR/LWAL/HEX:4 1.00000 NaN    1   1   1         1         
+MUR/LWAL/HEX:5 1.00000 NaN    1   1   1         1         
+*ALL*          5.00000 NaN    5   5   1         5         
+============== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading exposure        0.002     0.0       1     
-reading site collection 6.199E-06 0.0       1     
-======================= ========= ========= ======
+================ ========= ========= ======
+operation        time_sec  memory_mb counts
+================ ========= ========= ======
+reading exposure 4.447E-04 0.0       1     
+================ ========= ========= ======

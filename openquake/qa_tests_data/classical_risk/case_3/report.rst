@@ -2,9 +2,9 @@ Classical PSHA - Loss fractions QA test
 =======================================
 
 ============== ===================
-checksum32     2,143,483,537      
-date           2018-02-02T16:02:28
-engine_version 2.9.0-gitd6a3184   
+checksum32     177,006,542        
+date           2018-12-13T12:57:00
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 12, num_levels = 19
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      5.0
 width_of_mfd_bin                0.2               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     23                
 master_seed                     0                 
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -36,18 +38,17 @@ Name                     File
 exposure                 `exposure_model.xml <exposure_model.xml>`_                  
 gsim_logic_tree          `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                  `job.ini <job.ini>`_                                        
-source                   `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_        
 ======================== ============================================================
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -70,24 +71,8 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 2,132        33,831      
+source_model.xml 0      Active Shallow Crust 1,613        33,831      
 ================ ====== ==================== ============ ============
-
-Informational data
-------------------
-======================= ================================================================================
-count_ruptures.received tot 6.68 KB, max_per_task 1.86 KB                                               
-count_ruptures.sent     sources 31.62 KB, srcfilter 6.44 KB, param 2.68 KB, monitor 1.56 KB, gsims 635 B
-hazard.input_weight     3383.1000000000004                                                              
-hazard.n_imts           1                                                                               
-hazard.n_levels         19                                                                              
-hazard.n_realizations   1                                                                               
-hazard.n_sites          12                                                                              
-hazard.n_sources        15                                                                              
-hazard.output_weight    228.0                                                                           
-hostname                tstation.gem.lan                                                                
-require_epsilons        True                                                                            
-======================= ================================================================================
 
 Exposure model
 --------------
@@ -98,44 +83,44 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   5         5         
-2        1.000 0.0    1   1   4         4         
-3        2.000 NaN    2   2   1         2         
-4        1.000 0.0    1   1   2         2         
-*ALL*    1.083 0.289  1   2   12        13        
-======== ===== ====== === === ========= ==========
+======== ======= ======= === === ========= ==========
+taxonomy mean    stddev  min max num_sites num_assets
+W        1.00000 0.0     1   1   5         5         
+A        1.00000 0.0     1   1   4         4         
+DS       2.00000 NaN     2   2   1         2         
+UFB      1.00000 0.0     1   1   2         2         
+*ALL*    1.08333 0.28868 1   2   12        13        
+======== ======= ======= === === ========= ==========
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-232       AreaSource   1,612        0.023     7         124      
-225       AreaSource   520          0.004     52        1        
-253       AreaSource   3,058        0.0       1         0        
-359       AreaSource   2,314        0.0       1         0        
-27        AreaSource   1,482        0.0       1         0        
-8         AreaSource   4,832        0.0       1         0        
-135       AreaSource   3,285        0.0       1         0        
-59        AreaSource   750          0.0       1         0        
-57        AreaSource   840          0.0       1         0        
-306       AreaSource   1,768        0.0       1         0        
-101       AreaSource   559          0.0       1         0        
-42        AreaSource   1,755        0.0       1         0        
-299       AreaSource   710          0.0       1         0        
-137       AreaSource   2,072        0.0       1         0        
-125       AreaSource   8,274        0.0       1         0        
-========= ============ ============ ========= ========= =========
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      8         A    0     4     4,832        0.0       0.0        0.0       0         0.0   
+0      27        A    4     8     1,482        0.0       0.0        0.0       0         0.0   
+0      42        A    8     12    1,755        0.0       0.0        0.0       0         0.0   
+0      57        A    12    16    840          0.0       0.0        0.0       0         0.0   
+0      59        A    16    20    750          0.0       0.0        0.0       0         0.0   
+0      101       A    20    26    559          0.0       0.0        0.0       0         0.0   
+0      125       A    26    30    8,274        0.0       0.0        0.0       0         0.0   
+0      135       A    30    34    3,285        0.0       0.0        0.0       0         0.0   
+0      137       A    34    38    2,072        0.0       0.0        0.0       0         0.0   
+0      225       A    38    41    520          0.13954   0.20632    36        18        33    
+0      232       A    41    45    1,612        1.95803   3.92254    750       124       395   
+0      253       A    45    51    3,058        0.0       0.0        0.0       0         0.0   
+0      299       A    51    55    710          0.0       0.0        0.0       0         0.0   
+0      306       A    55    59    1,768        0.0       0.0        0.0       0         0.0   
+0      359       A    59    63    2,314        0.0       0.0        0.0       0         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-AreaSource   0.028     15    
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    2.09757   15    
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -143,22 +128,66 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.009 0.002  0.006 0.011 5        
-================== ===== ====== ===== ===== =========
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.93795 NaN       0.93795 0.93795 1      
+split_filter       0.29557 NaN       0.29557 0.29557 1      
+classical          0.42135 0.14687   0.15887 0.49709 5      
+build_hazard_stats 0.00442 6.723E-04 0.00377 0.00643 12     
+================== ======= ========= ======= ======= =======
+
+Fastest task
+------------
+taskno=5, weight=32, duration=0 s, sources="232"
+
+======== ======= ======= ======= ======= ==
+variable mean    stddev  min     max     n 
+======== ======= ======= ======= ======= ==
+nsites   6.20000 0.63246 5       7       10
+weight   3.23313 0.16615 2.90689 3.43948 10
+======== ======= ======= ======= ======= ==
+
+Slowest task
+------------
+taskno=5, weight=99, duration=0 s, sources="232"
+
+======== ======= ======= ======= ======= ==
+variable mean    stddev  min     max     n 
+======== ======= ======= ======= ======= ==
+nsites   6.20000 0.63246 5       7       10
+weight   3.23313 0.16615 2.90689 3.43948 10
+======== ======= ======= ======= ======= ==
+
+Data transfer
+-------------
+================== ========================================================= ========
+task               sent                                                      received
+read_source_models converter=388 B fnames=111 B                              13.36 KB
+split_filter       srcs=16.42 KB srcfilter=1012 B seed=56 B                  36.13 KB
+classical          group=39.24 KB src_filter=6.6 KB param=2.9 KB gsims=635 B 9.58 KB 
+build_hazard_stats pgetter=29.64 KB hstats=804 B                             4.57 KB 
+================== ========================================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 1.825     0.0       1     
-managing sources               0.062     0.0       1     
-total count_ruptures           0.043     4.172     5     
-reading exposure               0.011     0.0       1     
-store source_info              0.003     0.0       1     
-aggregate curves               1.609E-04 0.0       5     
-reading site collection        8.535E-05 0.0       1     
-saving probability maps        2.575E-05 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total classical          2.10677   0.27344   5     
+make_contexts            1.02293   0.0       1,846 
+total read_source_models 0.93795   0.74609   1     
+iter_ruptures            0.67724   0.0       142   
+get_poes                 0.37051   0.0       1,613 
+total split_filter       0.29557   2.60938   1     
+total build_hazard_stats 0.05299   1.31250   12    
+combine pmaps            0.04719   1.31250   12    
+building riskinputs      0.02462   0.12891   1     
+store source_info        0.01134   0.0       5     
+saving statistics        0.00640   0.0       12    
+managing sources         0.00562   0.0       1     
+compute mean             0.00309   0.02344   9     
+store source model       0.00207   0.0       1     
+aggregate curves         0.00148   0.0       5     
+saving probability maps  0.00128   0.0       1     
+reading exposure         4.463E-04 0.0       1     
+======================== ========= ========= ======

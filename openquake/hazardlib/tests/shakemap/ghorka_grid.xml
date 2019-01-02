@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="us20002926" shakemap_id="us20002926" shakemap_version="9" code_version="3.5.1440" process_timestamp="2015-07-02T22:50:42Z" shakemap_originator="us" map_status="RELEASED" shakemap_event_type="ACTUAL">
+<event event_id="us20002926" magnitude="7.8" depth="8.22" lat="28.230500" lon="84.731400" event_timestamp="2015-04-25T06:11:25UTC" event_network="us" event_description="NEPAL" />
+<grid_specification lon_min="81.731400" lat_min="25.587500" lon_max="87.731400" lat_max="30.873500" nominal_lon_spacing="0.016667" nominal_lat_spacing="0.016675" nlon="361" nlat="318" />
+<event_specific_uncertainty name="pga" value="0.000000" numsta="" />
+<event_specific_uncertainty name="pgv" value="0.000000" numsta="" />
+<event_specific_uncertainty name="mi" value="0.000000" numsta="" />
+<event_specific_uncertainty name="psa03" value="0.000000" numsta="" />
+<event_specific_uncertainty name="psa10" value="0.000000" numsta="" />
+<event_specific_uncertainty name="psa30" value="0.000000" numsta="" />
+<grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="PGA" units="pctg" />
+<grid_field index="4" name="PGV" units="cms" />
+<grid_field index="5" name="MMI" units="intensity" />
+<grid_field index="6" name="PSA03" units="pctg" />
+<grid_field index="7" name="PSA10" units="pctg" />
+<grid_field index="8" name="PSA30" units="pctg" />
+<grid_field index="9" name="STDPGA" units="ln(pctg)" />
+<grid_field index="10" name="URAT" units="" />
+<grid_field index="11" name="SVEL" units="ms" />
+<grid_data>
+81.7314 30.8735 0.44 2.21 3.83 1.82 2.8 1.26 0.53 1 400.758
+81.7481 30.8735 0.47 2.45 3.88 1.99 3.09 1.41 0.52 1 352.659
+81.7647 30.8735 0.47 2.4 3.88 1.97 3.04 1.38 0.52 1 363.687
+81.7814 30.8735 0.52 2.78 3.96 2.23 3.51 1.64 0.5 1 301.17
+</grid_data>
+</shakemap_grid>

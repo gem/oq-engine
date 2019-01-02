@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Module exports :class:`DerrasEtAl2014`
 """
-from __future__ import division
-
 import numpy as np
 from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -83,7 +81,7 @@ class DerrasEtAl2014(GMPE):
         C = self.COEFFS[imt]
         # Get the mean
         mean = self.get_mean(C, rup, sites, dists)
-        if isinstance(imt, PGV):
+        if imt.name == "PGV":
             # Convert from log10 m/s to ln cm/s
             mean = np.log((10.0 ** mean) * 100.)
         else:
@@ -146,7 +144,10 @@ class DerrasEtAl2014(GMPE):
         # List must be in following order
         p_n = []
         # Rjb
-        p_n.append(self._get_normalised_term(np.log10(dists.rjb),
+        # Note that Rjb must be clipped at 0.1 km
+        rjb = np.copy(dists.rjb)
+        rjb[rjb < 0.1] = 0.1
+        p_n.append(self._get_normalised_term(np.log10(rjb),
                                              self.CONSTANTS["logMaxR"],
                                              self.CONSTANTS["logMinR"]))
         # Magnitude
