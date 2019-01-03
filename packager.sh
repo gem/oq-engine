@@ -325,7 +325,7 @@ _pkgbuild_innervm_run () {
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
     ssh "$lxc_ip" mkdir build-deb
-    scp -r ./* "$lxc_ip:build-deb"
+    rsync --exclude "tests/" -a * "$lxc_ip:build-deb"
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
     ssh "$lxc_ip" sudo apt-get update
     ssh "$lxc_ip" sudo apt-get -y upgrade
@@ -1214,7 +1214,7 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 mksafedir "$GEM_BUILD_ROOT"
 mksafedir "$GEM_BUILD_SRC"
 
-git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv ; rm -rf rpm)
+git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv ; rm -rf rpm ; rm -rf $(find . -type d -name tests))
 
 # NOTE: if in the future we need modules we need to execute the following commands
 #

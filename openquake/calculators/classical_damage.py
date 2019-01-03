@@ -36,7 +36,7 @@ def classical_damage(riskinputs, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
-        a nested dictionary rlz_idx -> asset -> <damage array>
+        a nested dictionary lt_idx, rlz_idx -> asset_idx -> <damage array>
     """
     result = AccumDict(accum=AccumDict())
     for ri in riskinputs:

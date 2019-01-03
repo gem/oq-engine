@@ -31,8 +31,7 @@ from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
 from openquake.commonlib import writers, hazard_writers
-from openquake.commonlib.util import (
-    get_assets, compose_arrays, reader)
+from openquake.commonlib.util import get_assets, compose_arrays
 
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
@@ -494,13 +493,6 @@ def export_bcr_map(ekey, dstore):
         writer.save(compose_arrays(assets, bcr_data[:, t]), path)
         fnames.append(path)
     return writer.getsaved()
-
-
-@reader
-def get_loss_ratios(lrgetter, monitor):
-    with lrgetter.dstore:
-        loss_ratios = lrgetter.get_all()  # list of arrays of dtype lrs_dt
-    return list(zip(lrgetter.aids, loss_ratios))
 
 
 @depr('This exporter will be removed soon')

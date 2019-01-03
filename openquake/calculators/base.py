@@ -370,13 +370,10 @@ class HazardCalculator(BaseCalculator):
             the parent datastore if it is present and can be read from the
             workers, None otherwise
         """
-        read_access = (
-            config.distribution.oq_distribute in ('no', 'processpool') or
-            config.directory.shared_dir)
         hdf5cache = getattr(self, 'hdf5cache', None)
-        if hdf5cache and read_access:
+        if hdf5cache:
             return hdf5cache
-        elif (self.oqparam.hazard_calculation_id and read_access and
+        elif (self.oqparam.hazard_calculation_id and
                 'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
