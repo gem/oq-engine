@@ -1,4 +1,6 @@
-theme: jekyll-theme-architect
+theme: jekyll-theme-minimal
 
 include:
   - README.md
+  - doc/*.md
+  - doc/*/*.md

@@ -26,7 +26,6 @@ from openquake.baselib.python3compat import zip
 from openquake.hazardlib.calc import stochastic
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.source.rupture import EBRupture
-from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, generate_background_ruptures)
@@ -139,7 +138,6 @@ def sample_background_model(
 # #################################################################### #
 
 
-@util.reader
 def build_ruptures(sources, param, monitor):
     """
     :param sources: a list with a single UCERF source
