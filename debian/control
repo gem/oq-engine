@@ -2,7 +2,7 @@ Source: python3-oq-engine
 Section: python
 Priority: extra
 Maintainer: Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>
-Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, oq-python3.6, zip, dh-python,dh-systemd (>= 1.5)
+Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, oq-python3.6, zip, dh-python,dh-systemd (>= 1.5), rsync
 Standards-Version: 3.9.3
 X-Python3-Version: >= 3.6
 Homepage: http://github.com/gem/oq-engine
