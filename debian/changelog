@@ -1,3 +1,17 @@
+  [Graeme Weatherill]
+  * Adds GMPE suite for national PSHA for Germany
+  
+  [Daniele Viganò]
+  * Added a warning box when an unsupported browser is used to view the WebUI
+  * Updated Docker containers to support a multi-node deployment
+    with a shared directory
+  * Moved the Docker containers source code from oq-builders
+  * Updated the documentation related to the shared directory
+    which is now mandatory for multi-node deployments
+
+  [Matteo Nastasi]
+  * Removed tests folders
+
   [Stéphane Drouet]
   * Added Drouet & Cotton (2015) GMPE including 2017 erratum
 
@@ -38,6 +52,7 @@
   [Marco Pagani]
   * Added two modified versions of the Bindi et al. (2011) to be used in a
     backbone approach to compute hazard in Italy
+  * Added a modified version of Berge-Thierry et al. 2003 supporting Mw
 
   [Michele Simionato]
   * Changed the way loss curves and loss maps are stored in order to unify

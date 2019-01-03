@@ -593,12 +593,16 @@ to the `ChiouYoungs2008SWISS01` class, thus making it possible to use this
 GMPE in event based calculations.
 
 9. Graeme Weatherill contributed a fix in the HMTK plotting completeness
-functionality.
+tool and a suite of GMPEs for the Germany National Seismic Hazard Model.
 
 10. Stéphane Drouet contributed several Drouet & Cotton (2015) GMPEs,
 including the 2017 erratum.
 
-11. We fixed a few bugs in the GMPEs for Canada affecting the event based
+11. We added a modified version of the Berge-Thierry et al. (2003) GMPE
+supporting Mw rather than Ms. The conversion equation used is the one
+proposed by Weatherill et al. (2016).
+
+12. We fixed a few bugs in the GMPEs for Canada affecting the event based
 calculator.
 
 oq commands
@@ -669,11 +673,15 @@ multi-node, multi-host deployment. We now also have a mechanism to
 emulate a cluster on a single machine by using docker containers.
 The relevant documentation is [here](installing/docker.md).
 
-6. Now we check if the engine is running out of memory also in the workers
+6. We removed the tests from the Python package because users were trying
+to run them. The engine tests are not meant to be run from a production
+installation: they must be run from a development installation.
+
+7. Now we check if the engine is running out of memory also in the workers
 nodes, and if this is the case a warning is logged in the main log, a
 feature that we desired for years.
 
-7. There were several changes in the parallelization library and now
+8. There were several changes in the parallelization library and now
 all the traffic back from the workers goes through ZeroMQ, not
 RabbitMQ.  As a consequence, it is easier to support backends
 different from celery and we did some experiments with dask.

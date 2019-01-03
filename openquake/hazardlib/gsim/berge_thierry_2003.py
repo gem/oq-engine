@@ -19,6 +19,7 @@
 """
 Module exports :class:`BergeThierryEtAl2003SIGMA`.
 """
+import copy
 import numpy as np
 from scipy.constants import g
 
@@ -71,6 +72,10 @@ class BergeThierryEtAl2003SIGMA(GMPE):
     REQUIRES_DISTANCES = set(('rhypo', ))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        return self._get_mean_and_stddevs(sites, rup, dists, imt,
+                                          stddev_types)
+
+    def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
@@ -263,3 +268,19 @@ class BergeThierryEtAl2003SIGMA(GMPE):
     9.009000    0.6122000     0.0016370    -2.592000    -2.40800    0.4236
     10.00000    0.6086000     0.0015630    -2.668000    -2.48500    0.4183
     """)
+
+
+class BergeThierryEtAl2003SIGMAMwW(BergeThierryEtAl2003SIGMA):
+    """
+    Mw version of the Berge-Thierry et al. (2003) GMPE. For this conversion
+    we use the Weatherill et al. (2016) conversion equation between Ms and Mw
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        newrup = copy.copy(rup)
+        if rup.mag <= 6.064:
+            newrup.mag = (rup.mag - 2.369) / 0.616
+        else:
+            newrup.mag = (rup.mag - 0.100) / 0.994
+        return self._get_mean_and_stddevs(sites, newrup, dists, imt,
+                                          stddev_types)
