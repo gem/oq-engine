@@ -254,7 +254,7 @@ class ContextMaker(object):
                         pmap[sid].array *= pne
                     else:
                         pmap[sid].array += pne * rup.weight
-        #pmap = ~pmap
+        pmap = ~pmap
         pmap.eff_ruptures = eff_ruptures
         return pmap
 
