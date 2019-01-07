@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 
 import copy
 import numpy as np
-import pandas as pd
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA
@@ -152,8 +151,7 @@ def akkar_correlation(t1, t2):
     """
     """
 
-    ct = pd.DataFrame(act.coeff_table, index=act.periods, columns=act.periods)
-    return ct[t1][t2]
+    return act.coeff_table[act.periods.index(t1)][act.periods.index(t2)]
 
 
 def dummy_correlation(t1, t2):
