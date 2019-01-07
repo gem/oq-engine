@@ -23,7 +23,7 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.hazardlib.calc.stochastic import TWO32
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, scientific
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -98,28 +98,35 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
                 loss_type = riskmodel.loss_types[l]
+                ins = param['insured_losses'] and loss_type != 'occupants'
                 for a, asset in enumerate(out.assets):
-                    ratios = loss_ratios[a]  # shape (E, I)
+                    aval = asset.value(loss_type)
                     aid = asset.ordinal
                     idx = aid2idx[aid]
-                    aval = asset.value(loss_type)
-                    losses = aval * ratios
-                    if 'builder' in param:
-                        with mon:  # this is the heaviest part
-                            for i in range(I):
-                                lt = loss_type + '_ins' * i
-                                all_curves[idx, r][lt] = builder.build_curve(
-                                    aval, ratios[:, i], r)
+                    ratios = loss_ratios[a]  # length E
 
                     # average losses
-                    if param['avg_losses']:
-                        rat = ratios.sum(axis=0) * param['ses_ratio'] * aval
-                        for i in range(I):
-                            avg[idx, r, l + L * i] = rat[i]
+                    avg[idx, r, l] = (
+                        ratios.sum(axis=0) * param['ses_ratio'] * aval)
 
                     # agglosses
-                    for i in range(I):
-                        agglosses[:, l + L * i] += losses[:, i]
+                    agglosses[:, l] += ratios * aval
+
+                    if ins:
+                        iratios = scientific.insured_losses(
+                            ratios,  asset.deductible(loss_type),
+                            asset.insurance_limit(loss_type))
+                        avg[idx, r, l + L] = (iratios.sum(axis=0) *
+                                              param['ses_ratio'] * aval)
+                        agglosses[:, l + L] += iratios * aval
+                    if 'builder' in param:
+                        with mon:  # this is the heaviest part
+                            all_curves[idx, r][loss_type] = (
+                                builder.build_curve(aval, ratios, r))
+                            if ins:
+                                lt = loss_type + '_ins'
+                                all_curves[idx, r][lt] = builder.build_curve(
+                                    aval, iratios, r)
 
             # NB: I could yield the agglosses per output, but then I would
             # have millions of small outputs with big data transfer and slow
