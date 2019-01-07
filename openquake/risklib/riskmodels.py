@@ -346,19 +346,13 @@ class ProbabilisticEventBased(RiskModel):
         """
         gmvs, eids = gmvs_eids
         E = len(gmvs)
-        I = self.insured_losses + 1
         A = len(assets)
-        loss_ratios = numpy.zeros((A, E, I), F32)
+        loss_ratios = numpy.zeros((A, E), F32)
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
-            ratios = vf.sample(means, covs, idxs, epsilons)
-            loss_ratios[i, idxs, 0] = ratios
-            if self.insured_losses and loss_type != 'occupants':
-                loss_ratios[i, idxs, 1] = scientific.insured_losses(
-                    ratios,  asset.deductible(loss_type),
-                    asset.insurance_limit(loss_type))
+            loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
 
 
