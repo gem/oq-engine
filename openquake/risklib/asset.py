@@ -570,6 +570,9 @@ def build_asset_array(assets_by_site, tagnames=()):
             loss_types.append('value-' + name)
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
+    if deductible_d or limit_d:
+        logging.warn('Exposures with insuranceLimit/deductible fields are '
+                     'deprecated and may be removed in the future')
     deductibles = ['deductible-%s' % name for name in deductible_d]
     limits = ['insurance_limit-%s' % name for name in limit_d]
     retro = ['retrofitted'] if first_asset._retrofitted else []
@@ -880,6 +883,8 @@ class Exposure(object):
                         costs = Node('costs')
                         for cost in self.cost_types['name']:
                             a = dict(type=cost, value=dic[cost])
+                            if 'retrofitted' in dic:
+                                a['retrofitted'] = dic['retrofitted']
                             costs.append(Node('cost', a))
                         occupancies = Node('occupancies')
                         for period in occupancy_periods:
