@@ -402,10 +402,7 @@ def get_site_collection(oqparam):
                 sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
             sitecol.make_complete()
         else:
-            # associate the site parameters to the sites without
-            # discarding any site but warning for far away parameters
-            sc, params, _ = geo.utils.assoc(
-                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+            params = sm
         for name in req_site_params:
             if name in ('vs30measured', 'backarc') \
                    and name not in params.dtype.names:
@@ -1040,9 +1037,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         logging.info(
             'Associated %d assets to %d sites', num_assets, len(sitecol))
         if num_assets < tot_assets:
-            logging.warn('Discarded %d assets outside the '
-                         'asset_hazard_distance of %d km',
-                         tot_assets - num_assets, haz_distance)
+            if oqparam.discard_assets:
+                logging.warn('Discarded %d assets outside the '
+                             'asset_hazard_distance of %d km',
+                             tot_assets - num_assets, haz_distance)
+            else:
+                raise RuntimeError(
+                    '%d assets were discarded' % tot_assets - num_assets)
+
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol

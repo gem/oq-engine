@@ -166,24 +166,6 @@ def sitemodel():
 </nrml>''')]
 
 
-class ClosestSiteModelTestCase(unittest.TestCase):
-
-    def test_get_far_away_parameter(self):
-        oqparam = mock.Mock()
-        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
-        oqparam.hazard_calculation_id = None
-        oqparam.base_path = '/'
-        oqparam.maximum_distance = 100
-        oqparam.max_site_model_distance = 5
-        oqparam.region_grid_spacing = None
-        oqparam.sites = [(1.0, 0, 0), (2.0, 0, 0)]
-        oqparam.inputs = dict(site_model=sitemodel())
-        with mock.patch('logging.warn') as warn:
-            readinput.get_site_collection(oqparam)
-        # check that the warning was raised
-        self.assertEqual(len(warn.call_args), 2)
-
-
 class ExposureTestCase(unittest.TestCase):
     exposure = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
