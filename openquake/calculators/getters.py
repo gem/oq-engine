@@ -322,6 +322,7 @@ class GmfGetter(object):
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
+        assert self.computers, 'All ruptures were filtered out!'
 
     def gen_gmv(self):
         """
