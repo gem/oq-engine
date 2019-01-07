@@ -61,6 +61,14 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     """
     core_task = classical_bcr
 
+    def pre_execute(self):
+        super().pre_execute()
+        for asset_ref, retrofitted in zip(self.assetcol.asset_refs,
+                                          self.assetcol.array['retrofitted']):
+            if numpy.isnan(retrofitted):
+                raise ValueError('The asset %s has no retrofitted value!'
+                                 % asset_ref.decode('utf8'))
+
     def post_execute(self, result):
         # NB: defined only for loss_type = 'structural'
         bcr_data = numpy.zeros((self.A, self.R), bcr_dt)
