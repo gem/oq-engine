@@ -693,7 +693,12 @@ We have now in place a mechanism to run the global hazard mosaic
 calculations nightly so to avoid regressions in the models and the
 code.
 
-The was a lot of work on documentation. We have revamped the old docs
-and have added two new FAQ pages, one for [hazard](faq-hazard.md) and one
+The was a lot of work on documentation. We have revamped the old docs,
+added a description of CSV exposures in the manual and added two new FAQ
+pages, one for [hazard](faq-hazard.md) and one
 for [risk](faq-risk.md). Finally, we have started
 a [Manual for Advanced Users]( adv-manual/introduction.rst).
+
+Exposures with insuranceLimit/deductible fields are deprecated and may
+be removed in the future, in the sense that we may change the format
+that is currently used.

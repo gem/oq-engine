@@ -466,7 +466,47 @@ each \gls{asset} as shown in the following snippet from the same file:
 \inputminted[firstline=28,firstnumber=28,lastline=29,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_tags.xml}
 
 Note that it is not mandatory that every \gls{tag} name specified in the metadata
-section must be provided with a \gls{tag} value for each \gls{asset}. 
+section must be provided with a \gls{tag} value for each \gls{asset}.
+
+
+\paragraph{Example 8}
+
+Starting from \glsdesc{acr:oqe30}, the \gls{exposuremodel} may be 
+provided using csv files listing the asset information, along with an
+xml file conatining the metadata section for the exposure model that 
+has been described in the examples above.
+
+Let us take a look at the metadata section of the \gls{exposuremodel},
+which is listed as usual in an xml file:
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_csv.xml}
+  \caption{Example exposure model using csv files: metadata definition (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_exposure_csv.xml}{Download example})}
+  \label{lst:input_exposure_csv_metadata}
+\end{listing}
+
+As in all previous examples, the information in the metadata section 
+is common to all of the \glspl{asset} in the portfolio.
+
+The \gls{asset} data can be provided in one or more csv files. The 
+path to each of the csv files containing the \gls{asset} data must
+be listed between the \Verb+<assets>+ and \Verb+</assets>+ xml tags.
+
+In the example shown above, the exposure information is provided in
+three csv files, Washington.csv, Oregon.csv, and California.csv. 
+To illustrate the format of the csv files, we have shown below the
+header and first few lines of the file Washington.csv in
+Table~\ref{input:exposure_csv_wa}.
+
+\input{oqum/risk/verbatim/input_exposure_wa}
+
+Note that the xml metadata section for exposure models 
+provided using csv files must include the xml tag 
+\Verb+<occupancyPeriods>+ listing the periods of day for 
+which the number of occupants in each asset will be listed in the 
+csv files. In case the number of occupants are not listed in the csv
+files, a self-closing tag \Verb+<occupancyPeriods />+ should be
+included in the xml metadata section.
 
 A web-based tool to build an \gls{exposuremodel} in the \gls{acr:nrml} schema
 starting from a csv file or a spreadsheet can be found at the OpenQuake platform at the
