@@ -91,27 +91,22 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # prepare the probability maps
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
+    print(grp_ids)
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     # Get the parameters assigned to the group
     src_mutex = param.get('src_interdep') == 'mutex'
+    rup_mutex = param.get('rup_interdep') == 'mutex'
     cluster = param.get('cluster')
-    print(cluster)
-
+    # Processing
     if cluster:
-
-        print('>>>> CLUSTER OPTION')
-
         tom = param.get('temporal_occurrence_model')
         # TODO delta description
         delta = 1.
-        # Number of occurrences of the cluster
-        nocc = 1
+        # Number of occurrences for the cluster
+        nocc = 0
         while delta > 1e-8:
-
-            # prob_n_occ =
-
             for src, s_sites in src_filter(group):  # filter now
                 t0 = time.time()
                 try:
@@ -121,29 +116,25 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
                     etype, err, tb = sys.exc_info()
                     msg = '%s (source id=%s)' % (str(err), src.source_id)
                     raise etype(msg).with_traceback(tb)
-                # mutex sources, there is a single group
-                if src_mutex:
-                    for sid in poemap:
-                        pcurve = pmap[src.src_group_id].setdefault(sid, 0)
-                        pcurve += ~poemap[sid] * src.mutex_weight
-                elif poemap:
-                    for gid in src.src_group_ids:
-                        pmap[gid] |= ~poemap
-                pmap.calc_times[src.id] += numpy.array(
+
+                for sid in poemap:
+                    pcurve = pmap[src.src_group_id].setdefault(sid, 0)
+                    pcurve += poemap[sid] * src.mutex_weight
+                    
+                calc_times[src.id] += numpy.array(
                     [src.weight, len(s_sites), time.time() - t0])
                 # storing the number of contributing ruptures too
-                pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
-                                      for gid in src.src_group_ids}
+                eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
+                                 for gid in src.src_group_ids}
             # updating the probability map in the case of mutually exclusive
             # sources
             if src_mutex and param.get('grp_probability'):
                 pmap[src.src_group_id] *= param['grp_probability']
                 # TODO multiply by the cluster occurrence time and sum
-
     else:
         # Looping over the sources included in a source group. The `poe_map`
-        # method of the :class:`ContextMaker` method returns probabilities of
-        # non-exceedance
+        # method of the :class:`ContextMaker` returns probabilities of
+        # exceedance
         for src, s_sites in src_filter(group):  # filter now
             t0 = time.time()
             try:
@@ -169,6 +160,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         # sources
         if src_mutex and param.get('grp_probability'):
             pmap[src.src_group_id] *= param['grp_probability']
+    # Return results
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
 
 
@@ -228,7 +220,8 @@ def calc_hazard_curves(
 
     imtls = DictArray(imtls)
     param = dict(imtls=imtls, truncation_level=truncation_level,
-                 filter_distance=filter_distance, reqv=reqv)
+                 filter_distance=filter_distance, reqv=reqv,
+                 cluster=grp.cluster)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]

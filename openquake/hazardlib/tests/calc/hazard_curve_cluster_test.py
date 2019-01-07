@@ -46,7 +46,6 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
 
     def test_hazard_curve(self):
         # Test the former calculator
-        print('Cluster?', self.sg[0].cluster)
         curves = calc_hazard_curves(self.sg,
                                     self.sites,
                                     self.imtls,
