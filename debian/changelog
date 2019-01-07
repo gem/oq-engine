@@ -1,8 +1,11 @@
+  [Michele Simionato]
+  * A missing retrofitted value is now an error in classical_bcr calculations
+
 python3-oq-engine (3.3.0-1~xenial01) xenial; urgency=low
 
   [Graeme Weatherill]
   * Adds GMPE suite for national PSHA for Germany
-  
+
   [Daniele Viganò]
   * Added a warning box when an unsupported browser is used to view the WebUI
   * Updated Docker containers to support a multi-node deployment
