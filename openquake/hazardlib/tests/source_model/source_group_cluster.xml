@@ -10,6 +10,7 @@ xmlns:gml="http://www.opengis.net/gml"
             cluster="true">
             
                     <poissonTOM occurrence_rate="0.01" />
+
                     <simpleFaultSource
                     id="1"
                     name="Simple Fault Source B"
@@ -30,6 +31,7 @@ xmlns:gml="http://www.opengis.net/gml"
                                 maxMag="7.0" minMag="6.0" />
                         <rake>90</rake>
                     </simpleFaultSource>
+                    
                     <simpleFaultSource
                     id="2"
                     name="Simple Fault Source B"
