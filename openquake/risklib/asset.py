@@ -880,6 +880,8 @@ class Exposure(object):
                         costs = Node('costs')
                         for cost in self.cost_types['name']:
                             a = dict(type=cost, value=dic[cost])
+                            if 'retrofitted' in dic:
+                                a['retrofitted'] = dic['retrofitted']
                             costs.append(Node('cost', a))
                         occupancies = Node('occupancies')
                         for period in occupancy_periods:
