@@ -100,14 +100,25 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 loss_type = riskmodel.loss_types[l]
                 ins = param['insured_losses'] and loss_type != 'occupants'
                 for a, asset in enumerate(out.assets):
+                    aval = asset.value(loss_type)
+                    aid = asset.ordinal
+                    idx = aid2idx[aid]
                     ratios = loss_ratios[a]  # length E
+
+                    # average losses
+                    avg[idx, r, l] = (
+                        ratios.sum(axis=0) * param['ses_ratio'] * aval)
+
+                    # agglosses
+                    agglosses[:, l] += ratios * aval
+
                     if ins:
                         iratios = scientific.insured_losses(
                             ratios,  asset.deductible(loss_type),
                             asset.insurance_limit(loss_type))
-                    aid = asset.ordinal
-                    idx = aid2idx[aid]
-                    aval = asset.value(loss_type)
+                        avg[idx, r, l + L] = (iratios.sum(axis=0) *
+                                              param['ses_ratio'] * aval)
+                        agglosses[:, l + L] += iratios * aval
                     if 'builder' in param:
                         with mon:  # this is the heaviest part
                             all_curves[idx, r][loss_type] = (
@@ -117,18 +128,6 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                                 all_curves[idx, r][lt] = builder.build_curve(
                                     aval, iratios, r)
 
-                    # average losses
-                    if param['avg_losses']:
-                        avg[idx, r, l] = (
-                            ratios.sum(axis=0) * param['ses_ratio'] * aval)
-                        if ins:
-                            avg[idx, r, l + L] = (iratios.sum(axis=0) *
-                                                  param['ses_ratio'] * aval)
-
-                    # agglosses
-                    agglosses[:, l] += ratios * aval
-                    if ins:
-                        agglosses[:, l + L] += iratios * aval
             # NB: I could yield the agglosses per output, but then I would
             # have millions of small outputs with big data transfer and slow
             # saving time
