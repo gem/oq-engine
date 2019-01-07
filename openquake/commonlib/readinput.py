@@ -393,13 +393,8 @@ def get_site_collection(oqparam):
         except ValueError:
             # this is the normal case
             depth = None
-        if mesh is None:
-            # extract the site collection directly from the site model
-            sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm, req_site_params)
-        else:
-            sitecol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
+        sitecol = site.SiteCollection.from_points(
+            sm['lon'], sm['lat'], depth, sm, req_site_params)
         if oqparam.region_grid_spacing:
             logging.info('Reducing the grid sites to the site '
                          'parameters within the grid spacing')
