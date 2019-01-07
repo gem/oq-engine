@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 DATA = os.path.join(os.path.dirname(__file__), '../source_model')
 
 
-class HazardCurvesTestCase01(unittest.TestCase):
+class HazardCurvesClusterTestCase01(unittest.TestCase):
 
     def setUp(self):
         testfile = os.path.join(DATA, 'source_group_cluster.xml')
@@ -44,9 +44,9 @@ class HazardCurvesTestCase01(unittest.TestCase):
         s_filter = SourceFilter(SiteCollection([site]), {})
         self.sites = s_filter
 
-    def test_hazard_curve_X(self):
+    def test_hazard_curve(self):
         # Test the former calculator
-        print(self.sg[0].cluster)
+        print('Cluster?', self.sg[0].cluster)
         curves = calc_hazard_curves(self.sg,
                                     self.sites,
                                     self.imtls,

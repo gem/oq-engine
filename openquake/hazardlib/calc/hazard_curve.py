@@ -94,8 +94,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
+    # Get the parameters assigned to the group
     src_mutex = param.get('src_interdep') == 'mutex'
-    rup_mutex = param.get('rup_interdep') == 'mutex'
     cluster = param.get('cluster')
     print(cluster)
 
