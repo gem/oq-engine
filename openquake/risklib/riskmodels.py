@@ -318,16 +318,10 @@ class ProbabilisticEventBased(RiskModel):
     kind = 'vulnerability'
 
     def __init__(
-            self, taxonomy, vulnerability_functions,
-            conditional_loss_poes, insured_losses=False):
-        """
-        See :func:`openquake.risklib.scientific.event_based` for a description
-        of the input parameters.
-        """
+            self, taxonomy, vulnerability_functions, conditional_loss_poes):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.conditional_loss_poes = conditional_loss_poes
-        self.insured_losses = insured_losses
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
