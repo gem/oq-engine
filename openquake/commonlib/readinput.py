@@ -1036,14 +1036,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             num_assets += len(assets)
         logging.info(
             'Associated %d assets to %d sites', num_assets, len(sitecol))
-        if num_assets < tot_assets:
-            if oqparam.discard_assets:
-                logging.warn('Discarded %d assets outside the '
-                             'asset_hazard_distance of %d km',
-                             tot_assets - num_assets, haz_distance)
-            else:
-                raise RuntimeError(
-                    '%d assets were discarded' % tot_assets - num_assets)
+        if num_assets < tot_assets and oqparam.discard_assets:
+            logging.warn('Discarded %d assets outside the '
+                         'asset_hazard_distance of %d km',
+                         tot_assets - num_assets, haz_distance)
+        elif not oqparam.calculation_mode.startswith('scenario'):
+            # in case of scenario, it is fine to discard far away assets
+            raise RuntimeError(
+                '%d assets were discarded' % tot_assets - num_assets)
 
     else:
         # asset sites and hazard sites are the same
