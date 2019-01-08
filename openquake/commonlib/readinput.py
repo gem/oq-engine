@@ -1016,7 +1016,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             'Expected cost types %s but the exposure %r contains %s' % (
                 cost_types, expo, exposure.cost_types['name']))
     if oqparam.region_grid_spacing:
-        haz_distance = oqparam.region_grid_spacing
+        haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
                          haz_distance, oqparam.asset_hazard_distance)
@@ -1028,7 +1028,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
-            oqparam.asset_hazard_distance, 'filter', exposure.asset_refs)
+            haz_distance, 'filter', exposure.asset_refs)
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):

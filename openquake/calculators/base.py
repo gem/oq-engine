@@ -504,7 +504,7 @@ class HazardCalculator(BaseCalculator):
                     self.datastore['assetcol'] = self.assetcol
                     raise RuntimeError(
                         '%d assets were discarded; use `oq show discarded` to'
-                        'show them and `oq plot_assets` to plot them' %
+                        ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
 
         # reduce the riskmodel to the relevant taxonomies
