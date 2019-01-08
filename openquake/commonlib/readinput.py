@@ -886,7 +886,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                                 srcfilter.hdf5path)
     if (srcfilter and oqparam.prefilter_sources != 'no' and
             oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-        csm = parallel_split_filter(csm, srcfilter, not oqparam.fast_sampling,
+        split = 'event_based' not in oqparam.calculation_mode
+        csm = parallel_split_filter(csm, srcfilter, split,
                                     monitor('split_filter'))
     return csm
 
@@ -1413,7 +1414,7 @@ def get_checksum32(oqparam, hazard=False):
                        'maximum_distance', 'investigation_time',
                        'number_of_logic_tree_samples', 'imtls',
                        'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'prefilter_sources', 'sites', 'fast_sampling',
+                       'prefilter_sources', 'sites',
                        'pointsource_distance', 'filter_distance'):
                 hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
