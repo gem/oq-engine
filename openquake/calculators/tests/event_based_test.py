@@ -199,7 +199,7 @@ class EventBasedTestCase(CalculatorTestCase):
                               delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
