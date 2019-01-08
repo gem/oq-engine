@@ -610,7 +610,7 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(
             'job.ini', case_16, region_grid_spacing='15')
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
-        self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
+        self.assertEqual(len(sitecol), 148)  # 3 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 
