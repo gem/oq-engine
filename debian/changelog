@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Splitting the sources in classical calculators and not in event based
   * Removed `max_site_model_distance`
   * Extended the logic used in event_based_risk - read the hazard sites
     from the site model, not from the exposure - to all calculators
