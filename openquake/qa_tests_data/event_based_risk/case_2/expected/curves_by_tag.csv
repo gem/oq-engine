@@ -1,5 +1,6 @@
 taxonomy,return_period,loss_type,value
-RM,200,structural,4.66112E+02
-RM,500,structural,2.40037E+03
-RC+,200,structural,2.71267E+02
-RC+,500,structural,1.12018E+03
+RM,100,structural,2.35503E+02
+RM,200,structural,6.26310E+02
+RM,500,structural,2.39994E+03
+RC+,200,structural,1.03597E+02
+RC+,500,structural,1.11997E+03
