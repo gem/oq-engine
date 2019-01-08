@@ -346,7 +346,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 5)
+        self.assertEqual(len(self.calc.datastore['events']), 8)
 
     @attr('qa', 'hazard', 'event_based_risk')
     def test_case_6c(self):
