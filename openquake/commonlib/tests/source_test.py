@@ -746,7 +746,6 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
-        oqparam.fast_sampling = True
         csm = readinput.get_composite_source_model(oqparam)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 src_groups
@@ -755,9 +754,9 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         rlzs_assoc = csm.info.get_rlzs_assoc()
         rlzs = rlzs_assoc.realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        # counting the sources in each TRT model (unsplit)
+        # counting the sources in each TRT model (after splitting)
         self.assertEqual(
-            [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
+            [1, 14, 1, 14, 1, 14, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12],
             list(map(len, csm.src_groups)))
 
         # removing 9 src_groups out of 18
