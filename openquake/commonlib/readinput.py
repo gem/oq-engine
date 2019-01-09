@@ -886,7 +886,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                                 srcfilter.hdf5path)
     if (srcfilter and oqparam.prefilter_sources != 'no' and
             oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-        split = 'event_based' not in oqparam.calculation_mode
+        split = oqparam.calculation_mode not in 'event_based_risk ebrisk'
         csm = parallel_split_filter(csm, srcfilter, split,
                                     monitor('split_filter'))
     return csm
