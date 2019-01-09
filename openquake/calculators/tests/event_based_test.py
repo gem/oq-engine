@@ -29,6 +29,7 @@ from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators.views import view
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
@@ -125,6 +126,19 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
+        # testing event_info
+        einfo = dict(extract(self.calc.datastore, 'event_info/0'))
+        self.assertEqual(einfo['trt'], 'active shallow crust')
+        self.assertEqual(einfo['rupture_class'],
+                         'ParametricProbabilisticRupture')
+        self.assertEqual(einfo['surface_class'], 'PlanarSurface')
+        self.assertEqual(einfo['serial'], 1066)
+        self.assertEqual(str(einfo['gsim']), "'MultiGMPE()'")
+        self.assertEqual(einfo['rlzi'], 0)
+        self.assertEqual(einfo['grp_id'], 0)
+        self.assertEqual(einfo['occurrence_rate'], 1.0)
+        self.assertEqual(list(einfo['hypo']), [0., 0., 4.])
+
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
@@ -199,7 +213,7 @@ class EventBasedTestCase(CalculatorTestCase):
                               delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname)
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -249,7 +263,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 29)
+        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 51)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_10(self):
