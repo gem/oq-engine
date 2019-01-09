@@ -103,7 +103,7 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
-    asset_hazard_distance = valid.Param(valid.positivefloat, 20)  # km
+    asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
     max_hazard_curves = valid.Param(valid.boolean, False)
     max_num_sites = valid.Param(valid.positiveint, TWO16)
     max_potential_paths = valid.Param(valid.positiveint, 100)
@@ -143,7 +143,6 @@ class OqParam(valid.ParamSet):
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     ses_seed = valid.Param(valid.positiveint, 42)
-    max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
     shakemap_id = valid.Param(valid.nice_string, None)
     site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
@@ -153,7 +152,6 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.source_id, None)
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    fast_sampling = valid.Param(valid.boolean, False)
     pointsource_distance = valid.Param(valid.maximum_distance, {})
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)

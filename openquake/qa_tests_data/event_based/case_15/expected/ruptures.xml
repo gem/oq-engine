@@ -11,18 +11,18 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Subduction Interface - North East Correction"
         >
             <singlePlaneRupture
-            id="45"
+            id="43"
             multiplicity="1"
             >
                 <stochasticEventSets>
                     <SES
                     id="1"
                     >
-                        193273528320
+                        184683593728
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
-                    5.3000002e+00
+                    5.0999999e+00
                 </magnitude>
                 <strike>
                     2.4173760e+02

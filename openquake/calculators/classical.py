@@ -132,6 +132,7 @@ class ClassicalCalculator(base.HazardCalculator):
             ires = parallel.Starmap(
                 self.core_task.__func__, iterargs, self.monitor()
             ).submit_all()
+        self.csm.sources_by_trt.clear()  # save memory
         self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
         if not self.nsites:
