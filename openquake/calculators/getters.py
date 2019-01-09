@@ -503,6 +503,30 @@ class RuptureGetter(object):
                     eid_rlz.append((eid, rlz))
         return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
 
+    def get_rupdict(self):
+        """
+        :returns: a dictionary with the parameter of the rupture
+        """
+        assert len(self.rup_array) == 1, 'Please specify a slice of length 1'
+        dic = {'trt': self.trt, 'samples': self.samples}
+        with datastore.read(self.hdf5path) as dstore:
+            rupgeoms = dstore['rupgeoms']
+            rec = self.rup_array[0]
+            geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
+                rec['sy'], rec['sz'])
+            dic['lons'] = geom['lon']
+            dic['lats'] = geom['lat']
+            dic['deps'] = geom['depth']
+            rupclass, surclass = self.code2cls[rec['code']]
+            dic['rupture_class'] = rupclass.__name__
+            dic['surface_class'] = surclass.__name__
+            dic['hypo'] = rec['hypo']
+            dic['occurrence_rate'] = rec['occurrence_rate']
+            dic['grp_id'] = rec['grp_id']
+            dic['n_occ'] = rec['n_occ']
+            dic['serial'] = rec['serial']
+        return dic
+
     def get_ruptures(self, srcfilter=None):
         """
         :returns: a list of EBRuptures filtered by bounding box
