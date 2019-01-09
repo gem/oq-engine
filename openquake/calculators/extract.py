@@ -37,6 +37,7 @@ from openquake.commonlib import calc, util
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO32 = 2 ** 32
 
 
 def cast(loss_array, loss_dt):
@@ -699,3 +700,36 @@ def curves_by_tag(dstore, tag):
                         out[n][lt] = counts
                     n += 1
         yield stat, out
+
+
+@extract.add('rupture')
+def extract_rupture(dstore, serial):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
+    """
+    ridx = list(dstore['ruptures']['serial']).index(serial)
+    [getter] = getters.get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    return getter.get_rupdict().items()
+
+
+@extract.add('event_info')
+def extract_event_info(dstore, eidx):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
+    """
+    event = dstore['events'][int(eidx)]
+    serial = int(event['eid'] // TWO32)
+    ridx = list(dstore['ruptures']['serial']).index(serial)
+    [getter] = getters.get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    rupdict = getter.get_rupdict()
+    rlzi = event['rlz']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    gsim = rlzs_assoc.gsim_by_trt[rlzi][rupdict['trt']]
+    for key, val in rupdict.items():
+        yield key, val
+    yield 'rlzi', rlzi
+    yield 'gsim', repr(gsim)
