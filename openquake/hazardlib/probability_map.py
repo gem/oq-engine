@@ -75,6 +75,9 @@ class ProbabilityCurve(object):
             return self.__class__(self.array * other)
     __rmul__ = __mul__
 
+    def __pow__(self, n):
+        return self.__class__(self.array ** n)
+
     def __invert__(self):
         return self.__class__(1. - self.array)
 
@@ -290,6 +293,16 @@ class ProbabilityMap(dict):
         for sid in sids:
             prob = other.get(sid, 1) if is_pmap else other
             new[sid] = self.get(sid, 1) * prob
+        return new
+
+    def __ipow__(self, n):
+        for sid in set(self):
+            self[sid] = self[sid] ** n
+        return self
+
+    def __pow__(self, n):
+        new = self.__class__(self)
+        new **= n
         return new
 
     def __invert__(self):
