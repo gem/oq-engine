@@ -568,7 +568,7 @@ _pkgtest_innervm_run () {
         fi
 
         cd /usr/share/openquake/engine/demos
-        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
+        oq engine --run risk/EventBasedRisk/job.ini
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
@@ -604,7 +604,7 @@ sudo systemctl start openquake-celery
 celery_wait $GEM_MAXLOOP
 
         oq celery status
-        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
+        oq engine --run risk/EventBasedRisk/job.ini || echo \"distribution with celery not supported without master and/or worker packages\"
 
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
