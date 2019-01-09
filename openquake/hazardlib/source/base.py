@@ -112,13 +112,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         with ir_monitor:
             ruptures = list(self.iter_ruptures())
         tom = getattr(self, 'temporal_occurrence_model', None)
-        unsplit = isinstance(self.serial, int)
-        if unsplit:  # prefilter_sources=no was given
-            serials = numpy.arange(
-                self.serial, self.serial + self.num_ruptures)
-        else:  # the serials have been generated in prefiltering
-            serials = self.serial
-        if tom and unsplit:  # time-independent source
+        serials = numpy.arange(self.serial, self.serial + self.num_ruptures)
+        if tom:  # time-independent source
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
             numpy.random.seed(self.serial)
             occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
