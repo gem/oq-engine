@@ -505,7 +505,7 @@ class RuptureGetter(object):
 
     def get_rupdict(self):
         """
-        :returns: a dictionary with the parameter of the rupture
+        :returns: a dictionary with the parameters of the rupture
         """
         assert len(self.rup_array) == 1, 'Please specify a slice of length 1'
         dic = {'trt': self.trt, 'samples': self.samples}
