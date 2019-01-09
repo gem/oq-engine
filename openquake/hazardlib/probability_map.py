@@ -296,13 +296,14 @@ class ProbabilityMap(dict):
         return new
 
     def __ipow__(self, n):
-        for sid in set(self):
-            self[sid] = self[sid] ** n
+        for sid, pcurve in self.items():
+            self[sid] = pcurve ** n
         return self
 
     def __pow__(self, n):
-        new = self.__class__(self)
-        new **= n
+        new = self.__class__(self.shape_y, self.shape_z)
+        for sid, pcurve in self.items():
+            new[sid] = pcurve ** n
         return new
 
     def __invert__(self):
