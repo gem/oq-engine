@@ -393,13 +393,8 @@ def get_site_collection(oqparam):
         except ValueError:
             # this is the normal case
             depth = None
-        if mesh is None:
-            # extract the site collection directly from the site model
-            sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm, req_site_params)
-        else:
-            sitecol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
+        sitecol = site.SiteCollection.from_points(
+            sm['lon'], sm['lat'], depth, sm, req_site_params)
         if oqparam.region_grid_spacing:
             logging.info('Reducing the grid sites to the site '
                          'parameters within the grid spacing')
@@ -407,10 +402,7 @@ def get_site_collection(oqparam):
                 sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
             sitecol.make_complete()
         else:
-            # associate the site parameters to the sites without
-            # discarding any site but warning for far away parameters
-            sc, params, _ = geo.utils.assoc(
-                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+            params = sm
         for name in req_site_params:
             if name in ('vs30measured', 'backarc') \
                    and name not in params.dtype.names:
@@ -894,7 +886,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                                 srcfilter.hdf5path)
     if (srcfilter and oqparam.prefilter_sources != 'no' and
             oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-        csm = parallel_split_filter(csm, srcfilter, not oqparam.fast_sampling,
+        split = oqparam.calculation_mode not in 'event_based_risk ebrisk'
+        csm = parallel_split_filter(csm, srcfilter, split,
                                     monitor('split_filter'))
     return csm
 
@@ -1024,7 +1017,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             'Expected cost types %s but the exposure %r contains %s' % (
                 cost_types, expo, exposure.cost_types['name']))
     if oqparam.region_grid_spacing:
-        haz_distance = oqparam.region_grid_spacing
+        haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
                          haz_distance, oqparam.asset_hazard_distance)
@@ -1036,7 +1029,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
-            oqparam.asset_hazard_distance, 'filter', exposure.asset_refs)
+            haz_distance, 'filter', exposure.asset_refs)
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
@@ -1044,10 +1037,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             num_assets += len(assets)
         logging.info(
             'Associated %d assets to %d sites', num_assets, len(sitecol))
-        if num_assets < tot_assets:
-            logging.warn('Discarded %d assets outside the '
-                         'asset_hazard_distance of %d km',
-                         tot_assets - num_assets, haz_distance)
+        if (num_assets < tot_assets and not oqparam.discard_assets
+                and not oqparam.calculation_mode.startswith('scenario')):
+            raise RuntimeError(
+                '%d assets were discarded' % (tot_assets - num_assets))
+
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
@@ -1420,7 +1414,7 @@ def get_checksum32(oqparam, hazard=False):
                        'maximum_distance', 'investigation_time',
                        'number_of_logic_tree_samples', 'imtls',
                        'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'prefilter_sources', 'sites', 'fast_sampling',
+                       'prefilter_sources', 'sites',
                        'pointsource_distance', 'filter_distance'):
                 hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
