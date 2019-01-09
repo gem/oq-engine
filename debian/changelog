@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added an API `/extract/event_info/eid`
+  * Added an API `/extract/event_info/eidx`
   * Splitting the sources in classical calculators and not in event based
   * Removed `max_site_model_distance`
   * Extended the logic used in event_based_risk - read the hazard sites
