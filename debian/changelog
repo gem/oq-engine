@@ -1,6 +1,17 @@
+  [Michele Simionato]
+  * Added an API `/extract/event_info/eidx`
+  * Splitting the sources in classical calculators and not in event based
+  * Removed `max_site_model_distance`
+  * Extended the logic used in event_based_risk - read the hazard sites
+    from the site model, not from the exposure - to all calculators
+  * In classical_bcr calculations with a CSV exposure the retrofitted field
+    was not read. Now a missing retrofitted value is an error
+
+python3-oq-engine (3.3.0-1~xenial01) xenial; urgency=low
+
   [Graeme Weatherill]
   * Adds GMPE suite for national PSHA for Germany
-  
+
   [Daniele Viganò]
   * Added a warning box when an unsupported browser is used to view the WebUI
   * Updated Docker containers to support a multi-node deployment
@@ -229,6 +240,8 @@
   * Unified all distribution mechanisms to returns the outputs via zmq
   * Added a check for inconsistent IMTs between hazard and risk
   * Replaced the forking processpool with a spawning processpool
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 07 Jan 2019 13:51:24 +0000
 
 python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
 
