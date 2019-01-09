@@ -207,24 +207,23 @@ class ContextMaker(object):
         :param sites: the sites affected by it
         :yields: pairs (rupture, sites)
         """
-        with self.ir_mon:
-            pdist = self.pointsource_distance.get(src.tectonic_region_type)
-            if hasattr(src, 'location') and pdist:
-                close_sites, far_sites = sites.split(src.location, pdist)
-                if close_sites is None:  # all is far
-                    for rup in src.iter_ruptures(False, False):
-                        yield rup, far_sites
-                elif far_sites is None:  # all is close
-                    for rup in src.iter_ruptures(True, True):
-                        yield rup, close_sites
-                else:
-                    for rup in src.iter_ruptures(True, True):
-                        yield rup, close_sites
-                    for rup in src.iter_ruptures(False, False):
-                        yield rup, far_sites
+        pdist = self.pointsource_distance.get(src.tectonic_region_type)
+        if hasattr(src, 'location') and pdist:
+            close_sites, far_sites = sites.split(src.location, pdist)
+            if close_sites is None:  # all is far
+                for rup in src.iter_ruptures(False, False):
+                    yield rup, far_sites
+            elif far_sites is None:  # all is close
+                for rup in src.iter_ruptures(True, True):
+                    yield rup, close_sites
             else:
-                for rup in src.iter_ruptures():
-                    yield rup, sites
+                for rup in src.iter_ruptures(True, True):
+                    yield rup, close_sites
+                for rup in src.iter_ruptures(False, False):
+                    yield rup, far_sites
+        else:
+            for rup in src.iter_ruptures():
+                yield rup, sites
 
     def poe_map(self, src, s_sites, imtls, trunclevel, rup_indep=True):
         """
