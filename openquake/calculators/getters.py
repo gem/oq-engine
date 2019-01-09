@@ -511,6 +511,7 @@ class RuptureGetter(object):
         dic = {'trt': self.trt, 'samples': self.samples}
         with datastore.read(self.hdf5path) as dstore:
             rupgeoms = dstore['rupgeoms']
+            source_ids = dstore['source_info']['source_id']
             rec = self.rup_array[0]
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                 rec['sy'], rec['sz'])
@@ -525,6 +526,7 @@ class RuptureGetter(object):
             dic['grp_id'] = rec['grp_id']
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
+            dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
     def get_ruptures(self, srcfilter=None):
