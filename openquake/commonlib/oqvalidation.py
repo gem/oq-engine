@@ -141,7 +141,8 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
-    ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
+    ses_per_logic_tree_path = valid.Param(
+        valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
     site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
