@@ -128,7 +128,16 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # testing event_info
         einfo = dict(extract(self.calc.datastore, 'event_info/0'))
-        # TODO: add test
+        self.assertEqual(einfo['trt'], 'active shallow crust')
+        self.assertEqual(einfo['rupture_class'],
+                         'ParametricProbabilisticRupture')
+        self.assertEqual(einfo['surface_class'], 'PlanarSurface')
+        self.assertEqual(einfo['serial'], 1066)
+        self.assertEqual(str(einfo['gsim']), "'MultiGMPE()'")
+        self.assertEqual(einfo['rlzi'], 0)
+        self.assertEqual(einfo['grp_id'], 0)
+        self.assertEqual(einfo['occurrence_rate'], 1.0)
+        self.assertEqual(list(einfo['hypo']), [0., 0., 4.])
 
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
