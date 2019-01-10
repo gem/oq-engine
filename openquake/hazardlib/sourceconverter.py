@@ -523,13 +523,6 @@ class SourceConverter(RuptureConverter):
                     if tag in tom_node.attrib:
                         rate = float(tom_node[tag])
                         tom.occurrence_rate = rate
-                    # set mfd normalisation flag
-                    tag = 'mfd_normalised'
-                    mfdn = False
-                    if tag in tom_node.attrib:
-                        if tom_node[tag] == "true":
-                            mfdn = True
-                    tom.mfd_normalised = mfdn
                     return tom
                 else:
                     return PoissonTOM(time_span=self.tom.time_span)
