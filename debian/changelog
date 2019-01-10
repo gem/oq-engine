@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added cluster model to classical PSHA calculator
+  
   [Michele Simionato]
   * Added an API `/extract/event_info/eidx`
   * Splitting the sources in classical calculators and not in event based
