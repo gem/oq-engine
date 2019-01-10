@@ -20,15 +20,28 @@
 Test related to code in openquake/utils/general.py
 """
 
+import numpy as np
 import mock
 import unittest
 from operator import attrgetter
 from collections import namedtuple
-
+from openquake.hazardlib.probability_map import (ProbabilityCurve, 
+        ProbabilityMap)
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, search_module, assert_close,
-    deprecated, DeprecationWarning, cached_property)
+    deprecated, DeprecationWarning, cached_property, AccumDict)
 
+
+class AccumDictTestCase(unittest.TestCase):
+
+    def test_pow_dictionary(self):
+        arr = np.empty((1, 3, 1)) 
+        arr[0, :, 0] = [0.8, 0.5, 0.3]
+        pmap = ProbabilityMap.from_array(arr, [0])
+        acc = AccumDict({0: pmap})
+        computed = acc ** 2
+        expected = np.array([[0.64, 0.25, 0.09]]).transpose()
+        np.testing.assert_almost_equal(computed[0][0].array, expected)
 
 class BlockSplitterTestCase(unittest.TestCase):
     """Tests for :func:`openquake.baselib.general.block_splitter`."""

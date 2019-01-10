@@ -36,13 +36,15 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
     def setUp(self):
         testfile = os.path.join(DATA, 'source_group_cluster.xml')
         sc = SourceConverter(area_source_discretization=10.)
-        self.sg = nrml.to_python(testfile, sc)
-        self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
+        # This provides a SourceModel
+        self.sg = getattr(nrml.to_python(testfile, sc), 'src_groups')
+        self.imtls = DictArray({'PGA': [0.01, 0.1, 0.2, 0.3, 1.0]})
         gsim = SadighEtAl1997()
         self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
-        site = Site(Point(0.0, 0.0), 800, z1pt0=30., z2pt5=1.)
+        site = Site(Point(1.0, -0.1), 800, z1pt0=30., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
         self.sites = s_filter
+        print('Number of groups', len(self.sg))
 
     def test_hazard_curve(self):
         # Test the former calculator
@@ -52,4 +54,5 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
+        print(crv)
         # self.assertAlmostEqual(0.3, crv[0])
