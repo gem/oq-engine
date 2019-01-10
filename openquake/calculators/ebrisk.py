@@ -103,23 +103,23 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param dummy: unused parameter
         :param arr: ArrayWrapper with an attribute .eids
         """
-        if 'aggloss' not in self.datastore:  # first time
+        if 'losses_by_event' not in self.datastore:  # first time
             L = len(self.riskmodel.lti)
             shp = self.assetcol.agg_shape(len(self.eid2idx), L,
                                           self.oqparam.aggregate_by)
-            logging.info('Creating aggloss of shape %s, %s', shp,
+            logging.info('Creating losses_by_event of shape %s, %s', shp,
                          humansize(numpy.product(shp) * 4))
-            self.datastore.create_dset('aggloss', F32, shp)
+            self.datastore.create_dset('losses_by_event', F32, shp)
             self.oqparam.ground_motion_fields = False
-        with self.monitor('saving aggloss', measuremem=True):
+        with self.monitor('saving losses_by_event', measuremem=True):
             if len(arr):
                 idx = [self.eid2idx[eid] for eid in arr.eids]
-                self.datastore['aggloss'][idx] = arr
+                self.datastore['losses_by_event'][idx] = arr
         return 1
 
     def post_execute(self, dummy):
         """
-        Compute and store average losses from the aggloss dataset,
+        Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
         pass
