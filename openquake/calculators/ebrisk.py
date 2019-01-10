@@ -100,7 +100,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, dummy, arr):
         """
         :param dummy: unused parameter
-        :param eids_losses: (eids, aggregate losses)
+        :param arr: ArrayWrapper with an attribute .eids
         """
         if 'aggloss' not in self.datastore:  # first time
             shp = self.assetcol.agg_shape(len(self.eid2idx), self.L,
@@ -112,9 +112,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with self.monitor('saving aggloss', measuremem=True):
             idx = [self.eid2idx[eid] for eid in arr.eids]
             self.datastore['aggloss'][idx] = arr
+        return 1
 
-    def post_execute(self, result):
-        pass
-
-    def postproc(self):
-        pass
+    def post_execute(self, dummy):
+        """
+        Compute and store average losses from the aggloss dataset
+        """
+        rlzs = self.rlzs_assoc.realizations
+        aggloss = self.datastore['aggloss'].value
+        weights = [rlzs[r].weight['default']
+                   for r in self.datastore['events']['rlz']]
+        self.datastore['avgloss'] = numpy.average(aggloss, 0, weights)
