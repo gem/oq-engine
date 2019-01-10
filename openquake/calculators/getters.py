@@ -32,6 +32,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
+by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class PmapGetter(object):
@@ -305,7 +306,7 @@ class GmfGetter(object):
         """
         Initialize the computers. Should be called on the workers
         """
-        if hasattr(self, 'eids'):  # init already called
+        if hasattr(self, 'computers'):  # init already called
             return
         self.computers = []
         for ebr in self.ebruptures:
@@ -324,7 +325,7 @@ class GmfGetter(object):
                 continue
             self.computers.append(computer)
 
-    def gen_gmv(self):
+    def gen_gmv(self, rlzidx=True):
         """
         Compute the GMFs for the given realization and
         yields tuples of the form (sid, eid, imti, gmv).
@@ -358,7 +359,10 @@ class GmfGetter(object):
                             continue
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
-                                yield rlzi, sid, eid, gmv
+                                if rlzidx:  # event_based_risk
+                                    yield rlzi, sid, eid, gmv
+                                else:  # in ebrisk
+                                    yield sid, eid, gmv
                     n += e
 
     def get_hazard(self, data=None):
@@ -376,6 +380,29 @@ class GmfGetter(object):
             for rlzi in haz:
                 haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
         return hazard
+
+    def gen_risk(self, assets_by_sid, riskmodel, haz_by_sid):
+        """
+        :param assets_by_sid: a list of lists of assets keyed by site_id
+        :param riskmodel: a CompositeRiskModel instance
+        :param haz_by_sid: a dictionary site_id -> hazard array
+        :yields: (loss_type, asset, eids, loss_ratios)
+        """
+        imti = {imt: i for i, imt in enumerate(self.imts)}
+        taxi = riskmodel.taxi
+        for sid, haz in haz_by_sid.items():
+            eids = haz['eid']
+            E = len(eids)
+            gmv_array = haz['gmv']
+            assets_by_taxi = general.groupby(assets_by_sid[sid], by_taxonomy)
+            for taxo, rm in riskmodel.items():
+                for lt, rf in rm.risk_functions.items():
+                    gmvs = gmv_array[:, imti[rf.imt]]
+                    means, covs, idxs = rf.interpolate(gmvs)
+                    for asset in assets_by_taxi[taxi[taxo]]:
+                        loss_ratios = numpy.zeros(E, F32)
+                        loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
+                        yield lt, asset, eids, loss_ratios
 
     def compute_gmfs_curves(self, monitor):
         """
