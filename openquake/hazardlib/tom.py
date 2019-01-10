@@ -150,7 +150,7 @@ class PoissonTOM(BaseTOM):
         :return:
             Probability of occurrence
         """
-        return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(1)
+        return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(num)
 
     def sample_number_of_occurrences(self, occurrence_rate, seeds=None):
         """
