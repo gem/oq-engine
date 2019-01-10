@@ -323,8 +323,7 @@ class ProbabilisticEventBased(RiskModel):
         self.risk_functions = vulnerability_functions
         self.conditional_loss_poes = conditional_loss_poes
 
-    def __call__(self, loss_type, assets, gmvs_eids,
-                 epsgetter=lambda aid, eids: None):
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
         :param str loss_type:
             the loss type considered
