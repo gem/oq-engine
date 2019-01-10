@@ -13,7 +13,7 @@ xmlns:gml="http://www.opengis.net/gml"
 
                     <simpleFaultSource
                     id="1"
-                    name="Simple Fault Source B"
+                    name="Simple Fault Source A"
                     tectonicRegion="Active Shallow Crust" >
                         <simpleFaultGeometry>
                             <gml:LineString>
@@ -48,8 +48,8 @@ xmlns:gml="http://www.opengis.net/gml"
                         </simpleFaultGeometry>
                         <magScaleRel> WC1994 </magScaleRel>
                         <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                        <truncGutenbergRichterMFD aValue="4.00" bValue="0.9"
-                                maxMag="7.0" minMag="6.0" />
+                        <truncGutenbergRichterMFD aValue="4.00" bValue="0.94"
+                                maxMag="7.2" minMag="6.0" />
                         <rake> 90 </rake>
                     </simpleFaultSource>
 

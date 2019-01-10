@@ -269,8 +269,6 @@ class ContextMaker(object):
                 poes = gsim.get_poes(
                     sctx, rupture, dctx_,
                     imt_module.from_string(imt), imtls[imt], trunclevel)
-                # This is fine only is the occurrence is controlled only by the
-                # the rupture itself.
                 pnos.append(rupture.get_probability_no_exceedance(poes))
             pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
         return pne_array

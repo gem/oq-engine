@@ -23,7 +23,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         </simpleFaultGeometry>
                         <magScaleRel> WC1994 </magScaleRel>
                         <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                        <poissonTOM occurrence_rate="0.01" mfd_normalised="true" />
+                        <poissonTOM occurrence_rate="0.01"/>
                         <incrementalMFD
                             binWidth="0.1"
                             minMag="6.0">
