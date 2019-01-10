@@ -149,6 +149,8 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
         if ebr:
             job_id = run_job(job_ini, log_level, log_file,
                              exports, hazard_calculation_id=hc_id)
+        else:
+            job_id = hc_id
     else:
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
