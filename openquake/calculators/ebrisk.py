@@ -110,13 +110,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore.create_dset('aggloss', F32, shp)
             self.oqparam.ground_motion_fields = False
         with self.monitor('saving aggloss', measuremem=True):
-            idx = [self.eid2idx[eid] for eid in arr.eids]
-            self.datastore['aggloss'][idx] = arr
+            if len(arr):
+                idx = [self.eid2idx[eid] for eid in arr.eids]
+                self.datastore['aggloss'][idx] = arr
         return 1
 
     def post_execute(self, dummy):
         """
-        Compute and store average losses from the aggloss dataset
+        Compute and store average losses from the aggloss dataset,
+        and then loss curves and maps.
         """
         rlzs = self.rlzs_assoc.realizations
         aggloss = self.datastore['aggloss'].value
