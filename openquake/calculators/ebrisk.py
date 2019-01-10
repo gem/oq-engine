@@ -70,7 +70,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
     for loss_type, asset, eids_, loss_ratios in getter.gen_risk(
             assets_by_site, riskmodel, haz_by_sid):
-        losses = asset.value(loss_type) * loss_ratios
+        losses = asset.value(loss_type) * loss_ratios * param['ses_ratio']
         lti = riskmodel.lti[loss_type]
         tagi = assetcol.array[asset.ordinal][tagnames]
         tagidxs = tuple(idx - 1 for idx in tagi)
@@ -96,6 +96,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
+        self.param['ses_ratio'] = self.oqparam.ses_ratio
 
     def agg_dicts(self, dummy, arr):
         """
