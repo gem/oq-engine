@@ -309,7 +309,7 @@ class Classical(RiskModel):
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
-              'ucerf_rupture', 'ucerf_hazard', 'ucerf_risk')
+              'ebrisk', 'ucerf_rupture', 'ucerf_hazard', 'ucerf_risk')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel.
@@ -323,7 +323,8 @@ class ProbabilisticEventBased(RiskModel):
         self.risk_functions = vulnerability_functions
         self.conditional_loss_poes = conditional_loss_poes
 
-    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
+    def __call__(self, loss_type, assets, gmvs_eids,
+                 epsgetter=lambda aid, eids: None):
         """
         :param str loss_type:
             the loss type considered
