@@ -55,6 +55,10 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
+        # Expected results computed with a notebook using the original USGS 
+        # formulation as described in Appendix F of Petersen et al. (2008).
+        # The rates of exceedance were converted a posteriori into 
+        # probabilities.
         rates = np.array([1.00000000e-03, 9.98565030e-04, 8.42605169e-04, 
                           4.61559062e-04, 1.10100503e-06])
         expected = 1 - np.exp(-rates)
