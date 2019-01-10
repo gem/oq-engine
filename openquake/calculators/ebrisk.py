@@ -103,7 +103,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param arr: ArrayWrapper with an attribute .eids
         """
         if 'aggloss' not in self.datastore:  # first time
-            shp = self.assetcol.agg_shape(len(self.eid2idx), self.L,
+            L = len(self.riskmodel.lti)
+            shp = self.assetcol.agg_shape(len(self.eid2idx), L,
                                           self.oqparam.aggregate_by)
             logging.info('Creating aggloss of shape %s, %s', shp,
                          humansize(numpy.product(shp) * 4))

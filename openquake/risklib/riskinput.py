@@ -116,8 +116,7 @@ class CompositeRiskModel(collections.Mapping):
 
         self.init(oqparam)
 
-    @property
-    def taxi(self):
+    def get_taxonomy_dict(self):
         """
         A dictionary taxonomy string -> taxonomy index
         """
