@@ -138,22 +138,26 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # sources
     if src_mutex and param.get('grp_probability'):
         pmap[src.src_group_id] *= param['grp_probability']
-
     # Processing
     if cluster:
+        first = True
         pmapclu = AccumDict({grp_id: ProbabilityMap(len(imtls.array), 
                             len(gsims)) for grp_id in grp_ids})
-        pmapclu.setdefault(0)
+        # Get temporal occurrence model
         tom = param.get('temporal_occurrence_model')
-
         # Number of occurrences for the cluster
-        for nocc in range (0, 10):
+        for nocc in range (0, 50):
+            # TODO fix this once the occurrence rate will be used just as 
+            # an object attribute
             ocr = tom.occurrence_rate
             prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
-            tmp = (~pmap)**nocc
-            pmapclu =+ prob_n_occ * (~pmap)**nocc
+            if first:
+                pmapclu = prob_n_occ * (~pmap)**nocc
+                first = False
+            else:
+                tmp = prob_n_occ * (~pmap)**nocc
+                pmapclu += prob_n_occ * (~pmap)**nocc 
         pmap = ~pmapclu
-
     # Return results
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
 

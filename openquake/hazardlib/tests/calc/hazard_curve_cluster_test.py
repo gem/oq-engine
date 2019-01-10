@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import numpy as np
 import unittest
 
 from openquake.hazardlib import nrml
@@ -35,7 +36,8 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
 
     def setUp(self):
         testfile = os.path.join(DATA, 'source_group_cluster.xml')
-        sc = SourceConverter(area_source_discretization=10.)
+        sc = SourceConverter(area_source_discretization=10.,
+                             investigation_time=1.)
         # This provides a SourceModel
         self.sg = getattr(nrml.to_python(testfile, sc), 'src_groups')
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.2, 0.3, 1.0]})
@@ -44,15 +46,16 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
         site = Site(Point(1.0, -0.1), 800, z1pt0=30., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
         self.sites = s_filter
-        print('Number of groups', len(self.sg))
 
     def test_hazard_curve(self):
-        # Test the former calculator
+        """ Classical PSHA with cluster source """ 
         curves = calc_hazard_curves(self.sg,
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        print(crv)
-        # self.assertAlmostEqual(0.3, crv[0])
+        rates = np.array([1.00000000e-03, 9.98565030e-04, 8.42605169e-04, 
+                          4.61559062e-04, 1.10100503e-06])
+        expected = 1 - np.exp(-rates)
+        np.testing.assert_almost_equal(crv, expected)
