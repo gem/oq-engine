@@ -389,17 +389,22 @@ class GmfGetter(object):
         :yields: (loss_type, asset, eids, loss_ratios)
         """
         imti = {imt: i for i, imt in enumerate(self.imts)}
-        taxi = riskmodel.taxi
+        tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
         for sid, haz in haz_by_sid.items():
             eids = haz['eid']
             E = len(eids)
             gmv_array = haz['gmv']
             assets_by_taxi = general.groupby(assets_by_sid[sid], by_taxonomy)
             for taxo, rm in riskmodel.items():
+                t = tdict[taxo]
+                try:
+                    assets = assets_by_taxi[t]
+                except KeyError:  # there are no assets of taxonomy taxo
+                    continue
                 for lt, rf in rm.risk_functions.items():
                     gmvs = gmv_array[:, imti[rf.imt]]
                     means, covs, idxs = rf.interpolate(gmvs)
-                    for asset in assets_by_taxi[taxi[taxo]]:
+                    for asset in assets:
                         loss_ratios = numpy.zeros(E, F32)
                         loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
                         yield lt, asset, eids, loss_ratios
