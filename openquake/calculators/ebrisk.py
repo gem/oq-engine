@@ -121,8 +121,4 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the aggloss dataset,
         and then loss curves and maps.
         """
-        rlzs = self.rlzs_assoc.realizations
-        aggloss = self.datastore['aggloss'].value
-        weights = [rlzs[r].weight['default']
-                   for r in self.datastore['events']['rlz']]
-        self.datastore['avgloss'] = numpy.average(aggloss, 0, weights)
+        pass
