@@ -62,7 +62,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     tagnames = param['aggregate_by']
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
-        data = numpy.fromiter(getter.gen_gmv(rlzidx=False), getter.gmv_dt)
+        data = getter.get_hazard(rlzidx=False)  # (sid, eid, gmv)
         haz_by_sid = group_array(data, 'sid')
     eids = numpy.unique(data['eid'])
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
