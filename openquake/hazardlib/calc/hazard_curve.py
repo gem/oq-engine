@@ -152,6 +152,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
             prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
             tmp = (~pmap)**nocc
             pmapclu =+ prob_n_occ * (~pmap)**nocc
+        pmap = ~pmapclu
 
     # Return results
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
