@@ -18,6 +18,7 @@
 
 import os.path
 import logging
+import itertools
 import collections
 import operator
 import numpy
@@ -60,6 +61,20 @@ def store_rlzs_by_grp(dstore):
         for gsim_id, rlzs in enumerate(arr):
             lst.append((int(grp[4:]), gsim_id, rlzs))
     dstore['csm_info/rlzs_by_grp'] = numpy.array(lst, rlzs_by_grp_dt)
+
+
+def get_indices(sequence):
+    """
+    :param sequence: a sequence of integers
+    :returns: a dict idx -> [(start, stop), ...]
+    """
+    indices = AccumDict(accum=[])  # idx -> [(start, stop), ...]
+    start = 0
+    for i, vals in itertools.groupby(sequence):
+        n = sum(1 for val in vals)
+        indices[i].append((start, start + n))
+        start += n
+    return indices
 
 
 # ######################## GMF calculator ############################ #
@@ -281,6 +296,12 @@ class EventBasedCalculator(base.HazardCalculator):
             for eid, rlz in eid_rlz:
                 events[eid2idx[eid]]['rlz'] = rlz
         self.datastore['events'] = events  # fast too
+        indices = get_indices(events['rlz'])
+        dset = self.datastore.create_dset(
+            'events_indices', hdf5.vuint32, shape=(self.R, 2), fillvalue=None)
+        for r, startstop in indices.items():
+            dset[r, 0] = [ss[0] for ss in startstop]
+            dset[r, 1] = [ss[1] for ss in startstop]
         return rgetters
 
     def check_overflow(self):
