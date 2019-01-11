@@ -72,7 +72,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             assets_by_site, riskmodel, haz_by_sid):
         losses = asset.value(loss_type) * loss_ratios * param['ses_ratio']
         lti = riskmodel.lti[loss_type]
-        tagi = assetcol.array[asset.ordinal][tagnames]
+        tagi = assetcol.array[asset.ordinal][tagnames] if tagnames else ()
         tagidxs = tuple(idx - 1 for idx in tagi)
         for eid, loss in zip(eids_, losses):
             acc[(eid2idx[eid], lti) + tagidxs] += loss
