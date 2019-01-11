@@ -156,7 +156,7 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
         logging.info('Reusing job #%d', job.id)
         job_id = run_job(job_ini, log_level, log_file,
                          exports, hazard_calculation_id=hc_id)
-    if oqparam.aggregate_by:
+    if ebr and oqparam.aggregate_by:
         logging.info('Exporting aggregated data')
         dstore = datastore.read(job_id)
         aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)
