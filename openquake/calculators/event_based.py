@@ -63,14 +63,17 @@ def store_rlzs_by_grp(dstore):
     dstore['csm_info/rlzs_by_grp'] = numpy.array(lst, rlzs_by_grp_dt)
 
 
-def get_indices(sequence):
+def get_indices(integers):
     """
-    :param sequence: a sequence of integers
-    :returns: a dict idx -> [(start, stop), ...]
+    :param integers: a sequence of integers (with repetitions)
+    :returns: a dict integer -> [(start, stop), ...]
+
+    >>> get_indices([0, 0, 3, 3, 3, 2, 2, 0])
+    {0: [(0, 2), (7, 8)], 3: [(2, 5)], 2: [(5, 7)]}
     """
     indices = AccumDict(accum=[])  # idx -> [(start, stop), ...]
     start = 0
-    for i, vals in itertools.groupby(sequence):
+    for i, vals in itertools.groupby(integers):
         n = sum(1 for val in vals)
         indices[i].append((start, start + n))
         start += n
