@@ -57,14 +57,6 @@ class BaseTOM(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_probability_one_occurrence(self):
-        """
-        Calculate and return the probability of event to occur once
-        within the time range defined by the constructor's ``time_span``
-        parameter value.
-        """
-
-    @abc.abstractmethod
     def get_probability_n_occurrences(self):
         """
         Calculate the probability of occurrence of a number of events in the
@@ -103,9 +95,6 @@ class FatedTOM(BaseTOM):
     def get_probability_one_or_more_occurrences(self, occurrence_rate):
         return 1
 
-    def get_probability_one_occurrence(self, occurrence_rate):
-        return 1
-
     def get_probability_n_occurrences(self, occurrence_rate, num):
         if num != 1: 
             return 0
@@ -115,7 +104,7 @@ class FatedTOM(BaseTOM):
     def sample_number_of_occurrences(self, seeds=None):
         return 1
 
-    def get_probability_no_exceedance(self, occurrence_rate, poes): 
+    def get_probability_no_exceedance(self, occurrence_rate, poes):
         return 1-poes
 
 @with_slots
@@ -134,9 +123,6 @@ class PoissonTOM(BaseTOM):
             Float value between 0 and 1 inclusive.
         """
         return 1 - math.exp(- occurrence_rate * self.time_span)
-
-    def get_probability_one_occurrence(self, occurrence_rate):
-        return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(1)
 
     def get_probability_n_occurrences(self, occurrence_rate, num):
         """
