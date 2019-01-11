@@ -766,7 +766,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             if not make_sm.changes:
                 dupl += hits
     if (dupl and not oqparam.optimize_same_id_sources and
-            'event_based' not in oqparam.calculation_mode):
+            not oqparam.is_event_based()):
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
@@ -826,8 +826,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         logging.info('Considering {:,d} logic tree paths out of {:,d}'.format(
             oqparam.number_of_logic_tree_samples, p))
     else:  # full enumeration
-        if ('event_based' in oqparam.calculation_mode
-                and p > oqparam.max_potential_paths):
+        if oqparam.is_event_based() and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d) '
                 'use sampling instead of full enumeration' % p)
@@ -864,7 +863,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if not in_memory:
         return csm
 
-    if 'event_based' in oqparam.calculation_mode:
+    if oqparam.is_event_based():
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
@@ -886,7 +885,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                                 srcfilter.hdf5path)
     if (srcfilter and oqparam.prefilter_sources != 'no' and
             oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-        split = oqparam.calculation_mode not in 'event_based_risk ebrisk'
+        split = not oqparam.is_event_based()
         csm = parallel_split_filter(csm, srcfilter, split,
                                     monitor('split_filter'))
     return csm
