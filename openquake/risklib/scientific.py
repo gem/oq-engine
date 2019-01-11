@@ -1376,13 +1376,17 @@ class LossesByPeriodBuilder(object):
 
     def build_pair(self, losses, stats):
         """
+        :param losses: a list of lists with R elements
         :returns: two arrays of shape (P, R) and (P, S) respectively
         """
         P, R = len(self.return_periods), len(self.weights)
+        assert len(losses) == R, len(losses)
         array = numpy.zeros((P, R), F32)
         for r, ls in enumerate(losses):
-            array[:, r] = losses_by_period(
-                ls, self.return_periods, self.num_events[r], self.eff_time)
+            ne = self.num_events.get(r, 0)
+            if ne:
+                array[:, r] = losses_by_period(
+                    ls, self.return_periods, ne, self.eff_time)
         return self.pair(array, stats)
 
     # used in event_based_risk
@@ -1415,11 +1419,12 @@ class LossesByPeriodBuilder(object):
         :param losses: an array of shape R, E
         :param clp: a list of C conditional loss poes
         :param stats: list of pairs [(statname, statfunc), ...]
-        :returns: two arrays of shape (R, C) and (S, C)
+        :returns: two arrays of shape (C, R) and (C, S)
         """
-        array = numpy.zeros((len(losses), len(clp)), F32)
+        array = numpy.zeros((len(clp), len(losses)), F32)
         for r, ls in enumerate(losses):
+            if len(ls) < 2:
+                continue
             for c, poe in enumerate(clp):
-                clratio = conditional_loss_ratio(ls, self.poes, poe)
-                array[r, c] = clratio
+                array[c, r] = conditional_loss_ratio(ls, self.poes, poe)
         return self.pair(array, stats)

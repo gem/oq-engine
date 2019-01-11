@@ -216,6 +216,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
+    @attr('qa', 'risk', 'ebrisk')
+    def test_case_master2(self):
+        self.run_calc(case_master.__file__, 'job.ini',
+                      calculation_mode='ebrisk')
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
         if sys.platform == 'darwin':
