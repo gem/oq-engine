@@ -296,10 +296,9 @@ class EventBasedCalculator(base.HazardCalculator):
             for eid, rlz in eid_rlz:
                 events[eid2idx[eid]]['rlz'] = rlz
         self.datastore['events'] = events  # fast too
-        indices = get_indices(events['rlz'])
         dset = self.datastore.create_dset(
             'events_indices', hdf5.vuint32, shape=(self.R, 2), fillvalue=None)
-        for r, startstop in indices.items():
+        for r, startstop in get_indices(events['rlz']).items():
             dset[r, 0] = [ss[0] for ss in startstop]
             dset[r, 1] = [ss[1] for ss in startstop]
         return rgetters
