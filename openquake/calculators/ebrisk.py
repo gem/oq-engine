@@ -89,10 +89,15 @@ def compute_loss_curves_maps(hdf5path, multi_index, clp, individual_curves,
         R = len(indices)
         losses_by_event = dstore['losses_by_event']
         losses = [None] * R
-        for r, startstop in enumerate(indices):
-            losses[r] = numpy.concatenate([
-                losses_by_event[(slice(*ss),) + multi_index]
-                for ss in startstop])
+        for r, (start, stop) in enumerate(indices):
+            lst = []
+            for s1, s2 in zip(start, stop):
+                idx = (slice(s1, s2),) + multi_index
+                lst.append(losses_by_event[idx])
+            if lst:
+                losses[r] = numpy.concatenate(lst)
+            else:
+                losses[r] = []
     result = {'idx': multi_index}
     result['loss_curves/rlzs'], result['loss_curves/stats'] = (
         builder.build_pair(losses, stats))
