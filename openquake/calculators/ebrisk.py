@@ -196,16 +196,18 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         smap = parallel.Starmap(compute_loss_curves_maps, monitor=mon)
         first = self.datastore['losses_by_event'][0]  # to get the multi_index
         self.datastore.close()
-        for idx, _ in numpy.ndenumerate(first):
-            smap.submit(self.datastore.hdf5path, idx,
-                        oq.conditional_loss_poes, oq.individual_curves)
         acc = []
-        for res in smap:
-            idx = res.pop('idx')
-            for name, arr in res.items():
-                if arr is not None:
-                    acc.append((name, idx, arr))
+        with self.monitor('computing loss_curves and maps'):
+            for idx, _ in numpy.ndenumerate(first):
+                smap.submit(self.datastore.hdf5path, idx,
+                            oq.conditional_loss_poes, oq.individual_curves)
+            for res in smap:
+                idx = res.pop('idx')
+                for name, arr in res.items():
+                    if arr is not None:
+                        acc.append((name, idx, arr))
         self.datastore.open('r+')  # reopen
-        for name, idx, arr in acc:
-            for ij, val in numpy.ndenumerate(arr):
-                self.datastore[name][ij + idx] = val
+        with self.monitor('saving loss_curves and maps'):
+            for name, idx, arr in acc:
+                for ij, val in numpy.ndenumerate(arr):
+                    self.datastore[name][ij + idx] = val
