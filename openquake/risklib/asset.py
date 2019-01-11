@@ -401,6 +401,15 @@ class AssetCollection(object):
         """
         return self.tagcol.tagnames
 
+    def agg_shape(self, E, L, aggregate_by):
+        """
+        :returns: a shape (E, L, T, ...) depending on the tagnames
+        """
+        shp = (E, L) + tuple(
+            len(getattr(self.tagcol, tagname)) - 1
+            for tagname in aggregate_by)
+        return shp
+
     def get_aids_by_tag(self):
         """
         :returns: dict tag -> asset ordinals
@@ -444,8 +453,7 @@ class AssetCollection(object):
         shape = [len(getattr(self.tagcol, tagname)) for tagname in tagnames]
         acc = numpy.zeros(shape, (F32, shp) if shp else F32)
         for asset, row in zip(self.array, array):
-            idx = tuple(asset[tagnames])
-            acc[idx] += row
+            acc[tuple(asset[tagnames])] += row
         return acc
 
     def reduce(self, sitecol):
