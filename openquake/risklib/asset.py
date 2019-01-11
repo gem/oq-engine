@@ -401,14 +401,13 @@ class AssetCollection(object):
         """
         return self.tagcol.tagnames
 
-    def agg_shape(self, E, L, aggregate_by):
+    def agg_shape(self, shp, aggregate_by):
         """
-        :returns: a shape (E, L, T, ...) depending on the tagnames
+        :returns: a shape shp + (T, ...) depending on the tagnames
         """
-        shp = (E, L) + tuple(
+        return shp + tuple(
             len(getattr(self.tagcol, tagname)) - 1
             for tagname in aggregate_by)
-        return shp
 
     def get_aids_by_tag(self):
         """
