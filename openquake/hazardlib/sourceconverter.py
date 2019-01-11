@@ -124,6 +124,11 @@ class SourceGroup(collections.Sequence):
             for src in src_list:
                 assert src.tectonic_region_type == self.trt, (
                     src.tectonic_region_type, self.trt)
+                # Mutually exclusive ruptures can only be non-parametric
+                print(type(src))
+                if rup_interdep in ('mutex'):
+                    if not isinstance(src, NonParametricSeismicSource):
+                        raise ValueError('Wrong source typology')
 
     def update(self, src):
         """
