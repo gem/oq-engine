@@ -18,6 +18,7 @@
 import os
 import io
 import unittest
+from nose.tools import raises
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import update_source_model
 
@@ -174,10 +175,19 @@ class PointToMultiPointTestCase(unittest.TestCase):
 
 
 class SourceConverterTestCase(unittest.TestCase):
+
     def test_wrong_trt(self):
-        # a group with sources of two different TRTs
+        """ Test consistency between group and sources TRTs """
         testfile = os.path.join(testdir, 'wrong-trt.xml')
         with self.assertRaises(ValueError) as ctx:
             nrml.to_python(testfile)
         self.assertIn('node pointSource: Found Cratonic, expected '
                       'Active Shallow Crust, line 67', str(ctx.exception))
+
+    @raises(Exception)
+    def test_wrong_source_type(self):
+        """ Test that only nonparametric sources are used with mutex ruptures 
+        """
+        testfile = os.path.join(testdir, 'rupture_mutex_wrong.xml')
+        with self.assertRaises(ValueError) as ctx:
+            nrml.to_python(testfile)
