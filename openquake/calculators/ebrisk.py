@@ -70,7 +70,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
     for loss_type, asset, eids_, loss_ratios in getter.gen_risk(
             assets_by_site, riskmodel, haz_by_sid):
-        losses = asset.value(loss_type) * loss_ratios * param['ses_ratio']
+        losses = asset.value(loss_type) * loss_ratios
         lti = riskmodel.lti[loss_type]
         tagi = assetcol.array[asset.ordinal][tagnames] if tagnames else ()
         tagidxs = tuple(idx - 1 for idx in tagi)
@@ -129,7 +129,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
-        self.param['ses_ratio'] = self.oqparam.ses_ratio
 
     def agg_dicts(self, dummy, arr):
         """
@@ -189,6 +188,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
+        logging.info('Building losses_by_rlz')
+        with self.monitor('building losses_by_rlz', autoflush=True):
+            self.build_losses_by_rlz()
         oq = self.oqparam
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
@@ -197,7 +199,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         first = self.datastore['losses_by_event'][0]  # to get the multi_index
         self.datastore.close()
         acc = []
-        with self.monitor('computing loss_curves and maps'):
+        mon = self.monitor('building loss_curves and maps')
+        with mon:
             for idx, _ in numpy.ndenumerate(first):
                 smap.submit(self.datastore.hdf5path, idx,
                             oq.conditional_loss_poes, oq.individual_curves)
@@ -207,7 +210,19 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     if arr is not None:
                         acc.append((name, idx, arr))
         self.datastore.open('r+')  # reopen
-        with self.monitor('saving loss_curves and maps'):
+        with mon:
             for name, idx, arr in acc:
                 for ij, val in numpy.ndenumerate(arr):
                     self.datastore[name][ij + idx] = val
+        mon.flush()
+
+    def build_losses_by_rlz(self):
+        indices = self.datastore['events_indices']
+        R = len(indices)
+        dset = self.datastore['losses_by_event']
+        lbr = self.datastore.create_dset(
+            'avglosses_by_rlz', F32, (R,) + dset.shape[1:])
+        for r, (start, stop) in enumerate(self.datastore['events_indices']):
+            lbr[r] = numpy.sum(
+                dset[s1:s2].sum(axis=0) for s1, s2 in zip(start, stop)
+            ) * self.oqparam.ses_ratio
