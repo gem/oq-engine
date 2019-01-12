@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the ordering of the events (akin to a change of seed in the
+    asset correlation)
+
   [Robin Gee]
   * Fixed bug in tusa_langer_2016.py related to coeffs affecting Repi models
 
