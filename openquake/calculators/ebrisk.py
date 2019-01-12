@@ -181,8 +181,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         logging.info('Building losses_by_rlz')
-        with self.monitor('building losses_by_rlz', autoflush=True):
-            self.build_losses_by_rlz()
+        with self.monitor('building avglosses_by_rlz', autoflush=True):
+            self.build_avglosses_by_rlz()
         oq = self.oqparam
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
@@ -191,24 +191,29 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         first = self.datastore['losses_by_event'][0]  # to get the multi_index
         self.datastore.close()
         acc = []
-        mon = self.monitor('building loss_curves and maps')
-        with mon:
-            for idx, _ in numpy.ndenumerate(first):
-                smap.submit(self.datastore.hdf5path, idx,
-                            oq.conditional_loss_poes, oq.individual_curves)
-            for res in smap:
-                idx = res.pop('idx')
-                for name, arr in res.items():
-                    if arr is not None:
-                        acc.append((name, idx, arr))
+        for idx, _ in numpy.ndenumerate(first):
+            smap.submit(self.datastore.hdf5path, idx,
+                        oq.conditional_loss_poes, oq.individual_curves)
+        for res in smap:
+            idx = res.pop('idx')
+            for name, arr in res.items():
+                if arr is not None:
+                    acc.append((name, idx, arr))
+        # copy performance information from the cache to the datastore
+        pd = mon.hdf5['performance_data'].value
+        hdf5.extend3(self.datastore.hdf5path, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
-        with mon:
+        self.datastore['task_info/compute_loss_curves_and_maps'] = (
+            mon.hdf5['task_info/compute_loss_curves_maps'].value)
+        with self.monitor('saving loss_curves and maps', autoflush=True):
             for name, idx, arr in acc:
                 for ij, val in numpy.ndenumerate(arr):
                     self.datastore[name][ij + idx] = val
-        mon.flush()
 
-    def build_losses_by_rlz(self):
+    def build_avglosses_by_rlz(self):
+        """
+        Build the dataset avglosses_by_rlz from losses_by_event
+        """
         indices = self.datastore.get_attr('events', 'indices')
         R = len(indices)
         dset = self.datastore['losses_by_event']
