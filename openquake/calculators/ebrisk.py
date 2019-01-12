@@ -85,19 +85,13 @@ def compute_loss_curves_maps(hdf5path, multi_index, clp, individual_curves,
         oq = dstore['oqparam']
         stats = oq.risk_stats()
         builder = get_loss_builder(dstore)
-        indices = dstore['events_indices']
+        indices = dstore.get_attr('events', 'indices')
         R = len(indices)
         losses_by_event = dstore['losses_by_event']
         losses = [None] * R
-        for r, (start, stop) in enumerate(indices):
-            lst = []
-            for s1, s2 in zip(start, stop):
-                idx = (slice(s1, s2),) + multi_index
-                lst.append(losses_by_event[idx])
-            if lst:
-                losses[r] = numpy.concatenate(lst)
-            else:
-                losses[r] = []
+        for r, (s1, s2) in enumerate(indices):
+            idx = (slice(s1, s2),) + multi_index
+            losses[r] = losses_by_event[idx]
     result = {'idx': multi_index}
     result['loss_curves/rlzs'], result['loss_curves/stats'] = (
         builder.build_pair(losses, stats))
@@ -142,13 +136,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                          humansize(numpy.product(shp) * 4))
             self.datastore.create_dset('losses_by_event', F32, shp)
             self.oqparam.ground_motion_fields = False
-        with self.monitor('saving losses_by_event', measuremem=True):
-            if not hasattr(self, 'eid2idx'):
-                self.eid2idx = dict(
-                    zip(self.datastore['events']['eid'], range(self.E)))
-            if len(arr):
-                idx = [self.eid2idx[eid] for eid in arr.eids]
-                self.datastore['losses_by_event'][idx] = arr
+        if len(arr):
+            with self.monitor('saving losses_by_event', measuremem=True):
+                lbe = self.datastore['losses_by_event']
+                for eid, loss in zip(arr.eids, arr):
+                    lbe[self.eid2idx[eid]] = loss
         return 1
 
     def get_shape(self, *sizes):
@@ -217,12 +209,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         mon.flush()
 
     def build_losses_by_rlz(self):
-        indices = self.datastore['events_indices']
+        indices = self.datastore.get_attr('events', 'indices')
         R = len(indices)
         dset = self.datastore['losses_by_event']
         lbr = self.datastore.create_dset(
             'avglosses_by_rlz', F32, (R,) + dset.shape[1:])
-        for r, (start, stop) in enumerate(self.datastore['events_indices']):
-            lbr[r] = numpy.sum(
-                dset[s1:s2].sum(axis=0) for s1, s2 in zip(start, stop)
-            ) * self.oqparam.ses_ratio
+        for r, (s1, s2) in enumerate(indices):
+            lbr[r] = dset[s1:s2].sum(axis=0) * self.oqparam.ses_ratio

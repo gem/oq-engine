@@ -234,23 +234,25 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.parent.close()
         return rgetters
 
+    @cached_property
+    def eid2idx(self):
+        """
+        :returns: a dict eid -> index in the events table
+        """
+        return dict(zip(self.datastore['events']['eid'], range(self.E)))
+
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        try:
-            eid2idx = self.eid2idx
-        except AttributeError:  # first call
-            eid2idx = self.eid2idx = dict(
-                zip(self.datastore['events']['eid'], range(self.E)))
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data) == 0:
                 return acc
-            idxs = base.get_idxs(data, eid2idx)  # this has to be fast
+            idxs = base.get_idxs(data, self.eid2idx)  # this has to be fast
             data['eid'] = idxs  # replace eid with idx
             self.datastore.extend('gmf_data/data', data)
             # it is important to save the number of bytes while the
@@ -285,8 +287,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.E = len(eids)
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
-        events['eid'] = eids
-        self.eid2idx = eid2idx = dict(zip(events['eid'], range(self.E)))
         rgetters = self.get_rupture_getters()
 
         # build the associations eid -> rlz in parallel
@@ -294,16 +294,17 @@ class EventBasedCalculator(base.HazardCalculator):
                                 ((rgetter,) for rgetter in rgetters),
                                 self.monitor('get_eid_rlz'),
                                 progress=logging.debug)
-        for eid_rlz in smap:
-            # fast: 30 million of events associated in 1 minute
-            for eid, rlz in eid_rlz:
-                events[eid2idx[eid]]['rlz'] = rlz
-        self.datastore['events'] = events  # fast too
-        dset = self.datastore.create_dset(
-            'events_indices', hdf5.vuint32, shape=(self.R, 2), fillvalue=None)
-        for r, startstop in get_indices(events['rlz']).items():
-            dset[r, 0] = [ss[0] for ss in startstop]
-            dset[r, 1] = [ss[1] for ss in startstop]
+        i = 0
+        for eid_rlz in smap:  # 30 million of events associated in 1 minute!
+            for er in eid_rlz:
+                events[i] = er
+                i += 1
+        events.sort(order=['rlz', 'eid'])  # fast too
+        self.datastore['events'] = events
+        indices = numpy.zeros((self.R, 2), U32)
+        for r, [startstop] in get_indices(events['rlz']).items():
+            indices[r] = startstop
+        self.datastore.set_attrs('events', indices=indices)
         return rgetters
 
     def check_overflow(self):
