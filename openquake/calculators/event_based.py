@@ -301,11 +301,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 i += 1
         events.sort(order=['rlz', 'eid'])  # fast too
         self.datastore['events'] = events
-        dset = self.datastore.create_dset(
-            'events_indices', hdf5.vuint32, shape=(self.R, 2), fillvalue=None)
-        for r, startstop in get_indices(events['rlz']).items():
-            dset[r, 0] = [ss[0] for ss in startstop]
-            dset[r, 1] = [ss[1] for ss in startstop]
+        indices = numpy.zeros((self.R, 2), U32)
+        for r, [startstop] in get_indices(events['rlz']).items():
+            indices[r] = startstop
+        self.datastore.set_attrs('events', indices=indices)
         return rgetters
 
     def check_overflow(self):
