@@ -139,8 +139,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if len(arr):
             with self.monitor('saving losses_by_event', measuremem=True):
                 lbe = self.datastore['losses_by_event']
-                for eid, loss in zip(arr.eids, arr):
-                    lbe[self.eid2idx[eid]] = loss
+                idx = [self.eid2idx[eid] for eid in arr.eids]
+                sort_idx, sort_arr = zip(*sorted(zip(idx, arr)))
+                # h5py requires the indices to be sorted
+                lbe[list(sort_idx)] = numpy.array(sort_arr)
         return 1
 
     def get_shape(self, *sizes):
