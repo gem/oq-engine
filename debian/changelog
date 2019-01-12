@@ -1,7 +1,7 @@
   [Robin Gee]
   * Fixed bug in tusa_langer_2016.py realted to coeffs affecting Repi models
 
-    [Michele Simionato]
+  [Michele Simionato]
   * Added a check to forbid to set `ses_per_logic_tree_path = 0`
   * Added an API `/extract/event_info/eidx`
   * Splitting the sources in classical calculators and not in event based
