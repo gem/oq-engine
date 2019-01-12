@@ -130,7 +130,7 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     job = logs.dbcmd('get_job_from_checksum', haz_checksum)
     reuse = reuse_hazard and job and os.path.exists(job.ds_calc_dir + '.hdf5')
     # recompute the hazard and store the checksum
-    ebr = (oqparam.calculation_mode in ('event_based_risk', 'ebrisk') and
+    ebr = (oqparam.calculation_mode == 'event_based_risk' and
            'gmfs' not in oqparam.inputs)
     if ebr:
         kw = dict(calculation_mode='event_based')
