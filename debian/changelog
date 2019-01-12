@@ -1,5 +1,5 @@
   [Robin Gee]
-  * Fixed bug in tusa_langer_2016.py realted to coeffs affecting Repi models
+  * Fixed bug in tusa_langer_2016.py related to coeffs affecting Repi models
 
   [Michele Simionato]
   * Added a check to forbid to set `ses_per_logic_tree_path = 0`
