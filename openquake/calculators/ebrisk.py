@@ -70,15 +70,11 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
     for sid, haz in haz_by_sid.items():
-        eids_ = haz['eid']
         t0 = time.time()
         assets, ass_by_aid = assgetter.get(sid)
         mon.duration += time.time() - t0
-        for loss_type, asset, loss_ratios in getter.gen_risk(
-                assets, riskmodel, eids_, haz['gmv']):
-            losses = asset.value(loss_type) * loss_ratios
-            lti = riskmodel.lti[loss_type]
-            tagi = ass_by_aid[asset.ordinal][tagnames] if tagnames else ()
+        for lti, aid, eids_, losses in getter.gen_risk(assets, riskmodel, haz):
+            tagi = ass_by_aid[aid][tagnames] if tagnames else ()
             tagidxs = tuple(idx - 1 for idx in tagi)
             for eid, loss in zip(eids_, losses):
                 acc[(eid2idx[eid], lti) + tagidxs] += loss
