@@ -424,17 +424,18 @@ class GmfGetter(object):
                 haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
         return hazard
 
-    def gen_risk(self, assets, riskmodel, eids, gmvs):
+    def gen_risk(self, assets, riskmodel, eidgmv):
         """
         :param assets: a list of assets on the same site
         :param riskmodel: a CompositeRiskModel instance
-        :params eids: events affecting the given site
-        :param gmvs: GMVs on the given site
-        :yields: loss_type, asset, loss_ratios
+        :params eidgmv: hazard on the given site
+        :yields: lti, aid, eids, losses
         """
         imti = {imt: i for i, imt in enumerate(self.imts)}
         tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
-        E = len(eids)
+        E = len(eidgmv)
+        eids = eidgmv['eid']
+        gmvs = eidgmv['gmv']
         assets_by_taxi = general.groupby(assets, by_taxonomy)
         for taxo, rm in riskmodel.items():
             t = tdict[taxo]
@@ -443,11 +444,13 @@ class GmfGetter(object):
             except KeyError:  # there are no assets of taxonomy taxo
                 continue
             for lt, rf in rm.risk_functions.items():
+                lti = riskmodel.lti[lt]
                 means, covs, idxs = rf.interpolate(gmvs[:, imti[rf.imt]])
                 for asset in assets:
                     loss_ratios = numpy.zeros(E, F32)
                     loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
-                    yield lt, asset, loss_ratios
+                    yield (lti, asset.ordinal, eids,
+                           loss_ratios * asset.value(lt))
 
     def compute_gmfs_curves(self, monitor):
         """
