@@ -124,11 +124,13 @@ class SourceGroup(collections.Sequence):
             for src in src_list:
                 assert src.tectonic_region_type == self.trt, (
                     src.tectonic_region_type, self.trt)
-                # Mutually exclusive ruptures can only be non-parametric
-                print(type(src))
+                # Mutually exclusive ruptures can only belong to non-parametric
+                # sources
                 if rup_interdep in ('mutex'):
                     if not isinstance(src, NonParametricSeismicSource):
-                        raise ValueError('Wrong source typology')
+                        msg = "Mutually exclusive ruptures can only be "
+                        msg += "modelled using non-parametric sources"
+                        raise ValueError(msg)
 
     def update(self, src):
         """
@@ -755,13 +757,16 @@ class SourceConverter(RuptureConverter):
         """
         trt = node.attrib.get('tectonicRegion')
         rup_pmf_data = []
-        for rupnode in node:
+        tmp = node.attrib.get('rup_weights')
+        rups_weights = numpy.array([float(s) for s in tmp.split()])
+        for i, rupnode in enumerate(node):
             probs = pmf.PMF(valid.pmf(rupnode['probs_occur']))
             rup = RuptureConverter.convert_node(self, rupnode)
             rup.tectonic_region_type = trt
+            rup.weight = None if rups_weights is None else rups_weights[i]
             rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(
-            node['id'], node['name'], trt, rup_pmf_data)
+            node['id'], node['name'], trt, rup_pmf_data, rups_weights)
         return nps
 
     def convert_sourceModel(self, node):

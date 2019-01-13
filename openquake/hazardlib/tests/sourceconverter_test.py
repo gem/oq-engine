@@ -18,6 +18,7 @@
 import os
 import io
 import unittest
+import numpy
 from nose.tools import raises
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import update_source_model
@@ -158,7 +159,6 @@ class PointToMultiPointTestCase(unittest.TestCase):
         with io.BytesIO() as f:
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
-            print(got)
             self.assertEqual(got, expected)
 
     def test_complex(self):
@@ -170,7 +170,6 @@ class PointToMultiPointTestCase(unittest.TestCase):
         with io.BytesIO() as f:
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
-            print(got)
             self.assertEqual(got, multipoint)
 
 
@@ -191,3 +190,13 @@ class SourceConverterTestCase(unittest.TestCase):
         testfile = os.path.join(testdir, 'rupture_mutex_wrong.xml')
         with self.assertRaises(ValueError) as ctx:
             nrml.to_python(testfile)
+
+    def test_non_parametric_mutex(self):
+        """ Test non-parametric source with mutex ruptures """
+        fname  = 'nonparametric-source-mutex-ruptures.xml'
+        testfile = os.path.join(testdir, fname)
+        grp = nrml.to_python(testfile)[0]
+        src = grp[0]
+        expected = numpy.array([0.2, 0.8])
+        computed = numpy.array(src.rupture_weights)
+        numpy.testing.assert_equal(computed, expected)
