@@ -21,11 +21,13 @@ import operator
 import mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
+#from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, geo, probability_map, stats
+from openquake.hazardlib import calc, geo, probability_map, stats, valid
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import EBRupture, classes
 from openquake.risklib.riskinput import rsi2str
+from openquake.risklib.asset import Asset
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
 U16 = numpy.uint16
@@ -264,6 +266,45 @@ class GmfDataGetter(collections.Mapping):
         return len(self.sids)
 
 
+# used only in ebrisk
+class AssetGetter(object):
+    def __init__(self, dstore):
+        self.dstore = dstore
+        self.tagcol = dstore['assetcol/tagcol']
+        self.sids = dstore['assetcol/array']['site_id']
+        self.cost_calculator = dstore['assetcol/cost_calculator']
+        self.cost_calculator.tagi = {
+            tagname: i for i, tagname in enumerate(self.tagcol.tagnames)}
+        self.loss_types = dstore.get_attr('assetcol', 'loss_types').split()
+
+    def get(self, site_id):
+        """
+        :returns: assets, ass_by_aid
+        """
+        bools = site_id == self.sids
+        aids, = numpy.where(bools)
+        array = self.dstore['assetcol/array'][bools]
+        ass_by_aid = dict(zip(aids, array))
+        assets = []
+        for aid, a in ass_by_aid.items():
+            values = {lt: a['value-' + lt] for lt in self.loss_types
+                      if lt != 'occupants'}
+            for name in array.dtype.names:
+                if name.startswith('occupants_'):
+                    values[name] = a[name]
+            asset = Asset(
+                aid,
+                [a[name] for name in self.tagcol.tagnames],
+                number=a['number'],
+                location=(valid.longitude(a['lon']),  # round coordinates
+                          valid.latitude(a['lat'])),
+                values=values,
+                area=a['area'],
+                calc=self.cost_calculator)
+            assets.append(asset)
+        return assets, ass_by_aid
+
+
 class GmfGetter(object):
     """
     An hazard getter with methods .gen_gmv and .get_hazard returning
@@ -383,33 +424,30 @@ class GmfGetter(object):
                 haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
         return hazard
 
-    def gen_risk(self, assets_by_sid, riskmodel, haz_by_sid):
+    def gen_risk(self, assets, riskmodel, eids, gmvs):
         """
-        :param assets_by_sid: a list of lists of assets keyed by site_id
+        :param assets: a list of assets on the same site
         :param riskmodel: a CompositeRiskModel instance
-        :param haz_by_sid: a dictionary site_id -> hazard array
-        :yields: (loss_type, asset, eids, loss_ratios)
+        :params eids: events affecting the given site
+        :param gmvs: GMVs on the given site
+        :yields: loss_type, asset, loss_ratios
         """
         imti = {imt: i for i, imt in enumerate(self.imts)}
         tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
-        for sid, haz in haz_by_sid.items():
-            eids = haz['eid']
-            E = len(eids)
-            gmv_array = haz['gmv']
-            assets_by_taxi = general.groupby(assets_by_sid[sid], by_taxonomy)
-            for taxo, rm in riskmodel.items():
-                t = tdict[taxo]
-                try:
-                    assets = assets_by_taxi[t]
-                except KeyError:  # there are no assets of taxonomy taxo
-                    continue
-                for lt, rf in rm.risk_functions.items():
-                    gmvs = gmv_array[:, imti[rf.imt]]
-                    means, covs, idxs = rf.interpolate(gmvs)
-                    for asset in assets:
-                        loss_ratios = numpy.zeros(E, F32)
-                        loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
-                        yield lt, asset, eids, loss_ratios
+        E = len(eids)
+        assets_by_taxi = general.groupby(assets, by_taxonomy)
+        for taxo, rm in riskmodel.items():
+            t = tdict[taxo]
+            try:
+                assets = assets_by_taxi[t]
+            except KeyError:  # there are no assets of taxonomy taxo
+                continue
+            for lt, rf in rm.risk_functions.items():
+                means, covs, idxs = rf.interpolate(gmvs[:, imti[rf.imt]])
+                for asset in assets:
+                    loss_ratios = numpy.zeros(E, F32)
+                    loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
+                    yield lt, asset, loss_ratios
 
     def compute_gmfs_curves(self, monitor):
         """
