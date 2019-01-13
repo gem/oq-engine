@@ -127,7 +127,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         :returns: True if containing only GriddedRuptures, False otherwise
         """
-        for rup, pmf in self.data:
+        for rup, _ in self.data:
             if not isinstance(rup.surface, GriddedSurface):
                 return False
         return True
