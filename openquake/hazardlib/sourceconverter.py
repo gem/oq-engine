@@ -28,6 +28,7 @@ from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib.source import NonParametricSeismicSource
 
 U32 = numpy.uint32
 U64 = numpy.uint64
