@@ -103,7 +103,7 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
-    asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
+    asset_hazard_distance = valid.Param(valid.positivefloat, 15)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
     max_num_sites = valid.Param(valid.positiveint, TWO16)
     max_potential_paths = valid.Param(valid.positiveint, 100)
