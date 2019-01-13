@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
+import time
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, performance
@@ -50,13 +51,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
-    with monitor('getting assetcol'):
-        with datastore.read(rupgetter.hdf5path) as dstore:
-            assetcol = dstore['assetcol']
-        array = assetcol.array
-        tagcol = assetcol.tagcol
-        assets_by_site = assetcol.assets_by_site()
-        del assetcol
+    mon = monitor('getting assets', measuremem=False)
+    mon.counts = 1
+    with datastore.read(rupgetter.hdf5path) as dstore:
+        assgetter = getters.AssetGetter(dstore)
     with monitor('getting ruptures'):
         ebruptures = rupgetter.get_ruptures(srcfilter)
     getter = getters.GmfGetter(
@@ -69,16 +67,21 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     eids = numpy.unique(data['eid'])
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     tagnames = param['aggregate_by']
-    shape = tagcol.agg_shape((len(eids), L), tagnames)
+    shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
-    for loss_type, asset, eids_, loss_ratios in getter.gen_risk(
-            assets_by_site, riskmodel, haz_by_sid):
-        losses = asset.value(loss_type) * loss_ratios
-        lti = riskmodel.lti[loss_type]
-        tagi = array[asset.ordinal][tagnames] if tagnames else ()
-        tagidxs = tuple(idx - 1 for idx in tagi)
-        for eid, loss in zip(eids_, losses):
-            acc[(eid2idx[eid], lti) + tagidxs] += loss
+    for sid, haz in haz_by_sid.items():
+        eids_ = haz['eid']
+        t0 = time.time()
+        assets, ass_by_aid = assgetter.get(sid)
+        mon.duration += time.time() - t0
+        for loss_type, asset, loss_ratios in getter.gen_risk(
+                assets, riskmodel, eids_, haz['gmv']):
+            losses = asset.value(loss_type) * loss_ratios
+            lti = riskmodel.lti[loss_type]
+            tagi = ass_by_aid[asset.ordinal][tagnames] if tagnames else ()
+            tagidxs = tuple(idx - 1 for idx in tagi)
+            for eid, loss in zip(eids_, losses):
+                acc[(eid2idx[eid], lti) + tagidxs] += loss
     return hdf5.ArrayWrapper(acc, {'eids': eids})
 
 
