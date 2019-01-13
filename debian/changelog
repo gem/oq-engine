@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixes the implementation on mutex ruptures
+
   [Michele Simionato]
   * Added a check to forbid to set `ses_per_logic_tree_path = 0`
   * Added an API `/extract/event_info/eidx`
