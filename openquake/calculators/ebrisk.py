@@ -50,29 +50,32 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
-    with monitor('getting ruptures'):
-        ebruptures = rupgetter.get_ruptures(srcfilter)
     with monitor('getting assetcol'):
         with datastore.read(rupgetter.hdf5path) as dstore:
             assetcol = dstore['assetcol']
+        array = assetcol.array
+        tagcol = assetcol.tagcol
         assets_by_site = assetcol.assets_by_site()
+        del assetcol
+    with monitor('getting ruptures'):
+        ebruptures = rupgetter.get_ruptures(srcfilter)
     getter = getters.GmfGetter(
         rupgetter.rlzs_by_gsim, ebruptures, srcfilter.sitecol,
         param['oqparam'], param['min_iml'])
-    tagnames = param['aggregate_by']
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         data = getter.get_hazard(rlzidx=False)  # (sid, eid, gmv)
         haz_by_sid = group_array(data, 'sid')
     eids = numpy.unique(data['eid'])
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
-    shape = assetcol.agg_shape((len(eids), L), tagnames)
+    tagnames = param['aggregate_by']
+    shape = tagcol.agg_shape((len(eids), L), tagnames)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
     for loss_type, asset, eids_, loss_ratios in getter.gen_risk(
             assets_by_site, riskmodel, haz_by_sid):
         losses = asset.value(loss_type) * loss_ratios
         lti = riskmodel.lti[loss_type]
-        tagi = assetcol.array[asset.ordinal][tagnames] if tagnames else ()
+        tagi = array[asset.ordinal][tagnames] if tagnames else ()
         tagidxs = tuple(idx - 1 for idx in tagi)
         for eid, loss in zip(eids_, losses):
             acc[(eid2idx[eid], lti) + tagidxs] += loss
@@ -146,7 +149,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         return 1
 
     def get_shape(self, *sizes):
-        return self.assetcol.agg_shape(sizes, self.oqparam.aggregate_by)
+        return self.assetcol.tagcol.agg_shape(sizes, self.oqparam.aggregate_by)
 
     def build_datasets(self, builder):
         oq = self.oqparam

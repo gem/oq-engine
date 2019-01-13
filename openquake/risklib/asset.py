@@ -337,6 +337,13 @@ class TagCollection(object):
         for tagvalue in getattr(self, tagname):
             yield '%s=%s' % (tagname, decode(tagvalue))
 
+    def agg_shape(self, shp, aggregate_by):
+        """
+        :returns: a shape shp + (T, ...) depending on the tagnames
+        """
+        return shp + tuple(
+            len(getattr(self, tagname)) - 1 for tagname in aggregate_by)
+
     def __toh5__(self):
         dic = {}
         for tagname in self.tagnames:
@@ -400,14 +407,6 @@ class AssetCollection(object):
         :returns: the tagnames
         """
         return self.tagcol.tagnames
-
-    def agg_shape(self, shp, aggregate_by):
-        """
-        :returns: a shape shp + (T, ...) depending on the tagnames
-        """
-        return shp + tuple(
-            len(getattr(self.tagcol, tagname)) - 1
-            for tagname in aggregate_by)
 
     def get_aids_by_tag(self):
         """
