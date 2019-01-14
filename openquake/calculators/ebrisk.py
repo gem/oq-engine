@@ -92,15 +92,15 @@ def compute_loss_curves_maps(hdf5path, multi_index, clp, individual_curves,
             idx = (slice(s1, s2),) + multi_index
             losses[r] = losses_by_event[idx]
     result = {'idx': multi_index}
-    result['loss_curves/rlzs'], result['loss_curves/stats'] = (
+    result['agg_curves-rlzs'], result['agg_curves-stats'] = (
         builder.build_pair(losses, stats))
     if R > 1 and individual_curves is False:
-        del result['loss_curves/rlzs']
+        del result['agg_curves-rlzs']
     if clp:
-        result['loss_maps/rlzs'], result['loss_maps/stats'] = (
+        result['agg_maps-rlzs'], result['agg_maps-stats'] = (
             builder.build_loss_maps(losses, clp, stats))
         if R > 1 and individual_curves is False:
-            del result['loss_maps/rlzs']
+            del result['agg_maps-rlzs']
     return result
 
 
@@ -155,26 +155,30 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         L = len(self.riskmodel.lti)
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
+        loss_types = ' '.join(self.riskmodel.loss_types)
         if oq.individual_curves or R == 1:
             shp = self.get_shape(P, R, L)
-            self.datastore.create_dset('loss_curves/rlzs', F32, shp)
+            self.datastore.create_dset('agg_curves-rlzs', F32, shp)
             self.datastore.set_attrs(
-                'loss_curves/rlzs', return_periods=builder.return_periods)
+                'agg_curves-rlzs', return_periods=builder.return_periods,
+                loss_types=loss_types)
         if oq.conditional_loss_poes:
             shp = self.get_shape(C, R, L)
-            self.datastore.create_dset('loss_maps/rlzs', F32, shp)
+            self.datastore.create_dset('agg_maps-rlzs', F32, shp)
         if R > 1:
             shp = self.get_shape(P, S, L)
-            self.datastore.create_dset('loss_curves/stats', F32, shp)
+            self.datastore.create_dset('agg_curves-stats', F32, shp)
             self.datastore.set_attrs(
-                'loss_curves/stats', return_periods=builder.return_periods,
-                stats=[encode(name) for (name, func) in stats])
+                'agg_curves-stats', return_periods=builder.return_periods,
+                stats=[encode(name) for (name, func) in stats],
+                loss_types=loss_types)
             if oq.conditional_loss_poes:
                 shp = self.get_shape(C, S, L)
-                self.datastore.create_dset('loss_maps/stats', F32, shp)
+                self.datastore.create_dset('agg_maps-stats', F32, shp)
                 self.datastore.set_attrs(
-                    'loss_maps/stats',
-                    stats=[encode(name) for (name, func) in stats])
+                    'agg_maps-stats',
+                    stats=[encode(name) for (name, func) in stats],
+                    loss_types=loss_types)
 
     def post_execute(self, dummy):
         """
