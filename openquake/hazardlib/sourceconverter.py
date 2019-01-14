@@ -154,7 +154,7 @@ class SourceGroup(collections.Sequence):
             src.min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
-                self.rup_interdep in ('mutex')):
+                self.rup_interdep == 'mutex'):
             msg = "Mutually exclusive ruptures can only be "
             msg += "modelled using non-parametric sources"
             raise ValueError(msg)
