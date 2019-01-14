@@ -1358,20 +1358,21 @@ class LossesByPeriodBuilder(object):
         :param stats:
             list of pairs [(statname, statfunc), ...]
         :returns:
-            two arrays of dtype loss_dt values with shape (P, R) and (P, S)
+            two arrays with shape (P, R, L) and (P, S, L)
         """
         P, R = len(self.return_periods), len(self.weights)
-        array = numpy.zeros((P, R), self.loss_dt)
+        L = len(self.loss_dt.names)
+        array = numpy.zeros((P, R, L), F32)
         dic = group_array(losses_by_event, 'rlzi')
         for r in dic:
             num_events = self.num_events[r]
             losses = dic[r]['loss']
-            for lti, lt in enumerate(self.loss_dt.names):
-                ls = losses[:, lti].flatten()  # flatten only in ucerf
+            for l, lt in enumerate(self.loss_dt.names):
+                ls = losses[:, l].flatten()  # flatten only in ucerf
                 # NB: do not use squeeze or the gmf_ebrisk tests will break
                 lbp = losses_by_period(
                     ls, self.return_periods, num_events, self.eff_time)
-                array[:, r][lt] = lbp
+                array[:, r, l] = lbp
         return self.pair(array, stats)
 
     def build_pair(self, losses, stats):
