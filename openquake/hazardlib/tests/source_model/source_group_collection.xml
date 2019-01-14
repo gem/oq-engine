@@ -9,7 +9,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <sourceGroup
         grp_probability="0.5"
         name="group1"
-        rup_interdep="mutex"
+        rup_interdep="indep"
         src_interdep="indep"
         srcs_weights="0.1 0.2 0.7"
         tectonicRegion="Stable Continental Crust"

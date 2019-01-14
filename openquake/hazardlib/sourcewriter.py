@@ -26,6 +26,7 @@ import numpy
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
+from openquake.hazardlib.source import NonParametricSeismicSource
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -384,9 +385,17 @@ def get_source_attributes(source):
     :returns:
         Dictionary of source attributes
     """
-    return {"id": source.source_id,
-            "name": source.name,
-            "tectonicRegion": source.tectonic_region_type}
+    attrs = {"id": source.source_id,
+             "name": source.name,
+             "tectonicRegion": source.tectonic_region_type}
+    if isinstance(source, NonParametricSeismicSource):
+        if source.data[0][0].weight is not None:
+            weights = []
+            for data in source.data:
+                weights.append(data[0].weight)
+            attrs['rup_weights'] = numpy.array(weights)
+    print(attrs)
+    return attrs
 
 
 @obj_to_node.add('AreaSource')
