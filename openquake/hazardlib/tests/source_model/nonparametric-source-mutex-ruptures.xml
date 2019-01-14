@@ -16,6 +16,7 @@ xmlns:gml="http://www.opengis.net/gml"
             id="1"
             name="Fake Non Parametric Source"
             tectonicRegion="Some TRT"
+            rup_weights="0.2 0.8"
             >
                 <singlePlaneRupture
                 probs_occur="0.4 0.6"
