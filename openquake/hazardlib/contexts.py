@@ -237,10 +237,8 @@ class ContextMaker(object):
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
-        weight = 1. / src.num_ruptures
         eff_ruptures = 0
         for rup, sites in self.get_rupture_sites(src, s_sites):
-            rup.weight = weight
             try:
                 with self.ctx_mon:
                     sctx, dctx = self.make_contexts(sites, rup)

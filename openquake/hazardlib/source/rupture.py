@@ -75,7 +75,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
     attribute surface_nodes to an appropriate value.
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
-    rupture_slip_direction'''.split()
+    rupture_slip_direction weight'''.split()
     serial = 0  # set to a value > 0 by the engine
     _code = {}
     types = {}
@@ -101,7 +101,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
             raise ValueError('Too many rupture codes: %d' % n)
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, rupture_slip_direction=None):
+                 surface, rupture_slip_direction=None, weight=None):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         NodalPlane.check_rake(rake)
@@ -111,6 +111,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.hypocenter = hypocenter
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
+        self.weight = weight
+
 
     @property
     def code(self):
@@ -177,7 +179,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         in increasing order, and if they are not defined with unit step
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 pmf, rupture_slip_direction=None):
+                 pmf, rupture_slip_direction=None, weight=None):
         occ = numpy.array([occ for (prob, occ) in pmf.data])
         if not occ[0] == 0:
             raise ValueError('minimum number of ruptures must be zero')
@@ -189,7 +191,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
                 'numbers of ruptures must be defined with unit step')
         super().__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            rupture_slip_direction)
+            rupture_slip_direction, weight)
         # an array of probabilities with sum 1
         self.probs_occur = numpy.array(
             [prob for (prob, occ) in pmf.data], numpy.float32)
