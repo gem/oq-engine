@@ -67,9 +67,9 @@ def export_agg_curve_rlzs(ekey, dstore):
     name = ekey[0].split('-')[0]
     agg_curve, tags = _get(dstore, name)
     periods = agg_curve.attrs['return_periods']
+    loss_types = tuple(agg_curve.attrs['loss_types'].split())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    header = (('annual_frequency_of_exceedence', 'return_period') +
-              agg_curve.dtype.names)
+    header = ('annual_frequency_of_exceedence', 'return_period') + loss_types
     for r, tag in enumerate(tags):
         d = compose_arrays(periods, agg_curve[:, r], 'return_period')
         data = compose_arrays(1 / periods, d, 'annual_frequency_of_exceedence')
