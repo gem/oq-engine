@@ -69,12 +69,14 @@ def export_agg_curve_rlzs(ekey, dstore):
     periods = agg_curve.attrs['return_periods']
     loss_types = tuple(agg_curve.attrs['loss_types'].split())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    header = ('annual_frequency_of_exceedence', 'return_period') + loss_types
+    header = ('annual_frequency_of_exceedence', 'return_period', 'loss_type',
+              'loss')
     for r, tag in enumerate(tags):
-        d = compose_arrays(periods, agg_curve[:, r], 'return_period')
-        data = compose_arrays(1 / periods, d, 'annual_frequency_of_exceedence')
+        rows = []
+        for (p, l), loss in numpy.ndenumerate(agg_curve[:, r]):
+            rows.append((1 / periods[p], periods[p], loss_types[l], loss))
         dest = dstore.build_fname('agg_loss', tag, 'csv')
-        writer.save(data, dest, header)
+        writer.save(rows, dest, header)
     return writer.getsaved()
 
 
