@@ -183,7 +183,6 @@ class SourceConverterTestCase(unittest.TestCase):
         self.assertIn('node pointSource: Found Cratonic, expected '
                       'Active Shallow Crust, line 67', str(ctx.exception))
 
-    @raises(Exception)
     def test_wrong_source_type(self):
         """ Test that only nonparametric sources are used with mutex ruptures 
         """

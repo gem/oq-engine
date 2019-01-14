@@ -96,11 +96,11 @@ class SourceGroup(collections.Sequence):
                  tot_ruptures=0):
         # checks
         self.trt = trt
-        self._check_init_variables(sources, name, src_interdep, rup_interdep)
         self.sources = []
         self.name = name
         self.src_interdep = src_interdep
         self.rup_interdep = rup_interdep
+        self._check_init_variables(sources, name, src_interdep, rup_interdep)
         self.grp_probability = grp_probability
         self.min_mag = min_mag
         self.max_mag = max_mag
@@ -111,6 +111,7 @@ class SourceGroup(collections.Sequence):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
+        # check weights in case of mutually exclusive ruptures
         if rup_interdep == 'mutex':
             for src in self.sources:
                 assert isinstance(src, NonParametricSeismicSource)
@@ -133,6 +134,7 @@ class SourceGroup(collections.Sequence):
                 # Mutually exclusive ruptures can only belong to non-parametric
                 # sources
                 if rup_interdep in ('mutex'):
+                    print('muuutex')
                     if not isinstance(src, NonParametricSeismicSource):
                         msg = "Mutually exclusive ruptures can only be "
                         msg += "modelled using non-parametric sources"
@@ -151,6 +153,14 @@ class SourceGroup(collections.Sequence):
             src.tectonic_region_type, self.trt)
         if not src.min_mag:  # if not set already
             src.min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
+        # checking mutex ruptures
+        if (not isinstance(src, NonParametricSeismicSource) and 
+                self.rup_interdep in ('mutex')):
+            msg = "Mutually exclusive ruptures can only be "
+            msg += "modelled using non-parametric sources"
+            raise ValueError(msg)
+
+
         nr = get_set_num_ruptures(src)
         if nr == 0:  # the minimum_magnitude filters all ruptures
             return
