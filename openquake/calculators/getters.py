@@ -266,8 +266,11 @@ class GmfDataGetter(collections.Mapping):
         return len(self.sids)
 
 
-# used only in ebrisk
+# used only in ebrisk; does not support insured losses
 class AssetGetter(object):
+    """
+    An object which is able to read the assets on a given site.
+    """
     def __init__(self, dstore):
         self.dstore = dstore
         self.tagcol = dstore['assetcol/tagcol']
@@ -279,6 +282,7 @@ class AssetGetter(object):
 
     def get(self, site_id):
         """
+        :param site_id: the site of interest
         :returns: assets, ass_by_aid
         """
         bools = site_id == self.sids

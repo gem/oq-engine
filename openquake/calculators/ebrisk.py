@@ -22,9 +22,6 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, performance
 from openquake.baselib.general import group_array, humansize
 from openquake.baselib.python3compat import zip, encode
-from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.hazardlib.calc.stochastic import TWO32
-from openquake.risklib import riskinput, scientific
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
