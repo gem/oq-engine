@@ -774,8 +774,7 @@ class Exposure(object):
         `Exposure.read(fname, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
-        if by_country:
-            # E??_ -> countrycode
+        if by_country:  # E??_ -> countrycode
             prefix2cc = countries.from_exposures(
                 os.path.basename(f) for f in fnames)
         else:
@@ -790,7 +789,7 @@ class Exposure(object):
                     exp = Exposure.read1(
                         fname, calculation_mode, region_constraint,
                         ignore_missing_costs, asset_nodes, check_dupl,
-                        prefix, tagcol, by_country)
+                        prefix, tagcol)
                     exp.description = 'Composite exposure[%d]' % len(fnames)
                 else:
                     logging.info('Reading %s', fname)
@@ -810,13 +809,12 @@ class Exposure(object):
             return exp
         return Exposure.read1(
             fnames[0], calculation_mode, region_constraint,
-            ignore_missing_costs, asset_nodes, check_dupl,
-            prefix, tagcol, by_country)
+            ignore_missing_costs, asset_nodes, check_dupl, prefix, tagcol)
 
     @staticmethod
     def read1(fname, calculation_mode='', region_constraint='',
               ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
-              asset_prefix='', tagcol=None, by_country=False):
+              asset_prefix='', tagcol=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['asset_prefix'] = asset_prefix
