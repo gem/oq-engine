@@ -198,5 +198,5 @@ class SourceConverterTestCase(unittest.TestCase):
         grp = nrml.to_python(testfile)[0]
         src = grp[0]
         expected = numpy.array([0.2, 0.8])
-        computed = numpy.array(src.rupture_weights)
+        computed = numpy.array([src.data[0][0].weight, src.data[1][0].weight])
         numpy.testing.assert_equal(computed, expected)

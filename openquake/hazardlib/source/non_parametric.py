@@ -51,17 +51,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
         of occurrences equal to 0)
     """
     code = b'N'
-    _slots_ = BaseSeismicSource._slots_ + ['data', 'rupture_weights']
+    _slots_ = BaseSeismicSource._slots_ + ['data']
 
     MODIFICATIONS = set()
 
-    def __init__(self, source_id, name, tectonic_region_type, data,
-                 rupture_weights=None):
+    def __init__(self, source_id, name, tectonic_region_type, data):
         super().__init__(source_id, name, tectonic_region_type)
         self.data = data
-        if rupture_weights is None:
-            rupture_weights = numpy.empty((len(self.data)))
-        self.rupture_weights = rupture_weights
 
     def iter_ruptures(self):
         """
@@ -72,11 +68,11 @@ class NonParametricSeismicSource(BaseSeismicSource):
             Generator of instances of :class:`openquake.hazardlib.source.
             rupture.NonParametricProbabilisticRupture`.
         """
-        for (rup, pmf), wei in zip(self.data, self.rupture_weights):
+        for rup, pmf in self.data:
             if rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf, weight=wei)
+                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
