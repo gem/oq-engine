@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the aggregated loss curves exporter
   * Added an experimental calculator ebrisk
   * Changed the ordering of the events (akin to a change of seed in the
     asset correlation)
