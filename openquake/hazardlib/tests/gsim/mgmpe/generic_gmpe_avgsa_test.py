@@ -14,15 +14,88 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Implements the tests for the metaGMPE class to compute average spectral
-response from a generic base GMPE.
-"""
-
+from openquake.hazardlib import gsim, imt, const
 import numpy as np
 import unittest
 
 class GenericGmpeAvgSATestCase(unittest.TestCase):
 
-    def test_1(self):
-        pass
+    _ = gsim.get_available_gsims()
+
+    def test_calculation_Akkar(self):
+        """
+        """
+
+        DATA_FILE = 'Data/GENERIC_GMPE_AVGSA_MEAN_STD_TOTAL_AKKAR.csv'
+
+        # Initialise meta-GMPE
+        mgmpe = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
+                    gmpe_name='BooreAtkinson2008', 
+                    avg_periods="0.05,0.15,1.0,2.0,4.0",
+                    corr_func='akkar')
+
+        sctx = gsim.base.SitesContext()
+        rctx = gsim.base.RuptureContext()
+        dctx = gsim.base.DistancesContext()
+
+        P = imt.SA(1.0)
+        S = [const.StdDev.TOTAL]
+
+        with open(DATA_FILE, 'r') as f:
+
+            # Skip header
+            for i in [1,2,3]: f.readline()
+
+            for line in f:
+                data = np.float_(line.strip().split(','))
+
+                # Setting ground motion attributes
+                setattr(rctx, 'mag', data[0])
+                setattr(dctx, 'rjb', np.array([data[1]]))
+                setattr(rctx, 'rake', data[2])
+                setattr(rctx, 'hypo_depth', data[3])
+                setattr(sctx, 'vs30', np.array([data[4]]))
+
+                # Compute ground motion
+                mean, stdv = mgmpe.get_mean_and_stddevs(sctx, rctx, dctx, P, S)
+                np.testing.assert_almost_equal(mean, data[6])
+                np.testing.assert_almost_equal(stdv, data[7])
+
+    def test_calculation_Baker_Jayaram(self):
+        """
+        """
+
+        DATA_FILE = 'Data/GENERIC_GMPE_AVGSA_MEAN_STD_TOTAL_BAKER_JAYARAM.csv'
+
+        # Initialise meta-GMPE
+        mgmpe = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
+                    gmpe_name='BooreAtkinson2008', 
+                    avg_periods="0.05,0.15,1.0,2.0,4.0",
+                    corr_func='baker_jayaram')
+
+        sctx = gsim.base.SitesContext()
+        rctx = gsim.base.RuptureContext()
+        dctx = gsim.base.DistancesContext()
+
+        P = imt.SA(1.0)
+        S = [const.StdDev.TOTAL]
+
+        with open(DATA_FILE, 'r') as f:
+
+            # Skip header
+            for i in [1,2,3]: f.readline()
+
+            for line in f:
+                data = np.float_(line.strip().split(','))
+
+                # Setting ground motion attributes
+                setattr(rctx, 'mag', data[0])
+                setattr(dctx, 'rjb', np.array([data[1]]))
+                setattr(rctx, 'rake', data[2])
+                setattr(rctx, 'hypo_depth', data[3])
+                setattr(sctx, 'vs30', np.array([data[4]]))
+
+                # Compute ground motion
+                mean, stdv = mgmpe.get_mean_and_stddevs(sctx, rctx, dctx, P, S)
+                np.testing.assert_almost_equal(mean, data[6])
+                np.testing.assert_almost_equal(stdv, data[7])
