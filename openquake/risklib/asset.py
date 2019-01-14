@@ -22,7 +22,7 @@ import os
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, parallel
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -750,8 +750,12 @@ def _minimal_tagcol(fnames, by_country):
         else:
             tagnames &= set(exp.tagcol.tagnames)
     tagnames -= set(['taxonomy'])
-    return TagCollection(['taxonomy'] + list(tagnames) +
-                         ['country' if by_country else 'exposure'])
+    if len(fnames) > 1:
+        alltags = ['taxonomy'] + list(tagnames) + [
+            'country' if by_country else 'exposure']
+    else:
+        alltags = ['taxonomy'] + list(tagnames)
+    return TagCollection(alltags)
 
 
 class Exposure(object):
@@ -779,42 +783,40 @@ class Exposure(object):
                 os.path.basename(f) for f in fnames)
         else:
             prefix = ''
-        if len(fnames) > 1:
-            tagcol = _minimal_tagcol(fnames, by_country)
-            for i, fname in enumerate(fnames, 1):
+        allargs = []
+        tagcol = _minimal_tagcol(fnames, by_country)
+        for i, fname in enumerate(fnames, 1):
+            if by_country and len(fnames) > 1:
+                prefix = prefix2cc['E%02d_' % i]
+            elif len(fnames) > 1:
                 prefix = 'E%02d_' % i
-                if by_country:  # use the 3 letter ISO country code as prefix
-                    prefix = prefix2cc[prefix]
-                if i == 1:  # first exposure
-                    exp = Exposure.read1(
-                        fname, calculation_mode, region_constraint,
-                        ignore_missing_costs, asset_nodes, check_dupl,
-                        prefix, tagcol)
-                    exp.description = 'Composite exposure[%d]' % len(fnames)
-                else:
-                    logging.info('Reading %s', fname)
-                    exposure, assetnodes = _get_exposure(fname)
-                    assert exposure.cost_types == exp.cost_types
-                    assert exposure.occupancy_periods == exp.occupancy_periods
-                    assert (exposure.insurance_limit_is_absolute ==
-                            exp.insurance_limit_is_absolute)
-                    assert exposure.retrofitted == exp.retrofitted
-                    assert exposure.area == exp.area
-                    exposure.tagcol = exp.tagcol
-                    nodes = assetnodes if assetnodes else exposure._read_csv()
-                    exp.param['asset_prefix'] = prefix
-                    exp._populate_from(nodes, exp.param, check_dupl)
-            exp.exposures = [os.path.splitext(os.path.basename(f))[0]
-                             for f in fnames]
-            return exp
-        return Exposure.read1(
-            fnames[0], calculation_mode, region_constraint,
-            ignore_missing_costs, asset_nodes, check_dupl, prefix, tagcol)
+            else:
+                prefix = ''
+            allargs.append((fname, calculation_mode, region_constraint,
+                            ignore_missing_costs, asset_nodes, check_dupl,
+                            prefix, tagcol))
+        exp = None
+        for exposure in parallel.Starmap(Exposure.read1, allargs):
+            if exp is None:  # first time
+                exp = exposure
+                exp.description = 'Composite exposure[%d]' % len(fnames)
+            else:
+                assert exposure.cost_types == exp.cost_types
+                assert exposure.occupancy_periods == exp.occupancy_periods
+                assert (exposure.insurance_limit_is_absolute ==
+                        exp.insurance_limit_is_absolute)
+                assert exposure.retrofitted == exp.retrofitted
+                assert exposure.area == exp.area
+                exp.assets.extend(exposure.assets)
+                exp.asset_refs.extend(exposure.asset_refs)
+        exp.exposures = [os.path.splitext(os.path.basename(f))[0]
+                         for f in fnames]
+        return exp
 
     @staticmethod
     def read1(fname, calculation_mode='', region_constraint='',
               ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
-              asset_prefix='', tagcol=None):
+              asset_prefix='', tagcol=None, monitor=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['asset_prefix'] = asset_prefix
@@ -920,8 +922,6 @@ class Exposure(object):
                                     'taxonomy', 'exposure', 'country'):
                                 tags.attrib[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
-                        if i % 100000 == 0:
-                            logging.info('Read %d assets', i)
                     yield asset
 
     def _populate_from(self, asset_nodes, param, check_dupl):
