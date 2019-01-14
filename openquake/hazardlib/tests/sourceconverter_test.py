@@ -18,6 +18,8 @@
 import os
 import io
 import unittest
+import numpy
+from nose.tools import raises
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import update_source_model
 
@@ -157,7 +159,6 @@ class PointToMultiPointTestCase(unittest.TestCase):
         with io.BytesIO() as f:
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
-            print(got)
             self.assertEqual(got, expected)
 
     def test_complex(self):
@@ -169,15 +170,32 @@ class PointToMultiPointTestCase(unittest.TestCase):
         with io.BytesIO() as f:
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
-            print(got)
             self.assertEqual(got, multipoint)
 
 
 class SourceConverterTestCase(unittest.TestCase):
+
     def test_wrong_trt(self):
-        # a group with sources of two different TRTs
+        """ Test consistency between group and sources TRTs """
         testfile = os.path.join(testdir, 'wrong-trt.xml')
         with self.assertRaises(ValueError) as ctx:
             nrml.to_python(testfile)
         self.assertIn('node pointSource: Found Cratonic, expected '
                       'Active Shallow Crust, line 67', str(ctx.exception))
+
+    def test_wrong_source_type(self):
+        """ Test that only nonparametric sources are used with mutex ruptures
+        """
+        testfile = os.path.join(testdir, 'rupture_mutex_wrong.xml')
+        with self.assertRaises(ValueError) as ctx:
+            nrml.to_python(testfile)
+
+    def test_non_parametric_mutex(self):
+        """ Test non-parametric source with mutex ruptures """
+        fname = 'nonparametric-source-mutex-ruptures.xml'
+        testfile = os.path.join(testdir, fname)
+        grp = nrml.to_python(testfile)[0]
+        src = grp[0]
+        expected = numpy.array([0.2, 0.8])
+        computed = numpy.array([src.data[0][0].weight, src.data[1][0].weight])
+        numpy.testing.assert_equal(computed, expected)

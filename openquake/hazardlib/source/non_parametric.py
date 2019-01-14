@@ -72,7 +72,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
             if rup.mag >= self.min_mag:
                 yield NonParametricProbabilisticRupture(
                     rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf)
+                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
@@ -123,7 +123,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         :returns: True if containing only GriddedRuptures, False otherwise
         """
-        for rup, pmf in self.data:
+        for rup, _ in self.data:
             if not isinstance(rup.surface, GriddedSurface):
                 return False
         return True
