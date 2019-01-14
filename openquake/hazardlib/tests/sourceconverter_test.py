@@ -184,7 +184,7 @@ class SourceConverterTestCase(unittest.TestCase):
                       'Active Shallow Crust, line 67', str(ctx.exception))
 
     def test_wrong_source_type(self):
-        """ Test that only nonparametric sources are used with mutex ruptures 
+        """ Test that only nonparametric sources are used with mutex ruptures
         """
         testfile = os.path.join(testdir, 'rupture_mutex_wrong.xml')
         with self.assertRaises(ValueError) as ctx:
@@ -192,7 +192,7 @@ class SourceConverterTestCase(unittest.TestCase):
 
     def test_non_parametric_mutex(self):
         """ Test non-parametric source with mutex ruptures """
-        fname  = 'nonparametric-source-mutex-ruptures.xml'
+        fname = 'nonparametric-source-mutex-ruptures.xml'
         testfile = os.path.join(testdir, fname)
         grp = nrml.to_python(testfile)[0]
         src = grp[0]
