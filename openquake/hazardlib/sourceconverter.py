@@ -111,6 +111,11 @@ class SourceGroup(collections.Sequence):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
+        if rup_interdep == 'mutex':
+            for src in self.sources:
+                assert isinstance(src, NonParametricSeismicSource)
+                for rup, _ in src.data:
+                    assert rup.weight is not None 
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
@@ -758,8 +763,10 @@ class SourceConverter(RuptureConverter):
         """
         trt = node.attrib.get('tectonicRegion')
         rup_pmf_data = []
-        tmp = node.attrib.get('rup_weights')
-        rups_weights = numpy.array([float(s) for s in tmp.split()])
+        rups_weights = None
+        if 'rup_weights' in node.attrib.keys():
+            tmp = node.attrib.get('rup_weights')
+            rups_weights = numpy.array([float(s) for s in tmp.split()])
         for i, rupnode in enumerate(node):
             probs = pmf.PMF(valid.pmf(rupnode['probs_occur']))
             rup = RuptureConverter.convert_node(self, rupnode)
@@ -767,7 +774,7 @@ class SourceConverter(RuptureConverter):
             rup.weight = None if rups_weights is None else rups_weights[i]
             rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(
-            node['id'], node['name'], trt, rup_pmf_data, rups_weights)
+            node['id'], node['name'], trt, rup_pmf_data)
         return nps
 
     def convert_sourceModel(self, node):
