@@ -330,6 +330,14 @@ class TagCollection(object):
         """
         return '%s=%s' % (tagname, decode(getattr(self, tagname)[tagidx]))
 
+    def get_tagvalues(self, tagnames, tagidxs):
+        """
+        :returns: the tag associated to the given tagname and tag index
+        """
+        values = tuple(getattr(self, tagname)[tagidx + 1]
+                       for tagidx, tagname in zip(tagidxs, tagnames))
+        return values
+
     def gen_tags(self, tagname):
         """
         :yields: the tags associated to the given tagname
