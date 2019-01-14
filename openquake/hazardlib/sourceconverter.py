@@ -133,8 +133,7 @@ class SourceGroup(collections.Sequence):
                     src.tectonic_region_type, self.trt)
                 # Mutually exclusive ruptures can only belong to non-parametric
                 # sources
-                if rup_interdep in ('mutex'):
-                    print('muuutex')
+                if rup_interdep == 'mutex':
                     if not isinstance(src, NonParametricSeismicSource):
                         msg = "Mutually exclusive ruptures can only be "
                         msg += "modelled using non-parametric sources"
@@ -154,7 +153,7 @@ class SourceGroup(collections.Sequence):
         if not src.min_mag:  # if not set already
             src.min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
         # checking mutex ruptures
-        if (not isinstance(src, NonParametricSeismicSource) and 
+        if (not isinstance(src, NonParametricSeismicSource) and
                 self.rup_interdep in ('mutex')):
             msg = "Mutually exclusive ruptures can only be "
             msg += "modelled using non-parametric sources"
@@ -774,7 +773,7 @@ class SourceConverter(RuptureConverter):
         trt = node.attrib.get('tectonicRegion')
         rup_pmf_data = []
         rups_weights = None
-        if 'rup_weights' in node.attrib.keys():
+        if 'rup_weights' in node.attrib:
             tmp = node.attrib.get('rup_weights')
             rups_weights = numpy.array([float(s) for s in tmp.split()])
         for i, rupnode in enumerate(node):
