@@ -767,7 +767,7 @@ class Exposure(object):
     @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
-             asset_prefix='', tagcol=None, by_country=False):
+             tagcol=None, by_country=False):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
@@ -775,8 +775,11 @@ class Exposure(object):
         Node objects (one Node for each asset).
         """
         if by_country:
-            prefix2cc = countries.from_exposures(  # E??_ -> countrycode
+            # E??_ -> countrycode
+            prefix2cc = countries.from_exposures(
                 os.path.basename(f) for f in fnames)
+        else:
+            prefix = ''
         if len(fnames) > 1:
             tagcol = _minimal_tagcol(fnames, by_country)
             for i, fname in enumerate(fnames, 1):
@@ -784,8 +787,8 @@ class Exposure(object):
                 if by_country:  # use the 3 letter ISO country code as prefix
                     prefix = prefix2cc[prefix]
                 if i == 1:  # first exposure
-                    exp = Exposure.read(
-                        [fname], calculation_mode, region_constraint,
+                    exp = Exposure.read1(
+                        fname, calculation_mode, region_constraint,
                         ignore_missing_costs, asset_nodes, check_dupl,
                         prefix, tagcol, by_country)
                     exp.description = 'Composite exposure[%d]' % len(fnames)
@@ -805,7 +808,15 @@ class Exposure(object):
             exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                              for f in fnames]
             return exp
-        [fname] = fnames
+        return Exposure.read1(
+            fnames[0], calculation_mode, region_constraint,
+            ignore_missing_costs, asset_nodes, check_dupl,
+            prefix, tagcol, by_country)
+
+    @staticmethod
+    def read1(fname, calculation_mode='', region_constraint='',
+              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+              asset_prefix='', tagcol=None, by_country=False):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['asset_prefix'] = asset_prefix
