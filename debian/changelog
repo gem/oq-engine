@@ -1,8 +1,12 @@
+python3-oq-engine (3.3.1-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Fixed the GMF exporter to export the event IDs and not event indices
 
   [Robin Gee]
   * Fixed bug in tusa_langer_2016.py related to coeffs affecting Repi models
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 14 Jan 2019 08:14:23 +0000
 
 python3-oq-engine (3.3.0-1~xenial01) xenial; urgency=low
 
