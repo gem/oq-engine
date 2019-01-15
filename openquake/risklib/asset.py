@@ -801,8 +801,10 @@ class Exposure(object):
                             ignore_missing_costs, asset_nodes, check_dupl,
                             prefix, tagcol))
         exp = None
-        for exposure in parallel.Starmap(Exposure.read_exp, allargs,
-                                         distribute='processpool'):
+        for exposure in parallel.Starmap(
+                Exposure.read_exp, allargs,
+                distribute='no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                else 'processpool'):
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
