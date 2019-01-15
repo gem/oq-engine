@@ -801,7 +801,8 @@ class Exposure(object):
                             ignore_missing_costs, asset_nodes, check_dupl,
                             prefix, tagcol))
         exp = None
-        for exposure in parallel.Starmap(Exposure.read_exp, allargs):
+        for exposure in parallel.Starmap(Exposure.read_exp, allargs,
+                                         distribute='processpool'):
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
