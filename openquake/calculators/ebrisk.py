@@ -186,8 +186,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         logging.info('Building losses_by_rlz')
-        with self.monitor('building avglosses_by_rlz', autoflush=True):
-            self.build_avglosses_by_rlz()
+        with self.monitor('building avg_losses-rlzs', autoflush=True):
+            self.build_avg_losses()
         oq = self.oqparam
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
@@ -215,14 +215,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 for ij, val in numpy.ndenumerate(arr):
                     self.datastore[name][ij + idx] = val
 
-    def build_avglosses_by_rlz(self):
+    def build_avg_losses(self):
         """
-        Build the dataset avglosses_by_rlz from losses_by_event
+        Build the dataset avg_losses-rlzs from losses_by_event
         """
         indices = self.datastore.get_attr('events', 'indices')
         R = len(indices)
         dset = self.datastore['losses_by_event']
+        E, L, *shp = dset.shape
         lbr = self.datastore.create_dset(
-            'avglosses_by_rlz', F32, (R,) + dset.shape[1:])
+            'avg_losses-rlzs', F32, [L, R] + shp)
         for r, (s1, s2) in enumerate(indices):
-            lbr[r] = dset[s1:s2].sum(axis=0) * self.oqparam.ses_ratio
+            lbr[:, r] = dset[s1:s2].sum(axis=0) * self.oqparam.ses_ratio
