@@ -69,6 +69,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     """
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
+    expvalue = numpy.zeros(L * I, F32)
     for ri in riskinputs:
         with monitor('getting hazard'):
             ri.hazard_getter.init()
@@ -101,6 +102,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 ins = param['insured_losses'] and loss_type != 'occupants'
                 for a, asset in enumerate(out.assets):
                     aval = asset.value(loss_type)
+                    expvalue[l] += aval
                     aid = asset.ordinal
                     idx = aid2idx[aid]
                     ratios = loss_ratios[a]  # length E
@@ -148,6 +150,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         # store info about the GMFs, must be done at the end
         result['agglosses'] = (numpy.array(list(acc)),
                                numpy.array(list(acc.values())))
+        result['expvalue'] = expvalue
         yield result
 
 
@@ -202,6 +205,7 @@ class EbrCalculator(base.RiskCalculator):
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         self.agglosses = numpy.zeros((self.E, self.L * self.I), F32)
+        self.datastore['exposed_value'] = numpy.zeros(self.L * self.I, F32)
         if 'builder' in self.param:
             self.build_datasets(self.param['builder'])
         if parent:
@@ -254,6 +258,7 @@ class EbrCalculator(base.RiskCalculator):
         :param dic:
             dictionary with agglosses, avglosses
         """
+        self.datastore['exposed_value'] += dic.pop('expvalue')
         idxs, agglosses = dic.pop('agglosses')
         if len(idxs):
             self.agglosses[idxs] += agglosses

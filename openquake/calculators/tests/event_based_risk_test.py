@@ -224,6 +224,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # avg_losses-stats has shape (L=5, S=4)
         fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avglosses.txt', fname)
+        
+        fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/aggcurves.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):

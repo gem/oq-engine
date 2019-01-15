@@ -72,12 +72,16 @@ def export_agg_curve_rlzs(ekey, dstore):
     tagcol = dstore['assetcol/tagcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     header = ('annual_frequency_of_exceedence', 'return_period',
-              'loss_type') + tagnames + ('loss',)
+              'loss_type') + tagnames + (
+                  'loss_value',  'exposed_value', 'loss_ratio')
+    expvalue = dstore['exposed_value'].value  # shape (L, ...)
     for r, tag in enumerate(tags):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
             p, l, *tagidxs = multi_idx
-            row = tagcol.get_tagvalues(tagnames, tagidxs) + (loss,)
+            evalue = expvalue[multi_idx[1:]]
+            row = tagcol.get_tagvalues(tagnames, tagidxs) + (
+                loss, evalue, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
         dest = dstore.build_fname('agg_loss', tag, 'csv')
         writer.save(rows, dest, header)
@@ -112,7 +116,8 @@ def export_avg_losses(ekey, dstore):
         expvalue = dstore['exposed_value'].value  # shape (L, ...)
         tagcol = dstore['assetcol/tagcol']
         tagnames = tuple(dstore['oqparam'].aggregate_by)
-        header = ('loss_type',) + tagnames + ('avgloss', 'expvalue', 'ratio')
+        header = ('loss_type',) + tagnames + (
+            'loss_value', 'exposed_value', 'loss_ratio')
         for r, tag in enumerate(tags):
             rows = []
             for multi_idx, loss in numpy.ndenumerate(value[:, r]):
