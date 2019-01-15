@@ -94,27 +94,40 @@ def export_avg_losses(ekey, dstore):
     dskey = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
-    assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     name, kind = dskey.split('-')
     if kind == 'stats':
         weights = dstore['csm_info'].rlzs['weight']
         tags, stats = zip(*oq.risk_stats())
         if dskey in dstore:  # precomputed
-            value = dstore[dskey].value
+            value = dstore[dskey].value  # shape (:, R, ...)
         else:  # computed on the fly
             value = compute_stats2(
                 dstore['avg_losses-rlzs'].value, stats, weights)
     else:  # rlzs
-        value = dstore[dskey].value  # shape (A, R, LI)
+        value = dstore[dskey].value  # shape (:, R, ...)
         R = value.shape[1]
         tags = ['rlz-%03d' % r for r in range(R)]
-    for tag, values in zip(tags, value.transpose(1, 0, 2)):
-        dest = dstore.build_fname(name, tag, 'csv')
-        array = numpy.zeros(len(values), dt)
-        for l, lt in enumerate(dt.names):
-            array[lt] = values[:, l]
-        writer.save(compose_arrays(assets, array), dest)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    if oq.calculation_mode == 'ebrisk':  # shape (L, R, ...)
+        tagcol = dstore['assetcol/tagcol']
+        tagnames = tuple(dstore['oqparam'].aggregate_by)
+        header = ('loss_type',) + tagnames + ('avgloss',)
+        for r, tag in enumerate(tags):
+            rows = []
+            for multi_idx, loss in numpy.ndenumerate(value[:, r]):
+                l, *tagidxs = multi_idx
+                row = tagcol.get_tagvalues(tagnames, tagidxs) + (loss,)
+                rows.append((dt.names[l],) + row)
+            dest = dstore.build_fname(name, tag, 'csv')
+            writer.save(rows, dest, header)
+    else:  # shape (A, R, LI)
+        assets = get_assets(dstore)
+        for tag, values in zip(tags, value.transpose(1, 0, 2)):
+            dest = dstore.build_fname(name, tag, 'csv')
+            array = numpy.zeros(len(values), dt)
+            for l, lt in enumerate(dt.names):
+                array[lt] = values[:, l]
+            writer.save(compose_arrays(assets, array), dest)
     return writer.getsaved()
 
 
