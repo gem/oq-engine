@@ -1,5 +1,8 @@
+  [Michele Simionato]
+  * Parallelized the reading of the exposure
+
   [Marco Pagani]
-  * Fixes the implementation on mutex ruptures
+  * Fixed the implementation on mutex ruptures
 
   [Michele Simionato]
   * Changed the aggregated loss curves exporter
