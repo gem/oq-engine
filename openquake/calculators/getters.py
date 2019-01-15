@@ -433,7 +433,7 @@ class GmfGetter(object):
         :param assets: a list of assets on the same site
         :param riskmodel: a CompositeRiskModel instance
         :params eidgmv: hazard on the given site
-        :yields: lti, aid, eids, losses
+        :yields: lti, aid, aval, eids, losses
         """
         imti = {imt: i for i, imt in enumerate(self.imts)}
         tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
@@ -453,8 +453,8 @@ class GmfGetter(object):
                 for asset in assets:
                     loss_ratios = numpy.zeros(E, F32)
                     loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
-                    yield (lti, asset.ordinal, eids,
-                           loss_ratios * asset.value(lt))
+                    value = asset.value(lt)
+                    yield lti, asset.ordinal, value, eids, loss_ratios * value
 
     def compute_gmfs_curves(self, monitor):
         """

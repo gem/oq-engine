@@ -109,14 +109,17 @@ def export_avg_losses(ekey, dstore):
         tags = ['rlz-%03d' % r for r in range(R)]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     if oq.calculation_mode == 'ebrisk':  # shape (L, R, ...)
+        expvalue = dstore['exposed_value'].value  # shape (L, ...)
         tagcol = dstore['assetcol/tagcol']
         tagnames = tuple(dstore['oqparam'].aggregate_by)
-        header = ('loss_type',) + tagnames + ('avgloss',)
+        header = ('loss_type',) + tagnames + ('avgloss', 'expvalue', 'ratio')
         for r, tag in enumerate(tags):
             rows = []
             for multi_idx, loss in numpy.ndenumerate(value[:, r]):
                 l, *tagidxs = multi_idx
-                row = tagcol.get_tagvalues(tagnames, tagidxs) + (loss,)
+                evalue = expvalue[multi_idx]
+                row = tagcol.get_tagvalues(tagnames, tagidxs) + (
+                    loss, evalue, loss / evalue)
                 rows.append((dt.names[l],) + row)
             dest = dstore.build_fname(name, tag, 'csv')
             writer.save(rows, dest, header)
