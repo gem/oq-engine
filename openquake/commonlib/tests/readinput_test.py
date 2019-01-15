@@ -327,7 +327,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
 
-        with self.assertRaises(KeyError) as ctx:
+        with self.assertRaises(Exception) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("node asset: 'number', line 17 of", str(ctx.exception))
 
