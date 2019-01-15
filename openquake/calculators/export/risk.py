@@ -118,7 +118,7 @@ def export_avg_losses(ekey, dstore):
                 l, *tagidxs = multi_idx
                 row = tagcol.get_tagvalues(tagnames, tagidxs) + (loss,)
                 rows.append((dt.names[l],) + row)
-            dest = dstore.build_fname('agg_loss', tag, 'csv')
+            dest = dstore.build_fname(name, tag, 'csv')
             writer.save(rows, dest, header)
     else:  # shape (A, R, LI)
         assets = get_assets(dstore)
