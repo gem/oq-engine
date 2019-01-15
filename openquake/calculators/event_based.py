@@ -339,8 +339,11 @@ class EventBasedCalculator(base.HazardCalculator):
             ruptures_per_block=oq.ruptures_per_block,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        if oq.hazard_calculation_id:  # from ruptures
-            assert oq.ground_motion_fields, 'must be True!'
+        if oq.hazard_calculation_id and 'losses_by_event' in self.datastore:
+            # ebrisk already ran, repeat the postprocessing only
+            return {}
+        elif oq.hazard_calculation_id and 'ruptures' in self.datastore:
+            # from ruptures
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
             iterargs = ((rgetter, self.src_filter, param)
