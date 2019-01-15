@@ -219,7 +219,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ebrisk')
     def test_case_master2(self):
         self.run_calc(case_master.__file__, 'job.ini',
-                      calculation_mode='ebrisk')
+                      calculation_mode='ebrisk', aggregate_by='taxonomy')
         # avg_losses-rlzs has shape (L=5, R=9)
         # avg_losses-stats has shape (L=5, S=4)
         fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
