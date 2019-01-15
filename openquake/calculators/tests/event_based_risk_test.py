@@ -220,9 +220,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master2(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk')
-        # avglosses_by_rlz has shape (R=9, L=5)
-        avglosses = self.calc.datastore['avglosses_by_rlz'].value
-        fname = gettemp(rst_table(avglosses))
+        # avg_losses-rlzs has shape (L=5, R=9)
+        # avg_losses-stats has shape (L=5, S=4)
+        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avglosses.txt', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
