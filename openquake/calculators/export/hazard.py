@@ -493,7 +493,7 @@ def export_hcurves_xml(ekey, dstore):
         for im in oq.imtls:
             slc = oq.imtls(im)
             imt = from_string(im)
-            fname = name[:-len_ext] + '-' + imt.name + '.' + fmt
+            fname = name[:-len_ext] + '-' + im + '.' + fmt
             data = [HazardCurve(Location(site), poes[slc])
                     for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
