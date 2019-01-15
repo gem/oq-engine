@@ -324,6 +324,11 @@ class TagCollection(object):
                 'specified in the exposure' % ', '.join(dic))
         return idxs
 
+    def extend(self, other):
+        for tagname in other.tagnames:
+            for tagvalue in getattr(other, tagname):
+                self.add(tagname, tagvalue)
+
     def get_tag(self, tagname, tagidx):
         """
         :returns: the tag associated to the given tagname and tag index
@@ -787,7 +792,7 @@ class Exposure(object):
         tagcol = _minimal_tagcol(fnames, by_country)
         for i, fname in enumerate(fnames, 1):
             if by_country and len(fnames) > 1:
-                prefix = prefix2cc['E%02d_' % i]
+                prefix = prefix2cc['E%02d_' % i] + '_'
             elif len(fnames) > 1:
                 prefix = 'E%02d_' % i
             else:
@@ -796,7 +801,7 @@ class Exposure(object):
                             ignore_missing_costs, asset_nodes, check_dupl,
                             prefix, tagcol))
         exp = None
-        for exposure in parallel.Starmap(Exposure.read1, allargs):
+        for exposure in parallel.Starmap(Exposure.read_exp, allargs):
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
@@ -809,14 +814,15 @@ class Exposure(object):
                 assert exposure.area == exp.area
                 exp.assets.extend(exposure.assets)
                 exp.asset_refs.extend(exposure.asset_refs)
+                exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         return exp
 
     @staticmethod
-    def read1(fname, calculation_mode='', region_constraint='',
-              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
-              asset_prefix='', tagcol=None, monitor=None):
+    def read_exp(fname, calculation_mode='', region_constraint='',
+                 ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+                 asset_prefix='', tagcol=None, monitor=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['asset_prefix'] = asset_prefix
