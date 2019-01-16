@@ -30,7 +30,8 @@ from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
-    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
+    case_35)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -500,3 +501,9 @@ hazard_uhs-std.csv
     def test_case_33(self):
         # directivity
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_33.__file__)
+
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_35(self):
+        # cluster
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_35.__file__)
