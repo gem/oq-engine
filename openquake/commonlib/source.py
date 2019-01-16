@@ -455,6 +455,8 @@ class CompositeSourceModel(collections.Sequence):
             tot_weight += sum(map(weight, srcs))
         for grp in self.gen_mutex_groups():
             tot_weight += sum(map(weight, grp))
+        for grp in self.gen_cluster_groups():
+            tot_weight += sum(map(weight, grp))
         self.info.tot_weight = tot_weight
         return tot_weight
 
@@ -506,6 +508,14 @@ class CompositeSourceModel(collections.Sequence):
             if sg.src_interdep == 'mutex':
                 yield sg
 
+    def gen_cluster_groups(self):
+        """
+        Yield cluster groups
+        """
+        for sg in self.src_groups:
+            if sg.cluster:
+                yield sg
+
     def get_sources(self, kind='all'):
         """
         Extract the sources contained in the source models by optionally
@@ -531,7 +541,7 @@ class CompositeSourceModel(collections.Sequence):
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                if grp.src_interdep != 'mutex':
+                if grp.src_interdep != 'mutex' and not grp.cluster:
                     acc[grp.trt].extend(grp)
         if self.optimize_same_id is False:
             return acc

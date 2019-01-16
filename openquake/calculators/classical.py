@@ -160,12 +160,15 @@ class ClassicalCalculator(base.HazardCalculator):
                          self.csm.has_dupl_sources)
 
         for sg in self.csm.src_groups:
-            if sg.src_interdep == 'mutex' and len(sg) > 0:
+            if (sg.src_interdep == 'mutex' or sg.cluster) and len(sg) > 0:
                 par = param.copy()
                 par['src_interdep'] = sg.src_interdep
                 par['rup_interdep'] = sg.rup_interdep
                 par['grp_probability'] = sg.grp_probability
+                par['cluster'] = sg.cluster
+                par['temporal_occurrence_model'] = sg.temporal_occurrence_model
                 gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
+                print('Sources', sg.sources, len(sg.sources))
                 yield sg.sources, self.src_filter, gsims, par
                 num_tasks += 1
                 num_sources += len(sg.sources)
