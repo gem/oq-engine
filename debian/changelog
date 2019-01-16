@@ -1,5 +1,10 @@
+  [Michele Simionato]
+  * Fixed a bug in the hazard curves export (the filename did not contain
+    the period of the IMT thus producing duplicated files)
+  * Parallelized the reading of the exposure
+
   [Marco Pagani]
-  * Fixes the implementation on mutex ruptures
+  * Fixed the implementation on mutex ruptures
 
   [Michele Simionato]
   * Changed the aggregated loss curves exporter
