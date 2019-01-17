@@ -709,9 +709,9 @@ def extract_rupture(dstore, serial):
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
     """
-    ridx = list(dstore['ruptures']['serial']).index(serial)
+    ridx = list(dstore['ruptures']['serial']).index(int(serial))
     [getter] = getters.get_rupture_getters(dstore, slice(ridx, ridx + 1))
-    return getter.get_rupdict().items()
+    yield from getter.get_rupdict().items()
 
 
 @extract.add('event_info')

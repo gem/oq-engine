@@ -54,3 +54,41 @@ i.e. 1 million years the change is less than 0.2%.
 
 If you want a good convergency in the loss curves
 you typically need a very long effective investigation time.
+
+
+### Can I disaggregate my losses by source?
+
+Starting from engine 3.3 you can. For instance run the event based risk
+demo as follows:
+```bash
+$ oq engine --run job_hazard.ini job_risk.ini
+$ oq extract src_loss_table/structural -1 local
+```
+then look inside the generated HDF5 file. You will have a table like this one:
+```
+source_id       grp_id  loss
+"230"	0	7.13619e+10
+"229"	0	5.02764e+10
+"231"	0	3.59305e+10
+"235"	0	2.67777e+10
+"232"	0	2.3294e+10
+"234"	0	9.5545e+09
+"227"	0	6.75134e+09
+"374"	0	1.11386e+09
+"238"	0	9.66742e+08
+"386"	0	2.85308e+08
+"233"	0	1.26478e+08
+"224"	0	7.19202e+07
+"228"	0	3.60474e+07
+"239"	0	2.30192e+07
+"376"	0	1.14477e+06
+"280"	0	832316
+"240"	0	623095
+"243"	0	100953
+"226"	0	58649.9
+"272"	0	0
+"236"	0	0
+"225"	0	0
+```
+from which you can see that the source with ID "230" is the one
+causing the biggest losses on the current portfolio.

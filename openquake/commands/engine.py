@@ -130,8 +130,9 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     job = logs.dbcmd('get_job_from_checksum', haz_checksum)
     reuse = reuse_hazard and job and os.path.exists(job.ds_calc_dir + '.hdf5')
     # recompute the hazard and store the checksum
-    if (oqparam.calculation_mode == 'event_based_risk' and
-            'gmfs' not in oqparam.inputs):
+    ebr = (oqparam.calculation_mode == 'event_based_risk' and
+           'gmfs' not in oqparam.inputs)
+    if ebr:
         kw = dict(calculation_mode='event_based')
         if (oqparam.sites or 'sites' in oqparam.inputs or
                 'site_model' in oqparam.inputs):
@@ -145,16 +146,17 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
             logs.dbcmd('add_checksum', hc_id, haz_checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             logs.dbcmd('update_job_checksum', hc_id, haz_checksum)
-        if (oqparam.calculation_mode == 'event_based_risk' and
-                'gmfs' not in oqparam.inputs):
+        if ebr:
             job_id = run_job(job_ini, log_level, log_file,
                              exports, hazard_calculation_id=hc_id)
+        else:
+            job_id = hc_id
     else:
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
         job_id = run_job(job_ini, log_level, log_file,
                          exports, hazard_calculation_id=hc_id)
-    if oqparam.aggregate_by:
+    if ebr and oqparam.aggregate_by:
         logging.info('Exporting aggregated data')
         dstore = datastore.read(job_id)
         aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)

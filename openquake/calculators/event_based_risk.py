@@ -331,15 +331,17 @@ class EbrCalculator(base.RiskCalculator):
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
             array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
-        units = self.assetcol.cost_calculator.get_units(
-            loss_types=array.dtype.names)
+        loss_types = ' '.join(self.oqparam.loss_dt().names)
+        units = self.assetcol.cost_calculator.get_units(loss_types.split())
         if oq.individual_curves or self.R == 1:
             self.datastore['agg_curves-rlzs'] = array
             self.datastore.set_attrs(
                 'agg_curves-rlzs',
-                return_periods=b.return_periods, units=units)
+                return_periods=b.return_periods,
+                loss_types=loss_types, units=units)
         if arr_stats is not None:
             self.datastore['agg_curves-stats'] = arr_stats
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods,
-                stats=[encode(name) for (name, func) in stats], units=units)
+                stats=[encode(name) for (name, func) in stats],
+                loss_types=loss_types, units=units)
