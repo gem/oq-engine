@@ -22,7 +22,7 @@ import os
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, parallel
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -324,11 +324,24 @@ class TagCollection(object):
                 'specified in the exposure' % ', '.join(dic))
         return idxs
 
+    def extend(self, other):
+        for tagname in other.tagnames:
+            for tagvalue in getattr(other, tagname):
+                self.add(tagname, tagvalue)
+
     def get_tag(self, tagname, tagidx):
         """
         :returns: the tag associated to the given tagname and tag index
         """
         return '%s=%s' % (tagname, decode(getattr(self, tagname)[tagidx]))
+
+    def get_tagvalues(self, tagnames, tagidxs):
+        """
+        :returns: the tag associated to the given tagname and tag index
+        """
+        values = tuple(getattr(self, tagname)[tagidx + 1]
+                       for tagidx, tagname in zip(tagidxs, tagnames))
+        return values
 
     def gen_tags(self, tagname):
         """
@@ -336,6 +349,13 @@ class TagCollection(object):
         """
         for tagvalue in getattr(self, tagname):
             yield '%s=%s' % (tagname, decode(tagvalue))
+
+    def agg_shape(self, shp, aggregate_by):
+        """
+        :returns: a shape shp + (T, ...) depending on the tagnames
+        """
+        return shp + tuple(
+            len(getattr(self, tagname)) - 1 for tagname in aggregate_by)
 
     def __toh5__(self):
         dic = {}
@@ -444,8 +464,7 @@ class AssetCollection(object):
         shape = [len(getattr(self.tagcol, tagname)) for tagname in tagnames]
         acc = numpy.zeros(shape, (F32, shp) if shp else F32)
         for asset, row in zip(self.array, array):
-            idx = tuple(asset[tagnames])
-            acc[idx] += row
+            acc[tuple(asset[tagnames])] += row
         return acc
 
     def reduce(self, sitecol):
@@ -736,8 +755,12 @@ def _minimal_tagcol(fnames, by_country):
         else:
             tagnames &= set(exp.tagcol.tagnames)
     tagnames -= set(['taxonomy'])
-    return TagCollection(['taxonomy'] + list(tagnames) +
-                         ['country' if by_country else 'exposure'])
+    if len(fnames) > 1:
+        alltags = ['taxonomy'] + list(tagnames) + [
+            'country' if by_country else 'exposure']
+    else:
+        alltags = ['taxonomy'] + list(tagnames)
+    return TagCollection(alltags)
 
 
 class Exposure(object):
@@ -753,45 +776,56 @@ class Exposure(object):
     @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
-             asset_prefix='', tagcol=None, by_country=False):
+             tagcol=None, by_country=False):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
         `Exposure.read(fname, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
-        if by_country:
-            prefix2cc = countries.from_exposures(  # E??_ -> countrycode
+        if by_country:  # E??_ -> countrycode
+            prefix2cc = countries.from_exposures(
                 os.path.basename(f) for f in fnames)
-        if len(fnames) > 1:
-            tagcol = _minimal_tagcol(fnames, by_country)
-            for i, fname in enumerate(fnames, 1):
+        else:
+            prefix = ''
+        allargs = []
+        tagcol = _minimal_tagcol(fnames, by_country)
+        for i, fname in enumerate(fnames, 1):
+            if by_country and len(fnames) > 1:
+                prefix = prefix2cc['E%02d_' % i] + '_'
+            elif len(fnames) > 1:
                 prefix = 'E%02d_' % i
-                if by_country:  # use the 3 letter ISO country code as prefix
-                    prefix = prefix2cc[prefix]
-                if i == 1:  # first exposure
-                    exp = Exposure.read(
-                        [fname], calculation_mode, region_constraint,
-                        ignore_missing_costs, asset_nodes, check_dupl,
-                        prefix, tagcol, by_country)
-                    exp.description = 'Composite exposure[%d]' % len(fnames)
-                else:
-                    logging.info('Reading %s', fname)
-                    exposure, assetnodes = _get_exposure(fname)
-                    assert exposure.cost_types == exp.cost_types
-                    assert exposure.occupancy_periods == exp.occupancy_periods
-                    assert (exposure.insurance_limit_is_absolute ==
-                            exp.insurance_limit_is_absolute)
-                    assert exposure.retrofitted == exp.retrofitted
-                    assert exposure.area == exp.area
-                    exposure.tagcol = exp.tagcol
-                    nodes = assetnodes if assetnodes else exposure._read_csv()
-                    exp.param['asset_prefix'] = prefix
-                    exp._populate_from(nodes, exp.param, check_dupl)
-            exp.exposures = [os.path.splitext(os.path.basename(f))[0]
-                             for f in fnames]
-            return exp
-        [fname] = fnames
+            else:
+                prefix = ''
+            allargs.append((fname, calculation_mode, region_constraint,
+                            ignore_missing_costs, asset_nodes, check_dupl,
+                            prefix, tagcol))
+        exp = None
+        for exposure in parallel.Starmap(
+                Exposure.read_exp, allargs,
+                distribute='no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                else 'processpool'):
+            if exp is None:  # first time
+                exp = exposure
+                exp.description = 'Composite exposure[%d]' % len(fnames)
+            else:
+                assert exposure.cost_types == exp.cost_types
+                assert exposure.occupancy_periods == exp.occupancy_periods
+                assert (exposure.insurance_limit_is_absolute ==
+                        exp.insurance_limit_is_absolute)
+                assert exposure.retrofitted == exp.retrofitted
+                assert exposure.area == exp.area
+                exp.assets.extend(exposure.assets)
+                exp.asset_refs.extend(exposure.asset_refs)
+                exp.tagcol.extend(exposure.tagcol)
+        exp.exposures = [os.path.splitext(os.path.basename(f))[0]
+                         for f in fnames]
+        return exp
+
+    @staticmethod
+    def read_exp(fname, calculation_mode='', region_constraint='',
+                 ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+                 asset_prefix='', tagcol=None, monitor=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['asset_prefix'] = asset_prefix
@@ -897,8 +931,6 @@ class Exposure(object):
                                     'taxonomy', 'exposure', 'country'):
                                 tags.attrib[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
-                        if i % 100000 == 0:
-                            logging.info('Read %d assets', i)
                     yield asset
 
     def _populate_from(self, asset_nodes, param, check_dupl):

@@ -833,3 +833,19 @@ def view_pmap(token, dstore):
     pgetter = getters.PmapGetter(dstore, rlzs_assoc)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
+
+
+@view.add('act_ruptures_by_src')
+def view_act_ruptures_by_src(token, dstore):
+    """
+    Display the actual number of ruptures by source in event based calculations
+    """
+    data = dstore['ruptures'].value[['srcidx', 'serial']]
+    counts = sorted(countby(data, 'srcidx').items(),
+                    key=operator.itemgetter(1), reverse=True)
+    src_info = dstore['source_info'].value[['grp_id', 'source_id']]
+    table = [['src_id', 'grp_id', 'act_ruptures']]
+    for srcidx, act_ruptures in counts:
+        src = src_info[srcidx]
+        table.append([src['source_id'], src['grp_id'], act_ruptures])
+    return rst_table(table)

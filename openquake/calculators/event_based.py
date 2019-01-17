@@ -18,6 +18,7 @@
 
 import os.path
 import logging
+import itertools
 import collections
 import operator
 import numpy
@@ -60,6 +61,23 @@ def store_rlzs_by_grp(dstore):
         for gsim_id, rlzs in enumerate(arr):
             lst.append((int(grp[4:]), gsim_id, rlzs))
     dstore['csm_info/rlzs_by_grp'] = numpy.array(lst, rlzs_by_grp_dt)
+
+
+def get_indices(integers):
+    """
+    :param integers: a sequence of integers (with repetitions)
+    :returns: a dict integer -> [(start, stop), ...]
+
+    >>> get_indices([0, 0, 3, 3, 3, 2, 2, 0])
+    {0: [(0, 2), (7, 8)], 3: [(2, 5)], 2: [(5, 7)]}
+    """
+    indices = AccumDict(accum=[])  # idx -> [(start, stop), ...]
+    start = 0
+    for i, vals in itertools.groupby(integers):
+        n = sum(1 for val in vals)
+        indices[i].append((start, start + n))
+        start += n
+    return indices
 
 
 # ######################## GMF calculator ############################ #
@@ -216,23 +234,25 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.parent.close()
         return rgetters
 
+    @cached_property
+    def eid2idx(self):
+        """
+        :returns: a dict eid -> index in the events table
+        """
+        return dict(zip(self.datastore['events']['eid'], range(self.E)))
+
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        try:
-            eid2idx = self.eid2idx
-        except AttributeError:  # first call
-            eid2idx = self.eid2idx = dict(
-                zip(self.datastore['events']['eid'], range(self.E)))
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data) == 0:
                 return acc
-            idxs = base.get_idxs(data, eid2idx)  # this has to be fast
+            idxs = base.get_idxs(data, self.eid2idx)  # this has to be fast
             data['eid'] = idxs  # replace eid with idx
             self.datastore.extend('gmf_data/data', data)
             # it is important to save the number of bytes while the
@@ -267,8 +287,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.E = len(eids)
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
-        events['eid'] = eids
-        self.eid2idx = eid2idx = dict(zip(events['eid'], range(self.E)))
         rgetters = self.get_rupture_getters()
 
         # build the associations eid -> rlz in parallel
@@ -276,11 +294,17 @@ class EventBasedCalculator(base.HazardCalculator):
                                 ((rgetter,) for rgetter in rgetters),
                                 self.monitor('get_eid_rlz'),
                                 progress=logging.debug)
-        for eid_rlz in smap:
-            # fast: 30 million of events associated in 1 minute
-            for eid, rlz in eid_rlz:
-                events[eid2idx[eid]]['rlz'] = rlz
-        self.datastore['events'] = events  # fast too
+        i = 0
+        for eid_rlz in smap:  # 30 million of events associated in 1 minute!
+            for er in eid_rlz:
+                events[i] = er
+                i += 1
+        events.sort(order=['rlz', 'eid'])  # fast too
+        self.datastore['events'] = events
+        indices = numpy.zeros((self.R, 2), U32)
+        for r, [startstop] in get_indices(events['rlz']).items():
+            indices[r] = startstop
+        self.datastore.set_attrs('events', indices=indices)
         return rgetters
 
     def check_overflow(self):
@@ -315,8 +339,11 @@ class EventBasedCalculator(base.HazardCalculator):
             ruptures_per_block=oq.ruptures_per_block,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        if oq.hazard_calculation_id:  # from ruptures
-            assert oq.ground_motion_fields, 'must be True!'
+        if oq.hazard_calculation_id and 'losses_by_event' in self.datastore:
+            # ebrisk already ran, repeat the postprocessing only
+            return {}
+        elif oq.hazard_calculation_id and 'ruptures' in self.datastore:
+            # from ruptures
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
             iterargs = ((rgetter, self.src_filter, param)
