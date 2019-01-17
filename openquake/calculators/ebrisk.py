@@ -72,15 +72,13 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         losses_by_RN = {}
     for sid, haz in enumerate(hazard):
         t0 = time.time()
-        assets, ass_by_aid = assgetter.get(sid)
+        assets, tagidxs = assgetter.get(sid, tagnames)
         mon.duration += time.time() - t0
         for rlzi, eidgmv in haz.items():
             for lti, aid, eids_, losses in getter.gen_risk(
                     assets, riskmodel, eidgmv):
-                tagi = ass_by_aid[aid][tagnames] if tagnames else ()
-                tagidxs = tuple(idx - 1 for idx in tagi)
                 for eid, loss in zip(eids_, losses):
-                    acc[(eid2idx[eid], lti) + tagidxs] += loss
+                    acc[(eid2idx[eid], lti) + tagidxs[aid]] += loss
                     if param['avg_losses']:
                         losses_by_RN[rlzi][sid, lti] += loss
     return {'losses': acc, 'eids': eids, 'losses_by_RN': losses_by_RN}
