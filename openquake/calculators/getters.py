@@ -322,11 +322,9 @@ class GmfGetter(object):
         self.min_iml = min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        self.I = len(oqparam.imtls)
-        self.gmv_dt = numpy.dtype(
-            [('sid', U32), ('eid', U64), ('gmv', (F32, (self.I,)))])
-        self.gmv_eid_dt = numpy.dtype(
-            [('gmv', (F32, (self.I,))), ('eid', U64)])
+        self.I = I = len(oqparam.imtls)
+        self.gmv_dt = oqparam.gmf_data_dt()
+        self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
         self.cmaker = ContextMaker(
             rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
@@ -370,7 +368,7 @@ class GmfGetter(object):
                 continue
             self.computers.append(computer)
 
-    def gen_gmv(self, rlzidx=True):
+    def gen_gmv(self):
         """
         Compute the GMFs for the given realization and
         yields tuples of the form (sid, eid, imti, gmv).
@@ -404,10 +402,7 @@ class GmfGetter(object):
                             continue
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
-                                if rlzidx:  # event_based_risk
-                                    yield rlzi, sid, eid, gmv
-                                else:  # in ebrisk
-                                    yield sid, eid, gmv
+                                yield rlzi, sid, eid, gmv
                     n += e
 
     def get_hazard(self, data=None, rlzidx=True):
@@ -416,7 +411,7 @@ class GmfGetter(object):
         :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
         if data is None:
-            data = self.gen_gmv(rlzidx)
+            data = self.gen_gmv()
         if not rlzidx:
             return numpy.fromiter(data, self.gmv_dt)
         hazard = numpy.array([collections.defaultdict(list)

@@ -20,7 +20,7 @@ import time
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, performance
-from openquake.baselib.general import group_array, humansize
+from openquake.baselib.general import group_array, humansize, AccumDict
 from openquake.baselib.python3compat import zip, encode
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -48,6 +48,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
+    N = len(srcfilter.sitecol.complete)
     mon = monitor('getting assets', measuremem=False)
     mon.counts = 1
     with datastore.read(rupgetter.hdf5path) as dstore:
@@ -59,22 +60,27 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         param['oqparam'], param['min_iml'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
-        data = getter.get_hazard(rlzidx=False)  # (sid, eid, gmv)
+        data = getter.get_hazard(rlzidx=False)  # (rlzi, sid, eid, gmv)
         haz_by_sid = group_array(data, 'sid')
     eids = numpy.unique(data['eid'])
     eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     tagnames = param['aggregate_by']
     shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
+    if param['avg_losses']:
+        avg = AccumDict(accum=numpy.zeros((N, L), F32))  # R -> (N, L)
     for sid, haz in haz_by_sid.items():
         t0 = time.time()
         assets, ass_by_aid = assgetter.get(sid)
         mon.duration += time.time() - t0
+        rlzs = haz['rlzi']
         for lti, aid, eids_, losses in getter.gen_risk(assets, riskmodel, haz):
             tagi = ass_by_aid[aid][tagnames] if tagnames else ()
             tagidxs = tuple(idx - 1 for idx in tagi)
-            for eid, loss in zip(eids_, losses):
+            for eid, rlz, loss in zip(eids_, rlzs, losses):
                 acc[(eid2idx[eid], lti) + tagidxs] += loss
+                if param['avg_losses']:
+                    avg[rlz][sid, lti] += loss
     return hdf5.ArrayWrapper(acc, {'eids': eids})
 
 
