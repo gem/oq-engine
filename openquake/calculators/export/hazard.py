@@ -493,7 +493,7 @@ def export_hcurves_xml(ekey, dstore):
         for im in oq.imtls:
             slc = oq.imtls(im)
             imt = from_string(im)
-            fname = name[:-len_ext] + '-' + imt.name + '.' + fmt
+            fname = name[:-len_ext] + '-' + im + '.' + fmt
             data = [HazardCurve(Location(site), poes[slc])
                     for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
@@ -636,6 +636,8 @@ def export_gmf_data_csv(ekey, dstore):
         arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
     gmfa = dstore['gmf_data']['data'].value
+    event_id = dstore['events']['eid']
+    gmfa['eid'] = event_id[gmfa['eid']]
     if eid is None:  # we cannot use extract here
         f = dstore.build_fname('sitemesh', '', 'csv')
         sids = numpy.arange(len(arr), dtype=U32)
