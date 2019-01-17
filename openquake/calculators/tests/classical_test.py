@@ -506,4 +506,5 @@ hazard_uhs-std.csv
     @attr('qa', 'hazard', 'classical')
     def test_case_35(self):
         # cluster
-        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_35.__file__)
+        self.assert_curves_ok(['hazard_curve-rlz-000-PGA.csv'],
+                               case_35.__file__)

@@ -88,7 +88,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     grp_ids = set()
     sources = []
     for src in group:
-        print('\nNAME:', src.name)
         if not src.num_ruptures:
             # src.num_ruptures is set when parsing the XML, but not when
             # the source is instantiated manually, so it is set here
@@ -113,11 +112,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
-
-    print(cluster)
-    print(sources)
-
-
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
         t0 = time.time()
