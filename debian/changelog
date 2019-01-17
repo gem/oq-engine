@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Turned utils/reduce_sm into a proper command
   * Fixed a wrong coefficient in the ShakeMap amplification
   * Fixed a bug in the hazard curves export (the filename did not contain
     the period of the IMT thus producing duplicated files)
