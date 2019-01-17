@@ -280,7 +280,7 @@ class AssetGetter(object):
             tagname: i for i, tagname in enumerate(self.tagcol.tagnames)}
         self.loss_types = dstore.get_attr('assetcol', 'loss_types').split()
 
-    def get(self, site_id):
+    def get(self, site_id, tagnames):
         """
         :param site_id: the site of interest
         :returns: assets, ass_by_aid
@@ -288,9 +288,11 @@ class AssetGetter(object):
         bools = site_id == self.sids
         aids, = numpy.where(bools)
         array = self.dstore['assetcol/array'][bools]
-        ass_by_aid = dict(zip(aids, array))
+        tagidxs = {}  # aid -> tagidxs
         assets = []
-        for aid, a in ass_by_aid.items():
+        for aid, a in zip(aids, array):
+            tagi = a[tagnames] if tagnames else ()
+            tagidxs[aid] = tuple(idx - 1 for idx in tagi)
             values = {lt: a['value-' + lt] for lt in self.loss_types
                       if lt != 'occupants'}
             for name in array.dtype.names:
@@ -306,7 +308,7 @@ class AssetGetter(object):
                 area=a['area'],
                 calc=self.cost_calculator)
             assets.append(asset)
-        return assets, ass_by_aid
+        return assets, tagidxs
 
 
 class GmfGetter(object):
