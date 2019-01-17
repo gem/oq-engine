@@ -56,21 +56,6 @@ def get_src_ids(sources):
     return ' '.join(set(src_ids))
 
 
-def saving_sources_by_task(iterargs, dstore):
-    """
-    Yield the iterargs again by populating 'source_data'
-    """
-    source_ids = []
-    data = []
-    for i, args in enumerate(iterargs, 1):
-        source_ids.append(get_src_ids(args[0]))
-        for src in args[0]:  # collect source data
-            data.append((i, src.nsites, src.num_ruptures, src.weight))
-        yield args
-    dstore['task_sources'] = encode(source_ids)
-    dstore.extend('source_data', numpy.array(data, source_data_dt))
-
-
 @base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -122,20 +107,21 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats(parent)  # post-processing
             return {}
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args()
-            iterargs = saving_sources_by_task(allargs, self.datastore)
-            if isinstance(allargs, list):
-                # there is a trick here: if the arguments are known
-                # (a list, not an iterator), keep them as a list
-                # then the Starmap will understand the case of a single
-                # argument tuple and it will run in core the task
-                iterargs = list(iterargs)
-            ires = parallel.Starmap(
-                self.core_task.__func__, iterargs, self.monitor()
-            ).submit_all()
+            smap = parallel.Starmap(
+                self.core_task.__func__, monitor=self.monitor())
+            source_ids = []
+            data = []
+            for i, args in enumerate(self.gen_args(), 1):
+                smap.submit(*args)
+                source_ids.append(get_src_ids(args[0]))
+                for src in args[0]:  # collect source data
+                    data.append((i, src.nsites, src.num_ruptures, src.weight))
+            self.datastore['task_sources'] = encode(source_ids)
+            self.datastore.extend(
+                'source_data', numpy.array(data, source_data_dt))
         self.csm.sources_by_trt.clear()  # save memory
         self.nsites = []
-        acc = ires.reduce(self.agg_dicts, self.zerodict())
+        acc = smap.reduce(self.agg_dicts, self.zerodict())
         if not self.nsites:
             raise RuntimeError('All sources were filtered out!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))

@@ -103,7 +103,7 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
-    asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
+    asset_hazard_distance = valid.Param(valid.positivefloat, 15)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
     max_num_sites = valid.Param(valid.positiveint, TWO16)
     max_potential_paths = valid.Param(valid.positiveint, 100)
@@ -141,7 +141,8 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
-    ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
+    ses_per_logic_tree_path = valid.Param(
+        valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
     site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
@@ -563,6 +564,12 @@ class OqParam(valid.ParamSet):
                     else 'vulnerability')
         return ('fragility' if 'damage' in self.calculation_mode
                 else 'vulnerability')
+
+    def is_event_based(self):
+        """
+        The calculation mode is event_based, event_based_risk or ebrisk
+        """
+        return self.calculation_mode in 'event_based_risk ebrisk'
 
     def is_valid_shakemap(self):
         """

@@ -123,7 +123,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
-                                    not rup_mutex)
+                                    rup_indep=not rup_mutex)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = '%s (source id=%s)' % (str(err), src.source_id)
@@ -241,6 +241,7 @@ def calc_hazard_curves(
             par['temporal_occurrence_model'] = group.temporal_occurrence_model
             it = [classical(group.sources, ss_filter, [gsim], par, mon)]
         else:  # split the group and apply `classical` in parallel
+            param['rup_interdep'] = group.rup_interdep
             it = apply(
                 classical, (group.sources, ss_filter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
