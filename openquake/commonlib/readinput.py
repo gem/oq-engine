@@ -888,6 +888,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         split = not oqparam.is_event_based()
         csm = parallel_split_filter(csm, srcfilter, split,
                                     monitor('split_filter'))
+        parallel.Starmap.shutdown()  # save memory
     return csm
 
 
