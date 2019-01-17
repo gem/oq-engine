@@ -61,26 +61,27 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> rlzi -> (eid, gmv)
-    eids = rupgetter.get_eid_rlz()['eid']
-    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
-    tagnames = param['aggregate_by']
-    shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
-    acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
-    if param['avg_losses']:
-        losses_by_RN = AccumDict(accum=numpy.zeros((N, L), F32))
-    else:
-        losses_by_RN = {}
-    for sid, haz in enumerate(hazard):
-        t0 = time.time()
-        assets, tagidxs = assgetter.get(sid, tagnames)
-        mon.duration += time.time() - t0
-        for rlzi, eidgmv in haz.items():
-            for lti, aid, eids_, losses in getter.gen_risk(
-                    assets, riskmodel, eidgmv):
-                for eid, loss in zip(eids_, losses):
-                    acc[(eid2idx[eid], lti) + tagidxs[aid]] += loss
-                    if param['avg_losses']:
-                        losses_by_RN[rlzi][sid, lti] += loss
+    with monitor('building risk'):
+        eids = rupgetter.get_eid_rlz()['eid']
+        eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+        tagnames = param['aggregate_by']
+        shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
+        acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
+        if param['avg_losses']:
+            losses_by_RN = AccumDict(accum=numpy.zeros((N, L), F32))
+        else:
+            losses_by_RN = {}
+        for sid, haz in enumerate(hazard):
+            t0 = time.time()
+            assets, tagidxs = assgetter.get(sid, tagnames)
+            mon.duration += time.time() - t0
+            for rlzi, eidgmv in haz.items():
+                for lti, aid, eids_, losses in getter.gen_risk(
+                        assets, riskmodel, eidgmv):
+                    for eid, loss in zip(eids_, losses):
+                        acc[(eid2idx[eid], lti) + tagidxs[aid]] += loss
+                        if param['avg_losses']:
+                            losses_by_RN[rlzi][sid, lti] += loss
     return {'losses': acc, 'eids': eids, 'losses_by_RN': losses_by_RN}
 
 
