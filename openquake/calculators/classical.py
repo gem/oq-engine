@@ -88,7 +88,6 @@ class ClassicalCalculator(base.HazardCalculator):
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         for grp in self.csm.src_groups:
-            print(grp.sources)
             num_gsims = len(csm_info.gsim_lt.get_gsims(grp.trt))
             zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
@@ -155,7 +154,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 par['cluster'] = sg.cluster
                 par['temporal_occurrence_model'] = sg.temporal_occurrence_model
                 gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                print('Sources', sg.sources, len(sg.sources))
                 yield sg.sources, self.src_filter, gsims, par
                 num_tasks += 1
                 num_sources += len(sg.sources)
