@@ -10,7 +10,8 @@ xmlns:gml="http://www.opengis.net/gml"
                     <simpleFaultSource
                     id="3"
                     name="Simple Fault Source"
-                    tectonicRegion="Active Shallow Crust" >
+                    tectonicRegion="Active Shallow Crust"
+                    tom="PoissonTOM">
                         <simpleFaultGeometry>
                             <gml:LineString>
                                 <gml:posList>
@@ -23,7 +24,6 @@ xmlns:gml="http://www.opengis.net/gml"
                         </simpleFaultGeometry>
                         <magScaleRel> WC1994 </magScaleRel>
                         <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                        <poissonTOM />
                         <truncGutenbergRichterMFD aValue="4.20" bValue="0.9"
                                 maxMag="7.0" minMag="6.0" />
                         <rake>90</rake>
