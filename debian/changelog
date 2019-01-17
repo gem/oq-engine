@@ -2,6 +2,24 @@
   * Added cluster model to classical PSHA calculator
   
   [Michele Simionato]
+  * Fixed a bug in the hazard curves export (the filename did not contain
+    the period of the IMT thus producing duplicated files)
+  * Parallelized the reading of the exposure
+
+  [Marco Pagani]
+  * Fixed the implementation on mutex ruptures
+
+  [Michele Simionato]
+  * Changed the aggregated loss curves exporter
+  * Added an experimental calculator ebrisk
+  * Changed the ordering of the events (akin to a change of seed in the
+    asset correlation)
+
+  [Robin Gee]
+  * Fixed bug in tusa_langer_2016.py related to coeffs affecting Repi models
+
+  [Michele Simionato]
+  * Added a check to forbid to set `ses_per_logic_tree_path = 0`
   * Added an API `/extract/event_info/eidx`
   * Splitting the sources in classical calculators and not in event based
   * Removed `max_site_model_distance`

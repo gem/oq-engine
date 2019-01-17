@@ -1,0 +1,16 @@
+loss_type,taxonomy,avgloss
+business_interruption,tax1,1.31473E+03
+business_interruption,tax2,8.07631E+02
+business_interruption,tax3,3.22836E+02
+contents,tax1,7.48156E+03
+contents,tax2,1.03288E+04
+contents,tax3,1.52473E+03
+nonstructural,tax1,1.12223E+04
+nonstructural,tax2,1.39609E+04
+nonstructural,tax3,2.68072E+03
+occupants,tax1,2.62947E-02
+occupants,tax2,1.61526E-02
+occupants,tax3,6.45671E-03
+structural,tax1,2.22910E+03
+structural,tax2,9.06531E+02
+structural,tax3,6.07451E+01
