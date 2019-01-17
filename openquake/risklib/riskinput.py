@@ -116,6 +116,12 @@ class CompositeRiskModel(collections.Mapping):
 
         self.init(oqparam)
 
+    def get_taxonomy_dict(self):
+        """
+        A dictionary taxonomy string -> taxonomy index
+        """
+        return {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
+
     def init(self, oqparam):
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation

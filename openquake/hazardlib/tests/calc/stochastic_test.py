@@ -37,13 +37,11 @@ class StochasticEventSetTestCase(unittest.TestCase):
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
         seed = 42
-        rup_serial = numpy.arange(seed, seed + group.tot_ruptures,
-                                  dtype=numpy.uint32)
         start = 0
         for i, src in enumerate(group):
             src.id = i
             nr = src.num_ruptures
-            src.serial = rup_serial[start:start + nr]
+            src.serial = start + seed
             start += nr
         param = dict(ses_per_logic_tree_path=10, filter_distance='rjb',
                      gsims=[SiMidorikawa1999SInter()])
