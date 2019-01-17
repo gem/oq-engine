@@ -67,6 +67,29 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
+def _cluster(param, imtls, gsims, grp_ids, pmap):
+    """
+    Computes the probability map in case of a cluster group
+    """
+    tmp_pm = ProbabilityMap(len(imtls.array), len(gsims))
+    pmapclu = AccumDict({grp_id: tmp_pm for grp_id in grp_ids})
+    # Get temporal occurrence model
+    tom = param.get('temporal_occurrence_model')
+    # Number of occurrences for the cluster
+    first = True
+    for nocc in range(0, 50):
+        # TODO fix this once the occurrence rate will be used just as
+        # an object attribute
+        ocr = tom.occurrence_rate
+        prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
+        if first:
+            pmapclu = prob_n_occ * (~pmap)**nocc
+            first = False
+        else:
+            pmapclu += prob_n_occ * (~pmap)**nocc
+    pmap = ~pmapclu
+    return pmap
+
 
 def classical(group, src_filter, gsims, param, monitor=Monitor()):
     """
@@ -79,7 +102,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
         .eff_ruptures
     """
-
     # Get the parameters assigned to the group
     src_mutex = param.get('src_interdep') == 'mutex'
     rup_mutex = param.get('rup_interdep') == 'mutex'
@@ -92,7 +114,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
             # src.num_ruptures is set when parsing the XML, but not when
             # the source is instantiated manually, so it is set here
             src.num_ruptures = src.count_ruptures()
-        # This sets the proper TOM in case of a cluster 
+        # This sets the proper TOM in case of a cluster
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
             sources.append(src)
@@ -138,26 +160,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # sources
     if src_mutex and param.get('grp_probability'):
         pmap[src.src_group_id] *= param['grp_probability']
-    # Processing
+    # Processing cluster
     if cluster:
-        first = True
-        pmapclu = AccumDict({grp_id: ProbabilityMap(len(imtls.array), 
-                            len(gsims)) for grp_id in grp_ids})
-        # Get temporal occurrence model
-        tom = param.get('temporal_occurrence_model')
-        # Number of occurrences for the cluster
-        for nocc in range (0, 50):
-            # TODO fix this once the occurrence rate will be used just as 
-            # an object attribute
-            ocr = tom.occurrence_rate
-            prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
-            if first:
-                pmapclu = prob_n_occ * (~pmap)**nocc
-                first = False
-            else:
-                tmp = prob_n_occ * (~pmap)**nocc
-                pmapclu += prob_n_occ * (~pmap)**nocc 
-        pmap = ~pmapclu
+        pmap = _cluster(param, imtls, gsims, grp_ids, pmap)
     # Return results
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
 
