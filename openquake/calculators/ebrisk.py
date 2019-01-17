@@ -20,7 +20,7 @@ import time
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, performance
-from openquake.baselib.general import group_array, humansize, AccumDict
+from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import zip, encode
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
