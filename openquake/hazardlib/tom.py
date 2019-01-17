@@ -28,6 +28,8 @@ import scipy.stats
 
 from openquake.baselib.slots import with_slots
 
+registry = {}
+
 
 @with_slots
 class BaseTOM(metaclass=abc.ABCMeta):
@@ -39,9 +41,12 @@ class BaseTOM(metaclass=abc.ABCMeta):
     :raises ValueError:
         If ``time_span`` is not positive.
     """
-    
     _slots_ = ['time_span', 'occurrence_rate']
-    
+
+    @classmethod
+    def __init_subclass__(cls):
+        registry[cls.__name__] = cls
+
     def __init__(self, time_span, occurrence_rate=None):
         if time_span <= 0:
             raise ValueError('time_span must be positive')

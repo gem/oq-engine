@@ -6,8 +6,8 @@ xmlns:gml="http://www.opengis.net/gml"
     <sourceModel>
             <sourceGroup
             name="group 1"
-            tectonicRegion="Active Shallow Crust" >
-                    <poissonTOM occurrence_rate="0.01" />
+            tectonicRegion="Active Shallow Crust"
+            tom="PoissonTOM" occurrence_rate="0.01">
                     <simpleFaultSource
                     id="3"
                     name="Simple Fault Source"

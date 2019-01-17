@@ -67,6 +67,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
+
 def _cluster(param, imtls, gsims, grp_ids, pmap):
     """
     Computes the probability map in case of a cluster group
@@ -231,7 +232,7 @@ def calc_hazard_curves(
     mon = Monitor()
     for group in groups:
         # do not split the group
-        if group.src_interdep == 'mutex' or group.cluster:  
+        if group.src_interdep == 'mutex' or group.cluster:
             par = param.copy()
             par['src_interdep'] = group.src_interdep
             par['rup_interdep'] = group.rup_interdep
