@@ -116,7 +116,7 @@ class SourceGroup(collections.Sequence):
             for src in self.sources:
                 assert isinstance(src, NonParametricSeismicSource)
                 for rup, _ in src.data:
-                    assert rup.weight is not None 
+                    assert rup.weight is not None
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
@@ -158,7 +158,6 @@ class SourceGroup(collections.Sequence):
             msg = "Mutually exclusive ruptures can only be "
             msg += "modelled using non-parametric sources"
             raise ValueError(msg)
-
 
         nr = get_set_num_ruptures(src)
         if nr == 0:  # the minimum_magnitude filters all ruptures
