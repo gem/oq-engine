@@ -26,8 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
-from openquake.hazardlib import geo, mfd, pmf, source
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib import geo, mfd, pmf, source, tom
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source import NonParametricSeismicSource
 
@@ -515,11 +514,10 @@ class SourceConverter(RuptureConverter):
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
-        self.tom = PoissonTOM(investigation_time)
         self.spinning_floating = spinning_floating
         self.source_id = source_id
 
-    def convert_tom(self, node, default=None):
+    def get_tom(self, node):
         """
         Convert the given node into a Temporal Occurrence Model object.
 
@@ -527,28 +525,12 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
                   :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
         """
-        with context(self.fname, node):
-            found = False
-            for sn in node:
-                if sn.tag.endswith('poissonTOM'):
-                    found = True
-            if found:
-                [tom_node] = [subnode for subnode in node
-                              if subnode.tag.endswith(('poissonTOM'))]
-                # set time span
-                times = self.tom.time_span
-                if tom_node.tag.endswith('poissonTOM'):
-                    tom = PoissonTOM(time_span=times)
-                    # set occurrence rate param
-                    tag = 'occurrence_rate'
-                    if tag in tom_node.attrib:
-                        rate = float(tom_node[tag])
-                        tom.occurrence_rate = rate
-                    return tom
-                else:
-                    return PoissonTOM(time_span=self.tom.time_span)
-            else:
-                return default
+        if 'tom' in node.attrib:
+            tom_cls = tom.registry[node['tom']]
+        else:
+            tom_cls = tom.registry['PoissonTOM']
+        return tom_cls(time_span=self.investigation_time,
+                       occurrence_rate=node.get('occurrence_rate'))
 
     def convert_mfdist(self, node):
         """
@@ -663,7 +645,7 @@ class SourceConverter(RuptureConverter):
             hypocenter_distribution=self.convert_hpdist(node),
             polygon=polygon,
             area_discretization=area_discretization,
-            temporal_occurrence_model=self.convert_tom(node, self.tom))
+            temporal_occurrence_model=self.get_tom(node))
 
     def convert_pointSource(self, node):
         """
@@ -688,7 +670,7 @@ class SourceConverter(RuptureConverter):
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
-            temporal_occurrence_model=self.convert_tom(node, self.tom))
+            temporal_occurrence_model=self.get_tom(node))
 
     def convert_multiPointSource(self, node):
         """
@@ -712,8 +694,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             mesh=geo.Mesh(F32(lons), F32(lats)),
-            temporal_occurrence_model=self.convert_tom(node, self.tom),
-        )
+            temporal_occurrence_model=self.get_tom(node))
 
     def convert_simpleFaultSource(self, node):
         """
@@ -749,7 +730,7 @@ class SourceConverter(RuptureConverter):
                 fault_trace=fault_trace,
                 dip=~geom.dip,
                 rake=~node.rake,
-                temporal_occurrence_model=self.convert_tom(node, self.tom),
+                temporal_occurrence_model=self.get_tom(node),
                 hypo_list=hypo_list,
                 slip_list=slip_list)
         return simple
@@ -777,7 +758,7 @@ class SourceConverter(RuptureConverter):
                 rupture_aspect_ratio=~node.ruptAspectRatio,
                 edges=edges,
                 rake=~node.rake,
-                temporal_occurrence_model=self.convert_tom(node, self.tom))
+                temporal_occurrence_model=self.get_tom(node))
         return cmplx
 
     def convert_characteristicFaultSource(self, node):
@@ -797,7 +778,7 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.convert_tom(node, self.tom))
+            temporal_occurrence_model=self.get_tom(node))
         return char
 
     def convert_nonParametricSeismicSource(self, node):
@@ -844,6 +825,7 @@ class SourceConverter(RuptureConverter):
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights', 'group_type')}
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
+        sg.temporal_occurrence_model = self.get_tom(node)
         sg.name = node.attrib.get('name')
         # set attributes related to occurrence
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
@@ -855,12 +837,6 @@ class SourceConverter(RuptureConverter):
             sg.cluster = True
         #
         for src_node in node:
-            if re.search('TOM', src_node.tag):
-                if sg.temporal_occurrence_model is not None:
-                    msg = 'temporal occurrence model already defined'
-                    raise ValueError(msg)
-                sg.temporal_occurrence_model = self.convert_tom(node)
-                continue
             if self.source_id and self.source_id != src_node['id']:
                 continue  # filter by source_id
             src = self.convert_node(src_node)
@@ -1025,7 +1001,7 @@ def to_python(fname, converter):
         for src in sg:
             if hasattr(src, 'mfd'):
                 # multipoint source
-                src.tom = converter.tom
+                #src.tom = converter.tom
                 kwargs = getattr(src.mfd, 'kwargs', {})
                 if 'bin_width' not in kwargs:
                     kwargs['bin_width'] = [converter.width_of_mfd_bin]

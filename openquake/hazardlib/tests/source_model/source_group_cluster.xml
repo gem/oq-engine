@@ -7,9 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <sourceGroup
             name="group 1"
             tectonicRegion="Active Shallow Crust" 
-            cluster="true">
-            
-                    <poissonTOM occurrence_rate="0.001" />
+            cluster="true" tom="PoissonTOM" occurrence_rate="0.001">
 
                     <characteristicFaultSource id="0" 
                         name="Source A"
