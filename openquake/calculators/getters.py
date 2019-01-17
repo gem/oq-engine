@@ -405,15 +405,13 @@ class GmfGetter(object):
                                 yield rlzi, sid, eid, gmv
                     n += e
 
-    def get_hazard(self, data=None, rlzidx=True):
+    def get_hazard(self, data=None):
         """
         :param data: if given, an iterator of records of dtype gmf_data_dt
-        :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
+        :returns: sid -> rlzi -> array(gmv, eid)
         """
         if data is None:
             data = self.gen_gmv()
-        if not rlzidx:
-            return numpy.fromiter(data, self.gmv_dt)
         hazard = numpy.array([collections.defaultdict(list)
                               for _ in range(self.N)])
         for rlzi, sid, eid, gmv in data:
