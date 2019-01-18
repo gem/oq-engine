@@ -60,7 +60,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         param['oqparam'], param['min_iml'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
-        hazard = getter.get_hazard()  # sid -> rlzi -> (eid, gmv)
+        hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
     with monitor('building risk'):
         eids = rupgetter.get_eid_rlz()['eid']
         eid2idx = {eid: idx for idx, eid in enumerate(eids)}
@@ -71,17 +71,15 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             losses_by_RN = AccumDict(accum=numpy.zeros((N, L), F32))
         else:
             losses_by_RN = {}
-        for sid, haz in enumerate(hazard):
+        for sid, haz in hazard.items():
             t0 = time.time()
             assets, tagidxs = assgetter.get(sid, tagnames)
             mon.duration += time.time() - t0
-            for rlzi, eidgmv in haz.items():
-                for lti, aid, eids_, losses in getter.gen_risk(
-                        assets, riskmodel, eidgmv):
-                    for eid, loss in zip(eids_, losses):
-                        acc[(eid2idx[eid], lti) + tagidxs[aid]] += loss
-                        if param['avg_losses']:
-                            losses_by_RN[rlzi][sid, lti] += loss
+            for lti, aid, losses in getter.gen_risk(assets, riskmodel, haz):
+                for eid, rlz, loss in zip(haz['eid'], haz['rlzi'], losses):
+                    acc[(eid2idx[eid], lti) + tagidxs[aid]] += loss
+                    if param['avg_losses']:
+                        losses_by_RN[rlz][sid, lti] += loss
     return {'losses': acc, 'eids': eids, 'losses_by_RN': losses_by_RN}
 
 
