@@ -409,32 +409,24 @@ class GmfGetter(object):
 
     def get_hazard(self, data=None):
         """
-        :param data: if given, an iterator of records of dtype gmf_data_dt
-        :returns: sid -> rlzi -> array(gmv, eid)
+        :param data: if given, an iterator of records of dtype gmf_dt
+        :returns: sid -> records
         """
         if data is None:
-            data = self.gen_gmv()
-        hazard = numpy.array([collections.defaultdict(list)
-                              for _ in range(self.N)])
-        for rlzi, sid, eid, gmv in data:
-            hazard[sid][rlzi].append((gmv, eid))
-        for haz in hazard:
-            for rlzi in haz:
-                haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
-        return hazard
+            data = numpy.fromiter(self.gen_gmv(), self.gmv_dt)
+        return general.group_array(data, 'sid')
 
-    def gen_risk(self, assets, riskmodel, eidgmv):
+    def gen_risk(self, assets, riskmodel, haz):
         """
         :param assets: a list of assets on the same site
         :param riskmodel: a CompositeRiskModel instance
-        :params eidgmv: hazard on the given site
-        :yields: lti, aid, eids, losses
+        :params haz: hazard on the given site (rlzi, sid, eid, gmv)
+        :yields: lti, aid, losses
         """
         imti = {imt: i for i, imt in enumerate(self.imts)}
         tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
-        E = len(eidgmv)
-        eids = eidgmv['eid']
-        gmvs = eidgmv['gmv']
+        gmvs = haz['gmv']
+        E = len(gmvs)
         assets_by_taxi = general.groupby(assets, by_taxonomy)
         for taxo, rm in riskmodel.items():
             t = tdict[taxo]
@@ -448,8 +440,7 @@ class GmfGetter(object):
                 for asset in assets:
                     loss_ratios = numpy.zeros(E, F32)
                     loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
-                    yield (lti, asset.ordinal, eids,
-                           loss_ratios * asset.value(lt))
+                    yield (lti, asset.ordinal, loss_ratios * asset.value(lt))
 
     def compute_gmfs_curves(self, monitor):
         """
@@ -466,10 +457,9 @@ class GmfGetter(object):
             with monitor('building hazard', measuremem=True):
                 gmfdata = numpy.fromiter(self.gen_gmv(), dt)
                 hazard = self.get_hazard(data=gmfdata)
-            for sid, hazardr in zip(self.sids, hazard):
-                for rlzi, array in hazardr.items():
-                    if len(array) == 0:  # no data
-                        continue
+            for sid, hazardr in hazard.items():
+                dic = general.group_array(hazardr, 'rlzi')
+                for rlzi, array in dic.items():
                     with hc_mon:
                         gmvs = array['gmv']
                         for imti, imt in enumerate(oq.imtls):
