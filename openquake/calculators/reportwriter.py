@@ -146,4 +146,5 @@ def build_report(job_ini, output_dir=None):
         rw.save(report)
     except IOError as exc:  # permission error
         sys.stderr.write(str(exc) + '\n')
+    readinput.exposure = None  # ugly hack
     return report

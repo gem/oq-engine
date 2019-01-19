@@ -580,30 +580,35 @@ class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables::
 
-     >> acc = AccumDict()
-     >> acc += {'a': 1}
-     >> acc += {'a': 1, 'b': 1}
-     >> acc
+     >>> acc = AccumDict()
+     >>> acc += {'a': 1}
+     >>> acc += {'a': 1, 'b': 1}
+     >>> acc
      {'a': 2, 'b': 1}
-     >> {'a': 1} + acc
+     >>> {'a': 1} + acc
      {'a': 3, 'b': 1}
-     >> acc + 1
+     >>> acc + 1
      {'a': 3, 'b': 2}
-     >> 1 - acc
+     >>> 1 - acc
      {'a': -1, 'b': 0}
-     >> acc - 1
+     >>> acc - 1
      {'a': 1, 'b': 0}
 
-    Also the multiplication has been defined::
+    The multiplication has been defined::
 
-     >> prob1 = AccumDict(a=0.4, b=0.5)
-     >> prob2 = AccumDict(b=0.5)
-     >> prob1 * prob2
+     >>> prob1 = AccumDict(a=0.4, b=0.5)
+     >>> prob2 = AccumDict(b=0.5)
+     >>> prob1 * prob2
      {'a': 0.4, 'b': 0.25}
-     >> prob1 * 1.2
+     >>> prob1 * 1.2
      {'a': 0.48, 'b': 0.6}
-     >> 1.2 * prob1
+     >>> 1.2 * prob1
      {'a': 0.48, 'b': 0.6}
+
+    And even the power::
+
+    >>> prob2 ** 2
+    {'b': 0.25}
 
     It is very common to use an AccumDict of accumulators; here is an
     example using the empty list as accumulator:
@@ -684,6 +689,12 @@ class AccumDict(dict):
         return new
 
     __rmul__ = __mul__
+
+    def __pow__(self, n):
+        new = self.__class__(self)
+        for key in new:
+            new[key] **= n
+        return new
 
     def __truediv__(self, other):
         return self * (1. / other)
@@ -1035,7 +1046,7 @@ def _get_free_port():
     raise RuntimeError('No free ports in the range 1920:2000')
 
 
-def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None, cleanup=False):
     """
     Build a zip archive from the given file names.
 
@@ -1048,6 +1059,8 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
         for f in fnames:
             log('Archiving %s' % f)
             z.write(f, f[prefix:])
+            if cleanup:  # remove the zipped file
+                os.remove(f)
     log('Generated %s' % archive)
     return archive
 

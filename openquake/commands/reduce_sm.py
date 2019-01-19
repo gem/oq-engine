@@ -24,7 +24,7 @@ from openquake.commonlib import readinput
 @sap.Script
 def reduce_sm(calc_id):
     """
-    Reduce the source model of the given calculation by discarding all
+    Reduce the source model of the given (pre)calculation by discarding all
     sources that do not contribute to the hazard.
     """
     logging.basicConfig(level=logging.INFO)
@@ -37,8 +37,4 @@ def reduce_sm(calc_id):
             oqparam.inputs['source_model_logic_tree'], source_ids)
 
 
-reduce_sm.arg('calc_id', 'calculation ID')
-
-
-if __name__ == '__main__':
-    reduce_sm.callfunc()
+reduce_sm.arg('calc_id', 'calculation ID', type=int)

@@ -26,6 +26,7 @@ import importlib
 from openquake.hazardlib.scalerel.base import (
     BaseMSR, BaseASR, BaseMSRSigma, BaseASRSigma)
 from openquake.hazardlib.scalerel.ceus2011 import CEUS2011
+from openquake.hazardlib.scalerel.germany2018 import GermanyMSR
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.scalerel.wc1994 import WC1994

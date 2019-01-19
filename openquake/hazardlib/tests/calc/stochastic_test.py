@@ -37,21 +37,16 @@ class StochasticEventSetTestCase(unittest.TestCase):
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
         seed = 42
-        rup_serial = numpy.arange(seed, seed + group.tot_ruptures,
-                                  dtype=numpy.uint32)
         start = 0
         for i, src in enumerate(group):
             src.id = i
             nr = src.num_ruptures
-            src.serial = rup_serial[start:start + nr]
+            src.serial = start + seed
             start += nr
-        lonlat = 135.68, 35.68
-        site = Site(geo.Point(*lonlat), 800, z1pt0=100., z2pt5=1.)
-        s_filter = SourceFilter(SiteCollection([site]), {})
         param = dict(ses_per_logic_tree_path=10, filter_distance='rjb',
                      gsims=[SiMidorikawa1999SInter()])
-        dic = sample_ruptures(group, param, s_filter)
-        self.assertEqual(len(dic['eb_ruptures']), 5)
+        dic = sum(sample_ruptures(group, param), {})
+        self.assertEqual(len(dic['rup_array']), 5)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
         # test no filtering 1
@@ -59,5 +54,5 @@ class StochasticEventSetTestCase(unittest.TestCase):
         self.assertEqual(len(ruptures), 19)
 
         # test no filtering 2
-        ruptures = sample_ruptures(group, param)['eb_ruptures']
+        ruptures = sum(sample_ruptures(group, param), {})['rup_array']
         self.assertEqual(len(ruptures), 5)

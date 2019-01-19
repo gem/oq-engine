@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2018-10-05T03:05:04
-engine_version 3.3.0-git48e9a474fd
+date           2018-12-13T12:57:48
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -36,7 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -188,26 +187,26 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      SFLT1     S    0     2     60           0.0       3.076E-05  0.0       1         0.0   
-0      SFLT2     S    2     4     384          0.0       1.802E-04  0.0       2         0.0   
-1      SFLT1     S    0     2     60           0.0       1.264E-05  0.0       1         0.0   
-1      SFLT2     S    2     4     148          0.0       9.680E-05  0.0       2         0.0   
-2      SFLT1     S    0     2     60           0.0       9.537E-06  0.0       1         0.0   
-2      SFLT2     S    2     4     89           0.0       8.678E-05  0.0       2         0.0   
-3      SFLT1     S    0     2     150          0.0       8.345E-06  0.0       1         0.0   
-3      SFLT2     S    2     4     384          0.0       8.297E-05  0.0       2         0.0   
-4      SFLT1     S    0     2     150          0.0       8.821E-06  0.0       1         0.0   
-4      SFLT2     S    2     4     148          0.0       8.154E-05  0.0       2         0.0   
-5      SFLT1     S    0     2     150          0.0       8.106E-06  0.0       1         0.0   
-5      SFLT2     S    2     4     89           0.0       7.963E-05  0.0       2         0.0   
-6      SFLT1     S    0     2     90           0.0       8.106E-06  0.0       1         0.0   
-6      SFLT2     S    2     4     384          0.0       7.915E-05  0.0       2         0.0   
-7      SFLT1     S    0     2     90           0.0       8.821E-06  0.0       1         0.0   
-7      SFLT2     S    2     4     148          0.0       8.059E-05  0.0       2         0.0   
-8      SFLT1     S    0     2     90           0.0       8.345E-06  0.0       1         0.0   
-8      SFLT2     S    2     4     89           0.0       7.772E-05  0.0       2         0.0   
-9      SFLT1     S    0     2     25           0.0       8.106E-06  0.0       1         0.0   
-9      SFLT2     S    2     4     384          0.0       7.725E-05  0.0       2         0.0   
+0      SFLT1     S    0     2     60           0.0       3.695E-05  0.0       1         0.0   
+0      SFLT2     S    2     4     384          0.0       1.812E-04  0.0       2         0.0   
+1      SFLT1     S    0     2     60           0.0       1.597E-05  0.0       1         0.0   
+1      SFLT2     S    2     4     148          0.0       1.035E-04  0.0       2         0.0   
+2      SFLT1     S    0     2     60           0.0       1.287E-05  0.0       1         0.0   
+2      SFLT2     S    2     4     89           0.0       9.108E-05  0.0       2         0.0   
+3      SFLT1     S    0     2     150          0.0       1.168E-05  0.0       1         0.0   
+3      SFLT2     S    2     4     384          0.0       9.203E-05  0.0       2         0.0   
+4      SFLT1     S    0     2     150          0.0       1.192E-05  0.0       1         0.0   
+4      SFLT2     S    2     4     148          0.0       8.440E-05  0.0       2         0.0   
+5      SFLT1     S    0     2     150          0.0       1.097E-05  0.0       1         0.0   
+5      SFLT2     S    2     4     89           0.0       8.249E-05  0.0       2         0.0   
+6      SFLT1     S    0     2     90           0.0       1.097E-05  0.0       1         0.0   
+6      SFLT2     S    2     4     384          0.0       8.249E-05  0.0       2         0.0   
+7      SFLT1     S    0     2     90           0.0       1.097E-05  0.0       1         0.0   
+7      SFLT2     S    2     4     148          0.0       8.345E-05  0.0       2         0.0   
+8      SFLT1     S    0     2     90           0.0       1.097E-05  0.0       1         0.0   
+8      SFLT2     S    2     4     89           0.0       8.106E-05  0.0       2         0.0   
+9      SFLT1     S    0     2     25           0.0       1.764E-05  0.0       1         0.0   
+9      SFLT2     S    2     4     384          0.0       8.392E-05  0.0       2         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -224,26 +223,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.01786 NaN    0.01786 0.01786 1      
-split_filter       0.05957 NaN    0.05957 0.05957 1      
-================== ======= ====== ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.04190 0.01279 0.01803 0.08132 27     
+split_filter       0.11196 NaN     0.11196 0.11196 1      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================== ========
-task               sent                                                                     received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                     1.8 KB  
-split_filter       srcs=16.17 KB monitor=425 B srcfilter=253 B sample_factor=21 B seed=14 B 23.83 KB
-================== ======================================================================== ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=10.23 KB fnames=2.82 KB       48.41 KB
+split_filter       srcs=16.38 KB srcfilter=253 B seed=14 B 24.15 KB
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.07204  0.0       1     
-total split_filter       0.05957  0.0       1     
-total read_source_models 0.01786  0.0       1     
+total read_source_models 1.13138  0.08203   27    
+total split_filter       0.11196  0.23047   1     
 ======================== ======== ========= ======

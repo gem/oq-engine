@@ -2,9 +2,9 @@ Classical PSHA with NZ NSHM
 ===========================
 
 ============== ===================
-checksum32     865,392,691        
-date           2018-10-05T03:05:24
-engine_version 3.3.0-git48e9a474fd
+checksum32     3,211,843,635      
+date           2018-12-13T12:58:17
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 29
@@ -31,14 +31,13 @@ ses_seed                        42
 
 Input files
 -----------
-======================= ======================================================================
-Name                    File                                                                  
-======================= ======================================================================
-gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                          
-job_ini                 `job.ini <job.ini>`_                                                  
-source                  `NSHM_source_model-editedbkgd.xml <NSHM_source_model-editedbkgd.xml>`_
-source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_          
-======================= ======================================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
@@ -87,9 +86,9 @@ Slowest sources
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1  gidx2  num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
-0      1         P    0      1      20           0.0       3.052E-05  0.0       1         0.0   
-0      2         P    1      2      20           0.0       1.144E-05  0.0       1         0.0   
-1      21444     X    2      20,504 1            0.0       8.583E-06  0.0       1         0.0   
+0      1         P    0      1      20           0.0       2.694E-05  0.0       1         0.0   
+0      2         P    1      2      20           0.0       9.060E-06  0.0       1         0.0   
+1      21444     X    2      20,504 1            0.0       7.629E-06  0.0       1         0.0   
 1      21445     X    20,504 34,373 1            0.0       3.338E-06  0.0       1         0.0   
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
 
@@ -110,24 +109,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.19919 NaN    0.19919 0.19919 1      
-split_filter       0.00216 NaN    0.00216 0.00216 1      
+read_source_models 0.16052 NaN    0.16052 0.16052 1      
+split_filter       0.00420 NaN    0.00420 0.00420 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ========================================================================= =========
-task               sent                                                                      received 
-read_source_models monitor=0 B fnames=0 B converter=0 B                                      808.97 KB
-split_filter       srcs=808.48 KB monitor=428 B srcfilter=253 B sample_factor=21 B seed=14 B 808.65 KB
-================== ========================================================================= =========
+================== ======================================= =========
+task               sent                                    received 
+read_source_models converter=388 B fnames=123 B            808.95 KB
+split_filter       srcs=808.5 KB srcfilter=253 B seed=14 B 808.67 KB
+================== ======================================= =========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.19919  0.0       1     
-updating source_info     0.01255  0.0       1     
-total split_filter       0.00216  0.0       1     
+total read_source_models 0.16052  1.09766   1     
+total split_filter       0.00420  0.51562   1     
 ======================== ======== ========= ======

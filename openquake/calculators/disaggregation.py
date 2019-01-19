@@ -345,8 +345,9 @@ producing too small PoEs.'''
             dic[sid, poe, imt][rlzi] = matrix
         res = {}  # sid, stat, poe, imt -> disagg_matrix
         for (sid, poe, imt), array in dic.items():
+            wei_imt = [weight[imt] for weight in weights]
             for stat, func in hstats:
-                matrix = compute_stats(array, [func], weights)[0]
+                [matrix] = compute_stats(array, [func], wei_imt)
                 res[sid, stat, poe, imt] = matrix
         return res
 

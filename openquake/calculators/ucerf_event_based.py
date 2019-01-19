@@ -25,11 +25,10 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.hazardlib.calc import stochastic
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.contexts import ContextMaker
-from openquake.commonlib import util
+from openquake.hazardlib.source.rupture import EBRupture
 from openquake.calculators import base, event_based
 from openquake.calculators.ucerf_base import (
-    DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
+    DEFAULT_TRT, generate_background_ruptures)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -139,25 +138,21 @@ def sample_background_model(
 # #################################################################### #
 
 
-@util.reader
-def build_ruptures(sources, src_filter, param, monitor):
+def build_ruptures(sources, param, monitor):
     """
     :param sources: a list with a single UCERF source
-    :param src_filter: a SourceFilter instance
     :param param: extra parameters
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
     """
+    src_filter = param['src_filter']
     [src] = sources
     res = AccumDict()
     res.calc_times = []
     sampl_mon = monitor('sampling ruptures', measuremem=True)
-    filt_mon = monitor('filtering ruptures', measuremem=False)
     res.trt = DEFAULT_TRT
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
-    cmaker = ContextMaker(param['gsims'], src_filter.integration_distance)
-    num_ses = param['ses_per_logic_tree_path']
     samples = getattr(src, 'samples', 1)
     n_occ = AccumDict(accum=0)
     t0 = time.time()
@@ -170,12 +165,13 @@ def build_ruptures(sources, src_filter, param, monitor):
                 for rup, occ in zip(rups, occs):
                     n_occ[rup] += occ
     tot_occ = sum(n_occ.values())
-    with filt_mon:
-        src.eb_ruptures = stochastic.build_eb_ruptures(
-            src, num_ses, cmaker, sitecol, n_occ.items())
+    dic = {'eff_ruptures': {src.src_group_id: src.num_ruptures}}
+    eb_ruptures = [EBRupture(rup, src.id, src.src_group_id, n, samples)
+                   for rup, n in n_occ.items()]
+    dic['rup_array'] = stochastic.get_rup_array(eb_ruptures)
     dt = time.time() - t0
-    src.calc_times = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
-    return [src]
+    dic['calc_times'] = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
+    return dic
 
 
 @base.calculators.add('ucerf_hazard')
@@ -202,5 +198,4 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
-        self.src_filter = UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance)
+        self.param['src_filter'] = self.src_filter

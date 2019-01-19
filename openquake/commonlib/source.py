@@ -287,7 +287,8 @@ class CompositionInfo(object):
         """
         realizations = self.get_rlzs_assoc().realizations
         return numpy.array(
-            [(r.uid, gsim_names(r), r.weight) for r in realizations], rlz_dt)
+            [(r.uid, gsim_names(r), r.weight['default'])
+             for r in realizations], rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
         """
