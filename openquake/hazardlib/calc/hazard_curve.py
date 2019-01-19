@@ -231,8 +231,7 @@ def calc_hazard_curves(
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     mon = Monitor()
     for group in groups:
-        # do not split the group
-        if group.src_interdep == 'mutex' or group.cluster:
+        if group.atomic:  # do not split
             par = param.copy()
             par['src_interdep'] = group.src_interdep
             par['rup_interdep'] = group.rup_interdep
