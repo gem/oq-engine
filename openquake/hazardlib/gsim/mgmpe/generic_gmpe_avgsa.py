@@ -29,8 +29,8 @@ from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 class GenericGmpeAvgSA(GMPE):
     """
     Implements a modified GMPE class that can be used to compute average
-    ground motion over several spectral ordinates. The mean and standard
-    deviation are computed according to:
+    ground motion over several spectral ordinates from an arbitrary GMPE.
+    The mean and standard deviation are computed according to:
     Kohrangi M., Reddy Kotha S. and Bazzurro P., 2018, Ground-motion models
     for average spectral acceleration in a period range: direct and indirect
     methods, Bull. Earthquake. Eng., 16, pp. 45–65.
@@ -118,8 +118,8 @@ def baker_jayaram_correlation(t1, t2):
     Produce inter-period correlation for any two spectral periods.
     Subroutine taken from: https://usgs.github.io/shakemap/shakelib
     Based upon:
-    Baker, J.W. and Jayaram, N., "Correlation of spectral acceleration
-    values from NGA ground motion models," Earthquake Spectra, (2007).
+    Baker, J.W. and Jayaram, N., 2007, Correlation of spectral acceleration
+    values from NGA ground motion models, Earthquake Spectra.
 
     :param float t1:
         First period of interest.
