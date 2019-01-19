@@ -239,7 +239,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
         agglosses = extract(self.calc.datastore, 'agglosses-rlzs')
-        aac(agglosses['mean'], numpy.array([[795843.7]], numpy.float32),
+        aac(agglosses['mean'], numpy.array([[1848876.5]], numpy.float32),
             atol=.1)
-        aac(agglosses['stddev'], numpy.array([[951769.25]], numpy.float32),
+        aac(agglosses['stddev'], numpy.array([[1902063.]], numpy.float32),
             atol=.1)
