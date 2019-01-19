@@ -280,7 +280,7 @@ class AssetGetter(object):
             tagname: i for i, tagname in enumerate(self.tagcol.tagnames)}
         self.loss_types = dstore.get_attr('assetcol', 'loss_types').split()
 
-    def get(self, site_id):
+    def get(self, site_id, tagnames):
         """
         :param site_id: the site of interest
         :returns: assets, ass_by_aid
@@ -288,9 +288,11 @@ class AssetGetter(object):
         bools = site_id == self.sids
         aids, = numpy.where(bools)
         array = self.dstore['assetcol/array'][bools]
-        ass_by_aid = dict(zip(aids, array))
+        tagidxs = {}  # aid -> tagidxs
         assets = []
-        for aid, a in ass_by_aid.items():
+        for aid, a in zip(aids, array):
+            tagi = a[tagnames] if tagnames else ()
+            tagidxs[aid] = tuple(idx - 1 for idx in tagi)
             values = {lt: a['value-' + lt] for lt in self.loss_types
                       if lt != 'occupants'}
             for name in array.dtype.names:
@@ -306,7 +308,7 @@ class AssetGetter(object):
                 area=a['area'],
                 calc=self.cost_calculator)
             assets.append(asset)
-        return assets, ass_by_aid
+        return assets, tagidxs
 
 
 class GmfGetter(object):
@@ -322,11 +324,9 @@ class GmfGetter(object):
         self.min_iml = min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        self.I = len(oqparam.imtls)
-        self.gmv_dt = numpy.dtype(
-            [('sid', U32), ('eid', U64), ('gmv', (F32, (self.I,)))])
-        self.gmv_eid_dt = numpy.dtype(
-            [('gmv', (F32, (self.I,))), ('eid', U64)])
+        self.I = I = len(oqparam.imtls)
+        self.gmv_dt = oqparam.gmf_data_dt()
+        self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
         self.cmaker = ContextMaker(
             rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
@@ -370,7 +370,7 @@ class GmfGetter(object):
                 continue
             self.computers.append(computer)
 
-    def gen_gmv(self, rlzidx=True):
+    def gen_gmv(self):
         """
         Compute the GMFs for the given realization and
         yields tuples of the form (sid, eid, imti, gmv).
@@ -404,42 +404,29 @@ class GmfGetter(object):
                             continue
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
-                                if rlzidx:  # event_based_risk
-                                    yield rlzi, sid, eid, gmv
-                                else:  # in ebrisk
-                                    yield sid, eid, gmv
+                                yield rlzi, sid, eid, gmv
                     n += e
 
-    def get_hazard(self, data=None, rlzidx=True):
+    def get_hazard(self, data=None):
         """
-        :param data: if given, an iterator of records of dtype gmf_data_dt
-        :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
+        :param data: if given, an iterator of records of dtype gmf_dt
+        :returns: sid -> records
         """
         if data is None:
-            data = self.gen_gmv(rlzidx)
-        if not rlzidx:
-            return numpy.fromiter(data, self.gmv_dt)
-        hazard = numpy.array([collections.defaultdict(list)
-                              for _ in range(self.N)])
-        for rlzi, sid, eid, gmv in data:
-            hazard[sid][rlzi].append((gmv, eid))
-        for haz in hazard:
-            for rlzi in haz:
-                haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
-        return hazard
+            data = numpy.fromiter(self.gen_gmv(), self.gmv_dt)
+        return general.group_array(data, 'sid')
 
-    def gen_risk(self, assets, riskmodel, eidgmv):
+    def gen_risk(self, assets, riskmodel, haz):
         """
         :param assets: a list of assets on the same site
         :param riskmodel: a CompositeRiskModel instance
-        :params eidgmv: hazard on the given site
-        :yields: lti, aid, eids, losses
+        :params haz: hazard on the given site (rlzi, sid, eid, gmv)
+        :yields: lti, aid, losses
         """
         imti = {imt: i for i, imt in enumerate(self.imts)}
         tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
-        E = len(eidgmv)
-        eids = eidgmv['eid']
-        gmvs = eidgmv['gmv']
+        gmvs = haz['gmv']
+        E = len(gmvs)
         assets_by_taxi = general.groupby(assets, by_taxonomy)
         for taxo, rm in riskmodel.items():
             t = tdict[taxo]
@@ -453,8 +440,7 @@ class GmfGetter(object):
                 for asset in assets:
                     loss_ratios = numpy.zeros(E, F32)
                     loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
-                    yield (lti, asset.ordinal, eids,
-                           loss_ratios * asset.value(lt))
+                    yield (lti, asset.ordinal, loss_ratios * asset.value(lt))
 
     def compute_gmfs_curves(self, monitor):
         """
@@ -471,10 +457,9 @@ class GmfGetter(object):
             with monitor('building hazard', measuremem=True):
                 gmfdata = numpy.fromiter(self.gen_gmv(), dt)
                 hazard = self.get_hazard(data=gmfdata)
-            for sid, hazardr in zip(self.sids, hazard):
-                for rlzi, array in hazardr.items():
-                    if len(array) == 0:  # no data
-                        continue
+            for sid, hazardr in hazard.items():
+                dic = general.group_array(hazardr, 'rlzi')
+                for rlzi, array in dic.items():
                     with hc_mon:
                         gmvs = array['gmv']
                         for imti, imt in enumerate(oq.imtls):
