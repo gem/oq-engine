@@ -325,7 +325,7 @@ _pkgbuild_innervm_run () {
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
     ssh "$lxc_ip" mkdir build-deb
-    scp -r ./* "$lxc_ip:build-deb"
+    rsync --exclude "tests/" -a * "$lxc_ip:build-deb"
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
     ssh "$lxc_ip" sudo apt-get update
     ssh "$lxc_ip" sudo apt-get -y upgrade
@@ -568,7 +568,7 @@ _pkgtest_innervm_run () {
         fi
 
         cd /usr/share/openquake/engine/demos
-        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
+        oq engine --run risk/EventBasedRisk/job.ini
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
@@ -604,7 +604,7 @@ sudo systemctl start openquake-celery
 celery_wait $GEM_MAXLOOP
 
         oq celery status
-        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
+        oq engine --run risk/EventBasedRisk/job.ini || echo \"distribution with celery not supported without master and/or worker packages\"
 
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
@@ -1214,7 +1214,7 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 mksafedir "$GEM_BUILD_ROOT"
 mksafedir "$GEM_BUILD_SRC"
 
-git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv ; rm -rf rpm)
+git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv ; rm -rf rpm ; rm -rf $(find . -type d -name tests))
 
 # NOTE: if in the future we need modules we need to execute the following commands
 #

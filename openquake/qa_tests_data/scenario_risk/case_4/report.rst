@@ -2,9 +2,9 @@ Scenario Risk for Nepal with 20 assets
 ======================================
 
 ============== ===================
-checksum32     3,157,733,199      
-date           2018-10-05T03:04:32
-engine_version 3.3.0-git48e9a474fd
+checksum32     486,158,159        
+date           2018-12-13T12:57:05
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 20, num_levels = 8
@@ -85,11 +85,11 @@ Unreinforced-Brick-Masonry 1.00000 0.0    1   1   5         5
 
 Slowest operations
 ------------------
-=================== ======== ========= ======
-operation           time_sec memory_mb counts
-=================== ======== ========= ======
-building riskinputs 0.02973  0.0       1     
-saving gmfs         0.01026  0.0       1     
-computing gmfs      0.00198  0.0       1     
-reading exposure    0.00108  0.0       1     
-=================== ======== ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+building riskinputs 0.02469   0.0       1     
+saving gmfs         0.00856   0.06250   1     
+computing gmfs      0.00164   0.03906   1     
+reading exposure    8.526E-04 0.0       1     
+=================== ========= ========= ======

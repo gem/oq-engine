@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import cross_idl
+from openquake.commands import engine
 
 
 @sap.Script
@@ -29,7 +30,7 @@ def plot_sites(calc_id=-1):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
     logging.basicConfig(level=logging.INFO)
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
     if len(lons) > 1 and cross_idl(*lons):

@@ -3,8 +3,8 @@ Classical PSHA - Loss fractions QA test
 
 ============== ===================
 checksum32     177,006,542        
-date           2018-10-05T03:04:23
-engine_version 3.3.0-git48e9a474fd
+date           2018-12-13T12:57:00
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 12, num_levels = 19
@@ -38,7 +38,6 @@ Name                     File
 exposure                 `exposure_model.xml <exposure_model.xml>`_                  
 gsim_logic_tree          `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                  `job.ini <job.ini>`_                                        
-source                   `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_        
 ======================== ============================================================
@@ -107,8 +106,8 @@ grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites nu
 0      125       A    26    30    8,274        0.0       0.0        0.0       0         0.0   
 0      135       A    30    34    3,285        0.0       0.0        0.0       0         0.0   
 0      137       A    34    38    2,072        0.0       0.0        0.0       0         0.0   
-0      225       A    38    41    520          0.13726   0.21222    36        18        33    
-0      232       A    41    45    1,612        1.94277   4.10847    750       124       395   
+0      225       A    38    41    520          0.13954   0.20632    36        18        33    
+0      232       A    41    45    1,612        1.95803   3.92254    750       124       395   
 0      253       A    45    51    3,058        0.0       0.0        0.0       0         0.0   
 0      299       A    51    55    710          0.0       0.0        0.0       0         0.0   
 0      306       A    55    59    1,768        0.0       0.0        0.0       0         0.0   
@@ -120,7 +119,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    2.08004   15    
+A    2.09757   15    
 ==== ========= ======
 
 Duplicated sources
@@ -129,66 +128,66 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-read_source_models 1.27840 NaN     1.27840 1.27840 1      
-split_filter       0.30053 NaN     0.30053 0.30053 1      
-classical          1.04681 0.87540 0.42781 1.66582 2      
-build_hazard_stats 0.00615 0.00278 0.00410 0.01186 12     
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.93795 NaN       0.93795 0.93795 1      
+split_filter       0.29557 NaN       0.29557 0.29557 1      
+classical          0.42135 0.14687   0.15887 0.49709 5      
+build_hazard_stats 0.00442 6.723E-04 0.00377 0.00643 12     
+================== ======= ========= ======= ======= =======
 
 Fastest task
 ------------
-taskno=2, weight=83, duration=0 s, sources="232"
+taskno=5, weight=32, duration=0 s, sources="232"
 
 ======== ======= ======= ======= ======= ==
 variable mean    stddev  min     max     n 
 ======== ======= ======= ======= ======= ==
-nsites   6.07692 0.68836 5       7       26
-weight   3.19967 0.18270 2.90689 3.43948 26
+nsites   6.20000 0.63246 5       7       10
+weight   3.23313 0.16615 2.90689 3.43948 10
 ======== ======= ======= ======= ======= ==
 
 Slowest task
 ------------
-taskno=1, weight=345, duration=1 s, sources="225 232"
+taskno=5, weight=99, duration=0 s, sources="232"
 
-======== ======= ======= ======= ======= ===
-variable mean    stddev  min     max     n  
-======== ======= ======= ======= ======= ===
-nsites   5.41379 1.56076 2       7       116
-weight   2.98160 0.51148 1.83848 3.43948 116
-======== ======= ======= ======= ======= ===
+======== ======= ======= ======= ======= ==
+variable mean    stddev  min     max     n 
+======== ======= ======= ======= ======= ==
+nsites   6.20000 0.63246 5       7       10
+weight   3.23313 0.16615 2.90689 3.43948 10
+======== ======= ======= ======= ======= ==
 
 Data transfer
 -------------
-================== =========================================================================== ========
-task               sent                                                                        received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                        13.32 KB
-split_filter       srcs=16.36 KB monitor=1.71 KB srcfilter=1012 B sample_factor=84 B seed=56 B 36.13 KB
-classical          group=36.93 KB param=1.24 KB monitor=690 B src_filter=440 B gsims=254 B     4.15 KB 
-build_hazard_stats pgetter=29.71 KB monitor=4.15 KB hstats=804 B                               4.57 KB 
-================== =========================================================================== ========
+================== ========================================================= ========
+task               sent                                                      received
+read_source_models converter=388 B fnames=111 B                              13.36 KB
+split_filter       srcs=16.42 KB srcfilter=1012 B seed=56 B                  36.13 KB
+classical          group=39.24 KB src_filter=6.6 KB param=2.9 KB gsims=635 B 9.58 KB 
+build_hazard_stats pgetter=29.64 KB hstats=804 B                             4.57 KB 
+================== ========================================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          2.09362   0.56641   2     
-total read_source_models 1.27840   0.0       1     
-make_contexts            1.01128   0.0       1,846 
-iter_ruptures            0.67775   0.0       142   
-updating source_info     0.46499   0.0       1     
-get_poes                 0.36389   0.0       1,613 
-total split_filter       0.30053   0.25391   1     
-total build_hazard_stats 0.07386   0.70703   12    
-combine pmaps            0.06671   0.70703   12    
-building riskinputs      0.02826   0.0       1     
-saving statistics        0.00869   0.0       12    
-managing sources         0.00810   0.0       1     
-store source_info        0.00540   0.0       2     
-compute mean             0.00357   0.0       9     
-saving probability maps  0.00164   0.0       1     
-aggregate curves         8.883E-04 0.0       2     
-reading exposure         5.655E-04 0.0       1     
+total classical          2.10677   0.27344   5     
+make_contexts            1.02293   0.0       1,846 
+total read_source_models 0.93795   0.74609   1     
+iter_ruptures            0.67724   0.0       142   
+get_poes                 0.37051   0.0       1,613 
+total split_filter       0.29557   2.60938   1     
+total build_hazard_stats 0.05299   1.31250   12    
+combine pmaps            0.04719   1.31250   12    
+building riskinputs      0.02462   0.12891   1     
+store source_info        0.01134   0.0       5     
+saving statistics        0.00640   0.0       12    
+managing sources         0.00562   0.0       1     
+compute mean             0.00309   0.02344   9     
+store source model       0.00207   0.0       1     
+aggregate curves         0.00148   0.0       5     
+saving probability maps  0.00128   0.0       1     
+reading exposure         4.463E-04 0.0       1     
 ======================== ========= ========= ======

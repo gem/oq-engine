@@ -2,9 +2,9 @@ Classical PSHA-Based Hazard
 ===========================
 
 ============== ===================
-checksum32     513,967,307        
-date           2018-10-05T03:04:43
-engine_version 3.3.0-git48e9a474fd
+checksum32     2,806,154,443      
+date           2018-12-13T12:57:20
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 7, num_levels = 8
@@ -37,7 +37,6 @@ Name                    File
 exposure                `exposure_model.xml <exposure_model.xml>`_                  
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job_haz.ini <job_haz.ini>`_                                
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 structural_fragility    `fragility_model.xml <fragility_model.xml>`_                
 ======================= ============================================================
@@ -93,7 +92,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00278    0.0       15        0.0   
+0      1         S    0     2     482          0.0       0.00637    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -112,25 +111,24 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00360 NaN    0.00360 0.00360 1      
-split_filter       0.01391 NaN    0.01391 0.01391 1      
+read_source_models 0.00743 NaN    0.00743 0.00743 1      
+split_filter       0.02977 NaN    0.02977 0.02977 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                    1.47 KB 
-split_filter       srcs=1.09 KB monitor=425 B srcfilter=253 B sample_factor=21 B seed=14 B 4.21 KB 
-================== ======================================================================= ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=388 B fnames=106 B           1.45 KB 
+split_filter       srcs=1.09 KB srcfilter=253 B seed=14 B 4.27 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-updating source_info     0.01908   0.0       1     
-total split_filter       0.01391   0.0       1     
-total read_source_models 0.00360   0.0       1     
-reading exposure         4.311E-04 0.0       1     
+total split_filter       0.02977   0.0       1     
+total read_source_models 0.00743   0.0       1     
+reading exposure         6.907E-04 0.0       1     
 ======================== ========= ========= ======

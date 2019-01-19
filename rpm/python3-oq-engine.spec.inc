@@ -57,7 +57,7 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: oq-python3 python3-oq-libs >= 2.2.0
+Requires: oq-python3 python3-oq-libs >= 2.2.1
 Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
@@ -201,6 +201,7 @@ fi
 ) >/dev/null || true
 
 %files master
+%doc openquake/engine/openquake.cfg.cluster-sample
 
 %post worker
 %systemd_post openquake-celery.service
@@ -212,6 +213,7 @@ fi
 %systemd_postun_with_restart openquake-celery.service
 
 %files worker
+%doc openquake/engine/openquake.cfg.cluster-sample
 %{_unitdir}/openquake-celery.service
 
 %changelog

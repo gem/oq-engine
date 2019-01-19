@@ -31,8 +31,7 @@ from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
 from openquake.commonlib import writers, hazard_writers
-from openquake.commonlib.util import (
-    get_assets, compose_arrays, reader)
+from openquake.commonlib.util import get_assets, compose_arrays
 
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
@@ -68,14 +67,20 @@ def export_agg_curve_rlzs(ekey, dstore):
     name = ekey[0].split('-')[0]
     agg_curve, tags = _get(dstore, name)
     periods = agg_curve.attrs['return_periods']
+    loss_types = tuple(agg_curve.attrs['loss_types'].split())
+    tagnames = tuple(dstore['oqparam'].aggregate_by)
+    tagcol = dstore['assetcol/tagcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    header = (('annual_frequency_of_exceedence', 'return_period') +
-              agg_curve.dtype.names)
+    header = ('annual_frequency_of_exceedence', 'return_period',
+              'loss_type') + tagnames + ('loss',)
     for r, tag in enumerate(tags):
-        d = compose_arrays(periods, agg_curve[:, r], 'return_period')
-        data = compose_arrays(1 / periods, d, 'annual_frequency_of_exceedence')
+        rows = []
+        for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
+            p, l, *tagidxs = multi_idx
+            row = tagcol.get_tagvalues(tagnames, tagidxs) + (loss,)
+            rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
         dest = dstore.build_fname('agg_loss', tag, 'csv')
-        writer.save(data, dest, header)
+        writer.save(rows, dest, header)
     return writer.getsaved()
 
 
@@ -89,27 +94,72 @@ def export_avg_losses(ekey, dstore):
     dskey = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
-    assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     name, kind = dskey.split('-')
     if kind == 'stats':
         weights = dstore['csm_info'].rlzs['weight']
         tags, stats = zip(*oq.risk_stats())
         if dskey in dstore:  # precomputed
-            value = dstore[dskey].value
+            value = dstore[dskey].value  # shape (:, R, ...)
         else:  # computed on the fly
             value = compute_stats2(
                 dstore['avg_losses-rlzs'].value, stats, weights)
     else:  # rlzs
-        value = dstore[dskey].value  # shape (A, R, LI)
+        value = dstore[dskey].value  # shape (:, R, ...)
         R = value.shape[1]
         tags = ['rlz-%03d' % r for r in range(R)]
-    for tag, values in zip(tags, value.transpose(1, 0, 2)):
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    if oq.calculation_mode == 'ebrisk':  # shape (L, R, ...)
+        tagcol = dstore['assetcol/tagcol']
+        tagnames = tuple(dstore['oqparam'].aggregate_by)
+        header = ('loss_type',) + tagnames + ('avgloss',)
+        for r, tag in enumerate(tags):
+            rows = []
+            for multi_idx, loss in numpy.ndenumerate(value[:, r]):
+                l, *tagidxs = multi_idx
+                row = tagcol.get_tagvalues(tagnames, tagidxs) + (loss,)
+                rows.append((dt.names[l],) + row)
+            dest = dstore.build_fname(name, tag, 'csv')
+            writer.save(rows, dest, header)
+    else:  # shape (A, R, LI)
+        assets = get_assets(dstore)
+        for tag, values in zip(tags, value.transpose(1, 0, 2)):
+            dest = dstore.build_fname(name, tag, 'csv')
+            array = numpy.zeros(len(values), dt)
+            for l, lt in enumerate(dt.names):
+                array[lt] = values[:, l]
+            writer.save(compose_arrays(assets, array), dest)
+    return writer.getsaved()
+
+
+# this is used by ebrisk
+@export.add(('losses_by_site-rlzs', 'csv'), ('losses_by_site-stats', 'csv'),
+            ('losses_by_site', 'csv'))
+def export_losses_by_site(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dskey = ekey[0]
+    oq = dstore['oqparam']
+    dt = oq.loss_dt()
+    if '-' in dskey:
+        name, kind = dskey.split('-')
+    else:
+        name, kind = dskey, 'stats'
+    if kind == 'stats':
+        weights = dstore['csm_info'].rlzs['weight']
+        tags, stats = zip(*oq.risk_stats())
+        value = compute_stats2(dstore[name].value, stats, weights)
+    else:  # rlzs
+        value = dstore[dskey].value  # shape (N, R, L)
+        R = value.shape[1]
+        tags = ['rlz-%03d' % r for r in range(R)]
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    geo = dstore['sitecol'].array[['lon', 'lat']]
+    for r, tag in enumerate(tags):
+        arr = value[:, r].copy().view(dt)[:, 0]
         dest = dstore.build_fname(name, tag, 'csv')
-        array = numpy.zeros(len(values), dt)
-        for l, lt in enumerate(dt.names):
-            array[lt] = values[:, l]
-        writer.save(compose_arrays(assets, array), dest)
+        writer.save(compose_arrays(geo, arr), dest)
     return writer.getsaved()
 
 
@@ -248,11 +298,12 @@ def export_agg_losses_ebr(ekey, dstore):
     # populate rup_data and event_by_eid
     # TODO: avoid reading the events twice
     for rgetter in getters.get_rupture_getters(dstore):
-        for ebr in rgetter:
+        ruptures = rgetter.get_ruptures()
+        for ebr in ruptures:
             for event in events_by_rupid[ebr.serial]:
                 event_by_eid[event['eid']] = event
         if has_rup_data:
-            rup_data.update(get_rup_data(rgetter))
+            rup_data.update(get_rup_data(ruptures))
     for r, row in enumerate(agg_losses):
         rec = elt[r]
         event = event_by_eid[row['eid']]
@@ -493,13 +544,6 @@ def export_bcr_map(ekey, dstore):
         writer.save(compose_arrays(assets, bcr_data[:, t]), path)
         fnames.append(path)
     return writer.getsaved()
-
-
-@reader
-def get_loss_ratios(lrgetter, monitor):
-    with lrgetter.dstore:
-        loss_ratios = lrgetter.get_all()  # list of arrays of dtype lrs_dt
-    return list(zip(lrgetter.aids, loss_ratios))
 
 
 @depr('This exporter will be removed soon')

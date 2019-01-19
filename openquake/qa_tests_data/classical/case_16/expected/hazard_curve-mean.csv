@@ -1,3 +1,3 @@
-# mean, investigation_time=50.0, imt="PGA"
+# mean, investigation_time=50.0, imt="PGA", checksum=1751642476
 lon,lat,depth,poe-0.005,poe-0.007,poe-0.0098
 0.00000,0.00000,0.00000,3.541261E-01,3.509422E-01,3.424372E-01

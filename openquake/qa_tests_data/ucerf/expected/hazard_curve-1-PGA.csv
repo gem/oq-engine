@@ -1,4 +1,4 @@
-# source_model_tree_path=('ltbrTrueMean',), gsim_tree_path=('BA14',), investigation_time=1.0, imt="PGA"
+# source_model_tree_path=('ltbrTrueMean',), gsim_tree_path=('BA14',), investigation_time=1.0, imt="PGA", checksum=2513767148
 lon,lat,depth,poe-0.01,poe-0.04,poe-0.1,poe-0.4,poe-0.6
 -122.25444,37.84060,0.00000,4.235486E-04,1.872306E-05,8.017521E-06,4.399726E-06,2.426568E-06
 -122.24958,37.84817,0.00000,4.165022E-04,1.827805E-05,8.012756E-06,4.584232E-06,2.601120E-06

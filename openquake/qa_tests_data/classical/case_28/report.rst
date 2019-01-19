@@ -2,9 +2,9 @@ North Africa PSHA
 =================
 
 ============== ===================
-checksum32     576,018,697        
-date           2018-10-05T03:05:11
-engine_version 3.3.0-git48e9a474fd
+checksum32     3,672,594,697      
+date           2018-12-13T12:58:04
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 2, num_levels = 133
@@ -37,7 +37,6 @@ Name                    File
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
 sites                   `sites.csv <sites.csv>`_                                    
-source                  `GridSources.xml <GridSources.xml>`_                        
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -95,8 +94,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      21        M    0     2     260          0.0       0.00110    0.0       2         0.0   
-1      21        M    0     2     260          0.0       8.836E-04  0.0       2         0.0   
+0      21        M    0     2     260          0.0       0.00117    0.0       2         0.0   
+1      21        M    0     2     260          0.0       9.527E-04  0.0       2         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -113,26 +112,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.00141 NaN    0.00141 0.00141 1      
-split_filter       0.00285 NaN    0.00285 0.00285 1      
-================== ======= ====== ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.00240 2.933E-05 0.00238 0.00242 2      
+split_filter       0.00588 NaN       0.00588 0.00588 1      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                    1.91 KB 
-split_filter       srcs=1.95 KB monitor=425 B srcfilter=253 B sample_factor=21 B seed=14 B 2.46 KB 
-================== ======================================================================= ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=776 B fnames=212 B           3.79 KB 
+split_filter       srcs=1.97 KB srcfilter=253 B seed=14 B 2.46 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.00838  0.0       1     
-total split_filter       0.00285  0.0       1     
-total read_source_models 0.00141  0.0       1     
+total split_filter       0.00588  0.0       1     
+total read_source_models 0.00479  0.0       2     
 ======================== ======== ========= ======

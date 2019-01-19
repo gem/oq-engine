@@ -403,6 +403,14 @@ drouet_2015_brazil
     :undoc-members:
     :show-inheritance:
 
+drouet_alpes_2015
+--------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.drouet_alpes_2015
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 edwards_fah_2013a
 -------------------------------------------------
 
@@ -471,6 +479,14 @@ geomatrix_1993
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.geomatrix_1993
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+germany_2018
+----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.germany_2018
     :members:
     :undoc-members:
     :show-inheritance:

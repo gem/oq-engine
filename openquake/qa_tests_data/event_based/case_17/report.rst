@@ -3,8 +3,8 @@ Event Based Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     2,756,942,605      
-date           2018-10-05T03:04:49
-engine_version 3.3.0-git48e9a474fd
+date           2018-12-13T12:57:40
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -36,8 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model_1.xml <source_model_1.xml>`_                  
-source                  `source_model_2.xml <source_model_2.xml>`_                  
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -46,8 +44,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     39           0.0       9.060E-06  0.0       1         0.0   
-1      2         P    0     1     7            0.0       3.338E-06  0.0       1         0.0   
+0      1         P    0     1     39           0.0       3.433E-05  0.0       1         0.0   
+1      2         P    0     1     7            0.0       1.025E-05  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -66,24 +64,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00160 7.317E-05 0.00154 0.00165 2      
-split_filter       0.00166 NaN       0.00166 0.00166 1      
+read_source_models 0.00152 4.956E-05 0.00149 0.00156 2      
+split_filter       0.00405 NaN       0.00405 0.00405 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================================================== ========
-task               sent                                                                   received
-read_source_models monitor=662 B converter=638 B fnames=372 B                             3.36 KB 
-split_filter       srcs=2.1 KB monitor=343 B srcfilter=220 B sample_factor=21 B seed=14 B 2.18 KB 
-================== ====================================================================== ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=776 B fnames=222 B           3.33 KB 
+split_filter       srcs=1.76 KB srcfilter=253 B seed=14 B 2.37 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.00633  0.0       1     
-total read_source_models 0.00319  0.0       2     
-total split_filter       0.00166  0.0       1     
+total split_filter       0.00405  0.0       1     
+total read_source_models 0.00305  0.0       2     
 ======================== ======== ========= ======

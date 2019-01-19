@@ -737,7 +737,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(rlz.ordinal, 0)
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
-        self.assertEqual(rlz.weight, 1.)
+        self.assertEqual(rlz.weight['default'], 1.)
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997(): "
@@ -746,7 +746,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
-        csm = readinput.get_composite_source_model(oqparam, split_all=False)
+        csm = readinput.get_composite_source_model(oqparam)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 src_groups
         self.assertEqual(sum(1 for tm in csm.src_groups), 18)
@@ -754,9 +754,9 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         rlzs_assoc = csm.info.get_rlzs_assoc()
         rlzs = rlzs_assoc.realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        # counting the sources in each TRT model (unsplit)
+        # counting the sources in each TRT model (after splitting)
         self.assertEqual(
-            [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
+            [1, 14, 1, 14, 1, 14, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12],
             list(map(len, csm.src_groups)))
 
         # removing 9 src_groups out of 18
