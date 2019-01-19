@@ -113,14 +113,6 @@ run command
     :undoc-members:
     :show-inheritance:
 
-run_tiles command
-------------------------------------
-
-.. automodule:: openquake.commands.run_tiles
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 show command
 ------------------------------
 

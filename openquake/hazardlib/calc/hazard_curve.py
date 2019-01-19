@@ -91,15 +91,15 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
-    pmap.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-    pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
+    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     src_mutex = param.get('src_interdep') == 'mutex'
     rup_mutex = param.get('rup_interdep') == 'mutex'
     for src, s_sites in src_filter(group):  # filter now
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
-                                    not rup_mutex)
+                                    rup_indep=not rup_mutex)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = '%s (source id=%s)' % (str(err), src.source_id)
@@ -111,14 +111,14 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         elif poemap:
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
-        pmap.calc_times[src.id] += numpy.array(
+        calc_times[src.id] += numpy.array(
             [src.weight, len(s_sites), time.time() - t0])
         # storing the number of contributing ruptures too
-        pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
-                              for gid in src.src_group_ids}
+        eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
+                         for gid in src.src_group_ids}
     if src_mutex and param.get('grp_probability'):
         pmap[src.src_group_id] *= param['grp_probability']
-    return pmap
+    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
 
 
 def calc_hazard_curves(
@@ -190,10 +190,11 @@ def calc_hazard_curves(
             par['grp_probability'] = group.grp_probability
             it = [classical(group.sources, ss_filter, [gsim], par, mon)]
         else:  # split the group and apply `classical` in parallel
+            param['rup_interdep'] = group.rup_interdep
             it = apply(
                 classical, (group.sources, ss_filter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
-        for res in it:
-            for grp_id in res:
-                pmap |= res[grp_id]
+        for dic in it:
+            for grp_id, pval in dic['pmap'].items():
+                pmap |= pval
     return pmap.convert(imtls, len(sitecol.complete))

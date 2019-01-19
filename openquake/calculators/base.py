@@ -19,7 +19,6 @@ import os
 import sys
 import abc
 import pdb
-import math
 import logging
 import operator
 import itertools
@@ -29,13 +28,13 @@ from shapely import wkt
 import numpy
 
 from openquake.baselib import (
-    config, general, hdf5, datastore, __version__ as engine_version)
+    general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, source, calc, writers
+from openquake.commonlib import readinput, logictree, source, calc, writers
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -72,6 +71,7 @@ PRECALC_MAP = dict(
     classical_damage=['classical'],
     event_based=['event_based', 'event_based_risk', 'ucerf_hazard'],
     event_based_risk=['event_based', 'event_based_risk', 'ucerf_hazard'],
+    ebrisk=['event_based', 'event_based_risk', 'ucerf_hazard'],
     ucerf_classical=['ucerf_psha'],
     ucerf_hazard=['ucerf_hazard'])
 
@@ -173,7 +173,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
-            attrs['checksum32'] = readinput.get_checksum32(self.oqparam.inputs)
+            attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
 
     def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
@@ -336,65 +336,34 @@ class HazardCalculator(BaseCalculator):
     """
     precalc = None
 
-    def block_splitter(self, sources, weight=get_weight):
+    def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
         """
-        :params sources: a list of sources
+        :param sources: a list of sources
         :param weight: a weight function (default .weight)
+        :param key: None or 'src_group_id'
         :returns: an iterator over blocks of sources
         """
         ct = self.oqparam.concurrent_tasks or 1
-        minweight = source.MINWEIGHT * (math.sqrt(len(self.sitecol))
-                                        if self.sitecol else 1)
-        maxweight = self.csm.get_maxweight(weight, ct, minweight)
+        maxweight = self.csm.get_maxweight(weight, ct, source.MINWEIGHT)
         if not hasattr(self, 'logged'):
-            if maxweight == minweight:
-                logging.info('Using minweight=%d', minweight)
+            if maxweight == source.MINWEIGHT:
+                logging.info('Using minweight=%d', source.MINWEIGHT)
             else:
                 logging.info('Using maxweight=%d', maxweight)
             self.logged = True
-        return general.block_splitter(sources, maxweight, weight,
-                                      operator.attrgetter('src_group_id'))
+        return general.block_splitter(sources, maxweight, weight, key)
 
-    def get_filter(self):
+    @general.cached_property
+    def src_filter(self):
         """
-        :returns: a SourceFilter/RtreeFilter or None
+        :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
         sitecol = self.sitecol.complete if self.sitecol else None
-        self.src_filter = SourceFilter(
-            sitecol, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(sitecol, oq.maximum_distance)
-        elif oq.prefilter_sources == 'rtree':
-            # rtree can be used only with processpool, otherwise one gets an
-            # RTreeError: Error in "Index_Create": Spatial Index Error:
-            # IllegalArgumentException: SpatialIndex::DiskStorageManager:
-            # Index/Data file cannot be read/writen.
-            src_filter = RtreeFilter(
-                sitecol, oq.maximum_distance, self.hdf5cache)
-        else:
-            src_filter = self.src_filter
-        return src_filter
-
-    def can_read_parent(self):
-        """
-        :returns:
-            the parent datastore if it is present and can be read from the
-            workers, None otherwise
-        """
-        read_access = (
-            config.distribution.oq_distribute in ('no', 'processpool') or
-            config.directory.shared_dir)
-        hdf5cache = getattr(self, 'hdf5cache', None)
-        if hdf5cache and read_access:
-            return hdf5cache
-        elif (self.oqparam.hazard_calculation_id and read_access and
-                'gmf_data' not in self.datastore.hdf5):
-            self.datastore.parent.close()  # make sure it is closed
-            return self.datastore.parent
-        logging.warn('With a parent calculation reading the hazard '
-                     'would be faster')
+            return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
+        return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
     def check_overflow(self):
         """Overridden in event based"""
@@ -414,11 +383,10 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
-        if 'source' in oq.inputs and oq.hazard_calculation_id is None:
+        if ('source_model_logic_tree' in oq.inputs and
+                oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(),
-                split_all=oq.split_sources,
-                srcfilter=self.get_filter())
+                oq, self.monitor(), srcfilter=self.src_filter)
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
@@ -490,16 +458,23 @@ class HazardCalculator(BaseCalculator):
         """
         To be overridden to initialize the datasets needed by the calculation
         """
-        if not self.oqparam.risk_imtls:
+        oq = self.oqparam
+        if not oq.risk_imtls:
             if self.datastore.parent:
-                self.oqparam.risk_imtls = (
+                oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
-            elif not self.oqparam.imtls:
+            elif not oq.imtls:
                 raise ValueError('Missing intensity_measure_types!')
         if self.precalc:
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
-            self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
+            csm_info = self.datastore['csm_info']
+            if oq.hazard_calculation_id and 'gsim_logic_tree' in oq.inputs:
+                # redefine the realizations by reading the weights from the
+                # gsim_logic_tree_file that could be different from the parent
+                csm_info.gsim_lt = logictree.GsimLogicTree(
+                    oq.inputs['gsim_logic_tree'], set(csm_info.trts))
+            self.rlzs_assoc = csm_info.get_rlzs_assoc()
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
@@ -530,7 +505,7 @@ class HazardCalculator(BaseCalculator):
                     self.datastore['assetcol'] = self.assetcol
                     raise RuntimeError(
                         '%d assets were discarded; use `oq show discarded` to'
-                        'show them and `oq plot_assets` to plot them' %
+                        ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
 
         # reduce the riskmodel to the relevant taxonomies
@@ -677,7 +652,8 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
-        self.param = dict(individual_curves=oq.individual_curves)
+        self.param = dict(individual_curves=oq.individual_curves,
+                          avg_losses=oq.avg_losses)
 
     def store_csm_info(self, eff_ruptures):
         """
@@ -810,26 +786,38 @@ class RiskCalculator(HazardCalculator):
         logging.info('Built %d risk inputs', len(riskinputs))
         return riskinputs
 
+    def get_getter(self, kind, sid):
+        """
+        :param kind: 'poe' or 'gmf'
+        :param sid: a site ID
+        :returns: a PmapGetter or GmfDataGetter
+        """
+        hdf5cache = getattr(self, 'hdf5cache', None)
+        if hdf5cache:
+            dstore = hdf5cache
+        elif (self.oqparam.hazard_calculation_id and
+              'gmf_data' not in self.datastore):
+            # 'gmf_data' in self.datastore happens for ShakeMap calculations
+            self.datastore.parent.close()  # make sure it is closed
+            dstore = self.datastore.parent
+        else:
+            dstore = self.datastore
+        if kind == 'poe':  # hcurves, shape (R, N)
+            getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
+        else:  # gmf
+            getter = getters.GmfDataGetter(dstore, [sid], self.R)
+        if dstore is self.datastore:
+            getter.init()
+        return getter
+
     def _gen_riskinputs(self, kind, eps, num_events):
         rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
         rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
-        dstore = self.can_read_parent() or self.datastore
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
-            # build the riskinputs
-            if kind == 'poe':  # hcurves, shape (R, N)
-                getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
-                getter.num_rlzs = self.R
-            else:  # gmf
-                getter = getters.GmfDataGetter(dstore, [sid], self.R)
-            if dstore is self.datastore:
-                # read the hazard data in the controller node
-                getter.init()
-            else:
-                # the datastore must be closed to avoid the HDF5 fork bug
-                assert dstore.hdf5 == (), '%s is not closed!' % dstore
+            getter = self.get_getter(kind, sid)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
                 # dictionary of epsilons for the reduced assets
@@ -937,6 +925,19 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
         dstore['events'] = events
 
 
+def get_idxs(data, eid2idx):
+    """
+    Convert from event IDs to event indices.
+
+    :param data: an array with a field eid
+    :param eid2idx: a dictionary eid -> idx
+    :returns: the array of event indices
+    """
+    uniq, inv = numpy.unique(data['eid'], return_inverse=True)
+    idxs = numpy.array([eid2idx[eid] for eid in uniq])[inv]
+    return idxs
+
+
 def import_gmfs(dstore, fname, sids):
     """
     Import in the datastore a ground motion field CSV file.
@@ -955,7 +956,9 @@ def import_gmfs(dstore, fname, sids):
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
-    events = numpy.zeros(len(eids), rupture.events_dt)
+    E = len(eids)
+    eid2idx = dict(zip(eids, range(E)))
+    events = numpy.zeros(E, rupture.events_dt)
     events['eid'] = eids
     dstore['events'] = events
     # store the GMFs
@@ -967,7 +970,10 @@ def import_gmfs(dstore, fname, sids):
         lst.append((offset, offset + n))
         if n:
             offset += n
-            dstore.extend('gmf_data/data', dic[sid])
+            gmvs = dic[sid]
+            gmvs['eid'] = get_idxs(gmvs, eid2idx)
+            gmvs['rlzi'] = 0   # effectively there is only 1 realization
+            dstore.extend('gmf_data/data', gmvs)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
 

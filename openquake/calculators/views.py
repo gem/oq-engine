@@ -19,14 +19,13 @@ import ast
 import os.path
 import numbers
 import operator
-import decimal
 import functools
 import itertools
 import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, DictArray, AccumDict, CallableDict)
+    humansize, groupby, countby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import decode
@@ -38,7 +37,7 @@ from openquake.commonlib.writers import (
     build_header, scientificformat, FIVEDIGITS)
 from openquake.calculators import getters
 
-FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
+FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 F32 = numpy.float32
 U32 = numpy.uint32
@@ -126,6 +125,9 @@ def rst_table(data, header=None, fmt=None):
         tup = tuple(fmt(c) for c in row)
         for (i, col) in enumerate(tup):
             col_sizes[i] = max(col_sizes[i], len(col))
+        if len(tup) != len(col_sizes):
+            raise ValueError('The header has %d fields but the row %d fields!'
+                             % (len(col_sizes), len(tup)))
         body.append(tup)
 
     sepline = ' '.join(('=' * size for size in col_sizes))
@@ -285,6 +287,14 @@ def view_params(token, dstore):
                       for param in params])
 
 
+def rst_links(*fnames):
+    links = []
+    for fname in fnames:
+        bname = os.path.basename(fname)
+        links.append("`%s <%s>`_" % (bname, bname))
+    return ' '.join(links)
+
+
 def build_links(items):
     out = []
     for key, fname in items:
@@ -293,24 +303,16 @@ def build_links(items):
                 b = os.path.basename(v)
                 out.append(('reqv:' + k, "`%s <%s>`_" % (b, b)))
         elif isinstance(fname, list):
-            out.append((key, ' '.join(os.path.basename(f) for f in fname)))
+            out.append((key, rst_links(*fname)))
         else:
-            bname = os.path.basename(fname)
-            out.append((key, "`%s <%s>`_" % (bname, bname)))
+            out.append((key, rst_links(fname)))
     return sorted(out)
 
 
 @view.add('inputs')
 def view_inputs(token, dstore):
-    inputs = dstore['oqparam'].inputs.copy()
-    try:
-        source_models = [('source', fname) for fname in inputs['source']]
-        del inputs['source']
-    except KeyError:  # there is no 'source' in scenario calculations
-        source_models = []
-    return rst_table(
-        build_links(list(inputs.items()) + source_models),
-        header=['Name', 'File'])
+    inputs = dstore['oqparam'].inputs.items()
+    return rst_table(build_links(inputs), ['Name', 'File'])
 
 
 def _humansize(literal):
@@ -482,10 +484,12 @@ def view_exposure_info(token, dstore):
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
     num_events = len(dstore['events'])
+    events_by_rlz = countby(dstore['events'].value, 'rlz')
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),
-           ('Rupture multiplicity', mult)]
+           ('Rupture multiplicity', mult),
+           ('Events by rlz', events_by_rlz.values())]
     return rst_table(lst)
 
 
@@ -829,3 +833,19 @@ def view_pmap(token, dstore):
     pgetter = getters.PmapGetter(dstore, rlzs_assoc)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
+
+
+@view.add('act_ruptures_by_src')
+def view_act_ruptures_by_src(token, dstore):
+    """
+    Display the actual number of ruptures by source in event based calculations
+    """
+    data = dstore['ruptures'].value[['srcidx', 'serial']]
+    counts = sorted(countby(data, 'srcidx').items(),
+                    key=operator.itemgetter(1), reverse=True)
+    src_info = dstore['source_info'].value[['grp_id', 'source_id']]
+    table = [['src_id', 'grp_id', 'act_ruptures']]
+    for srcidx, act_ruptures in counts:
+        src = src_info[srcidx]
+        table.append([src['source_id'], src['grp_id'], act_ruptures])
+    return rst_table(table)

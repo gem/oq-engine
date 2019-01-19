@@ -21,19 +21,20 @@ import operator
 import mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
+#from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, geo, probability_map, stats
+from openquake.hazardlib import calc, geo, probability_map, stats, valid
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
+from openquake.hazardlib.source.rupture import EBRupture, classes
 from openquake.risklib.riskinput import rsi2str
+from openquake.risklib.asset import Asset
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-
-BaseRupture.init()  # initialize rupture codes
+by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class PmapGetter(object):
@@ -49,6 +50,7 @@ class PmapGetter(object):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        self.num_rlzs = len(self.rlzs_assoc.realizations)
         self.eids = None
         self.nbytes = 0
         self.sids = sids
@@ -167,7 +169,7 @@ class PmapGetter(object):
             if there is only one or the statistics otherwise.
         """
         num_rlzs = len(self.weights)
-        if not kind:  # use default
+        if not kind or kind == 'all':  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
                     yield k, self.dstore['hcurves/' + k].value
@@ -180,9 +182,10 @@ class PmapGetter(object):
                 yield 'rlz-%03d' % rlzi, hcurves
         elif 'poes' in self.dstore and kind.startswith('rlz-'):
             yield kind, self.get(int(kind[4:]))
-        if 'hcurves' in self.dstore and kind in ('stats', 'all'):
+        if 'hcurves' in self.dstore and kind == 'stats':
             for k in sorted(self.dstore['hcurves']):
-                yield k, self.dstore['hcurves/' + k].value
+                if not k.startswith('rlz'):
+                    yield k, self.dstore['hcurves/' + k].value
 
     def get_mean(self, grp=None):
         """
@@ -201,11 +204,13 @@ class PmapGetter(object):
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        else:  # multiple realizations, assume hcurves/mean is there
+        else:  # multiple realizations
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
-            return self.rlzs_assoc.compute_pmap_stats(
-                dic, [stats.mean_curve, stats.std_curve])
+            pmaps = self.rlzs_assoc.combine_pmaps(dic)
+            return stats.compute_pmap_stats(
+                pmaps, [stats.mean_curve, stats.std_curve],
+                self.weights, self.imtls)
 
 
 class GmfDataGetter(collections.Mapping):
@@ -261,6 +266,51 @@ class GmfDataGetter(collections.Mapping):
         return len(self.sids)
 
 
+# used only in ebrisk; does not support insured losses
+class AssetGetter(object):
+    """
+    An object which is able to read the assets on a given site.
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+        self.tagcol = dstore['assetcol/tagcol']
+        self.sids = dstore['assetcol/array']['site_id']
+        self.cost_calculator = dstore['assetcol/cost_calculator']
+        self.cost_calculator.tagi = {
+            tagname: i for i, tagname in enumerate(self.tagcol.tagnames)}
+        self.loss_types = dstore.get_attr('assetcol', 'loss_types').split()
+
+    def get(self, site_id, tagnames):
+        """
+        :param site_id: the site of interest
+        :returns: assets, ass_by_aid
+        """
+        bools = site_id == self.sids
+        aids, = numpy.where(bools)
+        array = self.dstore['assetcol/array'][bools]
+        tagidxs = {}  # aid -> tagidxs
+        assets = []
+        for aid, a in zip(aids, array):
+            tagi = a[tagnames] if tagnames else ()
+            tagidxs[aid] = tuple(idx - 1 for idx in tagi)
+            values = {lt: a['value-' + lt] for lt in self.loss_types
+                      if lt != 'occupants'}
+            for name in array.dtype.names:
+                if name.startswith('occupants_'):
+                    values[name] = a[name]
+            asset = Asset(
+                aid,
+                [a[name] for name in self.tagcol.tagnames],
+                number=a['number'],
+                location=(valid.longitude(a['lon']),  # round coordinates
+                          valid.latitude(a['lat'])),
+                values=values,
+                area=a['area'],
+                calc=self.cost_calculator)
+            assets.append(asset)
+        return assets, tagidxs
+
+
 class GmfGetter(object):
     """
     An hazard getter with methods .gen_gmv and .get_hazard returning
@@ -274,11 +324,9 @@ class GmfGetter(object):
         self.min_iml = min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        self.I = len(oqparam.imtls)
-        self.gmv_dt = numpy.dtype(
-            [('sid', U32), ('eid', U64), ('gmv', (F32, (self.I,)))])
-        self.gmv_eid_dt = numpy.dtype(
-            [('gmv', (F32, (self.I,))), ('eid', U64)])
+        self.I = I = len(oqparam.imtls)
+        self.gmv_dt = oqparam.gmf_data_dt()
+        self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
         self.cmaker = ContextMaker(
             rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
@@ -303,17 +351,21 @@ class GmfGetter(object):
         """
         Initialize the computers. Should be called on the workers
         """
-        if hasattr(self, 'eids'):  # init already called
+        if hasattr(self, 'computers'):  # init already called
             return
         self.computers = []
         for ebr in self.ebruptures:
+            if hasattr(ebr, 'sids'):  # filter the site collection
+                sitecol = self.sitecol.filtered(ebr.sids)
+            else:
+                sitecol = self.sitecol
             try:
                 computer = calc.gmf.GmfComputer(
-                    ebr, self.sitecol, self.oqparam.imtls, self.cmaker,
+                    ebr, sitecol, self.oqparam.imtls, self.cmaker,
                     self.oqparam.truncation_level, self.correl_model)
             except FarAwayRupture:
-                # due to numeric errors ruptures within the maximum_distance
-                # when written can be outside when read; I found a case with
+                # due to numeric errors, ruptures within the maximum_distance
+                # when written, can be outside when read; I found a case with
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
@@ -357,19 +409,38 @@ class GmfGetter(object):
 
     def get_hazard(self, data=None):
         """
-        :param data: if given, an iterator of records of dtype gmf_data_dt
-        :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
+        :param data: if given, an iterator of records of dtype gmf_dt
+        :returns: sid -> records
         """
         if data is None:
-            data = self.gen_gmv()
-        hazard = numpy.array([collections.defaultdict(list)
-                              for _ in range(self.N)])
-        for rlzi, sid, eid, gmv in data:
-            hazard[sid][rlzi].append((gmv, eid))
-        for haz in hazard:
-            for rlzi in haz:
-                haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
-        return hazard
+            data = numpy.fromiter(self.gen_gmv(), self.gmv_dt)
+        return general.group_array(data, 'sid')
+
+    def gen_risk(self, assets, riskmodel, haz):
+        """
+        :param assets: a list of assets on the same site
+        :param riskmodel: a CompositeRiskModel instance
+        :params haz: hazard on the given site (rlzi, sid, eid, gmv)
+        :yields: lti, aid, losses
+        """
+        imti = {imt: i for i, imt in enumerate(self.imts)}
+        tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
+        gmvs = haz['gmv']
+        E = len(gmvs)
+        assets_by_taxi = general.groupby(assets, by_taxonomy)
+        for taxo, rm in riskmodel.items():
+            t = tdict[taxo]
+            try:
+                assets = assets_by_taxi[t]
+            except KeyError:  # there are no assets of taxonomy taxo
+                continue
+            for lt, rf in rm.risk_functions.items():
+                lti = riskmodel.lti[lt]
+                means, covs, idxs = rf.interpolate(gmvs[:, imti[rf.imt]])
+                for asset in assets:
+                    loss_ratios = numpy.zeros(E, F32)
+                    loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
+                    yield (lti, asset.ordinal, loss_ratios * asset.value(lt))
 
     def compute_gmfs_curves(self, monitor):
         """
@@ -386,10 +457,9 @@ class GmfGetter(object):
             with monitor('building hazard', measuremem=True):
                 gmfdata = numpy.fromiter(self.gen_gmv(), dt)
                 hazard = self.get_hazard(data=gmfdata)
-            for sid, hazardr in zip(self.sids, hazard):
-                for rlzi, array in hazardr.items():
-                    if len(array) == 0:  # no data
-                        continue
+            for sid, hazardr in hazard.items():
+                dic = general.group_array(hazardr, 'rlzi')
+                for rlzi, array in dic.items():
                     with hc_mon:
                         gmvs = array['gmv']
                         for imti, imt in enumerate(oq.imtls):
@@ -451,7 +521,8 @@ def get_maxloss_rupture(dstore, loss_type):
     """
     lti = dstore['oqparam'].lti[loss_type]
     ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [[ebr]] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [rgetter] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [ebr] = rgetter.get_ruptures()
     return ebr
 
 
@@ -463,6 +534,7 @@ def get_code2cls(ruptures_attrs):
     return code2cls
 
 
+# this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """
     Iterable over ruptures.
@@ -489,13 +561,43 @@ class RuptureGetter(object):
         eid_rlz = []
         for rup in self.rup_array:
             ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
-                            self.grp_id, (), rup['n_occ'], self.samples)
+                            self.grp_id, rup['n_occ'], self.samples)
             for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rlz))
         return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
 
-    def __iter__(self):
+    def get_rupdict(self):
+        """
+        :returns: a dictionary with the parameters of the rupture
+        """
+        assert len(self.rup_array) == 1, 'Please specify a slice of length 1'
+        dic = {'trt': self.trt, 'samples': self.samples}
+        with datastore.read(self.hdf5path) as dstore:
+            rupgeoms = dstore['rupgeoms']
+            source_ids = dstore['source_info']['source_id']
+            rec = self.rup_array[0]
+            geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
+                rec['sy'], rec['sz'])
+            dic['lons'] = geom['lon']
+            dic['lats'] = geom['lat']
+            dic['deps'] = geom['depth']
+            rupclass, surclass = self.code2cls[rec['code']]
+            dic['rupture_class'] = rupclass.__name__
+            dic['surface_class'] = surclass.__name__
+            dic['hypo'] = rec['hypo']
+            dic['occurrence_rate'] = rec['occurrence_rate']
+            dic['grp_id'] = rec['grp_id']
+            dic['n_occ'] = rec['n_occ']
+            dic['serial'] = rec['serial']
+            dic['srcid'] = source_ids[rec['srcidx']]
+        return dic
+
+    def get_ruptures(self, srcfilter=None):
+        """
+        :returns: a list of EBRuptures filtered by bounding box
+        """
+        ebrs = []
         with datastore.read(self.hdf5path) as dstore:
             rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
@@ -514,9 +616,6 @@ class RuptureGetter(object):
                 rupture.hypocenter = geo.Point(*rec['hypo'])
                 rupture.occurrence_rate = rec['occurrence_rate']
                 rupture.tectonic_region_type = self.trt
-                pmfx = rec['pmfx']
-                if pmfx != -1:
-                    rupture.pmf = dstore['pmfs'][pmfx]
                 if surface_cls is geo.PlanarSurface:
                     rupture.surface = geo.PlanarSurface.from_array(
                         mesh[:, 0, :])
@@ -534,10 +633,19 @@ class RuptureGetter(object):
                     rupture.surface.strike = rupture.surface.dip = None
                     rupture.surface.__init__(RectangularMesh(*mesh))
                 grp_id = rec['grp_id']
-                ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
+                ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
-                yield ebr
+                bbox = (rec['minlon'], rec['minlat'],
+                        rec['maxlon'], rec['maxlat'])
+                if srcfilter is None:
+                    ebrs.append(ebr)
+                    continue
+                ebr.sids = srcfilter.get_sids_within(
+                        bbox, rupture.tectonic_region_type, rupture.mag)
+                if len(ebr.sids):
+                    ebrs.append(ebr)
+        return ebrs
 
     def __len__(self):
         return len(self.rup_array)

@@ -2,9 +2,9 @@ Ucerf test
 ==========
 
 ============== ===================
-checksum32     4,149,403,932      
-date           2018-10-05T03:04:43
-engine_version 3.3.0-git48e9a474fd
+checksum32     87,673,300         
+date           2018-12-13T12:57:19
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 155, num_levels = 6
@@ -16,7 +16,7 @@ calculation_mode                'ucerf_hazard'
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              200.0             
-ses_per_logic_tree_path         1                 
+ses_per_logic_tree_path         3                 
 truncation_level                None              
 rupture_mesh_spacing            1.0               
 complex_fault_mesh_spacing      1.0               

@@ -2,18 +2,18 @@ Classical PSHA for the southern Pacific Islands reduced
 =======================================================
 
 ============== ===================
-checksum32     2,117,996,838      
-date           2018-10-05T03:05:05
-engine_version 3.3.0-git48e9a474fd
+checksum32     194,124,302        
+date           2018-12-13T12:57:50
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
-num_sites = 5, num_levels = 10
+num_sites = 5, num_levels = 20
 
 Parameters
 ----------
 =============================== ==================
 calculation_mode                'classical'       
-number_of_logic_tree_samples    1                 
+number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 300.0}
 investigation_time              1.0               
 ses_per_logic_tree_path         1                 
@@ -31,23 +31,20 @@ ses_seed                        42
 
 Input files
 -----------
-======================= ====================================================================
-Name                    File                                                                
-======================= ====================================================================
-gsim_logic_tree         `gmmLT_3.xml <gmmLT_3.xml>`_                                        
-job_ini                 `job.ini <job.ini>`_                                                
-source                  `gridded_seismicity_source_4.xml <gridded_seismicity_source_4.xml>`_
-source                  `int_kt.xml <int_kt.xml>`_                                          
-source                  `shallow_faults.xml <shallow_faults.xml>`_                          
-source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_                                            
-======================= ====================================================================
+======================= ============================
+Name                    File                        
+======================= ============================
+gsim_logic_tree         `gmmLT_3.xml <gmmLT_3.xml>`_
+job_ini                 `job.ini <job.ini>`_        
+source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_    
+======================= ============================
 
 Composite source model
 ----------------------
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 complex(3,0,4)  1/12            
+b1        1.00000 complex(3,0,4)  12/12           
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -65,10 +62,18 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(size=3, rlzs=1)
-  0,ZhaoEtAl2006Asc(): [0]
-  1,ZhaoEtAl2006Asc(): [0]
-  2,YoungsEtAl1997SInter(): [0]>
+  <RlzsAssoc(size=11, rlzs=12)
+  0,BooreAtkinson2008(): [0 4 8]
+  0,CampbellBozorgnia2008(): [1 5 9]
+  0,ChiouYoungs2008(): [ 2  6 10]
+  0,ZhaoEtAl2006Asc(): [ 3  7 11]
+  1,BooreAtkinson2008(): [0 4 8]
+  1,CampbellBozorgnia2008(): [1 5 9]
+  1,ChiouYoungs2008(): [ 2  6 10]
+  1,ZhaoEtAl2006Asc(): [ 3  7 11]
+  2,AtkinsonBoore2003SInter(): [0 1 2 3]
+  2,YoungsEtAl1997SInter(): [4 5 6 7]
+  2,ZhaoEtAl2006SInter(): [ 8  9 10 11]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -100,14 +105,14 @@ grp_id source_id  code gidx1 gidx2 num_ruptures calc_time split_time num_sites n
 0      ds_4_13974 P    5     6     100          0.0       0.0        0.0       0         0.0   
 0      ds_4_1455  P    6     7     100          0.0       0.0        0.0       0         0.0   
 0      ds_4_14802 P    7     8     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_15201 P    8     9     100          0.0       2.623E-06  0.0       1         0.0   
+0      ds_4_15201 P    8     9     100          0.0       3.576E-06  0.0       1         0.0   
 0      ds_4_16265 P    9     10    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_18232 P    10    11    100          0.0       2.146E-06  0.0       1         0.0   
+0      ds_4_18232 P    10    11    100          0.0       3.099E-06  0.0       1         0.0   
 0      ds_4_1895  P    11    12    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_19558 P    12    13    100          0.0       2.623E-06  0.0       1         0.0   
+0      ds_4_19558 P    12    13    100          0.0       2.861E-06  0.0       1         0.0   
 0      ds_4_19649 P    13    14    100          0.0       0.0        0.0       0         0.0   
 0      ds_4_19683 P    14    15    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_2111  P    15    16    100          0.0       2.623E-06  0.0       1         0.0   
+0      ds_4_2111  P    15    16    100          0.0       3.338E-06  0.0       1         0.0   
 0      ds_4_28780 P    16    17    100          0.0       0.0        0.0       0         0.0   
 0      ds_4_314   P    17    18    100          0.0       0.0        0.0       0         0.0   
 0      ds_4_32853 P    18    19    100          0.0       0.0        0.0       0         0.0   
@@ -132,24 +137,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.11222 0.14269 0.02116 0.27667 3      
-split_filter       0.60832 NaN     0.60832 0.60832 1      
+read_source_models 0.13275 0.14527 0.02117 0.29701 3      
+split_filter       8.59814 NaN     8.59814 8.59814 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================== ========
-task               sent                                                                     received
-read_source_models monitor=993 B converter=957 B fnames=593 B                               60.71 KB
-split_filter       srcs=58.75 KB monitor=343 B srcfilter=253 B sample_factor=21 B seed=14 B 68.53 KB
-================== ======================================================================== ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=1.14 KB fnames=368 B          60.81 KB
+split_filter       srcs=58.92 KB srcfilter=253 B seed=14 B 1.6 MB  
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.63153  0.0       1     
-total split_filter       0.60832  0.0       1     
-total read_source_models 0.33667  0.20312   3     
+total split_filter       8.59814  2.85156   1     
+total read_source_models 0.39825  0.40234   3     
 ======================== ======== ========= ======

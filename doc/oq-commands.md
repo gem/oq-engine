@@ -15,11 +15,11 @@ You can see the full list of commands by running `oq help`:
 ```bash
 $ oq help
 usage: oq [--version]
-          {purge,show_attrs,export,extract,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_uhs,plot_ac,reduce,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
+          {purge,show_attrs,export,extract,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_uhs,plot_ac,reduce,reduce_sm,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
           ...
 
 positional arguments:
-  {purge,show_attrs,export,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_uhs,plot_ac,reduce,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
+  {purge,show_attrs,export,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_uhs,plot_ac,reduce,reduce_sm,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
                         available subcommands; use oq help <subcmd>
 
 optional arguments:
@@ -175,7 +175,7 @@ of hazard curves, hazard maps and uniform hazard spectra
 for all realizations the command to use is
 
 ```
-$ oq extract hazard/rlzs
+$ oq extract hazard/rlzs <calc_id> local
 ```
 
 Be warned that for large calculations the extraction will likely be slower
@@ -305,5 +305,5 @@ The command is able to manage multiple Vs30 files at once. Here is an example
 of usage:
 
 ```bash
-$ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv,Exposure/Exposure_Res_Bolivia.csv Vs30/Ecuador.csv Vs30/Bolivia.csv --grid-spacing=10
+$ oq prepare_site_model Vs30/Ecuador.csv Vs30/Bolivia.csv -e Exposure/Exposure_Res_Ecuador.csv Exposure/Exposure_Res_Bolivia.csv --grid-spacing=10
 ```

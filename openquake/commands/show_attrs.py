@@ -15,7 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
+from openquake.commands import engine
 import h5py
 
 
@@ -24,7 +25,7 @@ def show_attrs(key, calc_id=-1):
     """
     Show the attributes of a HDF5 dataset in the datastore.
     """
-    ds = datastore.read(calc_id)
+    ds = engine.read(calc_id)
     try:
         attrs = h5py.File.__getitem__(ds.hdf5, key).attrs
     except KeyError:

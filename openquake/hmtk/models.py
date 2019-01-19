@@ -281,7 +281,7 @@ class IncrementalMFD(object):
     :param float bin_width:
         Width of a single histogram bin.
     :param list occur_rates:
-        `list` of occurrence rates (`float` values).
+        `list` of occurrence rates (float values).
     """
 
     def __init__(self, min_mag=None, bin_width=None, occur_rates=None):
@@ -340,7 +340,7 @@ class NodalPlane(object):
 
     :param probability:
         Probability for this node in a Nodal Plane Distribution, as a
-        :class:`decimal.Decimal`.
+        float.
     :param float strike:
         Strike angle.
     :param float dip:
@@ -374,7 +374,7 @@ class HypocentralDepth(object):
 
     :param probability:
         Probability for this node in a Hypocentral Depth Distribution, as a
-        :class:`decimal.Decimal`.
+        float.
     :param float depth:
         Depth (in km).
     """

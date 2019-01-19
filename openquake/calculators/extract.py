@@ -37,6 +37,7 @@ from openquake.commonlib import calc, util
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO32 = 2 ** 32
 
 
 def cast(loss_array, loss_dt):
@@ -276,11 +277,20 @@ def extract_uhs(dstore, what):
     /extract/uhs/rlz-0, etc
     """
     oq = dstore['oqparam']
+    imts = oq.imt_periods()
     mesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     dic = {}
+    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
+    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in oq.poes])
     for name, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        dic[name] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
+        hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(mesh))
+        uhs = numpy.zeros(len(hmap), uhs_dt)
+        for field in hmap.dtype.names:
+            imt, poe = field.split('-')
+            if imt in imts_dt.names:
+                uhs[poe][imt] = hmap[field]
+        dic[name] = uhs
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -585,6 +595,27 @@ def extract_mfd(dstore, what):
     return magfreq
 
 
+@extract.add('src_loss_table')
+def extract_src_loss_table(dstore, loss_type):
+    """
+    Extract the source loss table for a give loss type, ordered in decreasing
+    order. Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/src_loss_table/structural
+    """
+    oq = dstore['oqparam']
+    li = oq.lti[loss_type]
+    source_ids = dstore['source_info']['source_id']
+    idxs = dstore['ruptures'].value[['srcidx', 'grp_id']]
+    losses = dstore['rup_loss_table'][:, li]
+    slt = numpy.zeros(len(source_ids), [('grp_id', U32), (loss_type, F32)])
+    for loss, (srcidx, grp_id) in zip(losses, idxs):
+        slt[srcidx][loss_type] += loss
+        slt[srcidx]['grp_id'] = grp_id
+    slt = util.compose_arrays(source_ids, slt, 'source_id')
+    slt.sort(order=loss_type)
+    return slt[::-1]
+
+
 @extract.add('mean_std_curves')
 def extract_mean_std_curves(dstore, what):
     """
@@ -669,3 +700,36 @@ def curves_by_tag(dstore, tag):
                         out[n][lt] = counts
                     n += 1
         yield stat, out
+
+
+@extract.add('rupture')
+def extract_rupture(dstore, serial):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
+    """
+    ridx = list(dstore['ruptures']['serial']).index(int(serial))
+    [getter] = getters.get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    yield from getter.get_rupdict().items()
+
+
+@extract.add('event_info')
+def extract_event_info(dstore, eidx):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
+    """
+    event = dstore['events'][int(eidx)]
+    serial = int(event['eid'] // TWO32)
+    ridx = list(dstore['ruptures']['serial']).index(serial)
+    [getter] = getters.get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    rupdict = getter.get_rupdict()
+    rlzi = event['rlz']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    gsim = rlzs_assoc.gsim_by_trt[rlzi][rupdict['trt']]
+    for key, val in rupdict.items():
+        yield key, val
+    yield 'rlzi', rlzi
+    yield 'gsim', repr(gsim)

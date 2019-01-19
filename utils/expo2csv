@@ -73,7 +73,8 @@ def expo2csv(job_ini):
 
     with performance.Monitor('expo2csv') as mon:
         # save exposure data as csv
-        csvname = oq.inputs['exposure'].replace('.xml', '.csv')
+        [fname] = oq.inputs['exposure']
+        csvname = fname.replace('.xml', '.csv')
         print('Saving %s' % csvname)
         with codecs.open(csvname, 'wb', encoding='utf8') as f:
             writer = csv.writer(f)
@@ -82,13 +83,13 @@ def expo2csv(job_ini):
                 writer.writerow(row)
 
         # save exposure header as xml
-        head = nrml.read(oq.inputs['exposure'], stop='assets')
+        head = nrml.read(fname, stop='assets')
         if occupancy_periods and not hasattr(head[0], 'occupancyPeriods'):
             assets = head[0].nodes.pop(-1)  # remove assets node
             n = node.Node('occupancyPeriods', text=' '.join(occupancy_periods))
             head[0].append(n)  # add occupancyPeriods node
             head[0].append(assets)  # restore assets node
-        xmlname = oq.inputs['exposure'].replace('.xml', '-header.xml')
+        xmlname = fname.replace('.xml', '-header.xml')
         print('Saving %s' % xmlname)
         head[0].assets.text = os.path.basename(csvname)
         with open(xmlname, 'wb') as f:

@@ -2,9 +2,9 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
 ============== ===================
-checksum32     3,294,662,884      
-date           2018-10-05T03:05:03
-engine_version 3.3.0-git48e9a474fd
+checksum32     4,152,338,418      
+date           2018-12-13T12:57:47
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -31,16 +31,14 @@ ses_seed                        42
 
 Input files
 -----------
-======================= ================================================================
-Name                    File                                                            
-======================= ================================================================
-gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                    
-job_ini                 `job.ini <job.ini>`_                                            
-sites                   `sites.csv <sites.csv>`_                                        
-source                  `Alaska_asc_grid_NSHMP2007.xml <Alaska_asc_grid_NSHMP2007.xml>`_
-source                  `extra_source_model.xml <extra_source_model.xml>`_              
-source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_    
-======================= ================================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+site_model              `sites.csv <sites.csv>`_                                    
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
@@ -84,7 +82,7 @@ Slowest sources
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 0      1         M    0     2     160          0.0       0.0        0.0       0         0.0   
-1      2         M    0     12    1,104        0.0       0.00396    0.0       4         0.0   
+1      2         M    0     12    1,104        0.0       0.00272    0.0       4         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -103,24 +101,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00242 8.787E-04 0.00180 0.00304 2      
-split_filter       0.00549 NaN       0.00549 0.00549 1      
+read_source_models 0.00184 5.199E-04 0.00147 0.00221 2      
+split_filter       0.00710 NaN       0.00710 0.00710 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-read_source_models monitor=662 B converter=638 B fnames=383 B                              6.78 KB 
-split_filter       srcs=5.01 KB monitor=343 B srcfilter=253 B sample_factor=21 B seed=14 B 3.01 KB 
-================== ======================================================================= ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=776 B fnames=233 B           6.73 KB 
+split_filter       srcs=5.03 KB srcfilter=253 B seed=14 B 3.01 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.01131  0.0       1     
-total split_filter       0.00549  0.0       1     
-total read_source_models 0.00484  0.0       2     
+total split_filter       0.00710  0.0       1     
+total read_source_models 0.00368  0.0       2     
 ======================== ======== ========= ======

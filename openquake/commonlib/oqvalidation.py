@@ -19,6 +19,7 @@
 import os
 import logging
 import functools
+import operator
 import multiprocessing
 import numpy
 
@@ -32,6 +33,7 @@ from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
+TWO32 = 2 ** 32
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
@@ -101,8 +103,9 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
-    asset_hazard_distance = valid.Param(valid.positivefloat, 20)  # km
+    asset_hazard_distance = valid.Param(valid.positivefloat, 15)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
+    max_num_sites = valid.Param(valid.positiveint, TWO16)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     mean_hazard_curves = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
@@ -138,9 +141,9 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
-    ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
+    ses_per_logic_tree_path = valid.Param(
+        valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
-    max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
     shakemap_id = valid.Param(valid.nice_string, None)
     site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
@@ -150,7 +153,6 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.source_id, None)
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    split_sources = valid.Param(valid.boolean, True)
     pointsource_distance = valid.Param(valid.maximum_distance, {})
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -293,7 +295,7 @@ class OqParam(valid.ParamSet):
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
-            if self.ses_per_logic_tree_path >= TWO16:
+            if self.ses_per_logic_tree_path >= TWO32:
                 raise ValueError('ses_per_logic_tree_path too big: %d' %
                                  self.ses_per_logic_tree_path)
             if self.number_of_logic_tree_samples >= TWO16:
@@ -407,6 +409,37 @@ class OqParam(valid.ParamSet):
         self.risk_imtls = imtls
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
+
+    def hmap_dt(self):  # used for CSV export
+        """
+        :returns: a composite dtype (imt, poe)
+        """
+        return numpy.dtype([('%s-%s' % (imt, poe), F32)
+                            for imt in self.imtls for poe in self.poes])
+
+    def uhs_dt(self):  # used for CSV export
+        """
+        :returns: a composity dtype (poe, imt)
+        """
+        imts = []
+        for im in self.imtls:
+            imt = from_string(im)
+            if hasattr(imt, 'period'):
+                imts.append(imt)
+        imts.sort(key=operator.attrgetter('period'))
+        return numpy.dtype([('%s-%s' % (poe, imt), F32)
+                            for poe in self.poes for imt in imts])
+
+    def imt_periods(self):
+        """
+        :returns: the IMTs with a period, as objects
+        """
+        imts = []
+        for im in self.imtls:
+            imt = from_string(im)
+            if hasattr(imt, 'period'):
+                imts.append(imt)
+        return imts
 
     def imt_dt(self):
         """
@@ -531,6 +564,12 @@ class OqParam(valid.ParamSet):
                     else 'vulnerability')
         return ('fragility' if 'damage' in self.calculation_mode
                 else 'vulnerability')
+
+    def is_event_based(self):
+        """
+        The calculation mode is event_based, event_based_risk or ebrisk
+        """
+        return self.calculation_mode in 'event_based_risk ebrisk'
 
     def is_valid_shakemap(self):
         """
@@ -758,7 +797,8 @@ class OqParam(valid.ParamSet):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
                 self.calculation_mode.startswith('scenario')):
             return
-        if 'source' not in self.inputs and not self.hazard_calculation_id:
+        if ('source_model_logic_tree' not in self.inputs and
+                not self.hazard_calculation_id):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
                              self.inputs.get('job_ini', 'job_ini'))
