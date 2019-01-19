@@ -127,6 +127,7 @@ class SourceGroup(collections.Sequence):
                 for rup, _ in src.data:
                     assert rup.weight is not None
 
+    @property
     def atomic(self):
         """
         :returns: True if the group cannot be split
