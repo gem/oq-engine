@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import shutil
 import tempfile
 import mock
 import unittest
@@ -31,7 +30,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.risklib import asset
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation
-from openquake.qa_tests_data.classical import case_1, case_2
+from openquake.qa_tests_data.classical import case_1, case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
@@ -165,24 +164,6 @@ def sitemodel():
         <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
     </siteModel>
 </nrml>''')]
-
-
-class ClosestSiteModelTestCase(unittest.TestCase):
-
-    def test_get_far_away_parameter(self):
-        oqparam = mock.Mock()
-        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
-        oqparam.hazard_calculation_id = None
-        oqparam.base_path = '/'
-        oqparam.maximum_distance = 100
-        oqparam.max_site_model_distance = 5
-        oqparam.region_grid_spacing = None
-        oqparam.sites = [(1.0, 0, 0), (2.0, 0, 0)]
-        oqparam.inputs = dict(site_model=sitemodel())
-        with mock.patch('logging.warn') as warn:
-            readinput.get_site_collection(oqparam)
-        # check that the warning was raised
-        self.assertEqual(len(warn.call_args), 2)
 
 
 class ExposureTestCase(unittest.TestCase):
@@ -346,7 +327,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
 
-        with self.assertRaises(KeyError) as ctx:
+        with self.assertRaises(Exception) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("node asset: 'number', line 17 of", str(ctx.exception))
 
@@ -598,6 +579,15 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             readinput.get_composite_source_model(oq, in_memory=False)
         self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
 
+    def test_applyToSources(self):
+        oq = readinput.get_oqparam('job.ini', case_21)
+        oq.prefilter_sources = 'no'
+        with mock.patch('logging.info') as info:
+            readinput.get_composite_source_model(oq)
+        self.assertEqual(
+            info.call_args[0],
+            ('Applied %d changes to the composite source model', 81))
+
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
     def tearDown(self):
@@ -620,7 +610,7 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(
             'job.ini', case_16, region_grid_spacing='15')
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
-        self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
+        self.assertEqual(len(sitecol), 148)  # 3 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 

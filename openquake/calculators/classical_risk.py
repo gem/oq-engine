@@ -61,7 +61,7 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
         l_idxs = range(len(riskmodel.lti))
         for assets, outs in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [w[out.rlzi] for out in outs]
+            weights = [w[out.rlzi]['default'] for out in outs]
             out = outs[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):

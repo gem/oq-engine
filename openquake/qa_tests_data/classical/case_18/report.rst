@@ -2,9 +2,9 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ============== ===================
-checksum32     1,369,868,782      
-date           2018-10-05T03:05:24
-engine_version 3.3.0-git48e9a474fd
+checksum32     902,044,270        
+date           2018-12-13T12:58:17
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -37,7 +37,6 @@ Name                    File
 gsim_logic_tree         `nbc_asc_logic_tree.xml <nbc_asc_logic_tree.xml>`_          
 job_ini                 `job.ini <job.ini>`_                                        
 sites                   `vancouver_school_sites.csv <vancouver_school_sites.csv>`_  
-source                  `vancouver_area_source.xml <vancouver_area_source.xml>`_    
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -80,7 +79,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      VICM      A    0     8     2,430        0.0       0.49202    0.0       30        0.0   
+0      VICM      A    0     8     2,430        0.0       0.28126    0.0       30        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -99,24 +98,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01595 NaN    0.01595 0.01595 1      
-split_filter       0.01968 NaN    0.01968 0.01968 1      
+read_source_models 0.01661 NaN    0.01661 0.01661 1      
+split_filter       0.01593 NaN    0.01593 0.01593 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                    2.5 KB  
-split_filter       srcs=2.13 KB monitor=425 B srcfilter=253 B sample_factor=21 B seed=14 B 7.85 KB 
-================== ======================================================================= ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=388 B fnames=116 B           2.47 KB 
+split_filter       srcs=2.14 KB srcfilter=253 B seed=14 B 7.85 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.02717  0.0       1     
-total split_filter       0.01968  0.0       1     
-total read_source_models 0.01595  0.0       1     
+total read_source_models 0.01661  0.0       1     
+total split_filter       0.01593  0.0       1     
 ======================== ======== ========= ======

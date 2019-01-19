@@ -108,7 +108,7 @@ class GmfComputer(object):
             self.sctx, self.dctx = cmaker.make_contexts(sitecol, rupture)
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
-            self.sites = sitecol.filtered(self.sids)
+            self.sites = sitecol.complete.filtered(self.sids)
 
     def compute(self, gsim, num_events, seed=None):
         """

@@ -16,15 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
-import operator
 import numpy
 
 from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
 
 TWO16 = 2 ** 16
@@ -39,6 +36,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
+
+BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
 
@@ -182,24 +181,6 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 # ################## utilities for classical calculators ################ #
 
-def get_imts_periods(imtls):
-    """
-    Returns a list of IMT strings and a list of periods. There is an element
-    for each IMT of type Spectral Acceleration, including PGA which is
-    considered an alias for SA(0.0). The lists are sorted by period.
-
-    :param imtls: a set of intensity measure type strings
-    :returns: a list of IMT strings and a list of periods
-    """
-    imts = []
-    for im in imtls:
-        imt = from_string(im)
-        if hasattr(imt, 'period'):
-            imts.append(imt)
-    imts.sort(key=operator.attrgetter('period'))
-    return imts, [imt.period for imt in imts]
-
-
 def make_hmap(pmap, imtls, poes):
     """
     Compute the hazard maps associated to the passed probability map.
@@ -238,8 +219,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
         hcurves = pmap.value
     except AttributeError:
         hcurves = pmap
-    dtlist = [('%s-%s' % (imt, poe), F32)
-              for imt in imtls for poe in poes]
+    dtlist = [('%s-%s' % (imt, poe), F32) for imt in imtls for poe in poes]
     array = numpy.zeros(len(pmap), dtlist)
     for imt, imls in imtls.items():
         curves = hcurves[:, imtls(imt)]
@@ -249,31 +229,26 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     return array  # array of shape N
 
 
-def make_uhs(hcurves, imtls, poes, nsites):
+def make_uhs(hmap, oq):
     """
     Make Uniform Hazard Spectra curves for each location.
 
     It is assumed that the `lons` and `lats` for each of the `maps` are
     uniform.
 
-    :param pmap:
-        a composite array of hazard curves
-    :param imtls:
-        a dictionary of intensity measure types and levels
-    :param poes:
-        a sequence of PoEs for the underlying hazard maps
+    :param hmap:
+        a composite array of hazard maps
+    :param oq:
+        an OqParam instance
     :returns:
-        an composite array containing nsites uniform hazard maps
+        a composite array containing uniform hazard spectra
     """
-    imts, _ = get_imts_periods(imtls)
-    array = make_hmap_array(hcurves, imtls, poes, len(hcurves))
-    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
-    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
-    uhs = numpy.zeros(nsites, uhs_dt)
-    for field in array.dtype.names:
+    uhs = numpy.zeros(len(hmap), oq.uhs_dt())
+    for field in hmap.dtype.names:
         imt, poe = field.split('-')
-        if any(imt == str(i) for i in imts):
-            uhs[poe][imt] = array[field]
+        poe_imt = '%s-%s' % (poe, imt)
+        if poe_imt in uhs.dtype.names:
+            uhs[poe_imt] = hmap[field]
     return uhs
 
 
@@ -342,7 +317,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.serial, ebr.srcidx, ebr.n_occ.sum(), rate,
+                (ebr.serial, ebr.srcidx, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake,
                  'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
@@ -354,81 +329,27 @@ class RuptureSerializer(object):
     Serialize event based ruptures on an HDF5 files. Populate the datasets
     `ruptures` and `sids`.
     """
-    rupture_dt = numpy.dtype([
-        ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
-        ('n_occ', U16),
-        ('gidx1', U32), ('gidx2', U32),
-        ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
-
-    pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
-
-    @classmethod
-    def get_array_nbytes(cls, ebruptures, offset):
-        """
-        Convert a list of EBRuptures into a numpy composite array
-        """
-        lst = []
-        geoms = []
-        nbytes = 0
-        for ebrupture in ebruptures:
-            rup = ebrupture.rupture
-            mesh = surface_to_array(rup.surface)
-            sy, sz = mesh.shape[1:]
-            # sanity checks
-            assert sy < TWO16, 'Too many multisurfaces: %d' % sy
-            assert sz < TWO16, 'The rupture mesh spacing is too small'
-            hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-            rate = getattr(rup, 'occurrence_rate', numpy.nan)
-            points = mesh.reshape(3, -1).T   # shape (n, 3)
-            n = len(points)
-            tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
-                   rup.code, ebrupture.n_occ,
-                   offset, offset + n, getattr(ebrupture, 'pmfx', -1),
-                   rup.mag, rup.rake, rate, hypo, sy, sz)
-            offset += n
-            lst.append(tup)
-            geoms.append(numpy.array([tuple(p) for p in points], point3d))
-            nbytes += cls.rupture_dt.itemsize + mesh.nbytes
-        geom = numpy.concatenate(geoms)
-        return numpy.array(lst, cls.rupture_dt), geom, nbytes
-
     def __init__(self, datastore):
         self.datastore = datastore
         self.nbytes = 0
         self.nruptures = 0
-        datastore.create_dset('ruptures', self.rupture_dt, attrs={'nbytes': 0})
-        datastore.create_dset('rupgeoms', point3d)
+        datastore.create_dset('ruptures', calc.stochastic.rupture_dt,
+                              attrs={'nbytes': 0})
+        datastore.create_dset('rupgeoms', calc.stochastic.point3d)
 
-    def save(self, ebruptures):
+    def save(self, rup_array):
         """
-        Populate a dictionary of site IDs tuples and save the ruptures.
-
-        :param ebruptures: a list of EBRupture objects to save
+         Store the ruptures in array format.
         """
-        pmfbytes = 0
-        self.nruptures += len(ebruptures)
-        for ebr in ebruptures:
-            rup = ebr.rupture
-            if hasattr(rup, 'pmf'):
-                pmfs = numpy.array([(ebr.serial, rup.pmf)], self.pmfs_dt)
-                dset = self.datastore.extend('pmfs', pmfs)
-                ebr.pmfx = len(dset) - 1
-                pmfbytes += self.pmfs_dt.itemsize + rup.pmf.nbytes
-
-        # store the ruptures in a compact format
+        self.nruptures += len(rup_array)
         offset = len(self.datastore['rupgeoms'])
-        array, geom, nbytes = self.get_array_nbytes(ebruptures, offset)
+        rup_array.array['gidx1'] += offset
+        rup_array.array['gidx2'] += offset
         previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
-        dset = self.datastore.extend(
-            'ruptures', array, nbytes=previous + nbytes)
-        self.datastore.extend('rupgeoms', geom)
-        # save nbytes occupied by the PMFs
-        if pmfbytes:
-            if 'nbytes' in dset.attrs:
-                dset.attrs['nbytes'] += pmfbytes
-            else:
-                dset.attrs['nbytes'] = pmfbytes
+        self.datastore.extend(
+            'ruptures', rup_array, nbytes=previous + rup_array.nbytes)
+        self.datastore.extend('rupgeoms', rup_array.geom)
+        # TODO: PMFs for nonparametric ruptures are not stored
         self.datastore.flush()
 
     def close(self):

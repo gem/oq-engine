@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2018-10-05T03:05:03
-engine_version 3.3.0-git48e9a474fd
+date           2018-12-13T12:57:47
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 6, num_levels = 3
@@ -37,7 +37,6 @@ Name                    File
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
 sites                   `sites.csv <sites.csv>`_                                    
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -78,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     8     440          0.0       0.27700    0.0       20        0.0   
+0      1         A    0     8     440          0.0       0.16623    0.0       20        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -97,24 +96,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00840 NaN    0.00840 0.00840 1      
-split_filter       0.01630 NaN    0.01630 0.01630 1      
+read_source_models 0.01664 NaN    0.01664 0.01664 1      
+split_filter       0.01347 NaN    0.01347 0.01347 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ==================================================================== ========
-task               sent                                                                 received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                 2.35 KB 
-split_filter       srcs=2 KB monitor=425 B srcfilter=253 B sample_factor=21 B seed=14 B 5.71 KB 
-================== ==================================================================== ========
+================== =================================== ========
+task               sent                                received
+read_source_models converter=388 B fnames=107 B        2.34 KB 
+split_filter       srcs=2 KB srcfilter=253 B seed=14 B 5.71 KB 
+================== =================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.02442  0.0       1     
-total split_filter       0.01630  0.0       1     
-total read_source_models 0.00840  0.0       1     
+total read_source_models 0.01664  0.0       1     
+total split_filter       0.01347  0.0       1     
 ======================== ======== ========= ======

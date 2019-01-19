@@ -15,9 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
 from openquake.calculators import getters
 from openquake.commonlib import calc
+from openquake.commands import engine
 
 
 def make_figure(sitecol, imtls, poes, hmaps):
@@ -47,7 +48,7 @@ def plot_hmaps(calc_id):
     """
     Mean hazard maps plotter.
     """
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
@@ -56,5 +57,6 @@ def plot_hmaps(calc_id):
     array = hmaps.array.reshape(len(hmaps.array), M, P)
     plt = make_figure(dstore['sitecol'], oq.imtls, oq.poes, array)
     plt.show()
+
 
 plot_hmaps.arg('calc_id', 'a computation id', type=int)

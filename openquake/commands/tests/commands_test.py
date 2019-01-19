@@ -27,14 +27,14 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib.datastore import read
 from openquake import commonlib
-from openquake.commonlib.readinput import read_csv
+from openquake.commonlib.readinput import read_csv, get_oqparam
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
-from openquake.commands.engine import run_job
+from openquake.commands.engine import run_job, smart_run
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
@@ -48,7 +48,8 @@ from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_2, case_5, case_16
-from openquake.qa_tests_data.event_based_risk import case_master
+from openquake.qa_tests_data.event_based_risk import (
+    case_master, case_1 as case_exposure)
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi, dbserver
 from openquake.server.tests import data as test_data
@@ -74,7 +75,7 @@ class Print(object):
 
 class InfoTestCase(unittest.TestCase):
     EXPECTED = '''<CompositionInfo
-b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
+b1, x15.xml, grp=[0], weight=1.0: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
 0,AkkarBommer2010(): [0]>'''
@@ -342,6 +343,21 @@ class ZipTestCase(unittest.TestCase):
                          names)
         shutil.rmtree(dtemp)
 
+    def test_zip_ebr(self):
+        # this is a case with an exposure.csv
+        ini = os.path.join(os.path.dirname(case_exposure.__file__), 'job.ini')
+        dtemp = tempfile.mkdtemp()
+        xzip = os.path.join(dtemp, 'x.zip')
+        zip_cmd.func(ini, xzip, None)
+        names = sorted(zipfile.ZipFile(xzip).namelist())
+        self.assertEqual(
+            ['exposure.csv', 'exposure.xml', 'gmpe_logic_tree.xml',
+             'job.ini', 'source_model.xml', 'source_model_logic_tree.xml',
+             'vulnerability_model_nonstco.xml',
+             'vulnerability_model_stco.xml'],
+            names)
+        shutil.rmtree(dtemp)
+
 
 class SourceModelShapefileConverterTestCase(unittest.TestCase):
     """
@@ -417,6 +433,12 @@ class EngineRunJobTestCase(unittest.TestCase):
         with read(job_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
+
+    def test_smart_run(self):
+        # test smart_run with gmf_ebrisk, since it was breaking
+        ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
+        oqparam = get_oqparam(ini)
+        smart_run(ini, oqparam, 'info', None, '', False)
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored

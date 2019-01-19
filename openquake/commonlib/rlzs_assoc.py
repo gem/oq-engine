@@ -20,8 +20,7 @@ import logging
 import operator
 import collections
 import numpy
-from openquake.hazardlib import probability_map, stats
-
+from openquake.hazardlib import probability_map
 
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
@@ -155,9 +154,7 @@ class RlzsAssoc(object):
                 rlz.weight /= tot_weight
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
-            if tot_weight == 0:
-                raise ValueError('All realizations have zero weight??')
-            elif abs(tot_weight - 1) > 1E-8:
+            if not tot_weight.is_one():
                 # this may happen for rounding errors or because of the
                 # logic tree reduction; we ensure the sum of the weights is 1
                 for rlz in self.realizations:
@@ -190,15 +187,6 @@ class RlzsAssoc(object):
                     pmaps[rlzi] |= pmap
         return pmaps
 
-    def compute_pmap_stats(self, pmap_by_grp, statfuncs):
-        """
-        :param pmap_by_grp: dictionary group string -> probability map
-        :param statfuncs: a list of statistical functions
-        :returns: a probability map containing all statistics
-        """
-        pmaps = self.combine_pmaps(pmap_by_grp)
-        return stats.compute_pmap_stats(pmaps, statfuncs, self.weights)
-
     def get_rlz(self, rlzstr):
         """
         Get a Realization instance for a string of the form 'rlz-\d+'
@@ -212,7 +200,7 @@ class RlzsAssoc(object):
         idx = numpy.arange(offset, offset + len(gsim_rlzs))
         rlzs = []
         for i, gsim_rlz in enumerate(gsim_rlzs):
-            weight = float(lt_model.weight) * float(gsim_rlz.weight)
+            weight = float(lt_model.weight) * gsim_rlz.weight
             rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
             self.gsim_by_trt.append(dict(zip(all_trts, gsim_rlz.value)))
             rlzs.append(rlz)

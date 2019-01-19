@@ -1,4 +1,79 @@
   [Michele Simionato]
+  * Turned utils/reduce_sm into a proper command
+  * Fixed a wrong coefficient in the ShakeMap amplification
+  * Fixed a bug in the hazard curves export (the filename did not contain
+    the period of the IMT thus producing duplicated files)
+  * Parallelized the reading of the exposure
+
+  [Marco Pagani]
+  * Fixed the implementation on mutex ruptures
+
+  [Michele Simionato]
+  * Changed the aggregated loss curves exporter
+  * Added an experimental calculator ebrisk
+  * Changed the ordering of the events (akin to a change of seed in the
+    asset correlation)
+
+  [Robin Gee]
+  * Fixed bug in tusa_langer_2016.py related to coeffs affecting Repi models
+
+  [Michele Simionato]
+  * Added a check to forbid to set `ses_per_logic_tree_path = 0`
+  * Added an API `/extract/event_info/eidx`
+  * Splitting the sources in classical calculators and not in event based
+  * Removed `max_site_model_distance`
+  * Extended the logic used in event_based_risk - read the hazard sites
+    from the site model, not from the exposure - to all calculators
+  * In classical_bcr calculations with a CSV exposure the retrofitted field
+    was not read. Now a missing retrofitted value is an error
+
+python3-oq-engine (3.3.0-1~xenial01) xenial; urgency=low
+
+  [Graeme Weatherill]
+  * Adds GMPE suite for national PSHA for Germany
+
+  [Daniele Viganò]
+  * Added a warning box when an unsupported browser is used to view the WebUI
+  * Updated Docker containers to support a multi-node deployment
+    with a shared directory
+  * Moved the Docker containers source code from oq-builders
+  * Updated the documentation related to the shared directory
+    which is now mandatory for multi-node deployments
+
+  [Matteo Nastasi]
+  * Removed tests folders
+
+  [Stéphane Drouet]
+  * Added Drouet & Cotton (2015) GMPE including 2017 erratum
+
+  [Michele Simionato]
+  * Optimized the memory occupation in classical calculations (Context.poe_map)
+  * Fixed a wrong counting of the ruptures in split fault sources with
+    an hypo_list/slip_list causing the calculation to fail
+  * Made the export of uniform hazard spectra fast
+  * Made the `std` hazard output properly exportable
+  * Replaced the `~` in the header of the UHS csv files with a `-`
+  * Restored the `individual_curves` flag even for the hazard curves
+  * Implemented dGMPE weights per intensity measure type
+  * Extended `--reuse-hazard` to all calculators
+  * Fixed a bug in event_based_risk from GMFs with coefficients of variations
+
+  [Graeme Weatherill]
+  * Adds magnitude scaling relation for Germany
+
+  [Michele Simionato]
+  * Used floats for the the GSIM realization weights, not Python Decimals
+  * Added a flag `fast_sampling`, by default False
+  * Added an API `/extract/src_loss_table/<loss_type>`
+  * Removed the rupture filtering from `sample_ruptures` and optimized it in
+    the `RuptureGetter` by making use of the bounding box
+  * Raised the limit on `ses_per_logic_tree_path` from 2**16 to 2**32;
+  * Added a parameter `max_num_sites` to increase the number of sites accepted
+    by an event based calculation up to 2 ** 32 (the default is still 2 ** 16)
+  * Added a command `oq compare` to compare hazard curves and maps within
+    calculations
+  * Extended the engine to read transparently zipped source models and exposures
+  * Restored the check for invalid source IDs in applyToSources
   * Extended the command `oq zip` to zip source models and exposures
   * Parallelized the associations event ID -> realization ID
   * Improved the message when assets are discarded in scenario calculations
@@ -8,6 +83,7 @@
   [Marco Pagani]
   * Added two modified versions of the Bindi et al. (2011) to be used in a
     backbone approach to compute hazard in Italy
+  * Added a modified version of Berge-Thierry et al. 2003 supporting Mw
 
   [Michele Simionato]
   * Changed the way loss curves and loss maps are stored in order to unify
@@ -184,6 +260,8 @@
   * Unified all distribution mechanisms to returns the outputs via zmq
   * Added a check for inconsistent IMTs between hazard and risk
   * Replaced the forking processpool with a spawning processpool
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 07 Jan 2019 13:51:24 +0000
 
 python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
 

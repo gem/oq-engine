@@ -75,7 +75,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
     attribute surface_nodes to an appropriate value.
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
-    rupture_slip_direction'''.split()
+    rupture_slip_direction weight'''.split()
     serial = 0  # set to a value > 0 by the engine
     _code = {}
     types = {}
@@ -85,9 +85,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         Initialize the class dictionaries `._code` and .`types` encoding the
         bidirectional correspondence between an integer in the range 0..255
-        (the code) and a triplet of classes (rupture_class, surface_class,
-        source_class). This is useful when serializing the rupture to and
-        from HDF5.
+        (the code) and a pair of classes (rupture_class, surface_class).
+        This is useful when serializing the rupture to and from HDF5.
         """
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
@@ -102,7 +101,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
             raise ValueError('Too many rupture codes: %d' % n)
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, rupture_slip_direction=None):
+                 surface, rupture_slip_direction=None, weight=None):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         NodalPlane.check_rake(rake)
@@ -112,6 +111,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.hypocenter = hypocenter
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
+        self.weight = weight
+
 
     @property
     def code(self):
@@ -178,7 +179,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         in increasing order, and if they are not defined with unit step
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 pmf, rupture_slip_direction=None):
+                 pmf, rupture_slip_direction=None, weight=None):
         occ = numpy.array([occ for (prob, occ) in pmf.data])
         if not occ[0] == 0:
             raise ValueError('minimum number of ruptures must be zero')
@@ -190,7 +191,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
                 'numbers of ruptures must be defined with unit step')
         super().__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            rupture_slip_direction)
+            rupture_slip_direction, weight)
         # an array of probabilities with sum 1
         self.probs_occur = numpy.array(
             [prob for (prob, occ) in pmf.data], numpy.float32)
@@ -565,12 +566,11 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, samples=1):
+    def __init__(self, rupture, srcidx, grp_id, n_occ, samples=1):
         assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
-        self.sids = sids
         self.n_occ = n_occ
         self.samples = samples
 
@@ -652,8 +652,8 @@ class EBRupture(object):
         rupture = self.rupture
         events = self.get_events(rlzs_by_gsim)
         events_by_ses = self.get_events_by_ses(events, num_ses)
-        new = ExportedRupture(self.serial, events_by_ses, self.sids)
-        new.mesh = mesh[self.sids]
+        new = ExportedRupture(self.serial, events_by_ses)
+        new.mesh = mesh[()]
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):

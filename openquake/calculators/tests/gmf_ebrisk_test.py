@@ -65,7 +65,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 10)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
-        val = 60.15764
+        val = 60.1378
         aae(totloss / 1E6, [val], decimal=4)
 
         # avg_losses-rlzs has shape (A, R, LI)
@@ -90,7 +90,6 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_4.__file__, 'job_haz.ini')
         calc0 = self.calc.datastore  # event_based
         self.run_calc(case_4.__file__, 'job_risk.ini',
-                      concurrent_tasks='0',  # avoid for bug
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
         [fname] = export(('agg_loss_table', 'csv'), calc1)
@@ -102,8 +101,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
         calc0 = self.calc.datastore  # single file event_based_risk
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
-                      calculation_mode='event_based',
-                      concurrent_tasks='0')
+                      calculation_mode='event_based')
         calc1 = self.calc.datastore  # event_based
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       hazard_calculation_id=str(calc1.calc_id),

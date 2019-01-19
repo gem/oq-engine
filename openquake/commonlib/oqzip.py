@@ -17,10 +17,10 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import mock
 import os.path
 import logging
 from openquake.baselib import general
-from openquake.hazardlib import nrml
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logictree
 
@@ -45,11 +45,24 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     Zip the source model files starting from the smmLT.xml file
     """
     basedir = os.path.dirname(ssmLT)
+    if os.path.basename(ssmLT) != 'ssmLT.xml':
+        orig = ssmLT
+        ssmLT = os.path.join(basedir, 'ssmLT.xml')
+        with open(ssmLT, 'wb') as f:
+            f.write(open(orig, 'rb').read())
+
     archive_zip = archive_zip or os.path.join(basedir, 'ssmLT.zip')
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
-    files = [os.path.abspath(ssmLT)] + logictree.collect_info(ssmLT).smpaths
-    return general.zipfiles(files, archive_zip, log=log)
+    oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT})
+    checksum = readinput.get_checksum32(oq)
+    checkfile = os.path.join(os.path.dirname(ssmLT), 'CHECKSUM.txt')
+    with open(checkfile, 'w') as f:
+        f.write(str(checksum))
+    files = logictree.collect_info(ssmLT).smpaths + [
+        os.path.abspath(ssmLT), os.path.abspath(checkfile)]
+    general.zipfiles(files, archive_zip, log=log, cleanup=True)
+    return archive_zip
 
 
 def zip_exposure(exposure_xml, archive_zip='', log=logging.info):
@@ -60,8 +73,9 @@ def zip_exposure(exposure_xml, archive_zip='', log=logging.info):
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
     [exp] = Exposure.read_headers([exposure_xml])
-    return general.zipfiles(
-        [exposure_xml] + exp.datafiles, archive_zip, log=log)
+    files = [exposure_xml] + exp.datafiles
+    general.zipfiles(files, archive_zip, log=log, cleanup=True)
+    return archive_zip
 
 
 def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
@@ -79,48 +93,12 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
             sys.exit('%s exists already' % archive_zip)
     # do not validate to avoid permissions error on the export_dir
     oq = oq or readinput.get_oqparam(job_ini, validate=False)
-    files = set()
     if risk_ini:
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
-        oq.inputs.update(readinput.get_params([risk_ini])['inputs'])
-        files.add(os.path.normpath(os.path.abspath(job_ini)))
-
-    # collect .hdf5 tables for the GSIMs, if any
-    if 'gsim_logic_tree' in oq.inputs or oq.gsim:
-        gsim_lt = readinput.get_gsim_lt(oq)
-        for gsims in gsim_lt.values.values():
-            for gsim in gsims:
-                table = getattr(gsim, 'GMPE_TABLE', None)
-                if table:
-                    files.add(table)
-
-    # collect exposure.csv, if any
-    exposures_xml = oq.inputs.get('exposure', [])
-    for exposure_xml in exposures_xml:
-        dname = os.path.dirname(exposure_xml)
-        expo = nrml.read(exposure_xml, stop='asset')[0]
-        if not expo.assets:
-            exposure_csv = (~expo.assets).strip()
-            for csv in exposure_csv.split():
-                if csv and os.path.exists(os.path.join(dname, csv)):
-                    files.add(os.path.join(dname, csv))
-
-    # collection .hdf5 UCERF file, if any
-    if oq.calculation_mode.startswith('ucerf_'):
-        sm = nrml.read(oq.inputs['source_model'])
-        fname = sm.sourceModel.UCERFSource['filename']
-        f = os.path.join(os.path.dirname(oq.inputs['source_model']), fname)
-        files.add(os.path.normpath(f))
-
-    # collect all other files
-    for key in oq.inputs:
-        fname = oq.inputs[key]
-        if isinstance(fname, list):
-            for f in fname:
-                files.add(os.path.normpath(f))
-        elif isinstance(fname, dict):
-            for f in fname.values():
-                files.add(os.path.normpath(f))
-        else:
-            files.add(os.path.normpath(fname))
+        risk_inputs = readinput.get_params([risk_ini])['inputs']
+        del risk_inputs['job_ini']
+        oq.inputs.update(risk_inputs)
+    files = readinput.get_input_files(oq)
+    if risk_ini:
+        files = [risk_ini] + files
     return general.zipfiles(files, archive_zip, log=log)

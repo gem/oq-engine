@@ -3,8 +3,8 @@ QA test for disaggregation case_2
 
 ============== ===================
 checksum32     131,107,173        
-date           2018-10-05T03:04:42
-engine_version 3.3.0-git48e9a474fd
+date           2018-12-13T12:57:19
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -36,8 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model_1.xml <source_model_1.xml>`_                  
-source                  `source_model_2.xml <source_model_2.xml>`_                  
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -94,10 +92,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      2         A    0     4     1,815        0.0       2.50017    0.0       121       0.0   
-1      1         A    4     8     1,815        0.0       1.55650    0.0       121       0.0   
-1      3         A    8     12    1,815        0.0       2.13290    0.0       121       0.0   
-2      1         S    0     2     1,420        0.0       0.00238    0.0       15        0.0   
+0      2         A    0     4     1,815        0.0       2.80068    0.0       121       0.0   
+1      1         A    4     8     1,815        0.0       1.89045    0.0       121       0.0   
+1      3         A    8     12    1,815        0.0       2.47917    0.0       121       0.0   
+2      1         S    0     2     1,420        0.0       0.00274    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -117,24 +115,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.02723 0.02757 0.00774 0.04672 2      
-split_filter       0.09101 NaN     0.09101 0.09101 1      
+read_source_models 0.03083 0.02082 0.01611 0.04556 2      
+split_filter       0.12899 NaN     0.12899 0.12899 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-read_source_models monitor=662 B converter=638 B fnames=360 B                              5.32 KB 
-split_filter       srcs=4.07 KB monitor=343 B srcfilter=253 B sample_factor=21 B seed=14 B 86.93 KB
-================== ======================================================================= ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=776 B fnames=210 B           5.29 KB 
+split_filter       srcs=4.09 KB srcfilter=253 B seed=14 B 86.99 KB
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.11427  0.0       1     
-total split_filter       0.09101  0.25000   1     
-total read_source_models 0.05446  0.15234   2     
+total split_filter       0.12899  0.91016   1     
+total read_source_models 0.06167  0.07422   2     
 ======================== ======== ========= ======
