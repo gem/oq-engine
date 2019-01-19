@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -15,6 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+Period-dependent correlation coefficient matrix as in:
+Akkar S., Sandikkaya MA., Ay BO., 2014, Compatible ground-motion
+prediction equations for damping scaling factors and vertical to
+horizontal spectral amplitude ratios for the broader Europe region,
+Bull Earthquake Eng, 12, pp. 517-547.
 """
 
 coeff_table = [

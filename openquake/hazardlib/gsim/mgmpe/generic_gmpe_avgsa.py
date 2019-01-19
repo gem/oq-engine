@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,10 +29,24 @@ from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 class GenericGmpeAvgSA(GMPE):
     """
     Implements a modified GMPE class that can be used to compute average
-    ground motion over several spectral ordinates.
+    ground motion over several spectral ordinates. The mean and standard
+    deviation are computed according to:
+    Kohrangi M., Reddy Kotha S. and Bazzurro P., 2018, Ground-motion models
+    for average spectral acceleration in a period range: direct and indirect
+    methods, Bull. Earthquake. Eng., 16, pp. 45–65.
+    Note that only the Total Standard Deviation is supported.
 
-    :param gmpe_name:
-        The name of a GMPE class
+    :param string gmpe_name:
+        The name of a GMPE class used for the calculation.
+
+    :param list avg_periods:
+        List of averaging periods (must be a subset of the periods allowed
+        in the selected GMPE)
+
+    :param string corr_func:
+        Handle of the function to compute correlation coefficients between
+        different spectral acceleration ordinates. Valid options are:
+        'baker_jayaram', 'akkar', 'none'. Default is none.
     """
 
     # Parameters
@@ -45,7 +59,7 @@ class GenericGmpeAvgSA(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, avg_periods, corr_func='None'):
+    def __init__(self, gmpe_name, avg_periods, corr_func='none'):
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
@@ -55,13 +69,13 @@ class GenericGmpeAvgSA(GMPE):
         correlation_function_handles = {
             'baker_jayaram': baker_jayaram_correlation,
             'akkar': akkar_correlation,
-            'None': dummy_correlation
+            'none': dummy_correlation
         }
 
         self.corr_func = correlation_function_handles[corr_func]
 
         # Check if this GMPE has the necessary requirements
-        # TO DO
+        # [TO DO]
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
@@ -101,22 +115,22 @@ class GenericGmpeAvgSA(GMPE):
 
 def baker_jayaram_correlation(t1, t2):
     """
-    NOTE: subroutine taken from: https://usgs.github.io/shakemap/shakelib
-    
     Produce inter-period correlation for any two spectral periods.
-
+    Subroutine taken from: https://usgs.github.io/shakemap/shakelib
     Based upon:
     Baker, J.W. and Jayaram, N., "Correlation of spectral acceleration
     values from NGA ground motion models," Earthquake Spectra, (2007).
 
-    Args:
-        t1, t2 (float):
-            The two periods of interest.
+    :param float t1:
+        First period of interest.
 
-    Returns:
-        rho (float): The predicted correlation coefficient
+    :param float t2:
+        Second period of interest.
 
+    :return float rho:
+        The predicted correlation coefficient.
     """
+
     t_min = min(t1, t2)
     t_max = max(t1, t2)
 
@@ -149,6 +163,20 @@ def baker_jayaram_correlation(t1, t2):
 
 def akkar_correlation(t1, t2):
     """
+    Read the period-dependent correlation coefficient matrix as in:
+    Akkar S., Sandikkaya MA., Ay BO., 2014, Compatible ground-motion
+    prediction equations for damping scaling factors and vertical to
+    horizontal spectral amplitude ratios for the broader Europe region,
+    Bull Earthquake Eng, 12, pp. 517-547.
+
+    :param float t1:
+        First period of interest.
+
+    :param float t2:
+        Second period of interest.
+
+    :return float:
+        The predicted correlation coefficient.
     """
 
     return act.coeff_table[act.periods.index(t1)][act.periods.index(t2)]
@@ -156,7 +184,15 @@ def akkar_correlation(t1, t2):
 
 def dummy_correlation(t1, t2):
     """
-    Dummy function returning just 1
+    Dummy function returning just 1 (used as default function handle)
+
+    :param float t1:
+        First period of interest.
+
+    :param float t2:
+        Second period of interest.
+
+    :return 1:
     """
 
     return 1.
