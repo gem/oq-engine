@@ -18,8 +18,8 @@
 import os
 import logging
 import operator
-
-from openquake.baselib import parallel
+import numpy as np
+from openquake.baselib import parallel, general
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator
@@ -50,6 +50,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
+        self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             gsims = self.csm.info.get_gsims(sm.ordinal)
@@ -68,4 +69,5 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                 concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
         self.store_csm_info(acc.eff_ruptures)
+        self.store_source_info(self.calc_times)
         return acc  # {grp_id: pmap}
