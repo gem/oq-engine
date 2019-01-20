@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     2,371,056,180      
-date           2018-12-13T12:57:21
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:37:42
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 7, num_levels = 28
@@ -92,7 +92,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00600    0.0       15        0.0   
+0      1         S    0     2     482          0.0       0.00292    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -105,14 +105,14 @@ S    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00735 NaN    0.00735 0.00735 1      
-split_filter       0.03505 NaN    0.03505 0.03505 1      
+read_source_models 0.00387 NaN    0.00387 0.00387 1      
+split_filter       0.02313 NaN    0.02313 0.02313 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -128,7 +128,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total split_filter       0.03505   0.62109   1     
-total read_source_models 0.00735   0.0       1     
-reading exposure         5.512E-04 0.0       1     
+total split_filter       0.02313   1.75391   1     
+total read_source_models 0.00387   0.14062   1     
+reading exposure         4.246E-04 0.0       1     
 ======================== ========= ========= ======
