@@ -895,4 +895,7 @@ def view_dupl_sources(token, dstore):
             sameid.append(source_id)
     msg = 'Found %d source(s) with the same ID and %d truly duplicate: %s' % (
         len(sameid), len(dupl), dupl)
+    fakedupl = set(sameid) - set(dupl)
+    if fakedupl:
+        msg += '\nHere is a fake duplicate: %s' % fakedupl.pop()
     return msg
