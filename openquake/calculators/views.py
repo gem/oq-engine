@@ -854,24 +854,17 @@ def view_act_ruptures_by_src(token, dstore):
 Source = collections.namedtuple('Source', 'source_id code geom num_ruptures')
 
 
-def equal(rec1, rec2):
-    if len(rec1) != len(rec2):
-        return False
-    for v1, v2 in zip(rec1, rec2):
-        if isinstance(v1, numpy.ndarray):
-            diff = v1 != v2
-            if diff is True:
-                return False
-            elif diff.any():
-                return False
-        elif v1 != v2:
-            return False
-    return True
-
-
 def all_equal(records):
     rec0 = records[0]
-    return all(equal(rec0, rec) for rec in records[1:])
+    for rec in records[1:]:
+        for v1, v2 in zip(rec0, rec):
+            if isinstance(v1, numpy.ndarray):  # field geom
+                for name in v1.dtype.names:
+                    if not numpy.allclose(v1[name], v2[name]):
+                        return False
+            elif v1 != v2:
+                return False
+    return True
 
 
 @view.add('dupl_sources')
