@@ -3,8 +3,8 @@ Classical Hazard-Risk QA test 4
 
 ============== ===================
 checksum32     3,002,809,595      
-date           2018-12-13T12:56:56
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:36:27
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 6, num_levels = 19
@@ -112,7 +112,7 @@ grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites nu
 0      20        A    60    64    1,256        0.0       0.0        0.0       0         0.0   
 0      208       A    64    70    760          0.0       0.0        0.0       0         0.0   
 0      225       A    70    73    520          0.0       0.0        0.0       0         0.0   
-0      231       A    73    77    4,185        0.0       18         0.0       279       0.0   
+0      231       A    73    77    4,185        0.0       25         0.0       279       0.0   
 0      253       A    77    83    3,058        0.0       0.0        0.0       0         0.0   
 0      257       A    83    87    2,850        0.0       0.0        0.0       0         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
@@ -127,14 +127,14 @@ A    0.0       39
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 2.13291 NaN     2.13291 2.13291 1      
-split_filter       0.23519 0.04437 0.20381 0.26656 2      
+read_source_models 2.94014 NaN     2.94014 2.94014 1      
+split_filter       0.37340 0.05466 0.33475 0.41205 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -150,7 +150,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 2.13291   1.04688   1     
-total split_filter       0.47037   2.81641   2     
-reading exposure         4.444E-04 0.0       1     
+total read_source_models 2.94014   1.14062   1     
+total split_filter       0.74679   2.09766   2     
+reading exposure         4.296E-04 0.0       1     
 ======================== ========= ========= ======

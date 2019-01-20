@@ -2,9 +2,9 @@ Calculation of the ground motion fields for a scenario
 ======================================================
 
 ============== ===================
-checksum32     3,734,678,775      
-date           2018-10-05T03:04:42
-engine_version 3.3.0-git48e9a474fd
+checksum32     4,182,813,640      
+date           2019-01-20T07:37:13
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -86,5 +86,5 @@ Slowest operations
 ================ ======== ========= ======
 operation        time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00174  0.0       1     
+reading exposure 0.00199  0.0       1     
 ================ ======== ========= ======
