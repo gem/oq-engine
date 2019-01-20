@@ -859,6 +859,8 @@ def all_equal(records):
     for rec in records[1:]:
         for v1, v2 in zip(rec0, rec):
             if isinstance(v1, numpy.ndarray):  # field geom
+                if len(v1) != len(v2):
+                    return False
                 for name in v1.dtype.names:
                     if not numpy.allclose(v1[name], v2[name]):
                         return False
