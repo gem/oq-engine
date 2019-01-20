@@ -2,9 +2,9 @@ Classical PSHA for the southern Pacific Islands reduced
 =======================================================
 
 ============== ===================
-checksum32     194,124,302        
-date           2018-12-13T12:57:50
-engine_version 3.3.0-git68d7d11268
+checksum32     3,339,350,387      
+date           2019-01-20T07:39:36
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 5, num_levels = 20
@@ -105,14 +105,14 @@ grp_id source_id  code gidx1 gidx2 num_ruptures calc_time split_time num_sites n
 0      ds_4_13974 P    5     6     100          0.0       0.0        0.0       0         0.0   
 0      ds_4_1455  P    6     7     100          0.0       0.0        0.0       0         0.0   
 0      ds_4_14802 P    7     8     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_15201 P    8     9     100          0.0       3.576E-06  0.0       1         0.0   
+0      ds_4_15201 P    8     9     100          0.0       1.907E-06  0.0       1         0.0   
 0      ds_4_16265 P    9     10    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_18232 P    10    11    100          0.0       3.099E-06  0.0       1         0.0   
+0      ds_4_18232 P    10    11    100          0.0       1.907E-06  0.0       1         0.0   
 0      ds_4_1895  P    11    12    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_19558 P    12    13    100          0.0       2.861E-06  0.0       1         0.0   
+0      ds_4_19558 P    12    13    100          0.0       1.431E-06  0.0       1         0.0   
 0      ds_4_19649 P    13    14    100          0.0       0.0        0.0       0         0.0   
 0      ds_4_19683 P    14    15    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_2111  P    15    16    100          0.0       3.338E-06  0.0       1         0.0   
+0      ds_4_2111  P    15    16    100          0.0       1.669E-06  0.0       1         0.0   
 0      ds_4_28780 P    16    17    100          0.0       0.0        0.0       0         0.0   
 0      ds_4_314   P    17    18    100          0.0       0.0        0.0       0         0.0   
 0      ds_4_32853 P    18    19    100          0.0       0.0        0.0       0         0.0   
@@ -131,14 +131,14 @@ S    0.0       5
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.13275 0.14527 0.02117 0.29701 3      
-split_filter       8.59814 NaN     8.59814 8.59814 1      
+read_source_models 0.09285 0.12186 0.01319 0.23313 3      
+split_filter       7.64496 NaN     7.64496 7.64496 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -146,7 +146,7 @@ Data transfer
 ================== ======================================= ========
 task               sent                                    received
 read_source_models converter=1.14 KB fnames=368 B          60.81 KB
-split_filter       srcs=58.92 KB srcfilter=253 B seed=14 B 1.6 MB  
+split_filter       srcs=58.92 KB srcfilter=253 B seed=14 B 1.62 MB 
 ================== ======================================= ========
 
 Slowest operations
@@ -154,6 +154,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       8.59814  2.85156   1     
-total read_source_models 0.39825  0.40234   3     
+total split_filter       7.64496  7.56641   1     
+total read_source_models 0.27856  2.08203   3     
 ======================== ======== ========= ======
