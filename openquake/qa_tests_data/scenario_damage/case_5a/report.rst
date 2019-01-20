@@ -3,8 +3,8 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     3,442,327,537      
-date           2018-12-13T12:57:19
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:37:13
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 1, num_levels = 1

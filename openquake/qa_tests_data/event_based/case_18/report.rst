@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 18
 ===================================
 
 ============== ===================
-checksum32     735,748,205        
-date           2018-12-13T12:57:43
-engine_version 3.3.0-git68d7d11268
+checksum32     3,669,072,072      
+date           2019-01-20T07:38:35
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -57,14 +57,14 @@ P    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01025 NaN    0.01025 0.01025 1      
-split_filter       0.00492 NaN    0.00492 0.00492 1      
+read_source_models 0.00444 NaN    0.00444 0.00444 1      
+split_filter       0.00600 NaN    0.00600 0.00600 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -80,6 +80,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.01025  0.36719   1     
-total only_filter        0.00492  0.42969   1     
+total only_filter        0.00600  2.00781   1     
+total read_source_models 0.00444  0.48047   1     
 ======================== ======== ========= ======

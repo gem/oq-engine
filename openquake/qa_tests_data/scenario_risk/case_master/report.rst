@@ -2,9 +2,9 @@ scenario risk
 =============
 
 ============== ===================
-checksum32     818,655,088        
-date           2018-10-03T15:00:41
-engine_version 3.3.0-gitd9f5dca908
+checksum32     2,297,606,000      
+date           2019-01-20T07:36:47
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -63,6 +63,14 @@ Realizations per (TRT, GSIM)
   0,BooreAtkinson2008(): [0]
   0,ChiouYoungs2008(): [1]>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
+
 Exposure model
 --------------
 =============== ========
@@ -82,11 +90,11 @@ tax3     1.00000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-=================== ======== ========= ======
-operation           time_sec memory_mb counts
-=================== ======== ========= ======
-building riskinputs 0.02285  0.0       1     
-computing gmfs      0.02132  0.23047   1     
-saving gmfs         0.01080  0.0       1     
-reading exposure    0.00135  0.0       1     
-=================== ======== ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+computing gmfs      0.01209   0.0       1     
+building riskinputs 0.01024   0.0       1     
+saving gmfs         0.00521   0.0       1     
+reading exposure    7.870E-04 0.0       1     
+=================== ========= ========= ======
