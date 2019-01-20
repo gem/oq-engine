@@ -452,13 +452,14 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            srcfilter = RtreeFilter(self.src_filter.sitecol,
-                                    oq.maximum_distance,
-                                    self.src_filter.hdf5path)
             csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
+            srcfilter = (self.src_filter if 'ucerf' in oq.calculation_mode
+                         else RtreeFilter(self.src_filter.sitecol,
+                                          oq.maximum_distance,
+                                          self.src_filter.hdf5path))
             self.csm = parallel_split_filter(
-                csm, srcfilter, True, self.monitor())
+                csm, srcfilter, not oq.is_event_based(), self.monitor())
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
