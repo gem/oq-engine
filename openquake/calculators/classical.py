@@ -122,9 +122,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.zerodict())
+            self.store_csm_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info', autoflush=True):
-                self.store_csm_info(acc.eff_ruptures)
                 self.store_source_info(self.calc_times)
             self.calc_times.clear()  # save a bit of memory
         if not self.nsites:
