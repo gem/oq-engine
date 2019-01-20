@@ -454,12 +454,15 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
-            srcfilter = (self.src_filter if 'ucerf' in oq.calculation_mode
-                         else RtreeFilter(self.src_filter.sitecol,
-                                          oq.maximum_distance,
-                                          self.src_filter.hdf5path))
-            self.csm = parallel_split_filter(
-                csm, srcfilter, not oq.is_event_based(), self.monitor())
+            if oq.prefilter_sources != 'no':
+                srcfilter = (self.src_filter if 'ucerf' in oq.calculation_mode
+                             else RtreeFilter(self.src_filter.sitecol,
+                                              oq.maximum_distance,
+                                              self.src_filter.hdf5path))
+                self.csm = parallel_split_filter(
+                    csm, srcfilter, not oq.is_event_based(), self.monitor())
+            else:
+                self.csm = csm
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
