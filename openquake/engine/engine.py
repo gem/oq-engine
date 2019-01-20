@@ -89,7 +89,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         OqParam.concurrent_tasks.default = ncores * 3
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
-    def celery_cleanup(terminate, tasks):
+    def celery_cleanup(terminate):
         """
         Release the resources used by an openquake job.
         In particular revoke the running tasks (if any).
@@ -99,6 +99,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         """
         # Using the celery API, terminate and revoke and terminate any running
         # tasks associated with the current job.
+        tasks = parallel.Starmap.running_tasks
         if tasks:
             logs.LOG.warn('Revoking %d tasks', len(tasks))
         else:  # this is normal when OQ_DISTRIBUTE=no
@@ -331,7 +332,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # taking further action, so that the real error can propagate
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
-                celery_cleanup(TERMINATE, parallel.running_tasks)
+                celery_cleanup(TERMINATE)
         except BaseException:
             # log the finalization error only if there is no real error
             if tb == 'None\n':
