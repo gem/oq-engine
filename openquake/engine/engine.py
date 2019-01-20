@@ -89,7 +89,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         OqParam.concurrent_tasks.default = ncores * 3
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
-    def celery_cleanup(terminate, tasks=()):
+    def celery_cleanup(terminate, tasks):
         """
         Release the resources used by an openquake job.
         In particular revoke the running tasks (if any).
@@ -103,7 +103,8 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.LOG.warn('Revoking %d tasks', len(tasks))
         else:  # this is normal when OQ_DISTRIBUTE=no
             logs.LOG.debug('No task to revoke')
-        for task in tasks:
+        while tasks:
+            task = tasks.pop()
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)

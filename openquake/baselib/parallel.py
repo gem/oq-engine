@@ -641,7 +641,7 @@ class Starmap(object):
         """
         global running_tasks
         if not hasattr(self, 'socket'):  # first time
-            running_tasks = self.tasks
+            running_tasks.extend(self.tasks)
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
