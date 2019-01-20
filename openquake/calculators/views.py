@@ -721,10 +721,10 @@ def view_global_hcurves(token, dstore):
     return rst_table(res)
 
 
-@view.add('dupl_sources')
-def view_dupl_sources(token, dstore):
+@view.add('dupl_sources_time')
+def view_dupl_sources_time(token, dstore):
     """
-    Display the duplicated sources from source_info
+    Display the time spent computing duplicated sources
     """
     info = dstore['source_info']
     items = sorted(group_array(info.value, 'source_id').items())
@@ -849,3 +849,42 @@ def view_act_ruptures_by_src(token, dstore):
         src = src_info[srcidx]
         table.append([src['source_id'], src['grp_id'], act_ruptures])
     return rst_table(table)
+
+
+Source = collections.namedtuple('Source', 'source_id code geom num_ruptures')
+
+
+def equal(rec1, rec2):
+    if len(rec1) != len(rec2):
+        return False
+    return all((v1 == v2).all() if isinstance(v1, numpy.ndarray)
+               else v1 == v2 for v1, v2 in zip(rec1, rec2))
+
+
+def all_equal(records):
+    rec0 = records[0]
+    return all(equal(rec0, rec) for rec in records[1:])
+
+
+@view.add('dupl_sources')
+def view_dupl_sources(token, dstore):
+    """
+    Show the sources with the same ID and the truly duplicated sources
+    """
+    fields = ['source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures']
+    dic = group_array(dstore['source_info'].value[fields], 'source_id')
+    sameid = []
+    dupl = []
+    for source_id, group in dic.items():
+        if len(group) > 1:  # same ID sources
+            sources = []
+            for rec in group:
+                geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
+                src = Source(source_id, rec['code'], geom, rec['num_ruptures'])
+                sources.append(src)
+            if all_equal(sources):
+                dupl.append(source_id)
+            sameid.append(source_id)
+    msg = 'Found %d source(s) with the same ID and %d true duplicate: %s' % (
+        len(sameid), len(dupl), dupl)
+    return msg
