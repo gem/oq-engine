@@ -857,8 +857,16 @@ Source = collections.namedtuple('Source', 'source_id code geom num_ruptures')
 def equal(rec1, rec2):
     if len(rec1) != len(rec2):
         return False
-    return all((v1 == v2).all() if isinstance(v1, numpy.ndarray)
-               else v1 == v2 for v1, v2 in zip(rec1, rec2))
+    for v1, v2 in zip(rec1, rec2):
+        if isinstance(v1, numpy.ndarray):
+            diff = v1 != v2
+            if diff is True:
+                return False
+            elif diff.any():
+                return False
+        elif v1 != v2:
+            return False
+    return True
 
 
 def all_equal(records):
@@ -885,6 +893,6 @@ def view_dupl_sources(token, dstore):
             if all_equal(sources):
                 dupl.append(source_id)
             sameid.append(source_id)
-    msg = 'Found %d source(s) with the same ID and %d true duplicate: %s' % (
+    msg = 'Found %d source(s) with the same ID and %d truly duplicate: %s' % (
         len(sameid), len(dupl), dupl)
     return msg
