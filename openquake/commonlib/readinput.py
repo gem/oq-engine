@@ -602,7 +602,7 @@ def store_sm(smodel, hdf5path, monitor):
     with monitor('store source model'):
         sources = h5['source_info']
         source_geom = h5['source_geom']
-        gid = 0
+        gid = len(source_geom)
         for sg in smodel:
             if hdf5path:
                 with hdf5.File(hdf5path, 'r+') as hdf5cache:
