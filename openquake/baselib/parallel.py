@@ -517,13 +517,11 @@ def init_workers():
         prctl.set_pdeathsig(signal.SIGKILL)
 
 
-running_tasks = []  # currently running tasks
-
-
 class Starmap(object):
     calc_id = None
     hdf5 = None
     pids = ()
+    running_tasks = []  # currently running tasks
 
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
@@ -639,9 +637,8 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
-        global running_tasks
         if not hasattr(self, 'socket'):  # first time
-            running_tasks.extend(self.tasks)
+            self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
