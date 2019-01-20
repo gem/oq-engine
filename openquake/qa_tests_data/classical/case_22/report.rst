@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,152,338,418      
-date           2018-12-13T12:57:47
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:39:14
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -82,7 +82,7 @@ Slowest sources
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 0      1         M    0     2     160          0.0       0.0        0.0       0         0.0   
-1      2         M    0     12    1,104        0.0       0.00272    0.0       4         0.0   
+1      2         M    2     14    1,104        0.0       0.00177    0.0       4         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -95,14 +95,14 @@ M    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00184 5.199E-04 0.00147 0.00221 2      
-split_filter       0.00710 NaN       0.00710 0.00710 1      
+read_source_models 0.00178 1.376E-04 0.00168 0.00187 2      
+split_filter       0.00477 NaN       0.00477 0.00477 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -118,6 +118,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00710  0.0       1     
-total read_source_models 0.00368  0.0       2     
+total split_filter       0.00477  1.53906   1     
+total read_source_models 0.00355  0.13281   2     
 ======================== ======== ========= ======
