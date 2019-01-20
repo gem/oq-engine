@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 17
 =================================
 
 ============== ===================
-checksum32     4,120,089,408      
-date           2018-12-13T12:57:50
-engine_version 3.3.0-git68d7d11268
+checksum32     51,027,111         
+date           2019-01-20T07:39:35
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -71,24 +71,24 @@ Number of ruptures per tectonic region type
 ================== ====== ==================== ============ ============
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
-source_model_1.xml 0      Active Shallow Crust -1           39          
-source_model_2.xml 1      Active Shallow Crust -1           7           
+source_model_1.xml 0      Active Shallow Crust 39           39          
+source_model_2.xml 1      Active Shallow Crust 7            7           
 ================== ====== ==================== ============ ============
 
-============= ==
-#TRT models   2 
-#eff_ruptures -2
-#tot_ruptures 46
-#tot_weight   0 
-============= ==
+============= =======
+#TRT models   2      
+#eff_ruptures 46     
+#tot_ruptures 46     
+#tot_weight   4.60000
+============= =======
 
 Slowest sources
 ---------------
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     39           0.0       0.0        0.0       0         0.0   
-1      2         P    0     1     7            0.0       0.0        0.0       0         0.0   
+0      1         P    0     1     39           0.0       7.868E-06  0.0       1         0.0   
+1      2         P    1     2     7            0.0       2.861E-06  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -101,26 +101,29 @@ P    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00134 2.976E-04 0.00113 0.00155 2      
+read_source_models 0.00132 1.001E-04 0.00125 0.00139 2      
+split_filter       0.00260 NaN       0.00260 0.00260 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=776 B fnames=218 B 3.33 KB 
-================== ============================ ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=776 B fnames=218 B           3.33 KB 
+split_filter       srcs=1.75 KB srcfilter=253 B seed=14 B 1.9 KB  
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00269  0.0       2     
+total read_source_models 0.00264  0.08984   2     
+total split_filter       0.00260  1.30078   1     
 ======================== ======== ========= ======
