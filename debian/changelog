@@ -17,6 +17,7 @@
     asset correlation)
 
   [Robin Gee]
+  * Fixed bug in tusa_langer_2016.py BA08SE model - authors updated b2 coeff
   * Fixed bug in tusa_langer_2016.py related to coeffs affecting Repi models
 
   [Michele Simionato]
