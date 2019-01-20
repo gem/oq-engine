@@ -20,7 +20,7 @@ import time
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, performance
-from openquake.baselib.general import group_array, humansize
+from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import zip, encode
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -48,6 +48,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
+    N = len(srcfilter.sitecol.complete)
     mon = monitor('getting assets', measuremem=False)
     mon.counts = 1
     with datastore.read(rupgetter.hdf5path) as dstore:
@@ -59,23 +60,27 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         param['oqparam'], param['min_iml'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
-        data = getter.get_hazard(rlzidx=False)  # (sid, eid, gmv)
-        haz_by_sid = group_array(data, 'sid')
-    eids = numpy.unique(data['eid'])
-    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
-    tagnames = param['aggregate_by']
-    shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
-    acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
-    for sid, haz in haz_by_sid.items():
-        t0 = time.time()
-        assets, ass_by_aid = assgetter.get(sid)
-        mon.duration += time.time() - t0
-        for lti, aid, eids_, losses in getter.gen_risk(assets, riskmodel, haz):
-            tagi = ass_by_aid[aid][tagnames] if tagnames else ()
-            tagidxs = tuple(idx - 1 for idx in tagi)
-            for eid, loss in zip(eids_, losses):
-                acc[(eid2idx[eid], lti) + tagidxs] += loss
-    return hdf5.ArrayWrapper(acc, {'eids': eids})
+        hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
+    with monitor('building risk'):
+        eids = rupgetter.get_eid_rlz()['eid']
+        eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+        tagnames = param['aggregate_by']
+        shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
+        acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
+        if param['avg_losses']:
+            losses_by_RN = AccumDict(accum=numpy.zeros((N, L), F32))
+        else:
+            losses_by_RN = {}
+        for sid, haz in hazard.items():
+            t0 = time.time()
+            assets, tagidxs = assgetter.get(sid, tagnames)
+            mon.duration += time.time() - t0
+            for lti, aid, losses in getter.gen_risk(assets, riskmodel, haz):
+                for eid, rlz, loss in zip(haz['eid'], haz['rlzi'], losses):
+                    acc[(eid2idx[eid], lti) + tagidxs[aid]] += loss
+                    if param['avg_losses']:
+                        losses_by_RN[rlz][sid, lti] += loss
+    return {'losses': acc, 'eids': eids, 'losses_by_RN': losses_by_RN}
 
 
 def compute_loss_curves_maps(hdf5path, multi_index, clp, individual_curves,
@@ -122,8 +127,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
+        N = len(self.sitecol.complete)
+        L = len(self.riskmodel.loss_types)
+        R = self.csm.info.get_num_rlzs()
+        self.datastore.create_dset('losses_by_site', F32, (N, R, L))
 
-    def agg_dicts(self, dummy, arr):
+    def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
         :param arr: ArrayWrapper with an attribute .eids
@@ -135,13 +144,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                          humansize(numpy.product(shp) * 4))
             self.datastore.create_dset('losses_by_event', F32, shp)
             self.oqparam.ground_motion_fields = False
-        if len(arr):
+        if len(dic['losses']):
             with self.monitor('saving losses_by_event', measuremem=True):
                 lbe = self.datastore['losses_by_event']
-                idx = [self.eid2idx[eid] for eid in arr.eids]
-                sort_idx, sort_arr = zip(*sorted(zip(idx, arr)))
+                idx = [self.eid2idx[eid] for eid in dic['eids']]
+                sort_idx, sort_arr = zip(*sorted(zip(idx, dic['losses'])))
                 # h5py requires the indices to be sorted
                 lbe[list(sort_idx)] = numpy.array(sort_arr)
+        with self.monitor('saving losses_by_site', measuremem=True):
+            for r, arr in dic['losses_by_RN'].items():
+                self.datastore['losses_by_site'][:, r] += arr
         return 1
 
     def get_shape(self, *sizes):
