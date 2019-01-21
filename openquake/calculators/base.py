@@ -23,6 +23,7 @@ import logging
 import operator
 import itertools
 import traceback
+import collections
 from datetime import datetime
 from shapely import wkt
 import numpy
@@ -30,8 +31,10 @@ import numpy
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
+from openquake.baselib import parallel
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import InvalidFile
+from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, source, calc, writers
@@ -52,6 +55,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
+RUPTURES_PER_BLOCK = 10000  # used in split_filter
 
 
 class InvalidCalculationID(Exception):
@@ -93,6 +97,16 @@ def fix_ones(pmap):
     return pmap
 
 
+def build_weights(realizations, imt_dt):
+    """
+    :returns: an array with the realization weights of dtype imt_dt
+    """
+    arr = numpy.zeros(len(realizations), imt_dt)
+    for imt in imt_dt.names:
+        arr[imt] = [rlz.weight[imt] for rlz in realizations]
+    return arr
+
+
 def set_array(longarray, shortarray):
     """
     :param longarray: a numpy array of floats of length L >= l
@@ -130,6 +144,69 @@ CORRELATION_MATRIX_TOO_LARGE = '''\
 You have a correlation matrix which is too large: %%d sites > %d.
 To avoid that, set a proper `region_grid_spacing` so that your exposure
 takes less sites.''' % MAXSITES
+
+
+def split_filter(srcs, srcfilter, seed, monitor):
+    """
+    Split the given source and filter the subsources by distance and by
+    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
+    Yields a pair (split_sources, split_time) if split_sources is non-empty.
+    """
+    splits, stime = split_sources(srcs)
+    if splits and seed:
+        # debugging tip to reduce the size of a calculation
+        splits = readinput.random_filtered_sources(splits, srcfilter, seed)
+        # NB: for performance, sample before splitting
+    if splits and srcfilter:
+        splits = list(srcfilter.filter(splits))
+    if splits:
+        yield splits, stime
+
+
+def only_filter(srcs, srcfilter, dummy, monitor):
+    """
+    Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
+    if there are filtered sources.
+    """
+    srcs = list(srcfilter.filter(srcs))
+    if srcs:
+        yield srcs, {src.id: 0 for src in srcs}
+
+
+def parallel_split_filter(csm, srcfilter, split, monitor):
+    """
+    Apply :func:`split_filter` in parallel to the composite source model.
+
+    :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
+    """
+    mon = monitor('split_filter')
+    seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    msg = 'Splitting/filtering' if split else 'Filtering'
+    logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
+    sources = csm.get_sources()
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+    smap = parallel.Starmap.apply(
+        split_filter if split else only_filter,
+        (sources, srcfilter, seed, mon),
+        maxweight=RUPTURES_PER_BLOCK, distribute=dist,
+        progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
+    if monitor.hdf5:
+        source_info = monitor.hdf5['source_info']
+        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
+    srcs_by_grp = collections.defaultdict(list)
+    arr = numpy.zeros((len(sources), 2), F32)
+    for splits, stime in smap:
+        for split in splits:
+            i = split.id
+            arr[i, 0] += stime[i]  # split_time
+            arr[i, 1] += 1         # num_split
+            srcs_by_grp[split.src_group_id].append(split)
+    if not srcs_by_grp:
+        raise RuntimeError('All sources were filtered away!')
+    elif monitor.hdf5:
+        source_info[:, 'split_time'] = arr[:, 0]
+        source_info[:, 'num_split'] = arr[:, 1]
+    return csm.new(srcs_by_grp)
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -385,8 +462,19 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            self.csm = readinput.get_composite_source_model(
+            csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
+            if (oq.prefilter_sources != 'no' and
+                    oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
+                split = not oq.is_event_based()
+                srcfilter = (self.src_filter if 'ucerf' in oq.calculation_mode
+                             else RtreeFilter(self.src_filter.sitecol,
+                                              oq.maximum_distance,
+                                              self.src_filter.hdf5path))
+                self.csm = parallel_split_filter(
+                    csm, srcfilter, split, self.monitor())
+            else:
+                self.csm = csm
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
@@ -652,7 +740,8 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
-        self.param = dict(individual_curves=oq.individual_curves)
+        self.param = dict(individual_curves=oq.individual_curves,
+                          avg_losses=oq.avg_losses)
 
     def store_csm_info(self, eff_ruptures):
         """
@@ -664,6 +753,11 @@ class HazardCalculator(BaseCalculator):
             raise RuntimeError('Empty logic tree: too much filtering?')
         self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
+        logging.info('There are %d realization(s)', R)
+        if self.oqparam.imtls:
+            self.datastore['csm_info/weights'] = arr = build_weights(
+                self.rlzs_assoc.realizations, self.oqparam.imt_dt())
+            self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(

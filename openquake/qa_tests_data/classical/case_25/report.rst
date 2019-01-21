@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2018-12-13T12:57:47
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:39:15
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 6, num_levels = 3
@@ -77,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     8     440          0.0       0.16623    0.0       20        0.0   
+0      1         A    0     8     440          0.0       0.12828    0.0       20        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -90,14 +90,14 @@ A    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01664 NaN    0.01664 0.01664 1      
-split_filter       0.01347 NaN    0.01347 0.01347 1      
+read_source_models 0.00759 NaN    0.00759 0.00759 1      
+split_filter       0.01088 NaN    0.01088 0.01088 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -113,6 +113,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.01664  0.0       1     
-total split_filter       0.01347  0.0       1     
+total split_filter       0.01088  1.79297   1     
+total read_source_models 0.00759  0.40234   1     
 ======================== ======== ========= ======

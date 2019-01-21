@@ -2,9 +2,9 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ============== ===================
-checksum32     902,044,270        
-date           2018-12-13T12:58:17
-engine_version 3.3.0-git68d7d11268
+checksum32     2,974,360,533      
+date           2019-01-20T07:40:25
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -79,7 +79,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      VICM      A    0     8     2,430        0.0       0.28126    0.0       30        0.0   
+0      VICM      A    0     8     2,430        0.0       0.21506    0.0       30        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -92,14 +92,14 @@ A    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01661 NaN    0.01661 0.01661 1      
-split_filter       0.01593 NaN    0.01593 0.01593 1      
+read_source_models 0.00879 NaN    0.00879 0.00879 1      
+split_filter       0.01285 NaN    0.01285 0.01285 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -115,6 +115,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.01661  0.0       1     
-total split_filter       0.01593  0.0       1     
+total split_filter       0.01285  1.87891   1     
+total read_source_models 0.00879  0.46094   1     
 ======================== ======== ========= ======

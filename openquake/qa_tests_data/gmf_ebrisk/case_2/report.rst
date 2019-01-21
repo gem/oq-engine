@@ -2,9 +2,9 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     4,081,447,500      
-date           2018-10-05T03:04:30
-engine_version 3.3.0-git48e9a474fd
+checksum32     1,576,137,282      
+date           2019-01-20T07:36:45
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 3, num_levels = 10
@@ -91,5 +91,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 5.965E-04 0.0       1     
+reading exposure 3.641E-04 0.0       1     
 ================ ========= ========= ======

@@ -717,8 +717,11 @@ def export_gmf_scenario_csv(ekey, dstore):
     eids = (numpy.concatenate([
         eids for eids in ebr.get_eids_by_rlz(rlzs_by_gsim).values()]))
     sids = getter.computers[0].sids
-    hazardr = getter.get_hazard()
     rlzs = rlzs_assoc.realizations
+    hazardr = [collections.defaultdict(list) for rlz in rlzs]
+    for sid, haz in getter.get_hazard().items():
+        for rec in haz:
+            hazardr[rec['rlzi']][sid].append(rec)
     fields = ['eid-%03d' % eid for eid in eids]
     dt = numpy.dtype([(f, F32) for f in fields])
     mesh = numpy.zeros(len(sids), [('lon', F64), ('lat', F64)])
