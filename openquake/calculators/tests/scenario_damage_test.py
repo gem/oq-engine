@@ -24,7 +24,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7)
+    case_6, case_7, case_8)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -153,3 +153,12 @@ RM       4,000
         # just run the npz export
         [npz] = export(('dmg_by_asset', 'npz'), self.calc.datastore)
         self.assertEqual(strip_calc_id(npz), 'dmg_by_asset.npz')
+
+    @attr('qa', 'risk', 'scenario_damage')
+    def test_case_8(self):
+        # case with a shakemap
+        self.run_calc(case_8.__file__, 'prejob.ini')
+        self.run_calc(case_8.__file__, 'job.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/dmg_by_event.csv', fname)
