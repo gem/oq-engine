@@ -16,29 +16,22 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import logging
-from openquake.baselib import sap, datastore
-from openquake.commonlib import readinput
+
+import numpy
+from openquake.baselib import sap, performance
+from openquake.hazardlib.shakemap import download_array
 
 
 @sap.Script
-def reduce_sm(calc_id):
+def download_shakemap(id):
     """
-    Reduce the source model of the given calculation by discarding all
-    sources that do not contribute to the hazard.
+    Example of usage: utils/shakemap usp000fjta
     """
-    logging.basicConfig(level=logging.INFO)
-    with datastore.read(calc_id) as dstore:
-        oqparam = dstore['oqparam']
-        info = dstore['source_info'].value
-        ok = info['weight'] > 0
-        source_ids = set(info[ok]['source_id'])
-    readinput.reduce_source_model(
-            oqparam.inputs['source_model_logic_tree'], source_ids)
+    with performance.Monitor('shakemap', measuremem=True) as mon:
+        dest = '%s.npy' % id
+        numpy.save(dest, download_array(id))
+    print(mon)
+    print('Saved %s' % dest)
 
 
-reduce_sm.arg('calc_id', 'calculation ID', type=int)
-
-
-if __name__ == '__main__':
-    reduce_sm.callfunc()
+download_shakemap.arg('id', 'USGS Shakemap ID')

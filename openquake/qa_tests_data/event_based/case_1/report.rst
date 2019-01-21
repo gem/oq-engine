@@ -2,9 +2,9 @@ Event Based QA Test, Case 1
 ===========================
 
 ============== ===================
-checksum32     2,936,365,882      
-date           2018-12-13T12:57:42
-engine_version 3.3.0-git68d7d11268
+checksum32     3,881,327,509      
+date           2019-01-20T07:38:24
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -57,14 +57,14 @@ P    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00149 NaN    0.00149 0.00149 1      
-split_filter       0.00359 NaN    0.00359 0.00359 1      
+read_source_models 0.00118 NaN    0.00118 0.00118 1      
+split_filter       0.00252 NaN    0.00252 0.00252 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -80,6 +80,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00359  0.0       1     
-total read_source_models 0.00149  0.0       1     
+total only_filter        0.00252  1.47266   1     
+total read_source_models 0.00118  0.08203   1     
 ======================== ======== ========= ======
