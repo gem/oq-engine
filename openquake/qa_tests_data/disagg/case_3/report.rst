@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     963,025,495        
-date           2018-12-13T12:57:12
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:37:02
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 1, num_levels = 200
@@ -91,11 +91,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      f1        C    0     4     2,308        11        168        37        37        9,232 
-1      p1        P    0     1     156          0.38979   1.121E-05  1.00000   1         15    
-1      p2        P    1     2     156          0.34699   3.815E-06  1.00000   1         15    
-1      p3        P    2     3     156          0.34487   2.623E-06  1.00000   1         15    
-1      p4        P    3     4     156          0.33597   2.384E-06  1.00000   1         15    
+0      f1        C    0     4     2,308        10        165        37        37        9,232 
+1      p1        P    4     5     156          0.40861   9.298E-06  1.00000   1         15    
+1      p2        P    5     6     156          0.34206   3.338E-06  1.00000   1         15    
+1      p3        P    6     7     156          0.34513   2.384E-06  1.00000   1         15    
+1      p4        P    7     8     156          0.34278   1.907E-06  1.00000   1         15    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -103,22 +103,22 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    11        1     
-P    1.41763   4     
+C    10        1     
+P    1.43858   4     
 ==== ========= ======
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05618 0.07191 0.00533 0.10703 2      
-split_filter       4.56857 NaN     4.56857 4.56857 1      
-classical          0.37836 0.23837 0.00769 1.41814 34     
-build_hazard_stats 0.00528 NaN     0.00528 0.00528 1      
+read_source_models 0.03886 0.05133 0.00257 0.07516 2      
+split_filter       4.48514 NaN     4.48514 4.48514 1      
+classical          0.34050 0.23699 0.00868 1.43906 34     
+build_hazard_stats 0.00557 NaN     0.00557 0.00557 1      
 ================== ======= ======= ======= ======= =======
 
 Fastest task
@@ -145,32 +145,31 @@ weight   15      0.0    15  15  4
 
 Data transfer
 -------------
-================== ============================================================= =========
-task               sent                                                          received 
-read_source_models converter=776 B fnames=230 B                                  6.1 KB   
-split_filter       srcs=4.81 KB srcfilter=380 B seed=14 B                        1.61 MB  
-classical          group=1.64 MB param=75.27 KB src_filter=31.21 KB gsims=9.4 KB 154.65 KB
-build_hazard_stats pgetter=5.3 KB hstats=67 B                                    1.92 KB  
-================== ============================================================= =========
+================== =============================================================== =========
+task               sent                                                            received 
+read_source_models converter=776 B fnames=230 B                                    6.1 KB   
+split_filter       srcs=4.81 KB srcfilter=380 B seed=14 B                          1.62 MB  
+classical          group=1.65 MB param=75.27 KB src_filter=31.21 KB gsims=13.58 KB 155.02 KB
+build_hazard_stats pgetter=5.93 KB hstats=67 B individual_curves=13 B              1.92 KB  
+================== =============================================================== =========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          12        0.39062   34    
-get_poes                 7.62870   0.0       2,932 
-make_contexts            4.92704   0.0       2,932 
-total split_filter       4.56857   4.21484   1     
-iter_ruptures            0.25776   0.0       41    
-total read_source_models 0.11236   0.29297   2     
-store source_info        0.11221   1.03125   34    
-managing sources         0.04742   0.76562   1     
-aggregate curves         0.01014   0.0       34    
-total build_hazard_stats 0.00528   1.26562   1     
-store source model       0.00501   0.0       2     
-combine pmaps            0.00477   1.26562   1     
-saving probability maps  0.00265   0.0       1     
-saving statistics        8.948E-04 0.0       1     
-compute mean             3.028E-04 0.0       1     
+total classical          11        1.05078   34    
+get_poes                 6.82806   0.0       2,932 
+total split_filter       4.48514   6.16797   1     
+make_contexts            4.45714   0.0       2,932 
+store source_info        0.10883   0.37891   34    
+total read_source_models 0.07772   0.87891   2     
+managing sources         0.04524   0.01172   1     
+aggregate curves         0.00979   0.0       34    
+store source model       0.00557   0.0       2     
+total build_hazard_stats 0.00557   1.63281   1     
+combine pmaps            0.00484   1.54688   1     
+saving probability maps  0.00231   0.0       1     
+saving statistics        7.718E-04 0.0       1     
+compute mean             5.288E-04 0.08594   1     
 ======================== ========= ========= ======

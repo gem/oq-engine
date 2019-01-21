@@ -2,9 +2,9 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
 ============== ===================
-checksum32     796,128,005        
-date           2018-12-13T12:57:40
-engine_version 3.3.0-git68d7d11268
+checksum32     2,398,350,176      
+date           2019-01-20T07:38:12
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -57,14 +57,14 @@ P    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00140 NaN    0.00140 0.00140 1      
-split_filter       0.00390 NaN    0.00390 0.00390 1      
+read_source_models 0.00124 NaN    0.00124 0.00124 1      
+split_filter       0.00259 NaN    0.00259 0.00259 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -80,6 +80,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00390  0.0       1     
-total read_source_models 0.00140  0.0       1     
+total only_filter        0.00259  1.56250   1     
+total read_source_models 0.00124  0.09375   1     
 ======================== ======== ========= ======

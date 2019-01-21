@@ -2,9 +2,9 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ============== ===================
-checksum32     3,231,940,023      
-date           2018-12-13T12:58:18
-engine_version 3.3.0-git68d7d11268
+checksum32     3,058,858,863      
+date           2019-01-20T07:40:28
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 1, num_levels = 78
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= ====================== ================
 smlt_path weight  gsim_logic_tree        num_realizations
 ========= ======= ====================== ================
-b1        1.00000 complex(0,5,2,4,4,1,0) 160/160         
+b1        1.00000 complex(0,5,2,4,4,1,0) 4/160           
 ========= ======= ====================== ================
 
 Required parameters per tectonic region type
@@ -64,42 +64,19 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(size=16, rlzs=160)
-  0,AtkinsonBoore2003SInter(): ['40 realizations']
-  0,LinLee2008SInter(): ['40 realizations']
-  0,YoungsEtAl1997SInter(): ['40 realizations']
-  0,ZhaoEtAl2006SInter(): ['40 realizations']
-  1,FaccioliEtAl2010(): ['160 realizations']
-  2,Campbell2003SHARE(): ['80 realizations']
-  2,ToroEtAl2002SHARE(): ['80 realizations']
-  3,AkkarBommer2010(): ['32 realizations']
-  3,Campbell2003SHARE(): ['32 realizations']
-  3,CauzziFaccioli2008(): ['32 realizations']
-  3,ChiouYoungs2008(): ['32 realizations']
-  3,ToroEtAl2002SHARE(): ['32 realizations']
-  4,AtkinsonBoore2003SSlab(): ['40 realizations']
-  4,LinLee2008SSlab(): ['40 realizations']
-  4,YoungsEtAl1997SSlab(): ['40 realizations']
-  4,ZhaoEtAl2006SSlab(): ['40 realizations']>
+  <RlzsAssoc(size=4, rlzs=4)
+  4,AtkinsonBoore2003SSlab(): [0]
+  4,LinLee2008SSlab(): [1]
+  4,YoungsEtAl1997SSlab(): [2]
+  4,ZhaoEtAl2006SSlab(): [3]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============================ ====== ==================== ============ ============
-source_model                 grp_id trt                  eff_ruptures tot_ruptures
-============================ ====== ==================== ============ ============
-simple_area_source_model.xml 0      Subduction Interface -1           42,624      
-simple_area_source_model.xml 1      Volcanic             -1           210         
-simple_area_source_model.xml 2      Shield               -1           96,804      
-simple_area_source_model.xml 3      Stable Shallow Crust -1           81,154      
-simple_area_source_model.xml 4      Subduction Inslab    -1           93,219      
-============================ ====== ==================== ============ ============
-
-============= =======
-#TRT models   5      
-#eff_ruptures -5     
-#tot_ruptures 314,011
-#tot_weight   0      
-============= =======
+============================ ====== ================= ============ ============
+source_model                 grp_id trt               eff_ruptures tot_ruptures
+============================ ====== ================= ============ ============
+simple_area_source_model.xml 4      Subduction Inslab 7,770        93,219      
+============================ ====== ================= ============ ============
 
 Slowest sources
 ---------------
@@ -121,7 +98,7 @@ grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites nu
 4      s34       A    579   605   12,327       0.0       0.0        0.0       0         0.0   
 4      s35       A    605   631   12,327       0.0       0.0        0.0       0         0.0   
 4      s40       A    631   657   12,327       0.0       0.0        0.0       0         0.0   
-4      s46       A    657   683   7,770        0.0       0.0        0.0       0         0.0   
+4      s46       A    657   683   7,770        0.0       57         0.0       370       0.0   
 4      s70       A    683   711   17,871       0.0       0.0        0.0       0         0.0   
 4      s72       A    711   739   17,871       0.0       0.0        0.0       0         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
@@ -137,26 +114,29 @@ C    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 5.01965 NaN    5.01965 5.01965 1      
+read_source_models 4.81437 NaN    4.81437 4.81437 1      
+split_filter       0.27123 NaN    0.27123 0.27123 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=388 B fnames=119 B 44.61 KB
-================== ============================ ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=388 B fnames=119 B            44.61 KB
+split_filter       srcs=58 KB srcfilter=4.23 KB seed=224 B 80.99 KB
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 5.01965  0.0       1     
+total read_source_models 4.81437  4.85938   1     
+total split_filter       0.27123  2.14062   1     
 ======================== ======== ========= ======

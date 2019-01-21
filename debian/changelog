@@ -2,6 +2,9 @@
   * Added cluster model to classical PSHA calculator
   
   [Michele Simionato]
+  * Fixed a bug in scenario_damage from ShakeMap with noDamageLimit=0
+  * Avoided the MemoryError in the controller node by speeding up the saving
+    of the information about the sources
   * Turned utils/reduce_sm into a proper command
   * Fixed a wrong coefficient in the ShakeMap amplification
   * Fixed a bug in the hazard curves export (the filename did not contain

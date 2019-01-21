@@ -76,8 +76,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if pmap:
                     acc[grp_id] |= pmap
                 self.nsites.append(len(pmap))
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(dic['calc_times'])
+        self.calc_times += dic['calc_times']
         return acc
 
     def zerodict(self):
@@ -119,11 +118,17 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.extend(
                 'source_data', numpy.array(data, source_data_dt))
         self.nsites = []
-        acc = smap.reduce(self.agg_dicts, self.zerodict())
+        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        try:
+            acc = smap.reduce(self.agg_dicts, self.zerodict())
+            self.store_csm_info(acc.eff_ruptures)
+        finally:
+            with self.monitor('store source_info', autoflush=True):
+                self.store_source_info(self.calc_times)
+            self.calc_times.clear()  # save a bit of memory
         if not self.nsites:
             raise RuntimeError('All sources were filtered out!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
-        self.store_csm_info(acc.eff_ruptures)
         return acc
 
     def gen_args(self):
