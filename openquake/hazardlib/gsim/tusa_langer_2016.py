@@ -49,10 +49,10 @@ class TusaLanger2016RepiBA08SE(GMPE):
     flank movements (SE, focal depths <5km) and deeper events occurring due to
     regional tectonics (DE, focal depths >5km).
 
-    Test tables are generated from a spreadsheet provided by authors, and
+    Test tables are generated from a spreadsheet provided by the authors, and
     modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
 
-    Jan 2019: After noticing an anomalous-looking spike in the response spectra 
+    Jan 2019: After noticing an anomalous-looking spike in the response spectra
     of the TusaLanger2016RepiBA08SE model at T=0.14s, we contacted the authors
     who found a mistake in one of the coefficients in the publication. It has
     been updated according to the authors suggestion.
