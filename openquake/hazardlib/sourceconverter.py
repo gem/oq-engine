@@ -805,6 +805,7 @@ class SourceConverter(RuptureConverter):
             rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, rup_pmf_data)
+        nps.splittable = 'rup_weights' not in node.attrib
         return nps
 
     def convert_sourceModel(self, node):
