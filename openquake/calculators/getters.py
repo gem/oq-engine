@@ -21,7 +21,6 @@ import operator
 import mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
-#from openquake.baselib.python3compat import decode
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats, valid
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -104,8 +103,8 @@ class PmapGetter(object):
             ok_sids = set(self.sids)
             for grp, dset in self.dstore['poes'].items():
                 ds = dset['array']
-                L, I = ds.shape[1:]
-                pmap = probability_map.ProbabilityMap(L, I)
+                L, G = ds.shape[1:]
+                pmap = probability_map.ProbabilityMap(L, G)
                 for idx, sid in enumerate(dset['sids'].value):
                     if sid in ok_sids:
                         pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
@@ -387,7 +386,7 @@ class GmfGetter(object):
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
                 array = computer.compute(gs, num_events).transpose(1, 0, 2)
-                # shape (N, I, E)
+                # shape (N, M, E)
                 for i, miniml in enumerate(self.min_iml):  # gmv < minimum
                     arr = array[:, i, :]
                     arr[arr < miniml] = 0
@@ -398,8 +397,8 @@ class GmfGetter(object):
                     if not e:
                         continue
                     for ei, eid in enumerate(eids):
-                        gmf = array[:, :, n + ei]  # shape (N, I)
-                        tot = gmf.sum(axis=0)  # shape (I,)
+                        gmf = array[:, :, n + ei]  # shape (N, M)
+                        tot = gmf.sum(axis=0)  # shape (M,)
                         if not tot.sum():
                             continue
                         for sid, gmv in zip(sids, gmf):

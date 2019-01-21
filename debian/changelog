@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in scenario_damage from ShakeMap with noDamageLimit=0
   * Avoided the MemoryError in the controller node by speeding up the saving
     of the information about the sources
   * Turned utils/reduce_sm into a proper command
