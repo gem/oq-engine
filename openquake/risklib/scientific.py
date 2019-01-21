@@ -514,6 +514,9 @@ class FragilityFunctionDiscrete(object):
         self.limit_state = limit_state
         self.imls = imls
         self.poes = poes
+        if len(imls) != len(poes):
+            raise ValueError('%s: %d levels but %d poes' % (
+                limit_state, len(imls), len(poes)))
         self._interp = None
         self.no_damage_limit = no_damage_limit
 
@@ -581,7 +584,7 @@ class FragilityFunctionList(list):
         """
         new = copy.copy(self)
         add_zero = (self.format == 'discrete' and
-                    self.nodamage and self.nodamage < self.imls[0])
+                    self.nodamage and self.nodamage <= self.imls[0])
         new.imls = build_imls(new, discretization)
         if steps_per_interval > 1:
             new.interp_imls = build_imls(  # passed to classical_damage
