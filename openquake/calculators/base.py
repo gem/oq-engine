@@ -97,6 +97,16 @@ def fix_ones(pmap):
     return pmap
 
 
+def build_weights(realizations, imt_dt):
+    """
+    :returns: an array with the realization weights of dtype imt_dt
+    """
+    arr = numpy.zeros(len(realizations), imt_dt)
+    for imt in imt_dt.names:
+        arr[imt] = [rlz.weight[imt] for rlz in realizations]
+    return arr
+
+
 def set_array(longarray, shortarray):
     """
     :param longarray: a numpy array of floats of length L >= l
@@ -743,6 +753,11 @@ class HazardCalculator(BaseCalculator):
             raise RuntimeError('Empty logic tree: too much filtering?')
         self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
+        logging.info('There are %d realization(s)', R)
+        if self.oqparam.imtls:
+            self.datastore['csm_info/weights'] = arr = build_weights(
+                self.rlzs_assoc.realizations, self.oqparam.imt_dt())
+            self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
