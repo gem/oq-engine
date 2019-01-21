@@ -39,7 +39,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
-weight = operator.attrgetter('weight')
 rlz_dt = numpy.dtype([
     ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
@@ -431,10 +430,11 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
-                sg = copy.copy(src_group)
-                sg.sources = sorted(sources_by_grp.get(sg.id, []),
-                                    key=operator.attrgetter('id'))
-                src_groups.append(sg)
+                if src_group.atomic:
+                    sg = copy.copy(src_group)
+                    sg.sources = sorted(sources_by_grp.get(sg.id, []),
+                                        key=operator.attrgetter('id'))
+                    src_groups.append(sg)
             newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
@@ -445,20 +445,20 @@ class CompositeSourceModel(collections.Sequence):
         new.info.tot_weight = new.get_weight()
         return new
 
+    def split2(self):
+        """
+        :returns: csm_by_grp and srcs_by_trt
+        """
+        csm_by_grp = self.new({sg.id: sg for sg in self.src_groups
+                               if sg.atomic})
+        return csm_by_grp, self._sources_by_trt()
+
     def get_weight(self, weight=operator.attrgetter('weight')):
         """
         :param weight: source weight function
         :returns: total weight of the source model
         """
-        tot_weight = 0
-        for srcs in self.sources_by_trt.values():
-            tot_weight += sum(map(weight, srcs))
-        for grp in self.gen_mutex_groups():
-            tot_weight += sum(map(weight, grp))
-        for grp in self.gen_cluster_groups():
-            tot_weight += sum(map(weight, grp))
-        self.info.tot_weight = tot_weight
-        return tot_weight
+        return sum(weight(src) for src in self.get_sources())
 
     @property
     def src_groups(self):
@@ -500,22 +500,6 @@ class CompositeSourceModel(collections.Sequence):
                 dupl.append(srcs)
         return dupl
 
-    def gen_mutex_groups(self):
-        """
-        Yield groups of mutually exclusive sources
-        """
-        for sg in self.src_groups:
-            if sg.src_interdep == 'mutex':
-                yield sg
-
-    def gen_cluster_groups(self):
-        """
-        Yield cluster groups
-        """
-        for sg in self.src_groups:
-            if sg.cluster:
-                yield sg
-
     def get_sources(self, kind='all'):
         """
         Extract the sources contained in the source models by optionally
@@ -532,16 +516,11 @@ class CompositeSourceModel(collections.Sequence):
                         sources.append(src)
         return sources
 
-    @cached_property
-    def sources_by_trt(self):
-        """
-        Build a dictionary TRT string -> sources. Sources of kind "mutex"
-        (if any) are silently discarded.
-        """
+    def _sources_by_trt(self):
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                if grp.src_interdep != 'mutex' and not grp.cluster:
+                if not grp.atomic:
                     acc[grp.trt].extend(grp)
         if self.optimize_same_id is False:
             return acc
