@@ -251,9 +251,12 @@ class ContextMaker(object):
                     if rup_indep:
                         pmap[sid].array *= pne
                     else:
-                        pmap[sid].array += pne * rup.weight
-        pmap = ~pmap
+                        pmap[sid].array += (1.-pne) * rup.weight
+        if rup_indep:
+            pmap = ~pmap
         pmap.eff_ruptures = eff_ruptures
+        print('----------')
+        print(pmap)
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop

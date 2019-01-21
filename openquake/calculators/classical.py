@@ -146,7 +146,8 @@ class ClassicalCalculator(base.HazardCalculator):
                          self.csm.has_dupl_sources)
 
         for sg in self.csm.src_groups:
-            if (sg.src_interdep == 'mutex' or sg.cluster) and len(sg) > 0:
+            if (sg.src_interdep == 'mutex' or sg.cluster or 
+                    sg.rup_interdep == 'mutex') and len(sg) > 0:
                 par = param.copy()
                 par['src_interdep'] = sg.src_interdep
                 par['rup_interdep'] = sg.rup_interdep

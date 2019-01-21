@@ -67,7 +67,6 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
-
 def _cluster(param, imtls, gsims, grp_ids, pmap):
     """
     Computes the probability map in case of a cluster group
@@ -90,7 +89,6 @@ def _cluster(param, imtls, gsims, grp_ids, pmap):
             pmapclu += prob_n_occ * (~pmap)**nocc
     pmap = ~pmapclu
     return pmap
-
 
 def classical(group, src_filter, gsims, param, monitor=Monitor()):
     """
@@ -137,6 +135,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
+
+        print(src.name)
+
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
@@ -165,6 +166,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     if cluster:
         pmap = _cluster(param, imtls, gsims, grp_ids, pmap)
     # Return results
+    print('>>>>>>>>>>>>>>>>>>>')
+    print(pmap)
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
 
 
