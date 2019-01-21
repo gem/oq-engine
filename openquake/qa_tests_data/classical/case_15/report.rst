@@ -2,9 +2,9 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ============== ===================
-checksum32     17,280,623         
-date           2018-12-13T12:58:02
-engine_version 3.3.0-git68d7d11268
+checksum32     905,885,649        
+date           2019-01-20T07:39:52
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -98,10 +98,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     15           0.0       3.314E-05  0.0       1         0.0   
-1      2         P    1     2     15           0.0       1.431E-05  0.0       1         0.0   
-2      1         A    0     4     240          0.0       0.10170    0.0       16        0.0   
-3      1         A    0     4     240          0.0       0.07745    0.0       16        0.0   
+0      1         P    0     1     15           0.0       1.836E-05  0.0       1         0.0   
+1      2         P    1     2     15           0.0       1.669E-05  0.0       1         0.0   
+2      1         A    2     6     240          0.0       0.03633    0.0       16        0.0   
+3      1         A    6     10    240          0.0       0.03262    0.0       16        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -115,14 +115,15 @@ P    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 1 source(s) with the same ID and 0 true duplicate(s)
+Here is a fake duplicate: 1
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00868 0.00573 0.00206 0.01205 3      
-split_filter       0.02011 NaN     0.02011 0.02011 1      
+read_source_models 0.00331 0.00147 0.00162 0.00416 3      
+split_filter       0.00985 NaN     0.00985 0.00985 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -138,6 +139,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.02603  0.0       3     
-total split_filter       0.02011  0.0       1     
+total read_source_models 0.00993  0.30469   3     
+total split_filter       0.00985  1.39062   1     
 ======================== ======== ========= ======
