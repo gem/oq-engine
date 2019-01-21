@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     3,719,876,721      
-date           2018-12-13T12:57:20
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:37:36
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 7, num_levels = 8
@@ -77,14 +77,17 @@ Exposure model
 --------------
 =============== ========
 #assets         7       
-#taxonomies     1       
+#taxonomies     3       
 deductibile     absolute
 insurance_limit absolute
 =============== ========
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
-Wood     1.00000 0.0    1   1   7         7         
+Wood     1.00000 0.0    1   1   3         3         
+Concrete 1.00000 0.0    1   1   2         2         
+Steel    1.00000 0.0    1   1   2         2         
+*ALL*    1.00000 0.0    1   1   7         7         
 ======== ======= ====== === === ========= ==========
 
 Slowest sources
@@ -92,7 +95,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00659    0.0       15        0.0   
+0      1         S    0     2     482          0.0       0.00263    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -105,14 +108,14 @@ S    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00807 NaN    0.00807 0.00807 1      
-split_filter       0.03433 NaN    0.03433 0.03433 1      
+read_source_models 0.00378 NaN    0.00378 0.00378 1      
+split_filter       0.02158 NaN    0.02158 0.02158 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -128,7 +131,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total split_filter       0.03433   0.02734   1     
-total read_source_models 0.00807   0.0       1     
-reading exposure         4.404E-04 0.0       1     
+total split_filter       0.02158   1.66797   1     
+total read_source_models 0.00378   0.28906   1     
+reading exposure         5.014E-04 0.0       1     
 ======================== ========= ========= ======

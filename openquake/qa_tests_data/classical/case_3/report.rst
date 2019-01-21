@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 3
 
 ============== ===================
 checksum32     4,051,148,706      
-date           2018-12-13T12:58:05
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:40:09
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -76,7 +76,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     65    31,353       0.0       140,556    0.0       31,353    0.0   
+0      1         A    0     65    31,353       0.0       128,549    0.0       31,353    0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -89,14 +89,14 @@ A    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 3.88777 NaN    3.88777 3.88777 1      
-split_filter       6.80742 NaN    6.80742 6.80742 1      
+read_source_models 3.91135 NaN    3.91135 3.91135 1      
+split_filter       6.21146 NaN    6.21146 6.21146 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -112,6 +112,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       6.80742  33        1     
-total read_source_models 3.88777  0.74219   1     
+total split_filter       6.21146  24        1     
+total read_source_models 3.91135  0.87109   1     
 ======================== ======== ========= ======

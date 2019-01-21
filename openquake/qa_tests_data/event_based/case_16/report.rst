@@ -2,19 +2,19 @@ Reduced Hazard Italy
 ====================
 
 ============== ===================
-checksum32     3,187,729,294      
-date           2018-10-05T03:04:48
-engine_version 3.3.0-git48e9a474fd
+checksum32     1,879,307,037      
+date           2019-01-20T07:38:13
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
-num_sites = 90, num_levels = 30
+num_sites = 148, num_levels = 30
 
 Parameters
 ----------
 =============================== ==================
 calculation_mode                'event_based'     
 number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
+maximum_distance                {'default': 300.0}
 investigation_time              200.0             
 ses_per_logic_tree_path         1                 
 truncation_level                3.0               
@@ -31,16 +31,15 @@ ses_seed                        42
 
 Input files
 -----------
-=============== ============================================
-Name            File                                        
-=============== ============================================
-exposure        `exposure.xml <exposure.xml>`_              
-gsim_logic_tree `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_
-job_ini         `job.ini <job.ini>`_                        
-site_model      `site_model.xml <site_model.xml>`_          
-source          `as_model_full.xml <as_model_full.xml>`_    
-source_model    `as_model_full.xml <as_model_full.xml>`_    
-=============== ============================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+exposure                `exposure.xml <exposure.xml>`_                              
+gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+site_model              `site_model.csv <site_model.csv>`_                          
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Exposure model
 --------------
@@ -53,24 +52,24 @@ insurance_limit absolute
 
 ================= ======= ======= === === ========= ==========
 taxonomy          mean    stddev  min max num_sites num_assets
-CR/CDN/HBET:1-2   1.14286 0.37796 1   2   7         8         
-CR/CDM/HBET:1-2   1.18182 0.60302 1   3   11        13        
-CR/CDM/HBET:3-5   1.16667 0.57735 1   3   12        14        
+CR/CDN/HBET:1-2   1.00000 0.0     1   1   8         8         
+CR/CDM/HBET:1-2   1.00000 0.0     1   1   13        13        
+CR/CDM/HBET:3-5   1.00000 0.0     1   1   14        14        
 CR/CDN/H:4        1.00000 0.0     1   1   2         2         
-MUR/LWAL/HBET:5-8 1.20000 0.44721 1   2   5         6         
-CR/CDM/HBET:6-8   1.50000 0.70711 1   2   2         3         
-MUR/LWAL/H:3      1.20000 0.56061 1   3   15        18        
-CR/CDM/SOS        1.42857 0.53452 1   2   7         10        
-MUR/LWAL/HBET:1-2 1.30769 0.48038 1   2   13        17        
-CR/CDN/SOS        1.42857 0.78680 1   3   7         10        
-W/CDN/HBET:1-3    1.40000 0.69921 1   3   10        14        
-CR/CDH/HBET:1-2   1.37500 1.06066 1   4   8         11        
+MUR/LWAL/HBET:5-8 1.00000 0.0     1   1   6         6         
+CR/CDM/HBET:6-8   1.00000 0.0     1   1   3         3         
+MUR/LWAL/H:3      1.00000 0.0     1   1   18        18        
+CR/CDM/SOS        1.00000 0.0     1   1   10        10        
+MUR/LWAL/HBET:1-2 1.00000 0.0     1   1   17        17        
+CR/CDN/SOS        1.00000 0.0     1   1   10        10        
+W/CDN/HBET:1-3    1.00000 0.0     1   1   14        14        
+CR/CDH/HBET:1-2   1.00000 0.0     1   1   11        11        
 CR/CDH/HBET:6-8   1.00000 0.0     1   1   3         3         
-MUR/LWAL/H:4      1.60000 0.89443 1   3   5         8         
-CR/CDH/HBET:3-5   1.28571 0.48795 1   2   7         9         
+MUR/LWAL/H:4      1.00000 0.0     1   1   8         8         
+CR/CDH/HBET:3-5   1.00000 0.0     1   1   9         9         
 S/CDM/HBET:4-8    1.00000 0.0     1   1   2         2         
 CR/CDN/H:3        1.00000 0.0     1   1   3         3         
-*ALL*             1.67778 2.71421 0   15  90        151       
+*ALL*             1.02027 0.14140 1   2   148       151       
 ================= ======= ======= === === ========= ==========
 
 Slowest sources
@@ -78,7 +77,7 @@ Slowest sources
 ====== ========== ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id  code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========== ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      AS_HRAS083 A    0     15    2,295        0.0       0.63394    0.0       25        0.0   
+0      AS_HRAS083 A    0     15    2,295        0.0       0.0        0.0       1         0.0   
 ====== ========== ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -91,31 +90,30 @@ A    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.02540 NaN    0.02540 0.02540 1      
-split_filter       0.02942 NaN    0.02942 0.02942 1      
+read_source_models 0.01769 NaN    0.01769 0.01769 1      
+split_filter       0.00262 NaN    0.00262 0.00262 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                    2.84 KB 
-split_filter       srcs=11.5 KB monitor=425 B srcfilter=220 B sample_factor=21 B seed=14 B 12.33 KB
-================== ======================================================================= ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=388 B fnames=110 B            2.82 KB 
+split_filter       srcs=2.47 KB srcfilter=253 B dummy=14 B 2.59 KB 
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-reading exposure         0.05274  0.0       1     
-updating source_info     0.03965  0.0       1     
-total split_filter       0.02942  0.0       1     
-total read_source_models 0.02540  0.0       1     
+total read_source_models 0.01769  0.44922   1     
+total only_filter        0.00262  1.35156   1     
+reading exposure         0.00243  0.0       1     
 ======================== ======== ========= ======
