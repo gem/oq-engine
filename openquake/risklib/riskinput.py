@@ -24,7 +24,7 @@ from urllib.parse import unquote_plus
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.general import groupby, AccumDict, group_array
 from openquake.risklib import scientific, riskmodels
 
 
@@ -55,9 +55,12 @@ def read_composite_risk_model(dstore):
             rf = dstore['%s/%s/%s' % (oqparam.risk_model, quotedtaxonomy, lt)]
             if len(rmdict.limit_states):
                 # rf is a FragilityFunctionList
-                rf = rf.build(rmdict.limit_states,
-                              oqparam.continuous_fragility_discretization,
-                              oqparam.steps_per_interval)
+                try:
+                    rf = rf.build(rmdict.limit_states,
+                                  oqparam.continuous_fragility_discretization,
+                                  oqparam.steps_per_interval)
+                except ValueError as err:
+                    raise ValueError('%s: %s' % (taxo, err))
             else:
                 # rf is a vulnerability function
                 rf.init()
@@ -263,7 +266,10 @@ class CompositeRiskModel(collections.Mapping):
             if not imt_lt:  # a warning is printed in riskmodel.check_imts
                 continue
             for sid, assets, epsgetter in dic[taxonomy]:
-                for rlzi, haz in sorted(hazard[sid].items()):
+                haz = hazard[sid]
+                if not isinstance(haz, dict):
+                    haz = group_array(haz, 'rlzi')
+                for rlzi, haz in sorted(haz.items()):
                     with mon:
                         if isinstance(haz, numpy.ndarray):
                             # NB: in GMF-based calculations the order in which
