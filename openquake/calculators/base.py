@@ -754,8 +754,9 @@ class HazardCalculator(BaseCalculator):
         self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
-        self.datastore['csm_info/weights'] = arr = build_weights(
-            self.rlzs_assoc.realizations, self.oqparam.imt_dt())
+        if 'csm_info/weights' not in self.datastore:
+            self.datastore['csm_info/weights'] = arr = build_weights(
+                self.rlzs_assoc.realizations, self.oqparam.imt_dt())
         self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
