@@ -127,6 +127,13 @@ class SourceGroup(collections.Sequence):
                 for rup, _ in src.data:
                     assert rup.weight is not None
 
+    @property
+    def atomic(self):
+        """
+        :returns: True if the group cannot be split
+        """
+        return self.cluster or self.src_interdep == 'mutex'
+
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
         if src_interdep not in ('indep', 'mutex'):

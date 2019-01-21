@@ -135,9 +135,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
-
-        print(src.name)
-
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
@@ -232,8 +229,7 @@ def calc_hazard_curves(
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     mon = Monitor()
     for group in groups:
-        # do not split the group
-        if group.src_interdep == 'mutex' or group.cluster:
+        if group.atomic:  # do not split
             par = param.copy()
             par['src_interdep'] = group.src_interdep
             par['rup_interdep'] = group.rup_interdep
