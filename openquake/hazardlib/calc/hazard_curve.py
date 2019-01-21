@@ -166,8 +166,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     if cluster:
         pmap = _cluster(param, imtls, gsims, grp_ids, pmap)
     # Return results
-    print('>>>>>>>>>>>>>>>>>>>')
-    print(pmap)
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
 
 
