@@ -442,6 +442,16 @@ class HazardCalculator(BaseCalculator):
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
+    @property
+    def E(self):
+        """
+        :returns: the number of stored events
+        """
+        try:
+            return len(self.datastore['events'])
+        except KeyError:
+            return 0
+
     def check_overflow(self):
         """Overridden in event based"""
 
