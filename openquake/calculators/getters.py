@@ -426,32 +426,6 @@ class GmfGetter(object):
             data = self.get_gmfdata()
         return general.group_array(data, 'sid')
 
-    def gen_risk(self, assets, riskmodel, haz):
-        """
-        :param assets: a list of assets on the same site
-        :param riskmodel: a CompositeRiskModel instance
-        :params haz: hazard on the given site (rlzi, sid, eid, gmv)
-        :yields: lti, aid, losses
-        """
-        imti = {imt: i for i, imt in enumerate(self.imts)}
-        tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
-        gmvs = haz['gmv']
-        E = len(gmvs)
-        assets_by_taxi = general.groupby(assets, by_taxonomy)
-        for taxo, rm in riskmodel.items():
-            t = tdict[taxo]
-            try:
-                assets = assets_by_taxi[t]
-            except KeyError:  # there are no assets of taxonomy taxo
-                continue
-            for lt, rf in rm.risk_functions.items():
-                lti = riskmodel.lti[lt]
-                means, covs, idxs = rf.interpolate(gmvs[:, imti[rf.imt]])
-                for asset in assets:
-                    loss_ratios = numpy.zeros(E, F32)
-                    loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
-                    yield (lti, asset.ordinal, loss_ratios * asset.value(lt))
-
     def compute_gmfs_curves(self, monitor):
         """
         :returns: a dict with keys gmfdata, indices, hcurves
