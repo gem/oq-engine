@@ -129,21 +129,20 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['riskmodel'] = self.riskmodel
         N = len(self.sitecol.complete)
         L = len(self.riskmodel.loss_types)
-        R = self.csm.info.get_num_rlzs()
-        self.datastore.create_dset('losses_by_site', F32, (N, R, L))
+        self.datastore.create_dset('losses_by_site', F32, (N, self.R, L))
 
     def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
-        :param arr: ArrayWrapper with an attribute .eids
+        :param dic: a dictionary with keys eids, losses, losses_by_RN
         """
-        if 'losses_by_event' not in self.datastore:  # first time
+        self.oqparam.ground_motion_fields = False  # hack
+        if 'losses_by_event' not in set(self.datastore):  # first time
             L = len(self.riskmodel.lti)
             shp = self.get_shape(len(self.eid2idx), L)
             logging.info('Creating losses_by_event of shape %s, %s', shp,
                          humansize(numpy.product(shp) * 4))
             self.datastore.create_dset('losses_by_event', F32, shp)
-            self.oqparam.ground_motion_fields = False
         if len(dic['losses']):
             with self.monitor('saving losses_by_event', measuremem=True):
                 lbe = self.datastore['losses_by_event']
