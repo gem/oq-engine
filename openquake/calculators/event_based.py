@@ -144,7 +144,6 @@ class EventBasedCalculator(base.HazardCalculator):
             grp_id:
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
             for grp_id in self.rlzs_by_gsim_grp}
-        self.R = len(self.rlzs_assoc.realizations)
 
     def zerodict(self):
         """
