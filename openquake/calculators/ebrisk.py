@@ -46,19 +46,19 @@ def gen_risk(assets, riskmodel, haz, imts):
     tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
     gmvs = haz['gmv']
     E = len(gmvs)
-    assets_by_taxi = general.groupby(assets, operator.attrgetter('taxonomy'))
+    assets_by_t = general.groupby(assets, operator.attrgetter('taxonomy'))
     for taxo, rm in riskmodel.items():
         t = tdict[taxo]
         try:
-            assets = assets_by_taxi[t]
+            assets = assets_by_t[t]
         except KeyError:  # there are no assets of taxonomy taxo
             continue
         for lt, rf in rm.risk_functions.items():
             lti = riskmodel.lti[lt]
             means, covs, idxs = rf.interpolate(gmvs[:, imti[rf.imt]])
+            loss_ratios = numpy.zeros(E, F32)
+            loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
             for asset in assets:
-                loss_ratios = numpy.zeros(E, F32)
-                loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
                 yield lti, asset.ordinal, loss_ratios * asset.value(lt)
 
 
