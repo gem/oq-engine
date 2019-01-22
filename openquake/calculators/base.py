@@ -571,6 +571,16 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
 
+    @general.cached_property
+    def R(self):
+        """
+        :returns: the number of realizations as read from `csm_info`
+        """
+        try:
+            return self.csm.info.get_num_rlzs()
+        except AttributeError:  # no self.csm
+            return self.datastore['csm_info'].get_num_rlzs()
+
     def read_exposure(self, haz_sitecol=None):  # after load_risk_model
         """
         Read the exposure, the riskmodel and update the attributes
@@ -803,17 +813,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
-    @property
-    def R(self):
-        """
-        :returns: the number of realizations as read from `csm_info`
-        """
-        try:
-            return self._R
-        except AttributeError:
-            self._R = self.datastore['csm_info'].get_num_rlzs()
-            return self._R
-
     def read_shakemap(self, haz_sitecol, assetcol):
         """
         Enabled only if there is a shakemap_id parameter in the job.ini.

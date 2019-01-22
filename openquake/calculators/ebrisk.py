@@ -129,8 +129,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['riskmodel'] = self.riskmodel
         N = len(self.sitecol.complete)
         L = len(self.riskmodel.loss_types)
-        R = self.csm.info.get_num_rlzs()
-        self.datastore.create_dset('losses_by_site', F32, (N, R, L))
+        self.datastore.create_dset('losses_by_site', F32, (N, self.R, L))
 
     def agg_dicts(self, dummy, dic):
         """
