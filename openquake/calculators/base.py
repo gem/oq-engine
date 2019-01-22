@@ -574,7 +574,7 @@ class HazardCalculator(BaseCalculator):
     @general.cached_property
     def R(self):
         """
-        :returns: the number of realizations as read from `csm_info`
+        :returns: the number of realizations
         """
         try:
             return self.csm.info.get_num_rlzs()
