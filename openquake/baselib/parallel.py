@@ -694,14 +694,15 @@ class Starmap(object):
     threadpool_submit = processpool_submit
 
     def celery_submit(self, args):
-        return safetask.delay(self.task_func, args, self.monitor)
+        return safetask.delay(self.task_func, args, self.task_no, self.monitor)
 
     def zmq_submit(self, args):
         if not hasattr(self, 'sender'):
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
-        return self.sender.send((self.task_func, args, self.monitor))
+        return self.sender.send(
+            (self.task_func, args, self.task_no, self.monitor))
 
     def dask_submit(self, args):
         return self.dask_client.submit(safely_call, self.task_func, args,
