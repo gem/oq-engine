@@ -145,7 +145,7 @@ class EventBasedCalculator(base.HazardCalculator):
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
             for grp_id in self.rlzs_by_gsim_grp}
 
-    def zerodict(self):
+    def acc0(self):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
@@ -212,6 +212,9 @@ class EventBasedCalculator(base.HazardCalculator):
         rgetters = self.save_events(sorted_ruptures)
         return ((rgetter, self.src_filter, par) for rgetter in rgetters)
 
+    def rup_weight(self, rec):
+        return 1
+
     def get_rupture_getters(self):
         """
         :returns: a list of RuptureGetters
@@ -223,7 +226,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
-            dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache)
+            dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache,
+            rup_weight=self.rup_weight)
         num_events = self.E
         num_ruptures = len(dstore['ruptures'])
         logging.info('Found {:,d} ruptures and {:,d} events'
@@ -349,7 +353,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
-        ).reduce(self.agg_dicts, self.zerodict())
+        ).reduce(self.agg_dicts, self.acc0())
 
         if self.indices:
             N = len(self.sitecol.complete)

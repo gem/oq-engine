@@ -468,7 +468,8 @@ class GmfGetter(object):
         return res
 
 
-def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None):
+def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None,
+                        rup_weight=lambda rup: 1):
     """
     :returns: a list of RuptureGetters
     """
@@ -480,7 +481,8 @@ def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None):
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
     rgetters = []
     by_grp = operator.itemgetter(2)  # serial, srcidx, grp_id
-    for block in general.split_in_blocks(rup_array, split, key=by_grp):
+    for block in general.split_in_blocks(rup_array, split, rup_weight,
+                                         key=by_grp):
         rups = numpy.array(block)
         grp_id = rups[0]['grp_id']
         if not rlzs_by_gsim[grp_id]:
@@ -490,6 +492,7 @@ def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None):
         rgetter = RuptureGetter(
             hdf5cache or dstore.hdf5path, code2cls, rups,
             grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+        rgetter.weight = block.weight
         rgetters.append(rgetter)
     return rgetters
 
