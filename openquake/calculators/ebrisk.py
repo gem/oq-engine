@@ -174,13 +174,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                          humansize(numpy.product(shp) * 4))
             self.datastore.create_dset('losses_by_event', F32, shp)
         if len(dic['losses']):
-            with self.monitor('saving losses_by_event', measuremem=True):
+            with self.monitor('saving losses_by_event', autoflush=True):
                 lbe = self.datastore['losses_by_event']
                 idx = [self.eid2idx[eid] for eid in dic['eids']]
                 sort_idx, sort_arr = zip(*sorted(zip(idx, dic['losses'])))
                 # h5py requires the indices to be sorted
                 lbe[list(sort_idx)] = numpy.array(sort_arr)
-        with self.monitor('saving losses_by_site', measuremem=True):
+        with self.monitor('saving losses_by_site', autoflush=True):
             for r, arr in dic['losses_by_RN'].items():
                 self.datastore['losses_by_site'][:, r] += arr
         return 1
