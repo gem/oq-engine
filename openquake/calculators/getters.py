@@ -492,7 +492,7 @@ def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None,
         rgetter = RuptureGetter(
             hdf5cache or dstore.hdf5path, code2cls, rups,
             grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
-        rgetter.weight = block.weight
+        rgetter.weight = block.weight if split else len(block)
         rgetters.append(rgetter)
     return rgetters
 
