@@ -134,7 +134,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
-        :param arr: ArrayWrapper with an attribute .eids
+        :param dic: a dictionary with keys eids, losses, losses_by_RN
         """
         if 'losses_by_event' not in self.datastore:  # first time
             L = len(self.riskmodel.lti)
