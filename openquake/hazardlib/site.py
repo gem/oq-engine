@@ -22,7 +22,8 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 from shapely import geometry
 from openquake.baselib.general import split_in_blocks, not_equal
-from openquake.hazardlib.geo.utils import fix_lon, cross_idl
+from openquake.hazardlib.geo.utils import (
+    fix_lon, cross_idl, KM_TO_DEGREES, angular_distance)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -394,6 +395,15 @@ class SiteCollection(object):
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
+
+    def close_sids(self, lon, lat, maxdist):
+        """
+        :returns:
+            site IDs close to (lon, lat)
+        """
+        a1 = min(maxdist * KM_TO_DEGREES, 90)
+        a2 = min(angular_distance(maxdist, lat), 180)
+        return self.within_bbox((lon - a2, lat - a1, lon + a2, lat + a1))
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

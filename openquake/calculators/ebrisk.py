@@ -90,7 +90,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
-    time_by_site = AccumDict(accum=0)
     with monitor('building risk'):
         imts = getter.imts
         eids = rupgetter.get_eid_rlz()['eid']
@@ -102,6 +101,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             losses_by_RN = AccumDict(accum=numpy.zeros((N, L), F32))
         else:
             losses_by_RN = {}
+        times = numpy.zeros(N)  # risk time per site_id
         for sid, haz in hazard.items():
             t0 = time.time()
             assets, tagidxs = assgetter.get(sid, tagnames)
@@ -111,9 +111,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                     acc[(eid2idx[eid], lti) + tagidxs[aid]] += loss
                     if param['avg_losses']:
                         losses_by_RN[rlz][sid, lti] += loss
-            time_by_site[sid] += time.time() - t0
+            times[sid] = time.time() - t0
     return {'losses': acc, 'eids': eids, 'losses_by_RN': losses_by_RN,
-            'time_by_site': time_by_site}
+            'times': times}
 
 
 def compute_loss_curves_maps(hdf5path, multi_index, clp, individual_curves,
@@ -157,15 +157,24 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with hdf5.File(self.hdf5cache) as cache:
             cache['assetcol'] = self.assetcol
         self.param['aggregate_by'] = self.oqparam.aggregate_by
+        self.N = len(self.sitecol.complete)
+        dic = general.countby(self.assetcol.array, 'site_id')
+        self.num_assets = numpy.zeros(self.N, U32)  # num assets per site
+        for sid in dic:
+            self.num_assets[sid] = dic[sid]
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
-        N = len(self.sitecol.complete)
         L = len(self.riskmodel.loss_types)
-        self.datastore.create_dset('losses_by_site', F32, (N, self.R, L))
+        self.datastore.create_dset('losses_by_site', F32, (self.N, self.R, L))
 
-    def zerodict(self):
-        return {}
+    def acc0(self):
+        return numpy.zeros(self.N)
+
+    def rup_weight(self, rec):
+        lon, lat, _ = rec['hypo']
+        sids = self.sitecol.close_sids(lon, lat, maxdist=50)
+        return self.num_assets[sids].sum() * rec['n_occ']
 
     def agg_dicts(self, acc, dic):
         """
@@ -189,7 +198,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with self.monitor('saving losses_by_site', autoflush=True):
             for r, arr in dic['losses_by_RN'].items():
                 self.datastore['losses_by_site'][:, r] += arr
-        return acc + dic['time_by_site']
+        return acc + dic['times']
 
     def get_shape(self, *sizes):
         return self.assetcol.tagcol.agg_shape(sizes, self.oqparam.aggregate_by)
@@ -227,14 +236,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     stats=[encode(name) for (name, func) in stats],
                     loss_types=loss_types)
 
-    def post_execute(self, time_by_site):
+    def post_execute(self, times):
         """
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
-        times = numpy.zeros(len(self.sitecol.complete), F32)
-        for sid in time_by_site:
-            times[sid] = time_by_site[sid]
         self.datastore.set_attrs('task_info/ebrisk', times=times)
         logging.info('Building losses_by_rlz')
         with self.monitor('building avg_losses-rlzs', autoflush=True):
