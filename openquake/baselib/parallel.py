@@ -656,9 +656,9 @@ class Starmap(object):
     @property
     def task_no(self):
         """
-        :returns: number of the last submitted task
+        :returns: number of the last submitted task, starting from 0
         """
-        return len(self.tasks) + 1
+        return len(self.tasks)
 
     def submit_all(self):
         """
