@@ -173,6 +173,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         :returns: the number of assets affected by the rupture
         """
+        return 1
         trt = self.csm_info.trt_by_grp[rup['grp_id']]
         sids = self.src_filter.close_sids(rup, trt, rup['mag'])
         return self.num_assets[sids].sum() * rup['n_occ']
