@@ -286,6 +286,8 @@ class EventBasedCalculator(base.HazardCalculator):
         # this is very fast compared to saving the ruptures
         eids = rupture.get_eids(
             rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
+        num_unique_events = len(numpy.unique(eids))
+        assert num_unique_events == len(eids), (num_unique_events, len(eids))
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
         rgetters = self.get_rupture_getters()
