@@ -67,7 +67,6 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
-
 def _cluster(param, imtls, gsims, grp_ids, pmap):
     """
     Computes the probability map in case of a cluster group
@@ -90,7 +89,6 @@ def _cluster(param, imtls, gsims, grp_ids, pmap):
             pmapclu += prob_n_occ * (~pmap)**nocc
     pmap = ~pmapclu
     return pmap
-
 
 def classical(group, src_filter, gsims, param, monitor=Monitor()):
     """
