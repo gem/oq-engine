@@ -151,7 +151,6 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
-        self.E = len(self.datastore['events'])
         return zd
 
     def from_sources(self, par):
@@ -225,7 +224,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
             dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache)
-        num_events = self.E if hasattr(self, 'E') else len(dstore['events'])
+        num_events = self.E
         num_ruptures = len(dstore['ruptures'])
         logging.info('Found {:,d} ruptures and {:,d} events'
                      .format(num_ruptures, num_events))
@@ -283,7 +282,6 @@ class EventBasedCalculator(base.HazardCalculator):
         # this is very fast compared to saving the ruptures
         eids = rupture.get_eids(
             rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
-        self.E = len(eids)
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
         rgetters = self.get_rupture_getters()
@@ -314,8 +312,7 @@ class EventBasedCalculator(base.HazardCalculator):
         store the GMFs (gmv_dt). They could be relaxed in the future.
         """
         max_ = dict(events=TWO32, imts=2**8)
-        E = getattr(self, 'E', 0)  # 0 for non event based
-        num_ = dict(events=E, imts=len(self.oqparam.imtls))
+        num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
         if self.sitecol:
             max_['sites'] = min(self.oqparam.max_num_sites, TWO32)
             num_['sites'] = len(self.sitecol)
