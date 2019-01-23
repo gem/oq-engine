@@ -163,12 +163,20 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         L = len(self.riskmodel.loss_types)
-        self.datastore['assetcol/num_assets'] = (
+        self.datastore['assetcol/num_assets'] = self.num_assets = (
             self.assetcol.num_assets_by_site())
         self.datastore.create_dset('losses_by_site', F32, (self.N, self.R, L))
 
     def acc0(self):
         return numpy.zeros(self.N)
+
+    def rup_weight(self, rup):
+        """
+        :returns: the number of assets affected by the rupture
+        """
+        trt = self.csm_info.trt_by_grp[rup['grp_id']]
+        sids = self.src_filter.close_sids(rup, trt, rup['mag'])
+        return self.num_assets[sids].sum() * rup['n_occ']
 
     def agg_dicts(self, acc, dic):
         """

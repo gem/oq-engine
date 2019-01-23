@@ -625,7 +625,7 @@ class RuptureGetter(object):
                 if srcfilter is None:
                     ebrs.append(ebr)
                     continue
-                ebr.sids = srcfilter.get_sids_within(
+                ebr.sids = srcfilter.close_sids(
                         rec, rupture.tectonic_region_type, rupture.mag)
                 if len(ebr.sids):
                     ebrs.append(ebr)
