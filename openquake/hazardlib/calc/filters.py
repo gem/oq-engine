@@ -326,7 +326,7 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
-    def get_sids_within(self, rec, trt, mag):
+    def close_sids(self, rec, trt, mag):
         """
         :param rec:
            a record with fields minlon, minlat, maxlon, maxlat
