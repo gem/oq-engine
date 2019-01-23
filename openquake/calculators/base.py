@@ -957,9 +957,9 @@ def get_gmv_data(sids, gmfs):
     """
     Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
     """
-    R, N, E, I = gmfs.shape
+    R, N, E, M = gmfs.shape
     gmv_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (M,)))])
     # NB: ordering of the loops: first site, then event, then realization
     # it is such that save_gmf_data saves the indices correctly for each sid
     it = ((r, sids[s], eid, gmfa[s, eid])
@@ -995,7 +995,7 @@ def save_gmfs(calculator):
     # NB: save_gmfs redefine oq.sites in case of GMFs from XML or CSV
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
-        R, N, E, I = gmfs.shape
+        R, N, E, M = gmfs.shape
         save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids],
                       oq.imtls, eids)
 
