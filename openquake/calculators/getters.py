@@ -622,13 +622,11 @@ class RuptureGetter(object):
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
-                bbox = (rec['minlon'], rec['minlat'],
-                        rec['maxlon'], rec['maxlat'])
                 if srcfilter is None:
                     ebrs.append(ebr)
                     continue
                 ebr.sids = srcfilter.get_sids_within(
-                        bbox, rupture.tectonic_region_type, rupture.mag)
+                        rec, rupture.tectonic_region_type, rupture.mag)
                 if len(ebr.sids):
                     ebrs.append(ebr)
         return ebrs

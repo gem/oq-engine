@@ -326,14 +326,21 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
-    def get_sids_within(self, bbox, trt, mag):
+    def get_sids_within(self, rec, trt, mag):
         """
+        :param rec:
+           a record with fields minlon, minlat, maxlon, maxlat
+        :param trt:
+           tectonic region type string
+        :param mag:
+           magnitude
         :returns:
            the site indices within the bounding box enlarged by the integration
            distance for the given TRT and magnitude
         """
         if not self.integration_distance:  # do not filter
             return self.sitecol.sids
+        bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
         maxdist = self.integration_distance(trt, mag)
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
