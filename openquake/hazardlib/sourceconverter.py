@@ -812,6 +812,7 @@ class SourceConverter(RuptureConverter):
             rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, rup_pmf_data)
+        nps.splittable = 'rup_weights' not in node.attrib
         return nps
 
     def convert_sourceModel(self, node):
@@ -830,7 +831,7 @@ class SourceConverter(RuptureConverter):
         srcs_weights = node.attrib.get('srcs_weights')
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
-                                  'srcs_weights', 'group_type')}
+                                  'srcs_weights')}
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.temporal_occurrence_model = self.get_tom(node)
         sg.name = node.attrib.get('name')
@@ -839,9 +840,7 @@ class SourceConverter(RuptureConverter):
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
         sg.grp_probability = node.attrib.get('grp_probability')
         # set the cluster attribute
-        sg.cluster = False
-        if node.attrib.get('cluster') == 'true':
-            sg.cluster = True
+        sg.cluster = node.attrib.get('cluster') == 'true'
         #
         for src_node in node:
             if self.source_id and self.source_id != src_node['id']:
