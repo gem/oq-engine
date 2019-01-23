@@ -163,8 +163,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         L = len(self.riskmodel.loss_types)
-        self.datastore['assetcol/num_assets'] = self.num_assets = (
-            self.assetcol.num_assets_by_site())
+        self.num_assets = self.assetcol.num_assets_by_site()
         self.datastore.create_dset('losses_by_site', F32, (self.N, self.R, L))
 
     def acc0(self):
