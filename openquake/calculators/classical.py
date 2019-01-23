@@ -79,7 +79,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times += dic['calc_times']
         return acc
 
-    def zerodict(self):
+    def acc0(self):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
@@ -121,7 +121,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.nsites = []
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
-            acc = smap.reduce(self.agg_dicts, self.zerodict())
+            acc = smap.reduce(self.agg_dicts, self.acc0())
             self.store_csm_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info', autoflush=True):
