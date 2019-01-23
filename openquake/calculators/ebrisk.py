@@ -40,7 +40,7 @@ def gen_risk(assets, riskmodel, haz, imts):
     :param riskmodel: a CompositeRiskModel instance
     :params haz: hazard on the given site (rlzi, sid, eid, gmv)
     :param imts: intensity measure types
-    :yields: lti, aid, losses
+    :yields: loss_type, asset, loss_ratios
     """
     imti = {imt: i for i, imt in enumerate(imts)}
     tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
@@ -54,12 +54,11 @@ def gen_risk(assets, riskmodel, haz, imts):
         except KeyError:  # there are no assets of taxonomy taxo
             continue
         for lt, rf in rm.risk_functions.items():
-            lti = riskmodel.lti[lt]
             means, covs, idxs = rf.interpolate(gmvs[:, imti[rf.imt]])
             loss_ratios = numpy.zeros(E, F32)
             loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
             for asset in assets:
-                yield lti, asset.ordinal, loss_ratios * asset.value(lt)
+                yield lt, asset, loss_ratios
 
 
 def ebrisk(rupgetter, srcfilter, param, monitor):
@@ -106,9 +105,11 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             t0 = time.time()
             assets, tagidxs = assgetter.get(sid, tagnames)
             mon.duration += time.time() - t0
-            for lti, aid, losses in gen_risk(assets, riskmodel, haz, imts):
+            for lt, asset, ratios in gen_risk(assets, riskmodel, haz, imts):
+                lti = riskmodel.lti[lt]
+                losses = ratios * asset.value(lt)
                 for eid, rlz, loss in zip(haz['eid'], haz['rlzi'], losses):
-                    acc[(eid2idx[eid], lti) + tagidxs[aid]] += loss
+                    acc[(eid2idx[eid], lti) + tagidxs[asset.ordinal]] += loss
                     if param['avg_losses']:
                         losses_by_RN[rlz][sid, lti] += loss
             times[sid] = time.time() - t0
@@ -170,11 +171,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def acc0(self):
         return numpy.zeros(self.N)
-
-    def rup_weight(self, rec):
-        lon, lat, _ = rec['hypo']
-        sids = self.sitecol.close_sids(lon, lat, maxdist=50)
-        return self.num_assets[sids].sum() * rec['n_occ']
 
     def agg_dicts(self, acc, dic):
         """
