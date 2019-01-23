@@ -56,7 +56,6 @@ def store_rlzs_by_grp(dstore):
     """
     lst = []
     assoc = dstore['csm_info'].get_rlzs_assoc()
-    logging.info('There are %d realizations', len(assoc.realizations))
     for grp, arr in assoc.by_grp().items():
         for gsim_id, rlzs in enumerate(arr):
             lst.append((int(grp[4:]), gsim_id, rlzs))
@@ -144,15 +143,13 @@ class EventBasedCalculator(base.HazardCalculator):
             grp_id:
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
             for grp_id in self.rlzs_by_gsim_grp}
-        self.R = len(self.rlzs_assoc.realizations)
 
-    def zerodict(self):
+    def acc0(self):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
-        self.E = len(self.datastore['events'])
         return zd
 
     def from_sources(self, par):
@@ -214,7 +211,10 @@ class EventBasedCalculator(base.HazardCalculator):
         rgetters = self.save_events(sorted_ruptures)
         return ((rgetter, self.src_filter, par) for rgetter in rgetters)
 
-    def get_rupture_getters(self):
+    def rup_weight(self, rec):
+        return 1
+
+    def get_rupture_getters(self, rup_weight=None):
         """
         :returns: a list of RuptureGetters
         """
@@ -225,11 +225,12 @@ class EventBasedCalculator(base.HazardCalculator):
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
-            dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache)
-        num_events = self.E if hasattr(self, 'E') else len(dstore['events'])
+            dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache,
+            rup_weight=rup_weight or self.rup_weight)
         num_ruptures = len(dstore['ruptures'])
-        logging.info('Found {:,d} ruptures and {:,d} events'
-                     .format(num_ruptures, num_events))
+        if self.E:
+            logging.info('Found {:,d} ruptures and {:,d} events'
+                         .format(num_ruptures, self.E))
         if self.datastore.parent:
             self.datastore.parent.close()
         return rgetters
@@ -284,10 +285,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # this is very fast compared to saving the ruptures
         eids = rupture.get_eids(
             rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
-        self.E = len(eids)
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
-        rgetters = self.get_rupture_getters()
+        rgetters = self.get_rupture_getters(lambda rup: 1)
 
         # build the associations eid -> rlz in parallel
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
@@ -300,6 +300,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 events[i] = er
                 i += 1
         events.sort(order=['rlz', 'eid'])  # fast too
+        n_unique_events = len(numpy.unique(events['eid']))
+        assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
         indices = numpy.zeros((self.R, 2), U32)
         for r, [startstop] in get_indices(events['rlz']).items():
@@ -315,8 +317,7 @@ class EventBasedCalculator(base.HazardCalculator):
         store the GMFs (gmv_dt). They could be relaxed in the future.
         """
         max_ = dict(events=TWO32, imts=2**8)
-        E = getattr(self, 'E', 0)  # 0 for non event based
-        num_ = dict(events=E, imts=len(self.oqparam.imtls))
+        num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
         if self.sitecol:
             max_['sites'] = min(self.oqparam.max_num_sites, TWO32)
             num_['sites'] = len(self.sitecol)
@@ -339,23 +340,21 @@ class EventBasedCalculator(base.HazardCalculator):
             ruptures_per_block=oq.ruptures_per_block,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        if oq.hazard_calculation_id and 'losses_by_event' in self.datastore:
-            # ebrisk already ran, repeat the postprocessing only
-            return {}
-        elif oq.hazard_calculation_id and 'ruptures' in self.datastore:
+        if oq.hazard_calculation_id and 'ruptures' in self.datastore:
             # from ruptures
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
             iterargs = ((rgetter, self.src_filter, param)
                         for rgetter in self.get_rupture_getters())
-        else:  # from sources
+        else:
+            # from sources
             iterargs = self.from_sources(param)
             if oq.ground_motion_fields is False:
                 return {}
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
-        ).reduce(self.agg_dicts, self.zerodict())
+        ).reduce(self.agg_dicts, self.acc0())
 
         if self.indices:
             N = len(self.sitecol.complete)
@@ -422,11 +421,11 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.datastore['hcurves/' + statname] = arr
                     if oq.poes:
                         P = len(oq.poes)
-                        I = len(oq.imtls)
+                        M = len(oq.imtls)
                         self.datastore.create_dset(
-                            'hmaps/' + statname, F32, (N, P * I))
+                            'hmaps/' + statname, F32, (N, P * M))
                         self.datastore.set_attrs(
-                            'hmaps/' + statname, nbytes=N * P * I * 4)
+                            'hmaps/' + statname, nbytes=N * P * M * 4)
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         ds = self.datastore['hmaps/' + statname]
                         for sid in hmap:
