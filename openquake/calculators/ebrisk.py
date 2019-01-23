@@ -159,14 +159,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['assetcol'] = self.assetcol
         self.param['aggregate_by'] = self.oqparam.aggregate_by
         self.N = len(self.sitecol.complete)
-        dic = general.countby(self.assetcol.array, 'site_id')
-        self.num_assets = numpy.zeros(self.N, U32)  # num assets per site
-        for sid in dic:
-            self.num_assets[sid] = dic[sid]
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         L = len(self.riskmodel.loss_types)
+        self.datastore['assetcol/num_assets'] = (
+            self.assetcol.num_assets_by_site())
         self.datastore.create_dset('losses_by_site', F32, (self.N, self.R, L))
 
     def acc0(self):

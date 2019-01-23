@@ -421,6 +421,16 @@ class AssetCollection(object):
         """
         return self.tagcol.tagnames
 
+    def num_assets_by_site(self):
+        """
+        :returns: an array with the number of assets per each site
+        """
+        dic = general.countby(self.array, 'site_id')
+        num_assets = numpy.zeros(self.tot_sites, U32)
+        for sid in dic:
+            num_assets[sid] = dic[sid]
+        return num_assets
+
     def get_aids_by_tag(self):
         """
         :returns: dict tag -> asset ordinals
