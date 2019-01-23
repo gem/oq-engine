@@ -42,7 +42,7 @@ Starting from engine 3.3, seismic events are uniquely identified by an
 event ID, a.k.a. `eid`, which is a 64 bit positive integer. The relation
 between event ID and rupture ID is given by the following formula:
 
-   rupture_ID = event_ID // 2 ** 32
+   `rupture_ID = event_ID // 2 ** 32`
 
 where `//` is the integer division. For instance the event ID 
 7374458847232 is associated to the rupture ID 1717. Given an event ID
