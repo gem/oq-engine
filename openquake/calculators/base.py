@@ -694,6 +694,8 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
+            self.datastore['assetcol/num_assets'] = (
+                self.assetcol.num_assets_by_site())
             if hasattr(readinput.exposure, 'exposures'):
                 self.datastore['assetcol/exposures'] = (
                     numpy.array(exposure.exposures, hdf5.vstr))
@@ -879,8 +881,6 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        if not hasattr(self, 'assetcol'):
-            self.assetcol = self.datastore['assetcol']
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = list(self._gen_riskinputs(kind, eps, num_events))
