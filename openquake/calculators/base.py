@@ -694,6 +694,8 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
+            self.datastore['assetcol/num_assets'] = (
+                self.assetcol.num_assets_by_site())
             if hasattr(readinput.exposure, 'exposures'):
                 self.datastore['assetcol/exposures'] = (
                     numpy.array(exposure.exposures, hdf5.vstr))
@@ -879,8 +881,6 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        if not hasattr(self, 'assetcol'):
-            self.assetcol = self.datastore['assetcol']
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = list(self._gen_riskinputs(kind, eps, num_events))
@@ -957,9 +957,9 @@ def get_gmv_data(sids, gmfs):
     """
     Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
     """
-    R, N, E, I = gmfs.shape
+    R, N, E, M = gmfs.shape
     gmv_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (M,)))])
     # NB: ordering of the loops: first site, then event, then realization
     # it is such that save_gmf_data saves the indices correctly for each sid
     it = ((r, sids[s], eid, gmfa[s, eid])
@@ -995,7 +995,7 @@ def save_gmfs(calculator):
     # NB: save_gmfs redefine oq.sites in case of GMFs from XML or CSV
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
-        R, N, E, I = gmfs.shape
+        R, N, E, M = gmfs.shape
         save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids],
                       oq.imtls, eids)
 
