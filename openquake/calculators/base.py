@@ -625,19 +625,6 @@ class HazardCalculator(BaseCalculator):
             self.riskmodel = self.riskmodel.reduce(taxonomies)
         return readinput.exposure
 
-    def get_min_iml(self, oq):
-        # set the minimum_intensity
-        if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
-            # infer it from the risk models if not directly set in job.ini
-            oq.minimum_intensity = self.riskmodel.min_iml
-        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-        if min_iml.sum() == 0:
-            logging.warn('The GMFs are not filtered: '
-                         'you may want to set a minimum_intensity')
-        else:
-            logging.info('minimum_intensity=%s', oq.minimum_intensity)
-        return min_iml
-
     def load_riskmodel(self):
         # to be called before read_exposure
         # NB: this is called even if there is no risk model
