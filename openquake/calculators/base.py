@@ -694,8 +694,8 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['assetcol/num_assets'] = (
-                self.assetcol.num_assets_by_site())
+            self.datastore['assetcol/num_taxonomies'] = (
+                self.assetcol.num_taxonomies_by_site())
             if hasattr(readinput.exposure, 'exposures'):
                 self.datastore['assetcol/exposures'] = (
                     numpy.array(exposure.exposures, hdf5.vstr))
