@@ -331,7 +331,16 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        self.get_min_iml(oq)
+        # set the minimum_intensity
+        if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.min_iml
+        min_iml = oq.min_iml
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
         param = self.param.copy()
         param.update(
             oqparam=oq,
