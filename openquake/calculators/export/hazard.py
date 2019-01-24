@@ -710,9 +710,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     [rgetter] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
     [ebr] = rgetter.get_ruptures()
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(0)
-    min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(rlzs_by_gsim, [ebr], sitecol, oq, min_iml)
+    getter = GmfGetter(rlzs_by_gsim, [ebr], sitecol, oq)
     getter.init()
     eids = (numpy.concatenate([
         eids for eids in ebr.get_eids_by_rlz(rlzs_by_gsim).values()]))
