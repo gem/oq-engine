@@ -21,7 +21,8 @@ import unittest
 import numpy
 from nose.tools import raises
 from openquake.hazardlib import nrml
-from openquake.hazardlib.sourceconverter import update_source_model
+from openquake.hazardlib.sourceconverter import update_source_model, \
+    SourceConverter
 
 testdir = os.path.join(os.path.dirname(__file__), 'source_model')
 
@@ -183,6 +184,23 @@ class SourceConverterTestCase(unittest.TestCase):
         self.assertIn('node pointSource: Found Cratonic, expected '
                       'Active Shallow Crust, line 67', str(ctx.exception))
 
+    def test_tom_poisson_not_defined(self):
+        """ Read area source without tom """
+        testfile = os.path.join(testdir, 'area-source.xml')
+        sc = SourceConverter(area_source_discretization=10.)
+        sg = nrml.to_python(testfile, sc)
+        src = sg[0].sources[0]
+        self.assertEqual(src.temporal_occurrence_model.time_span, 50,
+                         "Wrong time span in the temporal occurrence model")
+
+    def test_tom_poisson_no_rate(self):
+        testfile = os.path.join(testdir, 'tom_poisson_no_rate.xml')
+        sc = SourceConverter(area_source_discretization=10.)
+        sg = nrml.to_python(testfile, sc)
+        src = sg[0].sources[0]
+        msg = "Wrong time span in the temporal occurrence model"
+        self.assertEqual(src.temporal_occurrence_model.time_span, 50, msg)
+        
     def test_wrong_source_type(self):
         """ Test that only nonparametric sources are used with mutex ruptures
         """
@@ -199,3 +217,31 @@ class SourceConverterTestCase(unittest.TestCase):
         expected = numpy.array([0.2, 0.8])
         computed = numpy.array([src.data[0][0].weight, src.data[1][0].weight])
         numpy.testing.assert_equal(computed, expected)
+
+    def test_tom_poisson_with_rate(self):
+        testfile = os.path.join(testdir, 'tom_poisson_with_rate.xml')
+        sc = SourceConverter(area_source_discretization=10.)
+        sg = nrml.to_python(testfile, sc)
+        src = sg[0].sources[0]
+        msg = "Wrong time span in the temporal occurrence model"
+        self.assertEqual(src.temporal_occurrence_model.time_span, 50, msg)
+        msg = "Wrong occurrence rate in the temporal occurrence model"
+        self.assertEqual(src.temporal_occurrence_model.occurrence_rate,
+                         0.01, msg)
+
+    def test_source_group_with_tom(self):
+        testfile = os.path.join(testdir, 'source_group_with_tom.xml')
+        sc = SourceConverter(area_source_discretization=10.)
+        sg = nrml.to_python(testfile, sc)
+        msg = "Wrong occurrence rate in the temporal occurrence model"
+        expected = sg[0].temporal_occurrence_model.occurrence_rate
+        self.assertEqual(expected, 0.01, msg)
+        msg = "Wrong cluster definition"
+        self.assertEqual(sg[0].cluster, False, msg)
+
+    def test_source_group_cluster(self):
+        testfile = os.path.join(testdir, 'source_group_cluster.xml')
+        sc = SourceConverter(area_source_discretization=10.)
+        sg = nrml.to_python(testfile, sc)
+        msg = "Wrong cluster definition"
+        self.assertEqual(sg[0].cluster, True, msg)
