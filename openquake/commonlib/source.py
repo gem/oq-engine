@@ -516,6 +516,7 @@ class CompositeSourceModel(collections.Sequence):
         return sources
 
     def _sources_by_trt(self):
+        # involves non-atomic groups
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
