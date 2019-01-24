@@ -630,7 +630,7 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.riskmodel.min_iml
-        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        min_iml = oq.min_iml
         if min_iml.sum() == 0:
             logging.warn('The GMFs are not filtered: '
                          'you may want to set a minimum_intensity')
