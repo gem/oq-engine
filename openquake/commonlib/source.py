@@ -430,11 +430,10 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
-                if src_group.atomic:
-                    sg = copy.copy(src_group)
-                    sg.sources = sorted(sources_by_grp.get(sg.id, []),
-                                        key=operator.attrgetter('id'))
-                    src_groups.append(sg)
+                sg = copy.copy(src_group)
+                sg.sources = sorted(sources_by_grp.get(sg.id, []),
+                                    key=operator.attrgetter('id'))
+                src_groups.append(sg)
             newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
