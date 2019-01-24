@@ -149,7 +149,6 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warn('Found %d duplicated sources',
                          self.csm.has_dupl_sources)
         csm_atomic, sources_by_trt = self.csm.split2()
-
         for sg in csm_atomic.src_groups:
             par = param.copy()
             par['src_interdep'] = sg.src_interdep
@@ -236,7 +235,7 @@ class ClassicalCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         P = len(oq.poes)
-        I = len(oq.imtls)
+        M = len(oq.imtls)
         R = len(self.rlzs_assoc.realizations)
         names = [name for name, _ in hstats]
         if R > 1 and oq.individual_curves or not hstats:
@@ -246,8 +245,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
             self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
             if oq.poes:
-                self.datastore.create_dset('hmaps/' + name, F32, (N, P * I))
-                self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * I * 4)
+                self.datastore.create_dset('hmaps/' + name, F32, (N, P * M))
+                self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
         iterargs = ((getters.PmapGetter(parent, self.rlzs_assoc, t.sids),

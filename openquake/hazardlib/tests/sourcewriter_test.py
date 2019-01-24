@@ -58,7 +58,6 @@ class SourceWriterTestCase(unittest.TestCase):
         with hdf5.File.temporary() as f:
             for group in smodel.src_groups:
                 hdf5write(f, group)
-        print('written %s' % f.path)
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
