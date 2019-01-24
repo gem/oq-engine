@@ -285,12 +285,12 @@ class ParametricProbabilisticRupture(BaseRupture):
         Return the probability of this rupture to occur exactly one time.
 
         Uses :meth:
-        `openquake.hazardlib.tom.PoissonTOM.get_probability_one_occurrence`
+        `openquake.hazardlib.tom.PoissonTOM.get_probability_n_occurrences`
         of an assigned temporal occurrence model.
         """
         tom = self.temporal_occurrence_model
         rate = self.occurrence_rate
-        return tom.get_probability_one_occurrence(rate)
+        return tom.get_probability_n_occurrences(rate, 1)
 
     def sample_number_of_occurrences(self, n=1):
         """

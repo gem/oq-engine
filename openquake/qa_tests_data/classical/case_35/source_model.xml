@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel>
+            <sourceGroup
+            name="group 1"
+            tectonicRegion="Active Shallow Crust" 
+            cluster="true" tom="PoissonTOM" occurrence_rate="0.001">
+
+                    <characteristicFaultSource id="0" 
+                        name="Source A"
+                        tectonicRegion="Active Shallow Crust">
+                        <incrementalMFD minMag="6.5" binWidth="0.1">
+                            <occurRates>0.001</occurRates>
+                        </incrementalMFD>                        
+                        <rake>90.0</rake>
+                        <surface>
+                            <simpleFaultGeometry>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        1.0 -0.2 1.4 0.0 1.7 0.0
+                                    </gml:posList>
+                                </gml:LineString>
+                                <dip> 30 </dip>
+                                <upperSeismoDepth> 5.0 </upperSeismoDepth>
+                                <lowerSeismoDepth> 15.0 </lowerSeismoDepth>
+                            </simpleFaultGeometry>
+                        </surface>
+                    </characteristicFaultSource>
+
+                    <characteristicFaultSource id="1" 
+                        name="Source B"
+                        tectonicRegion="Active Shallow Crust">
+                        <incrementalMFD minMag="6.8" binWidth="0.1">
+                            <occurRates>0.001</occurRates>
+                        </incrementalMFD>                        
+                        <rake>90.0</rake>
+                        <surface>
+                            <simpleFaultGeometry>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        1.0 -0.2 1.4 0.0 1.7 0.0
+                                    </gml:posList>
+                                </gml:LineString>
+                                <dip> 30 </dip>
+                                <upperSeismoDepth> 5.0 </upperSeismoDepth>
+                                <lowerSeismoDepth> 15.0 </lowerSeismoDepth>
+                            </simpleFaultGeometry>
+                        </surface>
+                    </characteristicFaultSource>
+
+            </sourceGroup>
+    </sourceModel>
+</nrml>
