@@ -335,7 +335,7 @@ dummy_mon = Monitor()
 dummy_mon.backurl = None
 
 
-def safely_call(func, args, mon=dummy_mon):
+def safely_call(func, args, task_no=0, mon=dummy_mon):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -345,6 +345,8 @@ def safely_call(func, args, mon=dummy_mon):
 
     :param func: the function to call
     :param args: the arguments
+    :param task_no: the task number
+    :param mon: a monitor
     """
     isgenfunc = inspect.isgeneratorfunction(func)
     mon.operation = 'total ' + func.__name__
@@ -358,6 +360,7 @@ def safely_call(func, args, mon=dummy_mon):
     mon.operation = 'total ' + func.__name__
     mon.measuremem = True
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
+    mon.task_no = task_no
     args += (mon,)
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
@@ -643,14 +646,19 @@ class Starmap(object):
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
         assert not isinstance(args[-1], Monitor)  # sanity check
-        # add incremental task number and task weight
-        self.monitor.task_no = len(self.tasks) + 1
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
             self.sent += numpy.array([len(p) for p in args])
         res = getattr(self, dist + '_submit')(args)
         self.tasks.append(res)
+
+    @property
+    def task_no(self):
+        """
+        :returns: number of the last submitted task, starting from 0
+        """
+        return len(self.tasks)
 
     def submit_all(self):
         """
@@ -677,27 +685,28 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def no_submit(self, args):
-        return safely_call(self.task_func, args, self.monitor)
+        return safely_call(self.task_func, args, self.task_no, self.monitor)
 
     def processpool_submit(self, args):
         return self.pool.apply_async(
-            safely_call, (self.task_func, args, self.monitor))
+            safely_call, (self.task_func, args, self.task_no, self.monitor))
 
     threadpool_submit = processpool_submit
 
     def celery_submit(self, args):
-        return safetask.delay(self.task_func, args, self.monitor)
+        return safetask.delay(self.task_func, args, self.task_no, self.monitor)
 
     def zmq_submit(self, args):
         if not hasattr(self, 'sender'):
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
-        return self.sender.send((self.task_func, args, self.monitor))
+        return self.sender.send(
+            (self.task_func, args, self.task_no, self.monitor))
 
     def dask_submit(self, args):
         return self.dask_client.submit(safely_call, self.task_func, args,
-                                       self.monitor)
+                                       self.task_no, self.monitor)
 
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made
