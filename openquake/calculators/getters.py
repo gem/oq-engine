@@ -315,12 +315,12 @@ class GmfGetter(object):
     An hazard getter with methods .get_gmfdata and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam, min_iml):
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam):
         self.rlzs_by_gsim = rlzs_by_gsim
         self.ebruptures = ebruptures
         self.sitecol = sitecol.complete
         self.oqparam = oqparam
-        self.min_iml = min_iml
+        self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         M = len(oqparam.imtls)
