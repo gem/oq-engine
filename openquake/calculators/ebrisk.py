@@ -85,7 +85,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         ebruptures = rupgetter.get_ruptures(srcfilter)
     getter = getters.GmfGetter(
         rupgetter.rlzs_by_gsim, ebruptures, srcfilter.sitecol,
-        param['oqparam'], param['min_iml'])
+        param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
