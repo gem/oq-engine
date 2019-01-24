@@ -165,7 +165,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         L = len(self.riskmodel.loss_types)
         self.num_taxonomies = self.assetcol.num_taxonomies_by_site()
         self.datastore.create_dset('losses_by_site', F32, (self.N, self.R, L))
-
+        self.rup_weights = []
+    
     def acc0(self):
         return numpy.zeros(self.N)
 
@@ -175,7 +176,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         trt = self.csm_info.trt_by_grp[rup['grp_id']]
         sids = self.src_filter.close_sids(rup, trt, rup['mag'])
-        return self.num_taxonomies[sids].sum()  # * rup['n_occ']
+        weight = self.num_taxonomies[sids].sum() * rup['n_occ']
+        self.rup_weights.append(weight)
+        return weight
 
     def agg_dicts(self, acc, dic):
         """
@@ -242,6 +245,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
+        self.datastore['rupweights'] = self.weights
+        del self.weights
         self.datastore.set_attrs('task_info/ebrisk', times=times)
         logging.info('Building losses_by_rlz')
         with self.monitor('building avg_losses-rlzs', autoflush=True):
