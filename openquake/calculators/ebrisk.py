@@ -85,7 +85,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         ebruptures = rupgetter.get_ruptures(srcfilter)
     getter = getters.GmfGetter(
         rupgetter.rlzs_by_gsim, ebruptures, srcfilter.sitecol,
-        param['oqparam'], param['min_iml'])
+        param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
@@ -163,19 +163,22 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         L = len(self.riskmodel.loss_types)
-        self.num_assets = self.assetcol.num_assets_by_site()
+        self.num_taxonomies = self.assetcol.num_taxonomies_by_site()
         self.datastore.create_dset('losses_by_site', F32, (self.N, self.R, L))
+        self.rupweights = []
 
     def acc0(self):
         return numpy.zeros(self.N)
 
     def rup_weight(self, rup):
         """
-        :returns: the number of assets affected by the rupture
+        :returns: the number of taxonomies affected by the rupture
         """
         trt = self.csm_info.trt_by_grp[rup['grp_id']]
         sids = self.src_filter.close_sids(rup, trt, rup['mag'])
-        return self.num_assets[sids].sum() * rup['n_occ']
+        weight = self.num_taxonomies[sids].sum()
+        self.rupweights.append(weight)
+        return weight
 
     def agg_dicts(self, acc, dic):
         """
@@ -242,6 +245,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
+        if self.rupweights:
+            self.datastore['rupweights'] = self.rupweights
+        del self.rupweights
         self.datastore.set_attrs('task_info/ebrisk', times=times)
         logging.info('Building losses_by_rlz')
         with self.monitor('building avg_losses-rlzs', autoflush=True):
