@@ -671,6 +671,9 @@ class AccumDict(dict):
     def __neg__(self):
         return self.__class__({k: -v for k, v in self.items()})
 
+    def __invert__(self):
+        return self.__class__({k: ~v for k, v in self.items()})
+
     def __imul__(self, other):
         if hasattr(other, 'items'):
             for k, v in other.items():
