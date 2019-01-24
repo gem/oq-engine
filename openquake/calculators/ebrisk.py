@@ -165,9 +165,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         L = len(self.riskmodel.loss_types)
         self.num_taxonomies = self.assetcol.num_taxonomies_by_site()
         self.datastore.create_dset('losses_by_site', F32, (self.N, self.R, L))
+        self.rupweights = []
 
     def acc0(self):
-        self.rupweights = []
         return numpy.zeros(self.N)
 
     def rup_weight(self, rup):
