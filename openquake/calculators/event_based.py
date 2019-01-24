@@ -104,7 +104,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
         ebruptures = rupgetter.get_ruptures(srcfilter)
     getter = GmfGetter(
         rupgetter.rlzs_by_gsim, ebruptures, srcfilter.sitecol,
-        param['oqparam'], param['min_iml'])
+        param['oqparam'])
     return getter.compute_gmfs_curves(monitor)
 
 
@@ -331,10 +331,19 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        self.min_iml = self.get_min_iml(oq)
+        # set the minimum_intensity
+        if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.min_iml
+        min_iml = oq.min_iml
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
         param = self.param.copy()
         param.update(
-            oqparam=oq, min_iml=self.min_iml,
+            oqparam=oq,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
             ruptures_per_block=oq.ruptures_per_block,

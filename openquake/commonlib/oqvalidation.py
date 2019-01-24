@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import datastore
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats
+from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
@@ -383,6 +383,24 @@ class OqParam(valid.ParamSet):
             self._file_type, self._risk_files = get_risk_files(parent.inputs)
             costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         return costtypes
+
+    @property
+    def min_iml(self):
+        """
+        :returns: a numpy array of intensities, one per IMT
+        """
+        mini = self.minimum_intensity
+        if mini:
+            for imt in self.imtls:
+                try:
+                    mini[imt] = calc.filters.getdefault(mini, imt)
+                except KeyError:
+                    raise ValueError(
+                        'The parameter `minimum_intensity` in the job.ini '
+                        'file is missing the IMT %r' % imt)
+        if 'default' in mini:
+            del mini['default']
+        return F32([mini.get(imt, 0) for imt in self.imtls])
 
     def set_risk_imtls(self, risk_models):
         """
