@@ -71,6 +71,13 @@ def cached_property(method):
     return property(newmethod)
 
 
+def nokey(item):
+    """
+    Dummy function to apply to items without a key
+    """
+    return 'Unspecified'
+
+
 class WeightedSequence(collections.MutableSequence):
     """
     A wrapper over a sequence of weighted items with a total weight attribute.
@@ -188,19 +195,12 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def nokey(item):
-    """
-    Dummy function to apply to items without a key
-    """
-    return 'Unspecified'
-
-
-def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
+def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
-    :param kind: a function returning the kind of a given item
+    :param key: a function returning the kind of a given item
 
     Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -212,28 +212,31 @@ def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
      >>> list(block_splitter(items, 3))
      [<WeightedSequence ['A', 'B', 'C'], weight=3>, <WeightedSequence ['D', 'E'], weight=2>]
 
-    The default weight is 1 for all items.
+    The default weight is 1 for all items. Here is an example leveraning on the
+    key to group together results:
+
+    >>> items = ['A1', 'C2', 'D2', 'E2']
+    >>> list(block_splitter(items, 2, key=operator.itemgetter(1)))
+    [<WeightedSequence ['A1'], weight=1>, <WeightedSequence ['C2', 'D2'], weight=2>, <WeightedSequence ['E2'], weight=1>]
     """
     if max_weight <= 0:
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
-    prev_kind = 'Unspecified'
+    prev_key = 'Unspecified'
     for item in items:
         w = weight(item)
-        k = kind(item)
+        k = key(item)
         if w < 0:  # error
             raise ValueError('The item %r got a negative weight %s!' %
                              (item, w))
-        elif w == 0:  # ignore items with 0 weight
-            pass
-        elif ws.weight + w > max_weight or k != prev_kind:
+        elif ws.weight + w > max_weight or k != prev_key:
             new_ws = WeightedSequence([(item, w)])
             if ws:
                 yield ws
             ws = new_ws
-        else:
+        elif w > 0:  # ignore items with 0 weight
             ws.append((item, w))
-        prev_kind = k
+        prev_key = k
     if ws:
         yield ws
 
