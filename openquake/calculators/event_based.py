@@ -229,7 +229,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
-            dstore, hdf5cache=hdf5cache, rup_weight=rup_weight)
+            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            hdf5cache=hdf5cache, rup_weight=rup_weight)
         if self.datastore.parent:
             self.datastore.parent.close()
         return rgetters
