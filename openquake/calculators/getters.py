@@ -469,7 +469,7 @@ class GmfGetter(object):
         return res
 
 
-def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None,
+def get_rupture_getters(dstore, slc=slice(None), hdf5cache=None,
                         rup_weight=lambda rup: 1):
     """
     :returns: a list of RuptureGetters
@@ -484,8 +484,8 @@ def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None,
     nr = 0
     ne = 0
     for grp_id, array in general.group_array(rup_array, 'grp_id').items():
-        arr = sorted(array, key=rup_weight)
-        for block in general.split_in_blocks(arr, split, rup_weight):
+        # array = sorted(array, key=rup_weight)
+        for block in general.block_splitter(array, 1000, rup_weight):
             if not rlzs_by_gsim[grp_id]:
                 # this may happen if a source model has no sources, like
                 # in event_based_risk/case_3
@@ -494,7 +494,7 @@ def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None,
             rgetter = RuptureGetter(
                 hdf5cache or dstore.hdf5path, code2cls, rups,
                 grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
-            rgetter.weight = block.weight if split else len(block)
+            rgetter.weight = block.weight
             rgetters.append(rgetter)
             nr += len(rups)
             ne += rups['n_occ'].sum()
