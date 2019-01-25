@@ -601,7 +601,7 @@ class RuptureGetter(object):
             for rec in self.rup_array:
                 if srcfilter:
                     sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
-                    if len(sids) == 0:
+                    if len(sids) == 0:  # the rupture is far away
                         continue
                 else:
                     sids = None
