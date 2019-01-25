@@ -210,8 +210,13 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.set_attrs('ruptures', **attrs)
         self.save_events(sorted_ruptures)
 
-    def rup_weight(self, rec):
-        return 1
+    def rup_weight(self, rup):
+        """
+        :returns: the estimated number of sites affected by the rupture
+        """
+        trt = self.csm_info.trt_by_grp[rup['grp_id']]
+        sids = self.src_filter.close_sids(rup, trt, rup['mag'])
+        return len(sids)
 
     def get_rupture_getters(self, rup_weight):
         """
@@ -224,8 +229,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
-            dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache,
-            rup_weight=rup_weight)
+            dstore, hdf5cache=hdf5cache, rup_weight=rup_weight)
         if self.datastore.parent:
             self.datastore.parent.close()
         return rgetters
