@@ -280,7 +280,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
-        # including the ones far away that will be discarde later on
+        # including the ones far away that will be discarded later on
         rgetters = self.gen_rupture_getters(None)
 
         # build the associations eid -> rlz in parallel
