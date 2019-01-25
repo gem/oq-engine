@@ -18,6 +18,7 @@
 import collections
 import itertools
 import operator
+import logging
 import mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
@@ -480,20 +481,24 @@ def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None,
     rup_array = dstore['ruptures'][slc]
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
     rgetters = []
-    by_grp = operator.itemgetter(2)  # serial, srcidx, grp_id
-    for block in general.split_in_blocks(rup_array, split, rup_weight,
-                                         key=by_grp):
-        rups = numpy.array(block)
-        grp_id = rups[0]['grp_id']
-        if not rlzs_by_gsim[grp_id]:
-            # this may happen if a source model has no sources, like
-            # in event_based_risk/case_3
-            continue
-        rgetter = RuptureGetter(
-            hdf5cache or dstore.hdf5path, code2cls, rups,
-            grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
-        rgetter.weight = block.weight if split else len(block)
-        rgetters.append(rgetter)
+    nr = 0
+    ne = 0
+    for grp_id, array in general.group_array(rup_array, 'grp_id').items():
+        arr = sorted(array, key=rup_weight)
+        for block in general.split_in_blocks(arr, split, rup_weight):
+            if not rlzs_by_gsim[grp_id]:
+                # this may happen if a source model has no sources, like
+                # in event_based_risk/case_3
+                continue
+            rups = numpy.array(block)
+            rgetter = RuptureGetter(
+                hdf5cache or dstore.hdf5path, code2cls, rups,
+                grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+            rgetter.weight = block.weight if split else len(block)
+            rgetters.append(rgetter)
+            nr += len(rups)
+            ne += rups['n_occ'].sum()
+    logging.info('Read %d ruptures and %d events', nr, ne)
     return rgetters
 
 
