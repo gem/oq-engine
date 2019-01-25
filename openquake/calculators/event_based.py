@@ -35,7 +35,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, get_rupture_getters)
+    GmfGetter, RuptureGetter, gen_rupture_getters)
 from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
@@ -118,6 +118,7 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
     build_ruptures = sample_ruptures
+    rup_weight = None
 
     @cached_property
     def csm_info(self):
@@ -152,7 +153,7 @@ class EventBasedCalculator(base.HazardCalculator):
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    def from_sources(self, par):
+    def build_events_from_sources(self, par):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -208,13 +209,9 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures.sort(order='serial')
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
-        rgetters = self.save_events(sorted_ruptures)
-        return ((rgetter, self.src_filter, par) for rgetter in rgetters)
+        self.save_events(sorted_ruptures)
 
-    def rup_weight(self, rec):
-        return 1
-
-    def get_rupture_getters(self, rup_weight=None):
+    def gen_rupture_getters(self, rup_weight):
         """
         :returns: a list of RuptureGetters
         """
@@ -224,16 +221,11 @@ class EventBasedCalculator(base.HazardCalculator):
         with hdf5.File(hdf5cache, 'r+') as cache:
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
-        rgetters = get_rupture_getters(
-            dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache,
-            rup_weight=rup_weight or self.rup_weight)
-        num_ruptures = len(dstore['ruptures'])
-        if self.E:
-            logging.info('Found {:,d} ruptures and {:,d} events'
-                         .format(num_ruptures, self.E))
+        yield from gen_rupture_getters(
+            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            hdf5cache=hdf5cache, rup_weight=rup_weight)
         if self.datastore.parent:
             self.datastore.parent.close()
-        return rgetters
 
     @cached_property
     def eid2idx(self):
@@ -287,7 +279,9 @@ class EventBasedCalculator(base.HazardCalculator):
             rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
-        rgetters = self.get_rupture_getters(lambda rup: 1)
+        # when computing the events all ruptures must be considered,
+        # including the ones far away that will be discarded later on
+        rgetters = self.gen_rupture_getters(None)
 
         # build the associations eid -> rlz in parallel
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
@@ -307,7 +301,6 @@ class EventBasedCalculator(base.HazardCalculator):
         for r, [startstop] in get_indices(events['rlz']).items():
             indices[r] = startstop
         self.datastore.set_attrs('events', indices=indices)
-        return rgetters
 
     def check_overflow(self):
         """
@@ -353,13 +346,13 @@ class EventBasedCalculator(base.HazardCalculator):
             # from ruptures
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
-            iterargs = ((rgetter, self.src_filter, param)
-                        for rgetter in self.get_rupture_getters())
         else:
             # from sources
-            iterargs = self.from_sources(param)
+            self.build_events_from_sources(param)
             if oq.ground_motion_fields is False:
                 return {}
+        iterargs = ((rgetter, self.src_filter, param)
+                    for rgetter in self.gen_rupture_getters(self.rup_weight))
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
