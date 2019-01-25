@@ -475,7 +475,6 @@ def gen_rupture_getters(dstore, slc=slice(None),
     """
     :yields: RuptureGetters
     """
-    logging.info('Reading ruptures')
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
@@ -486,7 +485,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
     if rup_weight:  # ebrisk
         maxweight = numpy.ceil(1E9 / concurrent_tasks)
         blocks = general.block_splitter(rup_array, maxweight, rup_weight,
-                                        kind=by_grp)
+                                        key=by_grp)
     else:  # event based
         blocks = general.split_in_blocks(rup_array, concurrent_tasks,
                                          key=by_grp)
