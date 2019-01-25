@@ -118,6 +118,7 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
     build_ruptures = sample_ruptures
+    rup_weight = None
 
     @cached_property
     def csm_info(self):
@@ -210,14 +211,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.set_attrs('ruptures', **attrs)
         self.save_events(sorted_ruptures)
 
-    def rup_weight(self, rup):
-        """
-        :returns: the estimated number of sites affected by the rupture
-        """
-        trt = self.csm_info.trt_by_grp[rup['grp_id']]
-        sids = self.src_filter.close_sids(rup, trt, rup['mag'])
-        return len(sids)
-
     def gen_rupture_getters(self, rup_weight):
         """
         :returns: a list of RuptureGetters
@@ -288,7 +281,7 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarde later on
-        rgetters = self.gen_rupture_getters(lambda rup: 1)
+        rgetters = self.gen_rupture_getters(None)
 
         # build the associations eid -> rlz in parallel
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
