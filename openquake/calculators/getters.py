@@ -471,7 +471,7 @@ class GmfGetter(object):
 
 def gen_rupture_getters(dstore, slc=slice(None),
                         concurrent_tasks=1, hdf5cache=None,
-                        rup_weight=lambda rup: 1):
+                        rup_weight=None):
     """
     :yields: RuptureGetters
     """
@@ -482,23 +482,30 @@ def gen_rupture_getters(dstore, slc=slice(None),
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
-    maxweight = numpy.ceil(1E9 / concurrent_tasks)
+    by_grp = operator.itemgetter(2)  # serial, srcidx, grp_id
+    if rup_weight:  # ebrisk
+        maxweight = numpy.ceil(1E9 / concurrent_tasks)
+        blocks = general.block_splitter(rup_array, maxweight, rup_weight,
+                                        kind=by_grp)
+    else:  # event based
+        blocks = general.split_in_blocks(rup_array, concurrent_tasks,
+                                         rup_weight, key=by_grp)
     nr = 0
     ne = 0
-    for grp_id, array in general.group_array(rup_array, 'grp_id').items():
-        for block in general.block_splitter(array, maxweight, rup_weight):
-            if not rlzs_by_gsim[grp_id]:
-                # this may happen if a source model has no sources, like
-                # in event_based_risk/case_3
-                continue
-            rups = numpy.array(block)
-            rgetter = RuptureGetter(
-                hdf5cache or dstore.hdf5path, code2cls, rups,
-                grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
-            rgetter.weight = block.weight
-            yield rgetter
-            nr += len(rups)
-            ne += rups['n_occ'].sum()
+    for block in blocks:
+        grp_id = block[0]['grp_id']
+        if not rlzs_by_gsim[grp_id]:
+            # this may happen if a source model has no sources, like
+            # in event_based_risk/case_3
+            continue
+        rups = numpy.array(block)
+        rgetter = RuptureGetter(
+            hdf5cache or dstore.hdf5path, code2cls, rups,
+            grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+        rgetter.weight = getattr(block, 'weight', len(block))
+        yield rgetter
+        nr += len(rups)
+        ne += rups['n_occ'].sum()
     logging.info('Read %d ruptures and %d events', nr, ne)
 
 
