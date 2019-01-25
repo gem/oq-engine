@@ -152,7 +152,7 @@ class EventBasedCalculator(base.HazardCalculator):
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    def from_sources(self, par):
+    def build_events_from_sources(self, par):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -208,12 +208,12 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures.sort(order='serial')
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
-        return self.save_events(sorted_ruptures)
+        self.save_events(sorted_ruptures)
 
     def rup_weight(self, rec):
         return 1
 
-    def get_rupture_getters(self, rup_weight=None):
+    def get_rupture_getters(self, rup_weight):
         """
         :returns: a list of RuptureGetters
         """
@@ -225,7 +225,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
             dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache,
-            rup_weight=rup_weight or self.rup_weight)
+            rup_weight=rup_weight)
         num_ruptures = len(dstore['ruptures'])
         if self.E:
             logging.info('Found {:,d} ruptures and {:,d} events'
@@ -286,6 +286,8 @@ class EventBasedCalculator(base.HazardCalculator):
             rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
+        # when computing the events all ruptures must be considered,
+        # including the ones far away that will be discarde later on
         rgetters = self.get_rupture_getters(lambda rup: 1)
 
         # build the associations eid -> rlz in parallel
@@ -306,7 +308,6 @@ class EventBasedCalculator(base.HazardCalculator):
         for r, [startstop] in get_indices(events['rlz']).items():
             indices[r] = startstop
         self.datastore.set_attrs('events', indices=indices)
-        return rgetters
 
     def check_overflow(self):
         """
@@ -352,14 +353,13 @@ class EventBasedCalculator(base.HazardCalculator):
             # from ruptures
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
-            iterargs = ((rgetter, self.src_filter, param)
-                        for rgetter in self.get_rupture_getters())
         else:
             # from sources
-            iterargs = ((rgetter, self.src_filter, param)
-                        for rgetter in self.from_sources(param))
+            self.build_events_from_sources(param)
             if oq.ground_motion_fields is False:
                 return {}
+        iterargs = ((rgetter, self.src_filter, param)
+                    for rgetter in self.get_rupture_getters(self.rup_weight))
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
