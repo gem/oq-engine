@@ -485,7 +485,7 @@ def get_rupture_getters(dstore, slc=slice(None), hdf5cache=None,
     ne = 0
     for grp_id, array in general.group_array(rup_array, 'grp_id').items():
         # array = sorted(array, key=rup_weight)
-        for block in general.block_splitter(array, 1000, rup_weight):
+        for block in general.block_splitter(array, 1E6, rup_weight):
             if not rlzs_by_gsim[grp_id]:
                 # this may happen if a source model has no sources, like
                 # in event_based_risk/case_3
