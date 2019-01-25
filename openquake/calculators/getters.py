@@ -489,7 +489,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
                                         kind=by_grp)
     else:  # event based
         blocks = general.split_in_blocks(rup_array, concurrent_tasks,
-                                         rup_weight, key=by_grp)
+                                         key=by_grp)
     nr = 0
     ne = 0
     for block in blocks:
@@ -599,6 +599,12 @@ class RuptureGetter(object):
         with datastore.read(self.hdf5path) as dstore:
             rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
+                if srcfilter:
+                    sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
+                    if len(sids) == 0:
+                        continue
+                else:
+                    sids = None
                 mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                     rec['sy'], rec['sz'])
@@ -634,13 +640,9 @@ class RuptureGetter(object):
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
-                if srcfilter is None:
-                    ebrs.append(ebr)
-                    continue
-                ebr.sids = srcfilter.close_sids(
-                        rec, rupture.tectonic_region_type, rupture.mag)
-                if len(ebr.sids):
-                    ebrs.append(ebr)
+                if sids is not None:
+                    ebr.sids = sids
+                ebrs.append(ebr)
         return ebrs
 
     def __len__(self):
