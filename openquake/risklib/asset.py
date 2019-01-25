@@ -506,6 +506,7 @@ class AssetCollection(object):
             asset_refs.append(self.asset_refs[mask])
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
+        new.tot_sites = len(sitecol)
         new.array = numpy.concatenate(array)
         new.asset_refs = numpy.concatenate(asset_refs)
         sitecol.make_complete()
