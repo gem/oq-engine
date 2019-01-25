@@ -469,11 +469,11 @@ class GmfGetter(object):
         return res
 
 
-def get_rupture_getters(dstore, slc=slice(None),
+def gen_rupture_getters(dstore, slc=slice(None),
                         concurrent_tasks=1, hdf5cache=None,
                         rup_weight=lambda rup: 1):
     """
-    :returns: a list of RuptureGetters
+    :yields: RuptureGetters
     """
     logging.info('Reading ruptures')
     csm_info = dstore['csm_info']
@@ -483,7 +483,6 @@ def get_rupture_getters(dstore, slc=slice(None),
     rup_array = dstore['ruptures'][slc]
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
     maxweight = numpy.ceil(1E9 / concurrent_tasks)
-    rgetters = []
     nr = 0
     ne = 0
     for grp_id, array in general.group_array(rup_array, 'grp_id').items():
@@ -497,11 +496,10 @@ def get_rupture_getters(dstore, slc=slice(None),
                 hdf5cache or dstore.hdf5path, code2cls, rups,
                 grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
             rgetter.weight = block.weight
-            rgetters.append(rgetter)
+            yield rgetter
             nr += len(rups)
             ne += rups['n_occ'].sum()
     logging.info('Read %d ruptures and %d events', nr, ne)
-    return rgetters
 
 
 def get_maxloss_rupture(dstore, loss_type):
@@ -514,7 +512,7 @@ def get_maxloss_rupture(dstore, loss_type):
     """
     lti = dstore['oqparam'].lti[loss_type]
     ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [rgetter] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [rgetter] = gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     [ebr] = rgetter.get_ruptures()
     return ebr
 
@@ -527,7 +525,7 @@ def get_code2cls(ruptures_attrs):
     return code2cls
 
 
-# this is never called directly; get_rupture_getters is used instead
+# this is never called directly; gen_rupture_getters is used instead
 class RuptureGetter(object):
     """
     Iterable over ruptures.
