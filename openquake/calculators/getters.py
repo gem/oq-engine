@@ -469,7 +469,8 @@ class GmfGetter(object):
         return res
 
 
-def get_rupture_getters(dstore, slc=slice(None), hdf5cache=None,
+def get_rupture_getters(dstore, slc=slice(None),
+                        concurrent_tasks=1, hdf5cache=None,
                         rup_weight=lambda rup: 1):
     """
     :returns: a list of RuptureGetters
@@ -480,12 +481,12 @@ def get_rupture_getters(dstore, slc=slice(None), hdf5cache=None,
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
+    maxweight = numpy.ceil(1E8 / concurrent_tasks)
     rgetters = []
     nr = 0
     ne = 0
     for grp_id, array in general.group_array(rup_array, 'grp_id').items():
-        # array = sorted(array, key=rup_weight)
-        for block in general.block_splitter(array, 1E6, rup_weight):
+        for block in general.block_splitter(array, maxweight, rup_weight):
             if not rlzs_by_gsim[grp_id]:
                 # this may happen if a source model has no sources, like
                 # in event_based_risk/case_3
