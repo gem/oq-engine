@@ -208,8 +208,7 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures.sort(order='serial')
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
-        rgetters = self.save_events(sorted_ruptures)
-        return ((rgetter, self.src_filter, par) for rgetter in rgetters)
+        return self.save_events(sorted_ruptures)
 
     def rup_weight(self, rec):
         return 1
@@ -357,7 +356,8 @@ class EventBasedCalculator(base.HazardCalculator):
                         for rgetter in self.get_rupture_getters())
         else:
             # from sources
-            iterargs = self.from_sources(param)
+            iterargs = ((rgetter, self.src_filter, param)
+                        for rgetter in self.from_sources(param))
             if oq.ground_motion_fields is False:
                 return {}
         # call compute_gmfs in parallel
