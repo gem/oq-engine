@@ -426,7 +426,7 @@ class AssetCollection(object):
         :returns: an array with the number of assets per each site
         """
         dic = general.group_array(self.array, 'site_id')
-        num_taxonomies = numpy.zeros(len(dic), U32)
+        num_taxonomies = numpy.zeros(self.tot_sites, U32)
         for sid, arr in dic.items():
             num_taxonomies[sid] = len(numpy.unique(arr['taxonomy']))
         return num_taxonomies
