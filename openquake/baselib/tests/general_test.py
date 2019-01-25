@@ -115,7 +115,7 @@ class BlockSplitterTestCase(unittest.TestCase):
         blocks = list(
             block_splitter([s1, s2, s3, s4, s5], max_weight=6,
                            weight=attrgetter('weight'),
-                           kind=attrgetter('typology')))
+                           key=attrgetter('typology')))
         self.assertEqual(list(map(len, blocks)), [2, 2, 1])
         self.assertEqual([b.weight for b in blocks], [2, 6, 4])
 
