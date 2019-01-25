@@ -705,6 +705,8 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
+                self.datastore['assetcol/num_taxonomies'] = (
+                    self.assetcol.num_taxonomies_by_site())
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             else:
