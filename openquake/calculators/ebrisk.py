@@ -172,11 +172,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def rup_weight(self, rup):
         """
-        :returns: the number of taxonomies affected by the rupture
+        :returns: the number of taxonomies affected by the events
         """
         trt = self.csm_info.trt_by_grp[rup['grp_id']]
         sids = self.src_filter.close_sids(rup, trt, rup['mag'])
-        weight = self.num_taxonomies[sids].sum()
+        weight = self.num_taxonomies[sids].sum() * rup['n_occ']
         self.rupweights.append(weight)
         return weight
 
