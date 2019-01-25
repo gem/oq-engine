@@ -475,6 +475,7 @@ def get_rupture_getters(dstore, slc=slice(None),
     """
     :returns: a list of RuptureGetters
     """
+    logging.info('Reading ruptures')
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
