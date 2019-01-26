@@ -483,7 +483,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
     by_grp = operator.itemgetter(2)  # serial, srcidx, grp_id
     if rup_weight:  # ebrisk
-        maxweight = numpy.ceil(5E9 / concurrent_tasks)
+        maxweight = numpy.ceil(2E10 / concurrent_tasks)
         blocks = general.block_splitter(rup_array, maxweight, rup_weight,
                                         key=by_grp)
     else:  # event based
