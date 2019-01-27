@@ -63,6 +63,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
                 except ValueError:
                     pass
 
+
     def test_calculation_Akkar_valueerror(self):
         """
         """
