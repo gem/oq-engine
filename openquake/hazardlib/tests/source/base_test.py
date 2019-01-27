@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,15 +13,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import unittest
 
 from openquake.hazardlib import const
+from openquake.hazardlib import nrml
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import Polygon, Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.sourceconverter import SourceConverter
 
 
 class FakeSource(ParametricSeismicSource):
@@ -77,3 +80,15 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
     def test_positive_filtering(self):
         rates = self.source.get_annual_occurrence_rates(min_rate=5)
         self.assertEqual(rates, [(5, 7)])
+
+class GenerateOneRuptureTestCase(unittest.TestCase):
+
+    def test_simple_fault_source(self):
+        d = os.path.dirname(os.path.dirname(__file__))
+        tmps = 'simple-fault-source.xml'
+        source_model = os.path.join(d, 'source_model', tmps)
+        groups = nrml.to_python(source_model, SourceConverter(
+            investigation_time=50., rupture_mesh_spacing=2.))
+        src = groups[0].sources[0]
+        rup = src.get_one_rupture()
+        self.assertEqual(rup.mag, 5.0)
