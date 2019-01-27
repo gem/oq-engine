@@ -209,7 +209,6 @@ def sample_ruptures(sources, param, monitor=Monitor()):
 
         # import pdb; pdb.set_trace()
         # Create event based ruptures
-        print(rup_data.keys())
         for src_key in rup_data:
             for rup_key in rup_data[src_key]:
                 dat = rup_data[src_key][rup_key]
