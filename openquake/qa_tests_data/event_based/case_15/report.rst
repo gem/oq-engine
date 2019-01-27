@@ -3,8 +3,8 @@ Hazard Japan (HERP model 2014) reduced
 
 ============== ===================
 checksum32     2,896,463,652      
-date           2019-01-20T07:38:22
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:29:21
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 5, num_levels = 1
@@ -45,8 +45,8 @@ Slowest sources
 ====== ================== ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id          code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ================== ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      gs_PSE_CPCF_2_1228 P    0     1     26           0.0       0.0        0.0       1         0.0   
 1      case_02            N    1     159   1            0.0       0.0        0.0       1         0.0   
+0      gs_PSE_CPCF_2_1228 P    0     1     26           0.0       0.0        0.0       1         0.0   
 ====== ================== ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -66,16 +66,16 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00234 NaN    0.00234 0.00234 1      
-split_filter       0.00282 NaN    0.00282 0.00282 1      
+read_source_models 0.00237 NaN    0.00237 0.00237 1      
+split_filter       0.00273 NaN    0.00273 0.00273 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
-read_source_models converter=388 B fnames=119 B            6.52 KB 
-split_filter       srcs=6.05 KB srcfilter=253 B dummy=14 B 6.12 KB 
+read_source_models converter=313 B fnames=119 B            6.62 KB 
+split_filter       srcs=6.09 KB srcfilter=253 B dummy=14 B 6.16 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -83,6 +83,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00282  1.36719   1     
-total read_source_models 0.00234  0.19141   1     
+total only_filter        0.00273  1.37500   1     
+total read_source_models 0.00237  0.13281   1     
 ======================== ======== ========= ======

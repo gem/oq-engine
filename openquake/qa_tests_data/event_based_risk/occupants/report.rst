@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     515,431,980        
-date           2019-01-20T07:38:43
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:29:42
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -97,7 +97,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          0.03639   0.0        7.00000   1         2.00000
+0      1         S    0     2     482          0.03804   0.0        7.00000   1         2.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -105,7 +105,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.03639   1     
+S    0.03804   1     
 ==== ========= ======
 
 Duplicated sources
@@ -116,34 +116,34 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ======= =======
 operation-duration mean      stddev    min       max     outputs
-read_source_models 0.00870   NaN       0.00870   0.00870 1      
-split_filter       0.00414   NaN       0.00414   0.00414 1      
-sample_ruptures    0.04595   NaN       0.04595   0.04595 1      
-get_eid_rlz        9.627E-04 2.586E-04 5.252E-04 0.00211 51     
+read_source_models 0.00888   NaN       0.00888   0.00888 1      
+split_filter       0.00408   NaN       0.00408   0.00408 1      
+sample_ruptures    0.04698   NaN       0.04698   0.04698 1      
+get_eid_rlz        9.727E-04 2.180E-04 5.360E-04 0.00162 51     
 ================== ========= ========= ========= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=380 B fnames=116 B           1.46 KB 
-split_filter       srcs=1.1 KB srcfilter=253 B dummy=14 B 1.21 KB 
-sample_ruptures    param=2.88 KB sources=1.27 KB          68.68 KB
-get_eid_rlz        self=85.33 KB                          16.33 KB
-================== ====================================== ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=305 B fnames=116 B            1.49 KB 
+split_filter       srcs=1.12 KB srcfilter=253 B dummy=14 B 1.23 KB 
+sample_ruptures    param=2.8 KB sources=1.29 KB            68.68 KB
+get_eid_rlz        self=85.88 KB                           16.33 KB
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total get_eid_rlz        0.04910   0.20312   51    
-total sample_ruptures    0.04595   0.98828   1     
-iter_ruptures            0.03587   0.0       1     
-total read_source_models 0.00870   0.23047   1     
-saving ruptures          0.00530   0.0       1     
-total only_filter        0.00414   1.74219   1     
-store source_info        0.00176   0.0       1     
-store source model       0.00129   0.0       1     
-reading exposure         6.080E-04 0.0       1     
+total get_eid_rlz        0.04961   0.14062   51    
+total sample_ruptures    0.04698   0.85938   1     
+iter_ruptures            0.03751   0.0       1     
+total read_source_models 0.00888   0.23828   1     
+saving ruptures          0.00436   0.0       1     
+total only_filter        0.00408   1.58984   1     
+store source_info        0.00174   0.0       1     
+store source model       0.00170   0.0       1     
+reading exposure         6.628E-04 0.0       1     
 ======================== ========= ========= ======
