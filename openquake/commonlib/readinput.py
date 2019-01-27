@@ -1249,7 +1249,6 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
         if model:
             with open(path, 'wb') as f:
                 nrml.write([model], f, xmlns=root['xmlns'])
-                logging.warn('Reduced %s' % path)
         elif remove:  # remove the files completely reduced
             to_remove.append(path)
     if found:
