@@ -163,21 +163,86 @@ def sample_ruptures(sources, param, monitor=Monitor()):
     [grp_id] = set(src.src_group_id for src in sources)
     eb_ruptures = []
     ir_mon = monitor('iter_ruptures', measuremem=False)
-    for src in sources:
-        t0 = time.time()
-        if len(eb_ruptures) > MAX_RUPTURES:
-            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
-                            calc_times={}, eff_ruptures={})
-            eb_ruptures.clear()
-        samples = getattr(src, 'samples', 1)
-        n_occ = 0
-        for rup, n_occ in src.sample_ruptures(samples * num_ses, ir_mon):
-            ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
-            eb_ruptures.append(ebr)
-            n_occ += ebr.n_occ
-        eff_ruptures += src.num_ruptures
-        dt = time.time() - t0
-        calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    yield AccumDict(rup_array=get_rup_array(eb_ruptures),
-                    calc_times=calc_times,
-                    eff_ruptures={grp_id: eff_ruptures})
+    # Compute the number of occurrences of the source group. This is used
+    # for cluster groups or groups with mutually exclusive sources.
+
+    if param['group']:
+        # Set the parameters required to compute the number of occurrences
+        # of the group of sources
+        tom = param['tom']
+        samples = param['oqparam'].number_of_logic_tree_samples
+        rates = tom.occurrence_rate
+        time_span = tom.time_span
+        # Note that using a single time interval corresponding to the product
+        # of the investigation time and the number of realisations as we do
+        # here is admitted only in the case of a time-independent model
+        grp_num_occ = numpy.random.poisson(rates * time_span * samples *
+                                           num_ses)
+        # Now we process the sources included in the group. Possible cases:
+        # * The group is a cluster. In this case we choose one rupture per each
+        #   source; uncertainty in the ruptures can be handled in this case
+        #   using mutually exclusive ruptures (note that this is admitted
+        #   only for non-parametric sources).
+        # * The group contains mutually exclusive sources. In this case we
+        #   choose one source and then one rupture from this source.
+        rup_counter = {}
+        rup_data = {}
+        for rlz_num in range(grp_num_occ):
+            if param['cluster']:
+                for src in sources:
+                    rup = src.get_one_rupture()
+                    # The problem here is that we do not know a-priori the
+                    # number of occurrences of a given rupture. Why are we
+                    # storing in the rupture the parameter 'samples'?
+                    if src.id not in rup_counter:
+                        rup_counter[src.id] = {}
+                        rup_data[src.id] = {}
+                    if rup.idx not in rup_counter[src.id]:
+                        rup_counter[src.id][rup.idx] = 1
+                        rup_data[src.id][rup.idx] = [rup, src.id, grp_id]
+                    else:
+                        rup_counter[src.id][rup.idx] += 1
+
+                # ebr = EBRupture(rup, src.id, grp_id, 1, samples)
+                for src_key in rup_data:
+                    for rup_key in rup_data[src_key]:
+                        dat = rup_data[src_key][rup_key]
+                        cnt = rup_counter[src_key][rup_key]
+                        ebr = EBRupture(dat[0], dat[1], dat[2], cnt, samples)
+                        eb_ruptures.append(ebr)
+            elif param['src_interdep'] == 'mutex':
+                print('Not yet implemented')
+                exit(0)
+
+
+        unique_eids = numpy.unique(eb_ruptures['eid'])
+        n_unique_events = len(unique_eids)
+        if n_unique_events != len(eb_ruptures):
+            pass
+
+        # TODO need to set the calculation time and the eff_ruptures
+        yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+                        calc_times=calc_times,
+                        eff_ruptures={grp_id: eff_ruptures})
+
+    else:
+
+        for src in sources:
+            t0 = time.time()
+            if len(eb_ruptures) > MAX_RUPTURES:
+                yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+                                calc_times={}, eff_ruptures={})
+                eb_ruptures.clear()
+
+            samples = getattr(src, 'samples', 1)
+            n_occ = 0
+            for rup, n_occ in src.sample_ruptures(samples * num_ses, ir_mon):
+                ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
+                eb_ruptures.append(ebr)
+                n_occ += ebr.n_occ
+            eff_ruptures += src.num_ruptures
+            dt = time.time() - t0
+            calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
+        yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+                        calc_times=calc_times,
+                        eff_ruptures={grp_id: eff_ruptures})

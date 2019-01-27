@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import re
 import operator
 import collections
 import pickle
@@ -1007,7 +1006,7 @@ def to_python(fname, converter):
         for src in sg:
             if hasattr(src, 'mfd'):
                 # multipoint source
-                #src.tom = converter.tom
+                # src.tom = converter.tom
                 kwargs = getattr(src.mfd, 'kwargs', {})
                 if 'bin_width' not in kwargs:
                     kwargs['bin_width'] = [converter.width_of_mfd_bin]
