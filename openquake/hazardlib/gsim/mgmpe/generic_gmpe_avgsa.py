@@ -179,6 +179,12 @@ def akkar_correlation(t1, t2):
         The predicted correlation coefficient.
     """
 
+    if t1 not in act.periods:
+        raise ValueError('t1 not a valid period')
+
+    if t2 not in act.periods:
+        raise ValueError('t2 not a valid period')
+
     return act.coeff_table[act.periods.index(t1)][act.periods.index(t2)]
 
 
