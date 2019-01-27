@@ -213,7 +213,6 @@ def sample_ruptures(sources, param, monitor=Monitor()):
             for rup_key in rup_data[src_key]:
                 dat = rup_data[src_key][rup_key]
                 cnt = rup_counter[src_key][rup_key]
-                print(src_key, rup_key, cnt)
                 ebr = EBRupture(dat[0], dat[1], dat[2], cnt, samples)
                 eb_ruptures.append(ebr)
 
