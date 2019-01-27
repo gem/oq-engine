@@ -3,8 +3,8 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     3,193,187,389      
-date           2019-01-20T07:36:47
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:28:29
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 8, num_levels = 106
@@ -81,7 +81,7 @@ EMCA_PRIM_2L 1.00000 0.0     1   1   3         3
 EMCA_PRIM_4L 1.00000 NaN     1   1   1         1         
 concrete_spl 1.00000 0.0     1   1   2         2         
 steel_spl    1.00000 0.0     1   1   3         3         
-*ALL*        0.03704 0.20995 0   2   243       9         
+*ALL*        1.12500 0.35355 1   2   8         9         
 ============ ======= ======= === === ========= ==========
 
 Slowest operations
@@ -89,8 +89,8 @@ Slowest operations
 =================== ======== ========= ======
 operation           time_sec memory_mb counts
 =================== ======== ========= ======
-building riskinputs 0.01036  0.0       1     
-saving gmfs         0.00412  0.0       1     
-computing gmfs      0.00346  0.0       1     
-reading exposure    0.00221  0.0       1     
+building riskinputs 0.01054  0.0       1     
+saving gmfs         0.00389  0.0       1     
+computing gmfs      0.00361  0.30859   1     
+reading exposure    0.00215  0.25000   1     
 =================== ======== ========= ======
