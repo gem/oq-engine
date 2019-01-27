@@ -1220,6 +1220,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     found = 0
     to_remove = []
     for path in logictree.collect_info(smlt_file).smpaths:
+        logging.info('Reading %s', path)
         root = nrml.read(path)
         model = Node('sourceModel', root[0].attrib)
         origmodel = root[0]
