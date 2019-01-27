@@ -577,7 +577,6 @@ class HazardCalculator(BaseCalculator):
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-            self.datastore['csm_info'] = self.csm.info
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()

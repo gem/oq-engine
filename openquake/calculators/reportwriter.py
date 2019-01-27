@@ -129,6 +129,8 @@ def build_report(job_ini, output_dir=None):
     """
     calc_id = logs.init()
     oq = readinput.get_oqparam(job_ini)
+    if oq.calculation_mode == 'classical':
+        oq.calculation_mode = 'preclassical'
     oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
@@ -138,6 +140,8 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     calc.pre_execute()
+    if oq.calculation_mode == 'preclassical':
+        calc.execute()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
