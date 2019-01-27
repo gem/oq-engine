@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     1,437,466,600      
-date           2019-01-20T07:38:00
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:28:59
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 5
@@ -44,8 +44,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     65    2,456        0.0       0.0        0.0       1         0.0   
 1      1         A    65    130   2,456        0.0       0.0        0.0       1         0.0   
+0      1         A    0     65    2,456        0.0       0.0        0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -65,16 +65,16 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.04641 9.996E-04 0.04570 0.04711 2      
-split_filter       0.00281 NaN       0.00281 0.00281 1      
+read_source_models 0.04742 5.241E-04 0.04705 0.04779 2      
+split_filter       0.00277 NaN       0.00277 0.00277 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
-read_source_models converter=776 B fnames=218 B            8.35 KB 
-split_filter       srcs=6.51 KB srcfilter=253 B dummy=14 B 6.56 KB 
+read_source_models converter=626 B fnames=218 B            8.42 KB 
+split_filter       srcs=6.53 KB srcfilter=253 B dummy=14 B 6.59 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -82,6 +82,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.09281  0.57031   2     
-total only_filter        0.00281  1.29688   1     
+total read_source_models 0.09483  0.58594   2     
+total only_filter        0.00277  1.23047   1     
 ======================== ======== ========= ======
