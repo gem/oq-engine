@@ -373,7 +373,8 @@ class CompositeSourceModel(collections.Sequence):
         self.source_models = source_models
         self.optimize_same_id = optimize_same_id
         self.source_info = ()
-        totweight = sum(src.weight for sm in source_models
+        # NB: the weight is 1 for sources which are XML nodes
+        totweight = sum(getattr(src, 'weight', 1) for sm in source_models
                         for sg in sm.src_groups for src in sg)
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
