@@ -23,7 +23,7 @@ import copy
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import avgSA, SA
+from openquake.hazardlib.imt import AverageSA, SA
 from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 
 class GenericGmpeAvgSA(GMPE):
@@ -54,7 +54,7 @@ class GenericGmpeAvgSA(GMPE):
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([avgSA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([AverageSA])
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
