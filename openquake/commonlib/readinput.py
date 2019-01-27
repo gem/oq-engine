@@ -1255,8 +1255,6 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     if found:
         for path in to_remove:
             os.remove(path)
-    else:
-        logging.warn('Sources %s not found', source_ids)
 
 
 # used in oq zip and oq checksum
