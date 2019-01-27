@@ -20,8 +20,6 @@ import unittest
 
 class GenericGmpeAvgSATestCase(unittest.TestCase):
 
-    _ = gsim.get_available_gsims()
-
     def test_calculation_Akkar(self):
         """
         """
