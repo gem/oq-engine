@@ -167,7 +167,7 @@ class SA(IMT):
             return '%s(%s)' % (self.name, self.period)
 
 
-class avgSA(IMT):
+class AverageSA(IMT):
     """
     Dummy spectral acceleration to compute average ground motion over
     several spectral ordinates.
