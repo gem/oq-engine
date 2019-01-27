@@ -50,7 +50,7 @@ class ReportWriter(object):
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
-        'short_source_info': 'Slowest sources',
+        'slow_sources': 'Slowest sources',
         'task_hazard:0': 'Fastest task',
         'task_hazard:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
@@ -97,7 +97,7 @@ class ReportWriter(object):
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
         if 'source_info' in ds:
-            self.add('short_source_info')
+            self.add('slow_sources')
             self.add('times_by_source_class')
             self.add('dupl_sources')
         if 'task_info' in ds:
