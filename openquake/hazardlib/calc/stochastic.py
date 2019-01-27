@@ -203,24 +203,24 @@ def sample_ruptures(sources, param, monitor=Monitor()):
                     else:
                         rup_counter[src.id][rup.idx] += 1
 
-                # ebr = EBRupture(rup, src.id, grp_id, 1, samples)
-                for src_key in rup_data:
-                    for rup_key in rup_data[src_key]:
-                        dat = rup_data[src_key][rup_key]
-                        cnt = rup_counter[src_key][rup_key]
-                        ebr = EBRupture(dat[0], dat[1], dat[2], cnt, samples)
-                        eb_ruptures.append(ebr)
             elif param['src_interdep'] == 'mutex':
                 print('Not yet implemented')
                 exit(0)
 
-
-        unique_eids = numpy.unique(eb_ruptures['eid'])
-        n_unique_events = len(unique_eids)
-        if n_unique_events != len(eb_ruptures):
-            pass
+        # import pdb; pdb.set_trace()
+        # Create event based ruptures
+        print(rup_data.keys())
+        for src_key in rup_data:
+            for rup_key in rup_data[src_key]:
+                dat = rup_data[src_key][rup_key]
+                cnt = rup_counter[src_key][rup_key]
+                print(src_key, rup_key, cnt)
+                ebr = EBRupture(dat[0], dat[1], dat[2], cnt, samples)
+                eb_ruptures.append(ebr)
+                print(eb_ruptures)
 
         # TODO need to set the calculation time and the eff_ruptures
+        calc_times = 1
         yield AccumDict(rup_array=get_rup_array(eb_ruptures),
                         calc_times=calc_times,
                         eff_ruptures={grp_id: eff_ruptures})
