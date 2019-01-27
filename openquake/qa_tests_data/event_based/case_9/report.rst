@@ -3,8 +3,8 @@ Event Based Risk SJ
 
 ============== ===================
 checksum32     2,863,568,899      
-date           2019-01-20T07:38:15
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:29:14
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 61, num_levels = 1
@@ -64,16 +64,16 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00592 NaN    0.00592 0.00592 1      
-split_filter       0.00254 NaN    0.00254 0.00254 1      
+read_source_models 0.00586 NaN    0.00586 0.00586 1      
+split_filter       0.00256 NaN    0.00256 0.00256 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
-read_source_models converter=388 B fnames=106 B            2.34 KB 
-split_filter       srcs=2.03 KB srcfilter=253 B dummy=14 B 2.2 KB  
+read_source_models converter=313 B fnames=106 B            2.38 KB 
+split_filter       srcs=2.05 KB srcfilter=253 B dummy=14 B 2.22 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -81,6 +81,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00592  0.46875   1     
-total only_filter        0.00254  1.14453   1     
+total read_source_models 0.00586  0.26172   1     
+total only_filter        0.00256  1.23047   1     
 ======================== ======== ========= ======

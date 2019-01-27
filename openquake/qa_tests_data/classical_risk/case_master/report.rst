@@ -3,8 +3,8 @@ classical risk
 
 ============== ===================
 checksum32     4,038,465,672      
-date           2019-01-20T07:36:32
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:28:15
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 7, num_levels = 40
@@ -121,10 +121,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          4.24013   0.00281    105       15        1,275  
-1      2         S    2     4     4            0.02576   1.264E-05  7.00000   1         10     
-2      1         S    4     6     482          4.17806   0.00313    105       15        1,275  
-3      2         X    6     402   1            0.02899   5.245E-06  7.00000   1         2.64575
+0      1         S    0     2     482          4.08418   0.00271    105       15        1,275  
+2      1         S    4     6     482          3.99535   0.00202    105       15        1,275  
+3      2         X    6     402   1            0.02897   5.007E-06  7.00000   1         2.64575
+1      2         S    2     4     4            0.02624   8.869E-05  7.00000   1         10     
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -132,8 +132,8 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    8.44395   3     
-X    0.02899   1     
+S    8.10576   3     
+X    0.02897   1     
 ==== ========= ======
 
 Duplicated sources
@@ -144,17 +144,17 @@ Here is a fake duplicate: 2
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00835 0.00410   0.00545 0.01125 2      
-split_filter       0.04408 NaN       0.04408 0.04408 1      
-classical          0.33962 0.08879   0.05529 0.43997 25     
-build_hazard_stats 0.01126 3.633E-04 0.01100 0.01204 7      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.00789 0.00344 0.00546 0.01032 2      
+split_filter       0.04784 NaN     0.04784 0.04784 1      
+classical          0.32607 0.07982 0.05574 0.44169 25     
+build_hazard_stats 0.01246 0.00289 0.01098 0.01899 7      
+================== ======= ======= ======= ======= =======
 
 Fastest task
 ------------
-taskno=25, weight=13, duration=0 s, sources="2"
+taskno=24, weight=13, duration=0 s, sources="1"
 
 ======== ======= ======= ======= === =
 variable mean    stddev  min     max n
@@ -165,23 +165,23 @@ weight   6.61438 5.61249 2.64575 10  2
 
 Slowest task
 ------------
-taskno=25, weight=158, duration=0 s, sources="2"
+taskno=12, weight=158, duration=0 s, sources="1"
 
-======== ======= ======= ======= === =
-variable mean    stddev  min     max n
-======== ======= ======= ======= === =
-nsites   7.00000 0.0     7       7   2
-weight   6.61438 5.61249 2.64575 10  2
-======== ======= ======= ======= === =
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   7.00000 NaN    7   7   1
+weight   158     NaN    158 158 1
+======== ======= ====== === === =
 
 Data transfer
 -------------
 ================== =============================================================== =========
 task               sent                                                            received 
-read_source_models converter=776 B fnames=236 B                                    13.81 KB 
-split_filter       srcs=12.16 KB srcfilter=253 B seed=14 B                         18.85 KB 
-classical          group=41.64 KB src_filter=27.51 KB param=23.85 KB gsims=5.37 KB 137.75 KB
-build_hazard_stats pgetter=35.74 KB hstats=1.68 KB individual_curves=91 B          16.38 KB 
+read_source_models converter=626 B fnames=236 B                                    13.93 KB 
+split_filter       srcs=12.22 KB srcfilter=253 B seed=14 B                         18.92 KB 
+classical          group=42.13 KB src_filter=27.51 KB param=23.85 KB gsims=5.37 KB 137.75 KB
+build_hazard_stats pgetter=36.13 KB hstats=1.68 KB individual_curves=91 B          16.38 KB 
 ================== =============================================================== =========
 
 Slowest operations
@@ -189,23 +189,23 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total classical          8.49039  1.21484   25    
-make_contexts            5.16836  0.0       969   
-get_poes                 2.91128  0.0       969   
-total build_hazard_stats 0.07882  1.55859   7     
-store source_info        0.07338  0.0       25    
-combine pmaps            0.04609  1.50000   7     
-total split_filter       0.04408  1.97266   1     
-building riskinputs      0.02936  0.0       1     
-saving statistics        0.01678  0.0       7     
-total read_source_models 0.01670  0.28125   2     
-managing sources         0.00872  0.0       1     
-compute quantile-0.15    0.00816  0.0       7     
-compute quantile-0.5     0.00803  0.0       7     
-compute quantile-0.85    0.00803  0.0       7     
-aggregate curves         0.00769  0.0       25    
-store source model       0.00737  0.0       2     
-compute mean             0.00655  0.06641   7     
-saving probability maps  0.00433  0.0       1     
-reading exposure         0.00136  0.0       1     
+total classical          8.15183  1.05859   25    
+make_contexts            5.02194  0.0       969   
+get_poes                 2.76798  0.0       969   
+total build_hazard_stats 0.08721  1.48047   7     
+combine pmaps            0.05352  1.40625   7     
+total split_filter       0.04784  2.06250   1     
+building riskinputs      0.02998  0.03906   1     
+saving statistics        0.02132  0.0       7     
+total read_source_models 0.01578  0.20703   2     
+aggregate curves         0.00867  0.0       25    
+managing sources         0.00862  0.05078   1     
+compute quantile-0.15    0.00832  0.0       7     
+compute quantile-0.5     0.00822  0.0       7     
+compute quantile-0.85    0.00820  0.0       7     
+compute mean             0.00677  0.08594   7     
+saving probability maps  0.00440  0.0       1     
+store source model       0.00437  0.0       2     
+store source_info        0.00182  0.0       1     
+reading exposure         0.00139  0.05859   1     
 ======================== ======== ========= ======

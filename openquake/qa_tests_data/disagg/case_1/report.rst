@@ -3,8 +3,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 
 ============== ===================
 checksum32     1,811,660,702      
-date           2019-01-20T07:36:57
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:28:40
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 2, num_levels = 38
@@ -92,10 +92,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         P    0     1     15           0.02071   1.979E-05  1.00000   1         1.50000
-1      2         A    1     5     1,440        1.77300   1.20330    96        96        144    
-2      3         S    5     7     617          0.98286   0.00106    10        10        617    
-3      4         C    7     11    164          0.36502   2.00906    10        10        656    
+1      2         A    1     5     1,440        1.86479   1.24299    96        96        144    
+2      3         S    5     7     617          0.97720   0.00109    10        10        617    
+3      4         C    7     11    164          0.37129   2.09546    10        10        656    
+0      1         P    0     1     15           0.02143   1.812E-05  1.00000   1         1.50000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -103,10 +103,10 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    1.77300   1     
-C    0.36502   1     
-P    0.02071   1     
-S    0.98286   1     
+A    1.86479   1     
+C    0.37129   1     
+P    0.02143   1     
+S    0.97720   1     
 ==== ========= ======
 
 Duplicated sources
@@ -117,15 +117,15 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.03811 NaN       0.03811 0.03811 1      
-split_filter       0.23818 NaN       0.23818 0.23818 1      
-classical          0.62981 0.80195   0.14139 2.04323 5      
-build_hazard_stats 0.00581 6.160E-04 0.00537 0.00624 2      
+read_source_models 0.04164 NaN       0.04164 0.04164 1      
+split_filter       0.24827 NaN       0.24827 0.24827 1      
+classical          0.64833 0.84671   0.14369 2.14523 5      
+build_hazard_stats 0.00614 9.628E-04 0.00546 0.00682 2      
 ================== ======= ========= ======= ======= =======
 
 Fastest task
 ------------
-taskno=5, weight=152, duration=0 s, sources="4"
+taskno=4, weight=152, duration=0 s, sources="4"
 
 ======== ======= ====== ======= === =
 variable mean    stddev min     max n
@@ -136,23 +136,23 @@ weight   38      26     4.00000 64  4
 
 Slowest task
 ------------
-taskno=5, weight=321, duration=2 s, sources="4"
+taskno=0, weight=321, duration=2 s, sources="4"
 
-======== ======= ====== ======= === =
-variable mean    stddev min     max n
-======== ======= ====== ======= === =
-nsites   1.00000 0.0    1       1   4
-weight   38      26     4.00000 64  4
-======== ======= ====== ======= === =
+======== ======= ====== ======= === ==
+variable mean    stddev min     max n 
+======== ======= ====== ======= === ==
+nsites   1.00000 0.0    1       1   99
+weight   3.24747 12     1.50000 88  99
+======== ======= ====== ======= === ==
 
 Data transfer
 -------------
 ================== =========================================================== =========
 task               sent                                                        received 
-read_source_models converter=388 B fnames=103 B                                3.85 KB  
-split_filter       srcs=3.31 KB srcfilter=253 B seed=14 B                      101.68 KB
-classical          group=98.99 KB src_filter=4.39 KB param=4.02 KB gsims=635 B 5.67 KB  
-build_hazard_stats pgetter=5.62 KB hstats=134 B individual_curves=26 B         684 B    
+read_source_models converter=313 B fnames=103 B                                4.05 KB  
+split_filter       srcs=3.4 KB srcfilter=253 B seed=14 B                       101.78 KB
+classical          group=99.11 KB src_filter=4.39 KB param=4.02 KB gsims=635 B 5.67 KB  
+build_hazard_stats pgetter=5.73 KB hstats=134 B individual_curves=26 B         684 B    
 ================== =========================================================== =========
 
 Slowest operations
@@ -160,18 +160,18 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          3.14903   1.00391   5     
-make_contexts            1.60074   0.0       2,236 
-get_poes                 0.89213   0.0       2,236 
-total split_filter       0.23818   2.86328   1     
-total read_source_models 0.03811   0.69531   1     
-store source_info        0.01236   0.0       5     
-total build_hazard_stats 0.01161   1.44922   2     
-combine pmaps            0.01056   1.44922   2     
-managing sources         0.00727   0.00781   1     
-store source model       0.00513   0.0       1     
-saving probability maps  0.00433   0.0       1     
-aggregate curves         0.00139   0.0       5     
-saving statistics        0.00117   0.0       2     
-compute mean             3.717E-04 0.0       1     
+total classical          3.24167   0.90234   5     
+make_contexts            1.63715   0.0       2,236 
+get_poes                 0.92530   0.0       2,236 
+total split_filter       0.24827   1.91016   1     
+total read_source_models 0.04164   0.94531   1     
+total build_hazard_stats 0.01229   1.34375   2     
+combine pmaps            0.01113   1.34375   2     
+managing sources         0.00705   0.00781   1     
+saving probability maps  0.00530   0.0       1     
+store source model       0.00511   0.0       1     
+store source_info        0.00221   0.0       1     
+aggregate curves         0.00187   0.0       5     
+saving statistics        9.170E-04 0.0       2     
+compute mean             4.776E-04 0.0       1     
 ======================== ========= ========= ======
