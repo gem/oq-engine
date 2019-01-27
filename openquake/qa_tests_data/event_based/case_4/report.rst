@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     336,991,371        
-date           2019-01-20T07:38:04
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:29:02
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -63,16 +63,16 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00276 NaN    0.00276 0.00276 1      
-split_filter       0.00392 NaN    0.00392 0.00392 1      
+read_source_models 0.00261 NaN    0.00261 0.00261 1      
+split_filter       0.00428 NaN    0.00428 0.00428 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
-read_source_models converter=388 B fnames=108 B            1.45 KB 
-split_filter       srcs=1.06 KB srcfilter=253 B dummy=14 B 1.14 KB 
+read_source_models converter=313 B fnames=108 B            1.49 KB 
+split_filter       srcs=1.08 KB srcfilter=253 B dummy=14 B 1.16 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -80,6 +80,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00392  1.73828   1     
-total read_source_models 0.00276  0.17188   1     
+total only_filter        0.00428  1.73047   1     
+total read_source_models 0.00261  0.16016   1     
 ======================== ======== ========= ======
