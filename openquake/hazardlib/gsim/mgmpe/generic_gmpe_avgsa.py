@@ -19,6 +19,7 @@ Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 :class:`~openquake.hazardlib.mgmpe.GenericGmpeAvgSA`
 """
 
+import abc
 import copy
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry
@@ -67,9 +68,9 @@ class GenericGmpeAvgSA(GMPE):
         self.tnum = len(self.avg_periods)
 
         correlation_function_handles = {
-            'baker_jayaram': baker_jayaram_correlation,
-            'akkar': akkar_correlation,
-            'none': dummy_correlation
+            'baker_jayaram': BakerJayaramCorrelationModel(),
+            'akkar': AkkarCorrelationModel(),
+            'none': DummyCorrelationModel()
         }
 
         self.corr_func = correlation_function_handles[corr_func]
@@ -103,8 +104,8 @@ class GenericGmpeAvgSA(GMPE):
         for i1 in range(self.tnum):
             mean_avgsa += mean_list[i1]
             for i2 in range(self.tnum):
-                rho = self.corr_func(self.avg_periods[i1],
-                                     self.avg_periods[i2])
+                rho = self.corr_func.get_correlation(self.avg_periods[i1],
+                                                     self.avg_periods[i2])
                 stddvs_avgsa += rho * stddvs_list[i1] * stddvs_list[i2]
 
         mean_avgsa *= (1./self.tnum)
@@ -113,92 +114,97 @@ class GenericGmpeAvgSA(GMPE):
         return mean_avgsa, [stddvs_avgsa]
 
 
-def baker_jayaram_correlation(t1, t2):
+class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
+    """
+    Base class for correlation models used in spectral period averaging.
+    """
+
+    def get_correlation(self, t1, t2):
+        """
+        :param float t1:
+            First period of interest.
+
+        :param float t2:
+            Second period of interest.
+
+        :return float rho:
+            The predicted correlation coefficient.
+        """
+        pass
+
+
+class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
     """
     Produce inter-period correlation for any two spectral periods.
     Subroutine taken from: https://usgs.github.io/shakemap/shakelib
     Based upon:
     Baker, J.W. and Jayaram, N., 2007, Correlation of spectral acceleration
     values from NGA ground motion models, Earthquake Spectra.
-
-    :param float t1:
-        First period of interest.
-
-    :param float t2:
-        Second period of interest.
-
-    :return float rho:
-        The predicted correlation coefficient.
     """
 
-    t_min = min(t1, t2)
-    t_max = max(t1, t2)
+    def get_correlation(self, t1, t2):
+        """
+        """
 
-    c1 = 1.0 - np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * 0.366)
+        t_min = min(t1, t2)
+        t_max = max(t1, t2)
 
-    if t_max < 0.2:
-        c2 = 0.105 * (1.0 - 1.0 / (1.0 + np.exp(100.0 * t_max - 5.0)))
-        c2 = 1.0 - c2 * (t_max - t_min) / (t_max - 0.0099)
-    else:
-        c2 = 0
+        c1 = 1.0 - np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * 0.366)
 
-    if t_max < 0.109:
-        c3 = c2
-    else:
-        c3 = c1
+        if t_max < 0.2:
+            c2 = 0.105 * (1.0 - 1.0 / (1.0 + np.exp(100.0 * t_max - 5.0)))
+            c2 = 1.0 - c2 * (t_max - t_min) / (t_max - 0.0099)
+        else:
+            c2 = 0
 
-    c4 = c1 + 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
+        if t_max < 0.109:
+            c3 = c2
+        else:
+            c3 = c1
 
-    if t_max <= 0.109:
-        rho = c2
-    elif t_min > 0.109:
-        rho = c1
-    elif t_max < 0.2:
-        rho = min(c2, c4)
-    else:
-        rho = c4
+        c4 = c1 + 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
 
-    return rho
+        if t_max <= 0.109:
+            rho = c2
+        elif t_min > 0.109:
+            rho = c1
+        elif t_max < 0.2:
+            rho = min(c2, c4)
+        else:
+            rho = c4
+
+        return rho
 
 
-def akkar_correlation(t1, t2):
+class AkkarCorrelationModel(BaseAvgSACorrelationModel):
     """
     Read the period-dependent correlation coefficient matrix as in:
     Akkar S., Sandikkaya MA., Ay BO., 2014, Compatible ground-motion
     prediction equations for damping scaling factors and vertical to
     horizontal spectral amplitude ratios for the broader Europe region,
     Bull Earthquake Eng, 12, pp. 517-547.
-
-    :param float t1:
-        First period of interest.
-
-    :param float t2:
-        Second period of interest.
-
-    :return float:
-        The predicted correlation coefficient.
     """
 
-    if t1 not in act.periods:
-        raise ValueError('t1 not a valid period')
+    def get_correlation(self, t1, t2):
+        """
+        """
 
-    if t2 not in act.periods:
-        raise ValueError('t2 not a valid period')
+        if t1 not in act.periods:
+            raise ValueError('t1 not a valid period')
 
-    return act.coeff_table[act.periods.index(t1)][act.periods.index(t2)]
+        if t2 not in act.periods:
+            raise ValueError('t2 not a valid period')
+
+        return act.coeff_table[act.periods.index(t1)][act.periods.index(t2)]
 
 
-def dummy_correlation(t1, t2):
+class DummyCorrelationModel(BaseAvgSACorrelationModel):
     """
     Dummy function returning just 1 (used as default function handle)
-
-    :param float t1:
-        First period of interest.
-
-    :param float t2:
-        Second period of interest.
-
-    :return 1:
     """
 
-    return 1.
+    def get_correlation(self, t1, t2):
+        """
+        """
+
+        return 1.
