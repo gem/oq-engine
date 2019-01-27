@@ -216,7 +216,6 @@ def sample_ruptures(sources, param, monitor=Monitor()):
                 print(src_key, rup_key, cnt)
                 ebr = EBRupture(dat[0], dat[1], dat[2], cnt, samples)
                 eb_ruptures.append(ebr)
-                print(eb_ruptures)
 
         # TODO need to set the calculation time and the eff_ruptures
         calc_times = 1
