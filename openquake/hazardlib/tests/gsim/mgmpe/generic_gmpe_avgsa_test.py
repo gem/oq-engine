@@ -20,7 +20,7 @@ import unittest
 
 class GenericGmpeAvgSATestCase(unittest.TestCase):
 
-    def test_calculation_Akkar(self):
+    def test_calculation_Akkar(self, avg_periods="0.05,0.15,1.0,2.0,4.0"):
         """
         """
 
@@ -29,7 +29,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         # Initialise meta-GMPE
         mgmpe = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
                     gmpe_name='BooreAtkinson2008', 
-                    avg_periods="0.05,0.15,1.0,2.0,4.0",
+                    avg_periods=avg_periods,
                     corr_func='akkar')
 
         sctx = gsim.base.SitesContext()
@@ -54,10 +54,21 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
                 setattr(rctx, 'hypo_depth', data[3])
                 setattr(sctx, 'vs30', np.array([data[4]]))
 
-                # Compute ground motion
-                mean, stdv = mgmpe.get_mean_and_stddevs(sctx, rctx, dctx, P, S)
-                np.testing.assert_almost_equal(mean, data[6])
-                np.testing.assert_almost_equal(stdv, data[7])
+                try:
+                    # Compute ground motion
+                    mean, stdv = mgmpe.get_mean_and_stddevs(sctx, rctx,
+                                                            dctx, P, S)
+                    np.testing.assert_almost_equal(mean, data[6])
+                    np.testing.assert_almost_equal(stdv, data[7])
+                except ValueError:
+                    pass
+
+    def test_calculation_Akkar_valueerror(self):
+        """
+        """
+
+        self.test_calculation_Akkar(avg_periods="0.05,0.15,1.0,2.0,4.012345")
+
 
     def test_calculation_Baker_Jayaram(self):
         """
