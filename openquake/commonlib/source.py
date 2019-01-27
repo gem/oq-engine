@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
-    groupby, group_array, gettemp, AccumDict, cached_property)
+    groupby, group_array, gettemp, AccumDict)
 from openquake.hazardlib import source, sourceconverter
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
@@ -125,7 +125,7 @@ class CompositionInfo(object):
 
     get_rlzs_assoc = get_rlzs_assoc
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight=0):
+    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
@@ -373,10 +373,14 @@ class CompositeSourceModel(collections.Sequence):
         self.source_models = source_models
         self.optimize_same_id = optimize_same_id
         self.source_info = ()
+        # NB: the weight is 1 for sources which are XML nodes
+        totweight = sum(getattr(src, 'weight', 1) for sm in source_models
+                        for sg in sm.src_groups for src in sg)
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.source_models])
+            [sm.get_skeleton() for sm in self.source_models],
+            totweight)
         try:
             dupl_sources = self.check_dupl_sources()
         except AssertionError:
