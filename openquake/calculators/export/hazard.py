@@ -28,7 +28,7 @@ from openquake.baselib.general import humansize, group_array, deprecated
 from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, filters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
@@ -710,7 +710,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     [rgetter] = gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     [ebr] = rgetter.get_ruptures()
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(rgetter, sitecol, oq)
+    srcfilter = filters.SourceFilter(sitecol, oq.maximum_distance)
+    getter = GmfGetter(rgetter, srcfilter, oq)
     getter.init()
     eids = rgetter.get_eid_rlz()['eid']
     sids = getter.computers[0].sids
