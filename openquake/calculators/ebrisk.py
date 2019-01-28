@@ -93,13 +93,14 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         imts = getter.imts
         eids = rupgetter.get_eid_rlz()['eid']
         eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+        rlz2idx = rupgetter.rlz2idx
         tagnames = param['aggregate_by']
         shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
         acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
         if param['avg_losses']:
-            losses_by_RN = AccumDict(accum=numpy.zeros((N, L), F32))
+            losses_by_RN = numpy.zeros((rupgetter.num_rlzs, N, L), F32)
         else:
-            losses_by_RN = {}
+            losses_by_RN = None
         times = numpy.zeros(N)  # risk time per site_id
         for sid, haz in hazard.items():
             t0 = time.time()
@@ -108,13 +109,14 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             for lt, asset, ratios in gen_risk(assets, riskmodel, haz, imts):
                 lti = riskmodel.lti[lt]
                 losses = ratios * asset.value(lt)
+                tidx = tagidxs[asset.ordinal]
                 for eid, rlz, loss in zip(haz['eid'], haz['rlzi'], losses):
-                    acc[(eid2idx[eid], lti) + tagidxs[asset.ordinal]] += loss
+                    acc[(eid2idx[eid], lti) + tidx] += loss
                     if param['avg_losses']:
-                        losses_by_RN[rlz][sid, lti] += loss
+                        losses_by_RN[rlz2idx[rlz], sid, lti] += loss
             times[sid] = time.time() - t0
-    return {'losses': acc, 'eids': eids, 'losses_by_RN': losses_by_RN,
-            'times': times}
+    return {'losses': acc, 'eids': eids, 'losses_by_RN':
+            (rupgetter.rlzs, losses_by_RN), 'times': times}
 
 
 def compute_loss_curves_maps(hdf5path, multi_index, clp, individual_curves,
@@ -199,9 +201,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 sort_idx, sort_arr = zip(*sorted(zip(idx, dic['losses'])))
                 # h5py requires the indices to be sorted
                 lbe[list(sort_idx)] = numpy.array(sort_arr)
-        with self.monitor('saving losses_by_site', autoflush=True):
-            for r, arr in dic['losses_by_RN'].items():
-                self.datastore['losses_by_site'][:, r] += arr
+        if self.oqparam.avg_losses:
+            with self.monitor('saving losses_by_site', autoflush=True):
+                rlzi, array = dic['losses_by_RN']
+                for r, arr in enumerate(array):
+                    self.datastore['losses_by_site'][:, rlzi[r]] += arr
         return acc + dic['times']
 
     def get_shape(self, *sizes):
