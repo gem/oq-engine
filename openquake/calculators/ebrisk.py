@@ -81,9 +81,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     mon.counts = 1
     with datastore.read(rupgetter.hdf5path) as dstore:
         assgetter = getters.AssetGetter(dstore)
-    with monitor('getting ruptures'):
-        ebruptures = rupgetter.get_ruptures(srcfilter)
-    getter = getters.GmfGetter(rupgetter, srcfilter.sitecol, param['oqparam'])
+    getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
