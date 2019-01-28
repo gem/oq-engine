@@ -102,9 +102,7 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     """
     with monitor('getting ruptures'):
         ebruptures = rupgetter.get_ruptures(srcfilter)
-    getter = GmfGetter(
-        rupgetter.rlzs_by_gsim, ebruptures, srcfilter.sitecol,
-        param['oqparam'])
+    getter = GmfGetter(rupgetter, srcfilter.sitecol, param['oqparam'])
     return getter.compute_gmfs_curves(monitor)
 
 

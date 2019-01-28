@@ -316,9 +316,9 @@ class GmfGetter(object):
     An hazard getter with methods .get_gmfdata and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam):
-        self.rlzs_by_gsim = rlzs_by_gsim
-        self.ebruptures = ebruptures
+    def __init__(self, rupgetter, sitecol, oqparam):
+        self.rlzs_by_gsim = rupgetter.rlzs_by_gsim
+        self.rupgetter = rupgetter
         self.sitecol = sitecol.complete
         self.oqparam = oqparam
         self.min_iml = oqparam.min_iml
@@ -328,7 +328,7 @@ class GmfGetter(object):
         self.gmv_dt = oqparam.gmf_data_dt()
         self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (M,))), ('eid', U64)])
         self.cmaker = ContextMaker(
-            rlzs_by_gsim,
+            rupgetter.rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
             if isinstance(oqparam.maximum_distance, dict)
             else oqparam.maximum_distance,
@@ -354,7 +354,7 @@ class GmfGetter(object):
         if hasattr(self, 'computers'):  # init already called
             return
         self.computers = []
-        for ebr in self.ebruptures:
+        for ebr in self.rupgetter.get_ruptures():
             if hasattr(ebr, 'sids'):  # filter the site collection
                 sitecol = self.sitecol.filtered(ebr.sids)
             else:
