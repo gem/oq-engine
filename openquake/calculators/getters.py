@@ -316,10 +316,11 @@ class GmfGetter(object):
     An hazard getter with methods .get_gmfdata and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rupgetter, sitecol, oqparam):
+    def __init__(self, rupgetter, srcfilter, oqparam):
         self.rlzs_by_gsim = rupgetter.rlzs_by_gsim
         self.rupgetter = rupgetter
-        self.sitecol = sitecol.complete
+        self.srcfilter = srcfilter
+        self.sitecol = srcfilter.sitecol.complete
         self.oqparam = oqparam
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
@@ -354,7 +355,7 @@ class GmfGetter(object):
         if hasattr(self, 'computers'):  # init already called
             return
         self.computers = []
-        for ebr in self.rupgetter.get_ruptures():
+        for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             if hasattr(ebr, 'sids'):  # filter the site collection
                 sitecol = self.sitecol.filtered(ebr.sids)
             else:
