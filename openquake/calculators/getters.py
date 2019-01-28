@@ -504,7 +504,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
         rgetter.weight = getattr(block, 'weight', len(block))
         yield rgetter
         nr += len(rups)
-        ne += rups['n_occ'].sum()
+        ne += rgetter.num_events
     logging.info('Read %d ruptures and %d events', nr, ne)
 
 
@@ -550,6 +550,9 @@ class RuptureGetter(object):
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         [self.grp_id] = numpy.unique(rup_array['grp_id'])
+        self.num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
+        n_occ = rup_array['n_occ'].sum()
+        self.num_events = n_occ if samples > 1 else n_occ * self.num_rlzs
 
     def get_eid_rlz(self, monitor=None):
         """

@@ -113,7 +113,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.rupture_slip_direction = rupture_slip_direction
         self.weight = weight
 
-
     @property
     def code(self):
         """Returns the code (integer in the range 0 .. 255) of the rupture"""
