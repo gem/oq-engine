@@ -550,9 +550,22 @@ class RuptureGetter(object):
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         [self.grp_id] = numpy.unique(rup_array['grp_id'])
-        self.num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
+        self.rlz2idx = {}
+        nr = 0
+        for rlzs in rlzs_by_gsim.values():
+            for rlz in rlzs:
+                self.rlz2idx[rlz] = nr
+                nr += 1
         n_occ = rup_array['n_occ'].sum()
-        self.num_events = n_occ if samples > 1 else n_occ * self.num_rlzs
+        self.num_events = n_occ if samples > 1 else n_occ * nr
+
+    @property
+    def num_rlzs(self):
+        return len(self.rlz2idx)
+
+    @property
+    def rlz_offset(self):
+        return min(self.rlz2idx)
 
     def get_eid_rlz(self, monitor=None):
         """
