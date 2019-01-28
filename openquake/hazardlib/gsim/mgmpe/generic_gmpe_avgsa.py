@@ -61,6 +61,7 @@ class GenericGmpeAvgSA(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name, avg_periods, corr_func='none'):
+
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
