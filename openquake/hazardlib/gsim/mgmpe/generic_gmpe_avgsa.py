@@ -74,7 +74,10 @@ class GenericGmpeAvgSA(GMPE):
             'none': DummyCorrelationModel()
         }
 
-        self.corr_func = correlation_function_handles[corr_func]
+        if corr_func not in correlation_function_handles:
+            raise ValueError('Not a valid correlation function')
+        else:
+            self.corr_func = correlation_function_handles[corr_func]
 
         # Check if this GMPE has the necessary requirements
         # [TO DO]
