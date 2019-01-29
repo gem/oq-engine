@@ -656,6 +656,12 @@ class RuptureGetter(object):
                 ebrs.append(ebr)
         return ebrs
 
+    def E2R(self, array, rlzi):
+        z = numpy.zeros((self.num_rlzs,) + array.shape[1:], array.dtype)
+        for a, r in zip(array, rlzi):
+            z[self.rlz2idx[r]] += a
+        return z
+
     def __len__(self):
         return len(self.rup_array)
 
