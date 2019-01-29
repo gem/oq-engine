@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     3,672,594,697      
-date           2018-12-13T12:58:04
-engine_version 3.3.0-git68d7d11268
+date           2019-01-27T08:31:14
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 2, num_levels = 133
@@ -12,7 +12,7 @@ num_sites = 2, num_levels = 133
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -94,8 +94,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      21        M    0     2     260          0.0       0.00117    0.0       2         0.0   
-1      21        M    0     2     260          0.0       9.527E-04  0.0       2         0.0   
+1      21        M    2     4     260          0.0       5.221E-04  2.00000   2         26    
+0      21        M    0     2     260          0.0       6.857E-04  2.00000   2         26    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -108,22 +108,23 @@ M    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+['21']
+Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00240 2.933E-05 0.00238 0.00242 2      
-split_filter       0.00588 NaN       0.00588 0.00588 1      
+read_source_models 0.00161 3.911E-05 0.00158 0.00164 2      
+split_filter       0.00387 NaN       0.00387 0.00387 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ====================================== ========
 task               sent                                   received
-read_source_models converter=776 B fnames=212 B           3.79 KB 
-split_filter       srcs=1.97 KB srcfilter=253 B seed=14 B 2.46 KB 
+read_source_models converter=626 B fnames=212 B           3.9 KB  
+split_filter       srcs=1.99 KB srcfilter=253 B seed=14 B 2.48 KB 
 ================== ====================================== ========
 
 Slowest operations
@@ -131,6 +132,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00588  0.0       1     
-total read_source_models 0.00479  0.0       2     
+total split_filter       0.00387  1.32031   1     
+total read_source_models 0.00322  0.09375   2     
 ======================== ======== ========= ======
