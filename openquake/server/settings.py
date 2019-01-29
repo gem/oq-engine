@@ -174,7 +174,7 @@ SERVER_NAME = socket.gethostname()
 WEBUI = True
 
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
-if STANDALONE:
+if STANDALONE and WEBUI:
     INSTALLED_APPS += (
         'openquakeplatform',
     )
