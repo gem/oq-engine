@@ -101,7 +101,7 @@ rupture_dt = numpy.dtype([
 
 
 # this is really fast
-def get_rup_array(ebruptures):
+def get_rup_array(ebruptures, srcfilter=None):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
     out the ruptures far away from every site
@@ -124,6 +124,10 @@ def get_rup_array(ebruptures):
         minlat = points[:, 1].min()
         maxlon = points[:, 0].max()
         maxlat = points[:, 1].max()
+        if srcfilter.integration_distance and len(srcfilter.close_sids(
+                (minlon, minlat, maxlon, maxlat),
+                rup.tectonic_region_type, rup.mag)) == 0:
+            continue
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
@@ -141,12 +145,13 @@ def get_rup_array(ebruptures):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
-# NB: there is no filtering of the ruptures: the sources are supposed to
-# have been prefiltered
-def sample_ruptures(sources, param, monitor=Monitor()):
+# NB: there is postfiltering of the ruptures, which is more efficient
+def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     """
     :param sources:
         a sequence of (prefiltered) sources of the same group
+    :param srcfilter:
+        SourceFilter instance used for bounding box post filtering
     :param param:
         a dictionary of additional parameters including
         ses_per_logic_tree_path
@@ -178,6 +183,6 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         eff_ruptures += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    yield AccumDict(rup_array=get_rup_array(eb_ruptures),
-                    calc_times=calc_times,
+    rup_array = get_rup_array(eb_ruptures, srcfilter)
+    yield AccumDict(rup_array=rup_array, calc_times=calc_times,
                     eff_ruptures={grp_id: eff_ruptures})
