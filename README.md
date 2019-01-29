@@ -53,6 +53,7 @@ Current stable version is the **OpenQuake Engine 3.3** 'Boschi'. The documentati
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
 * [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
+* [HTTP REST API](https://github.com/gem/oq-engine/blob/master/doc/web-api.md)
 
 #### For scientists
 
