@@ -356,10 +356,7 @@ class GmfGetter(object):
             return
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
-            if hasattr(ebr, 'sids'):  # filter the site collection
-                sitecol = self.sitecol.filtered(ebr.sids)
-            else:
-                sitecol = self.sitecol
+            sitecol = self.sitecol.filtered(ebr.sids)
             try:
                 computer = calc.gmf.GmfComputer(
                     ebr, sitecol, self.oqparam.imtls, self.cmaker,
@@ -655,8 +652,7 @@ class RuptureGetter(object):
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
-                if sids is not None:
-                    ebr.sids = sids
+                ebr.sids = sids
                 ebrs.append(ebr)
         return ebrs
 
