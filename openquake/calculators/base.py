@@ -754,6 +754,11 @@ class HazardCalculator(BaseCalculator):
         self.param = dict(individual_curves=oq.individual_curves,
                           avg_losses=oq.avg_losses)
 
+        # store the `exposed_value` if there is an exposure
+        if 'exposed_value' not in self.datastore and hasattr(self, 'assetcol'):
+            self.datastore['exposed_value'] = self.assetcol.agg_value(
+                *oq.aggregate_by)
+
     def store_csm_info(self, eff_ruptures):
         """
         Save info about the composite source model inside the csm_info dataset
