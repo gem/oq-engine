@@ -424,4 +424,4 @@ class RtreeFilter(SourceFilter):
             index.close()
 
 
-source_site_noop_filter = SourceFilter(None, {})
+nofilter = SourceFilter(None, {})

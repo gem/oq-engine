@@ -606,7 +606,7 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter=None):
+    def get_ruptures(self, srcfilter=calc.filters.nofilter):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
