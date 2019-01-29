@@ -18,17 +18,16 @@ from openquake.hazardlib import gsim, imt, const
 import numpy as np
 import unittest
 
+
 class GenericGmpeAvgSATestCase(unittest.TestCase):
 
     def test_calculation_Akkar(self, avg_periods="0.05,0.15,1.0,2.0,4.0"):
-        """
-        """
 
         DATA_FILE = 'Data/GENERIC_GMPE_AVGSA_MEAN_STD_TOTAL_AKKAR.csv'
 
         # Initialise meta-GMPE
         mgmpe = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
-                    gmpe_name='BooreAtkinson2008', 
+                    gmpe_name='BooreAtkinson2008',
                     avg_periods=avg_periods,
                     corr_func='akkar')
 
@@ -42,7 +41,8 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         with open(DATA_FILE, 'r') as f:
 
             # Skip header
-            for i in [1,2,3]: f.readline()
+            for i in [1, 2, 3]:
+                f.readline()
 
             for line in f:
                 data = np.float_(line.strip().split(','))
@@ -63,23 +63,17 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
                 except ValueError:
                     pass
 
-
     def test_calculation_Akkar_valueerror(self):
-        """
-        """
 
         self.test_calculation_Akkar(avg_periods="0.05,0.15,1.0,2.0,4.012345")
 
-
     def test_calculation_Baker_Jayaram(self):
-        """
-        """
 
         DATA_FILE = 'Data/GENERIC_GMPE_AVGSA_MEAN_STD_TOTAL_BAKER_JAYARAM.csv'
 
         # Initialise meta-GMPE
         mgmpe = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
-                    gmpe_name='BooreAtkinson2008', 
+                    gmpe_name='BooreAtkinson2008',
                     avg_periods="0.05,0.15,1.0,2.0,4.0",
                     corr_func='baker_jayaram')
 
@@ -93,7 +87,8 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         with open(DATA_FILE, 'r') as f:
 
             # Skip header
-            for i in [1,2,3]: f.readline()
+            for i in [1, 2, 3]:
+                f.readline()
 
             for line in f:
                 data = np.float_(line.strip().split(','))
