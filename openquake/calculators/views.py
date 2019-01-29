@@ -387,14 +387,20 @@ def view_totlosses(token, dstore):
     return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
 
 
-# for event based risk
+# for event based risk and ebrisk
 def portfolio_loss(dstore):
     array = dstore['losses_by_event'].value
-    L, = array.dtype['loss'].shape
-    R = dstore['csm_info'].get_num_rlzs()
-    data = numpy.zeros((R, L), F32)
-    for row in array:
-        data[row['rlzi']] += row['loss']
+    if array.dtype.names:  # for event based risk
+        L, = array.dtype['loss'].shape
+        R = dstore['csm_info'].get_num_rlzs()
+        data = numpy.zeros((R, L), F32)
+        for row in array:
+            data[row['rlzi']] += row['loss']
+    else:  # arrays has shape (E, L)
+        rlzs = dstore['events']['rlz']
+        w = dstore['csm_info/weights']
+        weights = w[w.dtype.names[0]]
+        data = numpy.array([(arr * weights[rlzs]).sum() for arr in array.T])
     return data
 
 
@@ -721,10 +727,10 @@ def view_global_hcurves(token, dstore):
     return rst_table(res)
 
 
-@view.add('dupl_sources')
-def view_dupl_sources(token, dstore):
+@view.add('dupl_sources_time')
+def view_dupl_sources_time(token, dstore):
     """
-    Display the duplicated sources from source_info
+    Display the time spent computing duplicated sources
     """
     info = dstore['source_info']
     items = sorted(group_array(info.value, 'source_id').items())
@@ -849,3 +855,49 @@ def view_act_ruptures_by_src(token, dstore):
         src = src_info[srcidx]
         table.append([src['source_id'], src['grp_id'], act_ruptures])
     return rst_table(table)
+
+
+Source = collections.namedtuple('Source', 'source_id code geom num_ruptures')
+
+
+def all_equal(records):
+    rec0 = records[0]
+    for rec in records[1:]:
+        for v1, v2 in zip(rec0, rec):
+            if isinstance(v1, numpy.ndarray):  # field geom
+                if len(v1) != len(v2):
+                    return False
+                for name in v1.dtype.names:
+                    if not numpy.allclose(v1[name], v2[name]):
+                        return False
+            elif v1 != v2:
+                return False
+    return True
+
+
+@view.add('dupl_sources')
+def view_dupl_sources(token, dstore):
+    """
+    Show the sources with the same ID and the truly duplicated sources
+    """
+    fields = ['source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures']
+    dic = group_array(dstore['source_info'].value[fields], 'source_id')
+    sameid = []
+    dupl = []
+    for source_id, group in dic.items():
+        if len(group) > 1:  # same ID sources
+            sources = []
+            for rec in group:
+                geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
+                src = Source(source_id, rec['code'], geom, rec['num_ruptures'])
+                sources.append(src)
+            if all_equal(sources):
+                dupl.append(source_id)
+            sameid.append(source_id)
+    msg = str(dupl) + '\n' if dupl else ''
+    msg += ('Found %d source(s) with the same ID and %d true duplicate(s)'
+            % (len(sameid), len(dupl)))
+    fakedupl = set(sameid) - set(dupl)
+    if fakedupl:
+        msg += '\nHere is a fake duplicate: %s' % fakedupl.pop()
+    return msg

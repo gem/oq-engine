@@ -252,35 +252,6 @@ def make_uhs(hmap, oq):
     return uhs
 
 
-def fix_minimum_intensity(min_iml, imts):
-    """
-    :param min_iml: a dictionary, possibly with a 'default' key
-    :param imts: an ordered list of IMTs
-    :returns: a numpy array of intensities, one per IMT
-
-    Make sure the dictionary minimum_intensity (provided by the user in the
-    job.ini file) is filled for all intensity measure types and has no key
-    named 'default'. Here is how it works:
-
-    >>> min_iml = {'PGA': 0.1, 'default': 0.05}
-    >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
-    array([0.1 , 0.05], dtype=float32)
-    >>> sorted(min_iml.items())
-    [('PGA', 0.1), ('PGV', 0.05)]
-    """
-    if min_iml:
-        for imt in imts:
-            try:
-                min_iml[imt] = calc.filters.getdefault(min_iml, imt)
-            except KeyError:
-                raise ValueError(
-                    'The parameter `minimum_intensity` in the job.ini '
-                    'file is missing the IMT %r' % imt)
-    if 'default' in min_iml:
-        del min_iml['default']
-    return F32([min_iml.get(imt, 0) for imt in imts])
-
-
 class RuptureData(object):
     """
     Container for information about the ruptures of a given

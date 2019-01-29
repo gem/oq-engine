@@ -26,7 +26,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib import general
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation

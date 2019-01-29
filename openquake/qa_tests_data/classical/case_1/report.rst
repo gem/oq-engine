@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 1
 ================================
 
 ============== ===================
-checksum32     1,641,445,592      
-date           2018-12-13T12:58:02
-engine_version 3.3.0-git68d7d11268
+checksum32     141,718,627        
+date           2019-01-27T08:31:04
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 6
@@ -12,7 +12,7 @@ num_sites = 1, num_levels = 6
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -73,11 +73,11 @@ source_model.xml 0      Active Shallow Crust 1            1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     1            0.0       2.027E-05  0.0       1         0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         P    0     1     1            0.0       9.537E-06  1.00000   1         0.10000
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
@@ -89,22 +89,22 @@ P    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00155 NaN    0.00155 0.00155 1      
-split_filter       0.00400 NaN    0.00400 0.00400 1      
+read_source_models 0.00127 NaN    0.00127 0.00127 1      
+split_filter       0.00282 NaN    0.00282 0.00282 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ====================================== ========
 task               sent                                   received
-read_source_models converter=383 B fnames=106 B           1.53 KB 
-split_filter       srcs=1.12 KB srcfilter=253 B seed=14 B 1.22 KB 
+read_source_models converter=305 B fnames=106 B           1.56 KB 
+split_filter       srcs=1.14 KB srcfilter=253 B seed=14 B 1.24 KB 
 ================== ====================================== ========
 
 Slowest operations
@@ -112,6 +112,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00400  0.0       1     
-total read_source_models 0.00155  0.0       1     
+total split_filter       0.00282  1.36328   1     
+total read_source_models 0.00127  0.08594   1     
 ======================== ======== ========= ======

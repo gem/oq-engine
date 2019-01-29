@@ -265,6 +265,7 @@ validators = {
     'char_mag': valid.positivefloats,
     'magnitudes': valid.positivefloats,
     'id': valid.simple_id,
+    'occurrence_rate': valid.positivefloat,
     'rupture.id': valid.positiveint,
     'ruptureId': valid.positiveint,
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),

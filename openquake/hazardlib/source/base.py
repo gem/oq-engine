@@ -42,6 +42,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
+    splittable = True
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
