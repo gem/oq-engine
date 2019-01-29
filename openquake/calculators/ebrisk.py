@@ -85,6 +85,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
+    mon_avg = monitor('building avg_losses', measuremem=False)
     with monitor('building risk'):
         imts = getter.imts
         eids = rupgetter.get_eid_rlz()['eid']
@@ -107,9 +108,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                 losses = ratios * asset.value(lt)
                 tidx = tagidxs[asset.ordinal]
                 acc[(eidx, lti) + tidx] += losses
-                if param['avg_losses']:
-                    losses_by_RN[:, sid, lti] += rupgetter.E2R(
-                        losses, haz['rlzi'])
+                with mon_avg:
+                    if param['avg_losses']:
+                        losses_by_RN[:, sid, lti] += rupgetter.E2R(
+                            losses, haz['rlzi'])
             times[sid] = time.time() - t0
     return {'losses': acc, 'eids': eids, 'losses_by_RN':
             (rupgetter.rlzs, losses_by_RN), 'times': times}
