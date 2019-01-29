@@ -2,9 +2,9 @@ event based hazard
 ==================
 
 ============== ===================
-checksum32     469,978,632        
-date           2018-12-13T12:57:46
-engine_version 3.3.0-git68d7d11268
+checksum32     2,390,181,475      
+date           2019-01-27T08:29:53
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 1
@@ -72,30 +72,30 @@ S    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00941 NaN    0.00941 0.00941 1      
-split_filter       0.00712 NaN    0.00712 0.00712 1      
+read_source_models 0.00381 NaN    0.00381 0.00381 1      
+split_filter       0.00421 NaN    0.00421 0.00421 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=388 B fnames=114 B           1.46 KB 
-split_filter       srcs=1.1 KB srcfilter=253 B dummy=14 B 1.18 KB 
-================== ====================================== ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=313 B fnames=114 B            1.49 KB 
+split_filter       srcs=1.12 KB srcfilter=253 B dummy=14 B 1.2 KB  
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00941   0.0       1     
-total only_filter        0.00712   0.0       1     
-reading exposure         5.648E-04 0.0       1     
+total only_filter        0.00421   1.59375   1     
+total read_source_models 0.00381   0.18750   1     
+reading exposure         5.774E-04 0.0       1     
 ======================== ========= ========= ======

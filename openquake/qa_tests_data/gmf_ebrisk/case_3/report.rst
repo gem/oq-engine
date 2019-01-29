@@ -2,9 +2,9 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     3,424,054,410      
-date           2018-10-05T03:04:29
-engine_version 3.3.0-git48e9a474fd
+checksum32     2,583,369,442      
+date           2019-01-27T08:28:27
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 13, num_levels = 170
@@ -68,12 +68,12 @@ scenario     0      *   1            0
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-34 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 15.94 KB
+120 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 56.25 KB
 
 Exposure model
 --------------
 =============== ========
-#assets         34      
+#assets         120     
 #taxonomies     10      
 deductibile     absolute
 insurance_limit absolute
@@ -81,17 +81,17 @@ insurance_limit absolute
 
 ==================================== ======= ======= === === ========= ==========
 taxonomy                             mean    stddev  min max num_sites num_assets
-MCF/LWALL+DLO/HEX:1/YBET:1980-2010   1.00000 0.0     1   1   2         2         
-W+WLI/LWALL+DNO/HEX:1/YPRE:1980      1.33333 0.57735 1   2   3         4         
-CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010 1.20000 0.44721 1   2   5         6         
-MCF/LWALL+DUC/HEX:2/YBET:1980-2010   1.50000 0.57735 1   2   4         6         
-MATO/LN+DNO/HEX:1/Y99                1.50000 0.70711 1   2   2         3         
-W+WLI/LWALL+DLO/HEX:1/YPRE:1980      1.00000 0.0     1   1   3         3         
-CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010 1.00000 0.0     1   1   2         2         
-MCF/LWALL+DUC/HEX:1/YBET:1980-2010   1.00000 0.0     1   1   4         4         
-MR/LWALL+DUC/HEX:1/YBET:1980-2010    1.00000 0.0     1   1   2         2         
-MR/LWALL+DLO/HEX:1/YBET:1980-2010    1.00000 0.0     1   1   2         2         
-*ALL*                                2.61538 1.89466 0   6   13        34        
+MCF/LWALL+DLO/HEX:1/YBET:1980-2010   1.57143 0.97590 1   3   7         11        
+W+WLI/LWALL+DNO/HEX:1/YPRE:1980      2.20000 1.09545 1   4   5         11        
+CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010 1.60000 1.26491 1   5   10        16        
+MCF/LWALL+DUC/HEX:2/YBET:1980-2010   1.62500 0.91613 1   3   8         13        
+MATO/LN+DNO/HEX:1/Y99                1.54545 0.82020 1   3   11        17        
+W+WLI/LWALL+DLO/HEX:1/YPRE:1980      2.00000 1.82574 1   6   7         14        
+CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010 2.25000 0.95743 1   3   4         9         
+MCF/LWALL+DUC/HEX:1/YBET:1980-2010   2.00000 1.26491 1   4   6         12        
+MR/LWALL+DUC/HEX:1/YBET:1980-2010    1.85714 1.06904 1   4   7         13        
+MR/LWALL+DLO/HEX:1/YBET:1980-2010    1.00000 0.0     1   1   4         4         
+*ALL*                                9.23077 9.16655 2   36  13        120       
 ==================================== ======= ======= === === ========= ==========
 
 Slowest operations
@@ -99,5 +99,5 @@ Slowest operations
 ================ ======== ========= ======
 operation        time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.02672  0.0       1     
+reading exposure 0.00702  0.13281   1     
 ================ ======== ========= ======

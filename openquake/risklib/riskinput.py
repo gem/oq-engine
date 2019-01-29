@@ -55,9 +55,12 @@ def read_composite_risk_model(dstore):
             rf = dstore['%s/%s/%s' % (oqparam.risk_model, quotedtaxonomy, lt)]
             if len(rmdict.limit_states):
                 # rf is a FragilityFunctionList
-                rf = rf.build(rmdict.limit_states,
-                              oqparam.continuous_fragility_discretization,
-                              oqparam.steps_per_interval)
+                try:
+                    rf = rf.build(rmdict.limit_states,
+                                  oqparam.continuous_fragility_discretization,
+                                  oqparam.steps_per_interval)
+                except ValueError as err:
+                    raise ValueError('%s: %s' % (taxo, err))
             else:
                 # rf is a vulnerability function
                 rf.init()

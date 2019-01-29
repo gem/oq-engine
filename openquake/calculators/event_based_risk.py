@@ -187,7 +187,6 @@ class EbrCalculator(base.RiskCalculator):
                     oq.return_periods, oq.loss_dt())
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
-        self.E = len(self.events)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['insured_losses'] = oq.insured_losses

@@ -2,9 +2,9 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ============== ===================
-checksum32     17,280,623         
-date           2018-12-13T12:58:02
-engine_version 3.3.0-git68d7d11268
+checksum32     905,885,649        
+date           2019-01-27T08:31:01
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -12,7 +12,7 @@ num_sites = 3, num_levels = 17
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -95,14 +95,14 @@ source_model_2.xml 3      Active Shallow Crust     240          240
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     15           0.0       3.314E-05  0.0       1         0.0   
-1      2         P    1     2     15           0.0       1.431E-05  0.0       1         0.0   
-2      1         A    0     4     240          0.0       0.10170    0.0       16        0.0   
-3      1         A    0     4     240          0.0       0.07745    0.0       16        0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+3      1         A    6     10    240          0.0       0.03253    48        16        41     
+2      1         A    2     6     240          0.0       0.03682    48        16        41     
+1      2         P    1     2     15           0.0       5.960E-06  3.00000   1         2.59808
+0      1         P    0     1     15           0.0       1.907E-05  3.00000   1         2.59808
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
@@ -115,22 +115,23 @@ P    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 1 source(s) with the same ID and 0 true duplicate(s)
+Here is a fake duplicate: 1
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00868 0.00573 0.00206 0.01205 3      
-split_filter       0.02011 NaN     0.02011 0.02011 1      
+read_source_models 0.00321 0.00129 0.00176 0.00425 3      
+split_filter       0.01002 NaN     0.01002 0.01002 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ====================================== ========
 task               sent                                   received
-read_source_models converter=1.14 KB fnames=327 B         6.6 KB  
-split_filter       srcs=3.42 KB srcfilter=253 B seed=14 B 9.33 KB 
+read_source_models converter=939 B fnames=327 B           6.72 KB 
+split_filter       srcs=3.48 KB srcfilter=253 B seed=14 B 9.38 KB 
 ================== ====================================== ========
 
 Slowest operations
@@ -138,6 +139,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.02603  0.0       3     
-total split_filter       0.02011  0.0       1     
+total split_filter       0.01002  1.49609   1     
+total read_source_models 0.00962  0.55078   3     
 ======================== ======== ========= ======

@@ -24,7 +24,6 @@ import random
 import zipfile
 import logging
 import tempfile
-import operator
 import functools
 import configparser
 import collections
@@ -36,8 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import (
-    split_sources, SourceFilter, RtreeFilter)
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -50,7 +48,6 @@ from openquake.commonlib import logictree, source, writers
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
-RUPTURES_PER_BLOCK = 10000  # used in split_filter
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
 F64 = numpy.float64
@@ -602,7 +599,7 @@ def store_sm(smodel, hdf5path, monitor):
     with monitor('store source model'):
         sources = h5['source_info']
         source_geom = h5['source_geom']
-        gid = 0
+        gid = len(source_geom)
         for sg in smodel:
             if hdf5path:
                 with hdf5.File(hdf5path, 'r+') as hdf5cache:
@@ -874,85 +871,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
-    if (oqparam.prefilter_sources == 'rtree' and
-            oqparam.calculation_mode != 'ucerf_classical'):
-        # rtree can be used only with processpool, otherwise one gets an
-        # RTreeError: Error in "Index_Create": Spatial Index Error:
-        # IllegalArgumentException: SpatialIndex::DiskStorageManager:
-        # Index/Data file cannot be read/writen.
-        srcfilter = RtreeFilter(srcfilter.sitecol,
-                                oqparam.maximum_distance,
-                                srcfilter.hdf5path)
-    if (srcfilter and oqparam.prefilter_sources != 'no' and
-            oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-        split = not oqparam.is_event_based()
-        csm = parallel_split_filter(csm, srcfilter, split,
-                                    monitor('split_filter'))
-        parallel.Starmap.shutdown()  # save memory
+    parallel.Starmap.shutdown()  # save memory
     return csm
-
-
-def split_filter(srcs, srcfilter, seed, monitor):
-    """
-    Split the given source and filter the subsources by distance and by
-    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
-    Yields a pair (split_sources, split_time) if split_sources is non-empty.
-    """
-    splits, stime = split_sources(srcs)
-    if splits and seed:
-        # debugging tip to reduce the size of a calculation
-        splits = random_filtered_sources(splits, srcfilter, seed)
-        # NB: for performance, sample before splitting
-    if splits and srcfilter:
-        splits = list(srcfilter.filter(splits))
-    if splits:
-        yield splits, stime
-
-
-def only_filter(srcs, srcfilter, dummy, monitor):
-    """
-    Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
-    if there are filtered sources.
-    """
-    srcs = list(srcfilter.filter(srcs))
-    if srcs:
-        yield srcs, {src.id: 0 for src in srcs}
-
-
-def parallel_split_filter(csm, srcfilter, split, monitor):
-    """
-    Apply :func:`split_filter` in parallel to the composite source model.
-
-    :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
-    """
-    mon = monitor('split_filter')
-    seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    msg = 'Splitting/filtering' if split else 'Filtering'
-    logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
-    sources = csm.get_sources()
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
-    smap = parallel.Starmap.apply(
-        split_filter if split else only_filter,
-        (sources, srcfilter, seed, mon),
-        maxweight=RUPTURES_PER_BLOCK, distribute=dist,
-        progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
-    if monitor.hdf5:
-        source_info = monitor.hdf5['source_info']
-        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
-    srcs_by_grp = collections.defaultdict(list)
-    arr = numpy.zeros((len(sources), 2), F32)
-    for splits, stime in smap:
-        for split in splits:
-            i = split.id
-            arr[i, 0] += stime[i]  # split_time
-            arr[i, 1] += 1         # num_split
-            srcs_by_grp[split.src_group_id].append(split)
-    if not srcs_by_grp:
-        raise RuntimeError('All sources were filtered away!')
-    elif monitor.hdf5:
-        source_info[:, 'split_time'] = arr[:, 0]
-        source_info[:, 'num_split'] = arr[:, 1]
-    return csm.new(srcs_by_grp)
 
 
 def get_imts(oqparam):
@@ -1300,6 +1220,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     found = 0
     to_remove = []
     for path in logictree.collect_info(smlt_file).smpaths:
+        logging.info('Reading %s', path)
         root = nrml.read(path)
         model = Node('sourceModel', root[0].attrib)
         origmodel = root[0]
@@ -1328,14 +1249,11 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
         if model:
             with open(path, 'wb') as f:
                 nrml.write([model], f, xmlns=root['xmlns'])
-                logging.warn('Reduced %s' % path)
         elif remove:  # remove the files completely reduced
             to_remove.append(path)
     if found:
         for path in to_remove:
             os.remove(path)
-    else:
-        logging.warn('Sources %s not found', source_ids)
 
 
 # used in oq zip and oq checksum
