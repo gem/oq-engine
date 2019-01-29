@@ -89,7 +89,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         imts = getter.imts
         eids = rupgetter.get_eid_rlz()['eid']
         eid2idx = {eid: idx for idx, eid in enumerate(eids)}
-        rlz2idx = rupgetter.rlz2idx
         tagnames = param['aggregate_by']
         shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
         acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
@@ -102,14 +101,15 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             t0 = time.time()
             assets, tagidxs = assgetter.get(sid, tagnames)
             mon.duration += time.time() - t0
+            eidx = [eid2idx[eid] for eid in haz['eid']]
             for lt, asset, ratios in gen_risk(assets, riskmodel, haz, imts):
                 lti = riskmodel.lti[lt]
                 losses = ratios * asset.value(lt)
                 tidx = tagidxs[asset.ordinal]
-                for eid, rlz, loss in zip(haz['eid'], haz['rlzi'], losses):
-                    acc[(eid2idx[eid], lti) + tidx] += loss
-                    if param['avg_losses']:
-                        losses_by_RN[rlz2idx[rlz], sid, lti] += loss
+                acc[(eidx, lti) + tidx] += losses
+                if param['avg_losses']:
+                    losses_by_RN[:, sid, lti] += rupgetter.E2R(
+                        losses, haz['rlzi'])
             times[sid] = time.time() - t0
     return {'losses': acc, 'eids': eids, 'losses_by_RN':
             (rupgetter.rlzs, losses_by_RN), 'times': times}
