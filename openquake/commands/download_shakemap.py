@@ -23,7 +23,7 @@ from openquake.hazardlib.shakemap import download_array
 
 
 @sap.Script
-def shakemap(id):
+def download_shakemap(id):
     """
     Example of usage: utils/shakemap usp000fjta
     """
@@ -34,8 +34,4 @@ def shakemap(id):
     print('Saved %s' % dest)
 
 
-shakemap.arg('id', 'USGS Shakemap ID')
-
-
-if __name__ == '__main__':
-    shakemap.callfunc()
+download_shakemap.arg('id', 'USGS Shakemap ID')
