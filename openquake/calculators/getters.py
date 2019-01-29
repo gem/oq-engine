@@ -356,10 +356,7 @@ class GmfGetter(object):
             return
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
-            if hasattr(ebr, 'sids'):  # filter the site collection
-                sitecol = self.sitecol.filtered(ebr.sids)
-            else:
-                sitecol = self.sitecol
+            sitecol = self.sitecol.filtered(ebr.sids)
             try:
                 computer = calc.gmf.GmfComputer(
                     ebr, sitecol, self.oqparam.imtls, self.cmaker,
@@ -606,7 +603,7 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter=None):
+    def get_ruptures(self, srcfilter=calc.filters.nofilter):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
@@ -614,7 +611,7 @@ class RuptureGetter(object):
         with datastore.read(self.hdf5path) as dstore:
             rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
-                if srcfilter:
+                if srcfilter.integration_distance:
                     sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
                     if len(sids) == 0:  # the rupture is far away
                         continue
@@ -655,8 +652,7 @@ class RuptureGetter(object):
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
-                if sids is not None:
-                    ebr.sids = sids
+                ebr.sids = sids
                 ebrs.append(ebr)
         return ebrs
 
