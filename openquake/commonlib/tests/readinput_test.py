@@ -656,7 +656,7 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         assert_allclose(assetcol.agg_value('occupancy'),
                         [[0.0000000e+00], [3.6306644e+09]])
         arr = assetcol.agg_value('taxonomy', 'occupancy')
-        self.assertEqual(arr.shape, 18, 2, 1)
+        self.assertEqual(arr.shape, (18, 2, 1))
 
     def test_site_model_sites(self):
         # you cannot set them at the same time
