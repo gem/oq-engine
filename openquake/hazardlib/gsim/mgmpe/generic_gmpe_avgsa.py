@@ -27,6 +27,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import AverageSA, SA
 from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 
+
 class GenericGmpeAvgSA(GMPE):
     """
     Implements a modified GMPE class that can be used to compute average
@@ -89,10 +90,10 @@ class GenericGmpeAvgSA(GMPE):
         level with the ones assigned to the average GMPE.
         """
         for key in dir(self):
-            if 'REQUIRES_' in key:
+            if key.startswith('REQUIRES_'):
                 setattr(self, key, getattr(self.gmpe, key))
-            if 'DEFINED_' in key:
-                if 'FOR_INTENSITY_MEASURE_TYPES' not in key:
+            if key.startswith('DEFINED_'):
+                if not key.endswith('FOR_INTENSITY_MEASURE_TYPES'):
                     setattr(self, key, getattr(self.gmpe, key))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
@@ -113,7 +114,7 @@ class GenericGmpeAvgSA(GMPE):
                                                           imt_local,
                                                           stds_types)
             mean_list.append(mean)
-            stddvs_list.append(stddvs[0]) # Support only for total!
+            stddvs_list.append(stddvs[0])  # Support only for total!
 
         mean_avgsa = 0.
         stddvs_avgsa = 0.
@@ -125,8 +126,8 @@ class GenericGmpeAvgSA(GMPE):
                                                      self.avg_periods[i2])
                 stddvs_avgsa += rho * stddvs_list[i1] * stddvs_list[i2]
 
-        mean_avgsa *= (1./self.tnum)
-        stddvs_avgsa = (1./self.tnum) * np.sqrt(stddvs_avgsa)
+        mean_avgsa /= self.tnum
+        stddvs_avgsa = np.sqrt(stddvs_avgsa)/self.tnum
 
         return mean_avgsa, [stddvs_avgsa]
 
@@ -138,6 +139,8 @@ class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
 
     def get_correlation(self, t1, t2):
         """
+        Computes the correlation coefficient for the specified periods.
+
         :param float t1:
             First period of interest.
 
@@ -161,12 +164,23 @@ class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
 
     def get_correlation(self, t1, t2):
         """
+        Computes the correlation coefficient for the specified periods.
+
+        :param float t1:
+            First period of interest.
+
+        :param float t2:
+            Second period of interest.
+
+        :return float rho:
+            The predicted correlation coefficient.
         """
 
         t_min = min(t1, t2)
         t_max = max(t1, t2)
 
-        c1 = 1.0 - np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * 0.366)
+        c1 = 1.0
+        c1 -= np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * 0.366)
 
         if t_max < 0.2:
             c2 = 0.105 * (1.0 - 1.0 / (1.0 + np.exp(100.0 * t_max - 5.0)))
@@ -179,7 +193,8 @@ class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
         else:
             c3 = c1
 
-        c4 = c1 + 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
+        c4 = c1
+        c4 += 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
 
         if t_max <= 0.109:
             rho = c2
@@ -204,6 +219,16 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
 
     def get_correlation(self, t1, t2):
         """
+        Computes the correlation coefficient for the specified periods.
+
+        :param float t1:
+            First period of interest.
+
+        :param float t2:
+            Second period of interest.
+
+        :return float:
+            The predicted correlation coefficient.
         """
 
         if t1 not in act.periods:
@@ -222,6 +247,16 @@ class DummyCorrelationModel(BaseAvgSACorrelationModel):
 
     def get_correlation(self, t1, t2):
         """
+        Computes the correlation coefficient for the specified periods.
+
+        :param float t1:
+            First period of interest.
+
+        :param float t2:
+            Second period of interest.
+
+        :return float:
+            The predicted correlation coefficient.
         """
 
         return 1.
