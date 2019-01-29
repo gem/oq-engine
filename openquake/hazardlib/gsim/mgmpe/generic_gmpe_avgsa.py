@@ -74,13 +74,26 @@ class GenericGmpeAvgSA(GMPE):
             'none': DummyCorrelationModel()
         }
 
+        # Check for existing correlation function
         if corr_func not in correlation_function_handles:
             raise ValueError('Not a valid correlation function')
         else:
             self.corr_func = correlation_function_handles[corr_func]
 
         # Check if this GMPE has the necessary requirements
-        # [TO DO]
+        # TO-DO
+
+    def set_parameters(self):
+        """
+        Combines the parameters of the GMPE provided at the construction
+        level with the ones assigned to the average GMPE.
+        """
+        for key in dir(self):
+            if 'REQUIRES_' in key:
+                setattr(self, key, getattr(self.gmpe, key))
+            if 'DEFINED_' in key:
+                if 'FOR_INTENSITY_MEASURE_TYPES' not in key:
+                    setattr(self, key, getattr(self.gmpe, key))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
