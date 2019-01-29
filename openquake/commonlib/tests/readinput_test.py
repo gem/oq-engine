@@ -629,6 +629,35 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
 
+        # test agg_value
+        arr = assetcol.agg_value()
+        assert_allclose(arr, [3.6306637e+09])
+        arr = assetcol.agg_value('taxonomy')
+        assert_allclose(arr,
+                        [[0.0000000e+00],
+                         [4.9882240e+06],
+                         [1.1328099e+08],
+                         [4.2222912e+08],
+                         [1.6412870e+07],
+                         [5.0686808e+07],
+                         [2.5343402e+07],
+                         [1.5254313e+09],
+                         [6.6375590e+06],
+                         [8.3206810e+08],
+                         [1.6412871e+07],
+                         [3.9439158e+08],
+                         [1.6734690e+07],
+                         [6.7582400e+06],
+                         [1.3613027e+08],
+                         [4.3124016e+07],
+                         [9.4132640e+06],
+                         [1.0620092e+07]])
+        arr = assetcol.agg_value('occupancy')
+        assert_allclose(assetcol.agg_value('occupancy'),
+                        [[0.0000000e+00], [3.6306644e+09]])
+        arr = assetcol.agg_value('taxonomy', 'occupancy')
+        self.assertEqual(arr.shape, 18, 2, 1)
+
     def test_site_model_sites(self):
         # you cannot set them at the same time
         with self.assertRaises(ValueError):
