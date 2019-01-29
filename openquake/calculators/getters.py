@@ -614,7 +614,7 @@ class RuptureGetter(object):
         with datastore.read(self.hdf5path) as dstore:
             rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
-                if srcfilter:
+                if srcfilter.integration_distance:
                     sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
                     if len(sids) == 0:  # the rupture is far away
                         continue
