@@ -170,6 +170,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
 
+# Expose the WebUI interface, otherwise only the REST API will be available
+WEBUI = True
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE:
     INSTALLED_APPS += (
