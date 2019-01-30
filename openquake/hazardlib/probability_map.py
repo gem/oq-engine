@@ -61,10 +61,17 @@ class ProbabilityCurve(object):
             return self.__class__(1. - (1. - self.array) * (1. - other.array))
     __ror__ = __or__
 
+
     def __iadd__(self, other):
         # this is used when composing mutually exclusive probabilities
         self.array += other.array
         return self
+
+    def __add__(self, other):
+        # this is used when composing mutually exclusive probabilities
+        self.array += other.array
+        return self.__class__(self.array)
+
 
     def __mul__(self, other):
         if isinstance(other, self.__class__):
@@ -279,6 +286,21 @@ class ProbabilityMap(dict):
         return new
 
     __ror__ = __or__
+
+    def __add__(self, other):
+        try:
+            other.get
+            is_pmap = True
+            sids = set(self) | set(other)
+        except AttributeError:  # no .get method, assume a float
+            is_pmap = False
+            assert 0. <= other <= 1., other  # must be a probability
+            sids = set(self)
+        new = self.__class__(self.shape_y, self.shape_z)
+        for sid in sids:
+            prob = other.get(sid, 1) if is_pmap else other
+            new[sid] = self.get(sid, 1) + prob
+        return new
 
     def __mul__(self, other):
         try:

@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import re
 import operator
 import collections
 import pickle
@@ -25,8 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
-from openquake.hazardlib import geo, mfd, pmf, source
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib import geo, mfd, pmf, source, tom
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source import NonParametricSeismicSource
 
@@ -69,6 +69,12 @@ class SourceGroup(collections.Sequence):
         get_set_num_ruptures
     :param tot_ruptures:
         the potential maximum number of ruptures contained in the group
+    :param temporal_occurrence_model:
+        A temporal occurrence model controlling the source group occurrence
+    :param cluster:
+        A boolean indicating if the sources behaves as a cluster similarly
+        to what used by the USGS for the New Madrid in the 2008 National
+        Hazard Model.
     """
     @classmethod
     def collect(cls, sources):
@@ -93,7 +99,8 @@ class SourceGroup(collections.Sequence):
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
                  min_mag={'default': 0}, max_mag=None, id=0, eff_ruptures=-1,
-                 tot_ruptures=0):
+                 tot_ruptures=0, temporal_occurrence_model=None,
+                 cluster=False):
         # checks
         self.trt = trt
         self.sources = []
@@ -111,12 +118,21 @@ class SourceGroup(collections.Sequence):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
+        self.temporal_occurrence_model = temporal_occurrence_model
+        self.cluster = cluster
         # check weights in case of mutually exclusive ruptures
         if rup_interdep == 'mutex':
             for src in self.sources:
                 assert isinstance(src, NonParametricSeismicSource)
                 for rup, _ in src.data:
                     assert rup.weight is not None
+
+    @property
+    def atomic(self):
+        """
+        :returns: True if the group cannot be split
+        """
+        return self.cluster or self.src_interdep == 'mutex'
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
@@ -505,9 +521,23 @@ class SourceConverter(RuptureConverter):
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
-        self.tom = PoissonTOM(investigation_time)
         self.spinning_floating = spinning_floating
         self.source_id = source_id
+
+    def get_tom(self, node):
+        """
+        Convert the given node into a Temporal Occurrence Model object.
+
+        :param node: a node of kind poissonTOM or brownianTOM
+        :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
+                  :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
+        """
+        if 'tom' in node.attrib:
+            tom_cls = tom.registry[node['tom']]
+        else:
+            tom_cls = tom.registry['PoissonTOM']
+        return tom_cls(time_span=self.investigation_time,
+                       occurrence_rate=node.get('occurrence_rate'))
 
     def convert_mfdist(self, node):
         """
@@ -622,7 +652,7 @@ class SourceConverter(RuptureConverter):
             hypocenter_distribution=self.convert_hpdist(node),
             polygon=polygon,
             area_discretization=area_discretization,
-            temporal_occurrence_model=self.tom)
+            temporal_occurrence_model=self.get_tom(node))
 
     def convert_pointSource(self, node):
         """
@@ -647,7 +677,7 @@ class SourceConverter(RuptureConverter):
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
-            temporal_occurrence_model=self.tom)
+            temporal_occurrence_model=self.get_tom(node))
 
     def convert_multiPointSource(self, node):
         """
@@ -671,8 +701,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             mesh=geo.Mesh(F32(lons), F32(lats)),
-            temporal_occurrence_model=self.tom,
-        )
+            temporal_occurrence_model=self.get_tom(node))
 
     def convert_simpleFaultSource(self, node):
         """
@@ -708,7 +737,7 @@ class SourceConverter(RuptureConverter):
                 fault_trace=fault_trace,
                 dip=~geom.dip,
                 rake=~node.rake,
-                temporal_occurrence_model=self.tom,
+                temporal_occurrence_model=self.get_tom(node),
                 hypo_list=hypo_list,
                 slip_list=slip_list)
         return simple
@@ -736,7 +765,7 @@ class SourceConverter(RuptureConverter):
                 rupture_aspect_ratio=~node.ruptAspectRatio,
                 edges=edges,
                 rake=~node.rake,
-                temporal_occurrence_model=self.tom)
+                temporal_occurrence_model=self.get_tom(node))
         return cmplx
 
     def convert_characteristicFaultSource(self, node):
@@ -756,7 +785,7 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.tom)
+            temporal_occurrence_model=self.get_tom(node))
         return char
 
     def convert_nonParametricSeismicSource(self, node):
@@ -783,6 +812,7 @@ class SourceConverter(RuptureConverter):
             rup_pmf_data.append((rup, probs))
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, rup_pmf_data)
+        nps.splittable = 'rup_weights' not in node.attrib
         return nps
 
     def convert_sourceModel(self, node):
@@ -803,10 +833,15 @@ class SourceConverter(RuptureConverter):
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
+        sg.temporal_occurrence_model = self.get_tom(node)
         sg.name = node.attrib.get('name')
+        # set attributes related to occurrence
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
         sg.grp_probability = node.attrib.get('grp_probability')
+        # set the cluster attribute
+        sg.cluster = node.attrib.get('cluster') == 'true'
+        #
         for src_node in node:
             if self.source_id and self.source_id != src_node['id']:
                 continue  # filter by source_id
@@ -832,6 +867,12 @@ class SourceConverter(RuptureConverter):
                     % (len(srcs_weights), len(node), self.fname))
             for src, sw in zip(sg, srcs_weights):
                 src.mutex_weight = sw
+        # check that, when the cluster option is set, the group has a temporal
+        # occurrence model properly defined
+        if sg.cluster and not hasattr(sg, 'temporal_occurrence_model'):
+            msg = 'The Source Group is a cluster but does not have a '
+            msg += 'temporal occurrence model'
+            raise ValueError(msg)
         return sg
 
 # ################### MultiPointSource conversion ######################## #
@@ -966,7 +1007,7 @@ def to_python(fname, converter):
         for src in sg:
             if hasattr(src, 'mfd'):
                 # multipoint source
-                src.tom = converter.tom
+                #src.tom = converter.tom
                 kwargs = getattr(src.mfd, 'kwargs', {})
                 if 'bin_width' not in kwargs:
                     kwargs['bin_width'] = [converter.width_of_mfd_bin]

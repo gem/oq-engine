@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     1,429,593,239      
-date           2019-01-20T07:36:48
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:28:30
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 2, num_levels = 8
@@ -85,7 +85,7 @@ Slowest operations
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
 building riskinputs 0.00290   0.0       1     
-saving gmfs         0.00203   0.0       1     
-reading exposure    5.322E-04 0.0       1     
-computing gmfs      3.560E-04 0.0       1     
+saving gmfs         0.00211   0.0       1     
+reading exposure    6.089E-04 0.0       1     
+computing gmfs      3.829E-04 0.0       1     
 =================== ========= ========= ======
