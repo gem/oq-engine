@@ -21,7 +21,7 @@ import time
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, performance, general
-from openquake.baselib.general import humansize, AccumDict
+from openquake.baselib.general import humansize
 from openquake.baselib.python3compat import zip, encode
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -34,31 +34,26 @@ F64 = numpy.float64
 U64 = numpy.uint64
 
 
-def gen_risk(assets, riskmodel, haz, imts):
+def get_assets_ratios(assets, riskmodel, gmvs, imts):
     """
     :param assets: a list of assets on the same site
     :param riskmodel: a CompositeRiskModel instance
-    :params haz: hazard on the given site (rlzi, sid, eid, gmv)
+    :params gmvs: hazard on the given site, shape (E, M)
     :param imts: intensity measure types
-    :yields: loss_type, asset, loss_ratios
+    :returns: a list of (assets, loss_ratios)
     """
     imti = {imt: i for i, imt in enumerate(imts)}
     tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
-    gmvs = haz['gmv']
-    E = len(gmvs)
     assets_by_t = general.groupby(assets, operator.attrgetter('taxonomy'))
+    assets_ratios = []
     for taxo, rm in riskmodel.items():
         t = tdict[taxo]
         try:
             assets = assets_by_t[t]
         except KeyError:  # there are no assets of taxonomy taxo
             continue
-        for lt, rf in rm.risk_functions.items():
-            means, covs, idxs = rf.interpolate(gmvs[:, imti[rf.imt]])
-            loss_ratios = numpy.zeros(E, F32)
-            loss_ratios[idxs] = rf.sample(means, covs, idxs, None)
-            for asset in assets:
-                yield lt, asset, loss_ratios
+        assets_ratios.append((assets, rm.get_loss_ratios(gmvs, imti)))
+    return assets_ratios
 
 
 def ebrisk(rupgetter, srcfilter, param, monitor):
@@ -86,6 +81,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
     mon_avg = monitor('building avg_losses', measuremem=False)
+    mon_risk = monitor('computing risk', measuremem=False)
     with monitor('building risk'):
         imts = getter.imts
         eids = rupgetter.get_eid_rlz()['eid']
@@ -100,18 +96,22 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         times = numpy.zeros(N)  # risk time per site_id
         for sid, haz in hazard.items():
             t0 = time.time()
-            assets, tagidxs = assgetter.get(sid, tagnames)
+            assets_on_sid, tagidxs = assgetter.get(sid, tagnames)
             mon.duration += time.time() - t0
             eidx = [eid2idx[eid] for eid in haz['eid']]
-            for lt, asset, ratios in gen_risk(assets, riskmodel, haz, imts):
-                lti = riskmodel.lti[lt]
-                losses = ratios * asset.value(lt)
-                tidx = tagidxs[asset.ordinal]
-                acc[(eidx, lti) + tidx] += losses
-                with mon_avg:
-                    if param['avg_losses']:
-                        losses_by_RN[:, sid, lti] += rupgetter.E2R(
-                            losses, haz['rlzi'])
+            with mon_risk:
+                assets_ratios = get_assets_ratios(
+                    assets_on_sid, riskmodel, haz['gmv'], imts)
+            for assets, ratios in assets_ratios:
+                for lt, lti in riskmodel.lti.items():
+                    loss_ratios = ratios[lti]
+                    for asset in assets:
+                        losses = loss_ratios * asset.value(lt)
+                        acc[(eidx, lti) + tagidxs[asset.ordinal]] += losses
+                        if param['avg_losses']:
+                            with mon_avg:
+                                losses_by_RN[:, sid, lti] += rupgetter.E2R(
+                                    losses, haz['rlzi'])
             times[sid] = time.time() - t0
     return {'losses': acc, 'eids': eids, 'losses_by_RN':
             (rupgetter.rlzs, losses_by_RN), 'times': times}
