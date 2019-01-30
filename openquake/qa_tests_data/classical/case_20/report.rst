@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 20
 =================================
 
 ============== ===================
-checksum32     3,909,444,611      
-date           2018-12-13T12:58:00
-engine_version 3.3.0-git68d7d11268
+checksum32     1,888,120,170      
+date           2019-01-27T08:30:57
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -12,7 +12,7 @@ num_sites = 1, num_levels = 4
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -124,30 +124,30 @@ source_model.xml 11     Active Shallow Crust 121          86
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      CHAR1     X    0     308   1            0.0       1.597E-05  0.0       1         0.0   
-0      COMFLT1   C    308   312   29           0.0       1.454E-05  0.0       1         0.0   
-0      SFLT1     S    312   314   56           0.0       1.554E-04  0.0       2         0.0   
-1      CHAR1     X    0     8     1            0.0       5.245E-06  0.0       1         0.0   
-1      COMFLT1   C    8     12    29           0.0       6.437E-06  0.0       1         0.0   
-1      SFLT1     S    12    14    56           0.0       8.011E-05  0.0       2         0.0   
-2      CHAR1     X    0     344   1            0.0       4.292E-06  0.0       1         0.0   
-2      COMFLT1   C    344   348   29           0.0       5.484E-06  0.0       1         0.0   
-2      SFLT1     S    348   350   56           0.0       6.962E-05  0.0       2         0.0   
-3      CHAR1     X    0     308   1            0.0       4.053E-06  0.0       1         0.0   
-3      COMFLT1   C    308   312   62           0.0       5.484E-06  0.0       1         0.0   
-3      SFLT1     S    312   314   56           0.0       6.819E-05  0.0       2         0.0   
-4      CHAR1     X    0     8     1            0.0       3.576E-06  0.0       1         0.0   
-4      COMFLT1   C    8     12    62           0.0       5.245E-06  0.0       1         0.0   
-4      SFLT1     S    12    14    56           0.0       6.628E-05  0.0       2         0.0   
-5      CHAR1     X    0     344   1            0.0       3.576E-06  0.0       1         0.0   
-5      COMFLT1   C    344   348   62           0.0       5.007E-06  0.0       1         0.0   
-5      SFLT1     S    348   350   56           0.0       7.725E-05  0.0       2         0.0   
-6      CHAR1     X    0     308   1            0.0       3.576E-06  0.0       1         0.0   
-6      COMFLT1   C    308   312   29           0.0       4.768E-06  0.0       1         0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+11     SFLT1     S    2,710 2,712 58           0.0       3.719E-05  2.00000   2         58     
+11     COMFLT1   C    2,706 2,710 62           0.0       3.099E-06  1.00000   1         248    
+11     CHAR1     X    2,362 2,706 1            0.0       2.146E-06  1.00000   1         1.00000
+10     SFLT1     S    2,360 2,362 58           0.0       3.862E-05  2.00000   2         58     
+10     COMFLT1   C    2,356 2,360 62           0.0       2.861E-06  1.00000   1         248    
+10     CHAR1     X    2,348 2,356 1            0.0       2.384E-06  1.00000   1         1.00000
+9      SFLT1     S    2,346 2,348 58           0.0       6.390E-05  2.00000   2         58     
+9      COMFLT1   C    2,342 2,346 62           0.0       2.861E-06  1.00000   1         248    
+9      CHAR1     X    2,034 2,342 1            0.0       2.384E-06  1.00000   1         1.00000
+8      SFLT1     S    2,032 2,034 58           0.0       3.767E-05  2.00000   2         58     
+8      COMFLT1   C    2,028 2,032 29           0.0       2.623E-06  1.00000   1         116    
+8      CHAR1     X    1,684 2,028 1            0.0       2.384E-06  1.00000   1         1.00000
+7      SFLT1     S    1,682 1,684 58           0.0       3.815E-05  2.00000   2         58     
+7      COMFLT1   C    1,678 1,682 29           0.0       2.861E-06  1.00000   1         116    
+7      CHAR1     X    1,670 1,678 1            0.0       2.146E-06  1.00000   1         1.00000
+6      SFLT1     S    1,668 1,670 58           0.0       3.862E-05  2.00000   2         58     
+6      COMFLT1   C    1,664 1,668 29           0.0       2.861E-06  1.00000   1         116    
+6      CHAR1     X    1,356 1,664 1            0.0       2.146E-06  1.00000   1         1.00000
+5      SFLT1     S    1,354 1,356 56           0.0       3.910E-05  2.00000   2         56     
+5      COMFLT1   C    1,350 1,354 62           0.0       3.099E-06  1.00000   1         248    
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
@@ -161,22 +161,23 @@ X    0.0       12
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 3 source(s) with the same ID and 0 true duplicate(s)
+Here is a fake duplicate: COMFLT1
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.12383 0.03234 0.07153 0.15100 12     
-split_filter       0.06173 NaN     0.06173 0.06173 1      
+read_source_models 0.06745 0.01075 0.06141 0.09888 12     
+split_filter       0.05220 NaN     0.05220 0.05220 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= =========
 task               sent                                    received 
-read_source_models converter=4.55 KB fnames=1.25 KB        130.63 KB
-split_filter       srcs=25.37 KB srcfilter=253 B seed=14 B 29.41 KB 
+read_source_models converter=3.67 KB fnames=1.25 KB        131.54 KB
+split_filter       srcs=25.89 KB srcfilter=253 B seed=14 B 29.93 KB 
 ================== ======================================= =========
 
 Slowest operations
@@ -184,6 +185,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 1.48594  0.11719   12    
-total split_filter       0.06173  0.0       1     
+total read_source_models 0.80945  1.25391   12    
+total split_filter       0.05220  1.85547   1     
 ======================== ======== ========= ======

@@ -2,9 +2,9 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ============== ===================
-checksum32     3,231,940,023      
-date           2018-12-13T12:58:18
-engine_version 3.3.0-git68d7d11268
+checksum32     3,058,858,863      
+date           2019-01-27T08:31:43
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 78
@@ -12,7 +12,7 @@ num_sites = 1, num_levels = 78
 Parameters
 ----------
 =============================== ===========================================
-calculation_mode                'classical'                                
+calculation_mode                'preclassical'                             
 number_of_logic_tree_samples    0                                          
 maximum_distance                {'default': [(6, 100), (7, 150), (9, 200)]}
 investigation_time              50.0                                       
@@ -87,44 +87,44 @@ Number of ruptures per tectonic region type
 ============================ ====== ==================== ============ ============
 source_model                 grp_id trt                  eff_ruptures tot_ruptures
 ============================ ====== ==================== ============ ============
-simple_area_source_model.xml 0      Subduction Interface -1           42,624      
-simple_area_source_model.xml 1      Volcanic             -1           210         
-simple_area_source_model.xml 2      Shield               -1           96,804      
-simple_area_source_model.xml 3      Stable Shallow Crust -1           81,154      
-simple_area_source_model.xml 4      Subduction Inslab    -1           93,219      
+simple_area_source_model.xml 0      Subduction Interface 42,624       42,624      
+simple_area_source_model.xml 1      Volcanic             210          210         
+simple_area_source_model.xml 2      Shield               96,804       96,804      
+simple_area_source_model.xml 3      Stable Shallow Crust 81,154       81,154      
+simple_area_source_model.xml 4      Subduction Inslab    93,219       93,219      
 ============================ ====== ==================== ============ ============
 
 ============= =======
 #TRT models   5      
-#eff_ruptures -5     
+#eff_ruptures 314,011
 #tot_ruptures 314,011
-#tot_weight   0      
+#tot_weight   197,635
 ============= =======
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      i17       C    0     217   33,383       0.0       0.0        0.0       0         0.0   
-0      i20       C    217   323   9,241        0.0       0.0        0.0       0         0.0   
-1      v1        A    323   327   42           0.0       0.0        0.0       0         0.0   
-1      v4        A    327   338   168          0.0       0.0        0.0       0         0.0   
-2      sh13      A    338   350   41,952       0.0       0.0        0.0       0         0.0   
-2      sh14      A    350   362   41,952       0.0       0.0        0.0       0         0.0   
-2      sh6       A    362   369   12,900       0.0       0.0        0.0       0         0.0   
-3      scr293    A    369   496   61,740       0.0       0.0        0.0       0         0.0   
-3      scr299    A    496   506   1,572        0.0       0.0        0.0       0         0.0   
-3      scr301    A    506   543   17,268       0.0       0.0        0.0       0         0.0   
-3      scr304    A    543   553   574          0.0       0.0        0.0       0         0.0   
-4      s13       A    553   579   12,726       0.0       0.0        0.0       0         0.0   
-4      s34       A    579   605   12,327       0.0       0.0        0.0       0         0.0   
-4      s35       A    605   631   12,327       0.0       0.0        0.0       0         0.0   
-4      s40       A    631   657   12,327       0.0       0.0        0.0       0         0.0   
-4      s46       A    657   683   7,770        0.0       0.0        0.0       0         0.0   
-4      s70       A    683   711   17,871       0.0       0.0        0.0       0         0.0   
-4      s72       A    711   739   17,871       0.0       0.0        0.0       0         0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+4      s72       A    711   739   17,871       0.0       0.0        1.00000   0         1,787  
+4      s70       A    683   711   17,871       0.0       0.0        1.00000   0         1,787  
+4      s46       A    657   683   7,770        0.0       0.0        1.00000   0         777    
+4      s40       A    631   657   12,327       0.0       0.0        1.00000   0         1,233  
+4      s35       A    605   631   12,327       0.0       0.0        1.00000   0         1,233  
+4      s34       A    579   605   12,327       0.0       0.0        1.00000   0         1,233  
+4      s13       A    553   579   12,726       0.0       0.0        1.00000   0         1,273  
+3      scr304    A    543   553   574          0.0       0.0        1.00000   0         57     
+3      scr301    A    506   543   17,268       0.0       0.0        1.00000   0         1,727  
+3      scr299    A    496   506   1,572        0.0       0.0        1.00000   0         157    
+3      scr293    A    369   496   61,740       0.0       0.0        1.00000   0         6,174  
+2      sh6       A    362   369   12,900       0.0       0.0        1.00000   0         1,290  
+2      sh14      A    350   362   41,952       0.0       0.0        1.00000   0         4,195  
+2      sh13      A    338   350   41,952       0.0       0.0        1.00000   0         4,195  
+1      v4        A    327   338   168          0.0       0.0        1.00000   0         16     
+1      v1        A    323   327   42           0.0       0.0        1.00000   0         4.20000
+0      i20       C    217   323   9,241        0.0       0.0        1.00000   0         36,964 
+0      i17       C    0     217   33,383       0.0       0.0        1.00000   0         133,532
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
@@ -137,20 +137,20 @@ C    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 5.01965 NaN    5.01965 5.01965 1      
+read_source_models 6.35600 NaN    6.35600 6.35600 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=388 B fnames=119 B 44.61 KB
+read_source_models converter=313 B fnames=119 B 45.04 KB
 ================== ============================ ========
 
 Slowest operations
@@ -158,5 +158,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 5.01965  0.0       1     
+total read_source_models 6.35600  5.05469   1     
 ======================== ======== ========= ======

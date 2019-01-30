@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 2
 ==================================
 
 ============== ===================
-checksum32     751,573,168        
-date           2018-12-13T12:57:43
-engine_version 3.3.0-git68d7d11268
+checksum32     3,182,629,131      
+date           2019-01-27T08:29:33
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -57,22 +57,22 @@ P    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00909 NaN    0.00909 0.00909 1      
-split_filter       0.01187 NaN    0.01187 0.01187 1      
+read_source_models 0.00421 NaN    0.00421 0.00421 1      
+split_filter       0.00590 NaN    0.00590 0.00590 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
-read_source_models converter=388 B fnames=108 B            1.53 KB 
-split_filter       srcs=1.14 KB srcfilter=253 B dummy=14 B 1.23 KB 
+read_source_models converter=313 B fnames=108 B            1.57 KB 
+split_filter       srcs=1.16 KB srcfilter=253 B dummy=14 B 1.25 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -80,6 +80,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.01187  0.0       1     
-total read_source_models 0.00909  0.02344   1     
+total only_filter        0.00590  1.99219   1     
+total read_source_models 0.00421  0.61328   1     
 ======================== ======== ========= ======

@@ -3,8 +3,8 @@ classical damage hazard
 
 ============== ===================
 checksum32     3,129,914,875      
-date           2018-12-13T12:57:21
-engine_version 3.3.0-git68d7d11268
+date           2019-01-20T07:37:40
+engine_version 3.4.0-git452d0c6835
 ============== ===================
 
 num_sites = 7, num_levels = 79
@@ -100,14 +100,17 @@ Exposure model
 --------------
 =============== ========
 #assets         7       
-#taxonomies     1       
+#taxonomies     3       
 deductibile     absolute
 insurance_limit absolute
 =============== ========
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
-Wood     1.00000 0.0    1   1   7         7         
+tax1     1.00000 0.0    1   1   4         4         
+tax2     1.00000 0.0    1   1   2         2         
+tax3     1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   7         7         
 ======== ======= ====== === === ========= ==========
 
 Slowest sources
@@ -115,10 +118,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00335    0.0       15        0.0   
-1      2         S    2     4     4            0.0       1.717E-05  0.0       1         0.0   
-2      1         S    0     2     482          0.0       0.00231    0.0       15        0.0   
-3      2         X    2     398   1            0.0       5.960E-06  0.0       1         0.0   
+0      1         S    0     2     482          0.0       0.00299    0.0       15        0.0   
+1      2         S    2     4     4            0.0       1.144E-05  0.0       1         0.0   
+2      1         S    4     6     482          0.0       0.00322    0.0       15        0.0   
+3      2         X    6     402   1            0.0       4.768E-06  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -132,14 +135,16 @@ X    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+['1']
+Found 2 source(s) with the same ID and 1 true duplicate(s)
+Here is a fake duplicate: 2
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01414 0.00607 0.00985 0.01843 2      
-split_filter       0.05575 NaN     0.05575 0.05575 1      
+read_source_models 0.00761 0.00381 0.00492 0.01031 2      
+split_filter       0.04384 NaN     0.04384 0.04384 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -155,7 +160,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total split_filter       0.05575   0.37109   1     
-total read_source_models 0.02829   0.14844   2     
-reading exposure         5.913E-04 0.0       1     
+total split_filter       0.04384   1.68750   1     
+total read_source_models 0.01523   0.35156   2     
+reading exposure         5.348E-04 0.0       1     
 ======================== ========= ========= ======

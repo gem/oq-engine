@@ -421,6 +421,16 @@ class AssetCollection(object):
         """
         return self.tagcol.tagnames
 
+    def num_taxonomies_by_site(self):
+        """
+        :returns: an array with the number of assets per each site
+        """
+        dic = general.group_array(self.array, 'site_id')
+        num_taxonomies = numpy.zeros(self.tot_sites, U32)
+        for sid, arr in dic.items():
+            num_taxonomies[sid] = len(numpy.unique(arr['taxonomy']))
+        return num_taxonomies
+
     def get_aids_by_tag(self):
         """
         :returns: dict tag -> asset ordinals
@@ -496,6 +506,7 @@ class AssetCollection(object):
             asset_refs.append(self.asset_refs[mask])
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
+        new.tot_sites = len(sitecol)
         new.array = numpy.concatenate(array)
         new.asset_refs = numpy.concatenate(asset_refs)
         sitecol.make_complete()
