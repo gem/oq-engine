@@ -354,6 +354,8 @@ class GmfGetter(object):
         """
         if hasattr(self, 'computers'):  # init already called
             return
+        with hdf5.File(self.rupgetter.hdf5path, 'r') as cache:
+            self.weights = cache['csm_info/weights'].value
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             sitecol = self.sitecol.filtered(ebr.sids)
@@ -657,6 +659,11 @@ class RuptureGetter(object):
         return ebrs
 
     def E2R(self, array, rlzi):
+        """
+        :param array: an array of shape (E, ...)
+        :param rlzi: an array of E realization indices
+        :returns: an aggregated array of shape (R, ...)
+        """
         z = numpy.zeros((self.num_rlzs,) + array.shape[1:], array.dtype)
         for a, r in zip(array, rlzi):
             z[self.rlz2idx[r]] += a
