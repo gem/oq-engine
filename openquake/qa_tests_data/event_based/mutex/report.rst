@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     3,529,984,501      
-date           2019-01-20T07:38:30
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:29:29
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 46
@@ -44,16 +44,16 @@ Slowest sources
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1  gidx2  num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
-0      case_01   N    0      1,207  1            0.0       0.0        0.0       1         0.0   
-0      case_02   N    1,207  3,599  1            0.0       0.0        0.0       1         0.0   
-0      case_03   N    3,599  5,132  1            0.0       0.0        0.0       1         0.0   
-0      case_04   N    5,132  8,525  1            0.0       0.0        0.0       1         0.0   
-0      case_05   N    8,525  12,124 1            0.0       0.0        0.0       1         0.0   
-0      case_06   N    12,124 17,050 1            0.0       0.0        0.0       1         0.0   
-0      case_07   N    17,050 21,872 1            0.0       0.0        0.0       1         0.0   
-0      case_08   N    21,872 28,021 1            0.0       0.0        0.0       1         0.0   
-0      case_09   N    28,021 29,255 1            0.0       0.0        0.0       1         0.0   
 0      case_10   N    29,255 32,080 1            0.0       0.0        0.0       1         0.0   
+0      case_09   N    28,021 29,255 1            0.0       0.0        0.0       1         0.0   
+0      case_08   N    21,872 28,021 1            0.0       0.0        0.0       1         0.0   
+0      case_07   N    17,050 21,872 1            0.0       0.0        0.0       1         0.0   
+0      case_06   N    12,124 17,050 1            0.0       0.0        0.0       1         0.0   
+0      case_05   N    8,525  12,124 1            0.0       0.0        0.0       1         0.0   
+0      case_04   N    5,132  8,525  1            0.0       0.0        0.0       1         0.0   
+0      case_03   N    3,599  5,132  1            0.0       0.0        0.0       1         0.0   
+0      case_02   N    1,207  3,599  1            0.0       0.0        0.0       1         0.0   
+0      case_01   N    0      1,207  1            0.0       0.0        0.0       1         0.0   
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -72,16 +72,16 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.14478 NaN    0.14478 0.14478 1      
-split_filter       0.00374 NaN    0.00374 0.00374 1      
+read_source_models 0.14579 NaN    0.14579 0.14579 1      
+split_filter       0.00370 NaN    0.00370 0.00370 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ========================================= =========
 task               sent                                      received 
-read_source_models converter=388 B fnames=107 B              755.93 KB
-split_filter       srcs=755.59 KB srcfilter=253 B dummy=14 B 755.96 KB
+read_source_models converter=313 B fnames=107 B              756.09 KB
+split_filter       srcs=755.63 KB srcfilter=253 B dummy=14 B 756 KB   
 ================== ========================================= =========
 
 Slowest operations
@@ -89,6 +89,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.14478  5.52344   1     
-total only_filter        0.00374  1.62891   1     
+total read_source_models 0.14579  5.49219   1     
+total only_filter        0.00370  1.80078   1     
 ======================== ======== ========= ======

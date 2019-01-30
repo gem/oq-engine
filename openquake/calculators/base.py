@@ -73,8 +73,9 @@ PRECALC_MAP = dict(
     classical_risk=['classical'],
     classical_bcr=['classical'],
     classical_damage=['classical'],
-    event_based=['event_based', 'event_based_risk', 'ucerf_hazard'],
-    event_based_risk=['event_based', 'event_based_risk', 'ucerf_hazard'],
+    event_based=['event_based', 'event_based_risk', 'ucerf_hazard', 'ebrisk'],
+    event_based_risk=['event_based', 'event_based_risk', 'ucerf_hazard',
+                      'ebrisk'],
     ebrisk=['event_based', 'event_based_risk', 'ucerf_hazard'],
     ucerf_classical=['ucerf_psha'],
     ucerf_hazard=['ucerf_hazard'])
@@ -442,6 +443,16 @@ class HazardCalculator(BaseCalculator):
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
+    @property
+    def E(self):
+        """
+        :returns: the number of stored events
+        """
+        try:
+            return len(self.datastore['events'])
+        except KeyError:
+            return 0
+
     def check_overflow(self):
         """Overridden in event based"""
 
@@ -566,10 +577,19 @@ class HazardCalculator(BaseCalculator):
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-            self.datastore['csm_info'] = self.csm.info
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+
+    @general.cached_property
+    def R(self):
+        """
+        :returns: the number of realizations
+        """
+        try:
+            return self.csm.info.get_num_rlzs()
+        except AttributeError:  # no self.csm
+            return self.datastore['csm_info'].get_num_rlzs()
 
     def read_exposure(self, haz_sitecol=None):  # after load_risk_model
         """
@@ -604,19 +624,6 @@ class HazardCalculator(BaseCalculator):
                          len(self.riskmodel.taxonomies), len(taxonomies))
             self.riskmodel = self.riskmodel.reduce(taxonomies)
         return readinput.exposure
-
-    def get_min_iml(self, oq):
-        # set the minimum_intensity
-        if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
-            # infer it from the risk models if not directly set in job.ini
-            oq.minimum_intensity = self.riskmodel.min_iml
-        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-        if min_iml.sum() == 0:
-            logging.warn('The GMFs are not filtered: '
-                         'you may want to set a minimum_intensity')
-        else:
-            logging.info('minimum_intensity=%s', oq.minimum_intensity)
-        return min_iml
 
     def load_riskmodel(self):
         # to be called before read_exposure
@@ -674,6 +681,8 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
+            self.datastore['assetcol/num_taxonomies'] = (
+                self.assetcol.num_taxonomies_by_site())
             if hasattr(readinput.exposure, 'exposures'):
                 self.datastore['assetcol/exposures'] = (
                     numpy.array(exposure.exposures, hdf5.vstr))
@@ -696,6 +705,8 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
+                self.datastore['assetcol/num_taxonomies'] = (
+                    self.assetcol.num_taxonomies_by_site())
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             else:
@@ -758,6 +769,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info/weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
             self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
+            with hdf5.File(self.hdf5cache, 'r+') as cache:
+                cache['csm_info/weights'] = arr
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
@@ -803,17 +816,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
-    @property
-    def R(self):
-        """
-        :returns: the number of realizations as read from `csm_info`
-        """
-        try:
-            return self._R
-        except AttributeError:
-            self._R = self.datastore['csm_info'].get_num_rlzs()
-            return self._R
-
     def read_shakemap(self, haz_sitecol, assetcol):
         """
         Enabled only if there is a shakemap_id parameter in the job.ini.
@@ -870,8 +872,6 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        if not hasattr(self, 'assetcol'):
-            self.assetcol = self.datastore['assetcol']
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = list(self._gen_riskinputs(kind, eps, num_events))
@@ -948,9 +948,9 @@ def get_gmv_data(sids, gmfs):
     """
     Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
     """
-    R, N, E, I = gmfs.shape
+    R, N, E, M = gmfs.shape
     gmv_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (M,)))])
     # NB: ordering of the loops: first site, then event, then realization
     # it is such that save_gmf_data saves the indices correctly for each sid
     it = ((r, sids[s], eid, gmfa[s, eid])
@@ -986,7 +986,7 @@ def save_gmfs(calculator):
     # NB: save_gmfs redefine oq.sites in case of GMFs from XML or CSV
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
-        R, N, E, I = gmfs.shape
+        R, N, E, M = gmfs.shape
         save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids],
                       oq.imtls, eids)
 

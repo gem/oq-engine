@@ -1220,6 +1220,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     found = 0
     to_remove = []
     for path in logictree.collect_info(smlt_file).smpaths:
+        logging.info('Reading %s', path)
         root = nrml.read(path)
         model = Node('sourceModel', root[0].attrib)
         origmodel = root[0]
@@ -1248,14 +1249,11 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
         if model:
             with open(path, 'wb') as f:
                 nrml.write([model], f, xmlns=root['xmlns'])
-                logging.warn('Reduced %s' % path)
         elif remove:  # remove the files completely reduced
             to_remove.append(path)
     if found:
         for path in to_remove:
             os.remove(path)
-    else:
-        logging.warn('Sources %s not found', source_ids)
 
 
 # used in oq zip and oq checksum
