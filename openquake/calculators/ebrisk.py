@@ -121,7 +121,7 @@ def compute_loss_curves_maps(hdf5path, multi_index, clp, individual_curves,
                              monitor):
     with datastore.read(hdf5path) as dstore:
         oq = dstore['oqparam']
-        stats = oq.risk_stats()
+        stats = oq.hazard_stats()
         builder = get_loss_builder(dstore)
         indices = dstore.get_attr('events', 'indices')
         R = len(indices)
@@ -211,7 +211,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def build_datasets(self, builder):
         oq = self.oqparam
-        stats = oq.risk_stats()
+        stats = oq.hazard_stats()
         R = len(builder.weights)
         S = len(stats)
         L = len(self.riskmodel.lti)

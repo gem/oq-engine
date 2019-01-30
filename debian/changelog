@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the variables quantile_loss_curves and mean_loss_curves: they
+    were duplicating quantile_hazard_curves and mean_hazard_curves
   * Only ruptures boundingbox-close to the site collection are stored
 
   [Marco Pagani]
