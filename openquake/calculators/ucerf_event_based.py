@@ -138,14 +138,13 @@ def sample_background_model(
 # #################################################################### #
 
 
-def build_ruptures(sources, param, monitor):
+def build_ruptures(sources, src_filter, param, monitor):
     """
     :param sources: a list with a single UCERF source
     :param param: extra parameters
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
     """
-    src_filter = param['src_filter']
     [src] = sources
     res = AccumDict()
     res.calc_times = []
@@ -168,7 +167,7 @@ def build_ruptures(sources, param, monitor):
     dic = {'eff_ruptures': {src.src_group_id: src.num_ruptures}}
     eb_ruptures = [EBRupture(rup, src.id, src.src_group_id, n, samples)
                    for rup, n in n_occ.items()]
-    dic['rup_array'] = stochastic.get_rup_array(eb_ruptures)
+    dic['rup_array'] = stochastic.get_rup_array(eb_ruptures, src_filter)
     dt = time.time() - t0
     dic['calc_times'] = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
     return dic
@@ -191,11 +190,9 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-        self.R = len(self.rlzs_assoc.realizations)
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         self.init_logic_tree(self.csm.info)
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
-        self.param['src_filter'] = self.src_filter

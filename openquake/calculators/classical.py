@@ -79,7 +79,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times += dic['calc_times']
         return acc
 
-    def zerodict(self):
+    def acc0(self):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
@@ -109,7 +109,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.core_task.__func__, monitor=self.monitor())
             source_ids = []
             data = []
-            for i, args in enumerate(self.gen_args(), 1):
+            for i, args in enumerate(self.gen_args()):
                 smap.submit(*args)
                 source_ids.append(get_src_ids(args[0]))
                 for src in args[0]:  # collect source data
@@ -117,11 +117,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore['task_sources'] = encode(source_ids)
             self.datastore.extend(
                 'source_data', numpy.array(data, source_data_dt))
-        self.csm.sources_by_trt.clear()  # save memory
         self.nsites = []
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
-            acc = smap.reduce(self.agg_dicts, self.zerodict())
+            acc = smap.reduce(self.agg_dicts, self.acc0())
             self.store_csm_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info', autoflush=True):
@@ -149,19 +148,20 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.csm.has_dupl_sources and not opt:
             logging.warn('Found %d duplicated sources',
                          self.csm.has_dupl_sources)
-
-        for sg in self.csm.src_groups:
-            if sg.src_interdep == 'mutex' and len(sg) > 0:
+        csm_atomic, sources_by_trt = self.csm.split2()
+        for sg in csm_atomic.src_groups:
+            if sg.sources:
                 par = param.copy()
                 par['src_interdep'] = sg.src_interdep
                 par['rup_interdep'] = sg.rup_interdep
                 par['grp_probability'] = sg.grp_probability
+                par['cluster'] = sg.cluster
+                par['temporal_occurrence_model'] = sg.temporal_occurrence_model
                 gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                 yield sg.sources, self.src_filter, gsims, par
                 num_tasks += 1
                 num_sources += len(sg.sources)
-        # NB: csm.get_sources_by_trt discards the mutex sources
-        for trt, sources in self.csm.sources_by_trt.items():
+        for trt, sources in sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             for block in self.block_splitter(sources):
                 yield block, self.src_filter, gsims, param
@@ -236,7 +236,7 @@ class ClassicalCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         P = len(oq.poes)
-        I = len(oq.imtls)
+        M = len(oq.imtls)
         R = len(self.rlzs_assoc.realizations)
         names = [name for name, _ in hstats]
         if R > 1 and oq.individual_curves or not hstats:
@@ -246,8 +246,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
             self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
             if oq.poes:
-                self.datastore.create_dset('hmaps/' + name, F32, (N, P * I))
-                self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * I * 4)
+                self.datastore.create_dset('hmaps/' + name, F32, (N, P * M))
+                self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
         iterargs = ((getters.PmapGetter(parent, self.rlzs_assoc, t.sids),
