@@ -509,7 +509,7 @@ def collect_info(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 if 'applyToSources' in bset.attrib:
-                    applytosources.add(bset['applyToSources'])
+                    applytosources.update(bset['applyToSources'].split())
                 for br in bset:
                     fnames = br.uncertaintyModel.text.split()
                     paths.update(get_paths(smlt, fnames))
