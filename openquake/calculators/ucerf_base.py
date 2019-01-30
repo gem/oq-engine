@@ -66,16 +66,16 @@ def convert_UCERFSource(self, node):
         # poissonian
         # Verify that the source time span is the same as the TOM time span
         inv_time = float(node["investigationTime"])
-        if inv_time != self.tom.time_span:
+        if inv_time != self.investigation_time:
             raise ValueError("Source investigation time (%s) is not "
                              "equal to configuration investigation time "
-                             "(%s)" % (inv_time, self.tom.time_span))
+                             "(%s)" % (inv_time, self.investigation_time))
         start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
     else:
         start_date = None
     return UCERFSource(
         source_file,
-        self.tom.time_span,
+        self.investigation_time,
         start_date,
         float(node["minMag"]),
         npd=self.convert_npdist(node),

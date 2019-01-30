@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Only ruptures boundingbox-close to the site collection are stored
+
+  [Marco Pagani]
+  * Added cluster model to classical PSHA calculator
+
+  [Michele Simionato]
+  * Fixed a bug in scenario_damage from ShakeMap with noDamageLimit=0
+  * Avoided the MemoryError in the controller node by speeding up the saving
+    of the information about the sources
   * Turned utils/reduce_sm into a proper command
   * Fixed a wrong coefficient in the ShakeMap amplification
   * Fixed a bug in the hazard curves export (the filename did not contain
@@ -15,6 +24,7 @@
     asset correlation)
 
   [Robin Gee]
+  * Fixed bug in tusa_langer_2016.py BA08SE model - authors updated b2 coeff
   * Fixed bug in tusa_langer_2016.py related to coeffs affecting Repi models
 
   [Michele Simionato]
