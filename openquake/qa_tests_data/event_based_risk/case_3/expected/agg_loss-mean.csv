@@ -1,4 +1,4 @@
-annual_frequency_of_exceedence,return_period,loss_type,loss_value,exposed_value,loss_ratio
-1.00000E+00,1,structural,0.00000E+00,1.28126E+02,0.00000E+00
-5.00000E-01,2,structural,0.00000E+00,1.28126E+02,0.00000E+00
-2.00000E-01,5,structural,7.66973E+02,1.28126E+02,5.98607E+00
+annual_frequency_of_exceedence,return_period,loss_type,loss_value,loss_ratio
+1.00000E+00,1,structural,0.00000E+00,0.00000E+00
+5.00000E-01,2,structural,0.00000E+00,0.00000E+00
+2.00000E-01,5,structural,7.66973E+02,5.98607E+00
