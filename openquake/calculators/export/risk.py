@@ -76,8 +76,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     tagcol = dstore['assetcol/tagcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     header = ('annual_frequency_of_exceedence', 'return_period',
-              'loss_type') + tagnames + (
-                  'loss_value',  'exposed_value', 'loss_ratio')
+              'loss_type') + tagnames + ('loss_value', 'loss_ratio')
     expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
     for r, tag in enumerate(tags):
         rows = []
@@ -85,7 +84,7 @@ def export_agg_curve_rlzs(ekey, dstore):
             p, l, *tagidxs = multi_idx
             evalue = expvalue[tuple(tagidxs) + (l % L,)]
             row = tagcol.get_tagvalues(tagnames, tagidxs) + (
-                loss, evalue, loss / evalue)
+                loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
         dest = dstore.build_fname('agg_loss', tag, 'csv')
         writer.save(rows, dest, header)
