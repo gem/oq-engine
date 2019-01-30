@@ -61,30 +61,37 @@ def get_rup_data(ebruptures):
 # ############################### exporters ############################## #
 
 
-# this is used by event_based_risk
+# this is used by event_based_risk and ebrisk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     name = ekey[0].split('-')[0]
     agg_curve, tags = _get(dstore, name)
     periods = agg_curve.attrs['return_periods']
     loss_types = tuple(agg_curve.attrs['loss_types'].split())
+    if any(lt.endswith('_ins') for lt in loss_types):
+        L = len(loss_types) // 2
+    else:
+        L = len(loss_types)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
     tagcol = dstore['assetcol/tagcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     header = ('annual_frequency_of_exceedence', 'return_period',
-              'loss_type') + tagnames + ('loss',)
+              'loss_type') + tagnames + ('loss_value', 'loss_ratio')
+    expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
     for r, tag in enumerate(tags):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
             p, l, *tagidxs = multi_idx
-            row = tagcol.get_tagvalues(tagnames, tagidxs) + (loss,)
+            evalue = expvalue[tuple(tagidxs) + (l % L,)]
+            row = tagcol.get_tagvalues(tagnames, tagidxs) + (
+                loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
         dest = dstore.build_fname('agg_loss', tag, 'csv')
         writer.save(rows, dest, header)
     return writer.getsaved()
 
 
-# this is used by event_based_risk and classical_risk
+# this is used by event_based_risk, ebrisk and classical_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
@@ -109,14 +116,18 @@ def export_avg_losses(ekey, dstore):
         tags = ['rlz-%03d' % r for r in range(R)]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     if oq.calculation_mode == 'ebrisk':  # shape (L, R, ...)
+        expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
         tagcol = dstore['assetcol/tagcol']
         tagnames = tuple(dstore['oqparam'].aggregate_by)
-        header = ('loss_type',) + tagnames + ('avgloss',)
+        header = ('loss_type',) + tagnames + (
+            'loss_value', 'exposed_value', 'loss_ratio')
         for r, tag in enumerate(tags):
             rows = []
             for multi_idx, loss in numpy.ndenumerate(value[:, r]):
                 l, *tagidxs = multi_idx
-                row = tagcol.get_tagvalues(tagnames, tagidxs) + (loss,)
+                evalue = expvalue[tuple(tagidxs) + (l,)]
+                row = tagcol.get_tagvalues(tagnames, tagidxs) + (
+                    loss, evalue, loss / evalue)
                 rows.append((dt.names[l],) + row)
             dest = dstore.build_fname(name, tag, 'csv')
             writer.save(rows, dest, header)
