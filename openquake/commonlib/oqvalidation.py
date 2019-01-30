@@ -281,6 +281,10 @@ class OqParam(valid.ParamSet):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
 
+        # check for ebrisk
+        if self.calculation_mode == 'ebrisk' and self.insured_losses:
+            raise ValueError('ebrisk does not support insured losses')
+
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
                 'sites' not in self.inputs):
