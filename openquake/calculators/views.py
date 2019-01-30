@@ -389,18 +389,21 @@ def view_totlosses(token, dstore):
 
 # for event based risk and ebrisk
 def portfolio_loss(dstore):
+    R = dstore['csm_info'].get_num_rlzs()
     array = dstore['losses_by_event'].value
     if array.dtype.names:  # for event based risk
         L, = array.dtype['loss'].shape
-        R = dstore['csm_info'].get_num_rlzs()
         data = numpy.zeros((R, L), F32)
         for row in array:
             data[row['rlzi']] += row['loss']
-    else:  # arrays has shape (E, L)
+    else:  # for ebrisk
+        losses = dstore['losses_by_event'].value  # shape (E, L, ...)
+        L = losses.shape[1]
+        data = numpy.zeros((R, L), F32)
         rlzs = dstore['events']['rlz']
-        w = dstore['csm_info/weights']
-        weights = w[w.dtype.names[0]]
-        data = numpy.array([(arr * weights[rlzs]).sum() for arr in array.T])
+        for rlz, loss in zip(rlzs, losses):
+            for lti in range(L):
+                data[rlz, lti] += loss[lti].sum()
     return data
 
 
