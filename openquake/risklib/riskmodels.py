@@ -349,6 +349,20 @@ class ProbabilisticEventBased(RiskModel):
             loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
 
+    def get_loss_ratios(self, gmvs, imti):  # used in ebrisk
+        """
+        :param gmvs: an array of shape (E, M)
+        :param imti: a dictionary imt -> imt index
+        :returns: an array of shape (L, E)
+        """
+        E, L = len(gmvs), len(self.risk_functions)
+        loss_ratios = numpy.zeros((L, E), F32)
+        for lti, lt in enumerate(self.risk_functions):
+            vf = self.risk_functions[lt]
+            means, covs, idxs = vf.interpolate(gmvs[:, imti[vf.imt]])
+            loss_ratios[lti, idxs] = vf.sample(means, covs, idxs, None)
+        return loss_ratios
+
 
 @registry.add('classical_bcr')
 class ClassicalBCR(RiskModel):
