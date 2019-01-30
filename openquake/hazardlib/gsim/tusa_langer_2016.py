@@ -48,6 +48,14 @@ class TusaLanger2016RepiBA08SE(GMPE):
     The GMPE distinguishes between shallow volcano-tectonic events related to
     flank movements (SE, focal depths <5km) and deeper events occurring due to
     regional tectonics (DE, focal depths >5km).
+
+    Test tables are generated from a spreadsheet provided by the authors, and
+    modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
+
+    Jan 2019: After noticing an anomalous-looking spike in the response spectra
+    of the TusaLanger2016RepiBA08SE model at T=0.14s, we contacted the authors
+    who found a mistake in one of the coefficients in the publication. It has
+    been updated according to the authors suggestion.
     """
     #: Supported tectonic region type is 'volcanic' because the
     #: equations have been derived from data from Etna (Sicily, Italy)
@@ -96,7 +104,7 @@ class TusaLanger2016RepiBA08SE(GMPE):
 
         # convert from log10 to ln and from cm/s**2 to g
         mean = np.log((10.0 ** (imean - 2.0)) / g)
-        # Return stddevs in terms of naturl log scaling
+        # Return stddevs in terms of natural log scaling
         stddevs = np.log(10.0 ** np.array(istddevs))
 
         return mean, stddevs
@@ -169,6 +177,7 @@ class TusaLanger2016RepiBA08SE(GMPE):
         return ssa, ssb, ssd
 
     # Coefficients from Table 9 (PGA) and Table 12 (SA); sigma values in log
+    # Correction made to coeff b2 (0.14s) by Giuseppina Tusa in email (Jan 15, 2019)
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT    a       b1      b2      c1      c2       h       c3      sA  sB      sD      SigmaIE SigmaIS SigmaTot
     pga   -0.568   0.475   0.037   -2.054  -0.015   2.317   0.006   0   0.452   0.477   0.222   0.221   0.390
@@ -191,7 +200,7 @@ class TusaLanger2016RepiBA08SE(GMPE):
     0.22   0.139   0.448   0.040   -2.259  -0.038   3.476   0.007   0   0.478   0.546   0.233   0.222   0.385
     0.20   0.136   0.455   0.038   -2.266  -0.044   3.363   0.007   0   0.468   0.576   0.240   0.223   0.392
     0.17   0.021   0.556   0.016   -2.240  -0.026   2.997   0.006   0   0.423   0.542   0.263   0.234   0.413
-    0.14  -0.289   0.741   0.013   -2.240  -0.023   2.676   0.006   0   0.403   0.516   0.277   0.236   0.428
+    0.14  -0.289   0.741  -0.013   -2.240  -0.023   2.676   0.006   0   0.403   0.516   0.277   0.236   0.428
     0.13  -0.119   0.593   0.011   -2.243  -0.035   2.402   0.007   0   0.412   0.490   0.285   0.236   0.437
     0.11  -0.015   0.476   0.031   -2.219  -0.044   2.316   0.006   0   0.411   0.456   0.288   0.233   0.439
     0.10  -0.221   0.522   0.030   -2.193  -0.062   2.300   0.006   0   0.412   0.435   0.283   0.231   0.437

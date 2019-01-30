@@ -297,7 +297,7 @@ def export_agg_losses_ebr(ekey, dstore):
     event_by_eid = {}  # eid -> event
     # populate rup_data and event_by_eid
     # TODO: avoid reading the events twice
-    for rgetter in getters.get_rupture_getters(dstore):
+    for rgetter in getters.gen_rupture_getters(dstore):
         ruptures = rgetter.get_ruptures()
         for ebr in ruptures:
             for event in events_by_rupid[ebr.serial]:

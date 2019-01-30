@@ -710,7 +710,7 @@ def extract_rupture(dstore, serial):
     http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
     """
     ridx = list(dstore['ruptures']['serial']).index(int(serial))
-    [getter] = getters.get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     yield from getter.get_rupdict().items()
 
 
@@ -724,7 +724,7 @@ def extract_event_info(dstore, eidx):
     event = dstore['events'][int(eidx)]
     serial = int(event['eid'] // TWO32)
     ridx = list(dstore['ruptures']['serial']).index(serial)
-    [getter] = getters.get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()

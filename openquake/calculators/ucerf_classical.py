@@ -46,7 +46,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         """
         monitor = self.monitor(self.core_task.__name__)
         oq = self.oqparam
-        acc = self.zerodict()
+        acc = self.acc0()
         self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)

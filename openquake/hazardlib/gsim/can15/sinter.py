@@ -72,7 +72,6 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         #
         # Abrahamson et al. (2015) - Rrup + vs30 + backarc
         gmpe = AbrahamsonEtAl2015SInter()
-        sites.backarc = False
         mean_ab15, stds3 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         #
