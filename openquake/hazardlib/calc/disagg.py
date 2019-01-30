@@ -223,7 +223,7 @@ def _digitize_lons(lons, lon_bins):
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.source_site_noop_filter, filter_distance='rjb'):
+        source_filter=filters.nofilter, filter_distance='rjb'):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity

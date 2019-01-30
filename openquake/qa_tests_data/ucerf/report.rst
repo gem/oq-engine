@@ -3,8 +3,8 @@ Ucerf test
 
 ============== ===================
 checksum32     87,673,300         
-date           2018-12-13T12:57:19
-engine_version 3.3.0-git68d7d11268
+date           2019-01-27T08:28:56
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 155, num_levels = 6
@@ -46,26 +46,26 @@ Slowest sources
 ====== =========================================================================== ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id                                                                   code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== =========================================================================== ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2  U    0     0     1000         0.0       0.0        0.0       0         0.0   
-1      FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3  U    0     0     1000         0.0       0.0        0.0       0         0.0   
-2      FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2  U    0     0     1000         0.0       0.0        0.0       0         0.0   
-3      FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2       U    0     0     1000         0.0       0.0        0.0       0         0.0   
-4      FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3       U    0     0     1000         0.0       0.0        0.0       0         0.0   
-5      FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2       U    0     0     1000         0.0       0.0        0.0       0         0.0   
-6      FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 U    0     0     1000         0.0       0.0        0.0       0         0.0   
-7      FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 U    0     0     1000         0.0       0.0        0.0       0         0.0   
-8      FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 U    0     0     1000         0.0       0.0        0.0       0         0.0   
-9      FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2      U    0     0     1000         0.0       0.0        0.0       0         0.0   
-10     FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3      U    0     0     1000         0.0       0.0        0.0       0         0.0   
-11     FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2      U    0     0     1000         0.0       0.0        0.0       0         0.0   
-12     FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2  U    0     0     1000         0.0       0.0        0.0       0         0.0   
-13     FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3  U    0     0     1000         0.0       0.0        0.0       0         0.0   
-14     FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2  U    0     0     1000         0.0       0.0        0.0       0         0.0   
-15     FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2       U    0     0     1000         0.0       0.0        0.0       0         0.0   
-16     FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3       U    0     0     1000         0.0       0.0        0.0       0         0.0   
-17     FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2       U    0     0     1000         0.0       0.0        0.0       0         0.0   
-18     FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 U    0     0     1000         0.0       0.0        0.0       0         0.0   
+23     FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2      U    0     0     1000         0.0       0.0        0.0       0         0.0   
+22     FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3      U    0     0     1000         0.0       0.0        0.0       0         0.0   
+21     FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2      U    0     0     1000         0.0       0.0        0.0       0         0.0   
+20     FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 U    0     0     1000         0.0       0.0        0.0       0         0.0   
 19     FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 U    0     0     1000         0.0       0.0        0.0       0         0.0   
+18     FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 U    0     0     1000         0.0       0.0        0.0       0         0.0   
+17     FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2       U    0     0     1000         0.0       0.0        0.0       0         0.0   
+16     FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3       U    0     0     1000         0.0       0.0        0.0       0         0.0   
+15     FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2       U    0     0     1000         0.0       0.0        0.0       0         0.0   
+14     FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2  U    0     0     1000         0.0       0.0        0.0       0         0.0   
+13     FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3  U    0     0     1000         0.0       0.0        0.0       0         0.0   
+12     FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2  U    0     0     1000         0.0       0.0        0.0       0         0.0   
+11     FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2      U    0     0     1000         0.0       0.0        0.0       0         0.0   
+10     FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3      U    0     0     1000         0.0       0.0        0.0       0         0.0   
+9      FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2      U    0     0     1000         0.0       0.0        0.0       0         0.0   
+8      FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 U    0     0     1000         0.0       0.0        0.0       0         0.0   
+7      FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 U    0     0     1000         0.0       0.0        0.0       0         0.0   
+6      FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 U    0     0     1000         0.0       0.0        0.0       0         0.0   
+5      FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2       U    0     0     1000         0.0       0.0        0.0       0         0.0   
+4      FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3       U    0     0     1000         0.0       0.0        0.0       0         0.0   
 ====== =========================================================================== ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -78,7 +78,7 @@ U    0.0       24
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Slowest operations
 ------------------
