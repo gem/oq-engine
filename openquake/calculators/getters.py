@@ -355,7 +355,7 @@ class GmfGetter(object):
         if hasattr(self, 'computers'):  # init already called
             return
         with hdf5.File(self.rupgetter.hdf5path, 'r') as cache:
-            self.weights = cache['weights'].value
+            self.weights = cache['csm_info/weights'].value
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             sitecol = self.sitecol.filtered(ebr.sids)
