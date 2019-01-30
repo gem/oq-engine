@@ -2,9 +2,9 @@ Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 =====================================================================
 
 ============== ===================
-checksum32     3,820,932,605      
-date           2018-12-13T12:57:40
-engine_version 3.3.0-git68d7d11268
+checksum32     1,038,141,016      
+date           2019-01-27T08:29:09
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -57,22 +57,22 @@ P    0.0       1
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00247 NaN    0.00247 0.00247 1      
-split_filter       0.00229 NaN    0.00229 0.00229 1      
+read_source_models 0.00122 NaN    0.00122 0.00122 1      
+split_filter       0.00285 NaN    0.00285 0.00285 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
-read_source_models converter=388 B fnames=128 B            1.5 KB  
-split_filter       srcs=1.13 KB srcfilter=253 B dummy=14 B 1.22 KB 
+read_source_models converter=313 B fnames=128 B            1.53 KB 
+split_filter       srcs=1.15 KB srcfilter=253 B dummy=14 B 1.24 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -80,6 +80,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00247  0.19531   1     
-total only_filter        0.00229  0.0       1     
+total only_filter        0.00285  1.71875   1     
+total read_source_models 0.00122  0.08984   1     
 ======================== ======== ========= ======

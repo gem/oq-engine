@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,152,338,418      
-date           2018-12-13T12:57:47
-engine_version 3.3.0-git68d7d11268
+date           2019-01-27T08:30:22
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -12,7 +12,7 @@ num_sites = 21, num_levels = 114
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -81,8 +81,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+1      2         M    2     14    1,104        0.0       0.00314    5.00000   4         40    
 0      1         M    0     2     160          0.0       0.0        0.0       0         0.0   
-1      2         M    0     12    1,104        0.0       0.00272    0.0       4         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -95,22 +95,22 @@ M    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00184 5.199E-04 0.00147 0.00221 2      
-split_filter       0.00710 NaN       0.00710 0.00710 1      
+read_source_models 0.00187 2.805E-04 0.00167 0.00207 2      
+split_filter       0.00550 NaN       0.00550 0.00550 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ====================================== ========
 task               sent                                   received
-read_source_models converter=776 B fnames=233 B           6.73 KB 
-split_filter       srcs=5.03 KB srcfilter=253 B seed=14 B 3.01 KB 
+read_source_models converter=626 B fnames=233 B           6.84 KB 
+split_filter       srcs=5.05 KB srcfilter=253 B seed=14 B 3.03 KB 
 ================== ====================================== ========
 
 Slowest operations
@@ -118,6 +118,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00710  0.0       1     
-total read_source_models 0.00368  0.0       2     
+total split_filter       0.00550  1.37891   1     
+total read_source_models 0.00374  0.10938   2     
 ======================== ======== ========= ======

@@ -245,7 +245,7 @@ class SiteCollection(object):
            a filtered SiteCollection instance if `indices` is a proper subset
            of the available indices, otherwise returns the full SiteCollection
         """
-        if len(indices) == len(self):
+        if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
         indices = numpy.uint32(sorted(indices))
