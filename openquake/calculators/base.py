@@ -769,6 +769,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info/weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
             self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
+            with hdf5.File(self.hdf5cache, 'r+') as cache:
+                cache['weights'] = arr
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
