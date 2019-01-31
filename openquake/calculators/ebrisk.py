@@ -96,6 +96,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         times = numpy.zeros(N)  # risk time per site_id
         for sid, haz in hazard.items():
             t0 = time.time()
+            weights = getter.weights[haz['rlzi']]
             assets_on_sid, tagidxs = assgetter.get(sid, tagnames)
             mon.duration += time.time() - t0
             eidx = [eid2idx[eid] for eid in haz['eid']]
@@ -110,8 +111,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                         acc[(eidx, lti) + tagidxs[asset.ordinal]] += losses
                         if param['avg_losses']:
                             with mon_avg:
-                                ls = losses * getter.weights[haz['rlzi']][imt]
-                                losses_by_N[sid, lti] += ls.sum()
+                                losses_by_N[sid, lti] += losses @ weights[imt]
             times[sid] = time.time() - t0
     return {'losses': acc, 'eids': eids, 'losses_by_N': losses_by_N,
             'times': times}
