@@ -421,6 +421,16 @@ class AssetCollection(object):
         """
         return self.tagcol.tagnames
 
+    def num_taxonomies_by_site(self):
+        """
+        :returns: an array with the number of assets per each site
+        """
+        dic = general.group_array(self.array, 'site_id')
+        num_taxonomies = numpy.zeros(self.tot_sites, U32)
+        for sid, arr in dic.items():
+            num_taxonomies[sid] = len(numpy.unique(arr['taxonomy']))
+        return num_taxonomies
+
     def get_aids_by_tag(self):
         """
         :returns: dict tag -> asset ordinals
@@ -461,11 +471,27 @@ class AssetCollection(object):
         if A != len(self):
             raise ValueError('The array must have length %d, got %d' %
                              (len(self), A))
+        if not tagnames:
+            return array.sum(axis=0)
         shape = [len(getattr(self.tagcol, tagname)) for tagname in tagnames]
         acc = numpy.zeros(shape, (F32, shp) if shp else F32)
         for asset, row in zip(self.array, array):
             acc[tuple(asset[tagnames])] += row
         return acc
+
+    def agg_value(self, *tagnames):
+        """
+        :param tagnames:
+            tagnames of lengths T1, T2, ... respectively
+        :returns:
+            the values of the exposure aggregated by tagnames as an array
+            of shape (T1, T2, ..., L)
+        """
+        aval = numpy.zeros((len(self), len(self.loss_types)), F32)  # (A, L)
+        for asset in self:
+            for lti, lt in enumerate(self.loss_types):
+                aval[asset.ordinal, lti] = asset.value(lt)
+        return self.aggregate_by(list(tagnames), aval)
 
     def reduce(self, sitecol):
         """
@@ -496,6 +522,7 @@ class AssetCollection(object):
             asset_refs.append(self.asset_refs[mask])
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
+        new.tot_sites = len(sitecol)
         new.array = numpy.concatenate(array)
         new.asset_refs = numpy.concatenate(asset_refs)
         sitecol.make_complete()
