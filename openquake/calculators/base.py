@@ -55,7 +55,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
-RUPTURES_PER_BLOCK = 1000  # used in split_filter
+RUPTURES_PER_BLOCK = 10000  # used in split_filter
 
 
 class InvalidCalculationID(Exception):
@@ -479,8 +479,10 @@ class HazardCalculator(BaseCalculator):
                 split = not oq.is_event_based()
                 dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
                 if dist == 'celery' or 'ucerf' in oq.calculation_mode:
+                    # move the prefiltering on the workers
                     srcfilter = self.src_filter
                 else:
+                    # prefilter on the controller node with Rtree
                     srcfilter = RtreeFilter(self.src_filter.sitecol,
                                             oq.maximum_distance,
                                             self.src_filter.hdf5path)
