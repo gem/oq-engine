@@ -73,14 +73,12 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
     mon = monitor('getting assets', measuremem=False)
-    mon.counts = 1
     with datastore.read(rupgetter.hdf5path) as dstore:
         assgetter = getters.AssetGetter(dstore)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
-    mon_avg = monitor('computing losses_by_site', measuremem=False)
     mon_risk = monitor('computing risk', measuremem=False)
     with monitor('building risk'):
         imts = getter.imts
@@ -96,22 +94,22 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         times = numpy.zeros(N)  # risk time per site_id
         for sid, haz in hazard.items():
             t0 = time.time()
+            weights = getter.weights[haz['rlzi']]
             assets_on_sid, tagidxs = assgetter.get(sid, tagnames)
-            mon.duration += time.time() - t0
             eidx = [eid2idx[eid] for eid in haz['eid']]
+            mon.duration += time.time() - t0
+            mon.counts += 1
             with mon_risk:
                 assets_ratios = get_assets_ratios(
                     assets_on_sid, riskmodel, haz['gmv'], imts)
             for assets, triples in assets_ratios:
-                for lt, imt, loss_ratios in triples:
-                    lti = riskmodel.lti[lt]
+                for lti, (lt, imt, loss_ratios) in enumerate(triples):
+                    w = weights[imt]
                     for asset in assets:
                         losses = loss_ratios * asset.value(lt)
                         acc[(eidx, lti) + tagidxs[asset.ordinal]] += losses
                         if param['avg_losses']:
-                            with mon_avg:
-                                ls = losses * getter.weights[haz['rlzi']][imt]
-                                losses_by_N[sid, lti] += ls.sum()
+                            losses_by_N[sid, lti] += losses @ w
             times[sid] = time.time() - t0
     return {'losses': acc, 'eids': eids, 'losses_by_N': losses_by_N,
             'times': times}
