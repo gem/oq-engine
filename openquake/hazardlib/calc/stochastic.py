@@ -170,13 +170,14 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         # Set the parameters required to compute the number of occurrences
         # of the group of sources
         tom = param['tom']
-        samples = param['oqparam'].number_of_logic_tree_samples
-        rates = tom.occurrence_rate
+        assert param['oqparam'].number_of_logic_tree_samples > 0
+        samples = getattr(sources[0], 'samples')
+        rate = tom.occurrence_rate
         time_span = tom.time_span
         # Note that using a single time interval corresponding to the product
         # of the investigation time and the number of realisations as we do
         # here is admitted only in the case of a time-independent model
-        grp_num_occ = numpy.random.poisson(rates * time_span * samples *
+        grp_num_occ = numpy.random.poisson(rate * time_span * samples *
                                            num_ses)
         # Now we process the sources included in the group. Possible cases:
         # * The group is a cluster. In this case we choose one rupture per each
@@ -187,9 +188,15 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         #   choose one source and then one rupture from this source.
         rup_counter = {}
         rup_data = {}
+        eff_ruptures = 0
         for rlz_num in range(grp_num_occ):
             if param['cluster']:
                 for src in sources:
+                    # Sum Ruptures
+                    if rlz_num == 0:
+                        eff_ruptures += src.num_ruptures
+                    # Track calculation time
+                    t0 = time.time()
                     rup = src.get_one_rupture()
                     # The problem here is that we do not know a-priori the
                     # number of occurrences of a given rupture. Why are we
@@ -202,7 +209,10 @@ def sample_ruptures(sources, param, monitor=Monitor()):
                         rup_data[src.id][rup.idx] = [rup, src.id, grp_id]
                     else:
                         rup_counter[src.id][rup.idx] += 1
-
+                    # Store info
+                    dt = time.time() - t0
+                    calc_times[src.id] += numpy.array([len(rup_data[src.id]),
+                                                       src.nsites, dt])
             elif param['src_interdep'] == 'mutex':
                 print('Not yet implemented')
                 exit(0)
@@ -215,9 +225,7 @@ def sample_ruptures(sources, param, monitor=Monitor()):
                 cnt = rup_counter[src_key][rup_key]
                 ebr = EBRupture(dat[0], dat[1], dat[2], cnt, samples)
                 eb_ruptures.append(ebr)
-
-        # TODO need to set the calculation time and the eff_ruptures
-        calc_times = 1
+        # Yield ruptures
         yield AccumDict(rup_array=get_rup_array(eb_ruptures),
                         calc_times=calc_times,
                         eff_ruptures={grp_id: eff_ruptures})
