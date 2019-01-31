@@ -180,17 +180,16 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
 
     :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
     """
-    mon = monitor('split_filter')
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     msg = 'Splitting/filtering' if split else 'Filtering'
     logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
     sources = csm.get_sources()
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
         split_filter if split else only_filter,
-        (sources, srcfilter, seed, mon),
-        maxweight=RUPTURES_PER_BLOCK, distribute=dist,
-        progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
+        (sources, srcfilter, seed, monitor),
+        maxweight=RUPTURES_PER_BLOCK,
+        weight=operator.attrgetter('num_ruptures'),
+        progress=logging.debug)
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
@@ -478,10 +477,15 @@ class HazardCalculator(BaseCalculator):
             if (oq.prefilter_sources != 'no' and
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
                 split = not oq.is_event_based()
-                srcfilter = (self.src_filter if 'ucerf' in oq.calculation_mode
-                             else RtreeFilter(self.src_filter.sitecol,
-                                              oq.maximum_distance,
-                                              self.src_filter.hdf5path))
+                dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
+                if dist == 'celery' or 'ucerf' in oq.calculation_mode:
+                    # move the prefiltering on the workers
+                    srcfilter = self.src_filter
+                else:
+                    # prefilter on the controller node with Rtree
+                    srcfilter = RtreeFilter(self.src_filter.sitecol,
+                                            oq.maximum_distance,
+                                            self.src_filter.hdf5path)
                 self.csm = parallel_split_filter(
                     csm, srcfilter, split, self.monitor())
             else:
