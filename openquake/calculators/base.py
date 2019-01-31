@@ -184,12 +184,17 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
     msg = 'Splitting/filtering' if split else 'Filtering'
     logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
     sources = csm.get_sources()
+    if split:
+        dist = None  # use the default
+    else:
+        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                else 'processpool')
     smap = parallel.Starmap.apply(
         split_filter if split else only_filter,
         (sources, srcfilter, seed, monitor),
         maxweight=RUPTURES_PER_BLOCK,
         weight=operator.attrgetter('num_ruptures'),
-        progress=logging.debug)
+        distribute=dist, progress=logging.debug)
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
