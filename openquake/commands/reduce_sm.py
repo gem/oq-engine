@@ -17,7 +17,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap, datastore, performance
 from openquake.commonlib import readinput
 
 
@@ -33,8 +33,10 @@ def reduce_sm(calc_id):
         info = dstore['source_info'].value
         ok = info['weight'] > 0
         source_ids = set(info[ok]['source_id'])
-    readinput.reduce_source_model(
+    with performance.Monitor() as mon:
+        readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], source_ids)
+    print(mon)
 
 
 reduce_sm.arg('calc_id', 'calculation ID', type=int)
