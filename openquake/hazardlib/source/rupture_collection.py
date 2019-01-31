@@ -64,7 +64,7 @@ def split(src, chunksize=MINWEIGHT):
     Split a complex fault source in chunks
     """
     for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize,
-                                             kind=operator.attrgetter('mag'))):
+                                             key=operator.attrgetter('mag'))):
         rup = block[0]
         source_id = '%s:%d' % (src.source_id, i)
         amfd = mfd.ArbitraryMFD([rup.mag], [rup.mag_occ_rate])

@@ -207,7 +207,7 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
         dstore[prefix + '-rlzs'] = arrayNR
     R = arrayNR.shape[1]
     if R > 1:
-        stats = dstore['oqparam'].risk_stats()
+        stats = dstore['oqparam'].hazard_stats()
         statnames, statfuncs = zip(*stats)
         weights = dstore['csm_info'].rlzs['weight']
         dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)

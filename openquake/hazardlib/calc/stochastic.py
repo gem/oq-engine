@@ -27,6 +27,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
 from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 
@@ -42,16 +43,8 @@ F32 = numpy.float32
 MAX_RUPTURES = 1000
 
 
-def source_site_noop_filter(srcs):
-    for src in srcs:
-        yield src, None
-
-
-source_site_noop_filter.integration_distance = {}
-
-
 # this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
+def stochastic_event_set(sources, source_site_filter=nofilter):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -101,7 +94,7 @@ rupture_dt = numpy.dtype([
 
 
 # this is really fast
-def get_rup_array(ebruptures):
+def get_rup_array(ebruptures, srcfilter=nofilter):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
     out the ruptures far away from every site
@@ -124,6 +117,10 @@ def get_rup_array(ebruptures):
         minlat = points[:, 1].min()
         maxlon = points[:, 0].max()
         maxlat = points[:, 1].max()
+        if srcfilter.integration_distance and len(srcfilter.close_sids(
+                (minlon, minlat, maxlon, maxlat),
+                rup.tectonic_region_type, rup.mag)) == 0:
+            continue
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
@@ -141,12 +138,13 @@ def get_rup_array(ebruptures):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
-# NB: there is no filtering of the ruptures: the sources are supposed to
-# have been prefiltered
-def sample_ruptures(sources, param, monitor=Monitor()):
+# NB: there is postfiltering of the ruptures, which is more efficient
+def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     """
     :param sources:
         a sequence of (prefiltered) sources of the same group
+    :param srcfilter:
+        SourceFilter instance used for bounding box post filtering
     :param param:
         a dictionary of additional parameters including
         ses_per_logic_tree_path

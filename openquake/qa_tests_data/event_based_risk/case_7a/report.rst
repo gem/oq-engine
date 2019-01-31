@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     485,638,434        
-date           2019-01-20T07:38:48
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:29:47
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 1
@@ -78,24 +78,24 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00389 NaN    0.00389 0.00389 1      
-split_filter       0.00410 NaN    0.00410 0.00410 1      
+read_source_models 0.00405 NaN    0.00405 0.00405 1      
+split_filter       0.00412 NaN    0.00412 0.00412 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=388 B fnames=114 B           1.46 KB 
-split_filter       srcs=1.1 KB srcfilter=253 B dummy=14 B 1.18 KB 
-================== ====================================== ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=313 B fnames=114 B            1.49 KB 
+split_filter       srcs=1.12 KB srcfilter=253 B dummy=14 B 1.2 KB  
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total only_filter        0.00410   1.67188   1     
-total read_source_models 0.00389   0.28906   1     
-reading exposure         7.112E-04 0.0       1     
+total only_filter        0.00412   1.53516   1     
+total read_source_models 0.00405   0.17969   1     
+reading exposure         6.835E-04 0.0       1     
 ======================== ========= ========= ======

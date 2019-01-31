@@ -3,8 +3,8 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     372,210,909        
-date           2019-01-20T07:36:48
-engine_version 3.4.0-git452d0c6835
+date           2019-01-27T08:28:31
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 4, num_levels = 15
@@ -87,8 +87,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-saving gmfs         0.02566   0.58594   1     
-building riskinputs 0.01561   0.10938   1     
-computing gmfs      0.00591   0.0       1     
-reading exposure    4.058E-04 0.0       1     
+saving gmfs         0.02774   0.76953   1     
+building riskinputs 0.01477   0.23047   1     
+computing gmfs      0.00556   0.0       1     
+reading exposure    3.920E-04 0.0       1     
 =================== ========= ========= ======
