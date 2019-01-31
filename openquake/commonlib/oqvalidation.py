@@ -303,6 +303,11 @@ class OqParam(valid.ParamSet):
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
 
+        # check for ebrisk
+        if (self.calculation_mode == 'ebrisk' and
+                self.number_of_logic_tree_samples == 0):
+            logging.warn('ebrisk is not meant for full enumeration')
+
         # check grid + sites
         if (self.region_grid_spacing and 'site_model' in self.inputs
                 and 'exposure' in self.inputs):
