@@ -179,17 +179,16 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
 
     :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
     """
-    mon = monitor('split_filter')
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     msg = 'Splitting/filtering' if split else 'Filtering'
     logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
     sources = csm.get_sources()
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
         split_filter if split else only_filter,
-        (sources, srcfilter, seed, mon),
-        maxweight=RUPTURES_PER_BLOCK, distribute=dist,
-        progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
+        (sources, srcfilter, seed, monitor),
+        maxweight=RUPTURES_PER_BLOCK,
+        weight=operator.attrgetter('num_ruptures'),
+        progress=logging.debug)
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
@@ -477,10 +476,15 @@ class HazardCalculator(BaseCalculator):
             if (oq.prefilter_sources != 'no' and
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
                 split = not oq.is_event_based()
-                srcfilter = (self.src_filter if 'ucerf' in oq.calculation_mode
-                             else RtreeFilter(self.src_filter.sitecol,
-                                              oq.maximum_distance,
-                                              self.src_filter.hdf5path))
+                dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
+                if dist == 'celery' or 'ucerf' in oq.calculation_mode:
+                    # move the prefiltering on the workers
+                    srcfilter = self.src_filter
+                else:
+                    # prefilter on the controller node with Rtree
+                    srcfilter = RtreeFilter(self.src_filter.sitecol,
+                                            oq.maximum_distance,
+                                            self.src_filter.hdf5path)
                 self.csm = parallel_split_filter(
                     csm, srcfilter, split, self.monitor())
             else:
@@ -576,7 +580,6 @@ class HazardCalculator(BaseCalculator):
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-            self.datastore['csm_info'] = self.csm.info
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
@@ -705,6 +708,8 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
+                self.datastore['assetcol/num_taxonomies'] = (
+                    self.assetcol.num_taxonomies_by_site())
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             else:
@@ -752,6 +757,11 @@ class HazardCalculator(BaseCalculator):
         self.param = dict(individual_curves=oq.individual_curves,
                           avg_losses=oq.avg_losses)
 
+        # store the `exposed_value` if there is an exposure
+        if 'exposed_value' not in self.datastore and hasattr(self, 'assetcol'):
+            self.datastore['exposed_value'] = self.assetcol.agg_value(
+                *oq.aggregate_by)
+
     def store_csm_info(self, eff_ruptures):
         """
         Save info about the composite source model inside the csm_info dataset
@@ -767,6 +777,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info/weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
             self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
+            with hdf5.File(self.hdf5cache, 'r+') as cache:
+                cache['csm_info/weights'] = arr
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(

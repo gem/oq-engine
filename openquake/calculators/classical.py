@@ -109,7 +109,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.core_task.__func__, monitor=self.monitor())
             source_ids = []
             data = []
-            for i, args in enumerate(self.gen_args(), 1):
+            for i, args in enumerate(self.gen_args()):
                 smap.submit(*args)
                 source_ids.append(get_src_ids(args[0]))
                 for src in args[0]:  # collect source data
@@ -150,16 +150,17 @@ class ClassicalCalculator(base.HazardCalculator):
                          self.csm.has_dupl_sources)
         csm_atomic, sources_by_trt = self.csm.split2()
         for sg in csm_atomic.src_groups:
-            par = param.copy()
-            par['src_interdep'] = sg.src_interdep
-            par['rup_interdep'] = sg.rup_interdep
-            par['grp_probability'] = sg.grp_probability
-            par['cluster'] = sg.cluster
-            par['temporal_occurrence_model'] = sg.temporal_occurrence_model
-            gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-            yield sg.sources, self.src_filter, gsims, par
-            num_tasks += 1
-            num_sources += len(sg.sources)
+            if sg.sources:
+                par = param.copy()
+                par['src_interdep'] = sg.src_interdep
+                par['rup_interdep'] = sg.rup_interdep
+                par['grp_probability'] = sg.grp_probability
+                par['cluster'] = sg.cluster
+                par['temporal_occurrence_model'] = sg.temporal_occurrence_model
+                gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
+                yield sg.sources, self.src_filter, gsims, par
+                num_tasks += 1
+                num_sources += len(sg.sources)
         for trt, sources in sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             for block in self.block_splitter(sources):
