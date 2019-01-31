@@ -37,7 +37,7 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
     exclusive sources or ruptures.
     """
 
-    def from_sources(self, par):
+    def build_events_from_sources(self, par):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -62,7 +62,6 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
                 # Check cases where we do not want to split the group into
                 # pieces
                 par['group'] = False
-                par['tom'] = None
                 if sg.temporal_occurrence_model and (
                         sg.src_interdep in 'mutex' or
                         sg.rup_interdep in 'mutex' or
@@ -76,7 +75,7 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
                     # done with traditional sources
                     dat = [(s, 1.) for s in sg.sources]
                     block = WeightedSequence(dat)
-                    smap.submit(block, par)
+                    smap.submit(block, self.src_filter, par)
 
                 # This is the processing for traditional sources
                 else:
@@ -90,10 +89,10 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
                             for i in range(oq.ses_per_logic_tree_path):
                                 par['ses_seeds'] = [(ses_idx,
                                                      oq.ses_seed + i + 1)]
-                                smap.submit(block, par)
+                                smap.submit(block, self.src_filter, par)
                                 ses_idx += 1
                         else:
-                            smap.submit(block, par)
+                            smap.submit(block, self.src_filter, par)
 
         mon = self.monitor('saving ruptures')
         for dic in smap:
@@ -120,5 +119,4 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
         sorted_ruptures.sort(order='serial')
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
-        rgetters = self.save_events(sorted_ruptures)
-        return ((rgetter, self.src_filter, par) for rgetter in rgetters)
+        self.save_events(sorted_ruptures)

@@ -163,7 +163,6 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     ir_mon = monitor('iter_ruptures', measuremem=False)
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
-
     if param['group']:
         # Set the parameters required to compute the number of occurrences
         # of the group of sources
@@ -181,7 +180,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         # * The group is a cluster. In this case we choose one rupture per each
         #   source; uncertainty in the ruptures can be handled in this case
         #   using mutually exclusive ruptures (note that this is admitted
-        #   only for non-parametric sources).
+        #   only for nons-parametric sources).
         # * The group contains mutually exclusive sources. In this case we
         #   choose one source and then one rupture from this source.
         rup_counter = {}
