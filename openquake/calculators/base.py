@@ -188,7 +188,8 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
         split_filter if split else only_filter,
         (sources, srcfilter, seed, monitor),
         maxweight=RUPTURES_PER_BLOCK,
-        weight=operator.attrgetter('num_ruptures'))
+        weight=operator.attrgetter('num_ruptures'),
+        progress=logging.debug)
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
