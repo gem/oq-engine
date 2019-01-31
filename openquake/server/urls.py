@@ -31,6 +31,9 @@ urlpatterns = [
     url(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
 ]
 
+# it is useful to disable the default redirect if the usage is via API only
+# 'collectstatic' and related configurationis on the reverse proxy
+# are also not required anymore for an API-only usage
 if settings.WEBUI:
     urlpatterns += [
         url(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
