@@ -80,7 +80,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
-    mon_avg = monitor('building avg_losses', measuremem=False)
+    mon_avg = monitor('computing losses_by_site', measuremem=False)
     mon_risk = monitor('computing risk', measuremem=False)
     with monitor('building risk'):
         imts = getter.imts
