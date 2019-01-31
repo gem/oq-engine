@@ -27,6 +27,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source, tom
 from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
 
 U32 = numpy.uint32
@@ -834,12 +835,21 @@ class SourceConverter(RuptureConverter):
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.temporal_occurrence_model = self.get_tom(node)
         sg.name = node.attrib.get('name')
-        # set attributes related to occurrence
+        # Set attributes related to occurrence
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
         sg.grp_probability = node.attrib.get('grp_probability')
-        # set the cluster attribute
+        # Set the cluster attribute
         sg.cluster = node.attrib.get('cluster') == 'true'
+        # Filter admitted cases
+        # 1. The source group is a cluster. In this case the cluster must have
+        #    the attributes required to define its occurrence in time.
+        if sg.cluster:
+            msg = 'A cluster group requires the definition of a temporal'
+            msg += ' occurrence model'
+            assert 'tom' in node.attrib, msg
+            if isinstance(tom, PoissonTOM):
+                assert hasattr(sg, 'occurrence_rate')
         #
         for src_node in node:
             if self.source_id and self.source_id != src_node['id']:

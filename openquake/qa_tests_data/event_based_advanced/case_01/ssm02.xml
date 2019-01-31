@@ -30,6 +30,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <rake> 90.0 </rake>
                     <hypocenter depth="5.0" lat="1.4" lon="0.0"/>
                     <simpleFaultGeometry>
+                    <gml:LineString>
                         <gml:posList>
                             1.0 -0.2 1.4 0.0 1.7 0.0
                         </gml:posList>
