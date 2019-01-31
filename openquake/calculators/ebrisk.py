@@ -73,7 +73,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
     mon = monitor('getting assets', measuremem=False)
-    with datastore.read(rupgetter.hdf5path) as dstore:
+    with datastore.read(param['hdf5cache']) as dstore:
         assgetter = getters.AssetGetter(dstore)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
@@ -160,6 +160,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
+        self.param['hdf5cache'] = self.datastore.hdf5cache()
         L = len(self.riskmodel.loss_types)
         self.num_taxonomies = self.assetcol.num_taxonomies_by_site()
         self.datastore.create_dset('losses_by_site', F32, (self.N, L))
