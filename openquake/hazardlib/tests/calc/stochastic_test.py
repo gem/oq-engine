@@ -16,11 +16,9 @@
 import os
 import unittest
 import numpy
-from openquake.hazardlib import nrml, geo
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib import nrml, calc
 from openquake.hazardlib.calc.stochastic import (
     stochastic_event_set, sample_ruptures)
-from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 
 aae = numpy.testing.assert_almost_equal
@@ -45,7 +43,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
             start += nr
         param = dict(ses_per_logic_tree_path=10, filter_distance='rjb',
                      gsims=[SiMidorikawa1999SInter()])
-        dic = sum(sample_ruptures(group, param), {})
+        sf = calc.filters.SourceFilter(None, {})
+        dic = sum(sample_ruptures(group, sf, param), {})
         self.assertEqual(len(dic['rup_array']), 5)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
@@ -54,5 +53,5 @@ class StochasticEventSetTestCase(unittest.TestCase):
         self.assertEqual(len(ruptures), 19)
 
         # test no filtering 2
-        ruptures = sum(sample_ruptures(group, param), {})['rup_array']
+        ruptures = sum(sample_ruptures(group, sf, param), {})['rup_array']
         self.assertEqual(len(ruptures), 5)
