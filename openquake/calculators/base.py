@@ -180,14 +180,13 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
 
     :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
     """
-    mon = monitor('split_filter')
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     msg = 'Splitting/filtering' if split else 'Filtering'
     logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
     sources = csm.get_sources()
     smap = parallel.Starmap.apply(
         split_filter if split else only_filter,
-        (sources, srcfilter, seed, mon),
+        (sources, srcfilter, seed, monitor),
         maxweight=RUPTURES_PER_BLOCK,
         weight=operator.attrgetter('num_ruptures'))
     if monitor.hdf5:
