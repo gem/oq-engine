@@ -161,6 +161,12 @@ alias oqenv="source $HOME/openquake/oqenv/bin/activate"
 
 Put it again at the bottom of `~/.bashrc` or `~/.profile`; close and re-open the terminal. You can now load your environment just typing `oqenv`.
 
+It is also possible to run the `oq` command without the corresponding virtual environment loaded. Just run `$HOME/openquake/oqenv/bin/oq`; for convenience you can also add it as an `alias` in your `~/.bashrc` (Linux) or `~/.profile` (macOS):
+
+```bash
+alias oq="$HOME/openquake/oqenv/bin/oq"
+```
+
 ### Multiple installations
 
 If any other installation of the Engine exists on the same machine, like a system-wide installation made with packages, you must change the DbServer port from the default one (1908) to any other unused port. Using a DbServer started from a different codebase (which may be out-of-sync) could lead to unexpected behaviours and errors. To change the DbServer port `oq-engine/openquake/engine/openquake.cfg` must be updated:
