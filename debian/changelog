@@ -1,6 +1,13 @@
+  [Michele Simionato]
+  * Moved the prefiltering on the workers to save memory
+  * Exported the aggregated loss ratios in avg losses and agg losses
+  * Removed the variables quantile_loss_curves and mean_loss_curves: they
+    were duplicating quantile_hazard_curves and mean_hazard_curves
+  * Only ruptures boundingbox-close to the site collection are stored
+
   [Marco Pagani]
   * Added cluster model to classical PSHA calculator
-  
+
   [Michele Simionato]
   * Fixed a bug in scenario_damage from ShakeMap with noDamageLimit=0
   * Avoided the MemoryError in the controller node by speeding up the saving

@@ -28,12 +28,12 @@ from openquake.baselib.general import humansize, group_array, deprecated
 from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, filters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
 from openquake.calculators.getters import (
-    GmfGetter, PmapGetter, get_rupture_getters)
+    GmfGetter, PmapGetter, gen_rupture_getters)
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -69,7 +69,7 @@ def export_ruptures_xml(ekey, dstore):
     num_ses = oq.ses_per_logic_tree_path
     mesh = get_mesh(dstore['sitecol'])
     ruptures_by_grp = {}
-    for rgetter in get_rupture_getters(dstore):
+    for rgetter in gen_rupture_getters(dstore):
         ebrs = [ebr.export(mesh, rgetter.rlzs_by_gsim, num_ses)
                 for ebr in rgetter.get_ruptures()]
         if ebrs:
@@ -93,7 +93,7 @@ def export_ruptures_csv(ekey, dstore):
     header = ('rupid multiplicity mag centroid_lon centroid_lat '
               'centroid_depth trt strike dip rake boundary').split()
     rows = []
-    for rgetter in get_rupture_getters(dstore):
+    for rgetter in gen_rupture_getters(dstore):
         rups = rgetter.get_ruptures()
         rup_data = calc.RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r in rup_data.to_array(rups):
@@ -707,14 +707,13 @@ def export_gmf_scenario_csv(ekey, dstore):
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
     # for scenario there is an unique grp_id=0
-    [rgetter] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [rgetter] = gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     [ebr] = rgetter.get_ruptures()
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(0)
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(rlzs_by_gsim, [ebr], sitecol, oq)
+    srcfilter = filters.SourceFilter(sitecol, oq.maximum_distance)
+    getter = GmfGetter(rgetter, srcfilter, oq)
     getter.init()
-    eids = (numpy.concatenate([
-        eids for eids in ebr.get_eids_by_rlz(rlzs_by_gsim).values()]))
+    eids = rgetter.get_eid_rlz()['eid']
     sids = getter.computers[0].sids
     rlzs = rlzs_assoc.realizations
     hazardr = [collections.defaultdict(list) for rlz in rlzs]
