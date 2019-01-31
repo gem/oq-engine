@@ -2,9 +2,9 @@ test for POE_TOO_BIG
 ====================
 
 ============== ===================
-checksum32     963,025,495        
-date           2019-01-20T07:37:02
-engine_version 3.4.0-git452d0c6835
+checksum32     3,490,620,350      
+date           2019-01-27T08:28:45
+engine_version 3.4.0-git7f110aaa0b
 ============== ===================
 
 num_sites = 1, num_levels = 200
@@ -91,11 +91,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      f1        C    0     4     2,308        10        165        37        37        9,232 
-1      p1        P    4     5     156          0.40861   9.298E-06  1.00000   1         15    
-1      p2        P    5     6     156          0.34206   3.338E-06  1.00000   1         15    
-1      p3        P    6     7     156          0.34513   2.384E-06  1.00000   1         15    
-1      p4        P    7     8     156          0.34278   1.907E-06  1.00000   1         15    
+0      f1        C    0     4     2,308        10        163        37        37        9,232 
+1      p1        P    4     5     156          0.39963   1.073E-05  1.00000   1         15    
+1      p4        P    7     8     156          0.33029   1.907E-06  1.00000   1         15    
+1      p2        P    5     6     156          0.32401   2.861E-06  1.00000   1         15    
+1      p3        P    6     7     156          0.32364   2.384E-06  1.00000   1         15    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -104,7 +104,7 @@ Computation times by source typology
 code calc_time counts
 ==== ========= ======
 C    10        1     
-P    1.43858   4     
+P    1.37757   4     
 ==== ========= ======
 
 Duplicated sources
@@ -115,26 +115,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.03886 0.05133 0.00257 0.07516 2      
-split_filter       4.48514 NaN     4.48514 4.48514 1      
-classical          0.34050 0.23699 0.00868 1.43906 34     
-build_hazard_stats 0.00557 NaN     0.00557 0.00557 1      
+read_source_models 0.04076 0.05399 0.00258 0.07893 2      
+split_filter       4.41548 NaN     4.41548 4.41548 1      
+classical          0.34126 0.22841 0.00817 1.37809 34     
+build_hazard_stats 0.00572 NaN     0.00572 0.00572 1      
 ================== ======= ======= ======= ======= =======
 
 Fastest task
 ------------
-taskno=34, weight=8, duration=0 s, sources="p1 p2 p3 p4"
+taskno=19, weight=8, duration=0 s, sources="f1"
 
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 0.0    1   1   4
-weight   15      0.0    15  15  4
-======== ======= ====== === === =
+======== ======= ====== ======= ======= =
+variable mean    stddev min     max     n
+======== ======= ====== ======= ======= =
+nsites   1.00000 NaN    1       1       1
+weight   8.00000 NaN    8.00000 8.00000 1
+======== ======= ====== ======= ======= =
 
 Slowest task
 ------------
-taskno=34, weight=62, duration=1 s, sources="p1 p2 p3 p4"
+taskno=33, weight=62, duration=1 s, sources="f1"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
@@ -147,10 +147,10 @@ Data transfer
 -------------
 ================== =============================================================== =========
 task               sent                                                            received 
-read_source_models converter=776 B fnames=230 B                                    6.1 KB   
-split_filter       srcs=4.81 KB srcfilter=380 B seed=14 B                          1.62 MB  
+read_source_models converter=626 B fnames=230 B                                    6.27 KB  
+split_filter       srcs=4.9 KB srcfilter=380 B seed=14 B                           1.62 MB  
 classical          group=1.65 MB param=75.27 KB src_filter=31.21 KB gsims=13.58 KB 155.02 KB
-build_hazard_stats pgetter=5.93 KB hstats=67 B individual_curves=13 B              1.92 KB  
+build_hazard_stats pgetter=6.09 KB hstats=67 B individual_curves=13 B              11.87 KB 
 ================== =============================================================== =========
 
 Slowest operations
@@ -158,18 +158,19 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          11        1.05078   34    
-get_poes                 6.82806   0.0       2,932 
-total split_filter       4.48514   6.16797   1     
-make_contexts            4.45714   0.0       2,932 
-store source_info        0.10883   0.37891   34    
-total read_source_models 0.07772   0.87891   2     
-managing sources         0.04524   0.01172   1     
-aggregate curves         0.00979   0.0       34    
-store source model       0.00557   0.0       2     
-total build_hazard_stats 0.00557   1.63281   1     
-combine pmaps            0.00484   1.54688   1     
-saving probability maps  0.00231   0.0       1     
-saving statistics        7.718E-04 0.0       1     
-compute mean             5.288E-04 0.08594   1     
+total classical          11        0.98828   34    
+get_poes                 6.84276   0.0       2,932 
+make_contexts            4.48047   0.0       2,932 
+total split_filter       4.41548   6.05078   1     
+total read_source_models 0.08151   0.90234   2     
+managing sources         0.04593   0.00391   1     
+aggregate curves         0.01154   0.0       34    
+total build_hazard_stats 0.00572   1.42578   1     
+combine pmaps            0.00482   1.42578   1     
+store source model       0.00429   0.0       2     
+saving statistics        0.00281   0.0       1     
+saving probability maps  0.00225   0.0       1     
+store source_info        0.00192   0.0       1     
+compute mean             5.367E-04 0.0       1     
+build individual hmaps   1.366E-04 0.0       1     
 ======================== ========= ========= ======
