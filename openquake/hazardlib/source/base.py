@@ -279,13 +279,12 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         Yields one random rupture from a source
         """
-        if rupture_mutex:
-            msg = 'Mutually exclusive ruptures are admitted only in case of'
-            msg += ' non-parametric sources'
-            raise ValueError(msg)
+        # The Mutex case is admitted only for non-parametric ruptures
+        msg = 'Mutually exclusive ruptures are admitted only in case of'
+        msg += ' non-parametric sources'
+        assert(rupture_mutex), msg
+        # Set random seed and get the number of ruptures
         num_ruptures = self.count_ruptures()
-        # TODO Need to ask Michele about the seed of the random number
-        # generator
         numpy.random.seed(self.serial)
         idx = numpy.random.choice(num_ruptures)
         # NOTE Would be nice to have a method generating a rupture given two
