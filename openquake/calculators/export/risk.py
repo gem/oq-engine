@@ -143,8 +143,7 @@ def export_avg_losses(ekey, dstore):
 
 
 # this is used by ebrisk
-@export.add(('losses_by_site-rlzs', 'csv'), ('losses_by_site-stats', 'csv'),
-            ('losses_by_site', 'csv'))
+@export.add(('losses_by_site', 'csv'))
 def export_losses_by_site(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -153,24 +152,12 @@ def export_losses_by_site(ekey, dstore):
     dskey = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
-    if '-' in dskey:
-        name, kind = dskey.split('-')
-    else:
-        name, kind = dskey, 'stats'
-    if kind == 'stats':
-        weights = dstore['csm_info'].rlzs['weight']
-        tags, stats = zip(*oq.hazard_stats())
-        value = compute_stats2(dstore[name].value, stats, weights)
-    else:  # rlzs
-        value = dstore[dskey].value  # shape (N, R, L)
-        R = value.shape[1]
-        tags = ['rlz-%03d' % r for r in range(R)]
+    value = dstore[dskey].value  # shape (N, L)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     geo = dstore['sitecol'].array[['lon', 'lat']]
-    for r, tag in enumerate(tags):
-        arr = value[:, r].copy().view(dt)[:, 0]
-        dest = dstore.build_fname(name, tag, 'csv')
-        writer.save(compose_arrays(geo, arr), dest)
+    arr = value.copy().view(dt)[:, 0]
+    dest = dstore.build_fname('avg_losses', 'mean', 'csv')
+    writer.save(compose_arrays(geo, arr), dest)
     return writer.getsaved()
 
 
