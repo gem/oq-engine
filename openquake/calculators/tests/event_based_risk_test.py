@@ -217,19 +217,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   fname, delta=1E-5)
 
     @attr('qa', 'risk', 'ebrisk')
-    def test_case_master2(self):
-        self.run_calc(case_master.__file__, 'job.ini',
-                      calculation_mode='ebrisk', aggregate_by='taxonomy',
-                      insured_losses='false')
-        # avg_losses-rlzs has shape (L=5, R=9)
-        # avg_losses-stats has shape (L=5, S=4)
-        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses.txt', fname)
-
-        fname = export(('losses_by_site', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses_by_site.csv', fname)
-
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
@@ -278,6 +265,21 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         self.check_multi_tag(self.calc.datastore)
 
+        # ------------------------- ebrisk calculator ---------------------- #
+        self.run_calc(case_master.__file__, 'job.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id),
+                      calculation_mode='ebrisk', exports='',
+                      aggregate_by='taxonomy',
+                      insured_losses='false')
+
+        # avg_losses-rlzs has shape (L=5, R=9)
+        # avg_losses-stats has shape (L=5, S=4)
+        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/avglosses.txt', fname)
+
+        fname = export(('losses_by_site', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/avglosses_by_site.csv', fname)
+
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         url = 'aggregate_by/taxonomy,occupancy/avg_losses/structural'
@@ -294,24 +296,27 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
-    @attr('qa', 'risk', 'event_based_risk')
+    @attr('qa', 'risk', 'ebrisk')
     def test_case_miriam(self):
-        event_based.RUPTURES_PER_BLOCK = 20
-
         # this is a case with a grid and asset-hazard association
-        self.run_calc(case_miriam.__file__, 'job.ini',
-                      calculation_mode='ebrisk')
+        event_based.RUPTURES_PER_BLOCK = 20
+        self.run_calc(case_miriam.__file__, 'job.ini')
 
         # check minimum_magnitude >= 5.2
         minmag = self.calc.datastore['ruptures']['mag'].min()
         self.assertGreaterEqual(minmag, 5.2)
+
+        self.run_calc(case_miriam.__file__, 'job.ini',
+                      calculation_mode='ebrisk',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+
         # [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         # self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
         #                       fname, delta=1E-5)
-        # fname = gettemp(view('portfolio_losses', self.calc.datastore))
-        # self.assertEqualFiles(
-        #    'expected/portfolio_losses.txt', fname, delta=1E-5)
-        # os.remove(fname)
+        fname = gettemp(view('portfolio_losses', self.calc.datastore))
+        self.assertEqualFiles(
+            'expected/portfolio_losses.txt', fname, delta=1E-5)
+        os.remove(fname)
 
         # this is a case with exposure and region_grid_spacing=1
         self.run_calc(case_miriam.__file__, 'job2.ini')
