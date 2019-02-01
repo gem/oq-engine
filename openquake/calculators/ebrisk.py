@@ -73,7 +73,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
     mon = monitor('getting assets', measuremem=False)
-    with datastore.read(rupgetter.hdf5path) as dstore:
+    with datastore.read(srcfilter.hdf5path) as dstore:
         assgetter = getters.AssetGetter(dstore)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
@@ -153,7 +153,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         super().pre_execute(pre_calculator)
         # save a copy of the assetcol in hdf5cache
         self.hdf5cache = self.datastore.hdf5cache()
-        with hdf5.File(self.hdf5cache) as cache:
+        with hdf5.File(self.hdf5cache, 'w') as cache:
             cache['assetcol'] = self.assetcol
         self.param['aggregate_by'] = self.oqparam.aggregate_by
         self.N = len(self.sitecol.complete)
