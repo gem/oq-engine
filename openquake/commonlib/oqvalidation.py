@@ -281,9 +281,14 @@ class OqParam(valid.ParamSet):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
 
-        # check for ebrisk
-        if self.calculation_mode == 'ebrisk' and self.insured_losses:
-            raise ValueError('ebrisk does not support insured losses')
+        # checks for ebrisk
+        if self.calculation_mode == 'ebrisk':
+            if self.insured_losses:
+                raise ValueError('ebrisk does not support insured losses')
+            elif self.hazard_calculation_id is None:
+                raise ValueError('ebrisk requires hazard_calculation_id')
+            elif self.number_of_logic_tree_samples == 0:
+                logging.warn('ebrisk is not meant for full enumeration')
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
@@ -302,11 +307,6 @@ class OqParam(valid.ParamSet):
             if self.number_of_logic_tree_samples >= TWO16:
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
-
-        # check for ebrisk
-        if (self.calculation_mode == 'ebrisk' and
-                self.number_of_logic_tree_samples == 0):
-            logging.warn('ebrisk is not meant for full enumeration')
 
         # check grid + sites
         if (self.region_grid_spacing and 'site_model' in self.inputs
