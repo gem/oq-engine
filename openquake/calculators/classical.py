@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import time
 import logging
 import operator
 import numpy
@@ -22,6 +23,7 @@ import numpy
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc
@@ -257,16 +259,47 @@ class ClassicalCalculator(base.HazardCalculator):
             self.save_hazard_stats)
 
 
+def preclassical(group, src_filter, gsims, param, monitor):
+    """
+    Compute the context arrays; called only when there is a single site.
+    :returns: a dictionary with keys calc_times, eff_ruptures, ctx_array
+    """
+    maxdist = src_filter.integration_distance
+    cmaker = ContextMaker(gsims, maxdist, param, monitor)
+    ctxs = []
+    calc_times = AccumDict(accum=numpy.zeros(3, F32))
+    for src, s_sites in src_filter(group):
+        t0 = time.time()
+        ctxs.append(cmaker.make_context_array(src, s_sites))
+        calc_times[src.id] += numpy.array(
+            [src.weight, len(s_sites), time.time() - t0])
+    if ctxs:
+        ctx_array = numpy.concatenate(ctxs)
+    else:
+        ctx_array = ()
+    dic = {'calc_times': calc_times, 'eff_ruptures': len(ctx_array),
+           'ctx_array': ctx_array}
+    return dic
+
+
 @base.calculators.add('preclassical')
 class PreCalculator(ClassicalCalculator):
     """
     Calculator to filter the sources and compute the number of effective
     ruptures
     """
+    core_task = preclassical
+
     def execute(self):
+        if len(self.sitecol) == 1:
+            super().execute()
+            contexts = self.datastore['contexts'].value
+            contexts.sort(order=['srcidx', 'mag'])
+            self.datastore['contexts'] = contexts
+            return {}
+
         eff_ruptures = AccumDict(accum=0)
-        # weight, nsites, time
-        calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        calc_times = AccumDict(accum=numpy.zeros(3, F32))  # w, n, t
         for src in self.csm.get_sources():
             for grp_id in src.src_group_ids:
                 eff_ruptures[grp_id] += src.num_ruptures
@@ -275,6 +308,20 @@ class PreCalculator(ClassicalCalculator):
         self.store_csm_info(eff_ruptures)
         self.store_source_info(calc_times)
         return {}
+
+    def agg_dicts(self, acc, dic):
+        """
+        Aggregate dictionaries of hazard curves by updating the accumulator.
+
+        :param acc: accumulator dictionary
+        :param dic: dictionary with keys pmap, calc_times, eff_ruptures
+        """
+        with self.monitor('save contexts', autoflush=True):
+            acc.eff_ruptures += dic['eff_ruptures']
+            self.datastore.extend('contexts',  dic['ctx_array'])
+        self.calc_times += dic['calc_times']
+        self.nsites.append(1)
+        return acc
 
 
 def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
