@@ -174,7 +174,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         trt = self.csm_info.trt_by_grp[rup['grp_id']]
         sids = self.rtree_filter.close_sids(rup, trt, rup['mag'])
-        weight = self.num_taxonomies[sids].sum() * rup['n_occ']
+        weight = self.num_taxonomies[sids].sum()
         self.rupweights.append(weight)
         return weight
 
