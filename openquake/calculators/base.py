@@ -447,6 +447,15 @@ class HazardCalculator(BaseCalculator):
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
+    @general.cached_property
+    def rtree_filter(self):
+        """
+        :returns: an RtreeFilter
+        """
+        return RtreeFilter(self.src_filter.sitecol,
+                           self.oqparam.maximum_distance,
+                           self.src_filter.hdf5path)
+
     @property
     def E(self):
         """
@@ -488,7 +497,7 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
-            if (oq.prefilter_sources != 'no' and
+            if (self.sitecol is not None and oq.prefilter_sources != 'no' and
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
                 split = not oq.is_event_based()
                 dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
@@ -497,9 +506,7 @@ class HazardCalculator(BaseCalculator):
                     srcfilter = self.src_filter
                 else:
                     # prefilter on the controller node with Rtree
-                    srcfilter = RtreeFilter(self.src_filter.sitecol,
-                                            oq.maximum_distance,
-                                            self.src_filter.hdf5path)
+                    srcfilter = self.rtree_filter
                 self.csm = parallel_split_filter(
                     csm, srcfilter, split, self.monitor())
             else:
