@@ -186,10 +186,10 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-def split_sources(srcs):
+def split_sources(srcs, times=True):
     """
     :param srcs: sources
-    :returns: a pair (split sources, split time)
+    :returns: a pair (split sources, split time) or just the split_sources
     """
     from openquake.hazardlib.source import splittable
     sources = []
@@ -241,7 +241,9 @@ def split_sources(srcs):
                 splits[0].serial = src.serial
             if has_samples:
                 splits[0].samples = src.samples
-    return sources, split_time
+    if times:
+        return sources, split_time
+    return sources
 
 
 class SourceFilter(object):
