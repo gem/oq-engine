@@ -216,19 +216,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-    @attr('qa', 'risk', 'ebrisk')
-    def test_case_master2(self):
-        self.run_calc(case_master.__file__, 'job.ini',
-                      calculation_mode='ebrisk', aggregate_by='taxonomy',
-                      insured_losses='false')
-        # avg_losses-rlzs has shape (L=5, R=9)
-        # avg_losses-stats has shape (L=5, S=4)
-        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses.txt', fname)
-
-        fname = export(('losses_by_site', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses_by_site.csv', fname)
-
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
         if sys.platform == 'darwin':
@@ -277,6 +264,21 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/curves_by_occupancy.csv', fnames[0])
 
         self.check_multi_tag(self.calc.datastore)
+
+        # test ebrisk calculator
+        self.run_calc(case_master.__file__, 'job.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id),
+                      calculation_mode='ebrisk',
+                      aggregate_by='taxonomy',
+                      insured_losses='false')
+
+        # avg_losses-rlzs has shape (L=5, R=9)
+        # avg_losses-stats has shape (L=5, S=4)
+        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/avglosses.txt', fname)
+
+        fname = export(('losses_by_site', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/avglosses_by_site.csv', fname)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
