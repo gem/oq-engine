@@ -764,7 +764,8 @@ class HazardCalculator(BaseCalculator):
                           avg_losses=oq.avg_losses)
 
         # store the `exposed_value` if there is an exposure
-        if 'exposed_value' not in self.datastore and hasattr(self, 'assetcol'):
+        if 'exposed_value' not in set(self.datastore) and hasattr(
+                self, 'assetcol'):
             self.datastore['exposed_value'] = self.assetcol.agg_value(
                 *oq.aggregate_by)
 
