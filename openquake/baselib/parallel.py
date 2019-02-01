@@ -272,10 +272,14 @@ class Result(object):
     :param tb_str: traceback string (empty if there was no exception)
     :param msg: message string (default empty)
     """
+    func_args = ()
+
     def __init__(self, val, mon, tb_str='', msg='', count=0):
         if isinstance(val, dict):
             # store the size in bytes of the content
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
+        elif isinstance(val, tuple) and callable(val[0]):
+            self.func_args = val
         self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
@@ -726,6 +730,12 @@ class Starmap(object):
                 self.todo -= 1
             elif res.msg:
                 logging.warn(res.msg)
+            elif res.func_args:
+                orig = self.task_func
+                self.task_func, args = res.func_args
+                self.submit(*args)
+                self.task_func = orig
+                self.todo += 1
             else:
                 yield res
         self.log_percent()
