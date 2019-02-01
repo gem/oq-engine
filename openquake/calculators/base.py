@@ -492,7 +492,8 @@ class HazardCalculator(BaseCalculator):
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
                 split = not oq.is_event_based()
                 dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
-                if dist == 'celery' or 'ucerf' in oq.calculation_mode:
+                if (dist == 'celery' or 'ucerf' in oq.calculation_mode
+                        or self.sitecol is None):
                     # move the prefiltering on the workers
                     srcfilter = self.src_filter
                 else:
