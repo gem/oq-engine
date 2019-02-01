@@ -455,4 +455,4 @@ class DataStore(collections.MutableMapping):
 
     def __repr__(self):
         status = 'open' if self.hdf5 else 'closed'
-        return '<%s %d, %s>' % (self.__class__.__name__, self.calc_id, status)
+        return '<%s %s %s>' % (self.__class__.__name__, self.hdf5path, status)
