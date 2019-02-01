@@ -457,6 +457,15 @@ class HazardCalculator(BaseCalculator):
         except KeyError:
             return 0
 
+    @property
+    def N(self):
+        """
+        :returns: the total number of sites
+        """
+        if hasattr(self, 'sitecol'):
+            return len(self.sitecol.complete) if self.sitecol else None
+        return len(self.datastore['sitecol/array'])
+
     def check_overflow(self):
         """Overridden in event based"""
 
@@ -495,7 +504,6 @@ class HazardCalculator(BaseCalculator):
                     csm, srcfilter, split, self.monitor())
             else:
                 self.csm = csm
-        self.N = len(self.sitecol.complete) if self.sitecol else None
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
