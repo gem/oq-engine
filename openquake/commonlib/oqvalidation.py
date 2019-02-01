@@ -107,10 +107,8 @@ class OqParam(valid.ParamSet):
     max_hazard_curves = valid.Param(valid.boolean, False)
     max_num_sites = valid.Param(valid.positiveint, TWO16)
     max_potential_paths = valid.Param(valid.positiveint, 100)
-    mean_hazard_curves = valid.Param(valid.boolean, True)
+    mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
-    max_loss_curves = valid.Param(valid.boolean, False)
-    mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
@@ -118,8 +116,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
-    quantile_hazard_curves = valid.Param(valid.probabilities, [])
-    quantile_loss_curves = valid.Param(valid.probabilities, [])
+    quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
         valid.positivefloat, numpy.nan)
@@ -284,6 +281,10 @@ class OqParam(valid.ParamSet):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
 
+        # check for ebrisk
+        if self.calculation_mode == 'ebrisk' and self.insured_losses:
+            raise ValueError('ebrisk does not support insured losses')
+
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
                 'sites' not in self.inputs):
@@ -301,6 +302,11 @@ class OqParam(valid.ParamSet):
             if self.number_of_logic_tree_samples >= TWO16:
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
+
+        # check for ebrisk
+        if (self.calculation_mode == 'ebrisk' and
+                self.number_of_logic_tree_samples == 0):
+            logging.warn('ebrisk is not meant for full enumeration')
 
         # check grid + sites
         if (self.region_grid_spacing and 'site_model' in self.inputs
@@ -541,24 +547,6 @@ class OqParam(valid.ParamSet):
             names.append('quantile-%s' % q)
             funcs.append(functools.partial(stats.quantile_curve, q))
         if self.max_hazard_curves:
-            names.append('max')
-            funcs.append(stats.max_curve)
-        return list(zip(names, funcs))
-
-    def risk_stats(self):
-        """
-        Return a list of items with the statistical functions defined for the
-        risk calculation
-        """
-        names = []  # name of statistical functions
-        funcs = []  # statistical functions of kind func(values, weights)
-        if self.mean_loss_curves:
-            names.append('mean')
-            funcs.append(stats.mean_curve)
-        for q in self.quantile_loss_curves:
-            names.append('quantile-%s' % q)
-            funcs.append(functools.partial(stats.quantile_curve, q))
-        if self.max_loss_curves:
             names.append('max')
             funcs.append(stats.max_curve)
         return list(zip(names, funcs))
