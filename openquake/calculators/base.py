@@ -502,7 +502,7 @@ class HazardCalculator(BaseCalculator):
                     csm, srcfilter, split, self.monitor())
             else:
                 self.csm = csm
-        self.N = len(self.sitecol.complete)
+        self.N = len(self.sitecol.complete) if self.sitecol else None
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
