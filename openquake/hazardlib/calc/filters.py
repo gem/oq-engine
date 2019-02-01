@@ -349,6 +349,8 @@ class SourceFilter(object):
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
         bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+        if hasattr(self, 'index'):  # RtreeFilter
+            return within(bb, self.index)
         return self.sitecol.within_bbox(bb)
 
     def filter(self, sources):
@@ -394,14 +396,15 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance, hdf5path=None):
+        assert sitecol, 'Mandatory in an RtreeFilter'
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
         index = rtree.index.Index(self.indexpath)
-        if sitecol:
-            lonlats = zip(sitecol.lons, sitecol.lats)
-            for i, (lon, lat) in enumerate(lonlats):
-                index.insert(i, (lon, lat, lon, lat))
+        lonlats = zip(sitecol.lons, sitecol.lats)
+        for i, (lon, lat) in enumerate(lonlats):
+            index.insert(i, (lon, lat, lon, lat))
         index.close()
+        self.index = rtree.index.Index(self.indexpath)
 
     def filter(self, sources):
         """
@@ -411,16 +414,12 @@ class RtreeFilter(SourceFilter):
         if self.sitecol is None:  # do not filter
             yield from sources
             return
-        index = rtree.index.Index(self.indexpath)
-        try:
-            for src in sources:
-                box = self.integration_distance.get_affected_box(src)
-                indices = within(box, index)
-                if len(indices):
-                    src.indices = indices
-                    yield src
-        finally:
-            index.close()
+        for src in sources:
+            box = self.integration_distance.get_affected_box(src)
+            indices = within(box, self.index)
+            if len(indices):
+                src.indices = indices
+                yield src
 
 
 nofilter = SourceFilter(None, {})

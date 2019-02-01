@@ -447,6 +447,15 @@ class HazardCalculator(BaseCalculator):
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
+    @general.cached_property
+    def rtree_filter(self):
+        """
+        :returns: an RtreeFilter
+        """
+        return RtreeFilter(self.src_filter.sitecol,
+                           self.oqparam.maximum_distance,
+                           self.src_filter.hdf5path)
+
     @property
     def E(self):
         """
@@ -488,9 +497,7 @@ class HazardCalculator(BaseCalculator):
                     srcfilter = self.src_filter
                 else:
                     # prefilter on the controller node with Rtree
-                    srcfilter = RtreeFilter(self.src_filter.sitecol,
-                                            oq.maximum_distance,
-                                            self.src_filter.hdf5path)
+                    srcfilter = self.rtree_filter
                 self.csm = parallel_split_filter(
                     csm, srcfilter, split, self.monitor())
             else:
