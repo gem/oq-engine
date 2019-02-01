@@ -26,7 +26,7 @@ import rtree
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import gettemp, cached_property
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
@@ -282,7 +282,8 @@ class SourceFilter(object):
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
-        if not os.path.exists(self.hdf5path):  # case of nofilter/None sitecol
+        if self.hdf5path is None or not os.path.exists(self.hdf5path):
+            # case of nofilter/None sitecol
             return
         with hdf5.File(self.hdf5path, 'r') as h5:
             self.__dict__['sitecol'] = sc = h5.get('sitecol')
@@ -355,6 +356,8 @@ class SourceFilter(object):
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
         bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+        if hasattr(self, 'index'):  # RtreeFilter
+            return within(bb, self.index)
         return self.sitecol.within_bbox(bb)
 
     def filter(self, sources):
@@ -400,14 +403,21 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance, hdf5path=None):
+        assert sitecol, 'Mandatory in an RtreeFilter'
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
         index = rtree.index.Index(self.indexpath)
-        if sitecol:
-            lonlats = zip(sitecol.lons, sitecol.lats)
-            for i, (lon, lat) in enumerate(lonlats):
-                index.insert(i, (lon, lat, lon, lat))
+        lonlats = zip(sitecol.lons, sitecol.lats)
+        for i, (lon, lat) in enumerate(lonlats):
+            index.insert(i, (lon, lat, lon, lat))
         index.close()
+
+    @cached_property
+    def index(self):
+        """
+        :returns: the underlying index object
+        """
+        return rtree.index.Index(self.indexpath)
 
     def filter(self, sources):
         """
@@ -417,19 +427,16 @@ class RtreeFilter(SourceFilter):
         if self.sitecol is None:  # do not filter
             yield from sources
             return
-        index = rtree.index.Index(self.indexpath)
-        try:
-            for src in sources:
-                box = self.integration_distance.get_affected_box(src)
-                indices = within(box, index)
-                if len(indices):
-                    src.indices = indices
-                    yield src
-        finally:
-            index.close()
+        for src in sources:
+            box = self.integration_distance.get_affected_box(src)
+            indices = within(box, self.index)
+            if len(indices):
+                src.indices = indices
+                yield src
 
     def __getstate__(self):
-        # the RtreeFilter is pickleable with processpool
+        # NB: the RtreeFilter can be transferred on a single machine only
+        # (on a cluster, even, with a shared_dir, there are permission errors)
         return dict(hdf5path=self.hdf5path,
                     indexpath=self.indexpath,
                     integration_distance=self.integration_distance)
