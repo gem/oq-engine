@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
 import time
 import operator
@@ -24,7 +25,7 @@ import numpy
 import rtree
 from scipy.interpolate import interp1d
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
@@ -263,12 +264,10 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if hdf5path and (
-                config.distribution.oq_distribute in ('no', 'processpool') or
-                config.directory.shared_dir):  # store the sitecol
+        if sitecol is not None and hdf5path and not os.path.exists(hdf5path):
+            # store the sitecol
             with hdf5.File(hdf5path, 'w') as h5:
-                if sitecol is not None:
-                    h5['sitecol'] = sitecol
+                h5['sitecol'] = sitecol
         else:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
