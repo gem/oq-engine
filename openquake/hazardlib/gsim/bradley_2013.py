@@ -96,7 +96,7 @@ class Bradley2013(GMPE):
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
         exp2 = np.exp(C['phi3'] * (1130 - 360))
         # v1 is the period dependent site term. The Vs30 above which, the
-        # amplifica4tion is constant
+        # amplification is constant
         v1 = self._get_v1(imt)
 
         mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
