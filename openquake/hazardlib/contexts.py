@@ -101,8 +101,9 @@ class ContextMaker(object):
         self.REQUIRES_DISTANCES.add(self.filter_distance)
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
-            # since the ContextMaker must be used on ruptures with all the
+        if hasattr(gsims, 'items'):
+            # gsims is actually a dict rlzs_by_gsim
+            # since the ContextMaker must be used on ruptures with the
             # same TRT, given a realization there is a single gsim
             self.gsim_by_rlzi = {}
             for gsim, rlzis in gsims.items():
@@ -111,6 +112,11 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+        self.ctx_array_dt = dtlist = [('srcidx', numpy.uint32)]
+        for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
+            dtlist.append((rup_param, float))
+        for dist_param in self.REQUIRES_DISTANCES:
+            dtlist.append((dist_param, float))
 
     def filter(self, sites, rupture):
         """
@@ -200,6 +206,28 @@ class ContextMaker(object):
         # access site parameters different from the ones declared
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
+
+    def make_context_array(self, src, sites):
+        """
+        :param src: a source object
+        :param sites: a SiteCollection with a single site
+        :returns: a context array with the rupture and distance parameters
+        """
+        assert len(sites) == 1, 'make_context_array requires a single site'
+        ctx_array = []
+        for rup, sites in self.get_rupture_sites(src, sites):
+            try:
+                with self.ctx_mon:
+                    sctx, dctx = self.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            row = [src.id]
+            for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
+                row.append(getattr(rup, rup_param))
+            for dist_param in self.REQUIRES_DISTANCES:
+                row.append(getattr(dctx, dist_param)[0])
+            ctx_array.append(tuple(row))
+        return numpy.array(ctx_array, self.ctx_array_dt)
 
     def get_rupture_sites(self, src, sites):
         """
