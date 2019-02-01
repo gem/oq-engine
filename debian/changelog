@@ -1,3 +1,7 @@
+  [Chris Van Houtte]
+  * Adding conversion from geometric mean to larger horizontal component in
+    bradley_2013.py
+
   [Michele Simionato]
   * Fixed a bug in applyToSources for the case of multiple sources
   * Moved the prefiltering on the workers to save memory
