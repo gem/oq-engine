@@ -26,7 +26,7 @@ import rtree
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import gettemp, cached_property
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
@@ -408,7 +408,13 @@ class RtreeFilter(SourceFilter):
         for i, (lon, lat) in enumerate(lonlats):
             index.insert(i, (lon, lat, lon, lat))
         index.close()
-        self.index = rtree.index.Index(self.indexpath)
+
+    @cached_property
+    def index(self):
+        """
+        :returns: the underlying index object
+        """
+        return rtree.index.Index(self.indexpath)
 
     def filter(self, sources):
         """
@@ -426,7 +432,7 @@ class RtreeFilter(SourceFilter):
                 yield src
 
     def __getstate__(self):
-        # the RtreeFilter is pickleable with processpool
+        # the RtreeFilter is pickleable with processpool, not with celery
         return dict(hdf5path=self.hdf5path,
                     indexpath=self.indexpath,
                     integration_distance=self.integration_distance)
