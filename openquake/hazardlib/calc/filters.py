@@ -271,7 +271,7 @@ class SourceFilter(object):
         else:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
-    def __getstate(self):
+    def __getstate__(self):
         return dict(hdf5path=self.hdf5path,
                     integration_distance=self.integration_distance)
 
