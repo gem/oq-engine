@@ -384,13 +384,6 @@ class EventBasedCalculator(base.HazardCalculator):
                                'all below the minimum_intensity threshold')
         return acc
 
-    def save_gmf_bytes(self):
-        """Save the attribute nbytes in the gmf_data datasets"""
-        ds = self.datastore
-        for sm_id in ds['gmf_data']:
-            ds.set_nbytes('gmf_data/' + sm_id)
-        ds.set_nbytes('gmf_data')
-
     def post_execute(self, result):
         oq = self.oqparam
         if not oq.ground_motion_fields:
@@ -434,8 +427,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if self.datastore.parent:
             self.datastore.parent.open('r')
-        if 'gmf_data' in self.datastore:
-            self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):

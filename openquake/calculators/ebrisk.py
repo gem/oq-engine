@@ -176,6 +176,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         with self.rupweight_mon:
             trt = self.csm_info.trt_by_grp[rup['grp_id']]
+            # NB: self.rtree_filter was 50% slower for South America
             sids = self.src_filter.close_sids(rup, trt, rup['mag'])
             weight = self.num_taxonomies[sids].sum()
             self.rupweights.append(weight)
