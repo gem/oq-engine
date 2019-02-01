@@ -434,7 +434,8 @@ class RtreeFilter(SourceFilter):
                 yield src
 
     def __getstate__(self):
-        # the RtreeFilter is pickleable with processpool, not with celery
+        # NB: the RtreeFilter can be transferred on a single machine only
+        # (on a cluster, even, with a shared_dir, there are permission errors)
         return dict(hdf5path=self.hdf5path,
                     indexpath=self.indexpath,
                     integration_distance=self.integration_distance)
