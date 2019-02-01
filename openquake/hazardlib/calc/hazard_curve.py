@@ -67,6 +67,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
+
 def _cluster(param, imtls, gsims, grp_ids, pmap):
     """
     Computes the probability map in case of a cluster group
@@ -90,6 +91,7 @@ def _cluster(param, imtls, gsims, grp_ids, pmap):
     pmap = ~pmapclu
     return pmap
 
+
 def classical(group, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
@@ -101,6 +103,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
         .eff_ruptures
     """
+    if not hasattr(src_filter, 'sitecol'):  # a sitecol was passed
+        src_filter = SourceFilter(src_filter, {})
+
     # Get the parameters assigned to the group
     src_mutex = param.get('src_interdep') == 'mutex'
     rup_mutex = param.get('rup_interdep') == 'mutex'
@@ -214,12 +219,6 @@ def calc_hazard_curves(
         for src in grp:
             if src.src_group_id is None:
                 src.src_group_id = i
-    if hasattr(ss_filter, 'sitecol'):  # a filter, as it should be
-        sitecol = ss_filter.sitecol
-    else:  # backward compatibility, a site collection was passed
-        sitecol = ss_filter
-        ss_filter = SourceFilter(sitecol, {})
-
     imtls = DictArray(imtls)
     param = dict(imtls=imtls, truncation_level=truncation_level,
                  filter_distance=filter_distance, reqv=reqv,
@@ -245,4 +244,5 @@ def calc_hazard_curves(
         for dic in it:
             for grp_id, pval in dic['pmap'].items():
                 pmap |= pval
+    sitecol = getattr(ss_filter, 'sitecol', ss_filter)
     return pmap.convert(imtls, len(sitecol.complete))
