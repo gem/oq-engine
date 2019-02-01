@@ -488,12 +488,11 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
-            if (oq.prefilter_sources != 'no' and
+            if (self.sitecol is not None and oq.prefilter_sources != 'no' and
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
                 split = not oq.is_event_based()
                 dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
-                if (dist == 'celery' or 'ucerf' in oq.calculation_mode
-                        or self.sitecol is None):
+                if dist == 'celery' or 'ucerf' in oq.calculation_mode:
                     # move the prefiltering on the workers
                     srcfilter = self.src_filter
                 else:
