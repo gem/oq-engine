@@ -46,13 +46,13 @@ def _to_matrix(matrices, num_trts):
     return mat
 
 
-def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
+def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param src_filter:
-        a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param sources:
         list of hazardlib source objects
     :param cmaker:
@@ -74,10 +74,10 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
     result = {'trti': trti, 'num_ruptures': 0}
     # all the time is spent in collect_bin_data
     bin_data = disagg.collect_bin_data(
-        sources, src_filter.sitecol, cmaker, iml4,
+        sources, sitecol, cmaker, iml4,
         oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
     if bin_data:  # dictionary poe, imt, rlzi -> pne
-        for sid in src_filter.sitecol.sids:
+        for sid in sitecol.sids:
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
                     bin_data, bin_edges, sid, monitor).items():
                 result[sid, rlzi, poe, imt] = matrix
@@ -290,7 +290,7 @@ producing too small PoEs.'''
                     {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
-                        (src_filter, block, cmaker, iml4, trti,
+                        (src_filter.sitecol, block, cmaker, iml4, trti,
                          self.bin_edges, oq))
 
         self.num_ruptures = [0] * len(self.trts)
