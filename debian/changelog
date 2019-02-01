@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Fixed a bug in applyToSources for the case of multiple sources
+  * Moved the prefiltering on the workers to save memory
+  * Exported the aggregated loss ratios in avg losses and agg losses
+  * Removed the variables quantile_loss_curves and mean_loss_curves: they
+    were duplicating quantile_hazard_curves and mean_hazard_curves
   * Only ruptures boundingbox-close to the site collection are stored
 
   [Marco Pagani]
