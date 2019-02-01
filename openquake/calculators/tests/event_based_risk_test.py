@@ -216,7 +216,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-    @attr('qa', 'risk', 'event_based_risk')
+    @attr('qa', 'risk', 'ebrisk')
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
@@ -265,10 +265,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         self.check_multi_tag(self.calc.datastore)
 
-        # test ebrisk calculator
+        # ------------------------- ebrisk calculator ---------------------- #
         self.run_calc(case_master.__file__, 'job.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id),
-                      calculation_mode='ebrisk',
+                      calculation_mode='ebrisk', exports='',
                       aggregate_by='taxonomy',
                       insured_losses='false')
 
