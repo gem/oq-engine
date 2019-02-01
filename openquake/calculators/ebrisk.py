@@ -164,7 +164,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.num_taxonomies = self.assetcol.num_taxonomies_by_site()
         self.datastore.create_dset('losses_by_site', F32, (self.N, L))
         self.rupweights = []
-        self.rupweight_mon = self.monitor('compute rupture weight',
+        self.rupweight_mon = self.monitor('calc rupture weight',
                                           measuremem=False)
 
     def acc0(self):
@@ -177,7 +177,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with self.rupweight_mon:
             trt = self.csm_info.trt_by_grp[rup['grp_id']]
             sids = self.src_filter.close_sids(rup, trt, rup['mag'])
-            weight = self.num_taxonomies[sids].sum() * rup['n_occ']
+            weight = self.num_taxonomies[sids].sum()
             self.rupweights.append(weight)
         return weight
 
@@ -248,6 +248,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         if self.rupweights:
             self.datastore['rupweights'] = self.rupweights
+            self.rupweight_mon.flush()
         del self.rupweights
         self.datastore.set_attrs('task_info/ebrisk', times=times)
         logging.info('Building losses_by_rlz')
