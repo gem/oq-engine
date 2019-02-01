@@ -282,7 +282,8 @@ class SourceFilter(object):
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
-        if not os.path.exists(self.hdf5path):  # case of nofilter/None sitecol
+        if self.hdf5path is None or not os.path.exists(self.hdf5path):
+            # case of nofilter/None sitecol
             return
         with hdf5.File(self.hdf5path, 'r') as h5:
             self.__dict__['sitecol'] = sc = h5.get('sitecol')
