@@ -271,6 +271,10 @@ class SourceFilter(object):
         else:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
+    def __getstate__(self):
+        return dict(hdf5path=self.hdf5path,
+                    integration_distance=self.integration_distance)
+
     @property
     def sitecol(self):
         """
@@ -278,6 +282,8 @@ class SourceFilter(object):
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
+        if not os.path.exists(self.hdf5path):  # case of nofilter/None sitecol
+            return
         with hdf5.File(self.hdf5path, 'r') as h5:
             self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
@@ -421,6 +427,12 @@ class RtreeFilter(SourceFilter):
                     yield src
         finally:
             index.close()
+
+    def __getstate__(self):
+        # the RtreeFilter is pickleable with processpool
+        return dict(hdf5path=self.hdf5path,
+                    indexpath=self.indexpath,
+                    integration_distance=self.integration_distance)
 
 
 nofilter = SourceFilter(None, {})

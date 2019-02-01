@@ -457,6 +457,15 @@ class HazardCalculator(BaseCalculator):
         except KeyError:
             return 0
 
+    @property
+    def N(self):
+        """
+        :returns: the total number of sites
+        """
+        if hasattr(self, 'sitecol'):
+            return len(self.sitecol.complete) if self.sitecol else None
+        return len(self.datastore['sitecol/array'])
+
     def check_overflow(self):
         """Overridden in event based"""
 
