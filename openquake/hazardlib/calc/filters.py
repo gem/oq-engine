@@ -426,5 +426,11 @@ class RtreeFilter(SourceFilter):
         finally:
             index.close()
 
+    def __getstate__(self):
+        # the RtreeFilter is pickleable with processpool
+        return dict(hdf5path=self.hdf5path,
+                    indexpath=self.indexpath,
+                    integration_distance=self.integration_distance)
+
 
 nofilter = SourceFilter(None, {})
