@@ -294,7 +294,7 @@ class PreCalculator(ClassicalCalculator):
         if len(self.sitecol) == 1:
             super().execute()
             contexts = self.datastore['contexts'].value
-            contexts.sort(order=['srcidx', 'mag'])
+            contexts.sort(order=['srcidx'])
             self.datastore['contexts'] = contexts
             return {}
 
