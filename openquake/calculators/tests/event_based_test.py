@@ -156,7 +156,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
-    @attr('qa', 'hazard', 'event_based')
+    @attr('qa', 'hazard', 'ebrisk')
     def test_case_1_ruptures(self):
         self.run_calc(case_1.__file__, 'job_ruptures.ini')
         self.assertEqual(len(self.calc.datastore['ruptures']), 1)
