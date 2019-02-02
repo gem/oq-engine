@@ -105,8 +105,8 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # test predisagg
         self.run_calc(case_2.__file__, 'job.ini', calculation_mode='predisagg')
-        self.assertEqual(list(self.calc.datastore['rup_data']),
-                         ['Active Shallow Crust', 'Subduction IntraSlab'])
+        self.assertEqual(set(self.calc.datastore['rup_data']),
+                         {'Active Shallow Crust', 'Subduction IntraSlab'})
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_3(self):
