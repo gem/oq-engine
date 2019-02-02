@@ -202,23 +202,25 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def make_rup_data(self, src, sites):
+    def make_rup_data(self, src, sitecol):
         """
         :param src: a source object
-        :param sites: a complete SiteCollection object
+        :param sitecol: a complete SiteCollection object
         :returns: a context array with the rupture and distance parameters
         """
-        assert sites is sites.complete, sites
-        N = len(sites)
+        assert sitecol is sitecol.complete, sitecol
+        N = len(sitecol)
         dtlist = [('srcidx', numpy.uint32)]
         for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
             dtlist.append((rup_param, float))
         for dist_param in self.REQUIRES_DISTANCES:
             dtlist.append((dist_param, (float, N)))
+        dtlist.append(('lon', (float, N)))  # closest lons
+        dtlist.append(('lat', (float, N)))  # closest lats
         rup_data = []
         for rup in src.iter_ruptures():
             with self.ctx_mon:
-                sctx, dctx = self.make_contexts(sites, rup, filterflag=False)
+                sctx, dctx = self.make_contexts(sitecol, rup, filterflag=False)
             row = [src.id]
             for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
                 row.append(getattr(rup, rup_param))
@@ -230,6 +232,9 @@ class ContextMaker(object):
                     within_maxdist += 1
                 row.append(distances)
             if within_maxdist:
+                closest = rup.surface.get_closest_points(sitecol)
+                row.append(closest.lons)
+                row.append(closest.lats)
                 rup_data.append(tuple(row))
         return numpy.array(rup_data, dtlist)
 
