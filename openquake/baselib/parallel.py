@@ -458,7 +458,7 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            self.save_task_info(result.mon, mem_gb)
+            save_task_info(self, result, mem_gb)
             yield val
         if self.received:
             tot = sum(self.received)
@@ -470,16 +470,6 @@ class IterResult(object):
             if nbytes:
                 logging.info('Received %s',
                              {k: humansize(v) for k, v in nbytes.items()})
-
-    def save_task_info(self, mon, mem_gb):
-        if self.hdf5:
-            mon.hdf5 = self.hdf5
-            duration = mon.duration
-            t = (mon.task_no, mon.weight, duration, self.received[-1], mem_gb)
-            data = numpy.array([t], task_info_dt)
-            hdf5.extend(self.hdf5['task_info/' + self.name], data,
-                        argnames=self.argnames, sent=self.sent)
-        mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -505,6 +495,20 @@ class IterResult(object):
             else:
                 res.name = iresult.name.split('#')[0]
         return res
+
+
+def save_task_info(self, res, mem_gb=0, name=None):
+    mon = res.mon
+    if self.hdf5:
+        if name:
+            mon.operation = 'total ' + name
+        mon.hdf5 = self.hdf5
+        duration = mon.duration
+        t = (mon.task_no, mon.weight, duration, len(res.pik), mem_gb)
+        data = numpy.array([t], task_info_dt)
+        hdf5.extend(self.hdf5['task_info/' + (name or self.name)], data,
+                    argnames=self.argnames, sent=self.sent)
+    mon.flush()
 
 
 def init_workers():
@@ -732,8 +736,9 @@ class Starmap(object):
                 logging.warn(res.msg)
             elif res.func_args:
                 orig = self.task_func
-                self.task_func, args = res.func_args
+                self.task_func, *args = res.func_args
                 self.submit(*args)
+                save_task_info(self, res, name=self.task_func.__name__)
                 self.task_func = orig
                 self.todo += 1
             else:

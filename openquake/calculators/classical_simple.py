@@ -15,23 +15,25 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+import logging
+import numpy
 from openquake.baselib import parallel, general
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.commonlib import readinput
 from openquake.calculators.classical import (
     base, classical, ClassicalCalculator, weight)
 
-MAXWEIGHT = 10000
+MAXWEIGHT = 1000
 
 
 def classical_launcher(src_group, src_filter, gsims, param, monitor):
-    if src_group.atomic:
-        yield classical, src_group, src_filter, gsims, param
+    if hasattr(src_group, 'atomic') and src_group.atomic:
+        yield classical(src_group, src_filter, gsims, param)
         return
     isources = src_filter.filter(
         split_sources(src_filter.filter(src_group), times=False))
-    yield from general.block_splitter(isources, MAXWEIGHT, weight)
+    for block in general.block_splitter(isources, MAXWEIGHT, weight):
+        yield classical, block, src_filter, gsims, param
 
 
 @base.calculators.add('classical_simple')
@@ -47,7 +49,20 @@ class SimpleCalculator(ClassicalCalculator):
 
     def execute(self):
         smap = parallel.Starmap(classical_launcher, monitor=self.monitor())
-        for sg in self.csm.src_groups:
+        csm_atomic, sources_by_trt = self.csm.split2()
+        for sg in csm_atomic.src_groups:
             gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
             smap.submit(sg, self.src_filter, gsims, self.param)
-        return smap.reduce(self.agg_dicts, self.acc0())
+        for trt, sources in sources_by_trt.items():
+            gsims = self.csm.info.gsim_lt.get_gsims(trt)
+            for block in self.block_splitter(sources):
+                smap.submit(block, self.src_filter, gsims, self.param)
+
+        self.nsites = []
+        self.calc_times = general.AccumDict(
+            accum=numpy.zeros(3, numpy.float32))
+        acc = smap.reduce(self.agg_dicts, self.acc0())
+        self.store_csm_info(acc.eff_ruptures)
+        if not self.nsites:
+            raise RuntimeError('All sources were filtered out!')
+        logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
