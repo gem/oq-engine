@@ -112,11 +112,6 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
-        self.ctx_array_dt = dtlist = [('srcidx', numpy.uint32)]
-        for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
-            dtlist.append((rup_param, float))
-        for dist_param in self.REQUIRES_DISTANCES:
-            dtlist.append((dist_param, float))
 
     def filter(self, sites, rupture):
         """
@@ -210,10 +205,15 @@ class ContextMaker(object):
     def make_context_array(self, src, sites):
         """
         :param src: a source object
-        :param sites: a SiteCollection with a single site
+        :param sites: a SiteCollection object
         :returns: a context array with the rupture and distance parameters
         """
-        assert len(sites) == 1, 'make_context_array requires a single site'
+        N = len(sites.complete)
+        dtlist = [('srcidx', numpy.uint32)]
+        for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
+            dtlist.append((rup_param, float))
+        for dist_param in self.REQUIRES_DISTANCES:
+            dtlist.append((dist_param, (float, N)))
         ctx_array = []
         for rup, sites in self.get_rupture_sites(src, sites):
             try:
@@ -225,9 +225,9 @@ class ContextMaker(object):
             for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
                 row.append(getattr(rup, rup_param))
             for dist_param in self.REQUIRES_DISTANCES:
-                row.append(getattr(dctx, dist_param)[0])
+                row.append(getattr(dctx, dist_param))
             ctx_array.append(tuple(row))
-        return numpy.array(ctx_array, self.ctx_array_dt)
+        return numpy.array(ctx_array, dtlist)
 
     def get_rupture_sites(self, src, sites):
         """
