@@ -113,7 +113,7 @@ class ContextMaker(object):
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
 
-    def filter(self, sites, rupture):
+    def filter(self, sites, rupture, flag=True):
         """
         Filter the site collection with respect to the rupture.
 
@@ -126,7 +126,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rupture, sites, self.filter_distance)
-        if self.maximum_distance:
+        if flag and self.maximum_distance:
             mask = distances <= self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
             if mask.any():
@@ -164,7 +164,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture):
+    def make_contexts(self, sites, rupture, filterflag=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -183,7 +183,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture)
+        sites, dctx = self.filter(sites, rupture, filterflag)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -202,32 +202,36 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def make_context_array(self, src, sites):
+    def make_rup_data(self, src, sites):
         """
         :param src: a source object
-        :param sites: a SiteCollection object
+        :param sites: a complete SiteCollection object
         :returns: a context array with the rupture and distance parameters
         """
-        N = len(sites.complete)
+        assert sites is sites.complete, sites
+        N = len(sites)
         dtlist = [('srcidx', numpy.uint32)]
         for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
             dtlist.append((rup_param, float))
         for dist_param in self.REQUIRES_DISTANCES:
             dtlist.append((dist_param, (float, N)))
-        ctx_array = []
-        for rup, sites in self.get_rupture_sites(src, sites):
-            try:
-                with self.ctx_mon:
-                    sctx, dctx = self.make_contexts(sites, rup)
-            except FarAwayRupture:
-                continue
+        rup_data = []
+        for rup in src.iter_ruptures():
+            with self.ctx_mon:
+                sctx, dctx = self.make_contexts(sites, rup, filterflag=False)
             row = [src.id]
             for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
                 row.append(getattr(rup, rup_param))
+            maxdist = self.maximum_distance(rup.tectonic_region_type, rup.mag)
+            within_maxdist = 0
             for dist_param in self.REQUIRES_DISTANCES:
-                row.append(getattr(dctx, dist_param))
-            ctx_array.append(tuple(row))
-        return numpy.array(ctx_array, dtlist)
+                distances = getattr(dctx, dist_param)
+                if (distances < maxdist).any():
+                    within_maxdist += 1
+                row.append(distances)
+            if within_maxdist:
+                rup_data.append(tuple(row))
+        return numpy.array(rup_data, dtlist)
 
     def get_rupture_sites(self, src, sites):
         """
