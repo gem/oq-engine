@@ -40,7 +40,7 @@ U64 = numpy.uint64
 U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
-MAX_RUPTURES = 1000
+MAX_RUPTURES = 2000
 
 
 # this is used in acceptance/stochastic_test.py, not in the engine
@@ -164,7 +164,8 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     for src in sources:
         t0 = time.time()
         if len(eb_ruptures) > MAX_RUPTURES:
-            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+            # yield partial result to avoid running out of memory
+            yield AccumDict(rup_array=get_rup_array(eb_ruptures, srcfilter),
                             calc_times={}, eff_ruptures={})
             eb_ruptures.clear()
         samples = getattr(src, 'samples', 1)
