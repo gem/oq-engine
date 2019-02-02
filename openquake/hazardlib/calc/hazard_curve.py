@@ -68,14 +68,13 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
 
-def _cluster(param, imtls, gsims, grp_ids, pmap):
+def _cluster(param, tom, imtls, gsims, grp_ids, pmap):
     """
     Computes the probability map in case of a cluster group
     """
-    tmp_pm = ProbabilityMap(len(imtls.array), len(gsims))
-    pmapclu = AccumDict({grp_id: tmp_pm for grp_id in grp_ids})
+    pmapclu = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
+                         for grp_id in grp_ids})
     # Get temporal occurrence model
-    tom = param.get('temporal_occurrence_model')
     # Number of occurrences for the cluster
     first = True
     for nocc in range(0, 50):
@@ -92,7 +91,7 @@ def _cluster(param, imtls, gsims, grp_ids, pmap):
     return pmap
 
 
-def classical(sources, src_filter, gsims, param, monitor=Monitor()):
+def classical(group, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -107,12 +106,12 @@ def classical(sources, src_filter, gsims, param, monitor=Monitor()):
         src_filter = SourceFilter(src_filter, {})
 
     # Get the parameters assigned to the group
-    src_mutex = param.get('src_interdep') == 'mutex'
-    rup_mutex = param.get('rup_interdep') == 'mutex'
-    cluster = param.get('cluster')
+    src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
+    rup_mutex = getattr(group, 'rup_interdep', None) == 'mutex'
+    cluster = getattr(group, 'cluster', None)
     # Compute the number of ruptures
     grp_ids = set()
-    for src in sources:
+    for src in group:
         if not src.num_ruptures:
             # src.num_ruptures is set when parsing the XML, but not when
             # the source is instantiated manually, so it is set here
@@ -134,7 +133,7 @@ def classical(sources, src_filter, gsims, param, monitor=Monitor()):
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     # Computing hazard
-    for src, s_sites in src_filter(sources):  # filter now
+    for src, s_sites in src_filter(group):  # filter now
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
@@ -157,11 +156,13 @@ def classical(sources, src_filter, gsims, param, monitor=Monitor()):
                          for gid in src.src_group_ids}
     # Updating the probability map in the case of mutually exclusive
     # sources
-    if src_mutex and param.get('grp_probability'):
-        pmap[src.src_group_id] *= param['grp_probability']
+    group_probability = getattr(group, 'grp_probability', None)
+    if src_mutex and group_probability:
+        pmap[src.src_group_id] *= group_probability
     # Processing cluster
     if cluster:
-        pmap = _cluster(param, imtls, gsims, grp_ids, pmap)
+        tom = getattr(group, 'temporal_occurrence_model')
+        pmap = _cluster(param, tom, imtls, gsims, grp_ids, pmap)
     # Return results
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
 
@@ -210,6 +211,7 @@ def calc_hazard_curves(
         odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
+    # ensure the sources have the right src_group_id
     for i, grp in enumerate(groups):
         for src in grp:
             if src.src_group_id is None:
@@ -224,15 +226,8 @@ def calc_hazard_curves(
     mon = Monitor()
     for group in groups:
         if group.atomic:  # do not split
-            par = param.copy()
-            par['src_interdep'] = group.src_interdep
-            par['rup_interdep'] = group.rup_interdep
-            par['grp_probability'] = group.grp_probability
-            par['cluster'] = group.cluster
-            par['temporal_occurrence_model'] = group.temporal_occurrence_model
-            it = [classical(group.sources, ss_filter, [gsim], par, mon)]
+            it = [classical(group, ss_filter, [gsim], param, mon)]
         else:  # split the group and apply `classical` in parallel
-            param['rup_interdep'] = group.rup_interdep
             it = apply(
                 classical, (group.sources, ss_filter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
