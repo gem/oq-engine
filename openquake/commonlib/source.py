@@ -448,14 +448,6 @@ class CompositeSourceModel(collections.Sequence):
         new.info.tot_weight = new.get_weight()
         return new
 
-    def split2(self):
-        """
-        :returns: csm_by_grp and srcs_by_trt
-        """
-        csm_by_grp = self.new({sg.id: sg for sg in self.src_groups
-                               if sg.atomic})
-        return csm_by_grp, self._sources_by_trt()
-
     def get_weight(self, weight=operator.attrgetter('weight')):
         """
         :param weight: source weight function
@@ -519,15 +511,20 @@ class CompositeSourceModel(collections.Sequence):
                         sources.append(src)
         return sources
 
-    def _sources_by_trt(self):
-        # involves non-atomic groups
+    def get_trt_sources(self):
+        """
+        :returns: a list of pairs [(trt, group of sources)]
+        """
+        atomic = []
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                if not grp.atomic:
+                if grp.atomic:
+                    atomic.append((grp.trt, grp))
+                else:
                     acc[grp.trt].extend(grp)
         if self.optimize_same_id is False:
-            return acc
+            return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
         n = 0
         tot = 0
@@ -546,7 +543,7 @@ class CompositeSourceModel(collections.Sequence):
         if n < tot:
             logging.info('Reduced %d sources to %d sources with unique IDs',
                          tot, n)
-        return dic
+        return atomic + list(dic.items())
 
     def get_num_ruptures(self):
         """
