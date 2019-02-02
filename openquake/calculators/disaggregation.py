@@ -58,7 +58,7 @@ def predisagg(group, src_filter, gsims, param, monitor):
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     for src, s_sites in src_filter(group):
         t0 = time.time()
-        ctxs.append(cmaker.make_context_array(src, s_sites))
+        ctxs.append(cmaker.make_rup_data(src, s_sites.complete))
         calc_times[src.id] += numpy.array(
             [src.weight, len(s_sites), time.time() - t0])
     if ctxs:
