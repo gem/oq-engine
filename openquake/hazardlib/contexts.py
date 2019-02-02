@@ -307,10 +307,9 @@ class ContextMaker(object):
     def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
                      monitor=Monitor()):
         """
-        Disaggregate (separate) PoE of `imldict` in different contributions
-        each coming from `n_epsilons` distribution bins.
+        Disaggregate (separate) PoE in different contributions.
 
-        :param sitecol: a SiteCollection
+        :param sitecol: a SiteCollection with N sites
         :param ruptures: an iterator over ruptures with the same TRT
         :param iml4: a 4d array of IMLs of shape (N, R, M, P)
         :param truncnorm: an instance of scipy.stats.truncnorm
