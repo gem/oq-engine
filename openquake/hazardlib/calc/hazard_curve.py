@@ -92,7 +92,7 @@ def _cluster(param, imtls, gsims, grp_ids, pmap):
     return pmap
 
 
-def classical(group, src_filter, gsims, param, monitor=Monitor()):
+def classical(sources, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -112,8 +112,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     cluster = param.get('cluster')
     # Compute the number of ruptures
     grp_ids = set()
-    sources = []
-    for src in group:
+    for src in sources:
         if not src.num_ruptures:
             # src.num_ruptures is set when parsing the XML, but not when
             # the source is instantiated manually, so it is set here
@@ -121,12 +120,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         # This sets the proper TOM in case of a cluster
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
-            sources.append(src)
         # Updating IDs
         grp_ids.update(src.src_group_ids)
-    # Updating the group of sources
-    if cluster:
-        group = sources
     # Now preparing context
     maxdist = src_filter.integration_distance
     imtls = param['imtls']
@@ -139,7 +134,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     # Computing hazard
-    for src, s_sites in src_filter(group):  # filter now
+    for src, s_sites in src_filter(sources):  # filter now
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
