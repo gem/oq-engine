@@ -447,6 +447,15 @@ class HazardCalculator(BaseCalculator):
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
+    @general.cached_property
+    def rtree_filter(self):
+        """
+        :returns: an RtreeFilter
+        """
+        return RtreeFilter(self.src_filter.sitecol,
+                           self.oqparam.maximum_distance,
+                           self.src_filter.hdf5path)
+
     @property
     def E(self):
         """
@@ -456,6 +465,15 @@ class HazardCalculator(BaseCalculator):
             return len(self.datastore['events'])
         except KeyError:
             return 0
+
+    @property
+    def N(self):
+        """
+        :returns: the total number of sites
+        """
+        if hasattr(self, 'sitecol'):
+            return len(self.sitecol.complete) if self.sitecol else None
+        return len(self.datastore['sitecol/array'])
 
     def check_overflow(self):
         """Overridden in event based"""
@@ -479,7 +497,7 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
-            if (oq.prefilter_sources != 'no' and
+            if (self.sitecol is not None and oq.prefilter_sources != 'no' and
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
                 split = not oq.is_event_based()
                 dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
@@ -488,9 +506,7 @@ class HazardCalculator(BaseCalculator):
                     srcfilter = self.src_filter
                 else:
                     # prefilter on the controller node with Rtree
-                    srcfilter = RtreeFilter(self.src_filter.sitecol,
-                                            oq.maximum_distance,
-                                            self.src_filter.hdf5path)
+                    srcfilter = self.rtree_filter
                 self.csm = parallel_split_filter(
                     csm, srcfilter, split, self.monitor())
             else:
@@ -764,7 +780,8 @@ class HazardCalculator(BaseCalculator):
                           avg_losses=oq.avg_losses)
 
         # store the `exposed_value` if there is an exposure
-        if 'exposed_value' not in self.datastore and hasattr(self, 'assetcol'):
+        if 'exposed_value' not in set(self.datastore) and hasattr(
+                self, 'assetcol'):
             self.datastore['exposed_value'] = self.assetcol.agg_value(
                 *oq.aggregate_by)
 

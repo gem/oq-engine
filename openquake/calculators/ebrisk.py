@@ -73,7 +73,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
     mon = monitor('getting assets', measuremem=False)
-    with datastore.read(rupgetter.hdf5path) as dstore:
+    with datastore.read(srcfilter.hdf5path) as dstore:
         assgetter = getters.AssetGetter(dstore)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
@@ -153,10 +153,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         super().pre_execute(pre_calculator)
         # save a copy of the assetcol in hdf5cache
         self.hdf5cache = self.datastore.hdf5cache()
-        with hdf5.File(self.hdf5cache) as cache:
+        with hdf5.File(self.hdf5cache, 'w') as cache:
+            cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
         self.param['aggregate_by'] = self.oqparam.aggregate_by
-        self.N = len(self.sitecol.complete)
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
@@ -164,6 +164,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.num_taxonomies = self.assetcol.num_taxonomies_by_site()
         self.datastore.create_dset('losses_by_site', F32, (self.N, L))
         self.rupweights = []
+        self.rupweight_mon = self.monitor('calc rupture weight',
+                                          measuremem=False)
 
     def acc0(self):
         return numpy.zeros(self.N)
@@ -172,10 +174,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         :returns: the number of taxonomies affected by the events
         """
-        trt = self.csm_info.trt_by_grp[rup['grp_id']]
-        sids = self.src_filter.close_sids(rup, trt, rup['mag'])
-        weight = self.num_taxonomies[sids].sum() * rup['n_occ']
-        self.rupweights.append(weight)
+        with self.rupweight_mon:
+            trt = self.csm_info.trt_by_grp[rup['grp_id']]
+            # NB: self.rtree_filter was 50% slower for South America
+            sids = self.src_filter.close_sids(rup, trt, rup['mag'])
+            weight = self.num_taxonomies[sids].sum()
+            self.rupweights.append(weight)
         return weight
 
     def agg_dicts(self, acc, dic):
@@ -245,6 +249,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         if self.rupweights:
             self.datastore['rupweights'] = self.rupweights
+            self.rupweight_mon.flush()
         del self.rupweights
         self.datastore.set_attrs('task_info/ebrisk', times=times)
         logging.info('Building losses_by_rlz')

@@ -150,25 +150,17 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.csm.has_dupl_sources and not opt:
             logging.warn('Found %d duplicated sources',
                          self.csm.has_dupl_sources)
-        csm_atomic, sources_by_trt = self.csm.split2()
-        for sg in csm_atomic.src_groups:
-            if sg.sources:
-                par = param.copy()
-                par['src_interdep'] = sg.src_interdep
-                par['rup_interdep'] = sg.rup_interdep
-                par['grp_probability'] = sg.grp_probability
-                par['cluster'] = sg.cluster
-                par['temporal_occurrence_model'] = sg.temporal_occurrence_model
-                gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                yield sg.sources, self.src_filter, gsims, par
-                num_tasks += 1
-                num_sources += len(sg.sources)
-        for trt, sources in sources_by_trt.items():
+
+        for trt, sources in self.csm.get_trt_sources():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            for block in self.block_splitter(sources):
-                yield block, self.src_filter, gsims, param
+            num_sources += len(sources)
+            if hasattr(sources, 'atomic') and sources.atomic:
+                yield sources, self.src_filter, gsims, param
                 num_tasks += 1
-                num_sources += len(block)
+            else:  # regroup the sources in blocks
+                for block in self.block_splitter(sources):
+                    yield block, self.src_filter, gsims, param
+                    num_tasks += 1
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def save_hazard_stats(self, acc, pmap_by_kind):
