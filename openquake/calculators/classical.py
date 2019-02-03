@@ -212,6 +212,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
+                    if 'rup' in set(self.datastore):
+                        self.datastore.set_nbytes('rup/grp-%02d' % grp_id)
+            self.datastore.set_nbytes('poes')
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
             if oq.disagg_by_src and csm_info.get_num_rlzs() == 1:
