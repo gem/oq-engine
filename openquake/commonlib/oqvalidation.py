@@ -198,7 +198,8 @@ class OqParam(valid.ParamSet):
             if 'region' in names_vals:
                 raise InvalidFile('You cannot have both region and '
                                   'region_constraint in %s' % job_ini)
-            logging.warning('region_constraint is obsolete, use region instead')
+            logging.warning(
+                'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
         self.risk_investigation_time = (
@@ -206,7 +207,7 @@ class OqParam(valid.ParamSet):
         if ('intensity_measure_types_and_levels' in names_vals and
                 'intensity_measure_types' in names_vals):
             logging.warning('Ignoring intensity_measure_types since '
-                         'intensity_measure_types_and_levels is set')
+                            'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
@@ -720,7 +721,7 @@ class OqParam(valid.ParamSet):
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
             logging.warning('export_dir not specified. Using export_dir=%s'
-                         % self.export_dir)
+                            % self.export_dir)
             return True
         elif not os.path.exists(self.export_dir):
             try:
