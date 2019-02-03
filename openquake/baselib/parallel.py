@@ -499,12 +499,11 @@ class IterResult(object):
 
 def save_task_info(self, res, mem_gb=0, name=None):
     mon = res.mon
+    if name:
+        mon.operation = 'total ' + name
     if self.hdf5:
-        if name:
-            mon.operation = 'total ' + name
         mon.hdf5 = self.hdf5
-        duration = mon.duration
-        t = (mon.task_no, mon.weight, duration, len(res.pik), mem_gb)
+        t = (mon.task_no, mon.weight, mon.duration, len(res.pik), mem_gb)
         data = numpy.array([t], task_info_dt)
         hdf5.extend(self.hdf5['task_info/' + (name or self.name)], data,
                     argnames=self.argnames, sent=self.sent)
@@ -736,10 +735,13 @@ class Starmap(object):
                 logging.warn(res.msg)
             elif res.func_args:
                 orig = self.task_func
+                orig_mon = self.monitor
                 self.task_func, *args = res.func_args
+                self.monitor = res.mon
                 self.submit(*args)
                 save_task_info(self, res, name=self.task_func.__name__)
                 self.task_func = orig
+                self.monitor = orig_mon
                 self.todo += 1
             else:
                 yield res
