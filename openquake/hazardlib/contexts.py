@@ -26,7 +26,7 @@ from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-FEWSITES = 10  # if there are few sites compute the rupdata
+FEWSITES = 10  # if there are few sites store the rupdata
 
 
 def get_distances(rupture, mesh, param):
