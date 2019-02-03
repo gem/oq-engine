@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     2,852,175,627      
-date           2019-01-27T08:30:39
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:32
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -44,33 +44,33 @@ Composite source model
 ====================== ======= =============== ================
 smlt_path              weight  gsim_logic_tree num_realizations
 ====================== ======= =============== ================
-b1_mfd1_high_dip_dip30 0.01320 trivial(1)      1/1             
-b1_mfd1_high_dip_dip45 0.03960 trivial(1)      1/1             
-b1_mfd1_high_dip_dip60 0.01320 trivial(1)      1/1             
-b1_mfd1_low_dip_dip30  0.01320 trivial(1)      1/1             
-b1_mfd1_low_dip_dip45  0.03960 trivial(1)      1/1             
-b1_mfd1_low_dip_dip60  0.01320 trivial(1)      1/1             
-b1_mfd1_mid_dip_dip30  0.03960 trivial(1)      1/1             
-b1_mfd1_mid_dip_dip45  0.11880 trivial(1)      1/1             
-b1_mfd1_mid_dip_dip60  0.03960 trivial(1)      1/1             
-b1_mfd2_high_dip_dip30 0.01360 trivial(1)      1/1             
-b1_mfd2_high_dip_dip45 0.04080 trivial(1)      1/1             
-b1_mfd2_high_dip_dip60 0.01360 trivial(1)      1/1             
-b1_mfd2_low_dip_dip30  0.01360 trivial(1)      1/1             
-b1_mfd2_low_dip_dip45  0.04080 trivial(1)      1/1             
-b1_mfd2_low_dip_dip60  0.01360 trivial(1)      1/1             
-b1_mfd2_mid_dip_dip30  0.04080 trivial(1)      1/1             
-b1_mfd2_mid_dip_dip45  0.12240 trivial(1)      1/1             
-b1_mfd2_mid_dip_dip60  0.04080 trivial(1)      1/1             
-b1_mfd3_high_dip_dip30 0.01320 trivial(1)      1/1             
-b1_mfd3_high_dip_dip45 0.03960 trivial(1)      1/1             
-b1_mfd3_high_dip_dip60 0.01320 trivial(1)      1/1             
-b1_mfd3_low_dip_dip30  0.01320 trivial(1)      1/1             
-b1_mfd3_low_dip_dip45  0.03960 trivial(1)      1/1             
-b1_mfd3_low_dip_dip60  0.01320 trivial(1)      1/1             
-b1_mfd3_mid_dip_dip30  0.03960 trivial(1)      1/1             
-b1_mfd3_mid_dip_dip45  0.11880 trivial(1)      1/1             
-b1_mfd3_mid_dip_dip60  0.03960 trivial(1)      1/1             
+b1_mfd1_high_dip_dip30 0.01320 trivial(1)      1               
+b1_mfd1_high_dip_dip45 0.03960 trivial(1)      1               
+b1_mfd1_high_dip_dip60 0.01320 trivial(1)      1               
+b1_mfd1_low_dip_dip30  0.01320 trivial(1)      1               
+b1_mfd1_low_dip_dip45  0.03960 trivial(1)      1               
+b1_mfd1_low_dip_dip60  0.01320 trivial(1)      1               
+b1_mfd1_mid_dip_dip30  0.03960 trivial(1)      1               
+b1_mfd1_mid_dip_dip45  0.11880 trivial(1)      1               
+b1_mfd1_mid_dip_dip60  0.03960 trivial(1)      1               
+b1_mfd2_high_dip_dip30 0.01360 trivial(1)      1               
+b1_mfd2_high_dip_dip45 0.04080 trivial(1)      1               
+b1_mfd2_high_dip_dip60 0.01360 trivial(1)      1               
+b1_mfd2_low_dip_dip30  0.01360 trivial(1)      1               
+b1_mfd2_low_dip_dip45  0.04080 trivial(1)      1               
+b1_mfd2_low_dip_dip60  0.01360 trivial(1)      1               
+b1_mfd2_mid_dip_dip30  0.04080 trivial(1)      1               
+b1_mfd2_mid_dip_dip45  0.12240 trivial(1)      1               
+b1_mfd2_mid_dip_dip60  0.04080 trivial(1)      1               
+b1_mfd3_high_dip_dip30 0.01320 trivial(1)      1               
+b1_mfd3_high_dip_dip45 0.03960 trivial(1)      1               
+b1_mfd3_high_dip_dip60 0.01320 trivial(1)      1               
+b1_mfd3_low_dip_dip30  0.01320 trivial(1)      1               
+b1_mfd3_low_dip_dip45  0.03960 trivial(1)      1               
+b1_mfd3_low_dip_dip60  0.01320 trivial(1)      1               
+b1_mfd3_mid_dip_dip30  0.03960 trivial(1)      1               
+b1_mfd3_mid_dip_dip45  0.11880 trivial(1)      1               
+b1_mfd3_mid_dip_dip60  0.03960 trivial(1)      1               
 ====================== ======= =============== ================
 
 Required parameters per tectonic region type
@@ -187,26 +187,26 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-26     SFLT2     S    106   108   89           0.0       3.672E-05  2.00000   2         89    
-26     SFLT1     S    104   106   132          0.0       4.292E-06  1.00000   1         132   
-25     SFLT2     S    102   104   148          0.0       3.672E-05  2.00000   2         148   
-25     SFLT1     S    100   102   132          0.0       4.530E-06  1.00000   1         132   
-24     SFLT2     S    98    100   384          0.0       3.624E-05  2.00000   2         384   
-24     SFLT1     S    96    98    132          0.0       4.530E-06  1.00000   1         132   
-23     SFLT2     S    94    96    89           0.0       3.719E-05  2.00000   2         89    
-23     SFLT1     S    92    94    198          0.0       4.768E-06  1.00000   1         198   
-22     SFLT2     S    90    92    148          0.0       3.767E-05  2.00000   2         148   
-22     SFLT1     S    88    90    198          0.0       4.768E-06  1.00000   1         198   
-21     SFLT2     S    86    88    384          0.0       3.672E-05  2.00000   2         384   
+26     SFLT2     S    106   108   89           0.0       3.195E-05  2.00000   2         89    
+26     SFLT1     S    104   106   132          0.0       1.502E-05  1.00000   1         132   
+25     SFLT2     S    102   104   148          0.0       3.386E-05  2.00000   2         148   
+25     SFLT1     S    100   102   132          0.0       4.292E-06  1.00000   1         132   
+24     SFLT2     S    98    100   384          0.0       3.433E-05  2.00000   2         384   
+24     SFLT1     S    96    98    132          0.0       4.292E-06  1.00000   1         132   
+23     SFLT2     S    94    96    89           0.0       3.433E-05  2.00000   2         89    
+23     SFLT1     S    92    94    198          0.0       4.530E-06  1.00000   1         198   
+22     SFLT2     S    90    92    148          0.0       8.059E-05  2.00000   2         148   
+22     SFLT1     S    88    90    198          0.0       4.530E-06  1.00000   1         198   
+21     SFLT2     S    86    88    384          0.0       3.576E-05  2.00000   2         384   
 21     SFLT1     S    84    86    198          0.0       4.530E-06  1.00000   1         198   
-20     SFLT2     S    82    84    89           0.0       3.672E-05  2.00000   2         89    
-20     SFLT1     S    80    82    99           0.0       5.007E-06  1.00000   1         99    
-19     SFLT2     S    78    80    148          0.0       3.719E-05  2.00000   2         148   
-19     SFLT1     S    76    78    99           0.0       4.768E-06  1.00000   1         99    
+20     SFLT2     S    82    84    89           0.0       3.481E-05  2.00000   2         89    
+20     SFLT1     S    80    82    99           0.0       4.768E-06  1.00000   1         99    
+19     SFLT2     S    78    80    148          0.0       3.481E-05  2.00000   2         148   
+19     SFLT1     S    76    78    99           0.0       4.530E-06  1.00000   1         99    
 18     SFLT2     S    74    76    384          0.0       3.624E-05  2.00000   2         384   
-18     SFLT1     S    72    74    99           0.0       4.768E-06  1.00000   1         99    
-17     SFLT2     S    70    72    89           0.0       3.767E-05  2.00000   2         89    
-17     SFLT1     S    68    70    27           0.0       5.484E-06  1.00000   1         27    
+18     SFLT1     S    72    74    99           0.0       4.292E-06  1.00000   1         99    
+17     SFLT2     S    70    72    89           0.0       3.481E-05  2.00000   2         89    
+17     SFLT1     S    68    70    27           0.0       4.530E-06  1.00000   1         27    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -226,8 +226,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.03227 0.00744 0.01640 0.06238 27     
-split_filter       0.09173 NaN     0.09173 0.09173 1      
+read_source_models 0.03340 0.00758 0.01906 0.06503 27     
+split_filter       0.08582 NaN     0.08582 0.08582 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -243,6 +243,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.87133  0.44141   27    
-total split_filter       0.09173  2.00781   1     
+total read_source_models 0.90182  0.38672   27    
+total split_filter       0.08582  1.45703   1     
 ======================== ======== ========= ======

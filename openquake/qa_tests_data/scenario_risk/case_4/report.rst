@@ -3,8 +3,8 @@ Scenario Risk for Nepal with 20 assets
 
 ============== ===================
 checksum32     486,158,159        
-date           2019-01-27T08:28:29
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:39
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 20, num_levels = 8
@@ -46,7 +46,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
@@ -88,8 +88,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.02612   0.0       1     
-saving gmfs         0.00774   0.16406   1     
-computing gmfs      0.00142   0.0       1     
-reading exposure    9.863E-04 0.0       1     
+building riskinputs 0.04941   0.00391   1     
+saving gmfs         0.00849   0.0       1     
+computing gmfs      0.00138   0.0       1     
+reading exposure    9.370E-04 0.0       1     
 =================== ========= ========= ======
