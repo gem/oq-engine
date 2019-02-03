@@ -3,8 +3,8 @@ Scenario Damage
 
 ============== ===================
 checksum32     711,595,636        
-date           2019-01-27T08:28:55
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:38:06
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 26
@@ -46,7 +46,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
@@ -84,8 +84,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-saving gmfs         0.00188   0.0       1     
+saving gmfs         0.00225   0.0       1     
+computing gmfs      0.00183   0.0       1     
 building riskinputs 0.00177   0.0       1     
-computing gmfs      0.00168   0.0       1     
-reading exposure    5.620E-04 0.0       1     
+reading exposure    5.980E-04 0.0       1     
 =================== ========= ========= ======
