@@ -355,7 +355,7 @@ class mtkActiveFault(object):
         for iloc in range(0, n_levels):
             idx = np.linspace(0.,
                               float(branch_count[iloc]) - dstep,
-                              number_branches / cumval)
+                              number_branches // cumval)
             branch_index[:, iloc] = np.reshape(np.tile(idx, [cumval, 1]),
                                                number_branches)
             cumval *= branch_count[iloc]
