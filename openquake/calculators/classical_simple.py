@@ -28,7 +28,7 @@ MAXWEIGHT = 1000
 
 def classical_launcher(src_group, src_filter, gsims, param, monitor):
     if hasattr(src_group, 'atomic') and src_group.atomic:
-        yield classical(src_group, src_filter, gsims, param)
+        yield classical(src_group, src_filter, gsims, param, monitor)
         return
     isources = src_filter.filter(
         split_sources(src_filter.filter(src_group), times=False))
@@ -49,14 +49,13 @@ class SimpleCalculator(ClassicalCalculator):
 
     def execute(self):
         smap = parallel.Starmap(classical_launcher, monitor=self.monitor())
-        csm_atomic, sources_by_trt = self.csm.split2()
-        for sg in csm_atomic.src_groups:
-            gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-            smap.submit(sg, self.src_filter, gsims, self.param)
-        for trt, sources in sources_by_trt.items():
+        for trt, src_group in self.csm.get_trt_sources():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            for block in self.block_splitter(sources):
-                smap.submit(block, self.src_filter, gsims, self.param)
+            if hasattr(src_group, 'atomic') and src_group.atomic:
+                smap.submit(src_group, self.src_filter, gsims, self.param)
+            else:
+                for block in self.block_splitter(src_group):
+                    smap.submit(block, self.src_filter, gsims, self.param)
 
         self.nsites = []
         self.calc_times = general.AccumDict(
