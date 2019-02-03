@@ -269,7 +269,7 @@ def add_imt(fname, imt):
     '/path/to/hcurve-SA(0.1)_23.csv'
     """
     name = os.path.basename(fname)
-    newname = re.sub('(_\d+\.)', '-%s\\1' % imt, name)
+    newname = re.sub(r'(_\d+\.)', '-%s\\1' % imt, name)
     return os.path.join(os.path.dirname(fname), newname)
 
 
@@ -694,16 +694,16 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
 def export_gmf_scenario_csv(ekey, dstore):
     what = ekey[0].split('/')
     if len(what) == 1:
-        raise ValueError('Missing "/rup-\d+"')
+        raise ValueError(r'Missing "/rup-\d+"')
     oq = dstore['oqparam']
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
     num_ruptures = len(dstore['ruptures'])
     imts = list(oq.imtls)
-    mo = re.match('rup-(\d+)$', what[1])
+    mo = re.match(r'rup-(\d+)$', what[1])
     if mo is None:
         raise ValueError(
-            "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
+            r"Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
     # for scenario there is an unique grp_id=0

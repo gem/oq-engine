@@ -20,7 +20,8 @@ import unittest
 import io
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.hazardlib.nrml import read, parse, node_to_xml, get_tag_version
+from openquake.hazardlib.nrml import (
+    read, to_python, node_to_xml, get_tag_version)
 
 
 class NrmlTestCase(unittest.TestCase):
@@ -188,6 +189,6 @@ xmlns:gml="http://www.opengis.net/gml"
 ''')
         converter = SourceConverter(50., 1., 10, 0.1, 10.)
         with self.assertRaises(ValueError) as ctx:
-            parse(fname, converter)
+            to_python(fname, converter)
         self.assertIn('There are 2 srcs_weights but 1 source(s)',
                       str(ctx.exception))
