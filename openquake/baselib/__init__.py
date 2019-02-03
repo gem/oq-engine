@@ -72,7 +72,7 @@ def read(*paths, **validators):
     by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
     paths = config.paths + list(paths)
-    parser = configparser.SafeConfigParser()
+    parser = configparser.ConfigParser()
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
     if not found:
         raise IOError('No configuration file found in %s' % str(paths))

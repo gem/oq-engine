@@ -241,7 +241,7 @@ def get_csv_header(fname, sep=','):
     :param sep: the separator (default comma)
     :returns: the first line of fname
     """
-    with open(fname, 'U', encoding='utf-8-sig') as f:
+    with open(fname, encoding='utf-8-sig') as f:
         return next(f).split(sep)
 
 
@@ -277,7 +277,7 @@ def get_mesh(oqparam):
         if 'lon' in header:
             data = []
             for i, row in enumerate(
-                    csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
+                    csv.DictReader(open(fname, encoding='utf-8-sig'))):
                 if header[0] == 'site_id' and row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
@@ -286,7 +286,7 @@ def get_mesh(oqparam):
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
             data = [line.replace(',', ' ')
-                    for line in open(fname, 'U', encoding='utf-8-sig')]
+                    for line in open(fname, encoding='utf-8-sig')]
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
@@ -764,7 +764,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 dupl += hits
     if (dupl and not oqparam.optimize_same_id_sources and
             not oqparam.is_event_based()):
-        logging.warn('You are doing redundant calculations: please make sure '
+        logging.warning('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
     if make_sm.changes:

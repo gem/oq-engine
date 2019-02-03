@@ -34,7 +34,7 @@ registry = CallableDict()
 
 COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
 RISK_TYPE_REGEX = re.compile(
-    '(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
+    r'(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
 
 
 def get_risk_files(inputs):
@@ -561,7 +561,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     """
     riskmodel_class = registry[oqparam.calculation_mode]
     # arguments needed to instantiate the riskmodel class
-    argnames = inspect.getargspec(riskmodel_class.__init__).args[3:]
+    argnames = inspect.getfullargspec(riskmodel_class.__init__).args[3:]
 
     # arguments extracted from oqparam
     known_args = set(name for name, value in
