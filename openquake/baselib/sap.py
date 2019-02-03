@@ -51,7 +51,10 @@ Parsers can be composed too.
 import sys
 import inspect
 import argparse
-
+try:
+    import argcomplete
+except ImportError:
+    argcomplete = False
 
 NODEFAULT = object()
 
@@ -240,4 +243,6 @@ def compose(scripts, name='main', description=None, prog=None,
         else:
             return func(**kw)
     main.__name__ = name
+    if argcomplete:
+        argcomplete.autocomplete(parentparser)
     return Script(main, name, parentparser)
