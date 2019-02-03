@@ -329,7 +329,7 @@ class GmfGetter(object):
         self.gmv_dt = oqparam.gmf_data_dt()
         self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (M,))), ('eid', U64)])
         self.cmaker = ContextMaker(
-            rupgetter.rlzs_by_gsim,
+            rupgetter.trt, rupgetter.rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
             if isinstance(oqparam.maximum_distance, dict)
             else oqparam.maximum_distance,

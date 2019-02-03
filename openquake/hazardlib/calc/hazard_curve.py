@@ -126,10 +126,12 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     maxdist = src_filter.integration_distance
     imtls = param['imtls']
     trunclevel = param.get('truncation_level')
-    cmaker = ContextMaker(gsims, maxdist, param, monitor)
+    cmaker = ContextMaker(
+        src.tectonic_region_type, gsims, maxdist, param, monitor)
     # Prepare the accumulator for the probability maps
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
+    rupdata = {grp_id: [] for grp_id in grp_ids}
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
@@ -150,6 +152,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         elif poemap:
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
+        if len(cmaker.rupdata):
+            for gid in src.src_group_ids:
+                rupdata[gid].append(cmaker.rupdata)
         calc_times[src.id] += numpy.array(
             [src.weight, len(s_sites), time.time() - t0])
         # storing the number of contributing ruptures too
@@ -165,7 +170,11 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param, tom, imtls, gsims, grp_ids, pmap)
     # Return results
-    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
+    for gid, data in rupdata.items():
+        if len(data):
+            rupdata[gid] = numpy.concatenate(data)
+    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
+                rup_data=rupdata)
 
 
 def calc_hazard_curves(
