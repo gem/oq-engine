@@ -41,7 +41,7 @@ class ScenarioCalculator(base.HazardCalculator):
         cinfo = source.CompositionInfo.fake(readinput.get_gsim_lt(oq))
         self.datastore['csm_info'] = cinfo
         if 'rupture_model' not in oq.inputs:
-            logging.warn('There is no rupture_model, the calculator will just '
+            logging.warning('There is no rupture_model, the calculator will just '
                          'import data without performing any calculation')
             super().pre_execute()
             return

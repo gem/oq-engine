@@ -146,7 +146,7 @@ class ClassicalCalculator(base.HazardCalculator):
         num_sources = 0
 
         if self.csm.has_dupl_sources and not opt:
-            logging.warn('Found %d duplicated sources',
+            logging.warning('Found %d duplicated sources',
                          self.csm.has_dupl_sources)
         csm_atomic, sources_by_trt = self.csm.split2()
         for sg in csm_atomic.src_groups:
