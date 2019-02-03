@@ -224,7 +224,7 @@ class ContextMaker(object):
                 continue
             yield rup, sctx, dctx
             if fewsites:  # store rupdata
-                row = [src.id or 0, rup.weight or 1]
+                row = [src.id or 0]
                 for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
                     row.append(getattr(rup, rup_param))
                 for dist_param in self.REQUIRES_DISTANCES:
@@ -232,15 +232,17 @@ class ContextMaker(object):
                 closest = rup.surface.get_closest_points(sitecol)
                 row.append(closest.lons)
                 row.append(closest.lats)
+                row.append(rup.weight or 0)
                 rupdata.append(tuple(row))
         if rupdata:
-            dtlist = [('srcidx', numpy.uint32), ('weight', float)]
+            dtlist = [('srcidx', numpy.uint32)]
             for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
                 dtlist.append((rup_param, float))
             for dist_param in self.REQUIRES_DISTANCES:
                 dtlist.append((dist_param, (float, (N,))))
             dtlist.append(('lon', (float, (N,))))  # closest lons
             dtlist.append(('lat', (float, (N,))))  # closest lats
+            dtlist.append(('mutex_weight', float))
             self.rupdata = numpy.array(rupdata, dtlist)
         else:
             self.rupdata = ()
