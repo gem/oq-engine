@@ -283,7 +283,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.fake_surface = FakeSurface
 
     def make_contexts(self, site_collection, rupture):
-        return ContextMaker([self.gsim_class]).make_contexts(
+        return ContextMaker('faketrt', [self.gsim_class]).make_contexts(
             site_collection, rupture)
 
     def test_unknown_distance_error(self):
