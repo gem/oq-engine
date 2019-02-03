@@ -736,6 +736,7 @@ class Starmap(object):
                 logging.warn(res.msg)
             elif res.func_args:
                 res.mon.hdf5 = self.monitor.hdf5  # needed
+                res.mon.flush()
                 orig = self.task_func
                 self.task_func, *args = res.func_args
                 self.submit(*args, monitor=res.mon)
