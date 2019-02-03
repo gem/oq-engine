@@ -18,9 +18,11 @@
 
 import os
 import mock
+import tempfile
 import unittest
+import itertools
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import parallel, performance, general, hdf5
 
 try:
     import celery
@@ -35,6 +37,20 @@ def get_length(data, monitor):
 def gfunc(text, monitor):
     for char in text:
         yield char * 3
+
+
+def supertask(text, monitor):
+    # a supertask spawning subtasks of kind get_length
+    for block in general.block_splitter(text, max_weight=10):
+        items = [(k, len(list(grp))) for k, grp in itertools.groupby(block)]
+        if len(items) == 1:
+            # for instance items = [('i', 1)]
+            k, v = items[0]
+            yield get_length(k * v, monitor)
+            return
+        # for instance items = [('a', 4), ('e', 4), ('i', 2)]
+        for k, v in items:
+            yield get_length, k * v
 
 
 class StarmapTestCase(unittest.TestCase):
@@ -87,6 +103,22 @@ class StarmapTestCase(unittest.TestCase):
 
         res = list(parallel.Starmap(gfunc, [('xy',), ('z',)]))
         self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
+
+    def test_supertask(self):
+        allargs = [('aaaaeeeeiii',),
+                   ('uuuuaaaaeeeeiii',),
+                   ('aaaaaaaaeeeeiii',),
+                   ('aaaaeeeeiiiiiooooooo',)]
+        numchars = sum(len(arg) for arg, in allargs)  # 61
+        monitor = performance.Monitor(hdf5=hdf5.File.temporary())
+        res = parallel.Starmap(supertask, allargs, monitor).reduce()
+        self.assertEqual(res, {'n': numchars})
+        monitor.hdf5.close()
+        # check that the correct information is stored in the hdf5 file
+        with hdf5.File(monitor.hdf5.path) as h5:
+            self.assertGreater(len(h5['performance_data']), 0)
+            self.assertGreater(len(h5['task_info/supertask']), 0)
+        os.remove(monitor.hdf5.path)
 
     @classmethod
     def tearDownClass(cls):

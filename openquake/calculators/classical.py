@@ -21,8 +21,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc
@@ -33,7 +32,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-MAXWEIGHT = 10000
 weight = operator.attrgetter('weight')
 grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
                              ('source_name', hdf5.vstr)])
@@ -58,22 +56,12 @@ def get_src_ids(sources):
     return ' '.join(set(src_ids))
 
 
-def classical_launcher(src_group, src_filter, gsims, param, monitor):
-    if hasattr(src_group, 'atomic') and src_group.atomic:
-        yield classical(src_group, src_filter, gsims, param, monitor)
-        return
-    isources = src_filter.filter(
-        split_sources(src_filter.filter(src_group), times=False))
-    for block in block_splitter(isources, MAXWEIGHT, weight):
-        yield classical, block, src_filter, gsims, param
-
-
 @base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = classical_launcher
+    core_task = classical
 
     def agg_dicts(self, acc, dic):
         """
