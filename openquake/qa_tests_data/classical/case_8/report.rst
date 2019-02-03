@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 8
 
 ============== ===================
 checksum32     4,079,887,042      
-date           2019-01-27T08:30:37
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:30
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -44,9 +44,9 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1_b2     0.30000 trivial(1)      1/1             
-b1_b3     0.30000 trivial(1)      1/1             
-b1_b4     0.40000 trivial(1)      1/1             
+b1_b2     0.30000 trivial(1)      1               
+b1_b3     0.30000 trivial(1)      1               
+b1_b4     0.40000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -91,9 +91,9 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-2      1         P    2     3     3,000        0.0       4.292E-06  1.00000   1         300   
-1      1         P    1     2     3,000        0.0       6.199E-06  1.00000   1         300   
-0      1         P    0     1     3,000        0.0       2.217E-05  1.00000   1         300   
+2      1         P    2     3     3,000        0.0       4.530E-06  1.00000   1         300   
+1      1         P    1     2     3,000        0.0       6.676E-06  1.00000   1         300   
+0      1         P    0     1     3,000        0.0       2.122E-05  1.00000   1         300   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -111,11 +111,11 @@ Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00858 0.00102 0.00780 0.00973 3      
-split_filter       0.01247 NaN     0.01247 0.01247 1      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.00459 5.661E-05 0.00455 0.00465 3      
+split_filter       0.01183 NaN       0.01183 0.01183 1      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
@@ -130,6 +130,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.02574  0.66797   3     
-total split_filter       0.01247  1.92188   1     
+total read_source_models 0.01376  0.61328   3     
+total split_filter       0.01183  1.94141   1     
 ======================== ======== ========= ======

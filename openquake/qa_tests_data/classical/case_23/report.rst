@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     3,211,843,635      
-date           2019-01-27T08:31:41
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:40:29
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 29
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= ================ ================
 smlt_path weight  gsim_logic_tree  num_realizations
 ========= ======= ================ ================
-b1        1.00000 trivial(1,0,1,0) 1/1             
+b1        1.00000 trivial(1,0,1,0) 1               
 ========= ======= ================ ================
 
 Required parameters per tectonic region type
@@ -86,10 +86,10 @@ Slowest sources
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1  gidx2  num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= =======
-1      21445     X    20,504 34,373 1            0.0       2.384E-06  1.00000   1         1.00000
+1      21445     X    20,504 34,373 1            0.0       1.907E-06  1.00000   1         1.00000
 1      21444     X    2      20,504 1            0.0       4.530E-06  1.00000   1         1.00000
-0      2         P    1      2      20           0.0       1.717E-05  1.00000   1         2.00000
-0      1         P    0      1      20           0.0       2.122E-05  1.00000   1         2.00000
+0      2         P    1      2      20           0.0       5.245E-06  1.00000   1         2.00000
+0      1         P    0      1      20           0.0       1.979E-05  1.00000   1         2.00000
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -109,8 +109,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.73086 NaN    0.73086 0.73086 1      
-split_filter       0.00318 NaN    0.00318 0.00318 1      
+read_source_models 0.16376 NaN    0.16376 0.16376 1      
+split_filter       0.00310 NaN    0.00310 0.00310 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -126,6 +126,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.73086  3.00781   1     
-total split_filter       0.00318  1.51562   1     
+total read_source_models 0.16376  2.87500   1     
+total split_filter       0.00310  1.29688   1     
 ======================== ======== ========= ======
