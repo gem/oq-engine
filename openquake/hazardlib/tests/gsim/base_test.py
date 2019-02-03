@@ -57,7 +57,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
         super().setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
-        self.cmaker = ContextMaker([self.gsim])
+        self.cmaker = ContextMaker('faketrt', [self.gsim])
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES.add(self.DEFAULT_IMT)

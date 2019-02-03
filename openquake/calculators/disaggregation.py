@@ -47,51 +47,6 @@ def _to_matrix(matrices, num_trts):
     return mat
 
 
-def predisagg(group, src_filter, gsims, param, monitor):
-    """
-    Compute rup_data arrays, useful for further processing.
-    :returns: a dictionary with keys calc_times, eff_ruptures, rup_data, txt
-    """
-    maxdist = src_filter.integration_distance
-    cmaker = ContextMaker(gsims, maxdist, param, monitor)
-    ctxs = []
-    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-    for src, s_sites in src_filter(group):
-        t0 = time.time()
-        ctxs.append(cmaker.make_rup_data(src, s_sites.complete))
-        calc_times[src.id] += numpy.array(
-            [src.weight, len(s_sites), time.time() - t0])
-    if ctxs:
-        rup_data = numpy.concatenate(ctxs)
-    else:
-        rup_data = ()
-    dic = {'calc_times': calc_times, 'eff_ruptures': len(rup_data),
-           'rup_data': rup_data, 'trt': src.tectonic_region_type}
-    return dic
-
-
-@base.calculators.add('predisagg')
-class PreDisaggCalculator(classical.ClassicalCalculator):
-    """
-    Calculator to compute rup_data for each tectonic region type
-    """
-    core_task = predisagg
-
-    def agg_dicts(self, acc, dic):
-        """
-        Aggregate dictionaries of hazard curves by updating the accumulator.
-
-        :param acc: accumulator dictionary
-        :param dic: dictionary with keys pmap, calc_times, eff_ruptures
-        """
-        with self.monitor('save rup_data', autoflush=True):
-            acc.eff_ruptures += dic['eff_ruptures']
-            self.datastore.extend('rup_data/' + dic['trt'],  dic['rup_data'])
-        self.calc_times += dic['calc_times']
-        self.nsites.append(1)
-        return acc
-
-
 def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -332,7 +287,7 @@ producing too small PoEs.'''
                 sources = sum([grp.sources for grp in groups], [])
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
-                    rlzs_by_gsim, src_filter.integration_distance,
+                    trt, rlzs_by_gsim, src_filter.integration_distance,
                     {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
