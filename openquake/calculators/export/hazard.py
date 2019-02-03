@@ -576,7 +576,7 @@ def export_gmf(ekey, dstore):
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
-        logging.warn(GMF_WARNING, dstore.hdf5path)
+        logging.warning(GMF_WARNING, dstore.hdf5path)
     fnames = []
     events_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value

@@ -66,7 +66,7 @@ def read_vs30(fnames):
     """
     data = []
     for fname in fnames:
-        for line in open(fname, 'U', encoding='utf-8-sig'):
+        for line in open(fname, encoding='utf-8-sig'):
             data.append(tuple(line.split(',')))
     return numpy.array(data, vs30_dt)
 
