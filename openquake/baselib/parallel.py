@@ -643,21 +643,22 @@ class Starmap(object):
             self.prev_percent = percent
         return done
 
-    def submit(self, *args):
+    def submit(self, *args, monitor=None):
         """
         Submit the given arguments to the underlying task
         """
+        monitor = monitor or self.monitor
         if not hasattr(self, 'socket'):  # first time
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
-            self.monitor.backurl = 'tcp://%s:%s' % (
+            monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
         assert not isinstance(args[-1], Monitor)  # sanity check
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
             self.sent += numpy.array([len(p) for p in args])
-        res = getattr(self, dist + '_submit')(args)
+        res = getattr(self, dist + '_submit')(args, monitor)
         self.tasks.append(res)
 
     @property
@@ -691,29 +692,29 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-    def no_submit(self, args):
-        return safely_call(self.task_func, args, self.task_no, self.monitor)
+    def no_submit(self, args, monitor):
+        return safely_call(self.task_func, args, self.task_no, monitor)
 
-    def processpool_submit(self, args):
+    def processpool_submit(self, args, monitor):
         return self.pool.apply_async(
-            safely_call, (self.task_func, args, self.task_no, self.monitor))
+            safely_call, (self.task_func, args, self.task_no, monitor))
 
     threadpool_submit = processpool_submit
 
-    def celery_submit(self, args):
-        return safetask.delay(self.task_func, args, self.task_no, self.monitor)
+    def celery_submit(self, args, monitor):
+        return safetask.delay(self.task_func, args, self.task_no, monitor)
 
-    def zmq_submit(self, args):
+    def zmq_submit(self, args, monitor):
         if not hasattr(self, 'sender'):
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
         return self.sender.send(
-            (self.task_func, args, self.task_no, self.monitor))
+            (self.task_func, args, self.task_no, monitor))
 
-    def dask_submit(self, args):
+    def dask_submit(self, args, monitor):
         return self.dask_client.submit(safely_call, self.task_func, args,
-                                       self.task_no, self.monitor)
+                                       self.task_no)
 
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -735,15 +736,11 @@ class Starmap(object):
                 logging.warn(res.msg)
             elif res.func_args:
                 res.mon.hdf5 = self.monitor.hdf5  # needed
-                res.mon.flush()
                 orig = self.task_func
-                orig_mon = self.monitor
                 self.task_func, *args = res.func_args
-                self.monitor = res.mon
-                self.submit(*args)
+                self.submit(*args, monitor=res.mon)
                 save_task_info(self, res, name=self.task_func.__name__)
                 self.task_func = orig
-                self.monitor = orig_mon
                 self.todo += 1
             else:
                 yield res
