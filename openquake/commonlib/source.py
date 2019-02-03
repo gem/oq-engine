@@ -178,6 +178,23 @@ class CompositionInfo(object):
         return self.__class__(
             self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
 
+    def classify_gsim_lt(self, source_model):
+        """
+        :returns: (kind, num_paths), where kind is trivial, simple, complex
+        """
+        trts = set(sg.trt for sg in source_model.src_groups if sg.eff_ruptures)
+        gsim_lt = self.gsim_lt.reduce(trts)
+        num_branches = list(gsim_lt.get_num_branches().values())
+        num_paths = gsim_lt.get_num_paths()
+        num_gsims = '(%s)' % ','.join(map(str, num_branches))
+        multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
+        if multi_gsim_trts == 0:
+            return "trivial" + num_gsims, num_paths
+        elif multi_gsim_trts == 1:
+            return "simple" + num_gsims, num_paths
+        else:
+            return "complex" + num_gsims, num_paths
+
     def get_samples_by_grp(self):
         """
         :returns: a dictionary src_group_id -> source_model.samples
