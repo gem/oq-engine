@@ -206,7 +206,7 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def get_rup_contexts(self, src, sites):
+    def gen_rup_contexts(self, src, sites):
         """
         :param src: a hazardlib source
         :param sites: the sites affected by it
@@ -216,7 +216,7 @@ class ContextMaker(object):
         N = len(sitecol)
         fewsites = N <= FEWSITES
         rupdata = []
-        for rup, sites in self._get_rup_sites(src, sites):
+        for rup, sites in self._gen_rup_sites(src, sites):
             try:
                 with self.ctx_mon:
                     sctx, dctx = self.make_contexts(sites, rup)
@@ -245,7 +245,7 @@ class ContextMaker(object):
         else:
             self.rupdata = ()
 
-    def _get_rup_sites(self, src, sites):
+    def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
         pdist = self.pointsource_distance.get(src.tectonic_region_type)
         if hasattr(src, 'location') and pdist:
@@ -278,7 +278,7 @@ class ContextMaker(object):
             len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
         eff_ruptures = 0
-        for rup, sctx, dctx in self.get_rup_contexts(src, s_sites):
+        for rup, sctx, dctx in self.gen_rup_contexts(src, s_sites):
             eff_ruptures += 1
             with self.poe_mon:
                 pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
