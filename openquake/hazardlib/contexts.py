@@ -22,8 +22,11 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
+
+FEWSITES = 10  # if there are few sites compute the rupdata
 
 
 def get_distances(rupture, mesh, param):
@@ -77,11 +80,12 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None, param=None,
+    def __init__(self, trt, gsims, maximum_distance=None, param=None,
                  monitor=Monitor()):
         param = param or {}
+        self.trt = trt
         self.gsims = gsims
-        self.maximum_distance = maximum_distance or {}
+        self.maximum_distance = maximum_distance or IntegrationDistance({})
         self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
@@ -164,7 +168,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture, filterflag=True):
+    def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -183,7 +187,7 @@ class ContextMaker(object):
             If any of declared required parameters (site, rupture and
             distance parameters) is unknown.
         """
-        sites, dctx = self.filter(sites, rupture, filterflag)
+        sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
@@ -202,48 +206,47 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def make_rup_data(self, src, sitecol):
-        """
-        :param src: a source object
-        :param sitecol: a complete SiteCollection object
-        :returns: a context array with the rupture and distance parameters
-        """
-        assert sitecol is sitecol.complete, sitecol
-        N = len(sitecol)
-        dtlist = [('srcidx', numpy.uint32)]
-        for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
-            dtlist.append((rup_param, float))
-        for dist_param in self.REQUIRES_DISTANCES:
-            dtlist.append((dist_param, (float, N)))
-        dtlist.append(('lon', (float, N)))  # closest lons
-        dtlist.append(('lat', (float, N)))  # closest lats
-        rup_data = []
-        for rup in src.iter_ruptures():
-            with self.ctx_mon:
-                sctx, dctx = self.make_contexts(sitecol, rup, filterflag=False)
-            row = [src.id]
-            for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
-                row.append(getattr(rup, rup_param))
-            maxdist = self.maximum_distance(rup.tectonic_region_type, rup.mag)
-            within_maxdist = 0
-            for dist_param in self.REQUIRES_DISTANCES:
-                distances = getattr(dctx, dist_param)
-                if (distances < maxdist).any():
-                    within_maxdist += 1
-                row.append(distances)
-            if within_maxdist:
-                closest = rup.surface.get_closest_points(sitecol)
-                row.append(closest.lons)
-                row.append(closest.lats)
-                rup_data.append(tuple(row))
-        return numpy.array(rup_data, dtlist)
-
-    def get_rupture_sites(self, src, sites):
+    def get_rup_contexts(self, src, sites):
         """
         :param src: a hazardlib source
         :param sites: the sites affected by it
-        :yields: pairs (rupture, sites)
+        :yields: (rup, sctx, dctx)
         """
+        sitecol = sites.complete
+        N = len(sitecol)
+        fewsites = N <= FEWSITES
+        rupdata = []
+        for rup, sites in self._get_rup_sites(src, sites):
+            try:
+                with self.ctx_mon:
+                    sctx, dctx = self.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            yield rup, sctx, dctx
+            if fewsites:  # store rupdata
+                row = [src.id or 0, rup.weight or 1]
+                for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
+                    row.append(getattr(rup, rup_param))
+                for dist_param in self.REQUIRES_DISTANCES:
+                    row.append(get_distances(rup, sitecol, dist_param))
+                closest = rup.surface.get_closest_points(sitecol)
+                row.append(closest.lons)
+                row.append(closest.lats)
+                rupdata.append(tuple(row))
+        if rupdata:
+            dtlist = [('srcidx', numpy.uint32), ('weight', float)]
+            for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
+                dtlist.append((rup_param, float))
+            for dist_param in self.REQUIRES_DISTANCES:
+                dtlist.append((dist_param, (float, (N,))))
+            dtlist.append(('lon', (float, (N,))))  # closest lons
+            dtlist.append(('lat', (float, (N,))))  # closest lats
+            self.rupdata = numpy.array(rupdata, dtlist)
+        else:
+            self.rupdata = ()
+
+    def _get_rup_sites(self, src, sites):
+        # implements the pointsource_distance feature
         pdist = self.pointsource_distance.get(src.tectonic_region_type)
         if hasattr(src, 'location') and pdist:
             close_sites, far_sites = sites.split(src.location, pdist)
@@ -275,12 +278,7 @@ class ContextMaker(object):
             len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
         eff_ruptures = 0
-        for rup, sites in self.get_rupture_sites(src, s_sites):
-            try:
-                with self.ctx_mon:
-                    sctx, dctx = self.make_contexts(sites, rup)
-            except FarAwayRupture:
-                continue
+        for rup, sctx, dctx in self.get_rup_contexts(src, s_sites):
             eff_ruptures += 1
             with self.poe_mon:
                 pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)

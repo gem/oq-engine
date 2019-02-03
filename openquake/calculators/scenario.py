@@ -48,7 +48,7 @@ class ScenarioCalculator(base.HazardCalculator):
         self.rup = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
         R = len(self.gsims)
-        self.cmaker = ContextMaker(self.gsims, oq.maximum_distance,
+        self.cmaker = ContextMaker('*', self.gsims, oq.maximum_distance,
                                    {'filter_distance': oq.filter_distance})
         super().pre_execute()
         self.datastore['oqparam'] = oq

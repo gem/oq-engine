@@ -78,6 +78,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 if pmap:
                     acc[grp_id] |= pmap
                 self.nsites.append(len(pmap))
+            for grp_id, data in dic['rup_data'].items():
+                if len(data):
+                    self.datastore.extend('rup/grp-%02d' % grp_id, data)
         self.calc_times += dic['calc_times']
         return acc
 
