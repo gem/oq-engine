@@ -117,7 +117,7 @@ class ContextMaker(object):
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
 
-    def filter(self, sites, rupture, flag=True):
+    def filter(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture.
 
@@ -130,7 +130,7 @@ class ContextMaker(object):
             (filtered sites, distance context)
         """
         distances = get_distances(rupture, sites, self.filter_distance)
-        if flag and self.maximum_distance:
+        if self.maximum_distance:
             mask = distances <= self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
             if mask.any():
