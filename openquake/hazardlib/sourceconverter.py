@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import re
 import operator
 import collections
 import pickle
@@ -132,7 +131,8 @@ class SourceGroup(collections.Sequence):
         """
         :returns: True if the group cannot be split
         """
-        return self.cluster or self.src_interdep == 'mutex'
+        return (self.cluster or self.src_interdep == 'mutex' or
+                self.rup_interdep == 'mutex')
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
