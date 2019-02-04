@@ -117,7 +117,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rupser = calc.RuptureSerializer(self.datastore)
 
     def init_logic_tree(self, csm_info):
-        self.grp_trt = csm_info.grp_by("trt")
+        self.trt_by_grp = csm_info.grp_by("trt")
         self.rlzs_assoc = csm_info.get_rlzs_assoc()
         self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = csm_info.get_samples_by_grp()
