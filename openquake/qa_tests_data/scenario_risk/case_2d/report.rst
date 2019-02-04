@@ -3,8 +3,8 @@ scenario hazard
 
 ============== ===================
 checksum32     1,368,942,876      
-date           2019-01-27T08:28:30
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:41
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
@@ -82,5 +82,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.747E-04 0.0       1     
+reading exposure 4.857E-04 0.0       1     
 ================ ========= ========= ======
