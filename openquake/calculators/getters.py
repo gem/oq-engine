@@ -470,25 +470,18 @@ class GmfGetter(object):
 
 
 def gen_rupture_getters(dstore, slc=slice(None),
-                        concurrent_tasks=1, hdf5cache=None,
-                        rup_weight=None):
+                        concurrent_tasks=1, hdf5cache=None):
     """
     :yields: RuptureGetters
     """
     csm_info = dstore['csm_info']
-    grp_trt = csm_info.grp_by("trt")
+    trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
     by_grp = operator.itemgetter(2)  # serial, srcidx, grp_id
-    if rup_weight:  # ebrisk
-        maxweight = numpy.ceil(2E10 / concurrent_tasks)
-        blocks = general.block_splitter(rup_array, maxweight, rup_weight,
-                                        key=by_grp)
-    else:  # event based
-        blocks = general.split_in_blocks(rup_array, concurrent_tasks,
-                                         key=by_grp)
+    blocks = general.split_in_blocks(rup_array, concurrent_tasks, key=by_grp)
     nr = 0
     ne = 0
     for block in blocks:
@@ -500,7 +493,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
         rups = numpy.array(block)
         rgetter = RuptureGetter(
             hdf5cache or dstore.hdf5path, code2cls, rups,
-            grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+            trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
         rgetter.weight = getattr(block, 'weight', len(block))
         yield rgetter
         nr += len(rups)
