@@ -167,8 +167,17 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.rupweight_mon = self.monitor('calc rupture weight',
                                           measuremem=False)
 
-    def acc0(self):
-        return numpy.zeros(self.N)
+    def execute(self):
+        oq = self.oqparam
+        self.set_param()
+        self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+        self.init_logic_tree(self.csm_info)
+        iterargs = ((rgetter, self.src_filter, self.param)
+                    for rgetter in self.gen_rupture_getters(self.rup_weight))
+        acc = parallel.Starmap(
+            self.core_task.__func__, iterargs, self.monitor()
+        ).reduce(self.agg_dicts, numpy.zeros(self.N))
+        return acc
 
     def rup_weight(self, rup):
         """
