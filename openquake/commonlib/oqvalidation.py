@@ -198,15 +198,16 @@ class OqParam(valid.ParamSet):
             if 'region' in names_vals:
                 raise InvalidFile('You cannot have both region and '
                                   'region_constraint in %s' % job_ini)
-            logging.warn('region_constraint is obsolete, use region instead')
+            logging.warning(
+                'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
                 'intensity_measure_types' in names_vals):
-            logging.warn('Ignoring intensity_measure_types since '
-                         'intensity_measure_types_and_levels is set')
+            logging.warning('Ignoring intensity_measure_types since '
+                            'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
@@ -288,7 +289,7 @@ class OqParam(valid.ParamSet):
             elif self.hazard_calculation_id is None:
                 raise ValueError('ebrisk requires hazard_calculation_id')
             elif self.number_of_logic_tree_samples == 0:
-                logging.warn('ebrisk is not meant for full enumeration')
+                logging.warning('ebrisk is not meant for full enumeration')
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
@@ -311,7 +312,7 @@ class OqParam(valid.ParamSet):
         # check grid + sites
         if (self.region_grid_spacing and 'site_model' in self.inputs
                 and 'exposure' in self.inputs):
-            logging.warn(
+            logging.warning(
                 'You are specifying a grid, a site model and an exposure at '
                 'the same time: consider using `oq prepare_site_model`')
 
@@ -719,8 +720,8 @@ class OqParam(valid.ParamSet):
                 os.path.join(self.input_dir, self.export_dir))
         if not self.export_dir:
             self.export_dir = os.path.expanduser('~')  # home directory
-            logging.warn('export_dir not specified. Using export_dir=%s'
-                         % self.export_dir)
+            logging.warning('export_dir not specified. Using export_dir=%s'
+                            % self.export_dir)
             return True
         elif not os.path.exists(self.export_dir):
             try:
@@ -795,7 +796,7 @@ class OqParam(valid.ParamSet):
                              'if the IMT set contains SA(...) or PGA, got %s'
                              % list(self.imtls))
         elif len(ok_imts) == 1:
-            logging.warn(
+            logging.warning(
                 'There is a single IMT, the uniform_hazard_spectra plot will '
                 'contain a single point')
 

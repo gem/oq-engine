@@ -312,7 +312,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     except (RuntimeError, ValueError):
                         # sometimes produces errors but they are difficult to
                         # reproduce
-                        logging.warn('', exc_info=True)
+                        logging.warning('', exc_info=True)
 
         return getattr(self, 'exported', {})
 
@@ -808,7 +808,7 @@ class HazardCalculator(BaseCalculator):
                 'The logic tree has %d realizations, the maximum '
                 'is %d' % (R, TWO16))
         elif R > 10000:
-            logging.warn(
+            logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
         self.datastore.flush()
@@ -859,7 +859,7 @@ class RiskCalculator(HazardCalculator):
         oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
         extra = self.riskmodel.get_extra_imts(oq.risk_imtls)
         if extra:
-            logging.warn('There are risk functions for not available IMTs '
+            logging.warning('There are risk functions for not available IMTs '
                          'which will be ignored: %s' % extra)
 
         logging.info('Getting/reducing shakemap')

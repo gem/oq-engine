@@ -318,7 +318,7 @@ class EventBasedCalculator(base.HazardCalculator):
             oq.minimum_intensity = self.riskmodel.min_iml
         min_iml = oq.min_iml
         if min_iml.sum() == 0:
-            logging.warn('The GMFs are not filtered: '
+            logging.warning('The GMFs are not filtered: '
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
@@ -436,6 +436,6 @@ class EventBasedCalculator(base.HazardCalculator):
             eb_mean_curves = get_mean_curves(self.datastore)
             rdiff, index = util.max_rel_diff_index(
                 cl_mean_curves, eb_mean_curves)
-            logging.warn('Relative difference with the classical '
+            logging.warning('Relative difference with the classical '
                          'mean curves: %d%% at site index %d',
                          rdiff * 100, index)
