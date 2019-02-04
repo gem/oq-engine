@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     3,815,691,122      
-date           2019-01-27T08:29:49
-engine_version 3.4.0-git7f110aaa0b
+checksum32     3,519,531,262      
+date           2019-02-03T09:39:00
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -51,9 +51,9 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        0.25000 complex(2,2,1)  4/4             
-b2        0.25000 complex(2,2,1)  4/4             
-b3        0.50000 complex(2,2,1)  1/1             
+b1        0.25000 complex(2,2,0)  4               
+b2        0.25000 complex(2,2,0)  4               
+b3        0.50000 trivial(0,0,1)  1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -129,11 +129,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-2      1         S    4     6     482          0.09122   0.0        7.00000   1         0.0    
-0      1         S    0     2     482          0.08545   0.0        7.00000   1         0.0    
-1      2         S    2     4     4            0.00387   0.0        7.00000   1         2.00000
-4      buc06pt05 N    402   426   2            4.799E-04 0.0        7.00000   1         2.00000
-3      2         X    6     402   1            4.070E-04 0.0        7.00000   1         0.0    
+2      1         S    4     6     482          0.04146   0.0        7.00000   1         0.0    
+0      1         S    0     2     482          0.03868   0.0        7.00000   1         0.0    
+1      2         S    2     4     4            0.00234   0.0        7.00000   1         2.00000
+4      buc06pt05 N    402   426   2            3.181E-04 0.0        7.00000   1         2.00000
+3      2         X    6     402   1            2.689E-04 0.0        7.00000   1         0.0    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -141,9 +141,9 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    4.799E-04 1     
-S    0.18053   3     
-X    4.070E-04 1     
+N    3.181E-04 1     
+S    0.08249   3     
+X    2.689E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -156,34 +156,34 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-read_source_models 0.00745   0.00305   0.00544   0.01096   3      
-split_filter       0.00751   NaN       0.00751   0.00751   1      
-sample_ruptures    0.03709   0.04753   0.00108   0.09198   5      
-get_eid_rlz        5.409E-04 3.955E-05 5.062E-04 5.772E-04 4      
+read_source_models 0.00739   0.00288   0.00549   0.01070   3      
+only_filter        0.00723   NaN       0.00723   0.00723   1      
+sample_ruptures    0.01798   0.02069   7.644E-04 0.04198   5      
+get_eid_rlz        5.196E-04 1.517E-05 5.038E-04 5.398E-04 4      
 ================== ========= ========= ========= ========= =======
 
 Data transfer
 -------------
-================== ======================================== ========
-task               sent                                     received
-read_source_models converter=939 B fnames=351 B             16.43 KB
-split_filter       srcs=13.99 KB srcfilter=253 B dummy=14 B 14.3 KB 
-sample_ruptures    param=26.86 KB sources=16.8 KB           3.44 KB 
-get_eid_rlz        self=6.52 KB                             1.3 KB  
-================== ======================================== ========
+================== ================================================ ========
+task               sent                                             received
+read_source_models converter=939 B fnames=351 B                     16.43 KB
+only_filter        srcs=13.99 KB srcfilter=253 B dummy=14 B         14.3 KB 
+sample_ruptures    param=26.74 KB sources=16.8 KB srcfilter=1.07 KB 3.44 KB 
+get_eid_rlz        self=7.2 KB                                      1.3 KB  
+================== ================================================ ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total sample_ruptures    0.18544   0.97266   5     
-iter_ruptures            0.17908   0.0       5     
-total read_source_models 0.02236   1.64453   3     
-total only_filter        0.00751   1.66797   1     
-saving ruptures          0.00648   0.0       2     
-store source model       0.00638   0.0       3     
-store source_info        0.00319   0.0       1     
-total get_eid_rlz        0.00216   0.0       4     
-reading exposure         8.323E-04 0.0       1     
+total sample_ruptures    0.08992   1.69141   5     
+iter_ruptures            0.08179   0.0       5     
+total read_source_models 0.02216   1.37500   3     
+total only_filter        0.00723   2.18750   1     
+saving ruptures          0.00548   0.0       2     
+store source model       0.00535   0.0       3     
+total get_eid_rlz        0.00208   0.0       4     
+store source_info        0.00180   0.0       1     
+reading exposure         8.450E-04 0.0       1     
 ======================== ========= ========= ======

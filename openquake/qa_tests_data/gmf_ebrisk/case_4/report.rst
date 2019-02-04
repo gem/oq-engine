@@ -3,8 +3,8 @@ event based two source models
 
 ============== ===================
 checksum32     1,852,256,743      
-date           2019-01-27T08:28:25
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:35
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 11
@@ -85,8 +85,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00762 0.00338 0.00523 0.01001 2      
-split_filter       0.00677 NaN     0.00677 0.00677 1      
+read_source_models 0.00842 0.00401 0.00559 0.01126 2      
+only_filter        0.00684 NaN     0.00684 0.00684 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -94,7 +94,7 @@ Data transfer
 ================== ======================================== ========
 task               sent                                     received
 read_source_models converter=626 B fnames=218 B             13.91 KB
-split_filter       srcs=12.25 KB srcfilter=253 B dummy=14 B 12.38 KB
+only_filter        srcs=12.25 KB srcfilter=253 B dummy=14 B 12.38 KB
 ================== ======================================== ========
 
 Slowest operations
@@ -102,7 +102,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.01523   0.21094   2     
-total only_filter        0.00677   1.62891   1     
-reading exposure         7.653E-04 0.0       1     
+total read_source_models 0.01684   0.29688   2     
+total only_filter        0.00684   1.37891   1     
+reading exposure         6.523E-04 0.0       1     
 ======================== ========= ========= ======
