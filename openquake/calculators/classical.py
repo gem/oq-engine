@@ -199,7 +199,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         csm_info = self.datastore['csm_info']
-        grp_trt = csm_info.grp_by("trt")
+        trt_by_grp = csm_info.grp_by("trt")
         grp_source = csm_info.grp_by("name")
         if oq.disagg_by_src:
             src_name = {src.src_group_id: src.name
@@ -211,7 +211,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
+                    self.datastore.set_attrs(key, trt=trt_by_grp[grp_id])
                     if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))

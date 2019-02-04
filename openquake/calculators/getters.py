@@ -475,7 +475,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
     :yields: RuptureGetters
     """
     csm_info = dstore['csm_info']
-    grp_trt = csm_info.grp_by("trt")
+    trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
@@ -493,7 +493,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
         rups = numpy.array(block)
         rgetter = RuptureGetter(
             hdf5cache or dstore.hdf5path, code2cls, rups,
-            grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+            trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
         rgetter.weight = getattr(block, 'weight', len(block))
         yield rgetter
         nr += len(rups)
