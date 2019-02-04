@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     3,058,858,863      
-date           2019-01-27T08:31:43
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:40:31
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 78
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= ====================== ================
 smlt_path weight  gsim_logic_tree        num_realizations
 ========= ======= ====================== ================
-b1        1.00000 complex(0,5,2,4,4,1,0) 160/160         
+b1        1.00000 complex(0,5,2,4,4,1,0) 160             
 ========= ======= ====================== ================
 
 Required parameters per tectonic region type
@@ -143,7 +143,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 6.35600 NaN    6.35600 6.35600 1      
+read_source_models 5.23580 NaN    5.23580 5.23580 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -158,5 +158,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 6.35600  5.05469   1     
+total read_source_models 5.23580  5.33984   1     
 ======================== ======== ========= ======
