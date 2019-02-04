@@ -16,35 +16,24 @@
 
 import os
 import unittest
-import numpy
 import numpy.testing as npt
 
 from openquake.baselib.general import DictArray
-from openquake.hazardlib.source import NonParametricSeismicSource
-from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.hazardlib.const import TRT
-from openquake.hazardlib.geo.surface import PlanarSurface, SimpleFaultSurface
-from openquake.hazardlib.geo import Point, Line
-from openquake.hazardlib.geo.geodetic import point_at
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.geo import Point
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
-from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib import nrml
 
 
 class MutexRupturesTestCase(unittest.TestCase):
 
     def test(self):
-        """ Test rupture calculation in case of mutually exclusive ruptures """
+        # mutually exclusive ruptures
         d = os.path.dirname(os.path.dirname(__file__))
-        source_model = os.path.join(d, 'source_model/nonparametric-source-mutex-ruptures.xml')
+        source_model = os.path.join(
+            d, 'source_model/nonparametric-source-mutex-ruptures.xml')
         groups = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(143.5, 39.5), 800, z1pt0=100., z2pt5=1.)
