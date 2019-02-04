@@ -105,11 +105,6 @@ class IntegrationDistance(collections.Mapping):
     400
     >>> maxdist('Some TRT', mag=8.5)  # 2000 km are used above the maximum
     2000
-
-    It has also a method `.get_closest(sites, rupture)` returning the closest
-    sites to the rupture and their distances. The integration distance can be
-    missing if the sites have been already filtered (empty dictionary): in
-    that case the method returns all the sites and all the distances.
     """
     def __init__(self, dic):
         self.dic = dic or {}  # TRT -> float or list of pairs
@@ -121,6 +116,8 @@ class IntegrationDistance(collections.Mapping):
                 self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
+        if not self.dic:
+            return MAX_DISTANCE
         value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
