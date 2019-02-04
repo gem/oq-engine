@@ -471,11 +471,27 @@ class AssetCollection(object):
         if A != len(self):
             raise ValueError('The array must have length %d, got %d' %
                              (len(self), A))
+        if not tagnames:
+            return array.sum(axis=0)
         shape = [len(getattr(self.tagcol, tagname)) for tagname in tagnames]
         acc = numpy.zeros(shape, (F32, shp) if shp else F32)
         for asset, row in zip(self.array, array):
             acc[tuple(asset[tagnames])] += row
         return acc
+
+    def agg_value(self, *tagnames):
+        """
+        :param tagnames:
+            tagnames of lengths T1, T2, ... respectively
+        :returns:
+            the values of the exposure aggregated by tagnames as an array
+            of shape (T1, T2, ..., L)
+        """
+        aval = numpy.zeros((len(self), len(self.loss_types)), F32)  # (A, L)
+        for asset in self:
+            for lti, lt in enumerate(self.loss_types):
+                aval[asset.ordinal, lti] = asset.value(lt)
+        return self.aggregate_by(list(tagnames), aval)
 
     def reduce(self, sitecol):
         """

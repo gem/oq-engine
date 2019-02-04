@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2019-01-27T08:30:24
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:20
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 6, num_levels = 3
@@ -45,7 +45,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
+b1        1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -77,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     8     440          0.0       0.14303    120       20        107   
+0      1         A    0     8     440          0.0       0.12951    120       20        107   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -96,8 +96,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01527 NaN    0.01527 0.01527 1      
-split_filter       0.01226 NaN    0.01226 0.01226 1      
+read_source_models 0.00797 NaN    0.00797 0.00797 1      
+split_filter       0.01102 NaN    0.01102 0.01102 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -113,6 +113,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.01527  0.45312   1     
-total split_filter       0.01226  1.84375   1     
+total split_filter       0.01102  1.77734   1     
+total read_source_models 0.00797  0.52734   1     
 ======================== ======== ========= ======
