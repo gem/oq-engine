@@ -21,7 +21,6 @@ Disaggregation calculator core functionality
 """
 import logging
 import operator
-import time
 import numpy
 
 from openquake.baselib import parallel
@@ -439,9 +438,10 @@ producing too small PoEs.'''
             attrs['poe'] = poe
             poe_agg = numpy.mean(attrs['poe_agg'])
             if abs(1 - poe_agg / poe) > .1:
-                logging.warning('poe_agg=%s is quite different from the expected'
-                             ' poe=%s; perhaps the number of intensity measure'
-                             ' levels is too small?', poe_agg, poe)
+                logging.warning(
+                    'poe_agg=%s is quite different from the expected'
+                    ' poe=%s; perhaps the number of intensity measure'
+                    ' levels is too small?', poe_agg, poe)
 
     def build_disagg_by_src(self, iml4):
         """
