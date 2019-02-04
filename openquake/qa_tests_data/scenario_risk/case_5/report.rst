@@ -3,8 +3,8 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     3,193,187,389      
-date           2019-01-27T08:28:29
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:39
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 8, num_levels = 106
@@ -47,7 +47,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
@@ -89,8 +89,8 @@ Slowest operations
 =================== ======== ========= ======
 operation           time_sec memory_mb counts
 =================== ======== ========= ======
-building riskinputs 0.01054  0.0       1     
-saving gmfs         0.00389  0.0       1     
-computing gmfs      0.00361  0.30859   1     
-reading exposure    0.00215  0.25000   1     
+building riskinputs 0.01008  0.26562   1     
+saving gmfs         0.00410  0.0       1     
+computing gmfs      0.00355  0.20312   1     
+reading exposure    0.00217  0.0       1     
 =================== ======== ========= ======

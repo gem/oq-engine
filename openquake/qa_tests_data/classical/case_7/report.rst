@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 7
 
 ============== ===================
 checksum32     4,124,672,606      
-date           2019-01-27T08:31:06
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:58
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -44,8 +44,8 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        0.70000 trivial(1)      1/1             
-b2        0.30000 trivial(1)      1/1             
+b1        0.70000 trivial(1)      1               
+b2        0.30000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -87,9 +87,9 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      1         S    8     10    91           0.0       8.106E-06  1.00000   1         91    
-0      2         C    2     8     49           0.0       7.153E-06  1.00000   1         196   
-0      1         S    0     2     91           0.0       2.050E-05  1.00000   1         91    
+1      1         S    8     10    91           0.0       6.437E-06  1.00000   1         91    
+0      2         C    2     8     49           0.0       6.676E-06  1.00000   1         196   
+0      1         S    0     2     91           0.0       1.931E-05  1.00000   1         91    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -110,8 +110,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.06122 0.06088 0.01818 0.10427 2      
-split_filter       0.00627 NaN     0.00627 0.00627 1      
+read_source_models 0.06653 0.06693 0.01921 0.11386 2      
+split_filter       0.00628 NaN     0.00628 0.00628 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -127,6 +127,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.12245  1.33984   2     
-total split_filter       0.00627  1.80469   1     
+total read_source_models 0.13307  1.31250   2     
+total split_filter       0.00628  1.54297   1     
 ======================== ======== ========= ======

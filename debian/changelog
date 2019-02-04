@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Stored rupture information in classical calculations with few sites
+
   [Chris Van Houtte]
   * Adding conversion from geometric mean to larger horizontal component in
     bradley_2013.py

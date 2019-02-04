@@ -21,6 +21,7 @@ Disaggregation calculator core functionality
 """
 import logging
 import operator
+import time
 import numpy
 
 from openquake.baselib import parallel
@@ -286,7 +287,7 @@ producing too small PoEs.'''
                 sources = sum([grp.sources for grp in groups], [])
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
-                    rlzs_by_gsim, src_filter.integration_distance,
+                    trt, rlzs_by_gsim, src_filter.integration_distance,
                     {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
