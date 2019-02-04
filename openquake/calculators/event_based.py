@@ -207,6 +207,8 @@ class EventBasedCalculator(base.HazardCalculator):
         hdf5cache = dstore.hdf5cache()
         mode = 'r+' if os.path.exists(hdf5cache) else 'w'
         with hdf5.File(hdf5cache, mode) as cache:
+            if 'ruptures' not in cache:
+                dstore.hdf5.copy('ruptures', cache)
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         yield from gen_rupture_getters(
