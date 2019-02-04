@@ -3,8 +3,8 @@ Classical PSHA for the southern Pacific Islands reduced
 
 ============== ===================
 checksum32     56,125,602         
-date           2019-01-27T08:30:51
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:42
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 5, num_levels = 20
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 complex(3,0,4)  12/12           
+b1        1.00000 complex(3,0,4)  12              
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -137,7 +137,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.09631 0.12644 0.01354 0.24185 3      
+read_source_models 0.10019 0.13412 0.01348 0.25467 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -152,5 +152,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.28893  2.26953   3     
+total read_source_models 0.30056  2.34766   3     
 ======================== ======== ========= ======

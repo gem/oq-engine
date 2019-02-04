@@ -485,6 +485,12 @@ hazard_uhs-std.csv
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
+            # check rupdata
+            nruptures = []
+            for grp, rupdata in sorted(self.calc.datastore['rup'].items()):
+                nruptures.append((grp, len(rupdata)))
+            self.assertEqual(nruptures, [('grp-00', 700), ('grp-01', 1117),
+                                         ('grp-02', 1385)])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_31(self):
