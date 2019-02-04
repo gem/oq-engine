@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 20
 
 ============== ===================
 checksum32     1,888,120,170      
-date           2019-01-27T08:30:57
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:50
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -44,18 +44,18 @@ Composite source model
 ========================= ======= =============== ================
 smlt_path                 weight  gsim_logic_tree num_realizations
 ========================= ======= =============== ================
-sm1_sg1_cog1_char_complex 0.07000 trivial(1)      1/1             
-sm1_sg1_cog1_char_plane   0.10500 trivial(1)      1/1             
-sm1_sg1_cog1_char_simple  0.17500 trivial(1)      1/1             
-sm1_sg1_cog2_char_complex 0.07000 trivial(1)      1/1             
-sm1_sg1_cog2_char_plane   0.10500 trivial(1)      1/1             
-sm1_sg1_cog2_char_simple  0.17500 trivial(1)      1/1             
-sm1_sg2_cog1_char_complex 0.03000 trivial(1)      1/1             
-sm1_sg2_cog1_char_plane   0.04500 trivial(1)      1/1             
-sm1_sg2_cog1_char_simple  0.07500 trivial(1)      1/1             
-sm1_sg2_cog2_char_complex 0.03000 trivial(1)      1/1             
-sm1_sg2_cog2_char_plane   0.04500 trivial(1)      1/1             
-sm1_sg2_cog2_char_simple  0.07500 trivial(1)      1/1             
+sm1_sg1_cog1_char_complex 0.07000 trivial(1)      1               
+sm1_sg1_cog1_char_plane   0.10500 trivial(1)      1               
+sm1_sg1_cog1_char_simple  0.17500 trivial(1)      1               
+sm1_sg1_cog2_char_complex 0.07000 trivial(1)      1               
+sm1_sg1_cog2_char_plane   0.10500 trivial(1)      1               
+sm1_sg1_cog2_char_simple  0.17500 trivial(1)      1               
+sm1_sg2_cog1_char_complex 0.03000 trivial(1)      1               
+sm1_sg2_cog1_char_plane   0.04500 trivial(1)      1               
+sm1_sg2_cog1_char_simple  0.07500 trivial(1)      1               
+sm1_sg2_cog2_char_complex 0.03000 trivial(1)      1               
+sm1_sg2_cog2_char_plane   0.04500 trivial(1)      1               
+sm1_sg2_cog2_char_simple  0.07500 trivial(1)      1               
 ========================= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -127,26 +127,26 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-11     SFLT1     S    2,710 2,712 58           0.0       3.719E-05  2.00000   2         58     
-11     COMFLT1   C    2,706 2,710 62           0.0       3.099E-06  1.00000   1         248    
+11     SFLT1     S    2,710 2,712 58           0.0       3.529E-05  2.00000   2         58     
+11     COMFLT1   C    2,706 2,710 62           0.0       2.623E-06  1.00000   1         248    
 11     CHAR1     X    2,362 2,706 1            0.0       2.146E-06  1.00000   1         1.00000
-10     SFLT1     S    2,360 2,362 58           0.0       3.862E-05  2.00000   2         58     
+10     SFLT1     S    2,360 2,362 58           0.0       3.624E-05  2.00000   2         58     
 10     COMFLT1   C    2,356 2,360 62           0.0       2.861E-06  1.00000   1         248    
-10     CHAR1     X    2,348 2,356 1            0.0       2.384E-06  1.00000   1         1.00000
-9      SFLT1     S    2,346 2,348 58           0.0       6.390E-05  2.00000   2         58     
+10     CHAR1     X    2,348 2,356 1            0.0       2.146E-06  1.00000   1         1.00000
+9      SFLT1     S    2,346 2,348 58           0.0       4.053E-05  2.00000   2         58     
 9      COMFLT1   C    2,342 2,346 62           0.0       2.861E-06  1.00000   1         248    
-9      CHAR1     X    2,034 2,342 1            0.0       2.384E-06  1.00000   1         1.00000
-8      SFLT1     S    2,032 2,034 58           0.0       3.767E-05  2.00000   2         58     
+9      CHAR1     X    2,034 2,342 1            0.0       1.907E-06  1.00000   1         1.00000
+8      SFLT1     S    2,032 2,034 58           0.0       4.339E-05  2.00000   2         58     
 8      COMFLT1   C    2,028 2,032 29           0.0       2.623E-06  1.00000   1         116    
-8      CHAR1     X    1,684 2,028 1            0.0       2.384E-06  1.00000   1         1.00000
-7      SFLT1     S    1,682 1,684 58           0.0       3.815E-05  2.00000   2         58     
-7      COMFLT1   C    1,678 1,682 29           0.0       2.861E-06  1.00000   1         116    
-7      CHAR1     X    1,670 1,678 1            0.0       2.146E-06  1.00000   1         1.00000
-6      SFLT1     S    1,668 1,670 58           0.0       3.862E-05  2.00000   2         58     
+8      CHAR1     X    1,684 2,028 1            0.0       1.907E-06  1.00000   1         1.00000
+7      SFLT1     S    1,682 1,684 58           0.0       3.624E-05  2.00000   2         58     
+7      COMFLT1   C    1,678 1,682 29           0.0       2.623E-06  1.00000   1         116    
+7      CHAR1     X    1,670 1,678 1            0.0       1.669E-06  1.00000   1         1.00000
+6      SFLT1     S    1,668 1,670 58           0.0       3.815E-05  2.00000   2         58     
 6      COMFLT1   C    1,664 1,668 29           0.0       2.861E-06  1.00000   1         116    
-6      CHAR1     X    1,356 1,664 1            0.0       2.146E-06  1.00000   1         1.00000
-5      SFLT1     S    1,354 1,356 56           0.0       3.910E-05  2.00000   2         56     
-5      COMFLT1   C    1,350 1,354 62           0.0       3.099E-06  1.00000   1         248    
+6      CHAR1     X    1,356 1,664 1            0.0       1.669E-06  1.00000   1         1.00000
+5      SFLT1     S    1,354 1,356 56           0.0       3.672E-05  2.00000   2         56     
+5      COMFLT1   C    1,350 1,354 62           0.0       2.861E-06  1.00000   1         248    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -162,14 +162,14 @@ X    0.0       12
 Duplicated sources
 ------------------
 Found 3 source(s) with the same ID and 0 true duplicate(s)
-Here is a fake duplicate: COMFLT1
+Here is a fake duplicate: CHAR1
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.06745 0.01075 0.06141 0.09888 12     
-split_filter       0.05220 NaN     0.05220 0.05220 1      
+read_source_models 0.06852 0.01401 0.06190 0.11153 12     
+split_filter       0.05175 NaN     0.05175 0.05175 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -185,6 +185,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.80945  1.25391   12    
-total split_filter       0.05220  1.85547   1     
+total read_source_models 0.82221  1.19922   12    
+total split_filter       0.05175  2.19922   1     
 ======================== ======== ========= ======
