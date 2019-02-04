@@ -255,7 +255,8 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
+    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
     gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
-                     ContextMaker([gsim]), truncation_level, correlation_model)
+                     cmaker, truncation_level, correlation_model)
     res = gc.compute(gsim, realizations, seed)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

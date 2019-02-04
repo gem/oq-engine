@@ -3,8 +3,8 @@ Hazard South Africa
 
 ============== ===================
 checksum32     3,741,932,100      
-date           2019-01-27T08:29:17
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:38:28
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 18, num_levels = 1
@@ -68,14 +68,14 @@ A    0.0       10
 Duplicated sources
 ------------------
 Found 5 source(s) with the same ID and 0 true duplicate(s)
-Here is a fake duplicate: 19
+Here is a fake duplicate: 20
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.04698 0.05475   0.00327 0.14565 10     
-split_filter       0.00307 4.190E-04 0.00282 0.00380 5      
+read_source_models 0.04649 0.05471   0.00309 0.13871 10     
+only_filter        0.00277 1.105E-04 0.00263 0.00289 5      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -83,7 +83,7 @@ Data transfer
 ================== ========================================== ========
 task               sent                                       received
 read_source_models converter=3.06 KB fnames=1.06 KB           26.24 KB
-split_filter       srcs=17.58 KB srcfilter=1.48 KB dummy=84 B 14.51 KB
+only_filter        srcs=17.58 KB srcfilter=1.48 KB dummy=84 B 14.51 KB
 ================== ========================================== ========
 
 Slowest operations
@@ -91,6 +91,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.46982  0.61328   10    
-total only_filter        0.01533  1.44141   5     
+total read_source_models 0.46488  0.68750   10    
+total only_filter        0.01385  1.64844   5     
 ======================== ======== ========= ======

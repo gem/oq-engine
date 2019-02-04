@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import time
 import logging
 import operator
 import numpy
@@ -22,6 +23,7 @@ import numpy
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc
@@ -76,6 +78,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 if pmap:
                     acc[grp_id] |= pmap
                 self.nsites.append(len(pmap))
+            for grp_id, data in dic['rup_data'].items():
+                if len(data):
+                    self.datastore.extend('rup/grp-%02d' % grp_id, data)
         self.calc_times += dic['calc_times']
         return acc
 
@@ -191,7 +196,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         csm_info = self.datastore['csm_info']
-        grp_trt = csm_info.grp_by("trt")
+        trt_by_grp = csm_info.grp_by("trt")
         grp_source = csm_info.grp_by("name")
         if oq.disagg_by_src:
             src_name = {src.src_group_id: src.name
@@ -203,10 +208,12 @@ class ClassicalCalculator(base.HazardCalculator):
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
+                    self.datastore.set_attrs(key, trt=trt_by_grp[grp_id])
                     if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
+                    if 'rup' in set(self.datastore):
+                        self.datastore.set_nbytes('rup/grp-%02d' % grp_id)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
             if oq.disagg_by_src and csm_info.get_num_rlzs() == 1:
@@ -257,8 +264,7 @@ class PreCalculator(ClassicalCalculator):
     """
     def execute(self):
         eff_ruptures = AccumDict(accum=0)
-        # weight, nsites, time
-        calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        calc_times = AccumDict(accum=numpy.zeros(3, F32))  # w, n, t
         for src in self.csm.get_sources():
             for grp_id in src.src_group_ids:
                 eff_ruptures[grp_id] += src.num_ruptures
