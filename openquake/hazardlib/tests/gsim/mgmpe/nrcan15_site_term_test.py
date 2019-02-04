@@ -17,7 +17,7 @@
 import numpy as np
 import unittest
 
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy, DummyGMPEOne
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
