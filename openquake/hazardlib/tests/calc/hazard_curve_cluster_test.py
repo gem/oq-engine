@@ -22,7 +22,6 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo import Point
 from openquake.baselib.general import DictArray
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.sourceconverter import SourceConverter

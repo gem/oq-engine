@@ -575,7 +575,7 @@ def view_required_params_per_trt(token, dstore):
     tbl = []
     for grp_id, trt in sorted(csm_info.grp_by("trt").items()):
         gsims = csm_info.gsim_lt.get_gsims(trt)
-        maker = ContextMaker(gsims)
+        maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
