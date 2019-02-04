@@ -151,7 +151,7 @@ class ClassicalCalculator(base.HazardCalculator):
         num_sources = 0
 
         if self.csm.has_dupl_sources and not opt:
-            logging.warn('Found %d duplicated sources',
+            logging.warning('Found %d duplicated sources',
                          self.csm.has_dupl_sources)
 
         for trt, sources in self.csm.get_trt_sources():
