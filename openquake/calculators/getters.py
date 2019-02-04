@@ -474,13 +474,15 @@ def gen_rupture_getters(dstore, slc=slice(None),
     """
     :yields: RuptureGetters
     """
+    if dstore.parent:
+        dstore = dstore.parent
     csm_info = dstore['csm_info']
     trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     maxweight = numpy.ceil(len(rup_array) / (concurrent_tasks or 1))
-    nr = 0
+    nr, ne = 0, 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
@@ -493,7 +495,8 @@ def gen_rupture_getters(dstore, slc=slice(None),
             rgetter.weight = getattr(block, 'weight', len(block))
             yield rgetter
             nr += len(block)
-    logging.info('Read %d ruptures', nr)
+            ne += rgetter.num_events
+    logging.info('Read %d ruptures and %d events', nr, ne)
 
 
 def get_maxloss_rupture(dstore, loss_type):
@@ -559,6 +562,10 @@ class RuptureGetter(object):
     @general.cached_property
     def num_events(self):
         return self.rup_array['n_occ'].sum()
+
+    @property
+    def num_ruptures(self):
+        return len(self.rup_indices)
 
     @property
     def num_rlzs(self):
