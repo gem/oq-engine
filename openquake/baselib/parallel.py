@@ -434,7 +434,7 @@ class IterResult(object):
         for result in self.iresults:
             msg = check_mem_usage()  # log a warning if too much memory is used
             if msg and first_time:
-                logging.warn(msg)
+                logging.warning(msg)
                 first_time = False  # warn only once
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
@@ -560,7 +560,7 @@ class Starmap(object):
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info):
-        """
+        r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
         of the elements and possibly to a key (see :func:
@@ -603,11 +603,11 @@ class Starmap(object):
             self.num_tasks = None
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(task_func):
-            self.argnames = inspect.getargspec(task_func).args
+            self.argnames = inspect.getfullargspec(task_func).args
         elif inspect.isclass(task_func):
-            self.argnames = inspect.getargspec(task_func.__init__).args[1:]
+            self.argnames = inspect.getfullargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
-            self.argnames = inspect.getargspec(task_func.__call__).args[1:]
+            self.argnames = inspect.getfullargspec(task_func.__call__).args[1:]
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames) - 1)
@@ -718,14 +718,14 @@ class Starmap(object):
         while self.todo:
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
-                logging.warn('Discarding a result from job %s, since this '
+                logging.warning('Discarding a result from job %s, since this '
                              'is job %d', res.mon.calc_id, self.calc_id)
                 continue
             elif res.msg == 'TASK_ENDED':
                 self.log_percent()
                 self.todo -= 1
             elif res.msg:
-                logging.warn(res.msg)
+                logging.warning(res.msg)
             else:
                 yield res
         self.log_percent()
