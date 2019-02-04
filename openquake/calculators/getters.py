@@ -674,9 +674,6 @@ class RuptureGetter(object):
             z[self.rlz2idx[r]] += a
         return z
 
-    def __len__(self):
-        return len(self.rup_indices)
-
     def __repr__(self):
         return '<%s grp_id=%d, %d rupture(s)>' % (
             self.__class__.__name__, self.grp_id, len(self))
