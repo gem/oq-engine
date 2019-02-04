@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     1,437,466,600      
-date           2019-01-27T08:28:59
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:38:10
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 5
@@ -63,18 +63,18 @@ Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.04742 5.241E-04 0.04705 0.04779 2      
-split_filter       0.00277 NaN       0.00277 0.00277 1      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.04743 0.00103 0.04669 0.04816 2      
+only_filter        0.00270 NaN     0.00270 0.00270 1      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
 read_source_models converter=626 B fnames=218 B            8.42 KB 
-split_filter       srcs=6.53 KB srcfilter=253 B dummy=14 B 6.59 KB 
+only_filter        srcs=6.53 KB srcfilter=253 B dummy=14 B 6.59 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -82,6 +82,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.09483  0.58594   2     
-total only_filter        0.00277  1.23047   1     
+total read_source_models 0.09485  0.57422   2     
+total only_filter        0.00270  1.31250   1     
 ======================== ======== ========= ======

@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     186,455,639        
-date           2019-01-27T08:29:24
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:38:35
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 3, num_levels = 38
@@ -63,18 +63,18 @@ Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-read_source_models 0.04765 0.00287 0.04562 0.04968 2      
-split_filter       0.00273 NaN     0.00273 0.00273 1      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.04811 2.053E-04 0.04796 0.04825 2      
+only_filter        0.00267 NaN       0.00267 0.00267 1      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
 read_source_models converter=626 B fnames=218 B            8.42 KB 
-split_filter       srcs=6.55 KB srcfilter=253 B dummy=14 B 6.62 KB 
+only_filter        srcs=6.55 KB srcfilter=253 B dummy=14 B 6.62 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -82,6 +82,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.09531  0.58594   2     
-total only_filter        0.00273  1.32422   1     
+total read_source_models 0.09622  0.58594   2     
+total only_filter        0.00267  1.20312   1     
 ======================== ======== ========= ======
