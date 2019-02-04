@@ -18,7 +18,6 @@
 
 import os
 import mock
-import tempfile
 import unittest
 import itertools
 import numpy
@@ -116,7 +115,9 @@ class StarmapTestCase(unittest.TestCase):
         monitor.hdf5.close()
         # check that the correct information is stored in the hdf5 file
         with hdf5.File(monitor.hdf5.path) as h5:
-            self.assertGreater(len(h5['performance_data']), 0)
+            num = general.countby(h5['performance_data'].value, 'operation')
+            self.assertEqual(num[b'total supertask'], 18)
+            self.assertEqual(num[b'total get_length'], 17)
             self.assertGreater(len(h5['task_info/supertask']), 0)
         os.remove(monitor.hdf5.path)
 
