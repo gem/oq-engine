@@ -22,8 +22,11 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
+
+FEWSITES = 10  # if there are few sites store the rupdata
 
 
 def get_distances(rupture, mesh, param):
@@ -77,11 +80,12 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None, param=None,
+    def __init__(self, trt, gsims, maximum_distance=None, param=None,
                  monitor=Monitor()):
         param = param or {}
+        self.trt = trt
         self.gsims = gsims
-        self.maximum_distance = maximum_distance or {}
+        self.maximum_distance = maximum_distance or IntegrationDistance({})
         self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
@@ -101,8 +105,9 @@ class ContextMaker(object):
         self.REQUIRES_DISTANCES.add(self.filter_distance)
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
-            # since the ContextMaker must be used on ruptures with all the
+        if hasattr(gsims, 'items'):
+            # gsims is actually a dict rlzs_by_gsim
+            # since the ContextMaker must be used on ruptures with the
             # same TRT, given a realization there is a single gsim
             self.gsim_by_rlzi = {}
             for gsim, rlzis in gsims.items():
@@ -201,12 +206,49 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def get_rupture_sites(self, src, sites):
+    def gen_rup_contexts(self, src, sites):
         """
         :param src: a hazardlib source
         :param sites: the sites affected by it
-        :yields: pairs (rupture, sites)
+        :yields: (rup, sctx, dctx)
         """
+        sitecol = sites.complete
+        N = len(sitecol)
+        fewsites = N <= FEWSITES
+        rupdata = []
+        for rup, sites in self._gen_rup_sites(src, sites):
+            try:
+                with self.ctx_mon:
+                    sctx, dctx = self.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            yield rup, sctx, dctx
+            if fewsites:  # store rupdata
+                row = [src.id or 0]
+                for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
+                    row.append(getattr(rup, rup_param))
+                for dist_param in self.REQUIRES_DISTANCES:
+                    row.append(get_distances(rup, sitecol, dist_param))
+                closest = rup.surface.get_closest_points(sitecol)
+                row.append(closest.lons)
+                row.append(closest.lats)
+                row.append(rup.weight or 0)
+                rupdata.append(tuple(row))
+        if rupdata:
+            dtlist = [('srcidx', numpy.uint32)]
+            for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
+                dtlist.append((rup_param, float))
+            for dist_param in self.REQUIRES_DISTANCES:
+                dtlist.append((dist_param, (float, (N,))))
+            dtlist.append(('lon', (float, (N,))))  # closest lons
+            dtlist.append(('lat', (float, (N,))))  # closest lats
+            dtlist.append(('mutex_weight', float))
+            self.rupdata = numpy.array(rupdata, dtlist)
+        else:
+            self.rupdata = ()
+
+    def _gen_rup_sites(self, src, sites):
+        # implements the pointsource_distance feature
         pdist = self.pointsource_distance.get(src.tectonic_region_type)
         if hasattr(src, 'location') and pdist:
             close_sites, far_sites = sites.split(src.location, pdist)
@@ -238,12 +280,7 @@ class ContextMaker(object):
             len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
         eff_ruptures = 0
-        for rup, sites in self.get_rupture_sites(src, s_sites):
-            try:
-                with self.ctx_mon:
-                    sctx, dctx = self.make_contexts(sites, rup)
-            except FarAwayRupture:
-                continue
+        for rup, sctx, dctx in self.gen_rup_contexts(src, s_sites):
             eff_ruptures += 1
             with self.poe_mon:
                 pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
@@ -275,10 +312,9 @@ class ContextMaker(object):
     def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
                      monitor=Monitor()):
         """
-        Disaggregate (separate) PoE of `imldict` in different contributions
-        each coming from `n_epsilons` distribution bins.
+        Disaggregate (separate) PoE in different contributions.
 
-        :param sitecol: a SiteCollection
+        :param sitecol: a SiteCollection with N sites
         :param ruptures: an iterator over ruptures with the same TRT
         :param iml4: a 4d array of IMLs of shape (N, R, M, P)
         :param truncnorm: an instance of scipy.stats.truncnorm
