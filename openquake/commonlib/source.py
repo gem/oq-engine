@@ -178,6 +178,23 @@ class CompositionInfo(object):
         return self.__class__(
             self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
 
+    def classify_gsim_lt(self, source_model):
+        """
+        :returns: (kind, num_paths), where kind is trivial, simple, complex
+        """
+        trts = set(sg.trt for sg in source_model.src_groups if sg.eff_ruptures)
+        gsim_lt = self.gsim_lt.reduce(trts)
+        num_branches = list(gsim_lt.get_num_branches().values())
+        num_paths = gsim_lt.get_num_paths()
+        num_gsims = '(%s)' % ','.join(map(str, num_branches))
+        multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
+        if multi_gsim_trts == 0:
+            return "trivial" + num_gsims, num_paths
+        elif multi_gsim_trts == 1:
+            return "simple" + num_gsims, num_paths
+        else:
+            return "complex" + num_gsims, num_paths
+
     def get_samples_by_grp(self):
         """
         :returns: a dictionary src_group_id -> source_model.samples
@@ -448,14 +465,6 @@ class CompositeSourceModel(collections.Sequence):
         new.info.tot_weight = new.get_weight()
         return new
 
-    def split2(self):
-        """
-        :returns: csm_by_grp and srcs_by_trt
-        """
-        csm_by_grp = self.new({sg.id: sg for sg in self.src_groups
-                               if sg.atomic})
-        return csm_by_grp, self._sources_by_trt()
-
     def get_weight(self, weight=operator.attrgetter('weight')):
         """
         :param weight: source weight function
@@ -519,15 +528,20 @@ class CompositeSourceModel(collections.Sequence):
                         sources.append(src)
         return sources
 
-    def _sources_by_trt(self):
-        # involves non-atomic groups
+    def get_trt_sources(self):
+        """
+        :returns: a list of pairs [(trt, group of sources)]
+        """
+        atomic = []
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                if not grp.atomic:
+                if grp.atomic:
+                    atomic.append((grp.trt, grp))
+                else:
                     acc[grp.trt].extend(grp)
         if self.optimize_same_id is False:
-            return acc
+            return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
         n = 0
         tot = 0
@@ -546,7 +560,7 @@ class CompositeSourceModel(collections.Sequence):
         if n < tot:
             logging.info('Reduced %d sources to %d sources with unique IDs',
                          tot, n)
-        return dic
+        return atomic + list(dic.items())
 
     def get_num_ruptures(self):
         """
