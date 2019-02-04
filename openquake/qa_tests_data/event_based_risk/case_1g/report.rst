@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     2,390,181,475      
-date           2019-01-27T08:29:53
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:02
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 1
@@ -78,8 +78,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00381 NaN    0.00381 0.00381 1      
-split_filter       0.00421 NaN    0.00421 0.00421 1      
+read_source_models 0.00380 NaN    0.00380 0.00380 1      
+only_filter        0.00413 NaN    0.00413 0.00413 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -87,7 +87,7 @@ Data transfer
 ================== ======================================= ========
 task               sent                                    received
 read_source_models converter=313 B fnames=114 B            1.49 KB 
-split_filter       srcs=1.12 KB srcfilter=253 B dummy=14 B 1.2 KB  
+only_filter        srcs=1.12 KB srcfilter=253 B dummy=14 B 1.2 KB  
 ================== ======================================= ========
 
 Slowest operations
@@ -95,7 +95,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total only_filter        0.00421   1.59375   1     
-total read_source_models 0.00381   0.18750   1     
-reading exposure         5.774E-04 0.0       1     
+total only_filter        0.00413   1.50391   1     
+total read_source_models 0.00380   0.17969   1     
+reading exposure         5.498E-04 0.0       1     
 ======================== ========= ========= ======
