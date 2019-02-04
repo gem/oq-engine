@@ -218,12 +218,12 @@ producing too small PoEs.'''
             raise RuntimeError('All sources were filtered away!')
 
         R = len(self.rlzs_assoc.realizations)
-        I = len(oq.imtls)
+        M = len(oq.imtls)
         P = len(oq.poes_disagg) or 1
-        if R * I * P > 10:
+        if R * M * P > 10:
             logging.warning(
                 'You have %d realizations, %d IMTs and %d poes_disagg: the '
-                'disaggregation will be heavy and memory consuming', R, I, P)
+                'disaggregation will be heavy and memory consuming', R, M, P)
         iml4 = disagg.make_iml4(
             R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
         if oq.disagg_by_src:
@@ -231,7 +231,7 @@ producing too small PoEs.'''
                 self.build_disagg_by_src(iml4)
             else:
                 logging.warning('disagg_by_src works only with 1 realization, '
-                             'you have %d', R)
+                                'you have %d', R)
 
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
