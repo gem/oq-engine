@@ -182,7 +182,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def gen_rupture_getters(self):
         dstore = self.datastore.parent
         csm_info = dstore['csm_info']
-        grp_trt = csm_info.grp_by("trt")
+        trt_by_grp = csm_info.grp_by("trt")
         samples = csm_info.get_samples_by_grp()
         code2cls = getters.get_code2cls(dstore.get_attrs('ruptures'))
         maxweight = numpy.ceil(2E10 / (self.oqparam.concurrent_tasks or 1))
@@ -199,7 +199,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 rups = numpy.array(block)
                 rgetter = getters.RuptureGetter(
                     dstore.hdf5path, code2cls, rups,
-                    grp_trt[grp_id], samples[grp_id], rlzs_by_gsim)
+                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
                 rgetter.weight = getattr(block, 'weight', len(block))
                 yield rgetter
                 nr += len(rups)
