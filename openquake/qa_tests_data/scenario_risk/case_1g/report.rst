@@ -3,8 +3,8 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     1,419,232,840      
-date           2019-01-27T08:28:30
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:40
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 7, num_levels = 3
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Realizations per (TRT, GSIM)

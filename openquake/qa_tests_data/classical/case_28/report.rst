@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     3,672,594,697      
-date           2019-01-27T08:31:14
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:40:07
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 2, num_levels = 133
@@ -45,8 +45,8 @@ Composite source model
 ============================= ======= =============== ================
 smlt_path                     weight  gsim_logic_tree num_realizations
 ============================= ======= =============== ================
-smoothed_model_m_m0.2_b_e0.0  0.50000 simple(0,4,0)   4/4             
-smoothed_model_m_m0.2_b_m0.05 0.50000 simple(0,4,0)   4/4             
+smoothed_model_m_m0.2_b_e0.0  0.50000 simple(0,4,0)   4               
+smoothed_model_m_m0.2_b_m0.05 0.50000 simple(0,4,0)   4               
 ============================= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -94,8 +94,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      21        M    2     4     260          0.0       5.221E-04  2.00000   2         26    
-0      21        M    0     2     260          0.0       6.857E-04  2.00000   2         26    
+1      21        M    2     4     260          0.0       4.630E-04  2.00000   2         26    
+0      21        M    0     2     260          0.0       6.189E-04  2.00000   2         26    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -115,8 +115,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00161 3.911E-05 0.00158 0.00164 2      
-split_filter       0.00387 NaN       0.00387 0.00387 1      
+read_source_models 0.00164 9.289E-05 0.00157 0.00170 2      
+split_filter       0.00371 NaN       0.00371 0.00371 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -132,6 +132,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00387  1.32031   1     
-total read_source_models 0.00322  0.09375   2     
+total split_filter       0.00371  1.22266   1     
+total read_source_models 0.00327  0.07812   2     
 ======================== ======== ========= ======
