@@ -470,8 +470,7 @@ class GmfGetter(object):
 
 
 def gen_rupture_getters(dstore, slc=slice(None),
-                        concurrent_tasks=1, hdf5cache=None,
-                        rup_weight=None):
+                        concurrent_tasks=1, hdf5cache=None):
     """
     :yields: RuptureGetters
     """
@@ -482,13 +481,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
     rup_array = dstore['ruptures'][slc]
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
     by_grp = operator.itemgetter(2)  # serial, srcidx, grp_id
-    if rup_weight:  # ebrisk
-        maxweight = numpy.ceil(2E10 / concurrent_tasks)
-        blocks = general.block_splitter(rup_array, maxweight, rup_weight,
-                                        key=by_grp)
-    else:  # event based
-        blocks = general.split_in_blocks(rup_array, concurrent_tasks,
-                                         key=by_grp)
+    blocks = general.split_in_blocks(rup_array, concurrent_tasks, key=by_grp)
     nr = 0
     ne = 0
     for block in blocks:

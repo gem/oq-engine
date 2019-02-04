@@ -211,7 +211,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.hdf5.copy('rupgeoms', cache)
         yield from gen_rupture_getters(
             dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            hdf5cache=hdf5cache, rup_weight=rup_weight)
+            hdf5cache=hdf5cache)
         if self.datastore.parent:
             self.datastore.parent.close()
 
