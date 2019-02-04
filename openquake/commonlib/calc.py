@@ -259,7 +259,7 @@ class RuptureData(object):
     """
     def __init__(self, trt, gsims):
         self.trt = trt
-        self.cmaker = ContextMaker(gsims)
+        self.cmaker = ContextMaker(trt, gsims)
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
