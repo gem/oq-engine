@@ -3,8 +3,8 @@ Event Based Bogota
 
 ============== ===================
 checksum32     2,254,739,311      
-date           2019-01-27T08:29:04
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:38:15
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 5, num_levels = 104
@@ -102,18 +102,18 @@ Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-read_source_models 0.20953 0.24684 0.03499 0.38408 2      
-split_filter       0.01126 0.00236 0.00959 0.01293 2      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.20000 0.23149   0.03632 0.36369 2      
+only_filter        0.00949 1.780E-04 0.00936 0.00961 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================== ========
 task               sent                                     received
 read_source_models converter=626 B fnames=241 B             70.47 KB
-split_filter       srcs=74.32 KB srcfilter=506 B dummy=28 B 72.87 KB
+only_filter        srcs=74.32 KB srcfilter=506 B dummy=28 B 72.87 KB
 ================== ======================================== ========
 
 Slowest operations
@@ -121,7 +121,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.41907   1.60938   2     
-total only_filter        0.02252   1.91797   2     
-reading exposure         5.026E-04 0.0       1     
+total read_source_models 0.40001   1.89062   2     
+total only_filter        0.01898   1.75391   2     
+reading exposure         4.945E-04 0.0       1     
 ======================== ========= ========= ======

@@ -3,8 +3,8 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     372,210,909        
-date           2019-01-27T08:28:31
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:41
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 4, num_levels = 15
@@ -46,7 +46,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
@@ -87,8 +87,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-saving gmfs         0.02774   0.76953   1     
-building riskinputs 0.01477   0.23047   1     
-computing gmfs      0.00556   0.0       1     
-reading exposure    3.920E-04 0.0       1     
+saving gmfs         0.02954   0.76953   1     
+building riskinputs 0.01517   0.0       1     
+computing gmfs      0.00629   0.0       1     
+reading exposure    3.874E-04 0.0       1     
 =================== ========= ========= ======

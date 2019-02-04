@@ -3,8 +3,8 @@ Scenario Risk Maule Mw 8.8 reduced
 
 ============== ===================
 checksum32     35,423,337         
-date           2019-01-27T08:28:29
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:40
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 258, num_levels = 78
@@ -47,7 +47,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
@@ -120,6 +120,6 @@ Slowest operations
 =================== ======== ========= ======
 operation           time_sec memory_mb counts
 =================== ======== ========= ======
-building riskinputs 0.04696  0.0       1     
-reading exposure    0.00686  0.0       1     
+building riskinputs 0.04432  0.0       1     
+reading exposure    0.00769  0.0       1     
 =================== ======== ========= ======

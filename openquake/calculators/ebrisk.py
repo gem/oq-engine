@@ -167,8 +167,44 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.rupweight_mon = self.monitor('calc rupture weight',
                                           measuremem=False)
 
-    def acc0(self):
-        return numpy.zeros(self.N)
+    def execute(self):
+        oq = self.oqparam
+        self.set_param()
+        self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+        self.init_logic_tree(self.csm_info)
+        iterargs = ((rgetter, self.src_filter, self.param)
+                    for rgetter in self.gen_rupture_getters())
+        acc = parallel.Starmap(
+            self.core_task.__func__, iterargs, self.monitor()
+        ).reduce(self.agg_dicts, numpy.zeros(self.N))
+        return acc
+
+    def gen_rupture_getters(self):
+        dstore = self.datastore.parent
+        csm_info = dstore['csm_info']
+        trt_by_grp = csm_info.grp_by("trt")
+        samples = csm_info.get_samples_by_grp()
+        code2cls = getters.get_code2cls(dstore.get_attrs('ruptures'))
+        maxweight = numpy.ceil(2E10 / (self.oqparam.concurrent_tasks or 1))
+        nr, ne = 0, 0
+        for grp_id, rlzs_by_gsim in csm_info.get_rlzs_by_gsim_grp().items():
+            start, stop = dstore.get_attr('ruptures', 'grp_indices')[grp_id]
+            rup_array = dstore['ruptures'][start:stop]
+            for block in general.block_splitter(
+                    rup_array, maxweight, self.rup_weight):
+                if not rlzs_by_gsim:
+                    # this may happen if a source model has no sources, like
+                    # in event_based_risk/case_3
+                    continue
+                rups = numpy.array(block)
+                rgetter = getters.RuptureGetter(
+                    dstore.hdf5path, code2cls, rups,
+                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
+                rgetter.weight = getattr(block, 'weight', len(block))
+                yield rgetter
+                nr += len(rups)
+                ne += rgetter.num_events
+        logging.info('Read %d ruptures and %d events', nr, ne)
 
     def rup_weight(self, rup):
         """
