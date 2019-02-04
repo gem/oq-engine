@@ -3,8 +3,8 @@ NNParametric
 
 ============== ===================
 checksum32     34,932,175         
-date           2019-01-27T08:30:26
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:21
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 19
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
+b1        1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -76,7 +76,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      test      N    0     4     1            0.0       1.383E-05  1.00000   1         1.00000
+0      test      N    0     4     1            0.0       1.049E-05  1.00000   1         1.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -95,8 +95,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00274 NaN    0.00274 0.00274 1      
-split_filter       0.00314 NaN    0.00314 0.00314 1      
+read_source_models 0.00159 NaN    0.00159 0.00159 1      
+split_filter       0.00291 NaN    0.00291 0.00291 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -112,6 +112,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00314  1.60938   1     
-total read_source_models 0.00274  0.14844   1     
+total split_filter       0.00291  1.82812   1     
+total read_source_models 0.00159  0.15625   1     
 ======================== ======== ========= ======

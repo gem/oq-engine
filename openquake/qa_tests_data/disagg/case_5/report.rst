@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     1,136,041,000      
-date           2019-01-27T08:28:31
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:41
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 19
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= ================ ================
 smlt_path weight  gsim_logic_tree  num_realizations
 ========= ======= ================ ================
-b1        1.00000 trivial(0,1,0,0) 1/1             
+b1        1.00000 trivial(0,1,0,0) 1               
 ========= ======= ================ ================
 
 Required parameters per tectonic region type
@@ -86,8 +86,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      buc16pt75 N    76    316   8            0.00378   1.373E-04  8.00000   8         8.00000
-0      buc06pt05 N    0     76    7            0.00377   2.053E-04  7.00000   7         7.00000
+1      buc16pt75 N    76    316   8            0.00374   1.240E-04  8.00000   8         8.00000
+0      buc06pt05 N    0     76    7            0.00359   1.853E-04  7.00000   7         7.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -95,7 +95,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    0.00755   2     
+N    0.00734   2     
 ==== ========= ======
 
 Duplicated sources
@@ -106,10 +106,10 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00289 5.934E-04 0.00247 0.00331 2      
-split_filter       0.00417 NaN       0.00417 0.00417 1      
-classical          0.00830 NaN       0.00830 0.00830 1      
-build_hazard_stats 0.00504 NaN       0.00504 0.00504 1      
+read_source_models 0.00293 4.850E-04 0.00259 0.00327 2      
+split_filter       0.00415 NaN       0.00415 0.00415 1      
+classical          0.01010 NaN       0.01010 0.01010 1      
+build_hazard_stats 0.00514 NaN       0.00514 0.00514 1      
 ================== ======= ========= ======= ======= =======
 
 Fastest task
@@ -140,7 +140,7 @@ Data transfer
 task               sent                                                    received
 read_source_models converter=626 B fnames=212 B                            12.78 KB
 split_filter       srcs=11.14 KB srcfilter=253 B seed=14 B                 12.37 KB
-classical          group=12.42 KB src_filter=813 B param=594 B gsims=129 B 1 KB    
+classical          group=12.42 KB param=594 B src_filter=220 B gsims=129 B 1 KB    
 build_hazard_stats pgetter=4.03 KB hstats=67 B individual_curves=13 B      515 B   
 ================== ======================================================= ========
 
@@ -149,18 +149,18 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          0.00830   0.24219   1     
-total read_source_models 0.00578   0.12891   2     
-total build_hazard_stats 0.00504   1.34766   1     
-combine pmaps            0.00436   1.34766   1     
-total split_filter       0.00417   1.44922   1     
-store source model       0.00387   0.0       2     
-managing sources         0.00360   0.0       1     
-get_poes                 0.00332   0.0       15    
-make_contexts            0.00252   0.0       15    
-saving probability maps  0.00225   0.0       1     
-store source_info        0.00206   0.0       1     
-saving statistics        0.00102   0.0       1     
-aggregate curves         3.824E-04 0.0       1     
-compute mean             2.964E-04 0.0       1     
+total classical          0.01010   1.58984   1     
+total read_source_models 0.00586   0.17188   2     
+total build_hazard_stats 0.00514   1.39453   1     
+store source model       0.00479   0.0       2     
+combine pmaps            0.00445   1.39453   1     
+total split_filter       0.00415   1.37891   1     
+managing sources         0.00334   0.0       1     
+get_poes                 0.00323   0.0       15    
+saving probability maps  0.00251   0.0       1     
+make_contexts            0.00237   0.0       15    
+store source_info        0.00200   0.0       1     
+saving statistics        0.00125   0.0       1     
+aggregate curves         3.867E-04 0.0       1     
+compute mean             3.216E-04 0.0       1     
 ======================== ========= ========= ======

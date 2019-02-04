@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     935,710,079        
-date           2019-01-27T08:29:55
-engine_version 3.4.0-git7f110aaa0b
+checksum32     457,430,611        
+date           2019-02-03T09:39:04
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 281, num_levels = 50
@@ -12,7 +12,7 @@ num_sites = 281, num_levels = 50
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'event_based_risk'
+calculation_mode                'event_based'     
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -27,7 +27,6 @@ minimum_intensity               {}
 random_seed                     1024              
 master_seed                     100               
 ses_seed                        42                
-avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -41,52 +40,6 @@ job_ini                  `job.ini <job.ini>`_
 source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_        
 ======================== ============================================================
-
-Composite source model
-----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        1.00000 trivial(1,1)    1/1             
-========= ======= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== ========================= ========= ========== ==============
-grp_id gsims                     distances siteparams ruptparams    
-====== ========================= ========= ========== ==============
-0      AkkarBommer2010()         rjb       vs30       mag rake      
-1      AtkinsonBoore2003SInter() rrup      vs30       hypo_depth mag
-====== ========================= ========= ========== ==============
-
-Realizations per (TRT, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=2, rlzs=1)
-  0,AkkarBommer2010(): [0]
-  1,AtkinsonBoore2003SInter(): [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 2,348        2,348       
-source_model.xml 1      Subduction Interface 3,345        3,345       
-================ ====== ==================== ============ ============
-
-============= ======
-#TRT models   2     
-#eff_ruptures 5,693 
-#tot_ruptures 5,693 
-#tot_weight   22,772
-============= ======
-
-Estimated data transfer for the avglosses
------------------------------------------
-548 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 256.88 KB
 
 Exposure model
 --------------
@@ -115,19 +68,19 @@ PCR-SLSB-1 1.00000 0.0     1   1   3         3
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      D         C    8     12    3,345        4.55209   0.0        1.00000   0         2.00000
-0      F         C    0     8     2,348        2.39977   0.0        1.00000   0         2.00000
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+1      D         C    8     12    3,345        0.0       0.0        0.0       0         0.0   
+0      F         C    0     8     2,348        0.0       0.0        0.0       0         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    6.95186   2     
+C    0.0       2     
 ==== ========= ======
 
 Duplicated sources
@@ -136,33 +89,23 @@ Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ======= =======
-operation-duration mean      stddev    min       max     outputs
-read_source_models 0.68081   NaN       0.68081   0.68081 1      
-sample_ruptures    3.48055   1.52587   2.40160   4.55951 2      
-get_eid_rlz        9.964E-04 2.247E-04 5.958E-04 0.00174 53     
-================== ========= ========= ========= ======= =======
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.16730 NaN    0.16730 0.16730 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================= ========
-task               sent                          received
-read_source_models converter=358 B fnames=118 B  2.23 KB 
-sample_ruptures    param=9.43 KB sources=2.38 KB 47.69 KB
-get_eid_rlz        self=89.64 KB                 15.61 KB
-================== ============================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=358 B fnames=118 B 2.23 KB 
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    6.96110  6.17578   2     
-iter_ruptures            6.94698  0.0       2     
-total read_source_models 0.68081  1.19531   1     
-total get_eid_rlz        0.05281  0.14062   53    
-reading exposure         0.04218  0.0       1     
-saving ruptures          0.00867  0.0       2     
-store source model       0.00611  0.0       1     
-store source_info        0.00212  0.0       1     
+total read_source_models 0.16730  1.17969   1     
+reading exposure         0.04125  0.0       1     
 ======================== ======== ========= ======

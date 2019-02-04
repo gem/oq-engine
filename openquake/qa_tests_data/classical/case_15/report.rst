@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     905,885,649        
-date           2019-01-27T08:31:01
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:53
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -44,9 +44,9 @@ Composite source model
 ============== ======= =============== ================
 smlt_path      weight  gsim_logic_tree num_realizations
 ============== ======= =============== ================
-SM1            0.50000 complex(2,2)    4/4             
-SM2_a3b1       0.25000 complex(2,2)    2/2             
-SM2_a3pt2b0pt8 0.25000 complex(2,2)    2/2             
+SM1            0.50000 complex(2,2)    4               
+SM2_a3b1       0.25000 simple(2,0)     2               
+SM2_a3pt2b0pt8 0.25000 simple(2,0)     2               
 ============== ======= =============== ================
 
 Required parameters per tectonic region type
@@ -98,10 +98,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-3      1         A    6     10    240          0.0       0.03253    48        16        41     
-2      1         A    2     6     240          0.0       0.03682    48        16        41     
-1      2         P    1     2     15           0.0       5.960E-06  3.00000   1         2.59808
-0      1         P    0     1     15           0.0       1.907E-05  3.00000   1         2.59808
+3      1         A    6     10    240          0.0       0.04556    48        16        41     
+2      1         A    2     6     240          0.0       0.04900    48        16        41     
+1      2         P    1     2     15           0.0       7.391E-06  3.00000   1         2.59808
+0      1         P    0     1     15           0.0       2.193E-05  3.00000   1         2.59808
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -122,8 +122,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00321 0.00129 0.00176 0.00425 3      
-split_filter       0.01002 NaN     0.01002 0.01002 1      
+read_source_models 0.00323 0.00141 0.00160 0.00405 3      
+split_filter       0.01301 NaN     0.01301 0.01301 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -139,6 +139,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01002  1.49609   1     
-total read_source_models 0.00962  0.55078   3     
+total split_filter       0.01301  1.51172   1     
+total read_source_models 0.00969  0.54297   3     
 ======================== ======== ========= ======
