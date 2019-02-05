@@ -106,5 +106,5 @@ def show(what='contents', calc_id=-1, extra=()):
 
 
 show.arg('what', 'key or view of the datastore')
-show.arg('calc_id', 'calculation ID', type=int)
+show.arg('calc_id', 'calculation ID or datastore path')
 show.arg('extra', 'extra arguments', nargs='*')
