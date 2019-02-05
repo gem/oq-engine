@@ -310,7 +310,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     'The event based calculator is restricted to '
                     '%d %s, got %d' % (max_[var], var, num_[var]))
 
-    def set_param(self):
+    def set_param(self, **kw):
         oq = self.oqparam
         # set the minimum_intensity
         if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
@@ -319,7 +319,7 @@ class EventBasedCalculator(base.HazardCalculator):
         min_iml = oq.min_iml
         if min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
-                         'you may want to set a minimum_intensity')
+                            'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         self.param.update(
@@ -328,7 +328,7 @@ class EventBasedCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level,
             ruptures_per_block=oq.ruptures_per_block,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path, **kw)
 
     def execute(self):
         oq = self.oqparam
