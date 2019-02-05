@@ -313,7 +313,7 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             with monitor('compute best rlzs'):
                 pmap_by_kind['rlz_by_sid'] = rlz = {}
                 for sid, pcurve in pmap.items():
-                    rlz[sid] = util.closest_to_mean(
+                    rlz[sid] = util.closest_to_ref(
                         [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
 
     if R > 1 and individual_curves or not hstats:

@@ -81,15 +81,26 @@ def rmsep(array_ref, array, min_value=0):
     return numpy.sqrt(reldiffsquare.mean())
 
 
-def closest_to_mean(arrays, mean):
+def log(array, cutoff):
+    """
+    Compute the logarithm of an array with a cutoff on the small values
+    """
+    arr = numpy.copy(array)
+    arr[arr < cutoff] = cutoff
+    return numpy.log(arr)
+
+
+def closest_to_ref(arrays, ref, cutoff=1E-12):
     """
     :param arrays: a sequence of R arrays
-    :param mean: the mean array
+    :param mean: the reference array
     :returns: a dictionary with keys rlz, value, and dist
     """
     dist = numpy.zeros(len(arrays))
+    logref = log(ref, cutoff)
     for rlz, array in enumerate(arrays):
-        dist[rlz] = rmsep(mean, array)
+        diff = log(array, cutoff) - logref
+        dist[rlz] = numpy.sqrt((diff * diff).sum())
     rlz = dist.argmin()
     closest = dict(rlz=rlz, value=arrays[rlz], dist=dist[rlz])
     return closest
