@@ -196,20 +196,21 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
     srcs_by_grp = collections.defaultdict(list)
     arr = numpy.zeros((tot_sources, 2), F32)
     for trt, sources in trt_sources:
-        if hasattr(sources, 'atomic') and sources.atomic:
-            split = False
+        if split is False or hasattr(sources, 'atomic') and sources.atomic:
+            processor = only_filter
+        else:
+            processor = split_filter
         smap = parallel.Starmap.apply(
-            split_filter if split else only_filter,
-            (sources, srcfilter, seed, monitor),
+            processor, (sources, srcfilter, seed, monitor),
             maxweight=RUPTURES_PER_BLOCK,
             weight=operator.attrgetter('num_ruptures'),
             distribute=dist, progress=logging.debug)
         for splits, stime in smap:
-            for split in splits:
-                i = split.id
+            for src in splits:
+                i = src.id
                 arr[i, 0] += stime[i]  # split_time
                 arr[i, 1] += 1         # num_split
-                srcs_by_grp[split.src_group_id].append(split)
+                srcs_by_grp[src.src_group_id].append(src)
     if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
     elif monitor.hdf5:
