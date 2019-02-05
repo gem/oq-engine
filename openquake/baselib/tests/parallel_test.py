@@ -18,8 +18,11 @@
 
 import os
 import mock
+import shutil
+import pathlib
 import unittest
 import itertools
+import tempfile
 import numpy
 from openquake.baselib import parallel, performance, general, hdf5
 
@@ -104,22 +107,26 @@ class StarmapTestCase(unittest.TestCase):
         self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
 
     def test_supertask(self):
+        # this test has 4 supertasks generating 4 + 5 + 3 + 5 = 17 subtasks
+        # and 18 outputs (1 output does not produce a subtask)
         allargs = [('aaaaeeeeiii',),
                    ('uuuuaaaaeeeeiii',),
                    ('aaaaaaaaeeeeiii',),
                    ('aaaaeeeeiiiiiooooooo',)]
         numchars = sum(len(arg) for arg, in allargs)  # 61
-        monitor = performance.Monitor(hdf5=hdf5.File.temporary())
+        tmp = pathlib.Path(tempfile.mkdtemp(), 'calc_1.hdf5')
+        h5 = hdf5.File(tmp)
+        monitor = performance.Monitor(hdf5=h5)
         res = parallel.Starmap(supertask, allargs, monitor).reduce()
         self.assertEqual(res, {'n': numchars})
-        monitor.hdf5.close()
+        h5.close()
         # check that the correct information is stored in the hdf5 file
-        with hdf5.File(monitor.hdf5.path) as h5:
+        with hdf5.File(tmp) as h5:
             num = general.countby(h5['performance_data'].value, 'operation')
-            self.assertEqual(num[b'total supertask'], 18)
-            self.assertEqual(num[b'total get_length'], 17)
+            self.assertEqual(num[b'total supertask'], 18)  # outputs
+            self.assertEqual(num[b'total get_length'], 17)  # subtasks
             self.assertGreater(len(h5['task_info/supertask']), 0)
-        os.remove(monitor.hdf5.path)
+        shutil.rmtree(tmp.parent)
 
     @classmethod
     def tearDownClass(cls):
