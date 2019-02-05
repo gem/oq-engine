@@ -1,3 +1,7 @@
+  [Valerio Poggi]
+  * Added an AverageSA intensity measure type and a GenericGmpeAvgSA which is
+    able to use it
+
   [Michele Simionato]
   * Introduced the ability to launch subtasks from tasks
   * Stored rupture information in classical calculations with few sites
