@@ -21,7 +21,6 @@ Disaggregation calculator core functionality
 """
 import logging
 import operator
-import time
 import numpy
 
 from openquake.baselib import parallel
@@ -219,20 +218,20 @@ producing too small PoEs.'''
             raise RuntimeError('All sources were filtered away!')
 
         R = len(self.rlzs_assoc.realizations)
-        I = len(oq.imtls)
+        M = len(oq.imtls)
         P = len(oq.poes_disagg) or 1
-        if R * I * P > 10:
-            logging.warn(
+        if R * M * P > 10:
+            logging.warning(
                 'You have %d realizations, %d IMTs and %d poes_disagg: the '
-                'disaggregation will be heavy and memory consuming', R, I, P)
+                'disaggregation will be heavy and memory consuming', R, M, P)
         iml4 = disagg.make_iml4(
             R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
         if oq.disagg_by_src:
             if R == 1:
                 self.build_disagg_by_src(iml4)
             else:
-                logging.warn('disagg_by_src works only with 1 realization, '
-                             'you have %d', R)
+                logging.warning('disagg_by_src works only with 1 realization, '
+                                'you have %d', R)
 
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
@@ -439,16 +438,17 @@ producing too small PoEs.'''
             attrs['poe'] = poe
             poe_agg = numpy.mean(attrs['poe_agg'])
             if abs(1 - poe_agg / poe) > .1:
-                logging.warn('poe_agg=%s is quite different from the expected'
-                             ' poe=%s; perhaps the number of intensity measure'
-                             ' levels is too small?', poe_agg, poe)
+                logging.warning(
+                    'poe_agg=%s is quite different from the expected'
+                    ' poe=%s; perhaps the number of intensity measure'
+                    ' levels is too small?', poe_agg, poe)
 
     def build_disagg_by_src(self, iml4):
         """
         :param dstore: a datastore
         :param iml4: 4D array of IMLs with shape (N, 1, M, P)
         """
-        logging.warn('Disaggregation by source is experimental')
+        logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
         poes_disagg = oq.poes_disagg or (None,)
         pmap_by_grp = getters.PmapGetter(
@@ -474,7 +474,7 @@ producing too small PoEs.'''
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
-                            logging.warn('poe_agg=%s is quite different from '
+                            logging.warning('poe_agg=%s is quite different from '
                                          'the expected poe=%s', poe_agg, poe)
                         self.datastore[name] = poes[:, p]
                         self.datastore.set_attrs(name, poe_agg=poe_agg)

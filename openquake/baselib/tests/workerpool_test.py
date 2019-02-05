@@ -31,7 +31,8 @@ def double(x, mon):
 
 # this test is temporarily disabled, the workerpool is tested in the demos
 # in travis, since they are run with OQ_DISTRIBUTE=zmq
-class _WorkerPoolTestCase(unittest.TestCase):
+@unittest.skip
+class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.z = config.zworkers.copy()
