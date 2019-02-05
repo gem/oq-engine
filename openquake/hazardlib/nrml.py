@@ -301,6 +301,7 @@ validators = {
     'spacing': valid.positivefloat,
     'srcs_weights': valid.positivefloats,
     'grp_probability': valid.probability,
+    'avg_periods' : valid.positivefloats
 }
 
 
