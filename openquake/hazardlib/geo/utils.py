@@ -114,7 +114,7 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate within
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
-                logging.warn(
+                logging.warning(
                     'The closest vs30 site (%.1f %.1f) is distant more than %d'
                     ' km from site #%d (%.1f %.1f)', obj['lon'], obj['lat'],
                     int(distance), sid, lon, lat)

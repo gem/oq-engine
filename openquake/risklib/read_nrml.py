@@ -41,7 +41,7 @@ def get_vulnerability_functions_04(node, fname):
         a dictionary imt, taxonomy -> vulnerability function
     """
     # NB: the fname below can contain non-ASCII characters
-    logging.warn(u'Please upgrade %s to NRML 0.5', fname)
+    logging.warning(u'Please upgrade %s to NRML 0.5', fname)
     # NB: the IMTs can be duplicated and with different levels, each
     # vulnerability function in a set will get its own levels
     imts = set()
@@ -166,7 +166,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     nodamage = imls.attrib.get('noDamageLimit')
     if nodamage == 0:
         # use a cutoff to avoid log(0) in GMPE.to_distribution_values
-        logging.warn('Found a noDamageLimit=0 in %s, line %s, '
+        logging.warning('Found a noDamageLimit=0 in %s, line %s, '
                      'using %g instead', fname, ff.lineno, min_iml)
         nodamage = min_iml
     with context(fname, imls):
@@ -183,7 +183,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
         minIML = float(imls['minIML'])
         if minIML == 0:
             # use a cutoff to avoid log(0) in GMPE.to_distribution_values
-            logging.warn('Found minIML=0 in %s, line %s, using %g instead',
+            logging.warning('Found minIML=0 in %s, line %s, using %g instead',
                          fname, imls.lineno, min_iml)
             minIML = min_iml
         attrs['minIML'] = minIML
@@ -348,7 +348,7 @@ def get_fragility_model_04(fmodel, fname):
     :returns:
         an :class:`openquake.risklib.scientific.FragilityModel` instance
     """
-    logging.warn('Please upgrade %s to NRML 0.5', fname)
+    logging.warning('Please upgrade %s to NRML 0.5', fname)
     node05 = convert_fragility_model_04(fmodel, fname)
     node05.limitStates.text = node05.limitStates.text.split()
     return get_fragility_model(node05, fname)

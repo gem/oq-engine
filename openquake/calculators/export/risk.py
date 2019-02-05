@@ -189,7 +189,7 @@ def export_losses_by_event(ekey, dstore):
     :param dstore: datastore object
     """
     if dstore['oqparam'].calculation_mode == 'ebrisk':
-        logging.warn('You cannot export losses_by_event from ebrisk yet')
+        logging.warning('You cannot export losses_by_event from ebrisk yet')
         return []
     dtlist = [('eid', U64), ('rlzi', U16)] + dstore['oqparam'].loss_dt_list()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -272,7 +272,7 @@ def export_agg_losses_ebr(ekey, dstore):
     :param dstore: datastore object
     """
     if 'ruptures' not in dstore:
-        logging.warn('There are no ruptures in the datastore')
+        logging.warning('There are no ruptures in the datastore')
         return []
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore['losses_by_event']
