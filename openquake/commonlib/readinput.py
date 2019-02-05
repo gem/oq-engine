@@ -960,9 +960,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             'Associated %d assets to %d sites', num_assets, len(sitecol))
         if (num_assets < tot_assets and not oqparam.discard_assets
                 and not oqparam.calculation_mode.startswith('scenario')):
-            raise RuntimeError(
-                '%d assets were discarded' % (tot_assets - num_assets))
-
+            logging.error('%d assets were discarded', tot_assets - num_assets)
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
