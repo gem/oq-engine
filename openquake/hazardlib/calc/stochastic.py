@@ -186,18 +186,22 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         rup_counter = {}
         rup_data = {}
         eff_ruptures = 0
+        print('num occurrences:', grp_num_occ)
         for rlz_num in range(grp_num_occ):
+            print('------------', rlz_num)
             if param['cluster']:
                 for src in sources:
+                    # TBD with michele
+                    # numpy.random.seed(src.serial)
                     # Sum Ruptures
                     if rlz_num == 0:
                         eff_ruptures += src.num_ruptures
                     # Track calculation time
                     t0 = time.time()
                     rup = src.get_one_rupture()
+                    print(src.source_id, rup.mag)
                     # The problem here is that we do not know a-priori the
-                    # number of occurrences of a given rupture. Why are we
-                    # storing in the rupture the parameter 'samples'?
+                    # number of occurrences of a given rupture.
                     if src.id not in rup_counter:
                         rup_counter[src.id] = {}
                         rup_data[src.id] = {}
@@ -213,8 +217,6 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
             elif param['src_interdep'] == 'mutex':
                 print('Not yet implemented')
                 exit(0)
-
-        # import pdb; pdb.set_trace()
         # Create event based ruptures
         for src_key in rup_data:
             for rup_key in rup_data[src_key]:
@@ -233,7 +235,8 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
             t0 = time.time()
             if len(eb_ruptures) > MAX_RUPTURES:
                 # yield partial result to avoid running out of memory
-                yield AccumDict(rup_array=get_rup_array(eb_ruptures, srcfilter),
+                yield AccumDict(rup_array=get_rup_array(eb_ruptures,
+                                                        srcfilter),
                                 calc_times={}, eff_ruptures={})
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
