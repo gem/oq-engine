@@ -81,6 +81,20 @@ def rmsep(array_ref, array, min_value=0):
     return numpy.sqrt(reldiffsquare.mean())
 
 
+def closest_to_mean(arrays, mean):
+    """
+    :param arrays: a sequence of R arrays
+    :param mean: the mean array
+    :returns: a dictionary with keys rlz, value, and dist
+    """
+    dist = numpy.zeros(len(arrays))
+    for rlz, array in enumerate(arrays):
+        dist[rlz] = rmsep(mean, array)
+    rlz = dist.argmin()
+    closest = dict(rlz=rlz, value=arrays[rlz], dist=dist[rlz])
+    return closest
+
+
 def compose_arrays(a1, a2, firstfield='etag'):
     """
     Compose composite arrays by generating an extended datatype containing
