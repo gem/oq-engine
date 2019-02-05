@@ -19,14 +19,19 @@
 import abc
 import numpy
 
+from openquake.baselib.hdf5 import vfloat64
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.baselib.source import rupture as r
 
 FEWSITES = 10  # if there are few sites store the rupdata
+
+nop_pne = r.NonParametricProbabilisticRupture.get_probability_no_exceedance
+par_pne = r.ParametricProbabilisticRupture.get_probability_no_exceedance
 
 
 def get_distances(rupture, mesh, param):
@@ -215,7 +220,7 @@ class ContextMaker(object):
         sitecol = sites.complete
         N = len(sitecol)
         fewsites = N <= FEWSITES
-        rupdata = []
+        rupdata = []  # rupture data
         for rup, sites in self._gen_rup_sites(src, sites):
             try:
                 with self.ctx_mon:
@@ -224,7 +229,13 @@ class ContextMaker(object):
                 continue
             yield rup, sctx, dctx
             if fewsites:  # store rupdata
-                row = [src.id or 0, getattr(rup, 'occurrence_rate', numpy.nan)]
+                try:
+                    rate = rup.occurrence_rate
+                    probs_occur = numpy.zeros(0, numpy.float64)
+                except AttributeError:  # for nonparametric ruptures
+                    rate = numpy.nan
+                    probs_occur = rup.probs_occur
+                row = [src.id or 0, rate]
                 for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
                     row.append(getattr(rup, rup_param))
                 for dist_param in self.REQUIRES_DISTANCES:
@@ -232,6 +243,8 @@ class ContextMaker(object):
                 closest = rup.surface.get_closest_points(sitecol)
                 row.append(closest.lons)
                 row.append(closest.lats)
+                row.append(rup.weight)
+                row.append(probs_occur)
                 rupdata.append(tuple(row))
         if rupdata:
             dtlist = [('srcidx', numpy.uint32), ('rate', float)]
@@ -241,6 +254,8 @@ class ContextMaker(object):
                 dtlist.append((dist_param, (float, (N,))))
             dtlist.append(('lon', (float, (N,))))  # closest lons
             dtlist.append(('lat', (float, (N,))))  # closest lats
+            dtlist.append(('mutex_weight', float))
+            dtlist.append(('probs_occur', vfloat64))
             self.rupdata = numpy.array(rupdata, dtlist)
         else:
             self.rupdata = ()
@@ -334,11 +349,11 @@ class ContextMaker(object):
             with clo_mon:  # this is faster than computing orig_dctx
                 closest_points = rupture.surface.get_closest_points(sitecol)
             cache = {}
-            for r, gsim in self.gsim_by_rlzi.items():
+            for rlz, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
                 for m, imt in enumerate(iml4.imts):
                     for p, poe in enumerate(iml4.poes_disagg):
-                        iml = tuple(iml4.array[:, r, m, p])
+                        iml = tuple(iml4.array[:, rlz, m, p])
                         try:
                             pne = cache[gsim, imt, iml]
                         except KeyError:
@@ -347,7 +362,7 @@ class ContextMaker(object):
                                     rupture, sitecol, dctx, imt, iml,
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
-                        acc[poe, str(imt), r].append(pne)
+                        acc[poe, str(imt), rlz].append(pne)
             acc['mags'].append(rupture.mag)
             acc['dists'].append(getattr(dctx, self.filter_distance))
             acc['lons'].append(closest_points.lons)
@@ -451,3 +466,17 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
+
+    def __init__(self, rec=None):
+        if rec is not None:
+            for name in rec.dtype.names:
+                setattr(self, name, rec[name])
+
+    def get_probability_no_exceedance(self, poes):
+        """
+        Dispatch to the right method depending on the kind of rupture
+        """
+        if numpy.isnan(self.rate):  # nonparametric rupture
+            return nop_pne(self, poes)
+        else:  # parametric rupture
+            return par_pne(self, poes)
