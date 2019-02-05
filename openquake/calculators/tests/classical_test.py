@@ -494,7 +494,7 @@ hazard_uhs-std.csv
 
             # check best_rlz on 5 sites
             best_rlz = self.calc.datastore['best_rlz'].value
-            numpy.testing.assert_equal(best_rlz, [1, 4, 1, 9, 4])
+            numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_31(self):
