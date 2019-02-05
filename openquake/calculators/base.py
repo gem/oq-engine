@@ -183,7 +183,7 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     msg = 'Splitting/filtering' if split else 'Filtering'
     logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
-    trt_sources = csm.get_trt_sources()
+    trt_sources = csm.get_trt_sources(optimize_same_id=False)
     tot_sources = sum(len(sources) for trt, sources in trt_sources)
     if split:
         dist = None  # use the default
