@@ -167,8 +167,6 @@ def to_python(fname, *args):
     return node_to_obj(node, fname, *args)
 
 
-parse = deprecated('Use nrml.to_python instead')(to_python)
-
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
 

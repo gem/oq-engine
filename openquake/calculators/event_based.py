@@ -207,6 +207,8 @@ class EventBasedCalculator(base.HazardCalculator):
         hdf5cache = dstore.hdf5cache()
         mode = 'r+' if os.path.exists(hdf5cache) else 'w'
         with hdf5.File(hdf5cache, mode) as cache:
+            if 'ruptures' not in cache:
+                dstore.hdf5.copy('ruptures', cache)
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         yield from gen_rupture_getters(
@@ -316,7 +318,7 @@ class EventBasedCalculator(base.HazardCalculator):
             oq.minimum_intensity = self.riskmodel.min_iml
         min_iml = oq.min_iml
         if min_iml.sum() == 0:
-            logging.warn('The GMFs are not filtered: '
+            logging.warning('The GMFs are not filtered: '
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
@@ -434,6 +436,6 @@ class EventBasedCalculator(base.HazardCalculator):
             eb_mean_curves = get_mean_curves(self.datastore)
             rdiff, index = util.max_rel_diff_index(
                 cl_mean_curves, eb_mean_curves)
-            logging.warn('Relative difference with the classical '
+            logging.warning('Relative difference with the classical '
                          'mean curves: %d%% at site index %d',
                          rdiff * 100, index)
