@@ -180,10 +180,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for kind in pmap_by_kind:  # i.e. kind == ('hcurves', 'mean')
                 pmap = pmap_by_kind[kind]
                 if kind == 'rlz_by_sid':  # pmap is actually a rlz_by_sid
-                    rlzs = numpy.zeros(self.N, U32)
                     for sid, rlz in pmap.items():
-                        rlzs[sid] = rlz
-                    self.datastore['best_rlz'] = rlzs
+                        self.datastore['best_rlz'][sid] = rlz
                 elif pmap:
                     key = '%s/%s' % kind
                     dset = self.datastore.getitem(key)
@@ -252,6 +250,8 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.poes:
                 self.datastore.create_dset('hmaps/' + name, F32, (N, P * M))
                 self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
+            if name == 'mean' and R > 1:
+                self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
         iterargs = ((getters.PmapGetter(parent, self.rlzs_assoc, t.sids),
@@ -309,7 +309,8 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             if pgetter.poes:
                 pmap_by_kind['hmaps', statname] = calc.make_hmap(
                     pmap, pgetter.imtls, pgetter.poes)
-            if statname == 'mean' and R > 1:
+        if statname == 'mean' and R > 1:
+            with monitor('compute best rlzs'):
                 pmap_by_kind['rlz_by_sid'] = rlz = {}
                 for sid, pcurve in pmap.items():
                     rlz[sid] = util.closest_to_mean(
