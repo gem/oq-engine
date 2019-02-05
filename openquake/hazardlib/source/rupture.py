@@ -27,7 +27,7 @@ import itertools
 import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
@@ -118,29 +118,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """Returns the code (integer in the range 0 .. 255) of the rupture"""
         return self._code[self.__class__, self.surface.__class__]
 
-    def get_probability_no_exceedance(self, poes):
-        """
-        Compute and return the probability that in the time span for which the
-        rupture is defined, the rupture itself never generates a ground motion
-        value higher than a given level at a given site.
-
-        Such calculation is performed starting from the conditional probability
-        that an occurrence of the current rupture is producing a ground motion
-        value higher than the level of interest at the site of interest.
-        The actual formula used for such calculation depends on the temporal
-        occurrence model the rupture is associated with.
-        The calculation can be performed for multiple intensity measure levels
-        and multiple sites in a vectorized fashion.
-
-        :param poes:
-            2D numpy array containing conditional probabilities the the a
-            rupture occurrence causes a ground shaking value exceeding a
-            ground motion level at a site. First dimension represent sites,
-            second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :meth:`method
-            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>`.
-        """
-        raise NotImplementedError
+    get_probability_no_exceedance = (
+        contexts.RuptureContext.get_probability_no_exceedance)
 
     def sample_number_of_occurrences(self, n=1):
         """
@@ -194,35 +173,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         # an array of probabilities with sum 1
         self.probs_occur = numpy.array(
             [prob for (prob, occ) in pmf.data], numpy.float32)
-
-    def get_probability_no_exceedance(self, poes):
-        """
-        See :meth:`superclass method
-        <.rupture.BaseRupture.get_probability_no_exceedance>`
-        for spec of input and result values.
-
-        Uses the formula ::
-
-            ∑ p(k|T) * p(X<x|rup)^k
-
-        where ``p(k|T)`` is the probability that the rupture occurs k times in
-        the time span ``T``, ``p(X<x|rup)`` is the probability that a rupture
-        occurrence does not cause a ground motion exceedance, and the summation
-        ``∑`` is done over the number of occurrences ``k``.
-
-        ``p(k|T)`` is given by the constructor's parameter ``pmf``, and
-        ``p(X<x|rup)`` is computed as ``1 - poes``.
-        """
-        # Converting from 1d to 2d
-        if len(poes.shape) == 1:
-            poes = numpy.reshape(poes, (-1, len(poes)))
-        p_kT = self.probs_occur
-        prob_no_exceed = numpy.array(
-            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
-        prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-        prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
-        prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
-        return prob_no_exceed
+        self.occurrence_rate = numpy.nan
 
     def sample_number_of_occurrences(self, n=1):
         """
