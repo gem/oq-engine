@@ -132,7 +132,8 @@ class SourceGroup(collections.Sequence):
         """
         :returns: True if the group cannot be split
         """
-        return self.cluster or self.src_interdep == 'mutex'
+        return (self.cluster or self.src_interdep == 'mutex' or
+                self.rup_interdep == 'mutex')
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
@@ -243,17 +244,17 @@ def get_set_num_ruptures(src):
         clsname = src.__class__.__name__
         if dt > 10:
             if 'Area' in clsname:
-                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                logging.warning('%s.count_ruptures took %d seconds, perhaps the '
                              'area discretization is too small', src, dt)
             elif 'ComplexFault' in clsname:
-                logging.warn('%s.count_ruptures took %d seconds, perhaps the c'
+                logging.warning('%s.count_ruptures took %d seconds, perhaps the c'
                              'omplex_fault_mesh_spacing is too small', src, dt)
             elif 'SimpleFault' in clsname:
-                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                logging.warning('%s.count_ruptures took %d seconds, perhaps the '
                              'rupture_mesh_spacing is too small', src, dt)
             else:
                 # multiPointSource
-                logging.warn('count_ruptures %s took %d seconds', src, dt)
+                logging.warning('count_ruptures %s took %d seconds', src, dt)
     return src.num_ruptures
 
 

@@ -65,7 +65,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
     def read_file(self, start_year=None, end_year=None):
         """
         """
-        filedata = open(self.input_file, 'rU')
+        filedata = open(self.input_file, 'r')
         catalogue = self._setup_catalogue()
         # Reading the data file
         data = csv.DictReader(filedata)

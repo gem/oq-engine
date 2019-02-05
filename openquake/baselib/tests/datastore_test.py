@@ -62,7 +62,7 @@ class DataStoreTestCase(unittest.TestCase):
 
     def test_export_path(self):
         path = self.dstore.export_path('hello.txt', tempfile.mkdtemp())
-        mo = re.search('hello_\d+', path)
+        mo = re.search(r'hello_\d+', path)
         self.assertIsNotNone(mo)
 
     def test_read(self):

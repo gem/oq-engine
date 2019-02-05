@@ -3,8 +3,8 @@ Ucerf test
 
 ============== ===================
 checksum32     87,673,300         
-date           2019-01-27T08:28:56
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:38:06
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 155, num_levels = 6

@@ -55,7 +55,7 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_unknown_parameter(self):
         # if the job.ini file contains an unknown parameter, print a warning
-        with mock.patch('logging.warn') as w:
+        with mock.patch('logging.warning') as w:
             OqParam(
                 calculation_mode='classical', inputs=GST,
                 hazard_calculation_id=None, hazard_output_id=None,
@@ -318,7 +318,7 @@ class OqParamTestCase(unittest.TestCase):
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
 
-        with mock.patch('logging.warn') as w:
+        with mock.patch('logging.warning') as w:
             OqParam(
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',

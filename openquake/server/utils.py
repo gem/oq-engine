@@ -122,6 +122,6 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
         retry += 1
 
     if not success:
-        logging.warn('Unable to connect to %s within %s retries'
+        logging.warning('Unable to connect to %s within %s retries'
                      % (url, max_retries))
     return success

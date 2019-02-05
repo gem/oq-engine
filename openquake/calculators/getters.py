@@ -329,7 +329,7 @@ class GmfGetter(object):
         self.gmv_dt = oqparam.gmf_data_dt()
         self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (M,))), ('eid', U64)])
         self.cmaker = ContextMaker(
-            rupgetter.rlzs_by_gsim,
+            rupgetter.trt, rupgetter.rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
             if isinstance(oqparam.maximum_distance, dict)
             else oqparam.maximum_distance,
@@ -354,8 +354,8 @@ class GmfGetter(object):
         """
         if hasattr(self, 'computers'):  # init already called
             return
-        with hdf5.File(self.rupgetter.hdf5path, 'r') as cache:
-            self.weights = cache['csm_info/weights'].value
+        with hdf5.File(self.rupgetter.hdf5path, 'r') as parent:
+            self.weights = parent['csm_info/weights'].value
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             sitecol = self.sitecol.filtered(ebr.sids)
@@ -470,41 +470,32 @@ class GmfGetter(object):
 
 
 def gen_rupture_getters(dstore, slc=slice(None),
-                        concurrent_tasks=1, hdf5cache=None,
-                        rup_weight=None):
+                        concurrent_tasks=1, hdf5cache=None):
     """
     :yields: RuptureGetters
     """
+    if dstore.parent:
+        dstore = dstore.parent
     csm_info = dstore['csm_info']
-    grp_trt = csm_info.grp_by("trt")
+    trt_by_grp = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    code2cls = get_code2cls(dstore.get_attrs('ruptures'))
-    by_grp = operator.itemgetter(2)  # serial, srcidx, grp_id
-    if rup_weight:  # ebrisk
-        maxweight = numpy.ceil(2E10 / concurrent_tasks)
-        blocks = general.block_splitter(rup_array, maxweight, rup_weight,
-                                        key=by_grp)
-    else:  # event based
-        blocks = general.split_in_blocks(rup_array, concurrent_tasks,
-                                         key=by_grp)
-    nr = 0
-    ne = 0
-    for block in blocks:
-        grp_id = block[0]['grp_id']
+    maxweight = numpy.ceil(len(rup_array) / (concurrent_tasks or 1))
+    nr, ne = 0, 0
+    for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
             # in event_based_risk/case_3
             continue
-        rups = numpy.array(block)
-        rgetter = RuptureGetter(
-            hdf5cache or dstore.hdf5path, code2cls, rups,
-            grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
-        rgetter.weight = getattr(block, 'weight', len(block))
-        yield rgetter
-        nr += len(rups)
-        ne += rgetter.num_events
+        for block in general.block_splitter(arr, maxweight):
+            rgetter = RuptureGetter(
+                hdf5cache or dstore.hdf5path, numpy.array(block), grp_id,
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+            rgetter.weight = getattr(block, 'weight', len(block))
+            yield rgetter
+            nr += len(block)
+            ne += rgetter.num_events
     logging.info('Read %d ruptures and %d events', nr, ne)
 
 
@@ -523,14 +514,6 @@ def get_maxloss_rupture(dstore, loss_type):
     return ebr
 
 
-def get_code2cls(ruptures_attrs):
-    code2cls = {}  # code -> rupture_cls, surface_cls
-    for key, val in ruptures_attrs.items():
-        if key.startswith('code_'):
-            code2cls[int(key[5:])] = [classes[v] for v in val.split()]
-    return code2cls
-
-
 # this is never called directly; gen_rupture_getters is used instead
 class RuptureGetter(object):
     """
@@ -538,18 +521,20 @@ class RuptureGetter(object):
 
     :param hdf5path:
         path to an HDF5 file with a dataset names `ruptures`
-    :param rup_array:
-        an array of rupture parameters with homogeneous grp_id
+    :param rup_indices:
+        a list of rupture indices of the same group
     """
-    def __init__(self, hdf5path, code2cls, rup_array, trt, samples,
+    def __init__(self, hdf5path, rup_indices, grp_id, trt, samples,
                  rlzs_by_gsim):
         self.hdf5path = hdf5path
-        self.code2cls = code2cls
-        self.rup_array = rup_array
+        self.rup_indices = rup_indices
+        if not isinstance(rup_indices, list):  # is a rup_array
+            self.__dict__['rup_array'] = rup_indices
+            self.__dict__['num_events'] = rup_indices['n_occ'].sum()
+        self.grp_id = grp_id
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
-        [self.grp_id] = numpy.unique(rup_array['grp_id'])
         self.rlz2idx = {}
         nr = 0
         rlzi = []
@@ -558,9 +543,29 @@ class RuptureGetter(object):
                 self.rlz2idx[rlz] = nr
                 rlzi.append(rlz)
                 nr += 1
-        n_occ = rup_array['n_occ'].sum()
-        self.num_events = n_occ if samples > 1 else n_occ * nr
         self.rlzs = numpy.array(rlzi)
+
+    @general.cached_property
+    def rup_array(self):
+        with hdf5.File(self.hdf5path, 'r') as h5:
+            return h5['ruptures'][self.rup_indices]  # must be a list
+
+    @general.cached_property
+    def code2cls(self):
+        code2cls = {}  # code -> rupture_cls, surface_cls
+        with hdf5.File(self.hdf5path, 'r') as h5:
+            for key, val in h5['ruptures'].attrs.items():
+                if key.startswith('code_'):
+                    code2cls[int(key[5:])] = [classes[v] for v in val.split()]
+        return code2cls
+
+    @general.cached_property
+    def num_events(self):
+        return self.rup_array['n_occ'].sum()
+
+    @property
+    def num_ruptures(self):
+        return len(self.rup_indices)
 
     @property
     def num_rlzs(self):
@@ -668,9 +673,6 @@ class RuptureGetter(object):
         for a, r in zip(array, rlzi):
             z[self.rlz2idx[r]] += a
         return z
-
-    def __len__(self):
-        return len(self.rup_array)
 
     def __repr__(self):
         return '<%s grp_id=%d, %d rupture(s)>' % (
