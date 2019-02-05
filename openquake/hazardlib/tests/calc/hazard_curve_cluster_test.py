@@ -22,7 +22,6 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo import Point
 from openquake.baselib.general import DictArray
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.sourceconverter import SourceConverter
@@ -44,8 +43,7 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
         gsim = SadighEtAl1997()
         self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
         site = Site(Point(1.0, -0.1), 800, z1pt0=30., z2pt5=1.)
-        s_filter = SourceFilter(SiteCollection([site]), {})
-        self.sites = s_filter
+        self.sites = SiteCollection([site])
 
     def test_hazard_curve(self):
         # Classical PSHA with cluster source

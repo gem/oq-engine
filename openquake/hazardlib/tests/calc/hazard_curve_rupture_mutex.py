@@ -30,7 +30,7 @@ from openquake.hazardlib import nrml
 class MutexRupturesTestCase(unittest.TestCase):
 
     def test(self):
-        """ Test rupture calculation in case of mutually exclusive ruptures """
+        # mutually exclusive ruptures
         d = os.path.dirname(os.path.dirname(__file__))
         tmps = 'nonparametric-source-mutex-ruptures.xml'
         source_model = os.path.join(d, 'source_model', tmps)

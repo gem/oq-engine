@@ -399,7 +399,7 @@ class AssetCollection(object):
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, tagcol.tagnames)
         if self.occupancy_periods and not occupancy_periods:
-            logging.warn('Missing <occupancyPeriods>%s</occupancyPeriods> '
+            logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
                          'in the exposure', self.occupancy_periods)
         elif self.occupancy_periods.strip() != occupancy_periods.strip():
             raise ValueError('Expected %s, got %s' %
@@ -617,7 +617,7 @@ def build_asset_array(assets_by_site, tagnames=()):
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
     if deductible_d or limit_d:
-        logging.warn('Exposures with insuranceLimit/deductible fields are '
+        logging.warning('Exposures with insuranceLimit/deductible fields are '
                      'deprecated and may be removed in the future')
     deductibles = ['deductible-%s' % name for name in deductible_d]
     limits = ['insurance_limit-%s' % name for name in limit_d]
@@ -1035,7 +1035,7 @@ class Exposure(object):
         # check we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
         if missing and missing <= param['ignore_missing_costs']:
-            logging.warn(
+            logging.warning(
                 'Ignoring asset %s, missing cost type(s): %s',
                 asset_id, ', '.join(missing))
             for cost_type in missing:

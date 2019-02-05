@@ -94,7 +94,7 @@ class Script(object):
                  help=True, registry=True):
         self.func = func
         self.name = name or func.__name__
-        args, self.varargs, varkw, defaults = inspect.getargspec(func)
+        args, self.varargs, varkw, defaults = inspect.getfullargspec(func)[:4]
         assert self.varargs is None, self.varargs
         defaults = defaults or ()
         nodefaults = len(args) - len(defaults)
