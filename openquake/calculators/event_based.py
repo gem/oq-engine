@@ -18,7 +18,6 @@
 
 import os.path
 import logging
-import itertools
 import collections
 import operator
 import numpy
@@ -159,7 +158,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 par['gsims'] = gsims_by_trt[sg.trt]
                 for block in self.block_splitter(
                         sg.sources, weight_src, by_grp):
-
                     if 'ucerf' in oq.calculation_mode:
                         for i in range(oq.ses_per_logic_tree_path):
                             par['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]
@@ -320,7 +318,7 @@ class EventBasedCalculator(base.HazardCalculator):
         min_iml = oq.min_iml
         if min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
-                         'you may want to set a minimum_intensity')
+                            'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         self.param.update(
@@ -438,5 +436,5 @@ class EventBasedCalculator(base.HazardCalculator):
             rdiff, index = util.max_rel_diff_index(
                 cl_mean_curves, eb_mean_curves)
             logging.warning('Relative difference with the classical '
-                         'mean curves: %d%% at site index %d',
-                         rdiff * 100, index)
+                            'mean curves: %d%% at site index %d',
+                            rdiff * 100, index)
