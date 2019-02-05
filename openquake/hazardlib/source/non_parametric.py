@@ -176,7 +176,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         Yields one random rupture from a source
         """
-        numpy.random.seed(self.serial)
         num_ruptures = self.count_ruptures()
         if rupture_mutex:
             weights = numpy.array([rup.weight for rup in self.iter_ruptures()])

@@ -285,7 +285,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         assert(rupture_mutex), msg
         # Set random seed and get the number of ruptures
         num_ruptures = self.count_ruptures()
-        numpy.random.seed(self.serial)
         idx = numpy.random.choice(num_ruptures)
         # NOTE Would be nice to have a method generating a rupture given two
         # indexes, one for magnitude and one setting the position
