@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import time
 import logging
 import operator
 import numpy
@@ -23,7 +22,6 @@ import numpy
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc
@@ -151,8 +149,8 @@ class ClassicalCalculator(base.HazardCalculator):
         num_sources = 0
 
         if self.csm.has_dupl_sources and not opt:
-            logging.warn('Found %d duplicated sources',
-                         self.csm.has_dupl_sources)
+            logging.warning('Found %d duplicated sources',
+                            self.csm.has_dupl_sources)
 
         for trt, sources in self.csm.get_trt_sources():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)

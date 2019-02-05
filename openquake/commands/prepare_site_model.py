@@ -66,7 +66,7 @@ def read_vs30(fnames):
     """
     data = []
     for fname in fnames:
-        for line in open(fname, 'U', encoding='utf-8-sig'):
+        for line in open(fname, encoding='utf-8-sig'):
             data.append(tuple(line.split(',')))
     return numpy.array(data, vs30_dt)
 
@@ -110,7 +110,7 @@ def prepare_site_model(exposure_xml, vs30_csv,
                 'exposure sites', len(haz_sitecol), len(assets_by_site))
             haz_sitecol, assets_by, discarded = assoc(
                 assets_by_site, haz_sitecol, grid_spacing * SQRT2, 'filter')
-            if discarded:
+            if len(discarded):
                 logging.info('Discarded %d sites with assets '
                              '[use oq plot_assets]', len(discarded))
                 mon.hdf5['discarded'] = numpy.array(discarded)

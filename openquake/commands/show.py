@@ -63,7 +63,7 @@ def show(what='contents', calc_id=-1, extra=()):
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
                 f = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
-                logging.warn('Unreadable datastore %s', f)
+                logging.warning('Unreadable datastore %s', f)
                 continue
             else:
                 rows.append((calc_id, cmode, descr.encode('utf-8')))

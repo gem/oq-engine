@@ -184,7 +184,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         """
         parse the logic tree and source model input
         """
-        logging.warn('%s is still experimental', self.__class__.__name__)
+        logging.warning('%s is still experimental', self.__class__.__name__)
         self.read_inputs()  # read the site collection
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
