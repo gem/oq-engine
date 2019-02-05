@@ -37,7 +37,7 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
     exclusive sources or ruptures.
     """
 
-    def build_events_from_sources(self, par):
+    def build_events_from_sources(self):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -58,6 +58,7 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
+                par = self.param.copy()
                 par['gsims'] = gsims_by_trt[sg.trt]
                 # Check cases where we do not want to split the group into
                 # pieces
@@ -81,10 +82,6 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
                 else:
                     for block in self.block_splitter(
                             sg.sources, weight_src, by_grp):
-                        # TODO: The block has a number of attributes
-                        # originally assigned to the group. It's unclear (to
-                        # me) why these properties are transferred to the
-                        # source
                         if 'ucerf' in oq.calculation_mode:
                             for i in range(oq.ses_per_logic_tree_path):
                                 par['ses_seeds'] = [(ses_idx,
