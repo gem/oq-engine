@@ -189,21 +189,6 @@ def view_slow_sources(token, dstore, maxrows=20):
     return rst_table(info[::-1][:maxrows])
 
 
-def classify_gsim_lt(gsim_lt):
-    """
-    :returns: "trivial", "simple" or "complex"
-    """
-    num_branches = list(gsim_lt.get_num_branches().values())
-    num_gsims = '(%s)' % ','.join(map(str, num_branches))
-    multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
-    if multi_gsim_trts == 0:
-        return "trivial" + num_gsims
-    elif multi_gsim_trts == 1:
-        return "simple" + num_gsims
-    else:
-        return "complex" + num_gsims
-
-
 @view.add('contents')
 def view_contents(token, dstore):
     """
@@ -223,16 +208,11 @@ def view_contents(token, dstore):
 @view.add('csm_info')
 def view_csm_info(token, dstore):
     csm_info = dstore['csm_info']
-    rlzs_assoc = csm_info.get_rlzs_assoc()
     header = ['smlt_path', 'weight', 'gsim_logic_tree', 'num_realizations']
     rows = []
     for sm in csm_info.source_models:
-        num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
-        num_paths = sm.num_gsim_paths
-        row = ('_'.join(sm.path),
-               sm.weight,
-               classify_gsim_lt(csm_info.gsim_lt),
-               '%d/%d' % (num_rlzs, num_paths))
+        kind, num_rlzs = csm_info.classify_gsim_lt(sm)
+        row = ('_'.join(sm.path), sm.weight, kind, num_rlzs)
         rows.append(row)
     return rst_table(rows, header)
 
@@ -456,22 +436,6 @@ def sum_table(records):
     return result
 
 
-# this is used by the ebr calculator
-@view.add('mean_avg_losses')
-def view_mean_avg_losses(token, dstore):
-    oq = dstore['oqparam']
-    R = dstore['csm_info'].get_num_rlzs()
-    if R == 1:  # one realization
-        mean = dstore['avg_losses-rlzs'][:, 0]
-    else:
-        mean = dstore['avg_losses-stats'][:, 0]
-    data = numpy.array([tuple(row) for row in mean], oq.loss_dt())
-    assets = util.get_assets(dstore)
-    losses = util.compose_arrays(assets, data)
-    losses.sort()
-    return rst_table(losses, fmt=FIVEDIGITS)
-
-
 @view.add('exposure_info')
 def view_exposure_info(token, dstore):
     """
@@ -595,7 +559,7 @@ def view_required_params_per_trt(token, dstore):
     tbl = []
     for grp_id, trt in sorted(csm_info.grp_by("trt").items()):
         gsims = csm_info.gsim_lt.get_gsims(trt)
-        maker = ContextMaker(gsims)
+        maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)

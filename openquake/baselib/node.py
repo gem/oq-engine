@@ -720,7 +720,7 @@ def node_from_ini(ini_file, nodefactory=Node, root_name='ini'):
     """
     fileobj = open(ini_file) if isinstance(ini_file, str) else ini_file
     cfp = configparser.RawConfigParser()
-    cfp.readfp(fileobj)
+    cfp.read_file(fileobj)
     root = nodefactory(root_name)
     sections = cfp.sections()
     for section in sections:

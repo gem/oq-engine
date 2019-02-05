@@ -87,7 +87,7 @@ class DbServer(object):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
             threading.Thread(target=self.dworker, args=(sock,)).start()
             dworkers.append(sock)
-        logging.warn('DB server started with %s on %s, pid %d',
+        logging.warning('DB server started with %s on %s, pid %d',
                      sys.executable, self.frontend, self.pid)
         if ZMQ:
             # start task_in->task_out streamer thread
@@ -96,12 +96,12 @@ class DbServer(object):
                 target=w._streamer,
                 args=(self.master_host, c.task_in_port, c.task_out_port)
             ).start()
-            logging.warn('Task streamer started from %s -> %s',
+            logging.warning('Task streamer started from %s -> %s',
                          c.task_in_port, c.task_out_port)
 
             # start zworkers and wait a bit for them
             msg = self.master.start()
-            logging.warn(msg)
+            logging.warning(msg)
             time.sleep(1)
 
         # start frontend->backend proxy for the database workers
@@ -111,14 +111,14 @@ class DbServer(object):
         except (KeyboardInterrupt, z.zmq.ZMQError):
             for sock in dworkers:
                 sock.running = False
-            logging.warn('DB server stopped')
+            logging.warning('DB server stopped')
         finally:
             self.stop()
 
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
         if ZMQ:
-            logging.warn(self.master.stop())
+            logging.warning(self.master.stop())
             z.context.term()
         self.db.close()
 

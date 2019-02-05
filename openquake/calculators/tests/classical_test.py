@@ -31,7 +31,7 @@ from openquake.qa_tests_data.classical import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_35)
+    case_35, case_36)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -485,6 +485,12 @@ hazard_uhs-std.csv
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
+            # check rupdata
+            nruptures = []
+            for grp, rupdata in sorted(self.calc.datastore['rup'].items()):
+                nruptures.append((grp, len(rupdata)))
+            self.assertEqual(nruptures, [('grp-00', 700), ('grp-01', 1117),
+                                         ('grp-02', 1385)])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_31(self):
@@ -502,9 +508,13 @@ hazard_uhs-std.csv
         # directivity
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_33.__file__)
 
-
     @attr('qa', 'hazard', 'classical')
     def test_case_35(self):
         # cluster
         self.assert_curves_ok(['hazard_curve-rlz-000-PGA.csv'],
-                               case_35.__file__)
+                              case_35.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_36(self):
+        # test with advanced applyToSources and preclassical
+        self.run_calc(case_36.__file__, 'job.ini')

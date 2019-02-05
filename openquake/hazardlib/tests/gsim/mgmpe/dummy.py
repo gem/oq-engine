@@ -18,7 +18,6 @@ import numpy as np
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.source.rupture import BaseRupture
 
 

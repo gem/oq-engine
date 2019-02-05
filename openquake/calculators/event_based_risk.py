@@ -179,7 +179,7 @@ class EbrCalculator(base.RiskCalculator):
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
             if eff_time < 2:
-                logging.warn('eff_time=%s is too small to compute loss curves',
+                logging.warning('eff_time=%s is too small to compute loss curves',
                              eff_time)
             else:
                 self.param['builder'] = get_loss_builder(
