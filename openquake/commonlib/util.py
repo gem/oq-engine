@@ -93,7 +93,7 @@ def log(array, cutoff):
 def closest_to_ref(arrays, ref, cutoff=1E-12):
     """
     :param arrays: a sequence of R arrays
-    :param mean: the reference array
+    :param ref: the reference array
     :returns: a dictionary with keys rlz, value, and dist
     """
     dist = numpy.zeros(len(arrays))
