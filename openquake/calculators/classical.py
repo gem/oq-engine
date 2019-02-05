@@ -26,7 +26,7 @@ from openquake.baselib.general import AccumDict
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.commonlib import calc
+from openquake.commonlib import calc, util
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -152,7 +152,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         if self.csm.has_dupl_sources and not opt:
             logging.warning('Found %d duplicated sources',
-                         self.csm.has_dupl_sources)
+                            self.csm.has_dupl_sources)
 
         for trt, sources in self.csm.get_trt_sources():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
@@ -179,7 +179,12 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('saving statistics', autoflush=True):
             for kind in pmap_by_kind:  # i.e. kind == ('hcurves', 'mean')
                 pmap = pmap_by_kind[kind]
-                if pmap:
+                if kind == 'rlz_by_sid':  # pmap is actually a rlz_by_sid
+                    rlzs = numpy.zeros(self.N, U32)
+                    for sid, rlz in pmap.items():
+                        rlzs[sid] = rlz
+                    self.datastore['best_rlz'] = rlzs
+                elif pmap:
                     key = '%s/%s' % kind
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
@@ -294,6 +299,7 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             return {}
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
+    R = len(pmaps)
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     pmap_by_kind = {}
     for statname, stat in hstats:
@@ -303,8 +309,13 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             if pgetter.poes:
                 pmap_by_kind['hmaps', statname] = calc.make_hmap(
                     pmap, pgetter.imtls, pgetter.poes)
+            if statname == 'mean' and R > 1:
+                pmap_by_kind['rlz_by_sid'] = rlz = {}
+                for sid, pcurve in pmap.items():
+                    rlz[sid] = util.closest_to_mean(
+                        [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
 
-    if len(pmaps) > 1 and individual_curves or not hstats:
+    if R > 1 and individual_curves or not hstats:
         with monitor('build individual hmaps'):
             for r, pmap in enumerate(pmaps):
                 key = 'rlz-%03d' % r
