@@ -56,6 +56,19 @@ def get_assets_ratios(assets, riskmodel, gmvs, imts):
     return assets_ratios
 
 
+def start_ebrisk(rupgetter, srcfilter, param, monitor):
+    """
+    Launcher for ebrisk tasks
+    """
+    weight = rupgetter.get_weight(srcfilter, param['num_taxonomies'])
+    if weight <= param['maxweight']:
+        yield ebrisk(rupgetter, srcfilter, param, monitor)
+    else:
+        for rgetter in rupgetter.split(srcfilter, param['num_taxonomies'],
+                                       param['maxweight']):
+            yield ebrisk, rgetter, srcfilter, param
+
+
 def ebrisk(rupgetter, srcfilter, param, monitor):
     """
     :param rupgetter:
@@ -146,7 +159,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating event loss tables
     """
-    core_task = ebrisk
+    core_task = start_ebrisk
     is_stochastic = True
 
     def pre_execute(self, pre_calculator=None):
@@ -161,63 +174,31 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         L = len(self.riskmodel.loss_types)
-        self.num_taxonomies = self.assetcol.num_taxonomies_by_site()
         self.datastore.create_dset('losses_by_site', F32, (self.N, L))
-        self.rupweights = []
-        self.rupweight_mon = self.monitor('calc rupture weight',
-                                          measuremem=False)
 
     def execute(self):
         oq = self.oqparam
-        self.set_param()
+        self.set_param(num_taxonomies=self.assetcol.num_taxonomies_by_site(),
+                       maxweight=numpy.ceil(2E10 / (oq.concurrent_tasks or 1)))
         self.datastore.parent = datastore.read(oq.hazard_calculation_id)
         self.init_logic_tree(self.csm_info)
-        iterargs = ((rgetter, self.src_filter, self.param)
-                    for rgetter in self.gen_rupture_getters())
-        acc = parallel.Starmap(
-            self.core_task.__func__, iterargs, self.monitor()
-        ).reduce(self.agg_dicts, numpy.zeros(self.N))
-        return acc
-
-    def gen_rupture_getters(self):
+        smap = parallel.Starmap(
+            self.core_task.__func__, monitor=self.monitor())
         dstore = self.datastore.parent
         csm_info = dstore['csm_info']
         trt_by_grp = csm_info.grp_by("trt")
         samples = csm_info.get_samples_by_grp()
-        maxweight = numpy.ceil(2E10 / (self.oqparam.concurrent_tasks or 1))
-        nr, ne = 0, 0
-        self.rup_array = dstore['ruptures'].value
+        nr = 0
         for grp_id, rlzs_by_gsim in csm_info.get_rlzs_by_gsim_grp().items():
             start, stop = dstore.get_attr('ruptures', 'grp_indices')[grp_id]
-            rupindices = numpy.arange(start, stop)
-            for block in general.block_splitter(
-                    rupindices, maxweight, self.rup_index_weight):
-                if not rlzs_by_gsim:
-                    # this may happen if a source model has no sources, like
-                    # in event_based_risk/case_3
-                    continue
-                indices = list(block)
-                rgetter = getters.RuptureGetter(
-                    dstore.hdf5path, indices, grp_id,
-                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
-                rgetter.weight = getattr(block, 'weight', len(block))
-                yield rgetter
-                nr += len(indices)
-                ne += rgetter.num_events
-        logging.info('Read %d ruptures and %d events', nr, ne)
-
-    def rup_index_weight(self, rupidx):
-        """
-        :returns: the number of taxonomies affected by the events
-        """
-        with self.rupweight_mon:
-            rup = self.rup_array[rupidx]
-            trt = self.csm_info.trt_by_grp[rup['grp_id']]
-            # NB: self.rtree_filter was 50% slower for South America
-            sids = self.src_filter.close_sids(rup, trt, rup['mag'])
-            weight = self.num_taxonomies[sids].sum()
-            self.rupweights.append(weight)
-        return weight
+            rgetter = getters.RuptureGetter(
+                dstore.hdf5path, list(range(start, stop)), grp_id,
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
+            if rgetter:
+                smap.submit(rgetter, self.src_filter, self.param)
+            nr += stop - start
+        logging.info('Read %d ruptures', nr)
+        return smap.reduce(self.agg_dicts, numpy.zeros(self.N))
 
     def agg_dicts(self, acc, dic):
         """
@@ -284,11 +265,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
-        if self.rupweights:
-            self.datastore['rupweights'] = self.rupweights
-            self.rupweight_mon.flush()
-        del self.rupweights
-        self.datastore.set_attrs('task_info/ebrisk', times=times)
+        self.datastore.set_attrs('task_info/start_ebrisk', times=times)
         logging.info('Building losses_by_rlz')
         with self.monitor('building avg_losses-rlzs', autoflush=True):
             self.build_avg_losses()
