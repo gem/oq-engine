@@ -44,6 +44,13 @@ def get_hcurves_and_means(dstore):
     return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']
 
 
+def str_or_int(calc_id):
+    try:
+        return int(calc_id)
+    except ValueError:
+        return calc_id
+
+
 @sap.Script
 def show(what='contents', calc_id=-1, extra=()):
     """
@@ -106,5 +113,5 @@ def show(what='contents', calc_id=-1, extra=()):
 
 
 show.arg('what', 'key or view of the datastore')
-show.arg('calc_id', 'calculation ID or datastore path')
+show.arg('calc_id', 'calculation ID or datastore path', type=str_or_int)
 show.arg('extra', 'extra arguments', nargs='*')
