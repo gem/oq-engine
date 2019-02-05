@@ -69,10 +69,10 @@ def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
     return ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
-def collect_bin_data(sources, sitecol, cmaker, iml4,
+def collect_bin_data(ruptures, sitecol, cmaker, iml4,
                      truncation_level, n_epsilons, monitor=Monitor()):
     """
-    :param sources: a list of sources
+    :param ruptures: a list of ruptures
     :param sitecol: a SiteCollection instance
     :param cmaker: a ContextMaker instance
     :param iml4: an ArrayWrapper of intensities of shape (N, R, M, P)
@@ -84,18 +84,8 @@ def collect_bin_data(sources, sitecol, cmaker, iml4,
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
-    acc = AccumDict(accum=[])
-    for source in sources:
-        with cmaker.ir_mon:
-            ruptures = list(source.iter_ruptures())
-        try:
-            acc += cmaker.disaggregate(
-                sitecol, ruptures, iml4, truncnorm, epsilons, monitor)
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err)
-            raise_(etype, msg, tb)
+    acc = cmaker.disaggregate(
+        sitecol, ruptures, iml4, truncnorm, epsilons, monitor)
     return pack(acc, 'mags dists lons lats'.split())
 
 
@@ -298,11 +288,14 @@ def disaggregation(
     bdata = {}
     sitecol = SiteCollection([site])
     for trt, srcs in by_trt.items():
+        ruptures = []
+        for src in srcs:
+            ruptures.extend(src.iter_ruptures())
         cmaker = ContextMaker(
             trt, rlzs_by_gsim, source_filter.integration_distance,
             {'filter_distance': filter_distance})
         bdata[trt] = collect_bin_data(
-            srcs, sitecol, cmaker, iml4, truncation_level, n_epsilons)
+            ruptures, sitecol, cmaker, iml4, truncation_level, n_epsilons)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
