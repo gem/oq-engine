@@ -40,7 +40,7 @@ class DifferentFiles(Exception):
 
 def strip_calc_id(fname):
     name = os.path.basename(fname)
-    return re.sub('_\d+\.', '.', name)
+    return re.sub(r'_\d+\.', '.', name)
 
 
 def columns(line):
@@ -186,10 +186,10 @@ class CalculatorTestCase(unittest.TestCase):
 
     def run(self, result=None):
         res = super().run(result)
-        if res is not None:  # for Python 3
+        if hasattr(res, 'errors'):
             issues = len(res.errors) + len(res.failures)
-        else:
-            issues = 0  # this is bad, but Python 2 will die soon or later
+        else:  # this happens with pytest sometimes
+            issues = 0
         # remove temporary dir only for success
         if self.edir and not issues:
             shutil.rmtree(self.edir)

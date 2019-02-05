@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     51,027,111         
-date           2019-01-27T08:30:50
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:39:41
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -44,8 +44,8 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        0.20000 trivial(1)      3/1             
-b2        0.20000 trivial(1)      2/1             
+b1        0.20000 trivial(1)      1               
+b2        0.20000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -107,7 +107,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00132 5.445E-05 0.00128 0.00136 2      
+read_source_models 0.00135 3.304E-05 0.00133 0.00138 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -122,5 +122,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00264  0.08984   2     
+total read_source_models 0.00271  0.09766   2     
 ======================== ======== ========= ======

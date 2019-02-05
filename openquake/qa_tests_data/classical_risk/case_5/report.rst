@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2019-01-27T08:28:12
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:22
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 50
@@ -44,7 +44,7 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 simple(1,4)     4/4             
+b1        1.00000 simple(1,4)     4               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -89,8 +89,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      B         P    1     2     23           0.0       5.960E-06  1.00000   1         2.30000
-0      A         P    0     1     23           0.0       2.956E-05  1.00000   1         2.30000
+1      B         P    1     2     23           0.0       5.722E-06  1.00000   1         2.30000
+0      A         P    0     1     23           0.0       4.029E-05  1.00000   1         2.30000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -109,8 +109,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00157 NaN    0.00157 0.00157 1      
-split_filter       0.00279 NaN    0.00279 0.00279 1      
+read_source_models 0.00165 NaN    0.00165 0.00165 1      
+split_filter       0.00278 NaN    0.00278 0.00278 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -126,6 +126,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00279  1.55078   1     
-total read_source_models 0.00157  0.07422   1     
+total split_filter       0.00278  1.51562   1     
+total read_source_models 0.00165  0.09766   1     
 ======================== ======== ========= ======

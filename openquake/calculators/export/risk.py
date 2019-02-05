@@ -105,7 +105,7 @@ def export_avg_losses(ekey, dstore):
     if kind == 'stats':
         weights = dstore['csm_info'].rlzs['weight']
         tags, stats = zip(*oq.hazard_stats())
-        if dskey in dstore:  # precomputed
+        if dskey in set(dstore):  # precomputed
             value = dstore[dskey].value  # shape (:, R, ...)
         else:  # computed on the fly
             value = compute_stats2(
@@ -188,6 +188,9 @@ def export_losses_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    if dstore['oqparam'].calculation_mode == 'ebrisk':
+        logging.warning('You cannot export losses_by_event from ebrisk yet')
+        return []
     dtlist = [('eid', U64), ('rlzi', U16)] + dstore['oqparam'].loss_dt_list()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
@@ -269,7 +272,7 @@ def export_agg_losses_ebr(ekey, dstore):
     :param dstore: datastore object
     """
     if 'ruptures' not in dstore:
-        logging.warn('There are no ruptures in the datastore')
+        logging.warning('There are no ruptures in the datastore')
         return []
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore['losses_by_event']

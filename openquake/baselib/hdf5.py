@@ -81,6 +81,8 @@ def extend(dset, array, **attrs):
     :returns: the total length of the dataset (i.e. initial length + L)
     """
     length = len(dset)
+    if len(array) == 0:
+        return length
     newlength = length + len(array)
     if array.dtype.name == 'object':  # vlen array
         shape = (newlength,) + preshape(array[0])

@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     3,490,620,350      
-date           2019-01-27T08:28:45
-engine_version 3.4.0-git7f110aaa0b
+date           2019-02-03T09:37:55
+engine_version 3.4.0-gite8c42e513a
 ============== ===================
 
 num_sites = 1, num_levels = 200
@@ -44,8 +44,8 @@ Composite source model
 ========= ======= ================= ================
 smlt_path weight  gsim_logic_tree   num_realizations
 ========= ======= ================= ================
-complex   0.33000 simple(3,0,0,0,0) 3/3             
-point     0.67000 simple(3,0,0,0,0) 3/3             
+complex   0.33000 simple(3,0,0,0,0) 3               
+point     0.67000 simple(3,0,0,0,0) 3               
 ========= ======= ================= ================
 
 Required parameters per tectonic region type
@@ -91,11 +91,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      f1        C    0     4     2,308        10        163        37        37        9,232 
-1      p1        P    4     5     156          0.39963   1.073E-05  1.00000   1         15    
-1      p4        P    7     8     156          0.33029   1.907E-06  1.00000   1         15    
-1      p2        P    5     6     156          0.32401   2.861E-06  1.00000   1         15    
-1      p3        P    6     7     156          0.32364   2.384E-06  1.00000   1         15    
+0      f1        C    0     4     2,308        10        165        37        37        9,232 
+1      p1        P    4     5     156          0.38076   1.073E-05  1.00000   1         15    
+1      p4        P    7     8     156          0.32190   2.146E-06  1.00000   1         15    
+1      p2        P    5     6     156          0.32105   3.099E-06  1.00000   1         15    
+1      p3        P    6     7     156          0.32020   1.907E-06  1.00000   1         15    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -104,7 +104,7 @@ Computation times by source typology
 code calc_time counts
 ==== ========= ======
 C    10        1     
-P    1.37757   4     
+P    1.34391   4     
 ==== ========= ======
 
 Duplicated sources
@@ -115,9 +115,9 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.04076 0.05399 0.00258 0.07893 2      
-split_filter       4.41548 NaN     4.41548 4.41548 1      
-classical          0.34126 0.22841 0.00817 1.37809 34     
+read_source_models 0.04112 0.05418 0.00281 0.07944 2      
+split_filter       4.47884 NaN     4.47884 4.47884 1      
+classical          0.35169 0.22300 0.01050 1.34656 34     
 build_hazard_stats 0.00572 NaN     0.00572 0.00572 1      
 ================== ======= ======= ======= ======= =======
 
@@ -149,7 +149,7 @@ Data transfer
 task               sent                                                            received 
 read_source_models converter=626 B fnames=230 B                                    6.27 KB  
 split_filter       srcs=4.9 KB srcfilter=380 B seed=14 B                           1.62 MB  
-classical          group=1.65 MB param=75.27 KB src_filter=31.21 KB gsims=13.58 KB 155.02 KB
+classical          group=1.65 MB param=75.27 KB gsims=13.58 KB src_filter=11.52 KB 155.02 KB
 build_hazard_stats pgetter=6.09 KB hstats=67 B individual_curves=13 B              11.87 KB 
 ================== =============================================================== =========
 
@@ -158,19 +158,19 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          11        0.98828   34    
-get_poes                 6.84276   0.0       2,932 
-make_contexts            4.48047   0.0       2,932 
-total split_filter       4.41548   6.05078   1     
-total read_source_models 0.08151   0.90234   2     
-managing sources         0.04593   0.00391   1     
-aggregate curves         0.01154   0.0       34    
-total build_hazard_stats 0.00572   1.42578   1     
-combine pmaps            0.00482   1.42578   1     
-store source model       0.00429   0.0       2     
-saving statistics        0.00281   0.0       1     
-saving probability maps  0.00225   0.0       1     
-store source_info        0.00192   0.0       1     
-compute mean             5.367E-04 0.0       1     
-build individual hmaps   1.366E-04 0.0       1     
+total classical          11        2.46094   34    
+get_poes                 6.96396   0.0       2,932 
+make_contexts            4.63172   0.0       2,932 
+total split_filter       4.47884   5.56250   1     
+total read_source_models 0.08225   0.73438   2     
+managing sources         0.04407   0.0       1     
+aggregate curves         0.01253   0.0       34    
+store source model       0.00600   0.0       2     
+total build_hazard_stats 0.00572   0.49609   1     
+combine pmaps            0.00484   0.49609   1     
+saving statistics        0.00393   0.0       1     
+saving probability maps  0.00240   0.0       1     
+store source_info        0.00194   0.0       1     
+compute mean             5.627E-04 0.0       1     
+build individual hmaps   1.197E-04 0.0       1     
 ======================== ========= ========= ======

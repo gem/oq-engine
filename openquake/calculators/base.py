@@ -183,24 +183,34 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     msg = 'Splitting/filtering' if split else 'Filtering'
     logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
-    sources = csm.get_sources()
-    smap = parallel.Starmap.apply(
-        split_filter if split else only_filter,
-        (sources, srcfilter, seed, monitor),
-        maxweight=RUPTURES_PER_BLOCK,
-        weight=operator.attrgetter('num_ruptures'),
-        progress=logging.debug)
+    trt_sources = csm.get_trt_sources(optimize_same_id=False)
+    tot_sources = sum(len(sources) for trt, sources in trt_sources)
+    if split:
+        dist = None  # use the default
+    else:
+        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                else 'processpool')
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
-    arr = numpy.zeros((len(sources), 2), F32)
-    for splits, stime in smap:
-        for split in splits:
-            i = split.id
-            arr[i, 0] += stime[i]  # split_time
-            arr[i, 1] += 1         # num_split
-            srcs_by_grp[split.src_group_id].append(split)
+    arr = numpy.zeros((tot_sources, 2), F32)
+    for trt, sources in trt_sources:
+        if split is False or hasattr(sources, 'atomic') and sources.atomic:
+            processor = only_filter
+        else:
+            processor = split_filter
+        smap = parallel.Starmap.apply(
+            processor, (sources, srcfilter, seed, monitor),
+            maxweight=RUPTURES_PER_BLOCK,
+            weight=operator.attrgetter('num_ruptures'),
+            distribute=dist, progress=logging.debug)
+        for splits, stime in smap:
+            for src in splits:
+                i = src.id
+                arr[i, 0] += stime[i]  # split_time
+                arr[i, 1] += 1         # num_split
+                srcs_by_grp[src.src_group_id].append(src)
     if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
     elif monitor.hdf5:
@@ -307,7 +317,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     except (RuntimeError, ValueError):
                         # sometimes produces errors but they are difficult to
                         # reproduce
-                        logging.warn('', exc_info=True)
+                        logging.warning('', exc_info=True)
 
         return getattr(self, 'exported', {})
 
@@ -442,6 +452,15 @@ class HazardCalculator(BaseCalculator):
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
+    @general.cached_property
+    def rtree_filter(self):
+        """
+        :returns: an RtreeFilter
+        """
+        return RtreeFilter(self.src_filter.sitecol,
+                           self.oqparam.maximum_distance,
+                           self.src_filter.hdf5path)
+
     @property
     def E(self):
         """
@@ -451,6 +470,15 @@ class HazardCalculator(BaseCalculator):
             return len(self.datastore['events'])
         except KeyError:
             return 0
+
+    @property
+    def N(self):
+        """
+        :returns: the total number of sites
+        """
+        if hasattr(self, 'sitecol'):
+            return len(self.sitecol.complete) if self.sitecol else None
+        return len(self.datastore['sitecol/array'])
 
     def check_overflow(self):
         """Overridden in event based"""
@@ -474,7 +502,7 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
-            if (oq.prefilter_sources != 'no' and
+            if (self.sitecol is not None and oq.prefilter_sources != 'no' and
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
                 split = not oq.is_event_based()
                 dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
@@ -483,9 +511,7 @@ class HazardCalculator(BaseCalculator):
                     srcfilter = self.src_filter
                 else:
                     # prefilter on the controller node with Rtree
-                    srcfilter = RtreeFilter(self.src_filter.sitecol,
-                                            oq.maximum_distance,
-                                            self.src_filter.hdf5path)
+                    srcfilter = self.rtree_filter
                 self.csm = parallel_split_filter(
                     csm, srcfilter, split, self.monitor())
             else:
@@ -759,7 +785,8 @@ class HazardCalculator(BaseCalculator):
                           avg_losses=oq.avg_losses)
 
         # store the `exposed_value` if there is an exposure
-        if 'exposed_value' not in self.datastore and hasattr(self, 'assetcol'):
+        if 'exposed_value' not in set(self.datastore) and hasattr(
+                self, 'assetcol'):
             self.datastore['exposed_value'] = self.assetcol.agg_value(
                 *oq.aggregate_by)
 
@@ -786,7 +813,7 @@ class HazardCalculator(BaseCalculator):
                 'The logic tree has %d realizations, the maximum '
                 'is %d' % (R, TWO16))
         elif R > 10000:
-            logging.warn(
+            logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
         self.datastore.flush()
@@ -837,7 +864,7 @@ class RiskCalculator(HazardCalculator):
         oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
         extra = self.riskmodel.get_extra_imts(oq.risk_imtls)
         if extra:
-            logging.warn('There are risk functions for not available IMTs '
+            logging.warning('There are risk functions for not available IMTs '
                          'which will be ignored: %s' % extra)
 
         logging.info('Getting/reducing shakemap')
