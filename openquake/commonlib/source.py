@@ -536,9 +536,9 @@ class CompositeSourceModel(collections.Sequence):
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                if grp.atomic:
+                if grp and grp.atomic:
                     atomic.append((grp.trt, grp))
-                else:
+                elif grp:
                     acc[grp.trt].extend(grp)
         if optimize_same_id is None:
             optimize_same_id = self.optimize_same_id
