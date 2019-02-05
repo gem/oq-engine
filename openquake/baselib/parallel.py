@@ -361,7 +361,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         assert not isgenfunc, func
         return Result.new(func, args, mon)
 
-    mon.operation = 'total ' + func.__name__
     mon.measuremem = True
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
@@ -497,15 +496,18 @@ class IterResult(object):
         return res
 
 
-def save_task_info(self, res, mem_gb=0, name=None):
+def save_task_info(self, res, mem_gb=0):
+    """
+    :param self: an object with attributes .hdf5, .name, .argnames, .sent
+    :parent res: a :class:`Result` object
+    :param mem_gb: memory consumption at the saving time (optional)
+    """
     mon = res.mon
-    if name:
-        mon.operation = 'total ' + name
     if self.hdf5:
         mon.hdf5 = self.hdf5
         t = (mon.task_no, mon.weight, mon.duration, len(res.pik), mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend(self.hdf5['task_info/' + (name or self.name)], data,
+        hdf5.extend(self.hdf5['task_info/' + self.name], data,
                     argnames=self.argnames, sent=self.sent)
     mon.flush()
 
@@ -727,7 +729,7 @@ class Starmap(object):
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
-                             'is job %d', res.mon.calc_id, self.calc_id)
+                                'is job %d', res.mon.calc_id, self.calc_id)
                 continue
             elif res.msg == 'TASK_ENDED':
                 self.log_percent()
@@ -735,12 +737,13 @@ class Starmap(object):
             elif res.msg:
                 logging.warning(res.msg)
             elif res.func_args:
+                func, *args = res.func_args
                 res.mon.hdf5 = self.monitor.hdf5  # needed
-                res.mon.flush()
+                res.mon.flush()  # store supertask output information
                 orig = self.task_func
-                self.task_func, *args = res.func_args
+                self.task_func = func
                 self.submit(*args, monitor=res.mon)
-                save_task_info(self, res, name=self.task_func.__name__)
+                save_task_info(self, res)
                 self.task_func = orig
                 self.todo += 1
             else:
