@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import time
 import logging
 import operator
 import numpy
@@ -23,7 +22,7 @@ import numpy
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc, util
@@ -250,7 +249,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.poes:
                 self.datastore.create_dset('hmaps/' + name, F32, (N, P * M))
                 self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
-            if name == 'mean' and R > 1:
+            if name == 'mean' and R > 1 and FEWSITES:
                 self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
@@ -309,12 +308,11 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             if pgetter.poes:
                 pmap_by_kind['hmaps', statname] = calc.make_hmap(
                     pmap, pgetter.imtls, pgetter.poes)
-        if statname == 'mean' and R > 1:
-            with monitor('compute best rlzs'):
-                pmap_by_kind['rlz_by_sid'] = rlz = {}
-                for sid, pcurve in pmap.items():
-                    rlz[sid] = util.closest_to_ref(
-                        [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
+        if statname == 'mean' and R > 1 and FEWSITES:
+            pmap_by_kind['rlz_by_sid'] = rlz = {}
+            for sid, pcurve in pmap.items():
+                rlz[sid] = util.closest_to_ref(
+                    [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
 
     if R > 1 and individual_curves or not hstats:
         with monitor('build individual hmaps'):
