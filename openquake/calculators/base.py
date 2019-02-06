@@ -865,7 +865,7 @@ class RiskCalculator(HazardCalculator):
         extra = self.riskmodel.get_extra_imts(oq.risk_imtls)
         if extra:
             logging.warning('There are risk functions for not available IMTs '
-                         'which will be ignored: %s' % extra)
+                            'which will be ignored: %s' % extra)
 
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
@@ -982,7 +982,7 @@ class RiskCalculator(HazardCalculator):
 
 def get_gmv_data(sids, gmfs, events):
     """
-    Convert an array of shape (N, E, I) into an array of type gmv_data_dt
+    Convert an array of shape (N, E, M) into an array of type gmv_data_dt
     """
     N, E, M = gmfs.shape
     gmv_data_dt = numpy.dtype(
@@ -1027,13 +1027,13 @@ def save_gmfs(calculator):
                       oq.imtls, events)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, imts, events):
+def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param gmfs: an array of shape (N, E, M)
     :param imts: a list of IMT strings
-    :param eids: E event IDs or the empty tuple
+    :param events: E event IDs or the empty tuple
     """
     offset = 0
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs, events)
@@ -1047,6 +1047,10 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events):
         offset += n
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
+    if len(events) == 0:
+        E = gmfs.shape[1]
+        events = numpy.zeros(E, rupture.events_dt)
+        events['eid'] = numpy.arange(E, dtype=U64)
     dstore['events'] = events
 
 
