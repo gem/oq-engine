@@ -34,7 +34,8 @@ import numpy
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import const, site
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.gsim.base import GMPE, RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.python3compat import round
 
 
