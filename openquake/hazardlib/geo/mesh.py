@@ -287,7 +287,6 @@ class Mesh(object):
         Uses :func:`openquake.hazardlib.geo.geodetic.geodetic_distance`.
         """
         assert self.lons.ndim == 1
-        assert (self.depths == 0).all()
         distances = geodetic.geodetic_distance(
             self.lons.reshape(self.lons.shape + (1, )),
             self.lats.reshape(self.lats.shape + (1, )),
