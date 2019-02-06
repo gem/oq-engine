@@ -635,7 +635,7 @@ def export_gmf_data_csv(ekey, dstore):
     else:
         arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-    gmfa = dstore['gmf_data']['data'].value
+    gmfa = dstore['gmf_data/data'].value[['eid', 'sid', 'gmv']]
     event_id = dstore['events']['eid']
     gmfa['eid'] = event_id[gmfa['eid']]
     if eid is None:  # we cannot use extract here
@@ -644,21 +644,19 @@ def export_gmf_data_csv(ekey, dstore):
         sites = util.compose_arrays(sids, arr, 'site_id')
         writers.write_csv(f, sites)
         fname = dstore.build_fname('gmf', 'data', 'csv')
-        gmfa.sort(order=['rlzi', 'sid', 'eid'])
+        gmfa.sort(order=['eid', 'sid'])
         writers.write_csv(fname, _expand_gmv(gmfa, imts))
         return [fname, f]
     # old format for single eid
     gmfa = gmfa[gmfa['eid'] == eid]
-    fnames = []
-    for rlzi, array in group_array(gmfa, 'rlzi').items():
-        rlz = rlzs_assoc.realizations[rlzi]
-        data, comment = _build_csv_data(
-            array, rlz, dstore['sitecol'], imts, oq.investigation_time)
-        fname = dstore.build_fname(
-            'gmf', '%d-rlz-%03d' % (eid, rlzi), 'csv')
-        writers.write_csv(fname, data, comment=comment)
-        fnames.append(fname)
-    return fnames
+    eid2rlz = dict(dstore['events'])
+    rlzi = eid2rlz[eid]
+    rlz = rlzs_assoc.realizations[rlzi]
+    data, comment = _build_csv_data(
+        gmfa, rlz, dstore['sitecol'], imts, oq.investigation_time)
+    fname = dstore.build_fname(
+        'gmf', '%d-rlz-%03d' % (eid, rlzi), 'csv')
+    return writers.write_csv(fname, data, comment=comment)
 
 
 def _expand_gmv(array, imts):
