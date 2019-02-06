@@ -571,6 +571,29 @@ class RuptureGetter(object):
     def num_rlzs(self):
         return len(self.rlz2idx)
 
+    # used in ebrisk
+    def get_weight(self, src_filter, num_taxonomies_by_site):
+        """
+        :returns: the weight of the getter
+        """
+        weight = 0
+        for rup in self.rup_array:
+            sids = src_filter.close_sids(rup, self.trt, rup['mag'])
+            weight += num_taxonomies_by_site[sids].sum()
+        return weight
+
+    def split(self, src_filter, num_taxonomies_by_site, maxweight):
+        idx = {rupidx: i for i, rupidx in enumerate(self.rup_indices)}
+
+        def w(rupidx):
+            rup = self.rup_array[idx[rupidx]]
+            sids = src_filter.close_sids(rup, self.trt, rup['mag'])
+            return num_taxonomies_by_site[sids].sum()
+        for indices in general.block_splitter(self.rup_indices, maxweight, w):
+            if indices:
+                yield self.__class__(self.hdf5path, list(indices), self.grp_id,
+                                     self.trt, self.samples, self.rlzs_by_gsim)
+
     def get_eid_rlz(self, monitor=None):
         """
         :returns: a composite array with the associations eid->rlz
@@ -674,6 +697,9 @@ class RuptureGetter(object):
             z[self.rlz2idx[r]] += a
         return z
 
+    def __len__(self):
+        return len(self.rup_indices)
+
     def __repr__(self):
         return '<%s grp_id=%d, %d rupture(s)>' % (
-            self.__class__.__name__, self.grp_id, len(self))
+            self.__class__.__name__, self.grp_id, len(self.rup_indices))

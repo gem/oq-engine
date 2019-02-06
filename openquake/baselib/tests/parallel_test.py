@@ -18,9 +18,13 @@
 
 import os
 import mock
+import shutil
+import pathlib
 import unittest
+import itertools
+import tempfile
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import parallel, performance, general, hdf5
 
 try:
     import celery
@@ -35,6 +39,20 @@ def get_length(data, monitor):
 def gfunc(text, monitor):
     for char in text:
         yield char * 3
+
+
+def supertask(text, monitor):
+    # a supertask spawning subtasks of kind get_length
+    for block in general.block_splitter(text, max_weight=10):
+        items = [(k, len(list(grp))) for k, grp in itertools.groupby(block)]
+        if len(items) == 1:
+            # for instance items = [('i', 1)]
+            k, v = items[0]
+            yield get_length(k * v, monitor)
+            return
+        # for instance items = [('a', 4), ('e', 4), ('i', 2)]
+        for k, v in items:
+            yield get_length, k * v
 
 
 class StarmapTestCase(unittest.TestCase):
@@ -87,6 +105,28 @@ class StarmapTestCase(unittest.TestCase):
 
         res = list(parallel.Starmap(gfunc, [('xy',), ('z',)]))
         self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
+
+    def test_supertask(self):
+        # this test has 4 supertasks generating 4 + 5 + 3 + 5 = 17 subtasks
+        # and 18 outputs (1 output does not produce a subtask)
+        allargs = [('aaaaeeeeiii',),
+                   ('uuuuaaaaeeeeiii',),
+                   ('aaaaaaaaeeeeiii',),
+                   ('aaaaeeeeiiiiiooooooo',)]
+        numchars = sum(len(arg) for arg, in allargs)  # 61
+        tmp = pathlib.Path(tempfile.mkdtemp(), 'calc_1.hdf5')
+        h5 = hdf5.File(tmp)
+        monitor = performance.Monitor(hdf5=h5)
+        res = parallel.Starmap(supertask, allargs, monitor).reduce()
+        self.assertEqual(res, {'n': numchars})
+        h5.close()
+        # check that the correct information is stored in the hdf5 file
+        with hdf5.File(tmp) as h5:
+            num = general.countby(h5['performance_data'].value, 'operation')
+            self.assertEqual(num[b'total supertask'], 18)  # outputs
+            self.assertEqual(num[b'total get_length'], 17)  # subtasks
+            self.assertGreater(len(h5['task_info/supertask']), 0)
+        shutil.rmtree(tmp.parent)
 
     @classmethod
     def tearDownClass(cls):

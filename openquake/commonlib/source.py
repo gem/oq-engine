@@ -528,7 +528,7 @@ class CompositeSourceModel(collections.Sequence):
                         sources.append(src)
         return sources
 
-    def get_trt_sources(self):
+    def get_trt_sources(self, optimize_same_id=None):
         """
         :returns: a list of pairs [(trt, group of sources)]
         """
@@ -536,11 +536,13 @@ class CompositeSourceModel(collections.Sequence):
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                if grp.atomic:
+                if grp and grp.atomic:
                     atomic.append((grp.trt, grp))
-                else:
+                elif grp:
                     acc[grp.trt].extend(grp)
-        if self.optimize_same_id is False:
+        if optimize_same_id is None:
+            optimize_same_id = self.optimize_same_id
+        if optimize_same_id is False:
             return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
         n = 0

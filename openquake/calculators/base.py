@@ -183,29 +183,34 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     msg = 'Splitting/filtering' if split else 'Filtering'
     logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
-    sources = csm.get_sources()
+    trt_sources = csm.get_trt_sources(optimize_same_id=False)
+    tot_sources = sum(len(sources) for trt, sources in trt_sources)
     if split:
         dist = None  # use the default
     else:
         dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
                 else 'processpool')
-    smap = parallel.Starmap.apply(
-        split_filter if split else only_filter,
-        (sources, srcfilter, seed, monitor),
-        maxweight=RUPTURES_PER_BLOCK,
-        weight=operator.attrgetter('num_ruptures'),
-        distribute=dist, progress=logging.debug)
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
-    arr = numpy.zeros((len(sources), 2), F32)
-    for splits, stime in smap:
-        for split in splits:
-            i = split.id
-            arr[i, 0] += stime[i]  # split_time
-            arr[i, 1] += 1         # num_split
-            srcs_by_grp[split.src_group_id].append(split)
+    arr = numpy.zeros((tot_sources, 2), F32)
+    for trt, sources in trt_sources:
+        if split is False or hasattr(sources, 'atomic') and sources.atomic:
+            processor = only_filter
+        else:
+            processor = split_filter
+        smap = parallel.Starmap.apply(
+            processor, (sources, srcfilter, seed, monitor),
+            maxweight=RUPTURES_PER_BLOCK,
+            weight=operator.attrgetter('num_ruptures'),
+            distribute=dist, progress=logging.debug)
+        for splits, stime in smap:
+            for src in splits:
+                i = src.id
+                arr[i, 0] += stime[i]  # split_time
+                arr[i, 1] += 1         # num_split
+                srcs_by_grp[src.src_group_id].append(src)
     if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
     elif monitor.hdf5:

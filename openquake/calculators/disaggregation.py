@@ -73,8 +73,11 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
     """
     result = {'trti': trti, 'num_ruptures': 0}
     # all the time is spent in collect_bin_data
+    ruptures = []
+    for src in sources:
+        ruptures.extend(src.iter_ruptures())
     bin_data = disagg.collect_bin_data(
-        sources, sitecol, cmaker, iml4,
+        ruptures, sitecol, cmaker, iml4,
         oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
     if bin_data:  # dictionary poe, imt, rlzi -> pne
         for sid in sitecol.sids:

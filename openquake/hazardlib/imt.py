@@ -167,6 +167,13 @@ class SA(IMT):
             return '%s(%s)' % (self.name, self.period)
 
 
+class AverageSA(IMT):
+    """
+    Dummy spectral acceleration to compute average ground motion over
+    several spectral ordinates.
+    """
+
+
 class IA(IMT):
     """
     Arias intensity. Determines the intensity of shaking by measuring
