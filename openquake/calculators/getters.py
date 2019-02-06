@@ -278,6 +278,7 @@ class AssetGetter(object):
         self.cost_calculator = dstore['assetcol/cost_calculator']
         self.cost_calculator.tagi = {
             tagname: i for i, tagname in enumerate(self.tagcol.tagnames)}
+        self.num_assets = len(dstore['assetcol/array'])
         self.loss_types = dstore.get_attr('assetcol', 'loss_types').split()
 
     def get(self, site_id, tagnames):
