@@ -186,7 +186,7 @@ class IntegrationDistance(collections.Mapping):
 def split_sources(srcs):
     """
     :param srcs: sources
-    :returns: a pair (split sources, split time)
+    :returns: a pair (split sources, split time) or just the split_sources
     """
     from openquake.hazardlib.source import splittable
     sources = []

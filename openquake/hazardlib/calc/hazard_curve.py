@@ -91,7 +91,6 @@ def _cluster(param, tom, imtls, gsims, grp_ids, pmap):
     return pmap
 
 
-
 def classical(group, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
