@@ -184,6 +184,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
         idx = numpy.random.choice(range(num_ruptures), p=weights)
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
-                rup.serial = self.serial
+                rup.serial = self.serial + i
                 rup.idx = idx
                 return rup
