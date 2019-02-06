@@ -268,8 +268,7 @@ class Mesh(object):
         """
         Compute and return distances between each pairs of points in the mesh.
 
-        This method requires that all the points lie on Earth surface (have
-        zero depth) and coordinate arrays are one-dimensional.
+        This method requires that the coordinate arrays are one-dimensional.
 
         .. warning::
             Because of its quadratic space and time complexity this method
