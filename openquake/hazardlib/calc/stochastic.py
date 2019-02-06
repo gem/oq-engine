@@ -174,6 +174,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         # Note that using a single time interval corresponding to the product
         # of the investigation time and the number of realisations as we do
         # here is admitted only in the case of a time-independent model
+        print(rate, rate * time_span * samples * num_ses)
         grp_num_occ = numpy.random.poisson(rate * time_span * samples *
                                            num_ses)
         # Now we process the sources included in the group. Possible cases:
