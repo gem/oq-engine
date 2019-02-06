@@ -989,11 +989,7 @@ def _get_gmfs(oqparam):
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
         array = writers.read_composite_array(fname).array
-        R = len(numpy.unique(array['rlzi']))
-        if R > 1:
-            raise InvalidFile('%s: found %d realizations, currently only one '
-                              'realization is supported' % (fname, R))
-        # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
+        # the array has the structure sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
         required_imts = list(oqparam.imtls)
         imts = [name[4:] for name in array.dtype.names[3:]]
@@ -1020,22 +1016,22 @@ def _get_gmfs(oqparam):
                 'Found site IDs missing in the sites.csv file: %s' %
                 missing_sids)
         N = len(sitecol)
-        gmfs = numpy.zeros((R, N, E, M), F32)
+        gmfs = numpy.zeros((N, E, M), F32)
         counter = collections.Counter()
         for row in array.view(dtlist):
-            key = row['rlzi'], row['sid'], eidx[row['eid']]
+            key = row['sid'], eidx[row['eid']]
             gmfs[key] = row['gmv']
             counter[key] += 1
         dupl = [key for key in counter if counter[key] > 1]
         if dupl:
-            raise InvalidFile('Duplicated (rlzi, sid, eid) in the GMFs file: '
+            raise InvalidFile('Duplicated (sid, eid) in the GMFs file: '
                               '%s' % dupl)
     elif fname.endswith('.xml'):
         eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
         N, E = gmfs_by_imt.shape
-        gmfs = numpy.zeros((1, N, E, M), F32)
+        gmfs = numpy.zeros((N, E, M), F32)
         for imti, imtstr in enumerate(oqparam.imtls):
-            gmfs[0, :, :, imti] = gmfs_by_imt[imtstr]
+            gmfs[:, :, imti] = gmfs_by_imt[imtstr]
     else:
         raise NotImplemented('Reading from %s' % fname)
     return eids, gmfs
