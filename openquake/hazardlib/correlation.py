@@ -55,6 +55,11 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
         # of N random numbers (where N is equal to number of sites).
         # we need to do that multiplication once per realization
         # with the same matrix and different vectors.
+
+        if numpy.any(abs(sites.depths) > 1e-7):
+            raise Warning('Depths are not considered when dealing with spatial'
+                          ' correlation')
+
         try:
             corma = self.cache[imt]
         except KeyError:
