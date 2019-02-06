@@ -21,7 +21,6 @@ import abc
 import pdb
 import logging
 import operator
-import itertools
 import traceback
 import collections
 from datetime import datetime
@@ -885,9 +884,6 @@ class RiskCalculator(HazardCalculator):
                 oq.site_effects, oq.truncation_level, E, oq.random_seed,
                 oq.imtls)
             save_gmf_data(self.datastore, sitecol, gmfs, imts)
-            events = numpy.zeros(E, rupture.events_dt)
-            events['eid'] = numpy.arange(E, dtype=U64)
-            self.datastore['events'] = events
         return sitecol, assetcol
 
     def build_riskinputs(self, kind, eps=None, num_events=0):
@@ -1035,8 +1031,14 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     :param imts: a list of IMT strings
     :param events: E event IDs or the empty tuple
     """
+    if len(events) == 0:
+        E = gmfs.shape[1]
+        events = numpy.zeros(E, rupture.events_dt)
+        events['eid'] = numpy.arange(E, dtype=U64)
+    dstore['events'] = events
     offset = 0
-    dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs, events)
+    gmfa = get_gmv_data(sitecol.sids, gmfs, events)
+    dstore['gmf_data/data'] = gmfa
     dic = general.group_array(gmfa, 'sid')
     lst = []
     all_sids = sitecol.complete.sids
@@ -1047,11 +1049,6 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
         offset += n
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
-    if len(events) == 0:
-        E = gmfs.shape[1]
-        events = numpy.zeros(E, rupture.events_dt)
-        events['eid'] = numpy.arange(E, dtype=U64)
-    dstore['events'] = events
 
 
 def get_idxs(data, eid2idx):
