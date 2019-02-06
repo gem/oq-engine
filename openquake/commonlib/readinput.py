@@ -764,9 +764,10 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 dupl += hits
     if (dupl and not oqparam.optimize_same_id_sources and
             not oqparam.is_event_based()):
-        logging.warning('You are doing redundant calculations: please make sure '
-                     'that different sources have different IDs and set '
-                     'optimize_same_id_sources=true in your .ini file')
+        logging.warning(
+            'You are doing redundant calculations: please make sure '
+            'that different sources have different IDs and set '
+            'optimize_same_id_sources=true in your .ini file')
     if make_sm.changes:
         logging.info('Applied %d changes to the composite source model',
                      make_sm.changes)
@@ -959,9 +960,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             'Associated %d assets to %d sites', num_assets, len(sitecol))
         if (num_assets < tot_assets and not oqparam.discard_assets
                 and not oqparam.calculation_mode.startswith('scenario')):
-            raise RuntimeError(
-                '%d assets were discarded' % (tot_assets - num_assets))
-
+            logging.error('%d assets were discarded', tot_assets - num_assets)
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
