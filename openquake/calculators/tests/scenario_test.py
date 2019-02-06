@@ -44,7 +44,7 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
 class ScenarioTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
-        [gmfa] = self.execute(case.__file__, 'job.ini').values()
+        gmfa = self.execute(case.__file__, 'job.ini')
         gmvs0 = gmfa[0, :, 0]
         gmvs1 = gmfa[1, :, 0]
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
@@ -54,7 +54,7 @@ class ScenarioTestCase(CalculatorTestCase):
                 gmvs_within_range_snd / realizations)
 
     def medians(self, case):
-        [gmfa] = self.execute(case.__file__, 'job.ini').values()
+        gmfa = self.execute(case.__file__, 'job.ini')
         median = {imt: [] for imt in self.calc.oqparam.imtls}
         for imti, imt in enumerate(self.calc.oqparam.imtls):
             for sid in self.calc.sitecol.sids:
@@ -129,9 +129,8 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_9(self):
         with floatformat('%10.6E'):
             out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
-        f1, f2 = out['gmf_data', 'xml']
-        self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
-        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
+        [f] = out['gmf_data', 'xml']
+        self.assertEqualFiles('gmf.xml', f)
 
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
         f, _sitefile = out['gmf_data', 'csv']

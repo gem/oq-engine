@@ -980,20 +980,18 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
-def get_gmv_data(sids, gmfs):
+def get_gmv_data(sids, gmfs, events):
     """
-    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
+    Convert an array of shape (N, E, I) into an array of type gmv_data_dt
     """
-    R, N, E, M = gmfs.shape
+    N, E, M = gmfs.shape
     gmv_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (M,)))])
-    # NB: ordering of the loops: first site, then event, then realization
-    # it is such that save_gmf_data saves the indices correctly for each sid
-    it = ((r, sids[s], eid, gmfa[s, eid])
-          for s, eid in itertools.product(
-                  numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64))
-          for r, gmfa in enumerate(gmfs))
-    return numpy.fromiter(it, gmv_data_dt)
+    # NB: ordering of the loops: first site, then event
+    lst = [(event['rlz'], sids[s], ei, gmfs[s, ei])
+           for s in numpy.arange(N, dtype=U32)
+           for ei, event in enumerate(events)]
+    return numpy.array(lst, gmv_data_dt)
 
 
 def save_gmfs(calculator):
@@ -1006,11 +1004,13 @@ def save_gmfs(calculator):
     logging.info('Reading gmfs from file')
     if oq.inputs['gmfs'].endswith('.csv'):
         # TODO: check if import_gmfs can be removed
-        eids, num_rlzs = import_gmfs(
+        eids = import_gmfs(
             dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
     else:  # XML
         eids, gmfs = readinput.eids, readinput.gmfs
     E = len(eids)
+    events = numpy.zeros(E, rupture.events_dt)
+    events['eid'] = eids
     calculator.eids = eids
     if hasattr(oq, 'number_of_ground_motion_fields'):
         if oq.number_of_ground_motion_fields != E:
@@ -1022,21 +1022,21 @@ def save_gmfs(calculator):
     # NB: save_gmfs redefine oq.sites in case of GMFs from XML or CSV
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
-        R, N, E, M = gmfs.shape
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids],
-                      oq.imtls, eids)
+        N, E, M = gmfs.shape
+        save_gmf_data(dstore, haz_sitecol, gmfs[haz_sitecol.sids],
+                      oq.imtls, events)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
+def save_gmf_data(dstore, sitecol, gmfs, imts, events):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param gmfs: an array of shape (R, N, E, M)
+    :param gmfs: an array of shape (N, E, M)
     :param imts: a list of IMT strings
     :param eids: E event IDs or the empty tuple
     """
     offset = 0
-    dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
+    dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs, events)
     dic = general.group_array(gmfa, 'sid')
     lst = []
     all_sids = sitecol.complete.sids
@@ -1047,11 +1047,7 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
         offset += n
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
-    dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
-    if len(eids):  # store the events
-        events = numpy.zeros(len(eids), rupture.events_dt)
-        events['eid'] = eids
-        dstore['events'] = events
+    dstore['events'] = events
 
 
 def get_idxs(data, eid2idx):
@@ -1106,7 +1102,4 @@ def import_gmfs(dstore, fname, sids):
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
 
-    # FIXME: if there is no data for the maximum realization
-    # the inferred number of realizations will be wrong
-    num_rlzs = array['rlzi'].max() + 1
-    return eids, num_rlzs
+    return eids
