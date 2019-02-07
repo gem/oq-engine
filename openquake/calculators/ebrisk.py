@@ -184,7 +184,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         oq = self.oqparam
         self.set_param(num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-                       maxweight=1E8)
+                       maxweight=5E7)
         parent = self.datastore.parent
         if parent:
             hdf5path = parent.filename
