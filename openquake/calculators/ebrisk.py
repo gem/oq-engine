@@ -184,14 +184,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         oq = self.oqparam
         self.set_param(num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-                       maxweight=numpy.ceil(5E10 / (oq.concurrent_tasks or 1)))
+                       maxweight=1E8)
         parent = self.datastore.parent
         if parent:
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
+            nruptures = len(parent['ruptures'])
         else:
             hdf5path = self.datastore.hdf5cache()
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
+            nruptures = len(self.datastore['ruptures'])
             with hdf5.File(hdf5path, 'r+') as cache:
                 self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
@@ -202,17 +204,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         trt_by_grp = self.csm_info.grp_by("trt")
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
-        nr = 0
+        ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             for indices in general.block_splitter(
-                    range(start, stop), oq.ruptures_per_block):
+                    range(start, stop), ruptures_per_block):
                 rgetter = getters.RuptureGetter(
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
                 smap.submit(rgetter, self.src_filter, self.param)
-            nr += stop - start
-        logging.info('Read %d ruptures', nr)
         return smap.reduce(self.agg_dicts, numpy.zeros(self.N))
 
     def agg_dicts(self, acc, dic):
