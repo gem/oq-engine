@@ -192,6 +192,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
+    precalc = None
     accept_precalc = []
     from_engine = False  # set by engine.run_calc
     is_stochastic = False  # True for scenario and event based calculators
@@ -404,8 +405,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    precalc = None
-
     def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
         """
         :param sources: a list of sources
@@ -501,7 +500,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
 
-    def pre_execute(self, pre_calculator=None):
+    def pre_execute(self):
         """
         Check if there is a previous calculation ID.
         If yes, read the inputs by retrieving the previous calculation;
@@ -550,8 +549,8 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
                     ', '.join(missing_imts))
-        elif pre_calculator:
-            calc = calculators[pre_calculator](
+        elif self.__class__.precalc:
+            calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.run()
             self.param = calc.param
@@ -575,7 +574,7 @@ class HazardCalculator(BaseCalculator):
                     self.datastore.parent['oqparam'].risk_imtls)
             elif not oq.imtls:
                 raise ValueError('Missing intensity_measure_types!')
-        if self.precalc:
+        if 'precalc' in vars(self):
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
             csm_info = self.datastore['csm_info']
@@ -846,7 +845,7 @@ class RiskCalculator(HazardCalculator):
         extra = self.riskmodel.get_extra_imts(oq.risk_imtls)
         if extra:
             logging.warning('There are risk functions for not available IMTs '
-                         'which will be ignored: %s' % extra)
+                            'which will be ignored: %s' % extra)
 
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
