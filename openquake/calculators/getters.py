@@ -355,8 +355,8 @@ class GmfGetter(object):
         """
         if hasattr(self, 'computers'):  # init already called
             return
-        with hdf5.File(self.rupgetter.hdf5path, 'r') as parent:
-            self.weights = parent['csm_info/weights'].value
+        with hdf5.File(self.rupgetter.filename, 'r') as parent:
+            self.weights = parent['weights'].value
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             sitecol = self.sitecol.filtered(ebr.sids)
@@ -491,7 +491,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
             continue
         for block in general.block_splitter(arr, maxweight):
             rgetter = RuptureGetter(
-                hdf5cache or dstore.hdf5path, numpy.array(block), grp_id,
+                hdf5cache or dstore.filename, numpy.array(block), grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
             rgetter.weight = getattr(block, 'weight', len(block))
             yield rgetter
@@ -520,14 +520,14 @@ class RuptureGetter(object):
     """
     Iterable over ruptures.
 
-    :param hdf5path:
+    :param filename:
         path to an HDF5 file with a dataset names `ruptures`
     :param rup_indices:
         a list of rupture indices of the same group
     """
-    def __init__(self, hdf5path, rup_indices, grp_id, trt, samples,
+    def __init__(self, filename, rup_indices, grp_id, trt, samples,
                  rlzs_by_gsim):
-        self.hdf5path = hdf5path
+        self.filename = filename
         self.rup_indices = rup_indices
         if not isinstance(rup_indices, list):  # is a rup_array
             self.__dict__['rup_array'] = rup_indices
@@ -548,13 +548,13 @@ class RuptureGetter(object):
 
     @general.cached_property
     def rup_array(self):
-        with hdf5.File(self.hdf5path, 'r') as h5:
+        with hdf5.File(self.filename, 'r') as h5:
             return h5['ruptures'][self.rup_indices]  # must be a list
 
     @general.cached_property
     def code2cls(self):
         code2cls = {}  # code -> rupture_cls, surface_cls
-        with hdf5.File(self.hdf5path, 'r') as h5:
+        with hdf5.File(self.filename, 'r') as h5:
             for key, val in h5['ruptures'].attrs.items():
                 if key.startswith('code_'):
                     code2cls[int(key[5:])] = [classes[v] for v in val.split()]
@@ -592,7 +592,7 @@ class RuptureGetter(object):
             return num_taxonomies_by_site[sids].sum()
         for indices in general.block_splitter(self.rup_indices, maxweight, w):
             if indices:
-                yield self.__class__(self.hdf5path, list(indices), self.grp_id,
+                yield self.__class__(self.filename, list(indices), self.grp_id,
                                      self.trt, self.samples, self.rlzs_by_gsim)
 
     def get_eid_rlz(self, monitor=None):
@@ -614,7 +614,7 @@ class RuptureGetter(object):
         """
         assert len(self.rup_array) == 1, 'Please specify a slice of length 1'
         dic = {'trt': self.trt, 'samples': self.samples}
-        with datastore.read(self.hdf5path) as dstore:
+        with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             source_ids = dstore['source_info']['source_id']
             rec = self.rup_array[0]
@@ -639,7 +639,7 @@ class RuptureGetter(object):
         :returns: a list of EBRuptures filtered by bounding box
         """
         ebrs = []
-        with datastore.read(self.hdf5path) as dstore:
+        with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
                 if srcfilter.integration_distance:
