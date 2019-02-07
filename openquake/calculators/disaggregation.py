@@ -104,6 +104,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     """
     Classical PSHA disaggregation calculator
     """
+    accept_precalc = ['psha']
     POE_TOO_BIG = '''\
 You are trying to disaggregate for poe=%s.
 However the source model #%d, '%s',

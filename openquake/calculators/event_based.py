@@ -98,8 +98,9 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
+    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard',
+                       'ebrisk']
     build_ruptures = sample_ruptures
-    rup_weight = None
 
     @cached_property
     def csm_info(self):
