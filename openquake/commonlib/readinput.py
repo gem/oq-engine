@@ -947,7 +947,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
 
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
-        tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
             haz_distance, 'filter', exposure.asset_refs)
@@ -958,9 +957,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             num_assets += len(assets)
         logging.info(
             'Associated %d assets to %d sites', num_assets, len(sitecol))
-        if (num_assets < tot_assets and not oqparam.discard_assets
-                and not oqparam.calculation_mode.startswith('scenario')):
-            logging.error('%d assets were discarded', tot_assets - num_assets)
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
