@@ -121,25 +121,6 @@ def set_array(longarray, shortarray):
     longarray[len(shortarray):] = numpy.nan
 
 
-def check_precalc_consistency(calc_mode, precalc_mode):
-    """
-    Defensive programming against users providing an incorrect pre-calculation
-    ID (with ``--hazard-calculation-id``)
-
-    :param calc_mode:
-        calculation_mode of the current calculation
-    :param precalc_mode:
-        calculation_mode of the previous calculation
-    """
-    ok_mode = PRECALC_MAP[calc_mode]
-    if calc_mode != precalc_mode and precalc_mode not in ok_mode:
-        raise InvalidCalculationID(
-            'In order to run a risk calculation of kind %r, '
-            'you need to provide a calculation of kind %r, '
-            'but you provided a %r instead' %
-            (calc_mode, ok_mode, precalc_mode))
-
-
 MAXSITES = 1000
 CORRELATION_MATRIX_TOO_LARGE = '''\
 You have a correlation matrix which is too large: %%d sites > %d.
@@ -262,6 +243,23 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         if 'checksum32' not in attrs:
             attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
+
+    def check_precalc(self, precalc_mode):
+        """
+        Defensive programming against users providing an incorrect
+        pre-calculation ID (with ``--hazard-calculation-id``).
+
+        :param precalc_mode:
+            calculation_mode of the previous calculation
+        """
+        calc_mode = self.oqparam.calculation_mode
+        ok_mode = PRECALC_MAP[calc_mode]
+        if calc_mode != precalc_mode and precalc_mode not in ok_mode:
+            raise InvalidCalculationID(
+                'In order to run a risk calculation of kind %r, '
+                'you need to provide a calculation of kind %r, '
+                'but you provided a %r instead' %
+                (calc_mode, ok_mode, precalc_mode))
 
     def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
         """
@@ -545,9 +543,7 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = fake.get_rlzs_assoc()
         elif oq.hazard_calculation_id:
             parent = datastore.read(oq.hazard_calculation_id)
-            check_precalc_consistency(
-                oq.calculation_mode,
-                parent['oqparam'].calculation_mode)
+            self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
             params = {name: value for name, value in
