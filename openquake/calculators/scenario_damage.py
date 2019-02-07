@@ -114,9 +114,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     """
     core_task = scenario_damage
     is_stochastic = True
+    precalc = 'scenario'
+    accept_precalc = ['scenario']
 
     def pre_execute(self):
-        super().pre_execute('scenario')
+        super().pre_execute()
         E = self.oqparam.number_of_ground_motion_fields
         self.param['number_of_ground_motion_fields'] = E
         self.param['consequence_models'] = riskmodels.get_risk_models(
