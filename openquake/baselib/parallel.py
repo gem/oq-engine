@@ -641,7 +641,8 @@ class Starmap(object):
             self.progress('Sent %s of data in %d %s task(s)',
                           humansize(self.sent.sum()), self.total, self.name)
         elif percent > self.prev_percent:
-            self.progress('%s %3d%%', self.name, percent)
+            self.progress('%s %3d%% [of %d]',
+                          self.name, percent, len(self.tasks))
             self.prev_percent = percent
         return done
 
@@ -746,9 +747,6 @@ class Starmap(object):
                 save_task_info(self, res)
                 self.task_func = orig
                 self.todo += 1
-                ntasks = len(self.tasks)
-                if ntasks % 500 == 0:
-                    self.progress('Spawned %d tasks' % ntasks)
             else:
                 yield res
         self.log_percent()
