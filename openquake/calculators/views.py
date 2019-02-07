@@ -861,7 +861,9 @@ def view_dupl_sources(token, dstore):
             if all_equal(sources):
                 dupl.append(source_id)
             sameid.append(source_id)
-    msg = str(dupl) + '\n' if dupl else ''
+    if not dupl:
+        return ''
+    msg = str(dupl) + '\n'
     msg += ('Found %d source(s) with the same ID and %d true duplicate(s)'
             % (len(sameid), len(dupl)))
     fakedupl = set(sameid) - set(dupl)
