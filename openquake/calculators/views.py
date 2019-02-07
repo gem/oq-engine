@@ -201,7 +201,7 @@ def view_contents(token, dstore):
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data]
     total = '\n%s : %s' % (
-        dstore.hdf5path, humansize(os.path.getsize(dstore.hdf5path)))
+        dstore.filename, humansize(os.path.getsize(dstore.filename)))
     return rst_table(rows, header=(desc, '')) + total
 
 
