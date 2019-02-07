@@ -87,6 +87,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     core_task = classical_risk
+    precalc = 'classical'
+    accept_precalc = ['classical']
 
     def pre_execute(self):
         """
@@ -96,7 +98,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if oq.insured_losses:
             raise ValueError(
                 'insured_losses are not supported for classical_risk')
-        super().pre_execute('classical')
+        super().pre_execute()
         if 'poes' not in self.datastore:  # when building short report
             return
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
