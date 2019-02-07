@@ -558,7 +558,8 @@ class HazardCalculator(BaseCalculator):
             self.assetcol = calc.assetcol
             self.riskmodel = calc.riskmodel
             self.rlzs_assoc = calc.rlzs_assoc
-            self.csm = calc.csm
+            if hasattr(calc, 'csm'):  # no scenario
+                self.csm = calc.csm
         else:
             self.read_inputs()
         if self.riskmodel:
