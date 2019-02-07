@@ -162,6 +162,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     """
     core_task = start_ebrisk
     is_stochastic = True
+    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
 
     def pre_execute(self, pre_calculator=None):
         super().pre_execute(pre_calculator)

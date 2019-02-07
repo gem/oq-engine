@@ -87,6 +87,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     core_task = classical_risk
+    accept_precalc = ['classical']
 
     def pre_execute(self):
         """

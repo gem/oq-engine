@@ -65,22 +65,6 @@ class InvalidCalculationID(Exception):
     """
 
 
-PRECALC_MAP = dict(
-    classical=['psha'],
-    disaggregation=['psha'],
-    scenario_risk=['scenario'],
-    scenario_damage=['scenario'],
-    classical_risk=['classical'],
-    classical_bcr=['classical'],
-    classical_damage=['classical'],
-    event_based=['event_based', 'event_based_risk', 'ucerf_hazard', 'ebrisk'],
-    event_based_risk=['event_based', 'event_based_risk', 'ucerf_hazard',
-                      'ebrisk'],
-    ebrisk=['event_based', 'event_based_risk', 'ucerf_hazard'],
-    ucerf_classical=['ucerf_psha'],
-    ucerf_hazard=['ucerf_hazard'])
-
-
 def fix_ones(pmap):
     """
     Physically, an extremely small intensity measure level can have an
@@ -208,6 +192,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
+    accept_precalc = []
     from_engine = False  # set by engine.run_calc
     is_stochastic = False  # True for scenario and event based calculators
 
@@ -253,10 +238,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             calculation_mode of the previous calculation
         """
         calc_mode = self.oqparam.calculation_mode
-        ok_mode = PRECALC_MAP[calc_mode]
+        ok_mode = self.accept_precalc
         if calc_mode != precalc_mode and precalc_mode not in ok_mode:
             raise InvalidCalculationID(
-                'In order to run a risk calculation of kind %r, '
+                'In order to run a calculation of kind %r, '
                 'you need to provide a calculation of kind %r, '
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))

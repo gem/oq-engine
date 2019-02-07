@@ -87,6 +87,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
     core_task = scenario_risk
     is_stochastic = True
+    accept_precalc = ['scenario']
 
     def pre_execute(self):
         """
