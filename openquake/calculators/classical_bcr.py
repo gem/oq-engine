@@ -60,6 +60,7 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     Classical BCR Risk calculator
     """
     core_task = classical_bcr
+    accept_precalc = ['classical']
 
     def pre_execute(self):
         super().pre_execute()

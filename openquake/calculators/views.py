@@ -201,7 +201,7 @@ def view_contents(token, dstore):
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data]
     total = '\n%s : %s' % (
-        dstore.hdf5path, humansize(os.path.getsize(dstore.hdf5path)))
+        dstore.filename, humansize(os.path.getsize(dstore.filename)))
     return rst_table(rows, header=(desc, '')) + total
 
 
@@ -861,7 +861,9 @@ def view_dupl_sources(token, dstore):
             if all_equal(sources):
                 dupl.append(source_id)
             sameid.append(source_id)
-    msg = str(dupl) + '\n' if dupl else ''
+    if not dupl:
+        return ''
+    msg = str(dupl) + '\n'
     msg += ('Found %d source(s) with the same ID and %d true duplicate(s)'
             % (len(sameid), len(dupl)))
     fakedupl = set(sameid) - set(dupl)

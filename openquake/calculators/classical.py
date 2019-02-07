@@ -63,6 +63,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
+    accept_precalc = ['psha']
 
     def agg_dicts(self, acc, dic):
         """

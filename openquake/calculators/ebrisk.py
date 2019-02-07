@@ -86,7 +86,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
     mon = monitor('getting assets', measuremem=False)
-    with datastore.read(srcfilter.hdf5path) as dstore:
+    with datastore.read(srcfilter.filename) as dstore:
         assgetter = getters.AssetGetter(dstore)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
@@ -101,9 +101,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
         acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
         if param['avg_losses']:
-            losses_by_N = numpy.zeros((N, L), F32)
+            losses_by_A = numpy.zeros((assgetter.num_assets, L), F32)
         else:
-            losses_by_N = None
+            losses_by_A = None
         times = numpy.zeros(N)  # risk time per site_id
         for sid, haz in hazard.items():
             t0 = time.time()
@@ -119,18 +119,19 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                 for lti, (lt, imt, loss_ratios) in enumerate(triples):
                     w = weights[imt]
                     for asset in assets:
+                        aid = asset.ordinal
                         losses = loss_ratios * asset.value(lt)
-                        acc[(eidx, lti) + tagidxs[asset.ordinal]] += losses
+                        acc[(eidx, lti) + tagidxs[aid]] += losses
                         if param['avg_losses']:
-                            losses_by_N[sid, lti] += losses @ w
+                            losses_by_A[aid, lti] += losses @ w
             times[sid] = time.time() - t0
-    return {'losses': acc, 'eids': eids, 'losses_by_N': losses_by_N,
+    return {'losses': acc, 'eids': eids, 'losses_by_A': losses_by_A,
             'times': times}
 
 
-def compute_loss_curves_maps(hdf5path, multi_index, clp, individual_curves,
+def compute_loss_curves_maps(filename, multi_index, clp, individual_curves,
                              monitor):
-    with datastore.read(hdf5path) as dstore:
+    with datastore.read(filename) as dstore:
         oq = dstore['oqparam']
         stats = oq.hazard_stats()
         builder = get_loss_builder(dstore)
@@ -161,9 +162,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     """
     core_task = start_ebrisk
     is_stochastic = True
+    precalc = 'event_based'
+    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
 
-    def pre_execute(self, pre_calculator=None):
-        super().pre_execute(pre_calculator)
+    def pre_execute(self):
+        self.oqparam.ground_motion_fields = False
+        super().pre_execute()
         # save a copy of the assetcol in hdf5cache
         self.hdf5cache = self.datastore.hdf5cache()
         with hdf5.File(self.hdf5cache, 'w') as cache:
@@ -174,27 +178,38 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         L = len(self.riskmodel.loss_types)
-        self.datastore.create_dset('losses_by_site', F32, (self.N, L))
+        A = len(self.assetcol)
+        self.datastore.create_dset('avg_losses', F32, (A, L))
 
     def execute(self):
         oq = self.oqparam
         self.set_param(num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-                       maxweight=numpy.ceil(2E10 / (oq.concurrent_tasks or 1)))
-        self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+                       maxweight=numpy.ceil(5E10 / (oq.concurrent_tasks or 1)))
+        parent = self.datastore.parent
+        if parent:
+            hdf5path = parent.filename
+            grp_indices = parent['ruptures'].attrs['grp_indices']
+        else:
+            hdf5path = self.datastore.hdf5cache()
+            grp_indices = self.datastore['ruptures'].attrs['grp_indices']
+            with hdf5.File(hdf5path, 'r+') as cache:
+                self.datastore.hdf5.copy('weights', cache)
+                self.datastore.hdf5.copy('ruptures', cache)
+                self.datastore.hdf5.copy('rupgeoms', cache)
         self.init_logic_tree(self.csm_info)
         smap = parallel.Starmap(
             self.core_task.__func__, monitor=self.monitor())
-        dstore = self.datastore.parent
-        csm_info = dstore['csm_info']
-        trt_by_grp = csm_info.grp_by("trt")
-        samples = csm_info.get_samples_by_grp()
+        trt_by_grp = self.csm_info.grp_by("trt")
+        samples = self.csm_info.get_samples_by_grp()
+        rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         nr = 0
-        for grp_id, rlzs_by_gsim in csm_info.get_rlzs_by_gsim_grp().items():
-            start, stop = dstore.get_attr('ruptures', 'grp_indices')[grp_id]
-            rgetter = getters.RuptureGetter(
-                dstore.hdf5path, list(range(start, stop)), grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
-            if rgetter:
+        for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
+            start, stop = grp_indices[grp_id]
+            for indices in general.block_splitter(
+                    range(start, stop), base.RUPTURES_PER_BLOCK * 5):
+                rgetter = getters.RuptureGetter(
+                    hdf5path, list(indices), grp_id,
+                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
                 smap.submit(rgetter, self.src_filter, self.param)
             nr += stop - start
         logging.info('Read %d ruptures', nr)
@@ -220,8 +235,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 # h5py requires the indices to be sorted
                 lbe[list(sort_idx)] = numpy.array(sort_arr)
         if self.oqparam.avg_losses:
-            with self.monitor('saving losses_by_site', autoflush=True):
-                self.datastore['losses_by_site'] += dic['losses_by_N']
+            with self.monitor('saving avg_losses', autoflush=True):
+                self.datastore['avg_losses'] += dic['losses_by_A']
         return acc + dic['times']
 
     def get_shape(self, *sizes):
@@ -278,7 +293,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.close()
         acc = []
         for idx, _ in numpy.ndenumerate(first):
-            smap.submit(self.datastore.hdf5path, idx,
+            smap.submit(self.datastore.filename, idx,
                         oq.conditional_loss_poes, oq.individual_curves)
         for res in smap:
             idx = res.pop('idx')
@@ -287,7 +302,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     acc.append((name, idx, arr))
         # copy performance information from the cache to the datastore
         pd = mon.hdf5['performance_data'].value
-        hdf5.extend3(self.datastore.hdf5path, 'performance_data', pd)
+        hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
         self.datastore['task_info/compute_loss_curves_and_maps'] = (
             mon.hdf5['task_info/compute_loss_curves_maps'].value)
