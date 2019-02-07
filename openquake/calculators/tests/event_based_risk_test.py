@@ -303,10 +303,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         minmag = self.calc.datastore['ruptures']['mag'].min()
         self.assertGreaterEqual(minmag, 5.2)
 
-        self.run_calc(case_miriam.__file__, 'job.ini',
-                      calculation_mode='ebrisk',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id))
-
         # [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         # self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
         #                       fname, delta=1E-5)
