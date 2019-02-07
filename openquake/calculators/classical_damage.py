@@ -53,6 +53,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     Scenario damage calculator
     """
     core_task = classical_damage
+    accept_precalc = ['classical']
 
     def post_execute(self, result):
         """
