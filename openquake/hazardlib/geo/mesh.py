@@ -269,7 +269,6 @@ class Mesh(object):
         Compute and return distances between each pairs of points in the mesh.
 
         This method requires that the coordinate arrays are one-dimensional.
-        NB: the depth of the points is ignored.`
 
         .. warning::
             Because of its quadratic space and time complexity this method
