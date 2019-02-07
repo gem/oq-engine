@@ -1218,8 +1218,8 @@ class RjbEquivalent(object):
     >> reqv = RjbEquivalent('lookup.hdf5')
     >> reqv.get(repi_distances, mag)
     """
-    def __init__(self, hdf5path):
-        with hdf5.File(hdf5path, 'r') as f:
+    def __init__(self, filename):
+        with hdf5.File(filename, 'r') as f:
             self.repi = f['default/repi'].value  # shape D
             self.mags = f['default/mags'].value  # shape M
             self.reqv = f['default/reqv'].value  # shape D x M

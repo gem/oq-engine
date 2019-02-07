@@ -29,13 +29,13 @@ def purge_one(calc_id, user):
     """
     Remove one calculation ID from the database and remove its datastore
     """
-    hdf5path = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
+    filename = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     err = dbcmd('del_calc', calc_id, user)
     if err:
         print(err)
-    if os.path.exists(hdf5path):  # not removed yet
-        os.remove(hdf5path)
-        print('Removed %s' % hdf5path)
+    if os.path.exists(filename):  # not removed yet
+        os.remove(filename)
+        print('Removed %s' % filename)
 
 
 # used in the reset command
