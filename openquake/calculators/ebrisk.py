@@ -206,7 +206,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             for indices in general.block_splitter(
-                    range(start, stop), base.RUPTURES_PER_BLOCK * 5):
+                    range(start, stop), oq.ruptures_per_block):
                 rgetter = getters.RuptureGetter(
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)

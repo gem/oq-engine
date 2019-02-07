@@ -746,6 +746,9 @@ class Starmap(object):
                 save_task_info(self, res)
                 self.task_func = orig
                 self.todo += 1
+                ntasks = len(self.tasks)
+                if ntasks % 500 == 0:
+                    self.progress('Spawned %d tasks' % ntasks)
             else:
                 yield res
         self.log_percent()
