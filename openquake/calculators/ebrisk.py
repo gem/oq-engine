@@ -193,10 +193,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         nr = 0
         for grp_id, rlzs_by_gsim in csm_info.get_rlzs_by_gsim_grp().items():
             start, stop = dstore.get_attr('ruptures', 'grp_indices')[grp_id]
-            rgetter = getters.RuptureGetter(
-                dstore.hdf5path, list(range(start, stop)), grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
-            if rgetter:
+            for indices in general.block_splitter(
+                    range(start, stop), base.RUPTURES_PER_BLOCK):
+                rgetter = getters.RuptureGetter(
+                    dstore.hdf5path, list(indices), grp_id,
+                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
                 smap.submit(rgetter, self.src_filter, self.param)
             nr += stop - start
         logging.info('Read %d ruptures', nr)
