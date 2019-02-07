@@ -441,7 +441,7 @@ class HazardCalculator(BaseCalculator):
         """
         return RtreeFilter(self.src_filter.sitecol,
                            self.oqparam.maximum_distance,
-                           self.src_filter.hdf5path)
+                           self.src_filter.filename)
 
     @property
     def E(self):
@@ -558,6 +558,7 @@ class HazardCalculator(BaseCalculator):
             self.assetcol = calc.assetcol
             self.riskmodel = calc.riskmodel
             self.rlzs_assoc = calc.rlzs_assoc
+            self.csm = calc.csm
         else:
             self.read_inputs()
         if self.riskmodel:
@@ -782,11 +783,11 @@ class HazardCalculator(BaseCalculator):
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         if self.oqparam.imtls:
-            self.datastore['csm_info/weights'] = arr = build_weights(
+            self.datastore['weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
-            self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
+            self.datastore.set_attrs('weights', nbytes=arr.nbytes)
             with hdf5.File(self.hdf5cache, 'r+') as cache:
-                cache['csm_info/weights'] = arr
+                cache['weights'] = arr
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
