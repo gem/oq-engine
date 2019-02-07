@@ -95,11 +95,11 @@ def extend(dset, array, **attrs):
     return newlength
 
 
-def extend3(hdf5path, key, array, **attrs):
+def extend3(filename, key, array, **attrs):
     """
     Extend an HDF5 file dataset with the given array
     """
-    with h5py.File(hdf5path) as h5:
+    with h5py.File(filename) as h5:
         try:
             dset = h5[key]
         except KeyError:

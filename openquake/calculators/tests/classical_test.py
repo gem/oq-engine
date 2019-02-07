@@ -516,7 +516,7 @@ hazard_uhs-std.csv
     def test_case_34(self):
         # spectral averaging
         self.assert_curves_ok([
-            'hazard_curve-mean-AverageSA.csv'], case_34.__file__)
+            'hazard_curve-mean-AvgSA.csv'], case_34.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_35(self):
