@@ -193,7 +193,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             hdf5path = self.datastore.hdf5cache()
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
             with hdf5.File(hdf5path, 'r+') as cache:
-                self.datastore.hdf5.copy('csm_info/weights', cache)
+                self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
         self.init_logic_tree(self.csm_info)
