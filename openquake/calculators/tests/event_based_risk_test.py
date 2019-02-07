@@ -274,8 +274,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avglosses.txt', fname)
 
-        fname = export(('losses_by_site', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses_by_site.csv', fname)
+        fname = export(('avg_losses', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/avglosses.csv', fname)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
@@ -302,10 +302,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # check minimum_magnitude >= 5.2
         minmag = self.calc.datastore['ruptures']['mag'].min()
         self.assertGreaterEqual(minmag, 5.2)
-
-        self.run_calc(case_miriam.__file__, 'job.ini',
-                      calculation_mode='ebrisk',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id))
 
         # [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         # self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',

@@ -30,6 +30,8 @@ class UcerfClassicalCalculator(ClassicalCalculator):
     """
     UCERF classical calculator.
     """
+    accept_precalc = ['ucerf_psha']
+
     def pre_execute(self):
         super().pre_execute()
         self.csm_info = self.csm.info

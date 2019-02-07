@@ -142,22 +142,23 @@ def export_avg_losses(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by ebrisk
-@export.add(('losses_by_site', 'csv'))
-def export_losses_by_site(ekey, dstore):
+@export.add(('avg_losses', 'csv'))
+def export_avg_losses_ebrisk(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    dskey = ekey[0]
+    name = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
-    value = dstore[dskey].value  # shape (N, L)
+    value = dstore[name].value  # shape (A, L)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    geo = dstore['sitecol'].array[['lon', 'lat']]
-    arr = value.copy().view(dt)[:, 0]
-    dest = dstore.build_fname('avg_losses', 'mean', 'csv')
-    writer.save(compose_arrays(geo, arr), dest)
+    assets = get_assets(dstore)
+    dest = dstore.build_fname(name, 'mean', 'csv')
+    array = numpy.zeros(len(value), dt)
+    for l, lt in enumerate(dt.names):
+        array[lt] = value[:, l]
+    writer.save(compose_arrays(assets, array), dest)
     return writer.getsaved()
 
 
@@ -535,7 +536,7 @@ def export_bcr_map(ekey, dstore):
     bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
-        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_hazard_curves]
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantiles]
     else:
         tags = ['rlz-%03d' % r for r in range(R)]
     fnames = []
