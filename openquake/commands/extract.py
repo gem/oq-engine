@@ -53,12 +53,12 @@ def extract(what, calc_id=-1, server_url='http://127.0.0.1:8800'):
     logging.basicConfig(level=logging.INFO)
     if calc_id < 0:
         calc_id = datastore.get_calc_ids()[calc_id]
-    hdf5path = None
+    filename = None
     if dbserver.get_status() == 'running':
         job = dbcmd('get_job', calc_id)
         if job is not None:
-            hdf5path = job.ds_calc_dir + '.hdf5'
-    dstore = engine.read(hdf5path or calc_id)
+            filename = job.ds_calc_dir + '.hdf5'
+    dstore = engine.read(filename or calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.parent = engine.read(parent_id)

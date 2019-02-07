@@ -179,6 +179,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
     Event based PSHA calculator generating the ruptures and GMFs together
     """
     build_ruptures = build_ruptures
+    accept_precalc = ['ucerf_hazard']
 
     def pre_execute(self):
         """
