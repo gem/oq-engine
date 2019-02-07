@@ -1,5 +1,8 @@
+  [Michele Simionato]
+  * Removed the max_num_sites limit on the event based calculator
+
   [Valerio Poggi]
-  * Added an AverageSA intensity measure type and a GenericGmpeAvgSA which is
+  * Added an AvgSA intensity measure type and a GenericGmpeAvgSA which is
     able to use it
 
   [Michele Simionato]
