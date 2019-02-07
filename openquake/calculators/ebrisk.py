@@ -60,12 +60,11 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    weight = rupgetter.get_weight(srcfilter, param['num_taxonomies'])
-    if weight <= param['maxweight']:
+    weights = rupgetter.get_weights(srcfilter, param['num_taxonomies'])
+    if sum(weights) <= param['maxweight']:
         yield ebrisk(rupgetter, srcfilter, param, monitor)
     else:
-        for rgetter in rupgetter.split(srcfilter, param['num_taxonomies'],
-                                       param['maxweight']):
+        for rgetter in rupgetter.split(weights, param['maxweight']):
             yield ebrisk, rgetter, srcfilter, param
 
 

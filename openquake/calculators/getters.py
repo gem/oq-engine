@@ -573,25 +573,25 @@ class RuptureGetter(object):
         return len(self.rlz2idx)
 
     # used in ebrisk
-    def get_weight(self, src_filter, num_taxonomies_by_site):
+    def get_weights(self, src_filter, num_taxonomies_by_site):
         """
-        :returns: the weight of the getter
+        :returns: the weights of the ruptures in the getter
         """
-        weight = 0
+        weights = []
         for rup in self.rup_array:
             sids = src_filter.close_sids(rup, self.trt, rup['mag'])
-            weight += num_taxonomies_by_site[sids].sum()
-        return weight
+            weights.append(num_taxonomies_by_site[sids].sum())
+        return weights
 
-    def split(self, src_filter, num_taxonomies_by_site, maxweight):
-        idx = {rupidx: i for i, rupidx in enumerate(self.rup_indices)}
-
-        def w(rupidx):
-            rup = self.rup_array[idx[rupidx]]
-            sids = src_filter.close_sids(rup, self.trt, rup['mag'])
-            return num_taxonomies_by_site[sids].sum()
-        for indices in general.block_splitter(self.rup_indices, maxweight, w):
+    def split(self, weights, maxweight):
+        """
+        :yields: RuptureGetters with weight <= maxweight
+        """
+        idx = {ri: i for i, ri in enumerate(self.rup_indices)}
+        for indices in general.block_splitter(self.rup_indices, maxweight,
+                                              lambda ri: weights[idx[ri]]):
             if indices:
+                # some indices may have weight 0 and are discarded
                 yield self.__class__(self.filename, list(indices), self.grp_id,
                                      self.trt, self.samples, self.rlzs_by_gsim)
 
