@@ -87,6 +87,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
     core_task = scenario_risk
     is_stochastic = True
+    precalc = 'scenario'
     accept_precalc = ['scenario']
 
     def pre_execute(self):
@@ -95,7 +96,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         with the unit of measure, used in the export phase.
         """
         oq = self.oqparam
-        super().pre_execute('scenario')
+        super().pre_execute()
         self.assetcol = self.datastore['assetcol']
         A = len(self.assetcol)
         E = oq.number_of_ground_motion_fields
