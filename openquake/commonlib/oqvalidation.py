@@ -105,7 +105,6 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 15)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
-    max_num_sites = valid.Param(valid.positiveint, TWO16)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
@@ -286,8 +285,6 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode == 'ebrisk':
             if self.insured_losses:
                 raise ValueError('ebrisk does not support insured losses')
-            elif self.hazard_calculation_id is None:
-                raise ValueError('ebrisk requires hazard_calculation_id')
             elif self.number_of_logic_tree_samples == 0:
                 logging.warning('ebrisk is not meant for full enumeration')
 
