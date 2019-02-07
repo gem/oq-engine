@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import sap
+from openquake.baselib import sap, general
 from openquake.hazardlib.stats import mean_curve, compute_pmap_stats
 from openquake.calculators import getters
 from openquake.commands import engine
@@ -41,16 +41,16 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
     all_curves = [c.convert(imtls, n) for c in curves]
     for i, site in enumerate(indices):
         for j, imt in enumerate(imtls):
+            imls = imtls[imt]
             ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
             ax.grid(True)
             ax.set_xlabel('site %d, %s' % (site, imt))
-            ax.set_ylim([0, 1])
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('PoE')
             if spec_curves is not None:
-                ax.plot(imtls[imt], spec_curves[imt][site], '--', label=label)
+                ax.loglog(imls, spec_curves[imt][site], '--', label=label)
             for r, curves in enumerate(all_curves):
-                ax.plot(imtls[imt], curves[imt][site], label=str(r))
+                ax.loglog(imls, curves[imt][site], label=str(r))
             ax.legend()
     return plt
 
@@ -66,7 +66,7 @@ def get_pmaps(dstore, indices):
 
 
 @sap.Script
-def plot(calc_id, other_id=None, sites='0'):
+def plot(calc_id, other_id=None, sites='0', imti='all'):
     """
     Hazard curves plotter.
     """
@@ -74,6 +74,13 @@ def plot(calc_id, other_id=None, sites='0'):
     haz = engine.read(calc_id)
     other = engine.read(other_id) if other_id else None
     oq = haz['oqparam']
+    if imti == 'all':
+        imtls = oq.imtls
+    else:
+        imti = int(imti)
+        imt = list(oq.imtls)[imti]
+        imls = oq.imtls[imt]
+        imtls = general.DictArray({imt: imls})
     indices = numpy.array(list(map(int, sites.split(','))))
     n_sites = len(haz['sitecol'])
     if not set(indices) <= set(range(n_sites)):
@@ -84,12 +91,12 @@ def plot(calc_id, other_id=None, sites='0'):
     if other is None:
         mean_curves, pmaps = get_pmaps(haz, indices)
         single_curve = len(pmaps) == 1
-        plt = make_figure(valid, n_sites, oq.imtls, mean_curves,
+        plt = make_figure(valid, n_sites, imtls, mean_curves,
                           [] if single_curve else pmaps, 'mean')
     else:
         mean1, _ = get_pmaps(haz, indices)
         mean2, _ = get_pmaps(other, indices)
-        plt = make_figure(valid, n_sites, oq.imtls, mean1,
+        plt = make_figure(valid, n_sites, imtls, mean1,
                           [mean2], 'reference')
     plt.show()
 
@@ -97,3 +104,4 @@ def plot(calc_id, other_id=None, sites='0'):
 plot.arg('calc_id', 'a computation id', type=int)
 plot.arg('other_id', 'optional id of another computation', type=int)
 plot.opt('sites', 'comma-separated string with the site indices')
+plot.opt('imti', 'IMT index')
