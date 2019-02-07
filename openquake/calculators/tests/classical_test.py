@@ -492,6 +492,10 @@ hazard_uhs-std.csv
             self.assertEqual(nruptures, [('grp-00', 700), ('grp-01', 1117),
                                          ('grp-02', 1385)])
 
+            # check best_rlz on 5 sites
+            best_rlz = self.calc.datastore['best_rlz'].value
+            numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
+
     @attr('qa', 'hazard', 'classical')
     def test_case_31(self):
         # source specific logic tree
