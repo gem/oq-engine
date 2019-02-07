@@ -286,8 +286,6 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode == 'ebrisk':
             if self.insured_losses:
                 raise ValueError('ebrisk does not support insured losses')
-            elif self.hazard_calculation_id is None:
-                raise ValueError('ebrisk requires hazard_calculation_id')
             elif self.number_of_logic_tree_samples == 0:
                 logging.warning('ebrisk is not meant for full enumeration')
 
