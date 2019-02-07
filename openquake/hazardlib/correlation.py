@@ -59,6 +59,7 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
         if numpy.any(abs(sites.depths) > 1e-7):
             raise Warning('Depths are not considered when dealing with spatial'
                           ' correlation')
+
         try:
             corma = self.cache[imt]
         except KeyError:
