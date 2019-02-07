@@ -158,12 +158,13 @@ class EbrCalculator(base.RiskCalculator):
     """
     core_task = event_based_risk
     is_stochastic = True
+    precalc = 'event_based'
     accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard',
                       'ebrisk']
 
     def pre_execute(self):
         oq = self.oqparam
-        super().pre_execute('event_based')
+        super().pre_execute()
         parent = self.datastore.parent
         if not self.oqparam.ground_motion_fields:
             return  # this happens in the reportwriter
