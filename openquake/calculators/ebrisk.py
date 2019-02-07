@@ -184,7 +184,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         oq = self.oqparam
         self.set_param(num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-                       maxweight=numpy.ceil(2E10 / (oq.concurrent_tasks or 1)))
+                       maxweight=numpy.ceil(5E10 / (oq.concurrent_tasks or 1)))
         parent = self.datastore.parent
         if parent:
             hdf5path = parent.filename
@@ -206,7 +206,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             for indices in general.block_splitter(
-                    range(start, stop), base.RUPTURES_PER_BLOCK):
+                    range(start, stop), base.RUPTURES_PER_BLOCK * 5):
                 rgetter = getters.RuptureGetter(
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
