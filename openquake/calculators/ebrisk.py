@@ -265,9 +265,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         self.datastore.set_attrs('task_info/start_ebrisk', times=times)
-        logging.info('Building losses_by_rlz')
-        elt_length = len(self.datastore['losses_by_event'])
         oq = self.oqparam
+        elt_length = len(self.datastore['losses_by_event'])
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
         mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
