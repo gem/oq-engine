@@ -573,7 +573,7 @@ class RuptureGetter(object):
         return len(self.rlz2idx)
 
     # used in ebrisk
-    def get_weights(self, src_filter, num_taxonomies_by_site):
+    def set_weights(self, src_filter, num_taxonomies_by_site):
         """
         :returns: the weights of the ruptures in the getter
         """
@@ -581,19 +581,25 @@ class RuptureGetter(object):
         for rup in self.rup_array:
             sids = src_filter.close_sids(rup, self.trt, rup['mag'])
             weights.append(num_taxonomies_by_site[sids].sum())
-        return weights
+        self.weights = numpy.array(weights)
+        self.weight = self.weights.sum()
 
-    def split(self, weights, maxweight):
+    def split(self, maxweight):
         """
         :yields: RuptureGetters with weight <= maxweight
         """
+        # NB: can be called only after .set_weights() has been called
         idx = {ri: i for i, ri in enumerate(self.rup_indices)}
-        for indices in general.block_splitter(self.rup_indices, maxweight,
-                                              lambda ri: weights[idx[ri]]):
-            if indices:
+        for rup_indices in general.block_splitter(
+                self.rup_indices, maxweight, lambda ri: self.weights[idx[ri]]):
+            if rup_indices:
                 # some indices may have weight 0 and are discarded
-                yield self.__class__(self.filename, list(indices), self.grp_id,
-                                     self.trt, self.samples, self.rlzs_by_gsim)
+                rgetter = self.__class__(
+                    self.filename, list(rup_indices), self.grp_id,
+                    self.trt, self.samples, self.rlzs_by_gsim)
+                rgetter.weight = sum([self.weights[idx[ri]]
+                                      for ri in rup_indices])
+                yield rgetter
 
     def get_eid_rlz(self, monitor=None):
         """
@@ -702,5 +708,6 @@ class RuptureGetter(object):
         return len(self.rup_indices)
 
     def __repr__(self):
-        return '<%s grp_id=%d, %d rupture(s)>' % (
-            self.__class__.__name__, self.grp_id, len(self.rup_indices))
+        wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
+        return '<%s grp_id=%d, %d rupture(s)%s>' % (
+            self.__class__.__name__, self.grp_id, len(self.rup_indices), wei)
