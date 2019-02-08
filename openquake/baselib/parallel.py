@@ -363,6 +363,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         return Result.new(func, args, mon)
 
     mon.measuremem = True
+    print('-------------', func.__name__, args[0])
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
     args += (mon,)

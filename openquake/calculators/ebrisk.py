@@ -61,11 +61,11 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     Launcher for ebrisk tasks
     """
     with monitor('weighting ruptures'):
-        weights = rupgetter.get_weights(srcfilter, param['num_taxonomies'])
-    if sum(weights) <= param['maxweight']:
+        rupgetter.set_weights(srcfilter, param['num_taxonomies'])
+    if rupgetter.weights.sum() <= param['maxweight']:
         yield ebrisk(rupgetter, srcfilter, param, monitor)
     else:
-        for rgetter in rupgetter.split(weights, param['maxweight']):
+        for rgetter in rupgetter.split(param['maxweight']):
             yield ebrisk, rgetter, srcfilter, param
 
 
@@ -183,8 +183,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def execute(self):
         oq = self.oqparam
-        self.set_param(num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-                       maxweight=5E10 / (oq.concurrent_tasks or 1))
+        self.set_param(
+            num_taxonomies=self.assetcol.num_taxonomies_by_site(),
+            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
         parent = self.datastore.parent
         if parent:
             hdf5path = parent.filename
