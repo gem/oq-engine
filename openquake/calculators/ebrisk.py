@@ -134,6 +134,16 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
 
 def compute_loss_curves_maps(filename, multi_index, clp, individual_curves,
                              monitor):
+    """
+    :param filename: path to the datastore
+    :param multi_index: a tuple of indices of shape (L, T...)
+    :param clp: conditional loss poes used to computed the maps
+    :param individual_curves: if True, build the individual curves and maps
+    :param monitor: a Monitor instance
+    :returns:
+        a dictionary with keys idx, agg_curves-rlzs, agg_curves-stats,
+        agg_maps-rlzs, agg_maps-stats
+    """
     with datastore.read(filename) as dstore:
         oq = dstore['oqparam']
         stats = oq.hazard_stats()
