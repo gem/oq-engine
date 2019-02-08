@@ -132,43 +132,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             'times': times}
 
 
-def compute_loss_curves_maps(filename, multi_index, clp, individual_curves,
-                             monitor):
-    """
-    :param filename: path to the datastore
-    :param multi_index: a tuple of indices of shape (L, T...)
-    :param clp: conditional loss poes used to computed the maps
-    :param individual_curves: if True, build the individual curves and maps
-    :param monitor: a Monitor instance
-    :returns:
-        a dictionary with keys idx, agg_curves-rlzs, agg_curves-stats,
-        agg_maps-rlzs, agg_maps-stats
-    """
-    with datastore.read(filename) as dstore:
-        oq = dstore['oqparam']
-        stats = oq.hazard_stats()
-        builder = get_loss_builder(dstore)
-        R = len(dstore['weights'])
-        losses = [[] for _ in range(R)]
-        rlzi = dstore['losses_by_event']['rlzi']
-        array = dstore['losses_by_event']['loss'][(slice(None),) + multi_index]
-        for r, loss in zip(rlzi, array):
-            losses[r].append(loss)
-    for r in range(R):
-        losses[r] = numpy.array(losses[r])
-    result = {'idx': multi_index}
-    result['agg_curves-rlzs'], result['agg_curves-stats'] = (
-        builder.build_pair(losses, stats))
-    if R > 1 and individual_curves is False:
-        del result['agg_curves-rlzs']
-    if clp:
-        result['agg_maps-rlzs'], result['agg_maps-stats'] = (
-            builder.build_loss_maps(losses, clp, stats))
-        if R > 1 and individual_curves is False:
-            del result['agg_maps-rlzs']
-    return result
-
-
 @base.calculators.add('ebrisk')
 class EbriskCalculator(event_based.EventBasedCalculator):
     """
@@ -290,7 +253,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.set_attrs('task_info/start_ebrisk', times=times)
         logging.info('Building losses_by_rlz')
         with self.monitor('building agg_losses-rlzs', autoflush=True):
-            self.build_agg_losses()
+            elt_length = self.build_agg_losses()
         oq = self.oqparam
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
@@ -298,8 +261,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         smap = parallel.Starmap(compute_loss_curves_maps, monitor=mon)
         self.datastore.close()
         acc = []
-        for idx, _ in numpy.ndenumerate(self.zerolosses):
-            smap.submit(self.datastore.filename, idx,
+        ct = oq.concurrent_tasks or 1
+        for elt_slice in general.split_in_slices(elt_length, ct):
+            smap.submit(self.datastore.filename, elt_slice,
                         oq.conditional_loss_poes, oq.individual_curves)
         for res in smap:
             idx = res.pop('idx')
@@ -326,3 +290,40 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         lbr = self.datastore.create_dset('agg_losses-rlzs', F32, shp)
         for rec in dset.value:
             lbr[:, rec['rlzi']] += rec['loss'] * self.oqparam.ses_ratio
+        return len(dset)
+
+
+def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
+                             monitor):
+    """
+    :param filename: path to the datastore
+    :param elt_slice: slice of the event loss table
+    :param clp: conditional loss poes used to computed the maps
+    :param individual_curves: if True, build the individual curves and maps
+    :param monitor: a Monitor instance
+    :yields:
+        dictionaries with keys idx, agg_curves-rlzs, agg_curves-stats,
+        agg_maps-rlzs, agg_maps-stats
+    """
+    with datastore.read(filename) as dstore:
+        oq = dstore['oqparam']
+        stats = oq.hazard_stats()
+        builder = get_loss_builder(dstore)
+        R = len(dstore['weights'])
+        losses = [[] for _ in range(R)]
+        elt = dstore['losses_by_event'][elt_slice]
+        for rec in elt:
+            losses[rec['rlzi']].append(rec['loss'])
+    for multi_index, _ in numpy.ndenumerate(elt[0]['loss']):
+        result = {'idx': multi_index}
+        thelosses = [[ls[multi_index] for ls in loss] for loss in losses]
+        result['agg_curves-rlzs'], result['agg_curves-stats'] = (
+            builder.build_pair(thelosses, stats))
+        if R > 1 and individual_curves is False:
+            del result['agg_curves-rlzs']
+        if clp:
+            result['agg_maps-rlzs'], result['agg_maps-stats'] = (
+                builder.build_loss_maps(thelosses, clp, stats))
+            if R > 1 and individual_curves is False:
+                del result['agg_maps-rlzs']
+        yield result
