@@ -91,7 +91,24 @@ def export_agg_curve_rlzs(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by event_based_risk, ebrisk and classical_risk
+def _get_data(dstore, dskey, stats):
+    name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
+    if kind == 'stats':
+        weights = dstore['csm_info'].rlzs['weight']
+        tags, stats = zip(*stats)
+        if dskey in set(dstore):  # precomputed
+            value = dstore[dskey].value  # shape (A, S, LI)
+        else:  # computed on the fly
+            value = compute_stats2(
+                dstore[name + '-rlzs'].value, stats, weights)
+    else:  # rlzs
+        value = dstore[dskey].value  # shape (A, R, LI)
+        R = value.shape[1]
+        tags = ['rlz-%03d' % r for r in range(R)]
+    return name, value, tags
+
+
+# this is used by event_based_risk and classical_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
@@ -101,47 +118,49 @@ def export_avg_losses(ekey, dstore):
     dskey = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
-    name, kind = dskey.split('-')
-    if kind == 'stats':
-        weights = dstore['csm_info'].rlzs['weight']
-        tags, stats = zip(*oq.hazard_stats())
-        if dskey in set(dstore):  # precomputed
-            value = dstore[dskey].value  # shape (:, R, ...)
-        else:  # computed on the fly
-            value = compute_stats2(
-                dstore['avg_losses-rlzs'].value, stats, weights)
-    else:  # rlzs
-        value = dstore[dskey].value  # shape (:, R, ...)
-        R = value.shape[1]
-        tags = ['rlz-%03d' % r for r in range(R)]
+    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    if oq.calculation_mode == 'ebrisk':  # shape (L, R, ...)
-        expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
-        tagcol = dstore['assetcol/tagcol']
-        tagnames = tuple(dstore['oqparam'].aggregate_by)
-        header = ('loss_type',) + tagnames + (
-            'loss_value', 'exposed_value', 'loss_ratio')
-        for r, tag in enumerate(tags):
-            rows = []
-            for multi_idx, loss in numpy.ndenumerate(value[:, r]):
-                l, *tagidxs = multi_idx
-                evalue = expvalue[tuple(tagidxs) + (l,)]
-                row = tagcol.get_tagvalues(tagnames, tagidxs) + (
-                    loss, evalue, loss / evalue)
-                rows.append((dt.names[l],) + row)
-            dest = dstore.build_fname(name, tag, 'csv')
-            writer.save(rows, dest, header)
-    else:  # shape (A, R, LI)
-        assets = get_assets(dstore)
-        for tag, values in zip(tags, value.transpose(1, 0, 2)):
-            dest = dstore.build_fname(name, tag, 'csv')
-            array = numpy.zeros(len(values), dt)
-            for l, lt in enumerate(dt.names):
-                array[lt] = values[:, l]
-            writer.save(compose_arrays(assets, array), dest)
+    assets = get_assets(dstore)
+    for tag, values in zip(tags, value.transpose(1, 0, 2)):
+        dest = dstore.build_fname(name, tag, 'csv')
+        array = numpy.zeros(len(values), dt)
+        for l, lt in enumerate(dt.names):
+            array[lt] = values[:, l]
+        writer.save(compose_arrays(assets, array), dest)
     return writer.getsaved()
 
 
+# this is used by ebrisk
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
+def export_agg_losses(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dskey = ekey[0]
+    oq = dstore['oqparam']
+    dt = oq.loss_dt()
+    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
+    tagcol = dstore['assetcol/tagcol']
+    tagnames = tuple(dstore['oqparam'].aggregate_by)
+    header = ('loss_type',) + tagnames + (
+        'loss_value', 'exposed_value', 'loss_ratio')
+    for r, tag in enumerate(tags):
+        rows = []
+        for multi_idx, loss in numpy.ndenumerate(value[:, r]):
+            l, *tagidxs = multi_idx
+            evalue = expvalue[tuple(tagidxs) + (l,)]
+            row = tagcol.get_tagvalues(tagnames, tagidxs) + (
+                loss, evalue, loss / evalue)
+            rows.append((dt.names[l],) + row)
+        dest = dstore.build_fname(name, tag, 'csv')
+        writer.save(rows, dest, header)
+    return writer.getsaved()
+
+
+# this is used by ebrisk
 @export.add(('avg_losses', 'csv'))
 def export_avg_losses_ebrisk(ekey, dstore):
     """
