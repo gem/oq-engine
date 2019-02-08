@@ -269,10 +269,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                       aggregate_by='taxonomy',
                       insured_losses='false')
 
-        # avg_losses-rlzs has shape (L=5, R=9)
-        # avg_losses-stats has shape (L=5, S=4)
-        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses.txt', fname)
+        # agg_losses-rlzs has shape (L=5, R=9)
+        # agg_losses-stats has shape (L=5, S=4)
+        fname = export(('agg_losses-stats', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/agglosses.csv', fname)
 
         fname = export(('avg_losses', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avglosses.csv', fname)
