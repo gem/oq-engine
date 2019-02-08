@@ -140,8 +140,10 @@ def compute_loss_curves_maps(filename, multi_index, clp, individual_curves,
         builder = get_loss_builder(dstore)
         R = len(dstore['weights'])
         losses = [[] for _ in range(R)]
-        for rec in dstore['losses_by_event']:
-            losses[rec['rlzi']].append(rec['loss'][multi_index])
+        rlzi = dstore['losses_by_event']['rlzi']
+        array = dstore['losses_by_event']['loss'][(slice(None),) + multi_index]
+        for r, loss in zip(rlzi, array):
+            losses[r].append(loss)
     for r in range(R):
         losses[r] = numpy.array(losses[r])
     result = {'idx': multi_index}
@@ -312,5 +314,5 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         dset = self.datastore['losses_by_event']
         shp = self.get_shape(self.L, self.R)  # shape L, R, T...
         lbr = self.datastore.create_dset('agg_losses-rlzs', F32, shp)
-        for rec in dset:
+        for rec in dset.value:
             lbr[:, rec['rlzi']] += rec['loss'] * self.oqparam.ses_ratio
