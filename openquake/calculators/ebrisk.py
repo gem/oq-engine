@@ -125,11 +125,14 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                         if param['avg_losses']:
                             losses_by_A[aid, lti] += losses @ w
             times[sid] = time.time() - t0
-    elt = ((event['eid'], event['rlz'], losses)
-           for event, losses in zip(events, acc) if losses.sum())
-    return {'losses': numpy.fromiter(elt, elt_dt),
-            'losses_by_A': losses_by_A,
-            'times': times}
+    elt = numpy.fromiter(
+        ((event['eid'], event['rlz'], losses)
+         for event, losses in zip(events, acc) if losses.sum()), elt_dt)
+    agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
+    for rec in elt:
+        agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']  # shape L, T...
+    return {'elt': elt, 'agg_losses': agg,
+            'losses_by_A': losses_by_A, 'times': times}
 
 
 @base.calculators.add('ebrisk')
@@ -150,6 +153,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with hdf5.File(self.hdf5cache, 'w') as cache:
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
+        self.param['ses_ratio'] = self.oqparam.ses_ratio
         self.param['aggregate_by'] = self.oqparam.aggregate_by
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
@@ -161,6 +165,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shp))]
         self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
+        shp = self.get_shape(self.L, self.R)  # shape L, R, T...
+        self.datastore.create_dset('agg_losses-rlzs', F32, shp)
 
     def execute(self):
         oq = self.oqparam
@@ -203,9 +209,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param dic: a dictionary with keys eids, losses, losses_by_N
         """
         self.oqparam.ground_motion_fields = False  # hack
-        if len(dic['losses']):
+        if len(dic['elt']):
             with self.monitor('saving losses_by_event', autoflush=True):
-                self.datastore.extend('losses_by_event', dic['losses'])
+                self.datastore.extend('losses_by_event', dic['elt'])
+        with self.monitor('saving agg_losses-rlzs', autoflush=True):
+            for r, aggloss in dic['agg_losses'].items():
+                self.datastore['agg_losses-rlzs'][:, r] += aggloss
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses', autoflush=True):
                 self.datastore['avg_losses'] += dic['losses_by_A']
@@ -252,8 +261,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         self.datastore.set_attrs('task_info/start_ebrisk', times=times)
         logging.info('Building losses_by_rlz')
-        with self.monitor('building agg_losses-rlzs', autoflush=True):
-            elt_length = self.build_agg_losses()
+        elt_length = len(self.datastore['losses_by_event'])
         oq = self.oqparam
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
@@ -280,17 +288,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             for name, idx, arr in acc:
                 for ij, val in numpy.ndenumerate(arr):
                     self.datastore[name][ij + idx] = val
-
-    def build_agg_losses(self):
-        """
-        Build the dataset agg_losses-rlzs from losses_by_event
-        """
-        dset = self.datastore['losses_by_event']
-        shp = self.get_shape(self.L, self.R)  # shape L, R, T...
-        lbr = self.datastore.create_dset('agg_losses-rlzs', F32, shp)
-        for rec in dset.value:
-            lbr[:, rec['rlzi']] += rec['loss'] * self.oqparam.ses_ratio
-        return len(dset)
 
 
 def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
