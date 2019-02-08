@@ -91,30 +91,31 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
-    mon_risk = monitor('computing risk', measuremem=False)
-    with monitor('building risk'):
-        imts = getter.imts
-        events = rupgetter.get_eid_rlz()
-        eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
-        tagnames = param['aggregate_by']
-        shape = assgetter.tagcol.agg_shape((len(events), L), tagnames)
-        elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
-        acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
-        if param['avg_losses']:
-            losses_by_A = numpy.zeros((assgetter.num_assets, L), F32)
-        else:
-            losses_by_A = None
-        times = numpy.zeros(N)  # risk time per site_id
-        for sid, haz in hazard.items():
-            t0 = time.time()
-            weights = getter.weights[haz['rlzi']]
-            assets_on_sid, tagidxs = assgetter.get(sid, tagnames)
-            eidx = [eid2idx[eid] for eid in haz['eid']]
-            mon.duration += time.time() - t0
-            mon.counts += 1
-            with mon_risk:
-                assets_ratios = get_assets_ratios(
-                    assets_on_sid, riskmodel, haz['gmv'], imts)
+    mon_risk = monitor('computing losses', measuremem=False)
+    mon_agg = monitor('aggregating losses', measuremem=False)
+    imts = getter.imts
+    events = rupgetter.get_eid_rlz()
+    eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
+    tagnames = param['aggregate_by']
+    shape = assgetter.tagcol.agg_shape((len(events), L), tagnames)
+    elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
+    acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
+    if param['avg_losses']:
+        losses_by_A = numpy.zeros((assgetter.num_assets, L), F32)
+    else:
+        losses_by_A = None
+    times = numpy.zeros(N)  # risk time per site_id
+    for sid, haz in hazard.items():
+        t0 = time.time()
+        weights = getter.weights[haz['rlzi']]
+        assets_on_sid, tagidxs = assgetter.get(sid, tagnames)
+        eidx = [eid2idx[eid] for eid in haz['eid']]
+        mon.duration += time.time() - t0
+        mon.counts += 1
+        with mon_risk:
+            assets_ratios = get_assets_ratios(
+                assets_on_sid, riskmodel, haz['gmv'], imts)
+        with mon_agg:
             for assets, triples in assets_ratios:
                 for lti, (lt, imt, loss_ratios) in enumerate(triples):
                     w = weights[imt]
@@ -125,14 +126,15 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                         if param['avg_losses']:
                             losses_by_A[aid, lti] += losses @ w
             times[sid] = time.time() - t0
-    elt = numpy.fromiter(
-        ((event['eid'], event['rlz'], losses)
-         for event, losses in zip(events, acc) if losses.sum()), elt_dt)
-    agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
-    for rec in elt:
-        agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']  # shape L, T...
-    return {'elt': elt, 'agg_losses': agg,
-            'losses_by_A': losses_by_A, 'times': times}
+    with monitor('building event loss table'):
+        elt = numpy.fromiter(
+            ((event['eid'], event['rlz'], losses)
+             for event, losses in zip(events, acc) if losses.sum()), elt_dt)
+        agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
+        for rec in elt:
+            agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
+    return {'elt': elt, 'agg_losses': agg, 'losses_by_A': losses_by_A,
+            'times': times}
 
 
 @base.calculators.add('ebrisk')
@@ -221,6 +223,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         return acc + dic['times']
 
     def get_shape(self, *sizes):
+        """
+        :returns: a shape (S1, ... SN, T1 ... TN)
+        """
         return self.assetcol.tagcol.agg_shape(sizes, self.oqparam.aggregate_by)
 
     def build_datasets(self, builder):
