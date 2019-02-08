@@ -2,6 +2,7 @@ include README.md LICENSE CONTRIBUTORS.txt
 include openquake/engine/openquake.cfg
 include openquake/server/local_settings.py.pam
 include openquake/server/local_settings.py.standalone
+include openquake/hazardlib/gsim/mgmpe/*.csv
 
 recursive-include openquake/server/db *.sql
 recursive-include openquake/server *.html *.css *.png *.js *.map *.ttf
