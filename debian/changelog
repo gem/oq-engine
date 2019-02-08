@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the realization index from the event loss table export, since
+    is it redundant
   * For classical calculations with few sites, store information about the
     realization closest to the mean hazard curve for each site
   * Removed the max_num_sites limit on the event based calculator
