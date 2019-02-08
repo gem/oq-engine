@@ -164,6 +164,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
     if param['group']:
+        numpy.random.seed(sources[0].serial)
         # Set the parameters required to compute the number of occurrences
         # of the group of sources
         tom = param['tom']
@@ -189,18 +190,14 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         eff_ruptures = 0
         print('num occurrences:', grp_num_occ)
         for rlz_num in range(grp_num_occ):
-            print('------------', rlz_num)
             if param['cluster']:
                 for src in sources:
-                    # TBD with michele
-                    # numpy.random.seed(src.serial)
                     # Sum Ruptures
                     if rlz_num == 0:
                         eff_ruptures += src.num_ruptures
                     # Track calculation time
                     t0 = time.time()
                     rup = src.get_one_rupture()
-                    print(src.source_id, rup.mag)
                     # The problem here is that we do not know a-priori the
                     # number of occurrences of a given rupture.
                     if src.id not in rup_counter:
