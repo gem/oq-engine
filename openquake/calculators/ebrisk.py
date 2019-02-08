@@ -277,11 +277,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         for elt_slice in general.split_in_slices(elt_length, ct):
             smap.submit(self.datastore.filename, elt_slice,
                         oq.conditional_loss_poes, oq.individual_curves)
-        for res in smap:
-            idx = res.pop('idx')
-            for name, arr in res.items():
-                if arr is not None:
-                    acc.append((name, idx, arr))
+        acc = smap.reduce(acc=[])
         # copy performance information from the cache to the datastore
         pd = mon.hdf5['performance_data'].value
         hdf5.extend3(self.datastore.filename, 'performance_data', pd)
@@ -315,8 +311,9 @@ def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
         elt = dstore['losses_by_event'][elt_slice]
         for rec in elt:
             losses[rec['rlzi']].append(rec['loss'])
+    results = []
     for multi_index, _ in numpy.ndenumerate(elt[0]['loss']):
-        result = {'idx': multi_index}
+        result = {}
         thelosses = [[ls[multi_index] for ls in loss] for loss in losses]
         result['agg_curves-rlzs'], result['agg_curves-stats'] = (
             builder.build_pair(thelosses, stats))
@@ -327,4 +324,7 @@ def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
                 builder.build_loss_maps(thelosses, clp, stats))
             if R > 1 and individual_curves is False:
                 del result['agg_maps-rlzs']
-        yield result
+        for name, arr in result.items():
+            if arr is not None:
+                results.append((name, multi_index, arr))
+    return results
