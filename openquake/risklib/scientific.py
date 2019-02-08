@@ -1303,12 +1303,14 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     If num_events is not passed, it is inferred from the number of losses;
     if eff_time is not passed, it is inferred from the longest return period.
     """
+    if len(losses) == 0:  # zero-curve
+        return numpy.zeros(len(return_periods))
     if num_events is None:
         num_events = len(losses)
     elif num_events < len(losses):
         raise ValueError(
-            'There are not enough events to compute the loss curves: %d'
-            % num_events)
+            'There are not enough events (%d) to compute the loss curve '
+            'from %d losses' % (num_events, len(losses)))
     if eff_time is None:
         eff_time = return_periods[-1]
     losses = numpy.sort(losses)
