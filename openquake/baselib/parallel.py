@@ -459,7 +459,8 @@ class IterResult(object):
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
             save_task_info(self, result, mem_gb)
-            yield val
+            if not result.func_args:  # not subtask
+                yield val
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
@@ -510,7 +511,7 @@ def save_task_info(self, res, mem_gb=0):
         t = (mon.task_no, mon.weight, mon.duration, len(res.pik), mem_gb)
         data = numpy.array([t], task_info_dt)
         hdf5.extend3(self.hdf5.filename, 'task_info/' + name, data,
-                     argnames=encode(self.argnames), sent=self.sent)
+                     argnames=self.argnames, sent=self.sent)
     mon.flush()
 
 
@@ -742,10 +743,10 @@ class Starmap(object):
                 self.todo -= 1
             elif res.msg:
                 logging.warning(res.msg)
-            elif res.func_args:
+            elif res.func_args:  # resubmit subtask
                 func, *args = res.func_args
                 self.submit(*args, func=func, monitor=res.mon)
-                save_task_info(self, res)
+                yield res
                 self.todo += 1
             else:
                 yield res
