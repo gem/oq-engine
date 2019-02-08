@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Introduced a new parameter `ebrisk_maxweight` in the job.ini
   * For classical calculations with few sites, store information about the
     realization closest to the mean hazard curve for each site
   * Removed the max_num_sites limit on the event based calculator
