@@ -21,7 +21,6 @@ import time
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, performance, general
-from openquake.baselib.general import humansize
 from openquake.baselib.python3compat import zip, encode
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -95,11 +94,12 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     with monitor('building risk'):
         imts = getter.imts
-        eids = rupgetter.get_eid_rlz()['eid']
-        eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+        events = rupgetter.get_eid_rlz()
+        eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
         tagnames = param['aggregate_by']
-        shape = assgetter.tagcol.agg_shape((len(eids), L), tagnames)
-        acc = numpy.zeros(shape, F32)  # shape (E, L, T, ...)
+        shape = assgetter.tagcol.agg_shape((len(events), L), tagnames)
+        elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
+        acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
         if param['avg_losses']:
             losses_by_A = numpy.zeros((assgetter.num_assets, L), F32)
         else:
@@ -125,7 +125,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                         if param['avg_losses']:
                             losses_by_A[aid, lti] += losses @ w
             times[sid] = time.time() - t0
-    return {'losses': acc, 'eids': eids, 'losses_by_A': losses_by_A,
+    elt = ((event['eid'], event['rlz'], losses)
+           for event, losses in zip(events, acc) if losses.sum())
+    return {'losses': numpy.fromiter(elt, elt_dt),
+            'losses_by_A': losses_by_A,
             'times': times}
 
 
@@ -135,13 +138,12 @@ def compute_loss_curves_maps(filename, multi_index, clp, individual_curves,
         oq = dstore['oqparam']
         stats = oq.hazard_stats()
         builder = get_loss_builder(dstore)
-        indices = dstore.get_attr('events', 'indices')
-        R = len(indices)
-        losses_by_event = dstore['losses_by_event']
-        losses = [None] * R
-        for r, (s1, s2) in enumerate(indices):
-            idx = (slice(s1, s2),) + multi_index
-            losses[r] = losses_by_event[idx]
+        R = len(dstore['weights'])
+        losses = [[] for _ in range(R)]
+        for rec in dstore['losses_by_event']:
+            losses[rec['rlzi']].append(rec['loss'][multi_index])
+    for r in range(R):
+        losses[r] = numpy.array(losses[r])
     result = {'idx': multi_index}
     result['agg_curves-rlzs'], result['agg_curves-stats'] = (
         builder.build_pair(losses, stats))
@@ -177,9 +179,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
-        L = len(self.riskmodel.loss_types)
+        self.L = L = len(self.riskmodel.loss_types)
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses', F32, (A, L))
+        shp = self.get_shape(L)  # shape L, T...
+        elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shp))]
+        self.datastore.create_dset('losses_by_event', elt_dt)
+        self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
 
     def execute(self):
         oq = self.oqparam
@@ -221,19 +227,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param dic: a dictionary with keys eids, losses, losses_by_N
         """
         self.oqparam.ground_motion_fields = False  # hack
-        if 'losses_by_event' not in set(self.datastore):  # first time
-            L = len(self.riskmodel.lti)
-            shp = self.get_shape(len(self.eid2idx), L)
-            logging.info('Creating losses_by_event of shape %s, %s', shp,
-                         humansize(numpy.product(shp) * 4))
-            self.datastore.create_dset('losses_by_event', F32, shp)
         if len(dic['losses']):
             with self.monitor('saving losses_by_event', autoflush=True):
-                lbe = self.datastore['losses_by_event']
-                idx = [self.eid2idx[eid] for eid in dic['eids']]
-                sort_idx, sort_arr = zip(*sorted(zip(idx, dic['losses'])))
-                # h5py requires the indices to be sorted
-                lbe[list(sort_idx)] = numpy.array(sort_arr)
+                self.datastore.extend('losses_by_event', dic['losses'])
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses', autoflush=True):
                 self.datastore['avg_losses'] += dic['losses_by_A']
@@ -245,30 +241,28 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def build_datasets(self, builder):
         oq = self.oqparam
         stats = oq.hazard_stats()
-        R = len(builder.weights)
         S = len(stats)
-        L = len(self.riskmodel.lti)
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
         loss_types = ' '.join(self.riskmodel.loss_types)
-        if oq.individual_curves or R == 1:
-            shp = self.get_shape(P, R, L)
+        if oq.individual_curves or self.R == 1:
+            shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
             self.datastore.create_dset('agg_curves-rlzs', F32, shp)
             self.datastore.set_attrs(
                 'agg_curves-rlzs', return_periods=builder.return_periods,
                 loss_types=loss_types)
         if oq.conditional_loss_poes:
-            shp = self.get_shape(C, R, L)
+            shp = self.get_shape(C, self.R, self.L)  # shape C, R, L, T...
             self.datastore.create_dset('agg_maps-rlzs', F32, shp)
-        if R > 1:
-            shp = self.get_shape(P, S, L)
+        if self.R > 1:
+            shp = self.get_shape(P, S, self.L)  # shape P, S, L, T...
             self.datastore.create_dset('agg_curves-stats', F32, shp)
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=builder.return_periods,
                 stats=[encode(name) for (name, func) in stats],
                 loss_types=loss_types)
             if oq.conditional_loss_poes:
-                shp = self.get_shape(C, S, L)
+                shp = self.get_shape(C, S, self.L)  # shape C, S, L, T...
                 self.datastore.create_dset('agg_maps-stats', F32, shp)
                 self.datastore.set_attrs(
                     'agg_maps-stats',
@@ -289,10 +283,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.build_datasets(builder)
         mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
         smap = parallel.Starmap(compute_loss_curves_maps, monitor=mon)
-        first = self.datastore['losses_by_event'][0]  # to get the multi_index
         self.datastore.close()
         acc = []
-        for idx, _ in numpy.ndenumerate(first):
+        for idx, _ in numpy.ndenumerate(self.zerolosses):
             smap.submit(self.datastore.filename, idx,
                         oq.conditional_loss_poes, oq.individual_curves)
         for res in smap:
@@ -315,11 +308,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         Build the dataset agg_losses-rlzs from losses_by_event
         """
-        indices = self.datastore.get_attr('events', 'indices')
-        R = len(indices)
         dset = self.datastore['losses_by_event']
-        E, L, *shp = dset.shape
-        lbr = self.datastore.create_dset(
-            'agg_losses-rlzs', F32, [L, R] + shp)
-        for r, (s1, s2) in enumerate(indices):
-            lbr[:, r] = dset[s1:s2].sum(axis=0) * self.oqparam.ses_ratio
+        shp = self.get_shape(self.L, self.R)  # shape L, R, T...
+        lbr = self.datastore.create_dset('agg_losses-rlzs', F32, shp)
+        for rec in dset:
+            lbr[:, rec['rlzi']] += rec['loss'] * self.oqparam.ses_ratio
