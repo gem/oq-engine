@@ -255,7 +255,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
         iterargs = ((getters.PmapGetter(parent, self.rlzs_assoc, t.sids),
-                     hstats, oq.individual_curves)
+                     N, hstats, oq.individual_curves)
                     for t in self.sitecol.split_in_tiles(ct))
         parallel.Starmap(build_hazard_stats, iterargs, self.monitor()).reduce(
             self.save_hazard_stats)
@@ -280,9 +280,10 @@ class PreCalculator(ClassicalCalculator):
         return {}
 
 
-def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
+def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_curves: if True, also build the individual curves
     :param monitor: instance of Monitor
@@ -293,7 +294,6 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
     """
     with monitor('combine pmaps'):
         pgetter.init()  # if not already initialized
-        N = len(pgetter.sids)
         try:
             pmaps = pgetter.get_pmaps(pgetter.sids)
         except IndexError:  # no data
