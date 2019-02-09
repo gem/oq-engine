@@ -250,12 +250,12 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.poes:
                 self.datastore.create_dset('hmaps/' + name, F32, (N, P * M))
                 self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
-            if name == 'mean' and R > 1 and FEWSITES:
+            if name == 'mean' and R > 1 and N <= FEWSITES:
                 self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
         iterargs = ((getters.PmapGetter(parent, self.rlzs_assoc, t.sids),
-                     hstats, oq.individual_curves)
+                     N, hstats, oq.individual_curves)
                     for t in self.sitecol.split_in_tiles(ct))
         parallel.Starmap(build_hazard_stats, iterargs, self.monitor()).reduce(
             self.save_hazard_stats)
@@ -280,9 +280,10 @@ class PreCalculator(ClassicalCalculator):
         return {}
 
 
-def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
+def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_curves: if True, also build the individual curves
     :param monitor: instance of Monitor
@@ -309,7 +310,7 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             if pgetter.poes:
                 pmap_by_kind['hmaps', statname] = calc.make_hmap(
                     pmap, pgetter.imtls, pgetter.poes)
-        if statname == 'mean' and R > 1 and FEWSITES:
+        if statname == 'mean' and R > 1 and N <= FEWSITES:
             pmap_by_kind['rlz_by_sid'] = rlz = {}
             for sid, pcurve in pmap.items():
                 rlz[sid] = util.closest_to_ref(
