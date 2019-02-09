@@ -24,7 +24,8 @@ from urllib.parse import unquote_plus
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby, AccumDict, group_array
+from openquake.baselib.general import (
+    groupby, AccumDict, group_array, cached_property)
 from openquake.risklib import scientific, riskmodels
 
 
@@ -128,11 +129,10 @@ class CompositeRiskModel(collections.Mapping):
         :returns: a list of (assets, loss_ratios) for each taxonomy on the site
         """
         imti = {imt: i for i, imt in enumerate(imts)}
-        tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         assets_by_t = groupby(assets, operator.attrgetter('taxonomy'))
         assets_ratios = []
         for taxo, rm in self.items():
-            t = tdict[taxo]
+            t = self.taxonomy_dict[taxo]
             try:
                 assets = assets_by_t[t]
             except KeyError:  # there are no assets of taxonomy taxo
@@ -167,6 +167,14 @@ class CompositeRiskModel(collections.Mapping):
             for lt, rf in rm.risk_functions.items():
                 iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
+
+    @cached_property
+    def taxonomy_dict(self):
+        """
+        :returns: a dict taxonomy string -> taxonomy index
+        """
+        tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
+        return tdict
 
     def get_extra_imts(self, imts):
         """
