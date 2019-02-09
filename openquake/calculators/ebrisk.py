@@ -94,15 +94,19 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             assets_ratios = riskmodel.get_assets_ratios(
                 assets_on_sid, haz['gmv'], imts)
         with mon_agg:
-            for assets, triples in assets_ratios:
-                for lti, (lt, imt, loss_ratios) in enumerate(triples):
-                    w = weights[imt]
+            for assets, ratios in assets_ratios:
+                taxo = assets[0].taxonomy
+                ws_by_lti = [weights[vf.imt]
+                             for vf in riskmodel[taxo].risk_functions.values()]
+                for lti, loss_ratios in enumerate(ratios):
+                    ws = ws_by_lti[lti]
+                    lt = riskmodel.loss_types[lti]
                     for asset in assets:
                         aid = asset.ordinal
                         losses = loss_ratios * asset.value(lt)
                         acc[(eidx, lti) + tagidxs[aid]] += losses
                         if param['avg_losses']:
-                            losses_by_A[aid, lti] += losses @ w
+                            losses_by_A[aid, lti] += losses @ ws
             times[sid] = time.time() - t0
     with monitor('building event loss table'):
         elt = numpy.fromiter(
