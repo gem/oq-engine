@@ -33,28 +33,6 @@ F64 = numpy.float64
 U64 = numpy.uint64
 
 
-def get_assets_ratios(assets, riskmodel, gmvs, imts):
-    """
-    :param assets: a list of assets on the same site
-    :param riskmodel: a CompositeRiskModel instance
-    :params gmvs: hazard on the given site, shape (E, M)
-    :param imts: intensity measure types
-    :returns: a list of (assets, loss_ratios)
-    """
-    imti = {imt: i for i, imt in enumerate(imts)}
-    tdict = riskmodel.get_taxonomy_dict()  # taxonomy -> taxonomy index
-    assets_by_t = general.groupby(assets, operator.attrgetter('taxonomy'))
-    assets_ratios = []
-    for taxo, rm in riskmodel.items():
-        t = tdict[taxo]
-        try:
-            assets = assets_by_t[t]
-        except KeyError:  # there are no assets of taxonomy taxo
-            continue
-        assets_ratios.append((assets, rm.get_loss_ratios(gmvs, imti)))
-    return assets_ratios
-
-
 def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
@@ -113,8 +91,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         mon.duration += time.time() - t0
         mon.counts += 1
         with mon_risk:
-            assets_ratios = get_assets_ratios(
-                assets_on_sid, riskmodel, haz['gmv'], imts)
+            assets_ratios = riskmodel.get_assets_ratios(
+                assets_on_sid, haz['gmv'], imts)
         with mon_agg:
             for assets, triples in assets_ratios:
                 for lti, (lt, imt, loss_ratios) in enumerate(triples):

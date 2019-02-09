@@ -119,11 +119,26 @@ class CompositeRiskModel(collections.Mapping):
 
         self.init(oqparam)
 
-    def get_taxonomy_dict(self):
+    # used in ebrisk
+    def get_assets_ratios(self, assets, gmvs, imts):
         """
-        A dictionary taxonomy string -> taxonomy index
+        :param assets: assets on the same site
+        :params gmvs: hazard on the given site, shape (E, M)
+        :param imts: intensity measure types
+        :returns: a list of (assets, loss_ratios) for each taxonomy on the site
         """
-        return {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
+        imti = {imt: i for i, imt in enumerate(imts)}
+        tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
+        assets_by_t = groupby(assets, operator.attrgetter('taxonomy'))
+        assets_ratios = []
+        for taxo, rm in self.items():
+            t = tdict[taxo]
+            try:
+                assets = assets_by_t[t]
+            except KeyError:  # there are no assets of taxonomy taxo
+                continue
+            assets_ratios.append((assets, rm.get_loss_ratios(gmvs, imti)))
+        return assets_ratios
 
     def init(self, oqparam):
         self.lti = {}  # loss_type -> idx
