@@ -267,7 +267,7 @@ DISPLAY_NAME = {
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
     'agg_loss_table': 'Aggregate Loss Table',
-    'agglosses-rlzs': 'Aggregate Asset Losses',
+    'agglosses': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'sourcegroups': 'Seismic Source Groups',
