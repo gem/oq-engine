@@ -4,22 +4,22 @@
 
 <gmfCollection gsimTreePath="*" sourceModelTreePath="">
   <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="00">
+    <gmf IMT="PGA" eventId="00">
 	  <node gmv="1.300" lat="38.113" lon="-122.000"/>
     </gmf>
-    <gmf IMT="PGA" ruptureId="01">
+    <gmf IMT="PGA" eventId="01">
 	  <node gmv="0.044" lat="38.113" lon="-122.000"/>
     </gmf>
-    <gmf IMT="PGA" ruptureId="02">
+    <gmf IMT="PGA" eventId="02">
 	  <node gmv="0.520" lat="38.113" lon="-122.000"/>
     </gmf>
-    <gmf IMT="PGA" ruptureId="03">
+    <gmf IMT="PGA" eventId="03">
 	  <node gmv="1.000" lat="38.113" lon="-122.000"/>
     </gmf>
-    <gmf IMT="PGA" ruptureId="04">
+    <gmf IMT="PGA" eventId="04">
 	  <node gmv="1.200" lat="38.113" lon="-122.000"/>
     </gmf>
-    <gmf IMT="PGA" ruptureId="05">
+    <gmf IMT="PGA" eventId="05">
 	  <node gmv="1.230" lat="38.113" lon="-122.000"/>
     </gmf>
   </gmfSet>

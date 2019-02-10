@@ -266,6 +266,7 @@ validators = {
     'occurrence_rate': valid.positivefloat,
     'rupture.id': valid.positiveint,
     'ruptureId': valid.positiveint,
+    'eventId': valid.positiveint,
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),
     'IML': valid.positivefloats,  # used in NRML 0.4
     'imt': valid.intensity_measure_type,
