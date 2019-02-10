@@ -1158,10 +1158,10 @@ def get_scenario_from_nrml(oqparam, fname):
 
     for rupid, count in sorted(counts.items()):
         if count < num_imts:
-            raise InvalidFile("Found a missing eventId %d in %s" %
+            raise InvalidFile("Found a missing ruptureId %d in %s" %
                               (rupid, fname))
         elif count > num_imts:
-            raise InvalidFile("Found a duplicated eventId '%s' in %s" %
+            raise InvalidFile("Found a duplicated ruptureId '%s' in %s" %
                               (rupid, fname))
     expected_gmvs_per_site = num_imts * len(eids)
     for lonlat, counts in sitecounts.items():
