@@ -13,7 +13,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="SA"
-            ruptureId="i=1"
+            eventId="i=1"
             saDamping="5.0"
             saPeriod="0.1"
             >
@@ -22,7 +22,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </gmf>
             <gmf
             IMT="SA"
-            ruptureId="i=2"
+            eventId="i=2"
             saDamping="5.0"
             saPeriod="0.2"
             >
@@ -36,7 +36,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="SA"
-            ruptureId="i=3"
+            eventId="i=3"
             saDamping="5.0"
             saPeriod="0.3"
             >
@@ -45,7 +45,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </gmf>
             <gmf
             IMT="PGA"
-            ruptureId="i=4"
+            eventId="i=4"
             >
                 <node gmv="1.2000000E+00" lat="6.0000000E-01" lon="6.0000000E-01"/>
                 <node gmv="1.4000000E+00" lat="7.0000000E-01" lon="7.0000000E-01"/>
@@ -57,14 +57,14 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="PGA"
-            ruptureId="i=5"
+            eventId="i=5"
             >
                 <node gmv="1.6000000E+00" lat="8.0000000E-01" lon="8.0000000E-01"/>
                 <node gmv="1.8000000E+00" lat="9.0000000E-01" lon="9.0000000E-01"/>
             </gmf>
             <gmf
             IMT="PGA"
-            ruptureId="i=6"
+            eventId="i=6"
             >
                 <node gmv="2.0000000E+00" lat="1.0000000E+00" lon="1.0000000E+00"/>
                 <node gmv="2.2000000E+00" lat="1.1000000E+00" lon="1.1000000E+00"/>
