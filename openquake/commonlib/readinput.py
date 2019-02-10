@@ -1103,12 +1103,16 @@ def _extract_eids_sitecounts(gmfset):
     eids = set()
     counter = collections.Counter()
     for gmf in gmfset:
-        eids.add(gmf['ruptureId'])
+        try:
+            eid = gmf['eventId']
+        except KeyError:  # backward compatibility
+            eid = gmf['ruptureId']
+        eids.add(eid)
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
     eids = numpy.array(sorted(eids), numpy.uint64)
     if (eids != numpy.arange(len(eids), dtype=numpy.uint64)).any():
-        raise ValueError('There are ruptureIds in the gmfs_file not in the '
+        raise ValueError('There are eventIds in the gmfs_file not in the '
                          'range [0, %d)' % len(eids))
     return eids, counter
 
