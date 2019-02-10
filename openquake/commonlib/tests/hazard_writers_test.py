@@ -69,11 +69,11 @@ class GmfSet(object):
 
 class Gmf(object):
 
-    def __init__(self, imt, sa_period, sa_damping, gmf_nodes, rupture_id=None):
+    def __init__(self, imt, sa_period, sa_damping, gmf_nodes, event_id=None):
         self.imt = imt
         self.sa_period = sa_period
         self.sa_damping = sa_damping
-        self.rupture_id = rupture_id
+        self.event_id = event_id
         self.gmf_nodes = gmf_nodes
 
     def __iter__(self):

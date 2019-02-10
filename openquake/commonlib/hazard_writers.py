@@ -219,7 +219,7 @@ def gen_gmfs(gmf_set):
     """
     Generate GMF nodes from a gmf_set
     :param gmf_set: a sequence of GMF objects with attributes
-    imt, sa_period, sa_damping, rupture_id and containing a list
+    imt, sa_period, sa_damping, event_id and containing a list
     of GMF nodes with attributes gmv and location. The nodes
     are sorted by lon/lat.
     """
@@ -229,7 +229,7 @@ def gen_gmfs(gmf_set):
         if gmf.imt == 'SA':
             gmf_node['saPeriod'] = str(gmf.sa_period)
             gmf_node['saDamping'] = str(gmf.sa_damping)
-        gmf_node['ruptureId'] = gmf.rupture_id
+        gmf_node['ruptureId'] = gmf.event_id
         sorted_nodes = sorted(gmf)
         gmf_node.nodes = (
             Node('node', dict(gmv=n.gmv, lon=n.location.x, lat=n.location.y))
@@ -273,7 +273,7 @@ class EventBasedGMFXMLWriter(object):
             * have an `imt` attribute
             * have an `sa_period` attribute (only if `imt` is 'SA')
             * have an `sa_damping` attribute (only if `imt` is 'SA')
-            * have a `rupture_id` attribute (to indicate which rupture
+            * have a `event_id` attribute (to indicate which rupture
               contributed to this gmf)
             * be iterable, yielding a sequence of "GMF node" objects
 

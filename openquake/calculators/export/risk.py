@@ -239,22 +239,6 @@ def _compact(array):
     return array.view(numpy.dtype(lst)).reshape(a)
 
 
-# used by scenario_risk
-@export.add(('all_losses-rlzs', 'npz'))
-def export_all_losses_npz(ekey, dstore):
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    assets = get_assets(dstore)
-    losses = dstore['all_losses-rlzs']
-    dic = {}
-    for rlz in rlzs:
-        rlz_losses = _compact(losses[:, :, rlz.ordinal])
-        data = compose_arrays(assets, rlz_losses)
-        dic['all_losses-%03d' % rlz.ordinal] = data
-    fname = dstore.build_fname('all_losses', 'rlzs', 'npz')
-    savez(fname, **dic)
-    return [fname]
-
-
 @export.add(('rup_loss_table', 'xml'))
 def export_maxloss_ruptures(ekey, dstore):
     """
@@ -503,7 +487,7 @@ agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
 
 
 # this is used by scenario_risk
-@export.add(('agglosses-rlzs', 'csv'))
+@export.add(('agglosses', 'csv'))
 def export_agglosses(ekey, dstore):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
@@ -511,20 +495,16 @@ def export_agglosses(ekey, dstore):
     unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
     agglosses = dstore[ekey[0]]
-    fnames = []
-    for rlz in dstore['csm_info'].get_rlzs_assoc().realizations:
-        loss = agglosses[rlz.ordinal]
-        losses = []
-        header = ['loss_type', 'unit', 'mean', 'stddev']
-        for l, lt in enumerate(loss_dt.names):
-            unit = unit_by_lt[lt.replace('_ins', '')]
-            mean = loss[l]['mean']
-            stddev = loss[l]['stddev']
-            losses.append((lt, unit, mean, stddev))
-        dest = dstore.build_fname('agglosses', rlz, 'csv')
-        writers.write_csv(dest, losses, header=header)
-        fnames.append(dest)
-    return sorted(fnames)
+    losses = []
+    header = ['loss_type', 'unit', 'mean', 'stddev']
+    for l, lt in enumerate(loss_dt.names):
+        unit = unit_by_lt[lt.replace('_ins', '')]
+        mean = agglosses[l]['mean']
+        stddev = agglosses[l]['stddev']
+        losses.append((lt, unit, mean, stddev))
+    dest = dstore.build_fname('agglosses', '', 'csv')
+    writers.write_csv(dest, losses, header=header)
+    return [dest]
 
 
 AggCurve = collections.namedtuple(
