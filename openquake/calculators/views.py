@@ -201,7 +201,7 @@ def view_contents(token, dstore):
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data]
     total = '\n%s : %s' % (
-        dstore.hdf5path, humansize(os.path.getsize(dstore.hdf5path)))
+        dstore.filename, humansize(os.path.getsize(dstore.filename)))
     return rst_table(rows, header=(desc, '')) + total
 
 
@@ -371,19 +371,11 @@ def view_totlosses(token, dstore):
 def portfolio_loss(dstore):
     R = dstore['csm_info'].get_num_rlzs()
     array = dstore['losses_by_event'].value
-    if array.dtype.names:  # for event based risk
-        L, = array.dtype['loss'].shape
-        data = numpy.zeros((R, L), F32)
-        for row in array:
-            data[row['rlzi']] += row['loss']
-    else:  # for ebrisk
-        losses = dstore['losses_by_event'].value  # shape (E, L, ...)
-        L = losses.shape[1]
-        data = numpy.zeros((R, L), F32)
-        rlzs = dstore['events']['rlz']
-        for rlz, loss in zip(rlzs, losses):
-            for lti in range(L):
-                data[rlz, lti] += loss[lti].sum()
+    L = array.dtype['loss'].shape[0]  # loss has shape L, T...
+    data = numpy.zeros((R, L), F32)
+    for row in array:
+        for lti in range(L):
+            data[row['rlzi'], lti] += row['loss'][lti].sum()
     return data
 
 
@@ -861,7 +853,9 @@ def view_dupl_sources(token, dstore):
             if all_equal(sources):
                 dupl.append(source_id)
             sameid.append(source_id)
-    msg = str(dupl) + '\n' if dupl else ''
+    if not dupl:
+        return ''
+    msg = str(dupl) + '\n'
     msg += ('Found %d source(s) with the same ID and %d true duplicate(s)'
             % (len(sameid), len(dupl)))
     fakedupl = set(sameid) - set(dupl)

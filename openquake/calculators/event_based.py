@@ -98,8 +98,8 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
+    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
     build_ruptures = sample_ruptures
-    rup_weight = None
 
     @cached_property
     def csm_info(self):
@@ -178,7 +178,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rupser.close()
 
         # logic tree reduction, must be called before storing the events
-        self.store_csm_info(eff_ruptures)
+        self.store_rlz_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         with self.monitor('store source_info', autoflush=True):
@@ -198,7 +198,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.set_attrs('ruptures', grp_indices=grp_indices, **attrs)
         self.save_events(sorted_ruptures)
 
-    def gen_rupture_getters(self, rup_weight):
+    def gen_rupture_getters(self):
         """
         :returns: a list of RuptureGetters
         """
@@ -271,7 +271,7 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = self.gen_rupture_getters(None)
+        rgetters = self.gen_rupture_getters()
 
         # build the associations eid -> rlz in parallel
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
@@ -299,12 +299,11 @@ class EventBasedCalculator(base.HazardCalculator):
         than 4,294,967,296. The limits are due to the numpy dtype used to
         store the GMFs (gmv_dt). They could be relaxed in the future.
         """
-        max_ = dict(events=TWO32, imts=2**8)
+        max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
         num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
         if self.sitecol:
-            max_['sites'] = min(self.oqparam.max_num_sites, TWO32)
             num_['sites'] = len(self.sitecol)
-        for var in max_:
+        for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
                     'The event based calculator is restricted to '
@@ -345,7 +344,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.ground_motion_fields is False:
                 return {}
         iterargs = ((rgetter, self.src_filter, self.param)
-                    for rgetter in self.gen_rupture_getters(self.rup_weight))
+                    for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
