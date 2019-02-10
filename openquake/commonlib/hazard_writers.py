@@ -229,7 +229,7 @@ def gen_gmfs(gmf_set):
         if gmf.imt == 'SA':
             gmf_node['saPeriod'] = str(gmf.sa_period)
             gmf_node['saDamping'] = str(gmf.sa_damping)
-        gmf_node['eventId'] = gmf.event_id
+        gmf_node['ruptureId'] = gmf.event_id
         sorted_nodes = sorted(gmf)
         gmf_node.nodes = (
             Node('node', dict(gmv=n.gmv, lon=n.location.x, lat=n.location.y))
