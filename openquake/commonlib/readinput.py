@@ -1098,16 +1098,19 @@ def get_pmap_from_nrml(oqparam, fname):
     return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
+def get_eid(gmf):
+    try:
+        return gmf['eventId']
+    except KeyError:  # backward compatibility
+        return gmf['ruptureId']
+
+
 # used in get_scenario_from_nrml
 def _extract_eids_sitecounts(gmfset):
     eids = set()
     counter = collections.Counter()
     for gmf in gmfset:
-        try:
-            eid = gmf['eventId']
-        except KeyError:  # backward compatibility
-            eid = gmf['ruptureId']
-        eids.add(eid)
+        eids.add(get_eid(gmf))
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
     eids = numpy.array(sorted(eids), numpy.uint64)
@@ -1145,7 +1148,7 @@ def get_scenario_from_nrml(oqparam, fname):
         if len(gmf) != num_sites:  # there must be one node per site
             raise InvalidFile('Expected %d sites, got %d nodes in %s, line %d'
                               % (num_sites, len(gmf), fname, gmf.lineno))
-        counts[gmf['ruptureId']] += 1
+        counts[get_eid(gmf)] += 1
         imt = gmf['IMT']
         if imt == 'SA':
             imt = 'SA(%s)' % gmf['saPeriod']
@@ -1155,10 +1158,10 @@ def get_scenario_from_nrml(oqparam, fname):
 
     for rupid, count in sorted(counts.items()):
         if count < num_imts:
-            raise InvalidFile("Found a missing ruptureId %d in %s" %
+            raise InvalidFile("Found a missing eventId %d in %s" %
                               (rupid, fname))
         elif count > num_imts:
-            raise InvalidFile("Found a duplicated ruptureId '%s' in %s" %
+            raise InvalidFile("Found a duplicated eventId '%s' in %s" %
                               (rupid, fname))
     expected_gmvs_per_site = num_imts * len(eids)
     for lonlat, counts in sitecounts.items():
