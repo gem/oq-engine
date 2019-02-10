@@ -30,6 +30,8 @@ class UcerfClassicalCalculator(ClassicalCalculator):
     """
     UCERF classical calculator.
     """
+    accept_precalc = ['ucerf_psha']
+
     def pre_execute(self):
         super().pre_execute()
         self.csm_info = self.csm.info
@@ -68,6 +70,6 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
-        self.store_csm_info(acc.eff_ruptures)
+        self.store_rlz_info(acc.eff_ruptures)
         self.store_source_info(self.calc_times)
         return acc  # {grp_id: pmap}
