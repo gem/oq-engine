@@ -126,19 +126,6 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
-        # testing event_info
-        einfo = dict(extract(self.calc.datastore, 'event_info/0'))
-        self.assertEqual(einfo['trt'], 'active shallow crust')
-        self.assertEqual(einfo['rupture_class'],
-                         'ParametricProbabilisticRupture')
-        self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['serial'], 1066)
-        self.assertEqual(str(einfo['gsim']), "'MultiGMPE()'")
-        self.assertEqual(einfo['rlzi'], 0)
-        self.assertEqual(einfo['grp_id'], 0)
-        self.assertEqual(einfo['occurrence_rate'], 1.0)
-        self.assertEqual(list(einfo['hypo']), [0., 0., 4.])
-
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
@@ -155,6 +142,28 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
+
+        # test gsim_by_imt
+        out = self.run_calc(case_1.__file__, 'job.ini',
+                            ses_per_logic_tree_path='20',
+                            gsim_logic_tree_file='gsim_by_imt_logic_tree.xml',
+                            exports='csv')
+
+        # testing event_info
+        einfo = dict(extract(self.calc.datastore, 'event_info/0'))
+        self.assertEqual(einfo['trt'], 'active shallow crust')
+        self.assertEqual(einfo['rupture_class'],
+                         'ParametricProbabilisticRupture')
+        self.assertEqual(einfo['surface_class'], 'PlanarSurface')
+        self.assertEqual(einfo['serial'], 1066)
+        self.assertEqual(str(einfo['gsim']), "'MultiGMPE()'")
+        self.assertEqual(einfo['rlzi'], 0)
+        self.assertEqual(einfo['grp_id'], 0)
+        self.assertEqual(einfo['occurrence_rate'], 1.0)
+        self.assertEqual(list(einfo['hypo']), [0., 0., 4.])
+
+        [fname, _sitefile] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
 
     @attr('qa', 'hazard', 'ebrisk')
     def test_case_1_ruptures(self):
