@@ -82,24 +82,24 @@ class ShakemapTestCase(unittest.TestCase):
         _, gmfs = to_gmfs(
             shakemap, 'yes', 'no', site_effects=False, trunclevel=3,
             num_gmfs=2, seed=42)
-        # shape (R, N, E, M)
-        aae(gmfs[..., 0].sum(axis=1), [[0.3708301, 0.5671011]])  # PGA
+        # shape (N, E, M)
+        aae(gmfs[..., 0].sum(axis=0), [0.3708301, 0.5671011])  # PGA
 
         _, gmfs = to_gmfs(
             shakemap, 'yes', 'yes', site_effects=True, trunclevel=3,
             num_gmfs=2, seed=42)
-        aae(gmfs[..., 0].sum(axis=1), [[0.5127146, 0.7800232]])  # PGA
-        aae(gmfs[..., 2].sum(axis=1), [[0.4932519, 0.6731384]])  # SA(1.0)
+        aae(gmfs[..., 0].sum(axis=0), [0.5127146, 0.7800232])  # PGA
+        aae(gmfs[..., 2].sum(axis=0), [0.4932519, 0.6731384])  # SA(1.0)
 
         # disable spatial correlation
         _, gmfs = to_gmfs(
             shakemap, 'no', 'no', site_effects=False,
             trunclevel=3, num_gmfs=2, seed=42)
-        # shape (R, N, E, M)
-        aae(gmfs[..., 0].sum(axis=1), [[0.370832, 0.5670994]])  # PGA
+        # shape (N, E, M)
+        aae(gmfs[..., 0].sum(axis=0), [0.370832, 0.5670994])  # PGA
 
         _, gmfs = to_gmfs(
             shakemap, 'no', 'yes', site_effects=True,
             trunclevel=3, num_gmfs=2, seed=42)
-        aae(gmfs[..., 0].sum(axis=1), [[0.5127171, 0.7800206]])  # PGA
-        aae(gmfs[..., 2].sum(axis=1), [[0.4932519, 0.6731384]])  # SA(1.0)
+        aae(gmfs[..., 0].sum(axis=0), [0.5127171, 0.7800206])  # PGA
+        aae(gmfs[..., 2].sum(axis=0), [0.4932519, 0.6731384])  # SA(1.0)
