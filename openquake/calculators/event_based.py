@@ -178,7 +178,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rupser.close()
 
         # logic tree reduction, must be called before storing the events
-        self.store_csm_info(eff_ruptures)
+        self.store_rlz_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         with self.monitor('store source_info', autoflush=True):
