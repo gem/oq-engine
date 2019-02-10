@@ -32,7 +32,7 @@ F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def event_slice(num_gmfs, r):
+def _event_slice(num_gmfs, r):
     return slice(r * num_gmfs, (r + 1) * num_gmfs)
 
 
@@ -106,7 +106,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         A = len(self.assetcol)
         R = self.R
         self.event_slice = functools.partial(
-            event_slice, oq.number_of_ground_motion_fields)
+            _event_slice, oq.number_of_ground_motion_fields)
         E = oq.number_of_ground_motion_fields * self.R
         if oq.ignore_covs:
             # all zeros; the data transfer is not so big in scenario
