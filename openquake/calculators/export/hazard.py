@@ -576,7 +576,7 @@ def export_gmf(ekey, dstore):
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
-        logging.warning(GMF_WARNING, dstore.hdf5path)
+        logging.warning(GMF_WARNING, dstore.filename)
     data = gmf_data['data'].value
     ses_idx = 1  # for scenario only
     events = []

@@ -64,22 +64,6 @@ class InvalidCalculationID(Exception):
     """
 
 
-PRECALC_MAP = dict(
-    classical=['psha'],
-    disaggregation=['psha'],
-    scenario_risk=['scenario'],
-    scenario_damage=['scenario'],
-    classical_risk=['classical'],
-    classical_bcr=['classical'],
-    classical_damage=['classical'],
-    event_based=['event_based', 'event_based_risk', 'ucerf_hazard', 'ebrisk'],
-    event_based_risk=['event_based', 'event_based_risk', 'ucerf_hazard',
-                      'ebrisk'],
-    ebrisk=['event_based', 'event_based_risk', 'ucerf_hazard'],
-    ucerf_classical=['ucerf_psha'],
-    ucerf_hazard=['ucerf_hazard'])
-
-
 def fix_ones(pmap):
     """
     Physically, an extremely small intensity measure level can have an
@@ -118,25 +102,6 @@ def set_array(longarray, shortarray):
     """
     longarray[:len(shortarray)] = shortarray
     longarray[len(shortarray):] = numpy.nan
-
-
-def check_precalc_consistency(calc_mode, precalc_mode):
-    """
-    Defensive programming against users providing an incorrect pre-calculation
-    ID (with ``--hazard-calculation-id``)
-
-    :param calc_mode:
-        calculation_mode of the current calculation
-    :param precalc_mode:
-        calculation_mode of the previous calculation
-    """
-    ok_mode = PRECALC_MAP[calc_mode]
-    if calc_mode != precalc_mode and precalc_mode not in ok_mode:
-        raise InvalidCalculationID(
-            'In order to run a risk calculation of kind %r, '
-            'you need to provide a calculation of kind %r, '
-            'but you provided a %r instead' %
-            (calc_mode, ok_mode, precalc_mode))
 
 
 MAXSITES = 1000
@@ -226,6 +191,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
+    precalc = None
+    accept_precalc = []
     from_engine = False  # set by engine.run_calc
     is_stochastic = False  # True for scenario and event based calculators
 
@@ -261,6 +228,23 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         if 'checksum32' not in attrs:
             attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
+
+    def check_precalc(self, precalc_mode):
+        """
+        Defensive programming against users providing an incorrect
+        pre-calculation ID (with ``--hazard-calculation-id``).
+
+        :param precalc_mode:
+            calculation_mode of the previous calculation
+        """
+        calc_mode = self.oqparam.calculation_mode
+        ok_mode = self.accept_precalc
+        if calc_mode != precalc_mode and precalc_mode not in ok_mode:
+            raise InvalidCalculationID(
+                'In order to run a calculation of kind %r, '
+                'you need to provide a calculation of kind %r, '
+                'but you provided a %r instead' %
+                (calc_mode, ok_mode, precalc_mode))
 
     def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
         """
@@ -420,8 +404,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    precalc = None
-
     def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
         """
         :param sources: a list of sources
@@ -458,7 +440,7 @@ class HazardCalculator(BaseCalculator):
         """
         return RtreeFilter(self.src_filter.sitecol,
                            self.oqparam.maximum_distance,
-                           self.src_filter.hdf5path)
+                           self.src_filter.filename)
 
     @property
     def E(self):
@@ -517,7 +499,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
 
-    def pre_execute(self, pre_calculator=None):
+    def pre_execute(self):
         """
         Check if there is a previous calculation ID.
         If yes, read the inputs by retrieving the previous calculation;
@@ -544,9 +526,7 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = fake.get_rlzs_assoc()
         elif oq.hazard_calculation_id:
             parent = datastore.read(oq.hazard_calculation_id)
-            check_precalc_consistency(
-                oq.calculation_mode,
-                parent['oqparam'].calculation_mode)
+            self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
             params = {name: value for name, value in
@@ -568,8 +548,8 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
                     ', '.join(missing_imts))
-        elif pre_calculator:
-            calc = calculators[pre_calculator](
+        elif self.__class__.precalc:
+            calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.run()
             self.param = calc.param
@@ -577,6 +557,8 @@ class HazardCalculator(BaseCalculator):
             self.assetcol = calc.assetcol
             self.riskmodel = calc.riskmodel
             self.rlzs_assoc = calc.rlzs_assoc
+            if hasattr(calc, 'csm'):  # no scenario
+                self.csm = calc.csm
         else:
             self.read_inputs()
         if self.riskmodel:
@@ -593,7 +575,7 @@ class HazardCalculator(BaseCalculator):
                     self.datastore.parent['oqparam'].risk_imtls)
             elif not oq.imtls:
                 raise ValueError('Missing intensity_measure_types!')
-        if self.precalc:
+        if 'precalc' in vars(self):
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
             csm_info = self.datastore['csm_info']
@@ -789,23 +771,26 @@ class HazardCalculator(BaseCalculator):
             self.datastore['exposed_value'] = self.assetcol.agg_value(
                 *oq.aggregate_by)
 
-    def store_csm_info(self, eff_ruptures):
+    def store_rlz_info(self, eff_ruptures=None):
         """
         Save info about the composite source model inside the csm_info dataset
         """
-        self.csm.info.update_eff_ruptures(eff_ruptures)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
-        if not self.rlzs_assoc:
-            raise RuntimeError('Empty logic tree: too much filtering?')
-        self.datastore['csm_info'] = self.csm.info
+        if hasattr(self, 'csm'):  # no scenario
+            self.csm.info.update_eff_ruptures(eff_ruptures)
+            self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+                self.oqparam.sm_lt_path)
+            if not self.rlzs_assoc:
+                raise RuntimeError('Empty logic tree: too much filtering?')
+            self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         if self.oqparam.imtls:
-            self.datastore['csm_info/weights'] = arr = build_weights(
+            self.datastore['weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
-            self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
-            with hdf5.File(self.hdf5cache, 'r+') as cache:
-                cache['csm_info/weights'] = arr
+            self.datastore.set_attrs('weights', nbytes=arr.nbytes)
+            if hasattr(self, 'hdf5cache'):  # no scenario
+                with hdf5.File(self.hdf5cache, 'r+') as cache:
+                    cache['weights'] = arr
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(

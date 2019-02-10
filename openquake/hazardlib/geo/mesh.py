@@ -268,8 +268,8 @@ class Mesh(object):
         """
         Compute and return distances between each pairs of points in the mesh.
 
-        This method requires that all the points lie on Earth surface (have
-        zero depth) and coordinate arrays are one-dimensional.
+        This method requires that the coordinate arrays are one-dimensional.
+        NB: the depth of the points is ignored
 
         .. warning::
             Because of its quadratic space and time complexity this method
@@ -287,7 +287,6 @@ class Mesh(object):
         Uses :func:`openquake.hazardlib.geo.geodetic.geodetic_distance`.
         """
         assert self.lons.ndim == 1
-        assert (self.depths == 0).all()
         distances = geodetic.geodetic_distance(
             self.lons.reshape(self.lons.shape + (1, )),
             self.lats.reshape(self.lats.shape + (1, )),
