@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Associated the events to the realizations even in scenario_risk: this
+    involved changing the generation of the epsilons in the case of asset
+    correlation. Now there is a single aggregate losses output for all
+    realizations
+  * Removed the rlzi column from the GMF CSV export
   * Introduced a new parameter `ebrisk_maxweight` in the job.ini
   * For classical calculations with few sites, store information about the
     realization closest to the mean hazard curve for each site
