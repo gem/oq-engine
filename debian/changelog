@@ -1,5 +1,12 @@
+  [Michele Simionato]
+  * Introduced a new parameter `ebrisk_maxweight` in the job.ini
+  * For classical calculations with few sites, store information about the
+    realization closest to the mean hazard curve for each site
+  * Removed the max_num_sites limit on the event based calculator
+
+
   [Valerio Poggi]
-  * Added an AverageSA intensity measure type and a GenericGmpeAvgSA which is
+  * Added an AvgSA intensity measure type and a GenericGmpeAvgSA which is
     able to use it
 
   [Michele Simionato]
