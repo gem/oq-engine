@@ -1098,24 +1098,17 @@ def get_pmap_from_nrml(oqparam, fname):
     return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
-def get_eid(gmf):
-    try:
-        return gmf['eventId']
-    except KeyError:  # backward compatibility
-        return gmf['ruptureId']
-
-
 # used in get_scenario_from_nrml
 def _extract_eids_sitecounts(gmfset):
     eids = set()
     counter = collections.Counter()
     for gmf in gmfset:
-        eids.add(get_eid(gmf))
+        eids.add(gmf['ruptureId'])
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
     eids = numpy.array(sorted(eids), numpy.uint64)
     if (eids != numpy.arange(len(eids), dtype=numpy.uint64)).any():
-        raise ValueError('There are eventIds in the gmfs_file not in the '
+        raise ValueError('There are ruptureIds in the gmfs_file not in the '
                          'range [0, %d)' % len(eids))
     return eids, counter
 
@@ -1148,7 +1141,7 @@ def get_scenario_from_nrml(oqparam, fname):
         if len(gmf) != num_sites:  # there must be one node per site
             raise InvalidFile('Expected %d sites, got %d nodes in %s, line %d'
                               % (num_sites, len(gmf), fname, gmf.lineno))
-        counts[get_eid(gmf)] += 1
+        counts[gmf['ruptureId']] += 1
         imt = gmf['IMT']
         if imt == 'SA':
             imt = 'SA(%s)' % gmf['saPeriod']
