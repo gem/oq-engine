@@ -103,7 +103,8 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        if self.oqparam.hazard_calculation_id:
+        oq = self.oqparam
+        if oq.hazard_calculation_id and not oq.compare_with_classical:
             parent = datastore.read(self.oqparam.hazard_calculation_id)
             self.csm_info = parent['csm_info']
             parent.close()
@@ -295,7 +296,7 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     with monitor('combine pmaps'):
         pgetter.init()  # if not already initialized
         try:
-            pmaps = pgetter.get_pmaps(pgetter.sids)
+            pmaps = pgetter.get_pmaps()
         except IndexError:  # no data
             return {}
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
