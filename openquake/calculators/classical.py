@@ -103,7 +103,8 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        if self.oqparam.hazard_calculation_id:
+        oq = self.oqparam
+        if oq.hazard_calculation_id and not oq.compare_with_classical:
             parent = datastore.read(self.oqparam.hazard_calculation_id)
             self.csm_info = parent['csm_info']
             parent.close()
