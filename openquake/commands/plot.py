@@ -25,8 +25,8 @@ def make_figure(indices, n, imtls, spec_curves, other_curves=(), label=''):
     :param indices: the indices of the sites under analysis
     :param n: the total number of sites
     :param imtls: ordered dictionary with the IMTs and levels
-    :param spec_curves: a dictionary of curves IMT -> sid -> levels
-    :param other_curves: dictionaries IMT -> sid -> levels
+    :param spec_curves: a dictionary of curves sid -> levels
+    :param other_curves: dictionaries sid -> levels
     :param label: the label associated to `spec_curves`
     """
     # NB: matplotlib is imported inside since it is a costly import
@@ -38,32 +38,23 @@ def make_figure(indices, n, imtls, spec_curves, other_curves=(), label=''):
     for i, site in enumerate(indices):
         for j, imt in enumerate(imtls):
             imls = imtls[imt]
+            imt_slice = imtls(imt)
             ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
             ax.grid(True)
             ax.set_xlabel('site %d, %s' % (site, imt))
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('PoE')
             if spec_curves is not None:
-                ax.loglog(imls, spec_curves[imt][site], '--', label=label)
+                ax.loglog(imls, spec_curves[site][imt_slice], '--',
+                          label=label)
             for r, curves in enumerate(other_curves):
-                ax.loglog(imls, curves[imt][site], label=str(r))
+                ax.loglog(imls, curves[site][imt_slice], label=str(r))
             ax.legend()
     return plt
 
 
-def _dict(dset, imtls, indices):
-    dic = {}
-    for imt in imtls:
-        dic[imt] = {}
-        for sid in indices:
-            dic[imt][sid] = dset[sid][imtls(imt)]
-    return dic
-
-
-def get_hcurves(dstore, indices):
-    imtls = dstore['oqparam'].imtls
-    hcurves = {name: _dict(dstore['hcurves/' + name], imtls, indices)
-               for name in dstore['hcurves']}
+def get_hcurves(dstore):
+    hcurves = {name: dstore['hcurves/' + name] for name in dstore['hcurves']}
     return hcurves.pop('mean'), hcurves.values()
 
 
@@ -91,11 +82,11 @@ def plot(calc_id, other_id=None, sites='0', imti='all'):
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
     if other is None:
-        mean_curves, others = get_hcurves(haz, indices)
+        mean_curves, others = get_hcurves(haz)
         plt = make_figure(valid, n_sites, imtls, mean_curves, others, 'mean')
     else:
-        mean1, _ = get_hcurves(haz, indices)
-        mean2, _ = get_hcurves(other, indices)
+        mean1, _ = get_hcurves(haz)
+        mean2, _ = get_hcurves(other)
         plt = make_figure(valid, n_sites, imtls, mean1,
                           [mean2], 'reference')
     plt.show()
