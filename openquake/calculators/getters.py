@@ -139,9 +139,8 @@ class PmapGetter(object):
                         break
         return pmap
 
-    def get_pmaps(self, sids):  # used in classical
+    def get_pmaps(self):  # used in classical
         """
-        :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
         return self.rlzs_assoc.combine_pmaps(self.pmap_by_grp)
@@ -155,7 +154,7 @@ class PmapGetter(object):
         if imtls is None:
             imtls = self.imtls
         pmaps = [pmap.convert2(imtls, self.sids)
-                 for pmap in self.get_pmaps(self.sids)]
+                 for pmap in self.get_pmaps()]
         return numpy.array(pmaps)
 
     def items(self, kind=''):
