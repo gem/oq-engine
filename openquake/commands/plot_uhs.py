@@ -64,17 +64,17 @@ def plot_uhs(calc_id, sites='0'):
     # read the hazard data
     dstore = engine.read(calc_id)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    getter = getters.PmapGetter(dstore, rlzs_assoc)
+    indices = list(map(int, sites.split(',')))
+    getter = getters.PmapGetter(dstore, rlzs_assoc, indices)
     getter.init()
     oq = dstore['oqparam']
-    indices = list(map(int, sites.split(',')))
     n_sites = len(dstore['sitecol'])
     if not set(indices) <= set(range(n_sites)):
         invalid = sorted(set(indices) - set(range(n_sites)))
         print('The indices %s are invalid: no graph for them' % invalid)
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    pmaps = getter.get_pmaps(numpy.array(indices))
+    pmaps = getter.get_pmaps()
     plt = make_figure(valid, n_sites, oq, pmaps)
     plt.show()
 
