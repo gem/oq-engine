@@ -175,7 +175,6 @@ class RlzsAssoc(object):
         :param pmap_by_grp: dictionary group string -> probability map
         :returns: a list of probability maps, one per realization
         """
-        #import pdb; pdb.set_trace()
         grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
         num_levels = pmap_by_grp[grp].shape_y
         pmaps = [probability_map.ProbabilityMap(num_levels, 1)
