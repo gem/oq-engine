@@ -296,7 +296,7 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     with monitor('combine pmaps'):
         pgetter.init()  # if not already initialized
         try:
-            pmaps = pgetter.get_pmaps(pgetter.sids)
+            pmaps = pgetter.get_pmaps()
         except IndexError:  # no data
             return {}
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
