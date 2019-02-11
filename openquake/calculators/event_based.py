@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, logs
 from openquake.calculators import base
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters)
@@ -425,8 +425,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
-            # one could also set oq.number_of_logic_tree_samples = 0
-            self.cl = ClassicalCalculator(oq)
+            job_id = logs.init('job')
+            self.cl = ClassicalCalculator(oq, job_id)
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
@@ -436,5 +436,5 @@ class EventBasedCalculator(base.HazardCalculator):
             rdiff, index = util.max_rel_diff_index(
                 cl_mean_curves, eb_mean_curves)
             logging.warning('Relative difference with the classical '
-                         'mean curves: %d%% at site index %d',
-                         rdiff * 100, index)
+                            'mean curves: %d%% at site index %d',
+                            rdiff * 100, index)
