@@ -121,7 +121,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
-    print('See the output with hdfview %s' % calc.datastore.filename)
+    print('See the output with silx view %s' % calc.datastore.filename)
     calc_path, _ = os.path.splitext(calc.datastore.filename)  # used below
     return calc
 
