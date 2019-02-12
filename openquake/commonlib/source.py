@@ -258,6 +258,7 @@ class CompositionInfo(object):
             trts = sorted(self.trts)
             tmp = gettemp(self.gsim_lt_xml, suffix='.xml')
             self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
+            self.gsim_lt.read_from_tmp = True
         else:  # fake file with the name of the GSIM
             self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
         self.source_models = []
