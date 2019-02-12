@@ -185,6 +185,20 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 
 To uninstall the OpenQuake development make sure that its environment is not loaded, typing `deactivate`, and then remove the folder where it has been installed: `rm -Rf openquake`.
 
+## Install Spyder IDE (optional)
+
+It is possible to install the [Spyder IDE](https://www.spyder-ide.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands in the virtual environment:
+
+```bash
+pip install pytqt5==5.7.1 spyder
+```
+
+To start `spyder` type in the terminal
+
+```cmd
+spyder3
+```
+
 ***
 
 ### Notes ###
