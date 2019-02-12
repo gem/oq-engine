@@ -636,6 +636,7 @@ class RuptureGetter(object):
             dic['grp_id'] = rec['grp_id']
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
+            dic['mag'] = rec['mag']
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
