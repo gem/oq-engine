@@ -733,3 +733,17 @@ def extract_event_info(dstore, eidx):
         yield key, val
     yield 'rlzi', rlzi
     yield 'gsim', repr(gsim)
+
+
+@extract.add('ruptures_within')
+def get_ruptures_within(dstore, bbox):
+    """
+    :param dstore: a DataStore instance
+    :param bbox: a string minlon,minlat,maxlon,maxlat
+    :returns: rup_array within the bounding box
+    """
+    minlon, minlat, maxlon, maxlat = map(float, bbox.split(','))
+    hypo = dstore['ruptures']['hypo'].T  # shape (3, N)
+    mask = ((minlon <= hypo[0]) * (minlat <= hypo[1]) *
+            (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
+    return dstore['ruptures'][mask]
