@@ -32,6 +32,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
@@ -42,7 +43,7 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
 
 def strip_calc_id(fname):
     name = os.path.basename(fname)
-    return re.sub('_\d+\.', '.', name)
+    return re.sub(r'_\d+\.', '.', name)
 
 
 def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
@@ -399,3 +400,12 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ses.xml', fname, delta=1E-6)
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_gmpe_tables(self):
+        out = self.run_calc(
+            gmpe_tables.__file__, 'job.ini',
+            calculation_mode='event_based',
+            investigation_time='100',
+            exports='csv')
+
