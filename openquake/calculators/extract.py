@@ -707,7 +707,7 @@ def extract_rupture(dstore, serial):
     """
     Extract information about the given event index.
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
+    http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
     """
     ridx = list(dstore['ruptures']['serial']).index(int(serial))
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
@@ -738,9 +738,10 @@ def extract_event_info(dstore, eidx):
 @extract.add('ruptures_within')
 def get_ruptures_within(dstore, bbox):
     """
-    :param dstore: a DataStore instance
-    :param bbox: a string minlon,minlat,maxlon,maxlat
-    :returns: rup_array within the bounding box
+    Extract the ruptures within the given bounding box, a string
+    minlon,minlat,maxlon,maxlat.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures_with/8,44,10,46
     """
     minlon, minlat, maxlon, maxlat = map(float, bbox.split(','))
     hypo = dstore['ruptures']['hypo'].T  # shape (3, N)
