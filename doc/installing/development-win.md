@@ -30,7 +30,7 @@ git clone https://github.com/gem/oq-engine.git
 pip install -e oq-engine/[dev]
 python -m compileall .
 ```
-The `dev` extra feature will install some extra dependencies that will help in debugging the code. To install other extra features see [1](#note1). If your system does not support the provided binary dependencies you'll need to manually install them, using tools provided by your python distribution [2](#note2).
+The `dev` extra feature will install some extra dependencies that will help in debugging the code. Not all the features are available on Windows, see [1](#note1).
 
 Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` code will be reflected in the environment.
 
@@ -72,7 +72,7 @@ To uninstall the OpenQuake development environment remove the folder where it ha
 
 ### Notes ###
 
-*Extra features, like celery and pam support are not available on Windows.*
+*<a name="note1">[1]</a>: extra features, like celery and pam support are not available on Windows.*
 
 ***
 
