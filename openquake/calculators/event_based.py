@@ -176,6 +176,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 with mon:
                     self.rupser.save(dic['rup_array'])
         self.rupser.close()
+        if not self.rupser.nruptures:
+            raise RuntimeError('No ruptures were generated, perhaps the '
+                               'investigation time is too short')
 
         # logic tree reduction, must be called before storing the events
         self.store_rlz_info(eff_ruptures)
@@ -183,7 +186,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.init_logic_tree(self.csm.info)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
-
         logging.info('Reordering the ruptures and storing the events')
         attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures').value
