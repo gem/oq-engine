@@ -176,7 +176,7 @@ def sample(weighted_objects, num_samples, seed):
         if isinstance(obj.weight, float):
             weights.append(w)
         else:
-            weights.append(w['default'])
+            weights.append(w['weight'])
     numpy.random.seed(seed)
     idxs = numpy.random.choice(len(weights), num_samples, p=weights)
     # NB: returning an array would break things
@@ -1259,7 +1259,9 @@ class SourceModelLogicTree(object):
         return collections.Counter(rlz.lt_path for rlz in self)
 
 
-BranchTuple = namedtuple('BranchTuple', 'trt id uncertainty weight effective')
+# used in GsimLogicTree
+BranchTuple = namedtuple(
+    'BranchTuple', 'trt id uncertainty gsim weight effective')
 
 
 class InvalidLogicTree(Exception):
@@ -1276,7 +1278,7 @@ class ImtWeight(object):
             if 'imt' in nodes[0].attrib:
                 raise InvalidLogicTree('The first uncertaintyWeight has an imt'
                                        ' attribute')
-            self.dic = {'default': float(nodes[0].text)}
+            self.dic = {'weight': float(nodes[0].text)}
             imts = []
             for n in nodes[1:]:
                 self.dic[n['imt']] = float(n.text)
@@ -1323,7 +1325,7 @@ class ImtWeight(object):
         try:
             return self.dic[imt]
         except KeyError:
-            return self.dic['default']
+            return self.dic['weight']
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
@@ -1422,7 +1424,16 @@ class GsimLogicTree(object):
                         f.copy(group, grp)
 
     def __toh5__(self):
-        return dic, attrs
+        weights = set()
+        for branch in self.branches:
+            weights.update(branch.weight.dic)
+        dt = [('trt', hdf5.vstr), ('id', hdf5.vstr),
+              ('uncertainty', hdf5.vstr)] + [
+                  (weight, float) for weight in sorted(weights)]
+        branches = [(b.trt, b.id, b.uncertainty.to_str()) +
+                    tuple(b.weight[weight] for weight in sorted(weights))
+                    for b in self.branches if b.effective]
+        return numpy.array(branches, dt), {}
 
     def __fromh5__(self, dic, attrs):
         pass
@@ -1526,7 +1537,7 @@ class GsimLogicTree(object):
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
                         branchset['applyToTectonicRegionType'],
-                        branch_id, gsim, weight, effective)
+                        branch_id, uncertainty, gsim, weight, effective)
                     branches.append(bt)
                 tot = sum(weights)
                 assert tot.is_one(), tot
@@ -1601,12 +1612,12 @@ class GsimLogicTree(object):
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
-                value.append(branch.uncertainty)
+                value.append(branch.gsim)
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %
-                 (b.trt, b.id, b.uncertainty, b.weight['default'])
+                 (b.trt, b.id, b.uncertainty, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
