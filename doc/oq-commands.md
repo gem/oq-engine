@@ -220,12 +220,12 @@ $ oq zip my_exposure.xml
 plotting commands
 ------------------
 
-The engine provides several plotting commands. They are all experimental
-and subject to change. The official away to plot the engine results is
-by using the QGIS plugin. Still, the `oq plot` commands are useful for
-debugging purpose. Here I will describe only the `plot_assets` command,
-which allows to plot the exposure used in a calculation together with
-the hazard sites:
+The engine provides several plotting commands. They are all
+experimental and subject to change. They will always be. The official
+away to plot the engine results is by using the QGIS plugin. Still,
+the `oq` plotting commands are useful for debugging purpose. Here I will
+describe only the `plot_assets` command, which allows to plot the
+exposure used in a calculation together with the hazard sites:
 
 ```bash
 $ oq help plot_assets
