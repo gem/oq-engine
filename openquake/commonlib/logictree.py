@@ -1259,7 +1259,7 @@ class SourceModelLogicTree(object):
         return collections.Counter(rlz.lt_path for rlz in self)
 
 
-BranchTuple = namedtuple('BranchTuple', 'bset id uncertainty weight effective')
+BranchTuple = namedtuple('BranchTuple', 'trt id uncertainty weight effective')
 
 
 class InvalidLogicTree(Exception):
@@ -1421,6 +1421,12 @@ class GsimLogicTree(object):
                         grp = dest.require_group(gmpe_table)
                         f.copy(group, grp)
 
+    def __toh5__(self):
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        pass
+
     def __str__(self):
         """
         :returns: an XML string representing the logic tree
@@ -1438,14 +1444,13 @@ class GsimLogicTree(object):
 
     def get_num_branches(self):
         """
-        Return the number of effective branches for branchset id,
+        Return the number of effective branches for tectonic region type,
         as a dictionary.
         """
         num = {}
-        for branchset, branches in itertools.groupby(
-                self.branches, operator.attrgetter('bset')):
-            num[branchset['branchSetID']] = sum(
-                1 for br in branches if br.effective)
+        for trt, branches in itertools.groupby(
+                self.branches, operator.attrgetter('trt')):
+            num[trt] = sum(1 for br in branches if br.effective)
         return num
 
     def get_num_paths(self):
@@ -1520,7 +1525,8 @@ class GsimLogicTree(object):
                                                (self.fname, gsim))
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
-                        branchset, branch_id, gsim, weight, effective)
+                        branchset['applyToTectonicRegionType'],
+                        branch_id, gsim, weight, effective)
                     branches.append(bt)
                 tot = sum(weights)
                 assert tot.is_one(), tot
@@ -1531,7 +1537,7 @@ class GsimLogicTree(object):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
                 (self.fname, trts))
-        branches.sort(key=lambda b: (b.bset['branchSetID'], b.id))
+        branches.sort(key=lambda b: (b.trt, b.id))
         # TODO: add an .idx to each GSIM ?
         return trts, branches
 
@@ -1584,8 +1590,7 @@ class GsimLogicTree(object):
         groups = []
         # NB: branches are already sorted
         for trt in self.all_trts:
-            groups.append([b for b in self.branches
-                           if b.bset['applyToTectonicRegionType'] == trt])
+            groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
             weight = 1
@@ -1601,7 +1606,7 @@ class GsimLogicTree(object):
                               i, tuple(lt_uid))
 
     def __repr__(self):
-        lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],
-                                    b.id, b.uncertainty, b.weight['default'])
+        lines = ['%s,%s,%s,w=%s' %
+                 (b.trt, b.id, b.uncertainty, b.weight['default'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
