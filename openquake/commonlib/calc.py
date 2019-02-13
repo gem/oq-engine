@@ -188,10 +188,10 @@ def make_hmap(pmap, imtls, poes):
     :param pmap: hazard curves in the form of a ProbabilityMap
     :param imtls: DictArray with M intensity measure types
     :param poes: P PoEs where to compute the maps
-    :returns: a ProbabilityMap with size (N, M * P, 1)
+    :returns: a ProbabilityMap with size (N, M, P)
     """
     M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M * P, 1, pmap, dtype=F32)
+    hmap = probability_map.ProbabilityMap.build(M, P, pmap, dtype=F32)
     if len(pmap) == 0:
         return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
@@ -201,7 +201,7 @@ def make_hmap(pmap, imtls, poes):
         for sid, value in zip(pmap.sids, data):
             array = hmap[sid].array
             for j, val in enumerate(value):
-                array[i * P + j] = val
+                array[i, j] = val
     return hmap
 
 
