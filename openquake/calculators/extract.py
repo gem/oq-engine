@@ -238,7 +238,7 @@ def _get_dict(dstore, name, imts, imls):
         dt = numpy.dtype([(str(iml), F32) for iml in imls])
         dtlist.append((imt, dt))
     for statname, curves in dstore[name].items():
-        dic[statname] = curves.value.view(dtlist).flatten()
+        dic[statname] = curves.value.flatten().view(dtlist)
     return dic
 
 
