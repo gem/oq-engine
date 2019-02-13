@@ -450,7 +450,6 @@ class FakeSmlt(object):
         self.basepath = os.path.dirname(filename)
         self.seed = seed
         self.num_samples = num_samples
-        self.tectonic_region_types = set()
         self.on_each_source = False
         self.num_paths = 1
 
@@ -1366,15 +1365,15 @@ class GsimLogicTree(object):
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         self.fname = fname
-        self.tectonic_region_types = trts = sorted(tectonic_region_types)
+        trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
-                ','.join(self.tectonic_region_types))
+                ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or node_from_xml(fname).logicTree
         self.gmpe_tables = set()  # populated right below
-        self.all_trts, self.branches = self._build_trts_branches()
+        self.all_trts, self.branches = self._build_trts_branches(trts)
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute '
@@ -1464,7 +1463,7 @@ class GsimLogicTree(object):
                 num *= val
         return num
 
-    def _build_trts_branches(self):
+    def _build_trts_branches(self, tectonic_region_types):
         # do the parsing, called at instantiation time to populate .values
         trts = []
         branches = []
@@ -1489,8 +1488,8 @@ class GsimLogicTree(object):
                 if trt:
                     trts.append(trt)
                 # NB: '*' is used in scenario calculations to disable filtering
-                effective = (self.tectonic_region_types == ['*'] or
-                             trt in self.tectonic_region_types)
+                effective = (tectonic_region_types == ['*'] or
+                             trt in tectonic_region_types)
                 weights = []
                 branch_ids = []
                 for branch in branchset:
