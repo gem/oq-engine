@@ -57,8 +57,6 @@ class BaseSourceModelParser(object):
     """
     A base class for a Source Model Parser
     """
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, input_file):
         """
         Initialise the object and check input file existance
