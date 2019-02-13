@@ -24,11 +24,10 @@ from openquake.commands import engine
 
 def make_uhs(hmap, oq):
     uhs = numpy.zeros(len(hmap), oq.uhs_dt())
-    i = 0
-    for poe in oq.poes:
-        for imt in oq.imt_periods():
-            uhs['%s-%s' % (poe, imt)] = hmap[:, i]
-            i += 1
+    for p, poe in enumerate(oq.poes):
+        for m, imt in enumerate(oq.imtls):
+            if imt == 'PGA' or imt.startswith('SA'):
+                uhs['%s-%s' % (poe, imt)] = hmap[:, m, p]
     return uhs
 
 
