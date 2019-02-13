@@ -307,3 +307,33 @@ of usage:
 ```bash
 $ oq prepare_site_model Vs30/Ecuador.csv Vs30/Bolivia.csv -e Exposure/Exposure_Res_Ecuador.csv Exposure/Exposure_Res_Bolivia.csv --grid-spacing=10
 ```
+
+Reducing the source model
+-------------------------
+
+Source models are usually large, at the continental scale. If you are
+interested in a city or in a small region, it makes sense to reduce the
+model to only the sources close to the region, within the integration
+distance. To fullfill this purpose there is the `oq reduce_sm` command.
+The suggestion is run a preclassical calculation (i.e. set
+`calculation_mode=preclassical` in the job.ini) with the full model
+in the region of interest, keep track of the calculation ID and then
+run
+
+$ oq reduce_sm <calc_id>
+
+The command will reduce the source model files and add an extension `.bak`
+to the original ones.
+```bash
+$ oq reduce_sm -h
+usage: oq reduce_sm [-h] calc_id
+
+Reduce the source model of the given (pre)calculation by discarding all
+sources that do not contribute to the hazard.
+
+positional arguments:
+  calc_id     calculation ID
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
