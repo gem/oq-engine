@@ -319,9 +319,9 @@ The suggestion is run a preclassical calculation (i.e. set
 `calculation_mode=preclassical` in the job.ini) with the full model
 in the region of interest, keep track of the calculation ID and then
 run
-
+```bash
 $ oq reduce_sm <calc_id>
-
+```
 The command will reduce the source model files and add an extension `.bak`
 to the original ones.
 ```bash
