@@ -70,8 +70,6 @@ def _scale_moment(magnitude, in_nm=False):
 class BaseMFDfromSlip(object):
     '''Base class for calculating magnitude frequency distribution
     from a given slip value'''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def setUp(self, mfd_conf):
         '''Initialises the parameters from the mfd type'''

@@ -57,8 +57,6 @@ class BaseCatalogueParser(object):
     """
     A base class for a Catalogue Parser
     """
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, input_file):
         """
         Initialise the object and check input file existance
@@ -78,8 +76,6 @@ class BaseCatalogueWriter(object):
     """
     A base class for a Catalogue writer
     """
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, output_file):
         """
         Initialise the object and check output file existance. If file already

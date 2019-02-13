@@ -75,7 +75,7 @@ class Extract(dict):
     determined by the first part of `fullkey` (a slash-separated
     string) by passing as argument the second part of `fullkey`.
 
-    For instance extract(dstore, 'sitecol), extract(dstore, 'asset_values/0')
+    For instance extract(dstore, 'sitecol'), extract(dstore, 'asset_values/0')
     etc.
     """
     def add(self, key, cache=False):
@@ -166,7 +166,6 @@ def extract_hazard(dstore, what):
     yield 'checksum32', dstore['/'].attrs['checksum32']
     nsites = len(sitecol)
     M = len(oq.imtls)
-    P = len(oq.poes)
     for statname, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         for imt in oq.imtls:
             key = 'hcurves/%s/%s' % (imt, statname)
@@ -182,9 +181,8 @@ def extract_hazard(dstore, what):
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
-            idx = [m * P + p for m in range(M)]
             for sid in pmap:
-                arr[sid] = hmap[sid].array[idx, 0]
+                arr[sid] = hmap[sid].array[:, p]
             logging.info('extracting %s', key)
             yield key, arr
 
@@ -238,7 +236,7 @@ def _get_dict(dstore, name, imts, imls):
         dt = numpy.dtype([(str(iml), F32) for iml in imls])
         dtlist.append((imt, dt))
     for statname, curves in dstore[name].items():
-        dic[statname] = curves.value.view(dtlist).flatten()
+        dic[statname] = curves.value.flatten().view(dtlist)
     return dic
 
 
@@ -707,7 +705,7 @@ def extract_rupture(dstore, serial):
     """
     Extract information about the given event index.
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
+    http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
     """
     ridx = list(dstore['ruptures']['serial']).index(int(serial))
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
@@ -733,3 +731,18 @@ def extract_event_info(dstore, eidx):
         yield key, val
     yield 'rlzi', rlzi
     yield 'gsim', repr(gsim)
+
+
+@extract.add('ruptures_within')
+def get_ruptures_within(dstore, bbox):
+    """
+    Extract the ruptures within the given bounding box, a string
+    minlon,minlat,maxlon,maxlat.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures_with/8,44,10,46
+    """
+    minlon, minlat, maxlon, maxlat = map(float, bbox.split(','))
+    hypo = dstore['ruptures']['hypo'].T  # shape (3, N)
+    mask = ((minlon <= hypo[0]) * (minlat <= hypo[1]) *
+            (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
+    return dstore['ruptures'][mask]
