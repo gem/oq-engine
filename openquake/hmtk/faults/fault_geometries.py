@@ -55,8 +55,6 @@ class BaseFaultGeometry(object):
     '''
     Abstract base class to support geometry parameters and methods
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def get_area(self):
         '''
