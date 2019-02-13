@@ -238,6 +238,7 @@ class CompositionInfo(object):
                                 trti[src_group.trt], src_group.eff_ruptures,
                                 src_group.tot_ruptures, sm.ordinal))
         return (dict(
+            gsim_lt=self.gsim_lt,
             sg_data=numpy.array(sg_data, src_group_dt),
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
