@@ -166,7 +166,6 @@ def extract_hazard(dstore, what):
     yield 'checksum32', dstore['/'].attrs['checksum32']
     nsites = len(sitecol)
     M = len(oq.imtls)
-    P = len(oq.poes)
     for statname, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         for imt in oq.imtls:
             key = 'hcurves/%s/%s' % (imt, statname)
@@ -182,9 +181,8 @@ def extract_hazard(dstore, what):
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
-            idx = [m * P + p for m in range(M)]
             for sid in pmap:
-                arr[sid] = hmap[sid].array[idx, 0]
+                arr[sid] = hmap[sid].array[:, p]
             logging.info('extracting %s', key)
             yield key, arr
 
