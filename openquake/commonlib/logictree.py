@@ -1405,23 +1405,19 @@ class GsimLogicTree(object):
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
 
-    def store_gmpe_tables(self, dest):
-        """
-        Store the GMPE tables in HDF5 format inside the datastore
-        """
+    def _gmpe_tables(self):
+        dic = {}
         dirname = os.path.dirname(self.fname)
         for gmpe_table in sorted(self.gmpe_tables):
+            dic[gmpe_table] = d = {}
             filename = os.path.join(dirname, gmpe_table)
             with hdf5.File(filename, 'r') as f:
-                for group in f:
-                    name = '%s/%s' % (gmpe_table, group)
-                    if hasattr(f[group], 'value'):  # dataset, not group
-                        dest[name] = f[group].value
-                        for k, v in f[group].attrs.items():
-                            dest[name].attrs[k] = v
+                for group, g in f.items():
+                    if hasattr(g, 'value'):  # dataset, not group
+                        d[group] = g.value
                     else:
-                        grp = dest.require_group(gmpe_table)
-                        f.copy(group, grp)
+                        d[group] = {k: dset.value for k, dset in g.items()}
+        return dic
 
     def __toh5__(self):
         weights = set()
@@ -1433,7 +1429,9 @@ class GsimLogicTree(object):
         branches = [(b.trt, b.id, b.uncertainty.to_str()) +
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches if b.effective]
-        return numpy.array(branches, dt), {}
+        dic = {'branches': numpy.array(branches, dt)}
+        dic.update(self._gmpe_tables())
+        return dic, {}
 
     def __fromh5__(self, dic, attrs):
         pass
