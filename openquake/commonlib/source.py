@@ -154,20 +154,6 @@ class CompositionInfo(object):
             self._gsim_rlzs = list(self.gsim_lt)
             return self._gsim_rlzs
 
-    def get_gsims(self, grp_id):
-        """
-        Get the GSIMs associated with the given group
-        """
-        trt = self.trt_by_grp[grp_id]
-        if self.num_samples:  # sampling
-            seed, samples = self.seed_samples_by_grp[grp_id]
-            numpy.random.seed(seed)
-            idxs = numpy.random.choice(len(self.gsim_rlzs), samples)
-            rlzs = [self.gsim_rlzs[i] for i in idxs]
-        else:  # full enumeration
-            rlzs = None
-        return self.gsim_lt.get_gsims(trt, rlzs)
-
     def get_info(self, sm_id):
         """
         Extract a CompositionInfo instance containing the single
@@ -238,6 +224,7 @@ class CompositionInfo(object):
                                 trti[src_group.trt], src_group.eff_ruptures,
                                 src_group.tot_ruptures, sm.ordinal))
         return (dict(
+            gsim_lt=self.gsim_lt,
             sg_data=numpy.array(sg_data, src_group_dt),
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
