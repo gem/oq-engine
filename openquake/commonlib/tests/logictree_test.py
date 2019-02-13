@@ -2233,9 +2233,15 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         as_model_lt = self.parse_valid(xml, as_model_trts)
         fs_bg_model_lt = self.parse_valid(xml, fs_bg_model_trts)
         self.assertEqual(as_model_lt.get_num_branches(),
-                         {'bs1': 4, 'bs2': 5, 'bs3': 2, 'bs4': 1})
+                {'Active Shallow Crust': 4,
+                 'Shield': 2,
+                 'Stable Shallow Crust': 5,
+                 'Volcanic': 1})
         self.assertEqual(fs_bg_model_lt.get_num_branches(),
-                         {'bs1': 4, 'bs2': 5, 'bs3': 0, 'bs4': 0})
+                         {'Active Shallow Crust': 4,
+                          'Shield': 0,
+                          'Stable Shallow Crust': 5,
+                          'Volcanic': 0})
         self.assertEqual(as_model_lt.get_num_paths(), 40)
         self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
         self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
