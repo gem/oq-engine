@@ -1616,6 +1616,6 @@ class GsimLogicTree(object):
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %
-                 (b.trt, b.id, b.uncertainty, b.weight['weight'])
+                 (b.trt, b.id, b.gsim, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
