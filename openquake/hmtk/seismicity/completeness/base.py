@@ -57,8 +57,6 @@ class BaseCatalogueCompleteness(object):
     '''
     Abstract base class for implementation of the completeness algorithms
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def completeness(self, catalogue, config):
         '''
