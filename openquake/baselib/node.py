@@ -380,8 +380,12 @@ def _displayattrs(attrib, expandattrs):
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
-    val = (' %s' % repr(node.text.strip())
-           if expandvals and hasattr(node.text, 'strip') else '')
+    if node.text is None or not expandvals:
+        val = ''
+    elif isinstance(node.text, str):
+        val = ' %s' % repr(node.text.strip())
+    else:
+        val = ' %r' % node.text
     output.write(encode(indent + striptag(node.tag) + attrs + val + '\n'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
