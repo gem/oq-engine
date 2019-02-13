@@ -191,7 +191,7 @@ class RlzsAssoc(object):
         """
         Get a Realization instance for a string of the form 'rlz-\d+'
         """
-        mo = re.match('rlz-(\d+)', rlzstr)
+        mo = re.match(r'rlz-(\d+)', rlzstr)
         if not mo:
             return
         return self.realizations[int(mo.group(1))]
@@ -253,7 +253,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
     """
     assoc = RlzsAssoc(cinfo)
     offset = 0
-    trtset = set(cinfo.gsim_lt.tectonic_region_types)
+    trtset = set(cinfo.gsim_lt.all_trts)
     for smodel in cinfo.source_models:
         # discard source models with non-acceptable lt_path
         if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
@@ -275,7 +275,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                 # print the warning only when saving the logic tree,
                 # i.e. when called with sm_lt_path in store_rlz_info
                 logging.warning('Reducing the logic tree of %s from %d to %d '
-                             'realizations', smodel.name, before, after)
+                                'realizations', smodel.name, before, after)
             gsim_rlzs = list(gsim_lt)
             all_trts = gsim_lt.all_trts
         else:
