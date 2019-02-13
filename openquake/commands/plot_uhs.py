@@ -22,15 +22,6 @@ from openquake.calculators import getters
 from openquake.commands import engine
 
 
-def make_uhs(hmap, oq):
-    uhs = numpy.zeros(len(hmap), oq.uhs_dt())
-    for p, poe in enumerate(oq.poes):
-        for m, imt in enumerate(oq.imtls):
-            if imt == 'PGA' or imt.startswith('SA'):
-                uhs['%s-%s' % (poe, imt)] = hmap[:, m, p]
-    return uhs
-
-
 def make_figure(indices, n_sites, oq, hmaps):
     """
     :param indices: the indices of the sites under analysis
@@ -43,8 +34,6 @@ def make_figure(indices, n_sites, oq, hmaps):
 
     fig = plt.figure()
     n_poes = len(oq.poes)
-    R = len(hmaps)
-    uhs_by_rlz = [make_uhs(hmaps['rlz-%03d' % r], oq) for r in range(R)]
     periods = [imt.period for imt in oq.imt_periods()]
     for i, site in enumerate(indices):
         for j, poe in enumerate(oq.poes):
@@ -55,10 +44,12 @@ def make_figure(indices, n_sites, oq, hmaps):
                 'UHS on site %d, poe=%s, period in seconds' % (site, poe))
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('SA')
-            fields = [f for f in uhs_by_rlz[0].dtype.names
-                      if f.startswith(str(poe))]
-            for r, all_uhs in enumerate(uhs_by_rlz):
-                ax.plot(periods, list(all_uhs[site][fields]), label=r)
+            for kind, hmap in hmaps.items():
+                uhs = []
+                for m, imt in enumerate(oq.imtls):
+                    if imt == 'PGA' or imt.startswith('SA'):
+                        uhs.append(hmap[site, m, j])
+                ax.plot(periods, uhs, label=kind)
     plt.legend()
     return plt
 
