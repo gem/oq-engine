@@ -337,3 +337,32 @@ positional arguments:
 optional arguments:
   -h, --help  show this help message and exit
 ```
+
+Comparing hazard results
+------------------------------
+
+If you are interested in sensitivity analysis, i.e. in how much the
+results of the engine change by tuning a parameter, the `oq compare`
+command is useful. For the moment it is able to compare hazard curves
+and hazard maps. Here is the help message:
+```bash
+$ oq compare --help
+usage: oq compare [-h] [-f] [-s 100] [-r 0.1] [-a 0.0001]
+                  {hmaps,hcurves} imt calc_ids [calc_ids ...]
+
+Compare the hazard curves or maps of two or more calculations
+
+positional arguments:
+  {hmaps,hcurves}       hmaps or hcurves
+  imt                   intensity measure type to compare
+  calc_ids              calculation IDs
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f, --files           write the results in multiple files
+  -s 100, --samplesites 100
+                        number of sites to sample
+  -r 0.1, --rtol 0.1    relative tolerance
+  -a 0.0001, --atol 0.0001
+                        absolute tolerance
+```
