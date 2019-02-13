@@ -385,7 +385,7 @@ def _display(node, indent, expandattrs, expandvals, output):
     elif isinstance(node.text, str):
         val = ' %s' % repr(node.text.strip())
     else:
-        val = ' %r' % node.text
+        val = ' %s' % repr(node.text)  # node.text can be a tuple
     output.write(encode(indent + striptag(node.tag) + attrs + val + '\n'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
