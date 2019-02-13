@@ -214,7 +214,7 @@ class RunShowExportTestCase(unittest.TestCase):
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
-        self.assertIn('See the output with hdfview', str(self.p))
+        self.assertIn('See the output with silx view', str(self.p))
 
     def test_show_calc(self):
         with Print.patch() as p:

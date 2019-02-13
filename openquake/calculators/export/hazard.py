@@ -382,7 +382,7 @@ def export_hcurves_csv(ekey, dstore):
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
                 oq.hazard_maps):
-            hmap = dstore['hmaps/' + kind].value.view(hmap_dt)[:, 0]
+            hmap = dstore['hmaps/' + kind].value.flatten().view(hmap_dt)
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
             uhs_curves = calc.make_uhs(hmap, oq)
             writers.write_csv(
