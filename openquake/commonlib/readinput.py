@@ -870,8 +870,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm = csm.grp_by_src()  # one group per source
 
     csm.info.gsim_lt.check_imts(oqparam.imtls)
-    if monitor.hdf5:
-        csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
     parallel.Starmap.shutdown()  # save memory
     return csm
 
