@@ -1567,30 +1567,14 @@ class GsimLogicTree(object):
             raise_(etype, "%s in file %s" % (exc, self.fname), tb)
         return gsim
 
-    def get_gsim_by_trt(self, rlz, trt):
-        """
-        :param rlz: a logictree Realization
-        :param: a tectonic region type string
-        :returns: the GSIM string associated to the given realization
-        """
-        if trt == '*':  # assume a single TRT
-            return rlz.value[0]
-        idx = self.all_trts.index(trt)
-        return rlz.value[idx]
-
-    def get_gsims(self, trt, rlzs=None):
+    def get_gsims(self, trt):
         """
         :param trt: tectonic region type
-        :param rlzs: a sequence of realization indices (or None)
         :returns: sorted list of available GSIMs for that trt
         """
-        if rlzs is None:
-            if trt == '*' or trt == b'*':  # fake logictree
-                [trt] = self.values
-            gsims = self.values[trt]
-        else:
-            gsims = set(self.get_gsim_by_trt(rlz, trt) for rlz in rlzs)
-        return sorted(gsims)
+        if trt == '*' or trt == b'*':  # fake logictree
+            [trt] = self.values
+        return sorted(self.values[trt])
 
     def __iter__(self):
         """
