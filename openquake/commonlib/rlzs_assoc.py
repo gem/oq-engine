@@ -208,15 +208,16 @@ class RlzsAssoc(object):
 
     def __repr__(self):
         pairs = []
-        dic = self.by_grp()
-        size = sum(len(dic[grp]) for grp in dic)
-        for grp in sorted(dic):
-            grp_id = int(grp[4:])
-            gsims = self.csm_info.get_gsims(grp_id)
-            for gsim_idx, rlzis in enumerate(dic[grp]):
-                if len(rlzis) > 10:  # short representation
-                    rlzis = ['%d realizations' % len(rlzis)]
-                pairs.append(('%s,%s' % (grp_id, gsims[gsim_idx]), rlzis))
+        dic = {grp.id: self.get_rlzs_by_gsim(grp.id)
+               for sm in self.csm_info.source_models
+               for grp in sm.src_groups if grp.eff_ruptures}
+        size = 0
+        for grp_id, rlzs_by_gsim in dic.items():
+            for gsim, rlzs in rlzs_by_gsim.items():
+                size += 1
+                if len(rlzs) > 10:  # short representation
+                    rlzs = ['%d realizations' % len(rlzs)]
+                pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
             self.__class__.__name__, size, len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
