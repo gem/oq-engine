@@ -1555,11 +1555,13 @@ class GsimLogicTree(object):
         :param gsim_name: name of a GSIM class
         :param kwargs: keyword arguments used to instantiate the GSIM class
         """
-        if gsim_name == 'GMPETable':
-            # a bit hackish: set the GMPE_DIR equal to the
-            # directory where the gsim_logic_tree file is
-            GMPETable.GMPE_DIR = os.path.dirname(self.fname)
-            self.gmpe_tables.add(kwargs['gmpe_table'])
+        if isinstance(self.fname, str):
+            tmpfname = os.path.basename(self.fname).startswith('tmp')
+            if gsim_name == 'GMPETable' and not tmpfname:
+                # a bit hackish: set the GMPE_DIR equal to the
+                # directory where the gsim_logic_tree file is
+                GMPETable.GMPE_DIR = os.path.dirname(self.fname)
+                self.gmpe_tables.add(kwargs['gmpe_table'])
         try:
             gsim = valid.gsim(gsim_name, **kwargs)
         except Exception:
