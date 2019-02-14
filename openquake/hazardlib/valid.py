@@ -63,6 +63,10 @@ class FromFile(object):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
+    kwargs = {}
+
+    def init(self):
+        pass
 
     def __repr__(self):
         return 'FromFile'
