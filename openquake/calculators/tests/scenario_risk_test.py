@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from nose.plugins.attrib import attr
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
@@ -39,7 +38,6 @@ def tot_loss(dstore):
 
 class ScenarioRiskTestCase(CalculatorTestCase):
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
         [fname] = out['agglosses', 'csv']
@@ -62,13 +60,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         with self.assertRaises(IndexError):  # non-existing site_id
             extract(self.calc.datastore, 'asset_values/1')
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
         [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_2d(self):
         # time_event not specified in job_h.ini but specified in job_r.ini
         out = self.run_calc(case_2d.__file__, 'job_h.ini,job_r.ini',
@@ -86,7 +82,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tbl = extract(self.calc.datastore, 'agg_losses/occupants?taxonomy=*')
         self.assertEqual(tbl.array.shape, (1, 1))  # 1 taxonomy, 1 rlz
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
 
@@ -96,7 +91,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_4(self):
         # this test is sensitive to the ordering of the epsilons
         # in openquake.riskinput.make_eps
@@ -107,7 +101,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-6)
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
@@ -118,14 +111,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_5(self):
         # case with site model and 11 sites filled out of 17
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_6a(self):
         # case with two gsims
         self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
@@ -143,14 +134,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
             self.run_calc(case_6a.__file__, 'job_haz.ini',
                           gsim_logic_tree_file='wrong_gmpe_logic_tree.xml')
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
         [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_1h(self):
         # this is a case with 2 assets spawning 2 tasks
         out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv')
@@ -163,7 +152,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
         # a case with two GSIMs
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
@@ -185,7 +173,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(obj.tags, [b'state=01'])
         aac(obj.array, [[1316.3723145, 1602.6213]])
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_7(self):
         # check independence from concurrent_tasks
         self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='10')
@@ -195,7 +182,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         for name in tot10:
             aac(tot10[name], tot20[name])
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
@@ -206,14 +192,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_9(self):
         # using gmfs.xml
         self.run_calc(case_9.__file__, 'job.ini')
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
         aac(agglosses.array, [7306.7124])
 
-    @attr('qa', 'risk', 'scenario_risk')
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')
         self.run_calc(case_shakemap.__file__, 'job.ini',
