@@ -30,6 +30,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim import registry
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
+from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -83,6 +84,9 @@ def gsim(value, **kwargs):
         return FromFile()
     elif value.startswith('GMPETable'):
         gsim_class = GMPETable
+    elif value.startswith('MultiGMPE'):
+        gsim_class = MultiGMPE
+        kwargs = gsim_by_imt(kwargs['gsimByImt'])
     else:
         try:
             gsim_class = registry[value]
@@ -94,6 +98,19 @@ def gsim(value, **kwargs):
         raise ValueError('Could not instantiate %s%s' % (value, kwargs))
     gs.minimum_distance = minimum_distance
     return gs
+
+
+def gsim_by_imt(value):
+    """
+    >>> gsim_by_imt("PGA=AkkarBommer2010 SA(0.1)=SadighEtAl1997")
+    {'PGA': 'AkkarBommer2010()', 'SA(0.1)': 'SadighEtAl1997()'}
+    """
+    dic = {}
+    for imt_gsim in value.split():
+        imt, gsim_str = imt_gsim.split('=')
+        intensity_measure_type(imt)  # check validity
+        dic[imt] = gsim(gsim_str)
+    return dic
 
 
 def logic_tree_path(value):
