@@ -176,7 +176,7 @@ def sample(weighted_objects, num_samples, seed):
         if isinstance(obj.weight, float):
             weights.append(w)
         else:
-            weights.append(w['default'])
+            weights.append(w['weight'])
     numpy.random.seed(seed)
     idxs = numpy.random.choice(len(weights), num_samples, p=weights)
     # NB: returning an array would break things
@@ -450,7 +450,6 @@ class FakeSmlt(object):
         self.basepath = os.path.dirname(filename)
         self.seed = seed
         self.num_samples = num_samples
-        self.tectonic_region_types = set()
         self.on_each_source = False
         self.num_paths = 1
 
@@ -1260,7 +1259,9 @@ class SourceModelLogicTree(object):
         return collections.Counter(rlz.lt_path for rlz in self)
 
 
-BranchTuple = namedtuple('BranchTuple', 'bset id uncertainty weight effective')
+# used in GsimLogicTree
+BranchTuple = namedtuple(
+    'BranchTuple', 'trt id uncertainty gsim weight effective')
 
 
 class InvalidLogicTree(Exception):
@@ -1277,7 +1278,7 @@ class ImtWeight(object):
             if 'imt' in nodes[0].attrib:
                 raise InvalidLogicTree('The first uncertaintyWeight has an imt'
                                        ' attribute')
-            self.dic = {'default': float(nodes[0].text)}
+            self.dic = {'weight': float(nodes[0].text)}
             imts = []
             for n in nodes[1:]:
                 self.dic[n['imt']] = float(n.text)
@@ -1324,7 +1325,7 @@ class ImtWeight(object):
         try:
             return self.dic[imt]
         except KeyError:
-            return self.dic['default']
+            return self.dic['weight']
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
@@ -1366,15 +1367,15 @@ class GsimLogicTree(object):
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         self.fname = fname
-        self.tectonic_region_types = trts = sorted(tectonic_region_types)
+        trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
-                ','.join(self.tectonic_region_types))
+                ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or node_from_xml(fname).logicTree
         self.gmpe_tables = set()  # populated right below
-        self.all_trts, self.branches = self._build_trts_branches()
+        self.all_trts, self.branches = self._build_trts_branches(trts)
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute '
@@ -1404,23 +1405,36 @@ class GsimLogicTree(object):
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
 
-    def store_gmpe_tables(self, dest):
-        """
-        Store the GMPE tables in HDF5 format inside the datastore
-        """
+    def _gmpe_tables(self):
+        dic = {}
         dirname = os.path.dirname(self.fname)
         for gmpe_table in sorted(self.gmpe_tables):
+            dic[gmpe_table] = d = {}
             filename = os.path.join(dirname, gmpe_table)
             with hdf5.File(filename, 'r') as f:
-                for group in f:
-                    name = '%s/%s' % (gmpe_table, group)
-                    if hasattr(f[group], 'value'):  # dataset, not group
-                        dest[name] = f[group].value
-                        for k, v in f[group].attrs.items():
-                            dest[name].attrs[k] = v
+                for group, g in f.items():
+                    if hasattr(g, 'value'):  # dataset, not group
+                        d[group] = g.value
                     else:
-                        grp = dest.require_group(gmpe_table)
-                        f.copy(group, grp)
+                        d[group] = {k: dset.value for k, dset in g.items()}
+        return dic
+
+    def __toh5__(self):
+        weights = set()
+        for branch in self.branches:
+            weights.update(branch.weight.dic)
+        dt = [('trt', hdf5.vstr), ('id', hdf5.vstr),
+              ('uncertainty', hdf5.vstr)] + [
+                  (weight, float) for weight in sorted(weights)]
+        branches = [(b.trt, b.id, b.uncertainty.to_str()) +
+                    tuple(b.weight[weight] for weight in sorted(weights))
+                    for b in self.branches if b.effective]
+        dic = {'branches': numpy.array(branches, dt)}
+        dic.update(self._gmpe_tables())
+        return dic, {}
+
+    def __fromh5__(self, dic, attrs):
+        pass
 
     def __str__(self):
         """
@@ -1439,14 +1453,13 @@ class GsimLogicTree(object):
 
     def get_num_branches(self):
         """
-        Return the number of effective branches for branchset id,
+        Return the number of effective branches for tectonic region type,
         as a dictionary.
         """
         num = {}
-        for branchset, branches in itertools.groupby(
-                self.branches, operator.attrgetter('bset')):
-            num[branchset['branchSetID']] = sum(
-                1 for br in branches if br.effective)
+        for trt, branches in itertools.groupby(
+                self.branches, operator.attrgetter('trt')):
+            num[trt] = sum(1 for br in branches if br.effective)
         return num
 
     def get_num_paths(self):
@@ -1464,7 +1477,7 @@ class GsimLogicTree(object):
                 num *= val
         return num
 
-    def _build_trts_branches(self):
+    def _build_trts_branches(self, tectonic_region_types):
         # do the parsing, called at instantiation time to populate .values
         trts = []
         branches = []
@@ -1489,8 +1502,8 @@ class GsimLogicTree(object):
                 if trt:
                     trts.append(trt)
                 # NB: '*' is used in scenario calculations to disable filtering
-                effective = (self.tectonic_region_types == ['*'] or
-                             trt in self.tectonic_region_types)
+                effective = (tectonic_region_types == ['*'] or
+                             trt in tectonic_region_types)
                 weights = []
                 branch_ids = []
                 for branch in branchset:
@@ -1521,7 +1534,8 @@ class GsimLogicTree(object):
                                                (self.fname, gsim))
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
-                        branchset, branch_id, gsim, weight, effective)
+                        branchset['applyToTectonicRegionType'],
+                        branch_id, uncertainty, gsim, weight, effective)
                     branches.append(bt)
                 tot = sum(weights)
                 assert tot.is_one(), tot
@@ -1532,7 +1546,7 @@ class GsimLogicTree(object):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
                 (self.fname, trts))
-        branches.sort(key=lambda b: (b.bset['branchSetID'], b.id))
+        branches.sort(key=lambda b: (b.trt, b.id))
         # TODO: add an .idx to each GSIM ?
         return trts, branches
 
@@ -1554,30 +1568,14 @@ class GsimLogicTree(object):
             raise_(etype, "%s in file %s" % (exc, self.fname), tb)
         return gsim
 
-    def get_gsim_by_trt(self, rlz, trt):
-        """
-        :param rlz: a logictree Realization
-        :param: a tectonic region type string
-        :returns: the GSIM string associated to the given realization
-        """
-        if trt == '*':  # assume a single TRT
-            return rlz.value[0]
-        idx = self.all_trts.index(trt)
-        return rlz.value[idx]
-
-    def get_gsims(self, trt, rlzs=None):
+    def get_gsims(self, trt):
         """
         :param trt: tectonic region type
-        :param rlzs: a sequence of realization indices (or None)
         :returns: sorted list of available GSIMs for that trt
         """
-        if rlzs is None:
-            if trt == '*' or trt == b'*':  # fake logictree
-                [trt] = self.values
-            gsims = self.values[trt]
-        else:
-            gsims = set(self.get_gsim_by_trt(rlz, trt) for rlz in rlzs)
-        return sorted(gsims)
+        if trt == '*' or trt == b'*':  # fake logictree
+            [trt] = self.values
+        return sorted(self.values[trt])
 
     def __iter__(self):
         """
@@ -1586,8 +1584,7 @@ class GsimLogicTree(object):
         groups = []
         # NB: branches are already sorted
         for trt in self.all_trts:
-            groups.append([b for b in self.branches
-                           if b.bset['applyToTectonicRegionType'] == trt])
+            groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
             weight = 1
@@ -1598,12 +1595,12 @@ class GsimLogicTree(object):
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
-                value.append(branch.uncertainty)
+                value.append(branch.gsim)
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
 
     def __repr__(self):
-        lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],
-                                    b.id, b.uncertainty, b.weight['default'])
+        lines = ['%s,%s,%s,w=%s' %
+                 (b.trt, b.id, b.gsim, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
