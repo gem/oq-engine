@@ -2287,6 +2287,9 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             def __init__(self, gmpe_table):
                 self.gmpe_table = gmpe_table
 
+            def init(self):
+                pass
+
             def __str__(self):
                 return 'FakeGMPETable(gmpe_table="%s")' % self.gmpe_table
 

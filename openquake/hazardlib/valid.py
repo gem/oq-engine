@@ -64,6 +64,10 @@ class FromFile(object):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
+    kwargs = {}
+
+    def init(self):
+        pass
 
     def __repr__(self):
         return 'FromFile'
@@ -97,6 +101,7 @@ def gsim(value, **kwargs):
     except TypeError:
         raise ValueError('Could not instantiate %s%s' % (value, kwargs))
     gs.minimum_distance = minimum_distance
+    gs.init()
     return gs
 
 
