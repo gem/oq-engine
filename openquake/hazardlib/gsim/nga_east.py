@@ -469,12 +469,6 @@ class NGAEastBaseGMPE(GMPETable):
         super().__init__(gmpe_table=gmpe_table)
 
     def _setup_standard_deviations(self, fle):
-        """
-        Reads the standard deviation tables from hdf5 and stores them in
-        memory
-        :param fle:
-            HDF5 Tables as instance of :class:`h5py.File`
-        """
         # setup tau
         self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
                                        TAU_SETUP[self.tau_model]["STD"],
