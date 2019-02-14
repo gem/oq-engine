@@ -26,10 +26,9 @@ class ConfigPathsTestCase(unittest.TestCase):
 
     def test_venv(self):
         venv = os.environ.get('VIRTUAL_ENV')
-        if venv:
-            self.assertIn(os.path.join(venv, 'openquake.cfg'), config.paths)
-        else:
-            self.assertIn('/etc/openquake/openquake.cfg', config.paths)
+        self.assertTrue(venv, 'You cannot run the tests, you must use a '
+                        'development installation with a virtualenv!')
+        self.assertIn(os.path.join(venv, 'openquake.cfg'), config.paths)
 
     def test_config_file(self):
         cfgfile = os.environ.get('OQ_CONFIG_FILE')
