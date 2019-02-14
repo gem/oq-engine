@@ -409,4 +409,4 @@ class EventBasedTestCase(CalculatorTestCase):
             investigation_time='100',
             exports='csv')
         [fname, _] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/gmf.csv', fname)
+        self.assertEqualFiles('expected/gmf.csv', fname, delta=1E-6)
