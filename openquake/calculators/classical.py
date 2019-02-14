@@ -183,6 +183,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 if kind == 'rlz_by_sid':  # pmap is actually a rlz_by_sid
                     for sid, rlz in pmap.items():
                         self.datastore['best_rlz'][sid] = rlz
+                elif kind[0] == 'hmaps':
+                    key = '%s/%s' % kind
+                    dset = self.datastore.getitem(key)
+                    for sid in pmap:
+                        arr = pmap[sid].array
+                        dset[sid] = arr
                 elif pmap:
                     key = '%s/%s' % kind
                     dset = self.datastore.getitem(key)
@@ -249,7 +255,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
             self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
             if oq.poes:
-                self.datastore.create_dset('hmaps/' + name, F32, (N, P * M))
+                self.datastore.create_dset('hmaps/' + name, F32, (N, M, P))
                 self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
             if name == 'mean' and R > 1 and N <= FEWSITES:
                 self.datastore.create_dset('best_rlz', U32, (N,))
