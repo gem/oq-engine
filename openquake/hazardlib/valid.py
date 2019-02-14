@@ -86,7 +86,7 @@ def gsim(value, **kwargs):
         gsim_class = GMPETable
     elif value.startswith('MultiGMPE'):
         gsim_class = MultiGMPE
-        kwargs = gsim_by_imt(kwargs['gsimByImt'])
+        kwargs['gsimByImt'] = gsim_by_imt(kwargs['gsimByImt'])
     else:
         try:
             gsim_class = registry[value]
