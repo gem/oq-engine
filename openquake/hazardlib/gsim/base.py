@@ -169,6 +169,11 @@ class GroundShakingIntensityModel(object):
                    'for their application') % cls.__name__
             warnings.warn(msg, NotVerifiedWarning)
 
+    def init(self):
+        """
+        Override this method if you want to further initialize the GSIM
+        """
+
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
