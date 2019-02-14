@@ -57,8 +57,6 @@ class BaseCatalogueDecluster(object):
     """
     Abstract base class for implementation of declustering algorithms
     """
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def decluster(self, catalogue, config):
         """

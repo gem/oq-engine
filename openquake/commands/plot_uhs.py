@@ -15,29 +15,25 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 import numpy
 from openquake.baselib import sap
 from openquake.calculators import getters
-from openquake.commonlib import calc
 from openquake.commands import engine
 
 
-def make_figure(indices, n_sites, oq, pmaps):
+def make_figure(indices, n_sites, oq, hmaps):
     """
     :param indices: the indices of the sites under analysis
     :param n_sites: total number of sites
     :param oq: instance of OqParam
-    :param pmaps: a list of probability maps per realization
+    :param hmaps: a dictionary of hazard maps
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
 
     fig = plt.figure()
     n_poes = len(oq.poes)
-    uhs_by_rlz = []
-    for pmap in pmaps:
-        hmap = calc.make_hmap_array(pmap, oq.imtls, oq.poes, n_sites)
-        uhs_by_rlz.append(calc.make_uhs(hmap, oq))
     periods = [imt.period for imt in oq.imt_periods()]
     for i, site in enumerate(indices):
         for j, poe in enumerate(oq.poes):
@@ -48,10 +44,12 @@ def make_figure(indices, n_sites, oq, pmaps):
                 'UHS on site %d, poe=%s, period in seconds' % (site, poe))
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('SA')
-            fields = [f for f in uhs_by_rlz[0].dtype.names
-                      if f.startswith(str(poe))]
-            for r, all_uhs in enumerate(uhs_by_rlz):
-                ax.plot(periods, list(all_uhs[site][fields]), label=r)
+            for kind, hmap in hmaps.items():
+                uhs = []
+                for m, imt in enumerate(oq.imtls):
+                    if imt == 'PGA' or imt.startswith('SA'):
+                        uhs.append(hmap[site, m, j])
+                ax.plot(periods, uhs, label=kind)
     plt.legend()
     return plt
 
@@ -74,8 +72,7 @@ def plot_uhs(calc_id, sites='0'):
         print('The indices %s are invalid: no graph for them' % invalid)
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    pmaps = getter.get_pmaps()
-    plt = make_figure(valid, n_sites, oq, pmaps)
+    plt = make_figure(valid, n_sites, oq, dstore['hmaps'])
     plt.show()
 
 
