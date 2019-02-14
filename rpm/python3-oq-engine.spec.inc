@@ -110,7 +110,7 @@ Copyright (C) 2010-2018 GEM Foundation
 %{__python3} setup.py build
 
 %check
-#nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.engine
+#nosetests -v --with-doctest --with-coverage --cover-package=openquake.engine
 
 %pre
 getent group %{oquser} >/dev/null || groupadd -r %{oquser}
