@@ -171,7 +171,7 @@ class GroundShakingIntensityModel(object):
 
     def init(self):
         """
-        Override this method if you want further initialize the GSIM instance
+        Override this method if you want to further initialize the GSIM
         """
 
     @abc.abstractmethod
