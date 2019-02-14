@@ -39,7 +39,6 @@ from openquake.baselib.general import groupby, duplicated
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
@@ -1373,6 +1372,7 @@ class GsimLogicTree(object):
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
+        # NB: not using nrml.read, we need to keep the nodes as strings
         self._ltnode = ltnode or node_from_xml(fname).logicTree
         self.gmpe_tables = set()  # populated right below
         self.all_trts, self.branches = self._build_trts_branches(trts)
@@ -1512,23 +1512,8 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = branch.uncertaintyModel
-                    if uncertainty.text is None:  # expect MultiGMPE
-                        with context(self.fname, uncertainty):
-                            gsimdict = {}
-                            imts = []
-                            for nod in uncertainty.getnodes('gsimByImt'):
-                                kw = nod.attrib.copy()
-                                imt = kw.pop('imt')
-                                imts.append(imt)
-                                gsim_name = kw.pop('gsim')
-                                gsimdict[imt] = self.instantiate(gsim_name, kw)
-                            if len(imts) > len(gsimdict):
-                                raise InvalidLogicTree(
-                                    'Found duplicated IMTs in gsimByImt')
-                            gsim = MultiGMPE(gsim_by_imt=gsimdict)
-                    else:
-                        gsim = self.instantiate(uncertainty.text.strip(),
-                                                uncertainty.attrib)
+                    gsim = self.instantiate(uncertainty.text.strip(),
+                                            uncertainty.attrib)
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.fname, gsim))
