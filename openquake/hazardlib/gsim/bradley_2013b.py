@@ -27,7 +27,7 @@ Module exports :class:`Bradley2013ChchCBD`,
 """
 import numpy as np
 import shapely.geometry
-from openquake.hazardlib.gsim.bradley_2013 import Bradley2013LHC
+from openquake.hazardlib.gsim.bradley_2013 import Bradley2013LHC, convert_to_LHC
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -74,8 +74,8 @@ class Bradley2013bChchCBD(Bradley2013LHC):
         else:
             imt_per = imt.period
         # Fix site parameters for consistent dS2S application.
-        sites.vs30 = 250
-        sites.z1pt0 = 330
+        sites.vs30 = np.array([250])
+        sites.z1pt0 = np.array([330])
         # intensity on a reference soil is used for both mean
         # and stddev calculations.
         ln_y_ref = self._get_ln_y_ref(rup, dists, C)
@@ -89,7 +89,7 @@ class Bradley2013bChchCBD(Bradley2013LHC):
         b13a_mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
         # Adjust mean and standard deviation
         mean = b13a_mean + self._get_dL2L(imt_per) + self._get_dS2S(imt_per)
-        mean += self._convert_to_LHC(imt)
+        mean += convert_to_LHC(imt)
         stddevs = self._get_adjusted_stddevs(sites, rup, C, stddev_types,
                                              ln_y_ref, exp1, exp2, imt_per)
 
