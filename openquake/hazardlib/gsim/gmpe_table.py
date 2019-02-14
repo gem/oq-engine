@@ -23,10 +23,10 @@ in the form of binary tables, and
 :class:`openquake.hazardlib.gsim.gmpe_table.AmplificationTable` for defining
 the corresponding amplification of the IMLs
 """
+import os
 from copy import deepcopy
 
 import h5py
-
 from scipy.interpolate import interp1d
 import numpy
 
@@ -301,6 +301,8 @@ class GMPETable(GMPE):
 
     GMPE_TABLE = None
 
+    amplification = None
+
     def init(self, fle=None):
         """
         Executes the preprocessing steps at the instantiation stage to read in
@@ -310,7 +312,13 @@ class GMPETable(GMPE):
             fname = self.kwargs.get('gmpe_table', self.GMPE_TABLE)
             if fname is None:
                 raise ValueError('You forgot to set GMPETable.GMPE_TABLE!')
-            fle = h5py.File(fname, "r")
+            elif os.path.isabs(fname):
+                self.GMPE_TABLE = fname
+            else:
+                # NB: (hackish) GMPE_DIR must be set externally
+                self.GMPE_TABLE = os.path.abspath(
+                    os.path.join(self.GMPE_DIR, fname))
+            fle = h5py.File(self.GMPE_TABLE, "r")
         self.distance_type = decode(fle["Distances"].attrs["metric"])
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
@@ -324,9 +332,7 @@ class GMPETable(GMPE):
             raise ValueError("Spectral Acceleration must be accompanied by "
                              "periods")
         # Get the standard deviations
-        self.stddevs = {}
         self._setup_standard_deviations(fle)
-        self.amplification = None
         if "Amplification" in fle:
             self._setup_amplification(fle)
 
@@ -338,6 +344,7 @@ class GMPETable(GMPE):
             HDF5 Tables as instance of :class:`h5py.File`
         """
         # Load in total standard deviation
+        self.stddevs = {}
         self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
         # If other standard deviations
         for stddev_type in [const.StdDev.INTER_EVENT,

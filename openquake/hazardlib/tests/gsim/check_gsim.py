@@ -63,8 +63,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         gsim = copy.deepcopy(gsim_cls)
     else:
         gsim = gsim_cls()
-    if hasattr(gsim, 'init'):
-        gsim.init()
+    gsim.init()
 
     ctxs = []
     errors = 0
