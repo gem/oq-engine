@@ -65,15 +65,15 @@ class MultiGMPE(GMPE, collections.Mapping):
     #: Required distance metrics will be set by the GMPEs
     REQUIRES_DISTANCES = set()
 
-    def __init__(self, gsim_by_imt):
+    def __init__(self, gsimByImt):
         """
         Instantiate with a dictionary of GMPEs organised by IMT
         """
         super().__init__()
-        self.gsim_by_imt = gsim_by_imt
+        self.gsim_by_imt = gsimByImt
         for name in uppernames:
             setattr(self, name, getattr(self, name).copy())
-        for imt, gsim in gsim_by_imt.items():
+        for imt, gsim in self.gsim_by_imt.items():
             imt_class = from_string(imt).__class__
             if imt_class not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
                 raise ValueError("IMT %s not supported by %s" % (imt, gsim))
