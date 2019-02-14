@@ -41,7 +41,7 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
 
 def strip_calc_id(fname):
     name = os.path.basename(fname)
-    return re.sub('_\d+\.', '.', name)
+    return re.sub(r'_\d+\.', '.', name)
 
 
 def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,

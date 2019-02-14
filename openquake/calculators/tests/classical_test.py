@@ -19,7 +19,6 @@
 import os
 import mock
 import numpy
-from nose.plugins.attrib import attr
 from openquake.baselib import parallel
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.views import view

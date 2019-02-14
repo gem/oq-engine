@@ -9,21 +9,21 @@ The OpenQuake code is automatically tested by Continuous integration systems, [J
 The full suite of tests for the OpenQuake Engine can be run using `nose` from [**source code**](installing/development.md):
 
 ```bash
-$ nosetests -v -a '!slow' openquake
+$ nosetests -v openquake
 ```
 
 Python packages can also be specified to run only a subset of tests. Some examples are:
 
 ```bash
 # Hazardlib
-$ nosetests -v -a '!slow' openquake.hazardlib
+$ nosetests -v openquake.hazardlib
 
 # Calculators
-$ nosetests -v -a '!slow' openquake.calculators
+$ nosetests -v openquake.calculators
 
 # Engine server
 $ oq dbserver start &
-$ nosetests -v -a '!slow' openquake.server
+$ nosetests -v openquake.server
 ```
 
 See the [man page](http://nose.readthedocs.io/en/latest/man.html) of `nosetests` for further information and command options.
