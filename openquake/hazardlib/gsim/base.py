@@ -67,8 +67,20 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
+class MetaGSIM(abc.ABCMeta):
+    """
+    A metaclass converting set class attributes into frozensets, to avoid
+    mutability bugs without having to change already written GSIMs.
+    """
+    def __new__(meta, name, bases, dic):
+        for k, v in dic.items():
+            if isinstance(v, set):
+                dic[k] = frozenset(v)
+        return super().__new__(meta, name, bases, dic)
+
+
 @functools.total_ordering
-class GroundShakingIntensityModel(object):
+class GroundShakingIntensityModel(metaclass=MetaGSIM):
     """
     Base class for all the ground shaking intensity models.
 
