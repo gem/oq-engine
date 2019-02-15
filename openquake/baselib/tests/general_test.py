@@ -19,8 +19,6 @@
 """
 Test related to code in openquake/utils/general.py
 """
-
-import numpy as np
 import mock
 import unittest
 from operator import attrgetter
@@ -103,7 +101,8 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.assertEqual(len(blocks), 1)
         blocks = list(split_in_blocks('abcdefghi', 2, weights.get))
         self.assertEqual(len(blocks), 3)
-        self.assertEqual(repr(blocks), "[<WeightedSequence ['a', 'b'], weight=21>, <WeightedSequence ['c', 'd'], weight=115>, <WeightedSequence ['e', 'f', 'g', 'h', 'i'], weight=97>]")
+        self.assertEqual(repr(blocks), "[<WeightedSequence ['f', 'b', 'a', 'd', 'h', 'e', 'i'], weight=103>, <WeightedSequence ['g'], weight=30>, <WeightedSequence ['c'], weight=100>]")
+
 
     def test_split_with_kind(self):
         Source = namedtuple('Source', 'typology, weight')
