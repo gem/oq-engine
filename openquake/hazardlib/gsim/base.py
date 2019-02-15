@@ -41,7 +41,7 @@ ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
                              'COEFFS_SITE_RESPONSE']
 ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
-                           'REQUIRES_DISTANCES']
+                           'REQUIRES_DISTANCES', 'REQUIRES_SITES_PARAMETERS']
 
 registry = {}  # GSIM name -> GSIM class
 
