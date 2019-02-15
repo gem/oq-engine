@@ -31,6 +31,7 @@ from scipy.special import ndtr
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
+from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.contexts import *  # for backward compatibility
 
 
@@ -70,12 +71,18 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
-    mutability bugs without having to change already written GSIMs.
+    mutability bugs without having to change already written GSIMs. Moreover
+    it performs some checks against typos.
     """
     def __new__(meta, name, bases, dic):
         for k, v in dic.items():
             if isinstance(v, set):
                 dic[k] = frozenset(v)
+                if k == 'REQUIRES_DISTANCES':
+                    missing = v - KNOWN_DISTANCES
+                    if missing:
+                        raise ValueError('Unknown distance %s in %s' %
+                                         (missing, name))
         return super().__new__(meta, name, bases, dic)
 
 
