@@ -401,10 +401,6 @@ _devtest_innervm_run () {
                  fi
                  sudo /opt/openquake/bin/pip install coverage
 
-
-                 # Trick to use /opt/openquake as a venv, since /opt/openquake/bin/python3 -m venv is broken
-                 # with our python on Ubuntu
-                 export VIRTUAL_ENV=\"/opt/openquake\"
                  export PYTHONPATH=\"\$PWD/oq-engine\"
                  cd oq-engine
 
@@ -1166,9 +1162,14 @@ while [ $# -gt 0 ]; do
             break
             ;;
         devtest)
+            ## FIXME
+            ## devtests are executed on Travis and are
+            ## expensive to be maintaned in the packager
+            ## we are keeping them disabled for now
+            ## because of lack of time
             # Sed removes 'origin/' from the branch name
-            devtest_run "$(echo "$2" | sed 's@.*/@@g')"
-            exit $?
+            # devtest_run "$(echo "$2" | sed 's@.*/@@g')"
+            # exit $?
             break
             ;;
         pkgtest)
