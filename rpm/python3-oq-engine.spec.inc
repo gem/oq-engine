@@ -109,9 +109,6 @@ Copyright (C) 2010-2018 GEM Foundation
 %build
 %{__python3} setup.py build
 
-%check
-#nosetests -v --with-doctest --with-coverage --cover-package=openquake.engine
-
 %pre
 getent group %{oquser} >/dev/null || groupadd -r %{oquser}
 getent passwd %{oquser} >/dev/null || \
