@@ -105,7 +105,7 @@ model is parsed and sent to the workers *only once*. In particular if
 there is a single source model (like for South America) and
 ``number_of_logic_tree_samples =100``, we generate effectively 1 source
 model realization and not 100 equivalent source model realizations, as
-we did in past (actually in the engine version 1.3).  Then engine
+we did in past (actually in the engine version 1.3).  The engine
 keeps track of how many times a model has been sampled (say `N`) and
 in the event based case it produce ruptures (*with different seeds*)
 by calling the appropriate hazardlib function `N` times. This is done
@@ -142,6 +142,4 @@ computed by computing the relative difference between each point of
 the curves for each curve, and by taking the maximum, at least
 for probabilities of exceedence larger than 1% (for low values of
 the probability the convergency may be bad). For the details I
-suggest you `to look at the code`_.
-
-.. _to look at the code: ../openquake/commonlib/util.py
+suggest you to look at the code.

@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, logs
 from openquake.calculators import base
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters)
@@ -97,8 +97,8 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
+    accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
     build_ruptures = sample_ruptures
-    rup_weight = None
 
     @cached_property
     def csm_info(self):
@@ -175,14 +175,16 @@ class EventBasedCalculator(base.HazardCalculator):
                 with mon:
                     self.rupser.save(dic['rup_array'])
         self.rupser.close()
+        if not self.rupser.nruptures:
+            raise RuntimeError('No ruptures were generated, perhaps the '
+                               'investigation time is too short')
 
         # logic tree reduction, must be called before storing the events
-        self.store_csm_info(eff_ruptures)
+        self.store_rlz_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
-
         logging.info('Reordering the ruptures and storing the events')
         attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures').value
@@ -197,7 +199,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.set_attrs('ruptures', grp_indices=grp_indices, **attrs)
         self.save_events(sorted_ruptures)
 
-    def gen_rupture_getters(self, rup_weight):
+    def gen_rupture_getters(self):
         """
         :returns: a list of RuptureGetters
         """
@@ -270,7 +272,7 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = self.gen_rupture_getters(None)
+        rgetters = self.gen_rupture_getters()
 
         # build the associations eid -> rlz in parallel
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
@@ -298,18 +300,17 @@ class EventBasedCalculator(base.HazardCalculator):
         than 4,294,967,296. The limits are due to the numpy dtype used to
         store the GMFs (gmv_dt). They could be relaxed in the future.
         """
-        max_ = dict(events=TWO32, imts=2**8)
+        max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
         num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
         if self.sitecol:
-            max_['sites'] = min(self.oqparam.max_num_sites, TWO32)
             num_['sites'] = len(self.sitecol)
-        for var in max_:
+        for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
                     'The event based calculator is restricted to '
                     '%d %s, got %d' % (max_[var], var, num_[var]))
 
-    def set_param(self):
+    def set_param(self, **kw):
         oq = self.oqparam
         # set the minimum_intensity
         if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
@@ -327,7 +328,7 @@ class EventBasedCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level,
             ruptures_per_block=oq.ruptures_per_block,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path, **kw)
 
     def execute(self):
         oq = self.oqparam
@@ -344,7 +345,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.ground_motion_fields is False:
                 return {}
         iterargs = ((rgetter, self.src_filter, self.param)
-                    for rgetter in self.gen_rupture_getters(self.rup_weight))
+                    for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
@@ -410,13 +411,13 @@ class EventBasedCalculator(base.HazardCalculator):
                         P = len(oq.poes)
                         M = len(oq.imtls)
                         self.datastore.create_dset(
-                            'hmaps/' + statname, F32, (N, P * M))
+                            'hmaps/' + statname, F32, (N, M, P))
                         self.datastore.set_attrs(
                             'hmaps/' + statname, nbytes=N * P * M * 4)
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         ds = self.datastore['hmaps/' + statname]
                         for sid in hmap:
-                            ds[sid] = hmap[sid].array[:, 0]
+                            ds[sid] = hmap[sid].array
 
         if self.datastore.parent:
             self.datastore.parent.open('r')
@@ -425,8 +426,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
-            # one could also set oq.number_of_logic_tree_samples = 0
-            self.cl = ClassicalCalculator(oq)
+            job_id = logs.init('job')
+            self.cl = ClassicalCalculator(oq, job_id)
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation

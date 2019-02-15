@@ -57,8 +57,6 @@ class BaseSmoothingKernel(object):
     Abstract Base Class to smooth a grid according the sets of
     regular smoothing kernels
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def smooth_data(self, data, config):
         '''

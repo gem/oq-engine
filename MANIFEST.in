@@ -8,4 +8,5 @@ recursive-include openquake/server *.html *.css *.png *.js *.map *.ttf
 
 recursive-include openquake/qa_tests_data *.* README
 
+recursive-include openquake/hazardlib/gsim *.csv
 recursive-include openquake/commonlib/nrml_examples *.xml *.csv *.geojson

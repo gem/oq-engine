@@ -66,8 +66,6 @@ class BaseRecurrenceModel(object):
     '''
     Abstract base class to implement cumulative value formula
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def cumulative_value(self, slip_moment, mmax, mag_value, bbar, dbar):
         '''

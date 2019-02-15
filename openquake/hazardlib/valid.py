@@ -30,6 +30,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim import registry
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
+from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -63,6 +64,10 @@ class FromFile(object):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
+    kwargs = {}
+
+    def init(self):
+        pass
 
     def __repr__(self):
         return 'FromFile'
@@ -83,6 +88,9 @@ def gsim(value, **kwargs):
         return FromFile()
     elif value.startswith('GMPETable'):
         gsim_class = GMPETable
+    elif value.startswith('MultiGMPE'):
+        gsim_class = MultiGMPE
+        kwargs['gsimByImt'] = gsim_by_imt(kwargs['gsimByImt'])
     else:
         try:
             gsim_class = registry[value]
@@ -93,7 +101,21 @@ def gsim(value, **kwargs):
     except TypeError:
         raise ValueError('Could not instantiate %s%s' % (value, kwargs))
     gs.minimum_distance = minimum_distance
+    gs.init()
     return gs
+
+
+def gsim_by_imt(value):
+    """
+    >>> gsim_by_imt("PGA=AkkarBommer2010 SA(0.1)=SadighEtAl1997")
+    {'PGA': 'AkkarBommer2010()', 'SA(0.1)': 'SadighEtAl1997()'}
+    """
+    dic = {}
+    for imt_gsim in value.split():
+        imt, gsim_str = imt_gsim.split('=')
+        intensity_measure_type(imt)  # check validity
+        dic[imt] = gsim(gsim_str)
+    return dic
 
 
 def logic_tree_path(value):
@@ -1218,8 +1240,8 @@ class RjbEquivalent(object):
     >> reqv = RjbEquivalent('lookup.hdf5')
     >> reqv.get(repi_distances, mag)
     """
-    def __init__(self, hdf5path):
-        with hdf5.File(hdf5path, 'r') as f:
+    def __init__(self, filename):
+        with hdf5.File(filename, 'r') as f:
             self.repi = f['default/repi'].value  # shape D
             self.mags = f['default/mags'].value  # shape M
             self.reqv = f['default/reqv'].value  # shape D x M

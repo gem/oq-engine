@@ -314,4 +314,4 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
         gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs)
     if gmfs.max() > MAX_GMV:
         logging.warning('There suspiciously large GMVs of %.2fg', gmfs.max())
-    return imts, gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
+    return imts, gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)

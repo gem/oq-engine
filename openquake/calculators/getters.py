@@ -139,9 +139,8 @@ class PmapGetter(object):
                         break
         return pmap
 
-    def get_pmaps(self, sids):  # used in classical
+    def get_pmaps(self):  # used in classical
         """
-        :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
         return self.rlzs_assoc.combine_pmaps(self.pmap_by_grp)
@@ -155,7 +154,7 @@ class PmapGetter(object):
         if imtls is None:
             imtls = self.imtls
         pmaps = [pmap.convert2(imtls, self.sids)
-                 for pmap in self.get_pmaps(self.sids)]
+                 for pmap in self.get_pmaps()]
         return numpy.array(pmaps)
 
     def items(self, kind=''):
@@ -278,6 +277,7 @@ class AssetGetter(object):
         self.cost_calculator = dstore['assetcol/cost_calculator']
         self.cost_calculator.tagi = {
             tagname: i for i, tagname in enumerate(self.tagcol.tagnames)}
+        self.num_assets = len(dstore['assetcol/array'])
         self.loss_types = dstore.get_attr('assetcol', 'loss_types').split()
 
     def get(self, site_id, tagnames):
@@ -354,8 +354,8 @@ class GmfGetter(object):
         """
         if hasattr(self, 'computers'):  # init already called
             return
-        with hdf5.File(self.rupgetter.hdf5path, 'r') as parent:
-            self.weights = parent['csm_info/weights'].value
+        with hdf5.File(self.rupgetter.filename, 'r') as parent:
+            self.weights = parent['weights'].value
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             sitecol = self.sitecol.filtered(ebr.sids)
@@ -490,7 +490,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
             continue
         for block in general.block_splitter(arr, maxweight):
             rgetter = RuptureGetter(
-                hdf5cache or dstore.hdf5path, numpy.array(block), grp_id,
+                hdf5cache or dstore.filename, numpy.array(block), grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
             rgetter.weight = getattr(block, 'weight', len(block))
             yield rgetter
@@ -519,14 +519,14 @@ class RuptureGetter(object):
     """
     Iterable over ruptures.
 
-    :param hdf5path:
+    :param filename:
         path to an HDF5 file with a dataset names `ruptures`
     :param rup_indices:
         a list of rupture indices of the same group
     """
-    def __init__(self, hdf5path, rup_indices, grp_id, trt, samples,
+    def __init__(self, filename, rup_indices, grp_id, trt, samples,
                  rlzs_by_gsim):
-        self.hdf5path = hdf5path
+        self.filename = filename
         self.rup_indices = rup_indices
         if not isinstance(rup_indices, list):  # is a rup_array
             self.__dict__['rup_array'] = rup_indices
@@ -547,13 +547,13 @@ class RuptureGetter(object):
 
     @general.cached_property
     def rup_array(self):
-        with hdf5.File(self.hdf5path, 'r') as h5:
+        with hdf5.File(self.filename, 'r') as h5:
             return h5['ruptures'][self.rup_indices]  # must be a list
 
     @general.cached_property
     def code2cls(self):
         code2cls = {}  # code -> rupture_cls, surface_cls
-        with hdf5.File(self.hdf5path, 'r') as h5:
+        with hdf5.File(self.filename, 'r') as h5:
             for key, val in h5['ruptures'].attrs.items():
                 if key.startswith('code_'):
                     code2cls[int(key[5:])] = [classes[v] for v in val.split()]
@@ -570,6 +570,35 @@ class RuptureGetter(object):
     @property
     def num_rlzs(self):
         return len(self.rlz2idx)
+
+    # used in ebrisk
+    def set_weights(self, src_filter, num_taxonomies_by_site):
+        """
+        :returns: the weights of the ruptures in the getter
+        """
+        weights = []
+        for rup in self.rup_array:
+            sids = src_filter.close_sids(rup, self.trt, rup['mag'])
+            weights.append(num_taxonomies_by_site[sids].sum())
+        self.weights = numpy.array(weights)
+        self.weight = self.weights.sum()
+
+    def split(self, maxweight):
+        """
+        :yields: RuptureGetters with weight <= maxweight
+        """
+        # NB: can be called only after .set_weights() has been called
+        idx = {ri: i for i, ri in enumerate(self.rup_indices)}
+        for rup_indices in general.block_splitter(
+                self.rup_indices, maxweight, lambda ri: self.weights[idx[ri]]):
+            if rup_indices:
+                # some indices may have weight 0 and are discarded
+                rgetter = self.__class__(
+                    self.filename, list(rup_indices), self.grp_id,
+                    self.trt, self.samples, self.rlzs_by_gsim)
+                rgetter.weight = sum([self.weights[idx[ri]]
+                                      for ri in rup_indices])
+                yield rgetter
 
     def get_eid_rlz(self, monitor=None):
         """
@@ -590,7 +619,7 @@ class RuptureGetter(object):
         """
         assert len(self.rup_array) == 1, 'Please specify a slice of length 1'
         dic = {'trt': self.trt, 'samples': self.samples}
-        with datastore.read(self.hdf5path) as dstore:
+        with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             source_ids = dstore['source_info']['source_id']
             rec = self.rup_array[0]
@@ -607,6 +636,7 @@ class RuptureGetter(object):
             dic['grp_id'] = rec['grp_id']
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
+            dic['mag'] = rec['mag']
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
@@ -615,7 +645,7 @@ class RuptureGetter(object):
         :returns: a list of EBRuptures filtered by bounding box
         """
         ebrs = []
-        with datastore.read(self.hdf5path) as dstore:
+        with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
                 if srcfilter.integration_distance:
@@ -674,6 +704,10 @@ class RuptureGetter(object):
             z[self.rlz2idx[r]] += a
         return z
 
+    def __len__(self):
+        return len(self.rup_indices)
+
     def __repr__(self):
-        return '<%s grp_id=%d, %d rupture(s)>' % (
-            self.__class__.__name__, self.grp_id, len(self))
+        wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
+        return '<%s grp_id=%d, %d rupture(s)%s>' % (
+            self.__class__.__name__, self.grp_id, len(self.rup_indices), wei)
