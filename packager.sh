@@ -406,16 +406,17 @@ _devtest_innervm_run () {
                  pip install coverage
 
                  cd oq-engine
-                 nosetests --with-coverage --cover-package=openquake.baselib --with-xunit --xunit-file=xunit-baselib.xml --with-doctest -vs openquake.baselib
-                 nosetests --with-coverage --cover-package=openquake.hmtk --with-doctest --with-xunit --xunit-file=xunit-hmtk.xml -vs openquake.hmtk
-                 nosetests --with-coverage --cover-package=openquake.engine --with-doctest --with-xunit --xunit-file=xunit-engine.xml -vs openquake.engine
-                 nosetests --with-coverage --cover-package=openquake.server --with-doctest --with-xunit --xunit-file=xunit-server.xml -vs openquake.server
-                 nosetests --with-coverage --cover-package=openquake.calculators --with-doctest --with-xunit --xunit-file=xunit-calculators.xml -vs openquake.calculators
-                 nosetests --with-coverage --cover-package=openquake.risklib --with-doctest --with-xunit --xunit-file=xunit-risklib.xml -vs openquake.risklib
-                 nosetests --with-coverage --cover-package=openquake.commonlib --with-doctest --with-xunit --xunit-file=xunit-commonlib.xml -vs openquake.commonlib
-                 nosetests --with-coverage --cover-package=openquake.commands --with-doctest --with-xunit --xunit-file=xunit-commands.xml -vs openquake.commands
+                 # since we created the env with '--system-site-packages' we do not have nosetests in bin
+                 python3 -m nose --with-coverage --cover-package=openquake.baselib --with-xunit --xunit-file=xunit-baselib.xml --with-doctest -vs openquake.baselib
+                 python3 -m nose --with-coverage --cover-package=openquake.hmtk --with-doctest --with-xunit --xunit-file=xunit-hmtk.xml -vs openquake.hmtk
+                 python3 -m nose --with-coverage --cover-package=openquake.engine --with-doctest --with-xunit --xunit-file=xunit-engine.xml -vs openquake.engine
+                 python3 -m nose --with-coverage --cover-package=openquake.server --with-doctest --with-xunit --xunit-file=xunit-server.xml -vs openquake.server
+                 python3 -m nose --with-coverage --cover-package=openquake.calculators --with-doctest --with-xunit --xunit-file=xunit-calculators.xml -vs openquake.calculators
+                 python3 -m nose --with-coverage --cover-package=openquake.risklib --with-doctest --with-xunit --xunit-file=xunit-risklib.xml -vs openquake.risklib
+                 python3 -m nose --with-coverage --cover-package=openquake.commonlib --with-doctest --with-xunit --xunit-file=xunit-commonlib.xml -vs openquake.commonlib
+                 python3 -m nose --with-coverage --cover-package=openquake.commands --with-doctest --with-xunit --xunit-file=xunit-commands.xml -vs openquake.commands
 
-                 export MPLBACKEND=Agg; nosetests --with-coverage --cover-package=openquake.hazardlib  --with-xunit --xunit-file=xunit-hazardlib.xml --with-doctest -vs openquake.hazardlib
+                 export MPLBACKEND=Agg; python3 -m nose --with-coverage --cover-package=openquake.hazardlib  --with-xunit --xunit-file=xunit-hazardlib.xml --with-doctest -vs openquake.hazardlib
                  coverage xml --include=\"openquake/*\"
                  oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
