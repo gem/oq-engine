@@ -36,7 +36,7 @@ class NRCan15SiteTerm(GMPE):
     """
 
     # Parameters
-    REQUIRES_SITES_PARAMETERS = set(('vs30'))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
@@ -53,12 +53,11 @@ class NRCan15SiteTerm(GMPE):
         # Check if this GMPE has the necessary requirements
         if not (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
                 'vs30' in self.gmpe.REQUIRES_SITES_PARAMETERS):
-            tmps = '{:s} does not use vs30 nor a defined reference velocity'
-            msg = tmps.format(str(self.gmpe))
-            raise AttributeError(msg)
-        if not hasattr(self.gmpe, 'REQUIRES_SITES_PARAMETERS'):
-            self.REQUIRES_SITES_PARAMETERS = set(('vs30',))
+            msg = '{:s} does not use vs30 nor a defined reference velocity'
+            raise AttributeError(msg.format(str(self.gmpe)))
         if 'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
+            self.REQUIRES_SITES_PARAMETERS = copy.copy(
+                self.gmpe.REQUIRES_SITES_PARAMETERS)
             self.REQUIRES_SITES_PARAMETERS.add('vs30')
         #
         # Check compatibility of reference velocity
