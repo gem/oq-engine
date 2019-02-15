@@ -115,10 +115,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
             agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
-    return {'elt': elt,
-            'agg_losses': agg,
-            'losses_by_A': losses_by_A * param['ses_ratio'],
-            'times': times}
+    res = {'elt': elt, 'agg_losses': agg, 'times': times}
+    if param['avg_losses']:
+        res['losses_by_A'] = losses_by_A * param['ses_ratio']
+    return res
 
 
 @base.calculators.add('ebrisk')
