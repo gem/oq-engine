@@ -589,10 +589,10 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def store_sm(smodel, hdf5path, monitor):
+def store_sm(smodel, filename, monitor):
     """
     :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
-    :param hdf5path: path to an hdf5 file (cache_XXX.hdf5)
+    :param filename: path to an hdf5 file (cache_XXX.hdf5)
     :param monitor: a Monitor instance with an .hdf5 attribute
     """
     h5 = monitor.hdf5
@@ -601,8 +601,8 @@ def store_sm(smodel, hdf5path, monitor):
         source_geom = h5['source_geom']
         gid = len(source_geom)
         for sg in smodel:
-            if hdf5path:
-                with hdf5.File(hdf5path, 'r+') as hdf5cache:
+            if filename:
+                with hdf5.File(filename, 'r+') as hdf5cache:
                     hdf5cache['grp-%02d' % sg.id] = sg
             srcs = []
             geoms = []
@@ -637,7 +637,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
     :param srcfilter:
-        a SourceFilter instance with an .hdf5path pointing to the cache file
+        a SourceFilter instance with an .filename pointing to the cache file
     :returns:
         an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
@@ -676,7 +676,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     if monitor.hdf5:
         sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
-        hdf5path = (getattr(srcfilter, 'hdf5path', None)
+        filename = (getattr(srcfilter, 'filename', None)
                     if oqparam.prefilter_sources == 'no' else None)
     source_ids = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
@@ -719,7 +719,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                     grp_id += 1
                     src_groups.append(sg)
                 if monitor.hdf5:
-                    store_sm(newsm, hdf5path, monitor)
+                    store_sm(newsm, filename, monitor)
             else:  # just collect the TRT models
                 groups = logictree.read_source_groups(fname)
                 for group in groups:
@@ -870,8 +870,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm = csm.grp_by_src()  # one group per source
 
     csm.info.gsim_lt.check_imts(oqparam.imtls)
-    if monitor.hdf5:
-        csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
     parallel.Starmap.shutdown()  # save memory
     return csm
 
@@ -947,7 +945,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
 
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
-        tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
             haz_distance, 'filter', exposure.asset_refs)
@@ -958,11 +955,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             num_assets += len(assets)
         logging.info(
             'Associated %d assets to %d sites', num_assets, len(sitecol))
-        if (num_assets < tot_assets and not oqparam.discard_assets
-                and not oqparam.calculation_mode.startswith('scenario')):
-            raise RuntimeError(
-                '%d assets were discarded' % (tot_assets - num_assets))
-
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
@@ -991,11 +983,7 @@ def _get_gmfs(oqparam):
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
         array = writers.read_composite_array(fname).array
-        R = len(numpy.unique(array['rlzi']))
-        if R > 1:
-            raise InvalidFile('%s: found %d realizations, currently only one '
-                              'realization is supported' % (fname, R))
-        # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
+        # the array has the structure sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
         required_imts = list(oqparam.imtls)
         imts = [name[4:] for name in array.dtype.names[3:]]
@@ -1022,22 +1010,22 @@ def _get_gmfs(oqparam):
                 'Found site IDs missing in the sites.csv file: %s' %
                 missing_sids)
         N = len(sitecol)
-        gmfs = numpy.zeros((R, N, E, M), F32)
+        gmfs = numpy.zeros((N, E, M), F32)
         counter = collections.Counter()
         for row in array.view(dtlist):
-            key = row['rlzi'], row['sid'], eidx[row['eid']]
+            key = row['sid'], eidx[row['eid']]
             gmfs[key] = row['gmv']
             counter[key] += 1
         dupl = [key for key in counter if counter[key] > 1]
         if dupl:
-            raise InvalidFile('Duplicated (rlzi, sid, eid) in the GMFs file: '
+            raise InvalidFile('Duplicated (sid, eid) in the GMFs file: '
                               '%s' % dupl)
     elif fname.endswith('.xml'):
         eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
         N, E = gmfs_by_imt.shape
-        gmfs = numpy.zeros((1, N, E, M), F32)
+        gmfs = numpy.zeros((N, E, M), F32)
         for imti, imtstr in enumerate(oqparam.imtls):
-            gmfs[0, :, :, imti] = gmfs_by_imt[imtstr]
+            gmfs[:, :, imti] = gmfs_by_imt[imtstr]
     else:
         raise NotImplemented('Reading from %s' % fname)
     return eids, gmfs

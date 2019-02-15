@@ -19,6 +19,7 @@
 import abc
 import numpy
 
+from openquake.baselib.hdf5 import vfloat64
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
@@ -27,6 +28,9 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
 FEWSITES = 10  # if there are few sites store the rupdata
+
+KNOWN_DISTANCES = frozenset(
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth rvolc'.split())
 
 
 def get_distances(rupture, mesh, param):
@@ -215,7 +219,7 @@ class ContextMaker(object):
         sitecol = sites.complete
         N = len(sitecol)
         fewsites = N <= FEWSITES
-        rupdata = []
+        rupdata = []  # rupture data
         for rup, sites in self._gen_rup_sites(src, sites):
             try:
                 with self.ctx_mon:
@@ -224,7 +228,13 @@ class ContextMaker(object):
                 continue
             yield rup, sctx, dctx
             if fewsites:  # store rupdata
-                row = [src.id or 0, getattr(rup, 'occurrence_rate', numpy.nan)]
+                try:
+                    rate = rup.occurrence_rate
+                    probs_occur = numpy.zeros(0, numpy.float64)
+                except AttributeError:  # for nonparametric ruptures
+                    rate = numpy.nan
+                    probs_occur = rup.probs_occur
+                row = [src.id or 0, rate]
                 for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
                     row.append(getattr(rup, rup_param))
                 for dist_param in self.REQUIRES_DISTANCES:
@@ -232,15 +242,19 @@ class ContextMaker(object):
                 closest = rup.surface.get_closest_points(sitecol)
                 row.append(closest.lons)
                 row.append(closest.lats)
+                row.append(rup.weight)
+                row.append(probs_occur)
                 rupdata.append(tuple(row))
         if rupdata:
-            dtlist = [('srcidx', numpy.uint32), ('rate', float)]
+            dtlist = [('srcidx', numpy.uint32), ('occurrence_rate', float)]
             for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
                 dtlist.append((rup_param, float))
             for dist_param in self.REQUIRES_DISTANCES:
                 dtlist.append((dist_param, (float, (N,))))
             dtlist.append(('lon', (float, (N,))))  # closest lons
             dtlist.append(('lat', (float, (N,))))  # closest lats
+            dtlist.append(('mutex_weight', float))
+            dtlist.append(('probs_occur', vfloat64))
             self.rupdata = numpy.array(rupdata, dtlist)
         else:
             self.rupdata = ()
@@ -334,11 +348,11 @@ class ContextMaker(object):
             with clo_mon:  # this is faster than computing orig_dctx
                 closest_points = rupture.surface.get_closest_points(sitecol)
             cache = {}
-            for r, gsim in self.gsim_by_rlzi.items():
+            for rlz, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
                 for m, imt in enumerate(iml4.imts):
                     for p, poe in enumerate(iml4.poes_disagg):
-                        iml = tuple(iml4.array[:, r, m, p])
+                        iml = tuple(iml4.array[:, rlz, m, p])
                         try:
                             pne = cache[gsim, imt, iml]
                         except KeyError:
@@ -347,7 +361,7 @@ class ContextMaker(object):
                                     rupture, sitecol, dctx, imt, iml,
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
-                        acc[poe, str(imt), r].append(pne)
+                        acc[poe, str(imt), rlz].append(pne)
             acc['mags'].append(rupture.mag)
             acc['dists'].append(getattr(dctx, self.filter_distance))
             acc['lons'].append(closest_points.lons)
@@ -451,3 +465,56 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
+
+    def __init__(self, rec=None):
+        if rec is not None:
+            for name in rec.dtype.names:
+                setattr(self, name, rec[name])
+
+    def get_probability_no_exceedance(self, poes):
+        """
+        Compute and return the probability that in the time span for which the
+        rupture is defined, the rupture itself never generates a ground motion
+        value higher than a given level at a given site.
+
+        Such calculation is performed starting from the conditional probability
+        that an occurrence of the current rupture is producing a ground motion
+        value higher than the level of interest at the site of interest.
+        The actual formula used for such calculation depends on the temporal
+        occurrence model the rupture is associated with.
+        The calculation can be performed for multiple intensity measure levels
+        and multiple sites in a vectorized fashion.
+
+        :param poes:
+            2D numpy array containing conditional probabilities the the a
+            rupture occurrence causes a ground shaking value exceeding a
+            ground motion level at a site. First dimension represent sites,
+            second dimension intensity measure levels. ``poes`` can be obtained
+            calling the :meth:`method
+            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>
+        """
+        if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
+            # Uses the formula
+            #
+            #    ∑ p(k|T) * p(X<x|rup)^k
+            #
+            # where `p(k|T)` is the probability that the rupture occurs k times
+            # in the time span `T`, `p(X<x|rup)` is the probability that a
+            # rupture occurrence does not cause a ground motion exceedance, and
+            # thesummation `∑` is done over the number of occurrences `k`.
+            #
+            # `p(k|T)` is given by the attribute probs_occur and
+            # `p(X<x|rup)` is computed as ``1 - poes``.
+            # Converting from 1d to 2d
+            if len(poes.shape) == 1:
+                poes = numpy.reshape(poes, (-1, len(poes)))
+            p_kT = self.probs_occur
+            prob_no_exceed = numpy.array(
+                [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
+            prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
+            prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
+            prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
+            return prob_no_exceed
+        # parametric rupture
+        tom = self.temporal_occurrence_model
+        return tom.get_probability_no_exceedance(self.occurrence_rate, poes)

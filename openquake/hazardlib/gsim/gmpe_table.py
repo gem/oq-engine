@@ -27,14 +27,14 @@ import os
 from copy import deepcopy
 
 import h5py
-
 from scipy.interpolate import interp1d
 import numpy
 
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import const, site
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.gsim.base import GMPE, RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.python3compat import round
 
 
@@ -301,50 +301,24 @@ class GMPETable(GMPE):
 
     GMPE_TABLE = None
 
-    def __init__(self, gmpe_table=None):
-        """
-        If the path to the GMPE table is not assigned as an attribute of the
-        class then instantiate with a path to the GMPE table. If the
-        gmpe_table is input this will replace the path to the hdf5 file if it
-        has already been assigned. Otherwise, if the path to the hdf5 file
-        is not assigned as a property or the class nor is it input at
-        instantiation, an error will be raised
+    amplification = None
 
-        :param str gmpe_table:
-            Path to the hdf5 file containing the GMPE table
-        """
-        if not self.GMPE_TABLE:
-            if gmpe_table:
-                if os.path.isabs(gmpe_table):
-                    self.GMPE_TABLE = gmpe_table
-                else:
-                    # NB: (hackish) GMPE_DIR must be set externally
-                    self.GMPE_TABLE = os.path.abspath(
-                        os.path.join(self.GMPE_DIR, gmpe_table))
-            else:
-                raise IOError("GMPE Table Not Defined!")
-        super().__init__(gmpe_table=gmpe_table)
-        self.imls = None
-        self.stddevs = {}
-        self.m_w = None
-        self.distances = None
-        self.distance_type = None
-        self.amplification = None
-        # NB: it must be possible to instantiate a GMPETable even if the
-        # the .hdf5 file (GMPE_TABLE) does not exist; the reason is that
-        # we want to run a calculation on machine 1, copy the datastore
-        # on machine 2 (that misses the .hdf5 files) and still be able to
-        # export the results, i.e. to instantiate the GsimLogicTree object
-        # which is required by the engine to determine the realizations
-        if os.path.exists(self.GMPE_TABLE):
-            with h5py.File(self.GMPE_TABLE, "r") as f:
-                self.init(f)
-
-    def init(self, fle):
+    def init(self, fle=None):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
+        if fle is None:
+            fname = self.kwargs.get('gmpe_table', self.GMPE_TABLE)
+            if fname is None:
+                raise ValueError('You forgot to set GMPETable.GMPE_TABLE!')
+            elif os.path.isabs(fname):
+                self.GMPE_TABLE = fname
+            else:
+                # NB: (hackish) GMPE_DIR must be set externally
+                self.GMPE_TABLE = os.path.abspath(
+                    os.path.join(self.GMPE_DIR, fname))
+            fle = h5py.File(self.GMPE_TABLE, "r")
         self.distance_type = decode(fle["Distances"].attrs["metric"])
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
@@ -370,8 +344,11 @@ class GMPETable(GMPE):
             HDF5 Tables as instance of :class:`h5py.File`
         """
         # Load in total standard deviation
+        self.stddevs = {}
         self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
         # If other standard deviations
+        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
+            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
         for stddev_type in [const.StdDev.INTER_EVENT,
                             const.StdDev.INTRA_EVENT]:
             if stddev_type in fle:
@@ -394,8 +371,8 @@ class GMPETable(GMPE):
             # set the site and rupture parameters on the instance
             self.REQUIRES_SITES_PARAMETERS = set()
             self.REQUIRES_RUPTURE_PARAMETERS = (
-                self.REQUIRES_RUPTURE_PARAMETERS | set(
-                    [self.amplification.parameter]))
+                self.REQUIRES_RUPTURE_PARAMETERS |
+                {self.amplification.parameter})
 
     def _supported_imts(self):
         """

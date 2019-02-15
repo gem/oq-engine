@@ -24,7 +24,7 @@ class SinterCan15HighTestCase(BaseGSIMTestCase):
     GSIM_CLASS = SInterCan15Upp
 
     def test_mean(self):
-        self.check('CAN15/GMPEtInterface_High_combo.csv',
+        self.check('CAN15/GMPEtInterface_high_combo.csv',
                    max_discrep_percentage=100.)
 
 

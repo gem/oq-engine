@@ -166,7 +166,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         except (KeyError, AttributeError):
             size_mb = None
         keysize.append((key, size_mb))
-    ds_size = os.path.getsize(dstore.hdf5path) / MB
+    ds_size = os.path.getsize(dstore.filename) / MB
     logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 

@@ -353,7 +353,7 @@ class ProbabilisticEventBased(RiskModel):
         """
         :param gmvs: an array of shape (E, M)
         :param imti: a dictionary imt -> imt index
-        :returns: triples (loss_type, imt, loss_ratios)
+        :returns: loss_ratios of shape (L, E)
         """
         out = []
         E = len(gmvs)
@@ -361,8 +361,8 @@ class ProbabilisticEventBased(RiskModel):
             loss_ratios = numpy.zeros(E, F32)
             means, covs, idxs = vf.interpolate(gmvs[:, imti[vf.imt]])
             loss_ratios[idxs] = vf.sample(means, covs, idxs, None)
-            out.append((lt, vf.imt, loss_ratios))
-        return out
+            out.append(loss_ratios)
+        return numpy.array(out)
 
 
 @registry.add('classical_bcr')

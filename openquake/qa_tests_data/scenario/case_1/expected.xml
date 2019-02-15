@@ -4,8 +4,8 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <gmfCollection
-    gsimTreePath="b1"
-    sourceModelTreePath="b_1"
+    gsimTreePath=""
+    sourceModelTreePath=""
     >
         <gmfSet
         stochasticEventSetId="1"

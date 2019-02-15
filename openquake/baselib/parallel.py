@@ -159,6 +159,7 @@ except ImportError:
         "Do nothing"
 
 from openquake.baselib import hdf5, config
+from openquake.baselib.python3compat import encode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
@@ -272,10 +273,14 @@ class Result(object):
     :param tb_str: traceback string (empty if there was no exception)
     :param msg: message string (default empty)
     """
+    func_args = ()
+
     def __init__(self, val, mon, tb_str='', msg='', count=0):
         if isinstance(val, dict):
             # store the size in bytes of the content
             self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
+        elif isinstance(val, tuple) and callable(val[0]):
+            self.func_args = val
         self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
@@ -357,7 +362,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         assert not isgenfunc, func
         return Result.new(func, args, mon)
 
-    mon.operation = 'total ' + func.__name__
     mon.measuremem = True
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
@@ -454,8 +458,9 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            self.save_task_info(result.mon, mem_gb)
-            yield val
+            save_task_info(self, result, mem_gb)
+            if not result.func_args:  # not subtask
+                yield val
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
@@ -466,16 +471,6 @@ class IterResult(object):
             if nbytes:
                 logging.info('Received %s',
                              {k: humansize(v) for k, v in nbytes.items()})
-
-    def save_task_info(self, mon, mem_gb):
-        if self.hdf5:
-            mon.hdf5 = self.hdf5
-            duration = mon.duration
-            t = (mon.task_no, mon.weight, duration, self.received[-1], mem_gb)
-            data = numpy.array([t], task_info_dt)
-            hdf5.extend(self.hdf5['task_info/' + self.name], data,
-                        argnames=self.argnames, sent=self.sent)
-        mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -501,6 +496,23 @@ class IterResult(object):
             else:
                 res.name = iresult.name.split('#')[0]
         return res
+
+
+def save_task_info(self, res, mem_gb=0):
+    """
+    :param self: an object with attributes .hdf5, .argnames, .sent
+    :parent res: a :class:`Result` object
+    :param mem_gb: memory consumption at the saving time (optional)
+    """
+    mon = res.mon
+    name = mon.operation[6:]  # strip 'total '
+    if self.hdf5:
+        mon.hdf5 = self.hdf5  # needed for the flush below
+        t = (mon.task_no, mon.weight, mon.duration, len(res.pik), mem_gb)
+        data = numpy.array([t], task_info_dt)
+        hdf5.extend3(self.hdf5.filename, 'task_info/' + name, data,
+                     argnames=self.argnames, sent=self.sent)
+    mon.flush()
 
 
 def init_workers():
@@ -621,6 +633,10 @@ class Starmap(object):
         if h5 and 'performance_data' not in h5:
             hdf5.create(h5, 'performance_data', perf_dt)
 
+    @property
+    def hdf5(self):
+        return self.monitor.hdf5
+
     def log_percent(self):
         """
         Log the progress of the computation in percentage
@@ -632,25 +648,28 @@ class Starmap(object):
             self.progress('Sent %s of data in %d %s task(s)',
                           humansize(self.sent.sum()), self.total, self.name)
         elif percent > self.prev_percent:
-            self.progress('%s %3d%%', self.name, percent)
+            self.progress('%s %3d%% [of %d]',
+                          self.name, percent, len(self.tasks))
             self.prev_percent = percent
         return done
 
-    def submit(self, *args):
+    def submit(self, *args, func=None, monitor=None):
         """
         Submit the given arguments to the underlying task
         """
+        monitor = monitor or self.monitor
+        func = func or self.task_func
         if not hasattr(self, 'socket'):  # first time
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
-            self.monitor.backurl = 'tcp://%s:%s' % (
+            monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
         assert not isinstance(args[-1], Monitor)  # sanity check
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
             self.sent += numpy.array([len(p) for p in args])
-        res = getattr(self, dist + '_submit')(args)
+        res = getattr(self, dist + '_submit')(func, args, monitor)
         self.tasks.append(res)
 
     @property
@@ -684,29 +703,27 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-    def no_submit(self, args):
-        return safely_call(self.task_func, args, self.task_no, self.monitor)
+    def no_submit(self, func, args, monitor):
+        return safely_call(func, args, self.task_no, monitor)
 
-    def processpool_submit(self, args):
+    def processpool_submit(self, func, args, monitor):
         return self.pool.apply_async(
-            safely_call, (self.task_func, args, self.task_no, self.monitor))
+            safely_call, (func, args, self.task_no, monitor))
 
     threadpool_submit = processpool_submit
 
-    def celery_submit(self, args):
-        return safetask.delay(self.task_func, args, self.task_no, self.monitor)
+    def celery_submit(self, func, args, monitor):
+        return safetask.delay(func, args, self.task_no, monitor)
 
-    def zmq_submit(self, args):
+    def zmq_submit(self, func, args, monitor):
         if not hasattr(self, 'sender'):
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
-        return self.sender.send(
-            (self.task_func, args, self.task_no, self.monitor))
+        return self.sender.send((func, args, self.task_no, monitor))
 
-    def dask_submit(self, args):
-        return self.dask_client.submit(safely_call, self.task_func, args,
-                                       self.task_no, self.monitor)
+    def dask_submit(self, func, args, monitor):
+        return self.dask_client.submit(safely_call, func, args, self.task_no)
 
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -719,13 +736,18 @@ class Starmap(object):
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
-                             'is job %d', res.mon.calc_id, self.calc_id)
+                                'is job %d', res.mon.calc_id, self.calc_id)
                 continue
             elif res.msg == 'TASK_ENDED':
                 self.log_percent()
                 self.todo -= 1
             elif res.msg:
                 logging.warning(res.msg)
+            elif res.func_args:  # resubmit subtask
+                func, *args = res.func_args
+                self.submit(*args, func=func, monitor=res.mon)
+                yield res
+                self.todo += 1
             else:
                 yield res
         self.log_percent()

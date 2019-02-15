@@ -39,9 +39,15 @@ def get_hcurves_and_means(dstore):
     """
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     getter = getters.PmapGetter(dstore, rlzs_assoc)
-    sitecol = dstore['sitecol']
-    pmaps = getter.get_pmaps(sitecol.sids)
+    pmaps = getter.get_pmaps()
     return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']
+
+
+def str_or_int(calc_id):
+    try:
+        return int(calc_id)
+    except ValueError:
+        return calc_id
 
 
 @sap.Script
@@ -77,8 +83,7 @@ def show(what='contents', calc_id=-1, extra=()):
     if what == 'rlzs' and 'poes' in ds:
         min_value = 0.01  # used in rmsep
         getter = getters.PmapGetter(ds)
-        sitecol = ds['sitecol']
-        pmaps = getter.get_pmaps(sitecol.sids)
+        pmaps = getter.get_pmaps()
         weights = [rlz.weight for rlz in getter.rlzs]
         mean = stats.compute_pmap_stats(
             pmaps, [numpy.mean], weights, getter.imtls)
@@ -106,5 +111,5 @@ def show(what='contents', calc_id=-1, extra=()):
 
 
 show.arg('what', 'key or view of the datastore')
-show.arg('calc_id', 'calculation ID', type=int)
+show.arg('calc_id', 'calculation ID or datastore path', type=str_or_int)
 show.arg('extra', 'extra arguments', nargs='*')

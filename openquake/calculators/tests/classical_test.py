@@ -31,7 +31,7 @@ from openquake.qa_tests_data.classical import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_35, case_36)
+    case_34, case_35, case_36)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -492,6 +492,10 @@ hazard_uhs-std.csv
             self.assertEqual(nruptures, [('grp-00', 700), ('grp-01', 1117),
                                          ('grp-02', 1385)])
 
+            # check best_rlz on 5 sites
+            best_rlz = self.calc.datastore['best_rlz'].value
+            numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
+
     @attr('qa', 'hazard', 'classical')
     def test_case_31(self):
         # source specific logic tree
@@ -507,6 +511,12 @@ hazard_uhs-std.csv
     def test_case_33(self):
         # directivity
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_33.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_34(self):
+        # spectral averaging
+        self.assert_curves_ok([
+            'hazard_curve-mean-AvgSA.csv'], case_34.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_35(self):
