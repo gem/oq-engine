@@ -14,7 +14,6 @@
     realization closest to the mean hazard curve for each site
   * Removed the max_num_sites limit on the event based calculator
 
-
   [Valerio Poggi]
   * Added an AvgSA intensity measure type and a GenericGmpeAvgSA which is
     able to use it
