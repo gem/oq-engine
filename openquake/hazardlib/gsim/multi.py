@@ -72,7 +72,7 @@ class MultiGMPE(GMPE, collections.Mapping):
         super().__init__()
         self.gsim_by_imt = gsimByImt
         for name in uppernames:
-            setattr(self, name, getattr(self, name).copy())
+            setattr(self, name, set(getattr(self, name)))
         for imt, gsim in self.gsim_by_imt.items():
             imt_class = from_string(imt).__class__
             if imt_class not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
