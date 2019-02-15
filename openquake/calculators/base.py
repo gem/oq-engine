@@ -21,7 +21,6 @@ import abc
 import pdb
 import logging
 import operator
-import itertools
 import traceback
 import collections
 from datetime import datetime
@@ -121,25 +120,6 @@ def set_array(longarray, shortarray):
     longarray[len(shortarray):] = numpy.nan
 
 
-def check_precalc_consistency(calc_mode, precalc_mode):
-    """
-    Defensive programming against users providing an incorrect pre-calculation
-    ID (with ``--hazard-calculation-id``)
-
-    :param calc_mode:
-        calculation_mode of the current calculation
-    :param precalc_mode:
-        calculation_mode of the previous calculation
-    """
-    ok_mode = PRECALC_MAP[calc_mode]
-    if calc_mode != precalc_mode and precalc_mode not in ok_mode:
-        raise InvalidCalculationID(
-            'In order to run a risk calculation of kind %r, '
-            'you need to provide a calculation of kind %r, '
-            'but you provided a %r instead' %
-            (calc_mode, ok_mode, precalc_mode))
-
-
 MAXSITES = 1000
 CORRELATION_MATRIX_TOO_LARGE = '''\
 You have a correlation matrix which is too large: %%d sites > %d.
@@ -227,6 +207,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
+    precalc = None
+    accept_precalc = []
     from_engine = False  # set by engine.run_calc
     is_stochastic = False  # True for scenario and event based calculators
 
@@ -262,6 +244,23 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         if 'checksum32' not in attrs:
             attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
+
+    def check_precalc(self, precalc_mode):
+        """
+        Defensive programming against users providing an incorrect
+        pre-calculation ID (with ``--hazard-calculation-id``).
+
+        :param precalc_mode:
+            calculation_mode of the previous calculation
+        """
+        calc_mode = self.oqparam.calculation_mode
+        ok_mode = self.accept_precalc
+        if calc_mode != precalc_mode and precalc_mode not in ok_mode:
+            raise InvalidCalculationID(
+                'In order to run a calculation of kind %r, '
+                'you need to provide a calculation of kind %r, '
+                'but you provided a %r instead' %
+                (calc_mode, ok_mode, precalc_mode))
 
     def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
         """
@@ -421,8 +420,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    precalc = None
-
     def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
         """
         :param sources: a list of sources
@@ -459,7 +456,7 @@ class HazardCalculator(BaseCalculator):
         """
         return RtreeFilter(self.src_filter.sitecol,
                            self.oqparam.maximum_distance,
-                           self.src_filter.hdf5path)
+                           self.src_filter.filename)
 
     @property
     def E(self):
@@ -518,7 +515,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
 
-    def pre_execute(self, pre_calculator=None):
+    def pre_execute(self):
         """
         Check if there is a previous calculation ID.
         If yes, read the inputs by retrieving the previous calculation;
@@ -545,9 +542,7 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = fake.get_rlzs_assoc()
         elif oq.hazard_calculation_id:
             parent = datastore.read(oq.hazard_calculation_id)
-            check_precalc_consistency(
-                oq.calculation_mode,
-                parent['oqparam'].calculation_mode)
+            self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
             params = {name: value for name, value in
@@ -569,8 +564,8 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
                     ', '.join(missing_imts))
-        elif pre_calculator:
-            calc = calculators[pre_calculator](
+        elif self.__class__.precalc:
+            calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.run()
             self.param = calc.param
@@ -578,6 +573,8 @@ class HazardCalculator(BaseCalculator):
             self.assetcol = calc.assetcol
             self.riskmodel = calc.riskmodel
             self.rlzs_assoc = calc.rlzs_assoc
+            if hasattr(calc, 'csm'):  # no scenario
+                self.csm = calc.csm
         else:
             self.read_inputs()
         if self.riskmodel:
@@ -594,7 +591,7 @@ class HazardCalculator(BaseCalculator):
                     self.datastore.parent['oqparam'].risk_imtls)
             elif not oq.imtls:
                 raise ValueError('Missing intensity_measure_types!')
-        if self.precalc:
+        if 'precalc' in vars(self):
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
             csm_info = self.datastore['csm_info']
@@ -790,23 +787,26 @@ class HazardCalculator(BaseCalculator):
             self.datastore['exposed_value'] = self.assetcol.agg_value(
                 *oq.aggregate_by)
 
-    def store_csm_info(self, eff_ruptures):
+    def store_rlz_info(self, eff_ruptures=None):
         """
         Save info about the composite source model inside the csm_info dataset
         """
-        self.csm.info.update_eff_ruptures(eff_ruptures)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
-        if not self.rlzs_assoc:
-            raise RuntimeError('Empty logic tree: too much filtering?')
-        self.datastore['csm_info'] = self.csm.info
+        if hasattr(self, 'csm'):  # no scenario
+            self.csm.info.update_eff_ruptures(eff_ruptures)
+            self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+                self.oqparam.sm_lt_path)
+            if not self.rlzs_assoc:
+                raise RuntimeError('Empty logic tree: too much filtering?')
+            self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         if self.oqparam.imtls:
-            self.datastore['csm_info/weights'] = arr = build_weights(
+            self.datastore['weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
-            self.datastore.set_attrs('csm_info/weights', nbytes=arr.nbytes)
-            with hdf5.File(self.hdf5cache, 'r+') as cache:
-                cache['csm_info/weights'] = arr
+            self.datastore.set_attrs('weights', nbytes=arr.nbytes)
+            if hasattr(self, 'hdf5cache'):  # no scenario
+                with hdf5.File(self.hdf5cache, 'r+') as cache:
+                    cache['weights'] = arr
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
@@ -865,7 +865,7 @@ class RiskCalculator(HazardCalculator):
         extra = self.riskmodel.get_extra_imts(oq.risk_imtls)
         if extra:
             logging.warning('There are risk functions for not available IMTs '
-                         'which will be ignored: %s' % extra)
+                            'which will be ignored: %s' % extra)
 
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
@@ -885,9 +885,6 @@ class RiskCalculator(HazardCalculator):
                 oq.site_effects, oq.truncation_level, E, oq.random_seed,
                 oq.imtls)
             save_gmf_data(self.datastore, sitecol, gmfs, imts)
-            events = numpy.zeros(E, rupture.events_dt)
-            events['eid'] = numpy.arange(E, dtype=U64)
-            self.datastore['events'] = events
         return sitecol, assetcol
 
     def build_riskinputs(self, kind, eps=None, num_events=0):
@@ -980,20 +977,18 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
-def get_gmv_data(sids, gmfs):
+def get_gmv_data(sids, gmfs, events):
     """
-    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
+    Convert an array of shape (N, E, M) into an array of type gmv_data_dt
     """
-    R, N, E, M = gmfs.shape
+    N, E, M = gmfs.shape
     gmv_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (M,)))])
-    # NB: ordering of the loops: first site, then event, then realization
-    # it is such that save_gmf_data saves the indices correctly for each sid
-    it = ((r, sids[s], eid, gmfa[s, eid])
-          for s, eid in itertools.product(
-                  numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64))
-          for r, gmfa in enumerate(gmfs))
-    return numpy.fromiter(it, gmv_data_dt)
+    # NB: ordering of the loops: first site, then event
+    lst = [(event['rlz'], sids[s], ei, gmfs[s, ei])
+           for s in numpy.arange(N, dtype=U32)
+           for ei, event in enumerate(events)]
+    return numpy.array(lst, gmv_data_dt)
 
 
 def save_gmfs(calculator):
@@ -1006,11 +1001,13 @@ def save_gmfs(calculator):
     logging.info('Reading gmfs from file')
     if oq.inputs['gmfs'].endswith('.csv'):
         # TODO: check if import_gmfs can be removed
-        eids, num_rlzs = import_gmfs(
+        eids = import_gmfs(
             dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
     else:  # XML
         eids, gmfs = readinput.eids, readinput.gmfs
     E = len(eids)
+    events = numpy.zeros(E, rupture.events_dt)
+    events['eid'] = eids
     calculator.eids = eids
     if hasattr(oq, 'number_of_ground_motion_fields'):
         if oq.number_of_ground_motion_fields != E:
@@ -1022,21 +1019,27 @@ def save_gmfs(calculator):
     # NB: save_gmfs redefine oq.sites in case of GMFs from XML or CSV
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
-        R, N, E, M = gmfs.shape
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids],
-                      oq.imtls, eids)
+        N, E, M = gmfs.shape
+        save_gmf_data(dstore, haz_sitecol, gmfs[haz_sitecol.sids],
+                      oq.imtls, events)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
+def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param gmfs: an array of shape (R, N, E, M)
+    :param gmfs: an array of shape (N, E, M)
     :param imts: a list of IMT strings
-    :param eids: E event IDs or the empty tuple
+    :param events: E event IDs or the empty tuple
     """
+    if len(events) == 0:
+        E = gmfs.shape[1]
+        events = numpy.zeros(E, rupture.events_dt)
+        events['eid'] = numpy.arange(E, dtype=U64)
+    dstore['events'] = events
     offset = 0
-    dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
+    gmfa = get_gmv_data(sitecol.sids, gmfs, events)
+    dstore['gmf_data/data'] = gmfa
     dic = general.group_array(gmfa, 'sid')
     lst = []
     all_sids = sitecol.complete.sids
@@ -1047,11 +1050,6 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
         offset += n
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
-    dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
-    if len(eids):  # store the events
-        events = numpy.zeros(len(eids), rupture.events_dt)
-        events['eid'] = eids
-        dstore['events'] = events
 
 
 def get_idxs(data, eid2idx):
@@ -1106,7 +1104,4 @@ def import_gmfs(dstore, fname, sids):
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
 
-    # FIXME: if there is no data for the maximum realization
-    # the inferred number of realizations will be wrong
-    num_rlzs = array['rlzi'].max() + 1
-    return eids, num_rlzs
+    return eids

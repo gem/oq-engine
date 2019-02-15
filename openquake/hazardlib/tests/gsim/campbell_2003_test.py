@@ -26,9 +26,8 @@ from openquake.hazardlib.gsim.campbell_2003 import (
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-import numpy
-
 # Test data generated from OpenSHA implementation.
+
 
 class Campbell2003TestCase(BaseGSIMTestCase):
     GSIM_CLASS = Campbell2003

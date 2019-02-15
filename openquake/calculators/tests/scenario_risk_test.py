@@ -33,16 +33,8 @@ aac = numpy.testing.assert_allclose
 
 
 def tot_loss(dstore):
-    all_losses = dstore['all_losses-rlzs'].value  # shape (A, E, R)
-    names = all_losses.dtype.names
-    R = all_losses.shape[-1]
-    tot = numpy.zeros(R, [('rlz', int)] + [(name, numpy.float32)
-                                           for name in names])
-    for r in range(R):
-        for name in names:
-            tot[name][r] = all_losses[name][:, :, r].sum()
-        tot['rlz'][r] = r
-    return tot
+    dset = dstore['asset_loss_table']
+    return {name: dset[name].sum() for name in dset.dtype.names}
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -50,7 +42,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
-        [fname] = out['agglosses-rlzs', 'csv']
+        [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
 
         # check the exported GMFs
@@ -73,7 +65,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
-        [fname] = out['agglosses-rlzs', 'csv']
+        [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -101,7 +93,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
-        [fname] = out['agglosses-rlzs', 'csv']
+        [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -112,7 +104,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('totlosses', self.calc.datastore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
-        [fname] = out['agglosses-rlzs', 'csv']
+        [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-6)
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -123,7 +115,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
-        [fname] = out['agglosses-rlzs', 'csv']
+        [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -138,17 +130,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # case with two gsims
         self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
-        f1, f2 = export(('agglosses-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg-gsimltp_b1_structural.csv', f1)
-        self.assertEqualFiles('expected/agg-gsimltp_b2_structural.csv', f2)
+        [f] = export(('agglosses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_structural.csv', f)
 
         # testing the totlosses view
         dstore = self.calc.datastore
         fname = gettemp(view('totlosses', dstore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
-
-        # testing the npz export runs
-        export(('all_losses-rlzs', 'npz'), self.calc.datastore)
 
         # two equal gsims
         with self.assertRaises(InvalidLogicTree):
@@ -159,7 +147,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        [fname] = out['agglosses-rlzs', 'csv']
+        [fname] = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -187,16 +175,15 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # check losses by taxonomy
         agglosses = extract(self.calc.datastore, 'agg_losses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
-        aac(agglosses, [[1981.4681, 2363.5803],
-                        [712.8535, 924.75616],
-                        [986.7066, 1344.0371]])
+        self.assertEqualFiles('expected/agglosses_taxo.txt',
+                              gettemp(str(agglosses)))
 
         # extract agglosses with a * and a selection
         obj = extract(self.calc.datastore, 'agg_losses/structural?'
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[1316.3723145, 1569.1348877]])
+        aac(obj.array, [[1316.3723145, 1602.6213]])
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_7(self):
@@ -205,7 +192,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tot10 = tot_loss(self.calc.datastore)
         self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='20')
         tot20 = tot_loss(self.calc.datastore)
-        for name in tot10.dtype.names:
+        for name in tot10:
             aac(tot10[name], tot20[name])
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -238,8 +225,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (9,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
-        agglosses = extract(self.calc.datastore, 'agglosses-rlzs')
-        aac(agglosses['mean'], numpy.array([[1848876.5]], numpy.float32),
+        agglosses = extract(self.calc.datastore, 'agglosses')
+        aac(agglosses['mean'], numpy.array([1848876.5], numpy.float32),
             atol=.1)
-        aac(agglosses['stddev'], numpy.array([[1902063.]], numpy.float32),
+        aac(agglosses['stddev'], numpy.array([1902063.], numpy.float32),
             atol=.1)

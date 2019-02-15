@@ -140,6 +140,9 @@ class ValidationTestCase(unittest.TestCase):
             def __init__(self, arg):
                 self.arg = arg
 
+            def init(self):
+                pass
+
             def __repr__(self):
                 return '<FakeGsim(%s)>' % self.arg
         registry['FakeGsim'] = FakeGsim

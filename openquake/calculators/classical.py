@@ -22,9 +22,10 @@ import numpy
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
+from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.commonlib import calc
+from openquake.commonlib import calc, util
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -62,6 +63,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
+    accept_precalc = ['psha']
 
     def agg_dicts(self, acc, dic):
         """
@@ -101,7 +103,8 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        if self.oqparam.hazard_calculation_id:
+        oq = self.oqparam
+        if oq.hazard_calculation_id and not oq.compare_with_classical:
             parent = datastore.read(self.oqparam.hazard_calculation_id)
             self.csm_info = parent['csm_info']
             parent.close()
@@ -124,7 +127,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
-            self.store_csm_info(acc.eff_ruptures)
+            self.store_rlz_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
@@ -177,7 +180,16 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('saving statistics', autoflush=True):
             for kind in pmap_by_kind:  # i.e. kind == ('hcurves', 'mean')
                 pmap = pmap_by_kind[kind]
-                if pmap:
+                if kind == 'rlz_by_sid':  # pmap is actually a rlz_by_sid
+                    for sid, rlz in pmap.items():
+                        self.datastore['best_rlz'][sid] = rlz
+                elif kind[0] == 'hmaps':
+                    key = '%s/%s' % kind
+                    dset = self.datastore.getitem(key)
+                    for sid in pmap:
+                        arr = pmap[sid].array
+                        dset[sid] = arr
+                elif pmap:
                     key = '%s/%s' % kind
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
@@ -243,12 +255,14 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
             self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
             if oq.poes:
-                self.datastore.create_dset('hmaps/' + name, F32, (N, P * M))
+                self.datastore.create_dset('hmaps/' + name, F32, (N, M, P))
                 self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
+            if name == 'mean' and R > 1 and N <= FEWSITES:
+                self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
         iterargs = ((getters.PmapGetter(parent, self.rlzs_assoc, t.sids),
-                     hstats, oq.individual_curves)
+                     N, hstats, oq.individual_curves)
                     for t in self.sitecol.split_in_tiles(ct))
         parallel.Starmap(build_hazard_stats, iterargs, self.monitor()).reduce(
             self.save_hazard_stats)
@@ -268,14 +282,15 @@ class PreCalculator(ClassicalCalculator):
                 eff_ruptures[grp_id] += src.num_ruptures
                 calc_times[src.id] += numpy.array(
                     [src.weight, src.nsites, 0], F32)
-        self.store_csm_info(eff_ruptures)
+        self.store_rlz_info(eff_ruptures)
         self.store_source_info(calc_times)
         return {}
 
 
-def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
+def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_curves: if True, also build the individual curves
     :param monitor: instance of Monitor
@@ -287,11 +302,12 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
     with monitor('combine pmaps'):
         pgetter.init()  # if not already initialized
         try:
-            pmaps = pgetter.get_pmaps(pgetter.sids)
+            pmaps = pgetter.get_pmaps()
         except IndexError:  # no data
             return {}
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
+    R = len(pmaps)
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     pmap_by_kind = {}
     for statname, stat in hstats:
@@ -301,8 +317,13 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             if pgetter.poes:
                 pmap_by_kind['hmaps', statname] = calc.make_hmap(
                     pmap, pgetter.imtls, pgetter.poes)
+        if statname == 'mean' and R > 1 and N <= FEWSITES:
+            pmap_by_kind['rlz_by_sid'] = rlz = {}
+            for sid, pcurve in pmap.items():
+                rlz[sid] = util.closest_to_ref(
+                    [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
 
-    if len(pmaps) > 1 and individual_curves or not hstats:
+    if R > 1 and individual_curves or not hstats:
         with monitor('build individual hmaps'):
             for r, pmap in enumerate(pmaps):
                 key = 'rlz-%03d' % r

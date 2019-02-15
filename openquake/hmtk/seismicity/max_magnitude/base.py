@@ -115,8 +115,6 @@ class BaseMaximumMagnitude(object):
     Abstract base class for implementation of the maximum magnitude estimation
     based on instrumental/historical seismicity
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def get_mmax(self, catalogue, config):
         '''

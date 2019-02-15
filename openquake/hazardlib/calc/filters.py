@@ -186,7 +186,7 @@ class IntegrationDistance(collections.Mapping):
 def split_sources(srcs):
     """
     :param srcs: sources
-    :returns: a pair (split sources, split time)
+    :returns: a pair (split sources, split time) or just the split_sources
     """
     from openquake.hazardlib.source import splittable
     sources = []
@@ -251,38 +251,38 @@ class SourceFilter(object):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
-    def __init__(self, sitecol, integration_distance, hdf5path=None):
+    def __init__(self, sitecol, integration_distance, filename=None):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
         elif sitecol is None:
             integration_distance = {}
-        self.hdf5path = hdf5path
+        self.filename = filename
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if sitecol is not None and hdf5path and not os.path.exists(hdf5path):
+        if sitecol is not None and filename and not os.path.exists(filename):
             # store the sitecol
-            with hdf5.File(hdf5path, 'w') as h5:
+            with hdf5.File(filename, 'w') as h5:
                 h5['sitecol'] = sitecol
         else:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
     def __getstate__(self):
-        return dict(hdf5path=self.hdf5path,
+        return dict(filename=self.filename,
                     integration_distance=self.integration_distance)
 
     @property
     def sitecol(self):
         """
-        Read the site collection from .hdf5path and cache it
+        Read the site collection from .filename and cache it
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
-        if self.hdf5path is None or not os.path.exists(self.hdf5path):
+        if self.filename is None or not os.path.exists(self.filename):
             # case of nofilter/None sitecol
             return
-        with hdf5.File(self.hdf5path, 'r') as h5:
+        with hdf5.File(self.filename, 'r') as h5:
             self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
@@ -399,9 +399,9 @@ class RtreeFilter(SourceFilter):
     :param integration_distance:
         Integration distance dictionary (TRT -> distance in km)
     """
-    def __init__(self, sitecol, integration_distance, hdf5path=None):
+    def __init__(self, sitecol, integration_distance, filename=None):
         assert sitecol, 'Mandatory in an RtreeFilter'
-        super().__init__(sitecol, integration_distance, hdf5path)
+        super().__init__(sitecol, integration_distance, filename)
         self.indexpath = gettemp()
         index = rtree.index.Index(self.indexpath)
         lonlats = zip(sitecol.lons, sitecol.lats)
@@ -434,7 +434,7 @@ class RtreeFilter(SourceFilter):
     def __getstate__(self):
         # NB: the RtreeFilter can be transferred on a single machine only
         # (on a cluster, even, with a shared_dir, there are permission errors)
-        return dict(hdf5path=self.hdf5path,
+        return dict(filename=self.filename,
                     indexpath=self.indexpath,
                     integration_distance=self.integration_distance)
 
