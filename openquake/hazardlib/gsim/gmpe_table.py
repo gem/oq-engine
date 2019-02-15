@@ -347,6 +347,8 @@ class GMPETable(GMPE):
         self.stddevs = {}
         self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
         # If other standard deviations
+        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
+            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
         for stddev_type in [const.StdDev.INTER_EVENT,
                             const.StdDev.INTRA_EVENT]:
             if stddev_type in fle:
@@ -369,8 +371,8 @@ class GMPETable(GMPE):
             # set the site and rupture parameters on the instance
             self.REQUIRES_SITES_PARAMETERS = set()
             self.REQUIRES_RUPTURE_PARAMETERS = (
-                self.REQUIRES_RUPTURE_PARAMETERS | set(
-                    [self.amplification.parameter]))
+                self.REQUIRES_RUPTURE_PARAMETERS |
+                {self.amplification.parameter})
 
     def _supported_imts(self):
         """
