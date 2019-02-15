@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
-import re
 import abc
 import math
 import warnings
@@ -40,6 +39,9 @@ ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
 ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
 ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
                              'COEFFS_SITE_RESPONSE']
+ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
+                           'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
+                           'REQUIRES_DISTANCES']
 
 registry = {}  # GSIM name -> GSIM class
 
@@ -531,7 +533,8 @@ class GMPE(GroundShakingIntensityModel):
         Combines the parameters of the GMPE provided at the construction level
         with the ones originally assigned to the backbone modified GMPE.
         """
-        for key in ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS:
+        for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
+                    ADMITTED_SET_PARAMETERS):
             try:
                 val = getattr(self.gmpe, key)
             except AttributeError:
