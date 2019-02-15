@@ -72,6 +72,7 @@ install_requires = [
     'requests >=2.20, <2.21',
     'pyshp ==1.2.3',
     'PyYAML',
+    'toml',
 ]
 
 extras_require = {
