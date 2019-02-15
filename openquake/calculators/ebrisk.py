@@ -81,7 +81,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     if param['avg_losses']:
         losses_by_A = numpy.zeros((assgetter.num_assets, L), F32)
     else:
-        losses_by_A = None
+        losses_by_A = 0
     times = numpy.zeros(N)  # risk time per site_id
     for sid, haz in hazard.items():
         t0 = time.time()
@@ -115,7 +115,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
             agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
-    return {'elt': elt, 'agg_losses': agg, 'losses_by_A': losses_by_A,
+    return {'elt': elt,
+            'agg_losses': agg,
+            'losses_by_A': losses_by_A * param['ses_ratio'],
             'times': times}
 
 
