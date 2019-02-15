@@ -72,6 +72,7 @@ class OqParam(valid.ParamSet):
     discard_assets = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
+    ebrisk_maxweight = valid.Param(valid.positivefloat, 5E10)
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
@@ -105,7 +106,6 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 15)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
-    max_num_sites = valid.Param(valid.positiveint, TWO16)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
@@ -137,7 +137,7 @@ class OqParam(valid.ParamSet):
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
-    ruptures_per_block = valid.Param(valid.positiveint, 1000)
+    ruptures_per_block = valid.Param(valid.positiveint, 50000)
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -286,8 +286,6 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode == 'ebrisk':
             if self.insured_losses:
                 raise ValueError('ebrisk does not support insured losses')
-            elif self.hazard_calculation_id is None:
-                raise ValueError('ebrisk requires hazard_calculation_id')
             elif self.number_of_logic_tree_samples == 0:
                 logging.warning('ebrisk is not meant for full enumeration')
 

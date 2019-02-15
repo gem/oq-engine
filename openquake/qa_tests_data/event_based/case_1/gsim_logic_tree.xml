@@ -9,8 +9,7 @@
 
                 <logicTreeBranch branchID="b1">
                   <uncertaintyModel>
-                    <gsimByImt imt="PGA" gsim="SadighEtAl1997" />
-                    <gsimByImt imt="SA(0.1)" gsim="SadighEtAl1997" />
+                    SadighEtAl1997
                   </uncertaintyModel>
                   <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
