@@ -163,7 +163,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     ir_mon = monitor('iter_ruptures', measuremem=False)
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
-    if param['group']:
+    if sources.atomic and 'cluster' in param:
         numpy.random.seed(sources[0].serial)
         # Set the parameters required to compute the number of occurrences
         # of the group of sources
@@ -175,7 +175,6 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         # Note that using a single time interval corresponding to the product
         # of the investigation time and the number of realisations as we do
         # here is admitted only in the case of a time-independent model
-        print(rate, rate * time_span * samples * num_ses)
         grp_num_occ = numpy.random.poisson(rate * time_span * samples *
                                            num_ses)
         # Now we process the sources included in the group. Possible cases:
@@ -188,7 +187,6 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         rup_counter = {}
         rup_data = {}
         eff_ruptures = 0
-        print('num occurrences:', grp_num_occ)
         for rlz_num in range(grp_num_occ):
             if param['cluster']:
                 for src in sources:
