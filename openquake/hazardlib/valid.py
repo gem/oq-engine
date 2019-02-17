@@ -101,19 +101,6 @@ def gsim(value):
     return gs
 
 
-def gsim_by_imt(value):
-    """
-    >>> gsim_by_imt("PGA=AkkarBommer2010 SA(0.1)=SadighEtAl1997")
-    {'PGA': 'AkkarBommer2010()', 'SA(0.1)': 'SadighEtAl1997()'}
-    """
-    dic = {}
-    for imt_gsim in value.split():
-        imt, gsim_str = imt_gsim.split('=')
-        intensity_measure_type(imt)  # check validity
-        dic[imt] = gsim(gsim_str)
-    return dic
-
-
 def logic_tree_path(value):
     """
     >>> logic_tree_path('SM2_a3b1')
