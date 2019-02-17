@@ -28,7 +28,6 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
     groupby, group_array, gettemp, AccumDict)
 from openquake.hazardlib import source, sourceconverter
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
 
@@ -229,8 +228,6 @@ class CompositionInfo(object):
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(sorted(trti)),
-                     gsim_lt_xml=str(self.gsim_lt),
-                     gsim_fname=self.gsim_lt.fname,
                      tot_weight=self.tot_weight))
 
     def __fromh5__(self, dic, attrs):
@@ -238,15 +235,7 @@ class CompositionInfo(object):
         sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
-        self.gsim_fname = decode(self.gsim_fname)
-        if self.gsim_fname.endswith('.xml'):
-            # otherwise it would look in the current directory
-            GMPETable.GMPE_DIR = os.path.dirname(self.gsim_fname)
-            trts = sorted(self.trts)
-            tmp = gettemp(self.gsim_lt_xml, suffix='.xml')
-            self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
-        else:  # fake file with the name of the GSIM
-            self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
+        self.gsim_lt = dic['gsim_lt']
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
             tdata = sg_data[sm_id]
@@ -258,16 +247,11 @@ class CompositionInfo(object):
                     tot_ruptures=get_field(data, 'totrup', 0))
                 for data in tdata]
             path = tuple(str(decode(rec['path'])).split('_'))
-            trts = set(sg.trt for sg in srcgroups)
             sm = logictree.LtSourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
                 rec['num_rlzs'], sm_id, rec['samples'])
             self.source_models.append(sm)
         self.init()
-        try:
-            os.remove(tmp)  # gsim_lt file
-        except NameError:  # tmp is defined only in the regular case, see above
-            pass
 
     def get_num_rlzs(self, source_model=None):
         """
@@ -290,7 +274,7 @@ class CompositionInfo(object):
         """
         realizations = self.get_rlzs_assoc().realizations
         return numpy.array(
-            [(r.uid, gsim_names(r), r.weight['default'])
+            [(r.uid, gsim_names(r), r.weight['weight'])
              for r in realizations], rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
