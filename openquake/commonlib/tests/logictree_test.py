@@ -25,7 +25,6 @@ import mock
 import codecs
 import unittest
 import collections
-import toml
 
 import numpy
 from xml.parsers.expat import ExpatError
@@ -2049,7 +2048,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, toml.TomlDecodeError, "Invalid group name '+100'. "
+            xml, ValueError, "Invalid group name '+100'. "
             "Try quoting it. in file <StringIO>")
 
     def test_gmpe_uncertainty(self):
