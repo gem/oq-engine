@@ -1560,7 +1560,7 @@ class GsimLogicTree(object):
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
                         branchset['applyToTectonicRegionType'],
-                        branch_id, repr(gsim), weight, effective)
+                        branch_id, gsim, weight, effective)
                     branches.append(bt)
                 tot = sum(weights)
                 assert tot.is_one(), tot

@@ -538,7 +538,8 @@ class RuptureGetter(object):
         self.rlz2idx = {}
         nr = 0
         rlzi = []
-        for rlzs in rlzs_by_gsim.values():
+        for gsim, rlzs in rlzs_by_gsim.items():
+            assert not isinstance(gsim, str)
             for rlz in rlzs:
                 self.rlz2idx[rlz] = nr
                 rlzi.append(rlz)
