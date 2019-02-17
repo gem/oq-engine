@@ -1550,9 +1550,9 @@ class GsimLogicTree(object):
                         GMPETable.GMPE_DIR = os.path.dirname(self.fname)
                     try:
                         gsim = valid.gsim(uncertainty)
-                    except Exception:
-                        etype, exc, tb = sys.exc_info()
-                        raise_(etype, "%s in file %s" % (exc, self.fname), tb)
+                    except Exception as exc:
+                        raise ValueError(
+                            "%s in file %s" % (exc, self.fname)) from exc
                     if 'GMPETable' in uncertainty:
                         self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
