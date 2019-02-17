@@ -268,7 +268,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                     trts_.add(sg.trt)
 
         # recompute the GSIM logic tree if needed
-        if trtset != trts_:
+        if trts_ != {'*'} and trtset != trts_:
             before = cinfo.gsim_lt.get_num_paths()
             gsim_lt = cinfo.gsim_lt.reduce(trts_)
             after = gsim_lt.get_num_paths()

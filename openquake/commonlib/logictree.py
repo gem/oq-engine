@@ -1373,7 +1373,7 @@ class GsimLogicTree(object):
                                   'branchSetID': 'bs1',
                                   'uncertaintyType': 'gmpeModel'},
                                  nodes=[ltbranch])])])
-        return cls(str(gsim), ['*'], ltnode=lt)
+        return cls(repr(gsim), ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         self.fname = fname
@@ -1438,7 +1438,8 @@ class GsimLogicTree(object):
                         if hasattr(dset, 'value'):  # dataset, not group
                             d[group] = dset.value
                             if group == 'Distances':
-                                d['distance_type'] = dset.attrs['metric']
+                                d['distance_type'] = (
+                                    dset.attrs['metric'].decode('utf8'))
                         else:
                             d[group] = {k: ds.value for k, ds in dset.items()}
         return dic, {}
@@ -1473,7 +1474,7 @@ class GsimLogicTree(object):
         """
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
-        if trts != ['*']:
+        if trts != {'*'}:
             new.branches = []
             for br in self.branches:
                 branch = BranchTuple(br.trt, br.id, br.gsim, br.weight,

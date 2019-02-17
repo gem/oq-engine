@@ -10,7 +10,7 @@
                 <logicTreeBranch branchID="b1">
                   <uncertaintyModel>
                   [MultiGMPE."PGA".AkkarBommer2010]
-                  [MultiGMPE."SA(0.1)".Sadigh2007]
+                  [MultiGMPE."SA(0.1)".SadighEtAl1997]
                   </uncertaintyModel>
                   <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
