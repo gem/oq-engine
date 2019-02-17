@@ -147,7 +147,7 @@ class ValidationTestCase(unittest.TestCase):
                 return '<FakeGsim(%s)>' % self.arg
         registry['FakeGsim'] = FakeGsim
         try:
-            gsim = valid.gsim('FakeGsim', arg='0.1')
+            gsim = valid.gsim('[FakeGsim]\narg=0.1')
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
             self.assertEqual(gsim.minimum_distance, 0)
         finally:
