@@ -114,7 +114,7 @@ class CompositionInfo(object):
             object; if None, builds automatically a fake gsim logic tree
         """
         weight = 1
-        gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
+        gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
         fakeSM = logictree.LtSourceModel(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],

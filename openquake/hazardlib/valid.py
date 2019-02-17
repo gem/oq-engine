@@ -30,8 +30,6 @@ from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim import registry
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
-from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -82,6 +80,8 @@ def gsim(value):
     >>> gsim('[BooreAtkinson2011]')
     [BooreAtkinson2011]
     """
+    if not value.startswith('['):  # assume the GSIM name
+        value = '[%s]' % value
     [(gsim_name, kwargs)] = toml.loads(value).items()
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
     if gsim_name == 'FromFile':
@@ -93,7 +93,8 @@ def gsim(value):
     try:
         gs = gsim_class(**kwargs)
     except TypeError:
-        raise ValueError('Could not instantiate %s%s' % (value, kwargs))
+        raise
+        raise ValueError('Could not instantiate %s' % value)
     gs._toml = value
     gs.minimum_distance = minimum_distance
     gs.init()
