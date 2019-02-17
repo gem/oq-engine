@@ -178,7 +178,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
-    minimum_distance = 0  # can be set by the engine
+    _toml = ''  # set by valid.gsim
+    minimum_distance = 0  # set by valid.gsim
     superseded_by = None
     non_verified = False
 
@@ -443,16 +444,14 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         return hash(str(self))
 
-    def __str__(self):
-        kwargs = ', '.join('%s=%r' % kv for kv in self.kwargs.items())
-        return "%s(%s)" % (self.__class__.__name__, kwargs)
-
     def __repr__(self):
         """
         Default string representation for GSIM instances. It contains
         the name and values of the arguments, if any.
         """
-        return repr(str(self))
+        if self._toml:
+            return self._toml
+        return '[%s]' % self.__class__.__name__
 
 
 def _truncnorm_sf(truncation_level, values):
