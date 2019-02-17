@@ -2013,7 +2013,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         with self.assertRaises(errorclass) as exc:
             logictree.GsimLogicTree(StringIO(xml), ['Shield'])
         if errormessage is not None:
-            self.assertEqual(errormessage, str(exc.exception))
+            self.assertIn(errormessage, str(exc.exception))
 
     def parse_valid(self, xml, tectonic_region_types=('Shield',)):
         xmlbytes = xml.encode('utf-8') if hasattr(xml, 'encode') else xml
@@ -2048,8 +2048,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, "Invalid group name '+100'. "
-            "Try quoting it. in file <StringIO>")
+            xml, ValueError, "Invalid group name '+100'. Try quoting it.")
 
     def test_gmpe_uncertainty(self):
         xml = _make_nrml("""\
