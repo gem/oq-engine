@@ -86,6 +86,7 @@ NL="
 "
 TB="	"
 
+OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages:/opt/openquake/lib/python3.6/dist-packages
 #
 #  functions
 
@@ -401,7 +402,7 @@ _devtest_innervm_run () {
                  fi
                  sudo /opt/openquake/bin/pip install coverage
 
-                 export PYTHONPATH=\"\$PWD/oq-engine\"
+                 export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
 
                  /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.baselib --with-xunit --xunit-file=xunit-baselib.xml --with-doctest -vs openquake.baselib
@@ -566,6 +567,7 @@ _pkgtest_innervm_run () {
         # Switch to celery mode
         sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/; s/multi_node = false/multi_node = true/;' /etc/openquake/openquake.cfg
 
+export PYTHONPATH=\"$OPT_LIBS_PATH\"
 celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
 
@@ -1162,14 +1164,9 @@ while [ $# -gt 0 ]; do
             break
             ;;
         devtest)
-            ## FIXME
-            ## devtests are executed on Travis and are
-            ## expensive to be maintaned in the packager
-            ## we are keeping them disabled for now
-            ## because of lack of time
             # Sed removes 'origin/' from the branch name
-            # devtest_run "$(echo "$2" | sed 's@.*/@@g')"
-            # exit $?
+            devtest_run "$(echo "$2" | sed 's@.*/@@g')"
+            exit $?
             break
             ;;
         pkgtest)
