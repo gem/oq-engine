@@ -218,6 +218,9 @@ producing too small PoEs.'''
         tl = oq.truncation_level
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm
+        for src in csm.src_groups:
+            if src.atomic:
+                raise NotImplemented('Atomic groups are not supported yet')
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
 
