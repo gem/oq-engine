@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     186,455,639        
-date           2019-02-03T09:38:35
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:31
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 3, num_levels = 38
@@ -65,7 +65,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.04811 2.053E-04 0.04796 0.04825 2      
+read_source_models 0.04713 6.462E-04 0.04667 0.04759 2      
 only_filter        0.00267 NaN       0.00267 0.00267 1      
 ================== ======= ========= ======= ======= =======
 
@@ -82,6 +82,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.09622  0.58594   2     
-total only_filter        0.00267  1.20312   1     
+total read_source_models 0.09426  0.17578   2     
+total only_filter        0.00267  1.41406   1     
 ======================== ======== ========= ======

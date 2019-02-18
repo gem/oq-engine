@@ -319,7 +319,12 @@ class GMPETable(GMPE):
                 self.GMPE_TABLE = os.path.abspath(
                     os.path.join(self.GMPE_DIR, fname))
             fle = h5py.File(self.GMPE_TABLE, "r")
-        self.distance_type = decode(fle["Distances"].attrs["metric"])
+        try:
+            # this is the format inside the datastore
+            self.distance_type = fle["distance_type"].value
+        except KeyError:
+            # this is the original format outside the datastore
+            self.distance_type = decode(fle["Distances"].attrs["metric"])
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
         self.m_w = fle["Mw"][:]

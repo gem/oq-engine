@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     51,027,111         
-date           2019-02-03T09:39:41
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:37
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -50,21 +50,21 @@ b2        0.20000 trivial(1)      1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-1      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
+====== ================== ========= ========== ==========
+grp_id gsims              distances siteparams ruptparams
+====== ================== ========= ========== ==========
+0      '[SadighEtAl1997]' rrup      vs30       mag rake  
+1      '[SadighEtAl1997]' rrup      vs30       mag rake  
+====== ================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=5)
-  0,SadighEtAl1997(): [0 1 2]
-  1,SadighEtAl1997(): [3 4]>
+  0,'[SadighEtAl1997]': [0 1 2]
+  1,'[SadighEtAl1997]': [3 4]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -99,15 +99,11 @@ code calc_time counts
 P    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00135 3.304E-05 0.00133 0.00138 2      
+read_source_models 0.00124 1.158E-04 0.00116 0.00132 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -122,5 +118,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00271  0.09766   2     
+total read_source_models 0.00248  0.01953   2     
 ======================== ======== ========= ======

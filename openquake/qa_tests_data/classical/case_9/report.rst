@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 9
 
 ============== ===================
 checksum32     774,957,335        
-date           2019-02-03T09:39:40
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:35
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -50,21 +50,21 @@ b1_b3     0.50000 trivial(1)      1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-1      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
+====== ================== ========= ========== ==========
+grp_id gsims              distances siteparams ruptparams
+====== ================== ========= ========== ==========
+0      '[SadighEtAl1997]' rrup      vs30       mag rake  
+1      '[SadighEtAl1997]' rrup      vs30       mag rake  
+====== ================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,SadighEtAl1997(): [0]
-  1,SadighEtAl1997(): [1]>
+  0,'[SadighEtAl1997]': [0]
+  1,'[SadighEtAl1997]': [1]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -87,8 +87,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      1         P    1     2     3,500        0.0       6.199E-06  1.00000   1         350   
-0      1         P    0     1     3,000        0.0       3.457E-05  1.00000   1         300   
+1      1         P    1     2     3,500        0.0       5.722E-06  1.00000   1         350   
+0      1         P    0     1     3,000        0.0       1.884E-05  1.00000   1         300   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -99,17 +99,12 @@ code calc_time counts
 P    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 1 source(s) with the same ID and 0 true duplicate(s)
-Here is a fake duplicate: 1
-
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00462 3.001E-05 0.00460 0.00464 2      
-split_filter       0.01034 NaN       0.01034 0.01034 1      
+read_source_models 0.00489 1.027E-04 0.00482 0.00496 2      
+split_filter       0.02505 NaN       0.02505 0.02505 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -125,6 +120,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01034  2.23047   1     
-total read_source_models 0.00923  0.61328   2     
+total split_filter       0.02505  2.08594   1     
+total read_source_models 0.00978  0.51562   2     
 ======================== ======== ========= ======
