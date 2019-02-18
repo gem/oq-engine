@@ -16,14 +16,14 @@ Python packages can also be specified to run only a subset of tests. Some exampl
 
 ```bash
 # Hazardlib
-$ nosetests -v openquake.hazardlib
+$ nosetests -vs openquake.hazardlib
 
 # Calculators
-$ nosetests -v openquake.calculators
+$ nosetests -vs openquake.calculators
 
 # Engine server
 $ oq dbserver start &
-$ nosetests -v openquake.server
+$ nosetests -vs openquake.server
 ```
 
 See the [man page](http://nose.readthedocs.io/en/latest/man.html) of `nosetests` for further information and command options.
