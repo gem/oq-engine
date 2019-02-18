@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2019-02-03T09:37:22
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:35:18
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 50
@@ -49,24 +49,24 @@ b1        1.00000 simple(1,4)     4
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================================================================================== ========== ========== ==============
-grp_id gsims                                                                                    distances  siteparams ruptparams    
-====== ======================================================================================== ========== ========== ==============
-0      AkkarBommer2010()                                                                        rjb        vs30       mag rake      
-1      AtkinsonBoore2003SInter() LinLee2008SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter() rhypo rrup vs30       hypo_depth mag
-====== ======================================================================================== ========== ========== ==============
+====== ================================================================================================ ========== ========== ==============
+grp_id gsims                                                                                            distances  siteparams ruptparams    
+====== ================================================================================================ ========== ========== ==============
+0      '[AkkarBommer2010]'                                                                              rjb        vs30       mag rake      
+1      '[AtkinsonBoore2003SInter]' '[LinLee2008SInter]' '[YoungsEtAl1997SInter]' '[ZhaoEtAl2006SInter]' rhypo rrup vs30       hypo_depth mag
+====== ================================================================================================ ========== ========== ==============
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=5, rlzs=4)
-  0,AkkarBommer2010(): [0 1 2 3]
-  1,AtkinsonBoore2003SInter(): [1]
-  1,LinLee2008SInter(): [3]
-  1,YoungsEtAl1997SInter(): [2]
-  1,ZhaoEtAl2006SInter(): [0]>
+  0,'[AkkarBommer2010]': [0 1 2 3]
+  1,'[AtkinsonBoore2003SInter]': [1]
+  1,'[LinLee2008SInter]': [3]
+  1,'[YoungsEtAl1997SInter]': [2]
+  1,'[ZhaoEtAl2006SInter]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -89,8 +89,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      B         P    1     2     23           0.0       5.722E-06  1.00000   1         2.30000
-0      A         P    0     1     23           0.0       4.029E-05  1.00000   1         2.30000
+1      B         P    1     2     23           0.0       1.955E-05  1.00000   1         2.30000
+0      A         P    0     1     23           0.0       2.027E-05  1.00000   1         2.30000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -101,24 +101,20 @@ code calc_time counts
 P    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.00165 NaN    0.00165 0.00165 1      
-split_filter       0.00278 NaN    0.00278 0.00278 1      
-================== ======= ====== ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.00168 NaN       0.00168 0.00168 1      
+split_filter       0.00266 5.563E-06 0.00266 0.00266 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ====================================== ========
 task               sent                                   received
 read_source_models converter=313 B fnames=111 B           1.97 KB 
-split_filter       srcs=1.51 KB srcfilter=253 B seed=14 B 1.66 KB 
+split_filter       srcs=1.15 KB srcfilter=253 B seed=14 B 2.49 KB 
 ================== ====================================== ========
 
 Slowest operations
@@ -126,6 +122,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00278  1.51562   1     
-total read_source_models 0.00165  0.09766   1     
+total split_filter       0.00532  1.46484   2     
+total read_source_models 0.00168  0.0       1     
 ======================== ======== ========= ======
