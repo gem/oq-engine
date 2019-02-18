@@ -18,7 +18,6 @@
 
 import os.path
 import logging
-import itertools
 import collections
 import operator
 import numpy
@@ -240,6 +239,8 @@ class EventBasedCalculator(base.HazardCalculator):
             idxs = base.get_idxs(data, self.eid2idx)  # this has to be fast
             data['eid'] = idxs  # replace eid with idx
             self.datastore.extend('gmf_data/data', data)
+            self.datastore.extend('gmf_data/sigma', result.pop('sig'))
+            self.datastore.extend('gmf_data/epsilon', result.pop('eps'))
             # it is important to save the number of bytes while the
             # computation is going, to see the progress
             update_nbytes(self.datastore, 'gmf_data/data', data)
