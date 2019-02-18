@@ -377,7 +377,6 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
-    @attr('qa', 'hazard', 'event_based')
     def test_gmpe_tables(self):
         out = self.run_calc(
             gmpe_tables.__file__, 'job.ini',
