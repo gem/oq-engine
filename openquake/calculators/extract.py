@@ -18,6 +18,8 @@
 import collections
 import operator
 import logging
+import io
+import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -32,7 +34,7 @@ from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, oqvalidation
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -748,3 +750,36 @@ def get_ruptures_within(dstore, bbox):
     mask = ((minlon <= hypo[0]) * (minlat <= hypo[1]) *
             (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
     return dstore['ruptures'][mask]
+
+# #####################  extraction from the WebAPI ###################### #
+
+
+class Extractor(object):
+    """
+    A class to extract data from the WebAPI.
+    NB: instantiating the Extractor opens a session
+    """
+    def __init__(self, calc_id, server, username, password):
+        self.calc_id = calc_id
+        self.server = server
+        self.sess = requests.Session()
+        if username:
+            login_url = '%s/accounts/ajax_login/' % server
+            resp = self.sess.post(
+                login_url, data=dict(username=username, password=password))
+            assert resp.status_code == 200, resp.status_code
+        params = self.sess.get(
+            '%s/v1/calc/%d/oqparam' % (server, calc_id)).json()
+        self.oqparam = object.__new__(oqvalidation.OqParam)
+        vars(self.oqparam).update(params)
+
+    def get_npz(self, partial_url):
+        """
+        :param partial_url: what to extract
+        :returns: an NPZFile instance
+        """
+        url = '%s/v1/calc/%d/extract/%s' % (
+            self.server, self.calc_id, partial_url)
+        resp = self.sess.get(url)
+        assert resp.status_code == 200, resp.status_code
+        return numpy.load(io.BytesIO(resp.content))
