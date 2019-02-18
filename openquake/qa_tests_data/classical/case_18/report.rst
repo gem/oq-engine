@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     2,974,360,533      
-date           2019-02-03T09:40:27
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:38:20
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -50,21 +50,21 @@ b1        1.00000 simple(3)       3
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ========================================================================================================================================== ========= ========== ==========
-grp_id gsims                                                                                                                                      distances siteparams ruptparams
-====== ========================================================================================================================================== ========= ========== ==========
-0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rrup                 mag       
-====== ========================================================================================================================================== ========= ========== ==========
+====== ============================================================================================================================================================ ========== ========== ==========
+grp_id gsims                                                                                                                                                        distances  siteparams ruptparams
+====== ============================================================================================================================================================ ========== ========== ==========
+0      "[GMPETable]\ngmpe_table = 'Wcrust_high_rhypo.hdf5'" "[GMPETable]\ngmpe_table = 'Wcrust_low_rhypo.hdf5'" "[GMPETable]\ngmpe_table = 'Wcrust_med_rhypo.hdf5'" rhypo rrup            mag       
+====== ============================================================================================================================================================ ========== ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=3, rlzs=3)
-  0,GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5'): [2]
-  0,GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5'): [0]
-  0,GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5'): [1]>
+  0,"[GMPETable]\ngmpe_table = 'Wcrust_high_rhypo.hdf5'": [2]
+  0,"[GMPETable]\ngmpe_table = 'Wcrust_low_rhypo.hdf5'": [0]
+  0,"[GMPETable]\ngmpe_table = 'Wcrust_med_rhypo.hdf5'": [1]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -79,7 +79,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      VICM      A    0     8     2,430        0.0       0.22064    90        30        420   
+0      VICM      A    0     8     2,430        0.0       0.20715    90        30        420   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -90,16 +90,12 @@ code calc_time counts
 A    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00878 NaN    0.00878 0.00878 1      
-split_filter       0.01277 NaN    0.01277 0.01277 1      
+read_source_models 0.00852 NaN    0.00852 0.00852 1      
+split_filter       0.01229 NaN    0.01229 0.01229 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -115,6 +111,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01277  1.70703   1     
-total read_source_models 0.00878  0.35156   1     
+total split_filter       0.01229  1.84375   1     
+total read_source_models 0.00852  0.12109   1     
 ======================== ======== ========= ======
