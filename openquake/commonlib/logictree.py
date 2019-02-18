@@ -26,7 +26,7 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 
 import os
 import re
-import sys
+import ast
 import copy
 import logging
 import itertools
@@ -36,7 +36,6 @@ from collections import namedtuple
 import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.general import groupby, duplicated
-from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -1337,7 +1336,11 @@ def toml(uncertainty):
     if not text.startswith('['):  # a bare GSIM name was passed
         text = '[%s]' % text
     for k, v in uncertainty.attrib.items():
-        text += '\n%s = %s' % (k, repr(v))
+        try:
+            v = ast.literal_eval(v)
+        except ValueError:
+            v = repr(v)
+        text += '\n%s = %s' % (k, v)
     return text
 
 
