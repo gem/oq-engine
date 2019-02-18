@@ -16,15 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap
+from openquake.hazardlib.imt import from_string
 from openquake.calculators import getters
 from openquake.commonlib import calc
 from openquake.commands import engine
 
 
-def make_figure(sitecol, imtls, poes, hmaps):
+def make_figure(sitecol, imt, imls, poes, hmaps):
     """
     :param sitecol: site collection
-    :param imtls: DictArray with the IMTs and levels
+    :param imt: intensity measure type
+    :param imls: intensity measure levels
     :param poes: PoEs used to compute the hazard maps
     :param hmaps: mean hazard maps as an array of shape (N, M, P)
     """
@@ -32,31 +34,28 @@ def make_figure(sitecol, imtls, poes, hmaps):
     import matplotlib.pyplot as plt
     fig = plt.figure()
     n_poes = len(poes)
-    num_imts = len(imtls)
-    for i, imt in enumerate(imtls):
-        for j, poe in enumerate(poes):
-            ax = fig.add_subplot(num_imts, n_poes, i * n_poes + j + 1)
-            ax.grid(True)
-            ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
-            ax.scatter(sitecol.lons, sitecol.lats, c=hmaps[:, i, j],
-                       cmap='rainbow')
+    i = 0
+    for j, poe in enumerate(poes):
+        ax = fig.add_subplot(1, n_poes, i * n_poes + j + 1)
+        ax.grid(True)
+        ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
+        ax.scatter(sitecol.lons, sitecol.lats, c=hmaps[:, i, j],
+                   cmap='rainbow')
     return plt
 
 
 @sap.Script
-def plot_hmaps(calc_id):
+def plot_hmaps(calc_id, imt):
     """
     Mean hazard maps plotter.
     """
     dstore = engine.read(calc_id)
     oq = dstore['oqparam']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
-    hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
-    M, P = len(oq.imtls), len(oq.poes)
-    array = hmaps.array.reshape(len(hmaps.array), M, P)
-    plt = make_figure(dstore['sitecol'], oq.imtls, oq.poes, array)
+    array = dstore['hmaps/mean'].value  # shape (N, M, P)
+    imls = oq.imtls[str(imt)]
+    plt = make_figure(dstore['sitecol'], imt, imls, oq.poes, array)
     plt.show()
 
 
 plot_hmaps.arg('calc_id', 'a computation id', type=int)
+plot_hmaps.arg('imt', 'an intensity measure type', type=from_string)
