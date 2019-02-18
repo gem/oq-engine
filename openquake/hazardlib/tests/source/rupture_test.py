@@ -176,7 +176,7 @@ class Cdppvalue(unittest.TestCase):
 
             self.assertAlmostEqual(dpp, ref_dpp, delta=0.1)
 
-    @unittest.skipUnless(os.environ.get('OQ_RUN_SLOW_TESTS') == '1', 'slow')
+    @unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
     def test_get_cdppvalue(self):
         rupture = self.make_rupture_fordpp(
             ParametricProbabilisticRupture, occurrence_rate=0.01,

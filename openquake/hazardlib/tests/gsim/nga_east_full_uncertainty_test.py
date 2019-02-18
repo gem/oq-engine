@@ -538,7 +538,7 @@ NGA_EAST_SIGMA_FILES = [
     ]
 
 
-@unittest.skipUnless(os.environ.get('OQ_RUN_SLOW_TESTS') == '1', 'slow')
+@unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
 class NGAEastUncertaintyTestCase(unittest.TestCase):
     """
     Variant of the :class:
