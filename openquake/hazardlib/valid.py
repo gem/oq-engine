@@ -90,11 +90,7 @@ def gsim(value):
         gsim_class = registry[gsim_name]
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % gsim_name)
-    try:
-        gs = gsim_class(**kwargs)
-    except TypeError:
-        raise
-        raise ValueError('Could not instantiate %s' % value)
+    gs = gsim_class(**kwargs)
     gs._toml = value
     gs.minimum_distance = minimum_distance
     gs.init()

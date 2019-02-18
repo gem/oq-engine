@@ -446,8 +446,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     def __repr__(self):
         """
-        Default string representation for GSIM instances. It contains
-        the name and values of the arguments, if any.
+        String representation for GSIM instances in TOML format.
         """
         if self._toml:
             return self._toml
