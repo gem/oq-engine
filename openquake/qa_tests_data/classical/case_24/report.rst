@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2019-02-03T09:39:55
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:50
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 197
@@ -49,19 +49,19 @@ b1        1.00000 trivial(1)      1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
+====== ===================== ========= ========== ==========
+grp_id gsims                 distances siteparams ruptparams
+====== ===================== ========= ========== ==========
+0      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+====== ===================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): [0]>
+  0,'[BooreAtkinson2008]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -76,7 +76,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     4     260          0.0       0.57374    52        52        26    
+0      1         A    0     4     260          0.0       0.56202    52        52        26    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -87,16 +87,12 @@ code calc_time counts
 A    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01211 NaN    0.01211 0.01211 1      
-split_filter       0.01819 NaN    0.01819 0.01819 1      
+read_source_models 0.01246 NaN    0.01246 0.01246 1      
+split_filter       0.01751 NaN    0.01751 0.01751 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -112,6 +108,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01819  1.62109   1     
-total read_source_models 0.01211  0.40234   1     
+total split_filter       0.01751  2.14844   1     
+total read_source_models 0.01246  0.21484   1     
 ======================== ======== ========= ======

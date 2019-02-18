@@ -23,7 +23,7 @@ models organised by IMT type or by a string describing the association
 """
 import collections
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GMPE
+from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.imt import from_string
 
 uppernames = '''
@@ -65,15 +65,16 @@ class MultiGMPE(GMPE, collections.Mapping):
     #: Required distance metrics will be set by the GMPEs
     REQUIRES_DISTANCES = set()
 
-    def __init__(self, gsim_by_imt):
+    def __init__(self, **kwargs):
         """
         Instantiate with a dictionary of GMPEs organised by IMT
         """
-        super().__init__()
-        self.gsim_by_imt = gsim_by_imt
+        super().__init__(**kwargs)
         for name in uppernames:
-            setattr(self, name, getattr(self, name).copy())
-        for imt, gsim in gsim_by_imt.items():
+            setattr(self, name, set(getattr(self, name)))
+        for imt, gsim_dic in self.kwargs.items():
+            [(gsim_name, kw)] = gsim_dic.items()
+            self.kwargs[imt] = gsim = registry[gsim_name](**kw)
             imt_class = from_string(imt).__class__
             if imt_class not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
                 raise ValueError("IMT %s not supported by %s" % (imt, gsim))
@@ -81,22 +82,22 @@ class MultiGMPE(GMPE, collections.Mapping):
                 getattr(self, name).update(getattr(gsim, name))
 
     def __iter__(self):
-        yield from self.gsim_by_imt
+        yield from self.kwargs
 
     def __getitem__(self, imt):
-        return self.gsim_by_imt[imt]
+        return self.kwargs[imt]
 
     def __len__(self):
-        return len(self.gsim_by_imt)
+        return len(self.kwargs)
 
     def __hash__(self):
         items = tuple((imt, str(gsim)) for imt, gsim in
-                      sorted(self.gsim_by_imt.items()))
+                      sorted(self.kwargs.items()))
         return hash(items)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Call the get mean and stddevs of the GMPE for the respective IMT
         """
-        return self.gsim_by_imt[str(imt)].get_mean_and_stddevs(
+        return self.kwargs[str(imt)].get_mean_and_stddevs(
             sctx, rctx, dctx, imt, stddev_types)

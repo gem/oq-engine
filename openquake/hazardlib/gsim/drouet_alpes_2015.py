@@ -311,7 +311,7 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rhyp', ))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -494,7 +494,7 @@ class DrouetAlpes2015RhypHR(DrouetAlpes2015Rhyp):
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rhyp', ))
+    REQUIRES_DISTANCES = {'rhypo'}
     DEFINED_FOR_REFERENCE_VELOCITY = 2000
 
     #: Coefficient tables are constructed from the electronic suplements of
@@ -650,7 +650,7 @@ class DrouetAlpes2015Rhyp_50bars(DrouetAlpes2015Rhyp):
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rhyp', ))
+    REQUIRES_DISTANCES = {'rhypo'}
     DEFINED_FOR_REFERENCE_VELOCITY = 800
 
     #: Coefficient table is not published
