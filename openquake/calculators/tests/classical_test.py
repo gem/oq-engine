@@ -89,7 +89,7 @@ class ClassicalTestCase(CalculatorTestCase):
                 case_1.__file__, 'job.ini',
                 intensity_measure_types_and_levels=imtls)
         self.assertEqual(
-            'SA(4.1) is out of the period range defined for SadighEtAl1997()',
+            'SA(4.1) is out of the period range defined for [SadighEtAl1997]',
             str(ctx.exception))
 
     @attr('qa', 'hazard', 'classical')
