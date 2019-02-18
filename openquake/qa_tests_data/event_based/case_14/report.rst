@@ -3,8 +3,8 @@ Hazard South Africa
 
 ============== ===================
 checksum32     3,741,932,100      
-date           2019-02-03T09:38:28
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:24
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 18, num_levels = 1
@@ -65,17 +65,12 @@ code calc_time counts
 A    0.0       10    
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 5 source(s) with the same ID and 0 true duplicate(s)
-Here is a fake duplicate: 20
-
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.04649 0.05471   0.00309 0.13871 10     
-only_filter        0.00277 1.105E-04 0.00263 0.00289 5      
+read_source_models 0.04712 0.05442   0.00322 0.13859 10     
+only_filter        0.00266 1.324E-04 0.00254 0.00286 5      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -91,6 +86,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.46488  0.68750   10    
-total only_filter        0.01385  1.64844   5     
+total read_source_models 0.47122  0.60156   10    
+total only_filter        0.01332  1.51172   5     
 ======================== ======== ========= ======

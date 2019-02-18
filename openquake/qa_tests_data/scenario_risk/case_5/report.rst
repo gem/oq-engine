@@ -3,8 +3,8 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     3,193,187,389      
-date           2019-02-03T09:37:39
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:35:34
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 8, num_levels = 106
@@ -50,13 +50,13 @@ smlt_path weight  gsim_logic_tree num_realizations
 b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,AkkarEtAlRjb2014(): [0]>
+  0,'[AkkarEtAlRjb2014]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -89,8 +89,8 @@ Slowest operations
 =================== ======== ========= ======
 operation           time_sec memory_mb counts
 =================== ======== ========= ======
-building riskinputs 0.01008  0.26562   1     
-saving gmfs         0.00410  0.0       1     
-computing gmfs      0.00355  0.20312   1     
-reading exposure    0.00217  0.0       1     
+building riskinputs 0.01022  0.0       1     
+saving gmfs         0.00391  0.0       1     
+computing gmfs      0.00348  0.0       1     
+reading exposure    0.00225  0.0       1     
 =================== ======== ========= ======
