@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     905,885,649        
-date           2019-02-03T09:39:53
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:48
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -51,29 +51,29 @@ SM2_a3pt2b0pt8 0.25000 simple(2,0)     2
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =========================================== ========= ========== =================
-grp_id gsims                                       distances siteparams ruptparams       
-====== =========================================== ========= ========== =================
-0      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  vs30 z2pt5 dip mag rake ztor
-1      Campbell2003() ToroEtAl2002()               rjb rrup             mag              
-2      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  vs30 z2pt5 dip mag rake ztor
-3      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  vs30 z2pt5 dip mag rake ztor
-====== =========================================== ========= ========== =================
+====== =============================================== ========= ========== =================
+grp_id gsims                                           distances siteparams ruptparams       
+====== =============================================== ========= ========== =================
+0      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+1      '[Campbell2003]' '[ToroEtAl2002]'               rjb rrup             mag              
+2      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+3      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+====== =============================================== ========= ========== =================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=8, rlzs=8)
-  0,BooreAtkinson2008(): [0 1]
-  0,CampbellBozorgnia2008(): [2 3]
-  1,Campbell2003(): [0 2]
-  1,ToroEtAl2002(): [1 3]
-  2,BooreAtkinson2008(): [4]
-  2,CampbellBozorgnia2008(): [5]
-  3,BooreAtkinson2008(): [6]
-  3,CampbellBozorgnia2008(): [7]>
+  0,'[BooreAtkinson2008]': [0 1]
+  0,'[CampbellBozorgnia2008]': [2 3]
+  1,'[Campbell2003]': [0 2]
+  1,'[ToroEtAl2002]': [1 3]
+  2,'[BooreAtkinson2008]': [4]
+  2,'[CampbellBozorgnia2008]': [5]
+  3,'[BooreAtkinson2008]': [6]
+  3,'[CampbellBozorgnia2008]': [7]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -98,10 +98,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-3      1         A    6     10    240          0.0       0.04556    48        16        41     
-2      1         A    2     6     240          0.0       0.04900    48        16        41     
-1      2         P    1     2     15           0.0       7.391E-06  3.00000   1         2.59808
-0      1         P    0     1     15           0.0       2.193E-05  3.00000   1         2.59808
+3      1         A    6     10    240          0.0       0.03266    48        16        41     
+2      1         A    2     6     240          0.0       0.03665    48        16        41     
+1      2         P    1     2     15           0.0       1.812E-05  3.00000   1         2.59808
+0      1         P    0     1     15           0.0       1.884E-05  3.00000   1         2.59808
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -113,17 +113,12 @@ A    0.0       2
 P    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 1 source(s) with the same ID and 0 true duplicate(s)
-Here is a fake duplicate: 1
-
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00323 0.00141 0.00160 0.00405 3      
-split_filter       0.01301 NaN     0.01301 0.01301 1      
+read_source_models 0.00318 0.00142 0.00154 0.00405 3      
+split_filter       0.00620 0.00507 0.00261 0.00978 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -131,7 +126,7 @@ Data transfer
 ================== ====================================== ========
 task               sent                                   received
 read_source_models converter=939 B fnames=327 B           6.72 KB 
-split_filter       srcs=3.48 KB srcfilter=253 B seed=14 B 9.38 KB 
+split_filter       srcs=1.15 KB srcfilter=253 B seed=14 B 10.21 KB
 ================== ====================================== ========
 
 Slowest operations
@@ -139,6 +134,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01301  1.51172   1     
-total read_source_models 0.00969  0.54297   3     
+total split_filter       0.01239  1.45312   2     
+total read_source_models 0.00954  0.32422   3     
 ======================== ======== ========= ======
