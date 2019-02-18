@@ -3,8 +3,8 @@ Classical PSHA with source specific logic tree (3**2 realizations)
 
 ============== ===================
 checksum32     283,798,826        
-date           2019-02-03T09:39:47
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:42
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 14
@@ -57,53 +57,53 @@ b11_b23_b33 0.11156 trivial(1,1)    1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-1      ToroEtAl2002()      rjb                  mag       
-2      BooreAtkinson2008() rjb       vs30       mag rake  
-3      ToroEtAl2002()      rjb                  mag       
-4      BooreAtkinson2008() rjb       vs30       mag rake  
-5      ToroEtAl2002()      rjb                  mag       
-6      BooreAtkinson2008() rjb       vs30       mag rake  
-7      ToroEtAl2002()      rjb                  mag       
-8      BooreAtkinson2008() rjb       vs30       mag rake  
-9      ToroEtAl2002()      rjb                  mag       
-10     BooreAtkinson2008() rjb       vs30       mag rake  
-11     ToroEtAl2002()      rjb                  mag       
-12     BooreAtkinson2008() rjb       vs30       mag rake  
-13     ToroEtAl2002()      rjb                  mag       
-14     BooreAtkinson2008() rjb       vs30       mag rake  
-15     ToroEtAl2002()      rjb                  mag       
-16     BooreAtkinson2008() rjb       vs30       mag rake  
-17     ToroEtAl2002()      rjb                  mag       
-====== =================== ========= ========== ==========
+====== ===================== ========= ========== ==========
+grp_id gsims                 distances siteparams ruptparams
+====== ===================== ========= ========== ==========
+0      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+1      '[ToroEtAl2002]'      rjb                  mag       
+2      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+3      '[ToroEtAl2002]'      rjb                  mag       
+4      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+5      '[ToroEtAl2002]'      rjb                  mag       
+6      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+7      '[ToroEtAl2002]'      rjb                  mag       
+8      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+9      '[ToroEtAl2002]'      rjb                  mag       
+10     '[BooreAtkinson2008]' rjb       vs30       mag rake  
+11     '[ToroEtAl2002]'      rjb                  mag       
+12     '[BooreAtkinson2008]' rjb       vs30       mag rake  
+13     '[ToroEtAl2002]'      rjb                  mag       
+14     '[BooreAtkinson2008]' rjb       vs30       mag rake  
+15     '[ToroEtAl2002]'      rjb                  mag       
+16     '[BooreAtkinson2008]' rjb       vs30       mag rake  
+17     '[ToroEtAl2002]'      rjb                  mag       
+====== ===================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=18, rlzs=9)
-  0,BooreAtkinson2008(): [0]
-  1,ToroEtAl2002(): [0]
-  2,BooreAtkinson2008(): [1]
-  3,ToroEtAl2002(): [1]
-  4,BooreAtkinson2008(): [2]
-  5,ToroEtAl2002(): [2]
-  6,BooreAtkinson2008(): [3]
-  7,ToroEtAl2002(): [3]
-  8,BooreAtkinson2008(): [4]
-  9,ToroEtAl2002(): [4]
-  10,BooreAtkinson2008(): [5]
-  11,ToroEtAl2002(): [5]
-  12,BooreAtkinson2008(): [6]
-  13,ToroEtAl2002(): [6]
-  14,BooreAtkinson2008(): [7]
-  15,ToroEtAl2002(): [7]
-  16,BooreAtkinson2008(): [8]
-  17,ToroEtAl2002(): [8]>
+  0,'[BooreAtkinson2008]': [0]
+  1,'[ToroEtAl2002]': [0]
+  2,'[BooreAtkinson2008]': [1]
+  3,'[ToroEtAl2002]': [1]
+  4,'[BooreAtkinson2008]': [2]
+  5,'[ToroEtAl2002]': [2]
+  6,'[BooreAtkinson2008]': [3]
+  7,'[ToroEtAl2002]': [3]
+  8,'[BooreAtkinson2008]': [4]
+  9,'[ToroEtAl2002]': [4]
+  10,'[BooreAtkinson2008]': [5]
+  11,'[ToroEtAl2002]': [5]
+  12,'[BooreAtkinson2008]': [6]
+  13,'[ToroEtAl2002]': [6]
+  14,'[BooreAtkinson2008]': [7]
+  15,'[ToroEtAl2002]': [7]
+  16,'[BooreAtkinson2008]': [8]
+  17,'[ToroEtAl2002]': [8]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -142,24 +142,24 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-17     1         A    59    63    1,040        0.0       0.62167    52        52        104   
-16     2         S    56    59    310          0.0       0.00122    10        10        310   
-15     1         A    52    56    1,040        0.0       0.64078    52        52        104   
-14     2         S    49    52    310          0.0       0.00143    10        10        310   
-13     1         A    45    49    1,040        0.0       0.65600    52        52        104   
-12     2         S    42    45    310          0.0       0.00120    10        10        310   
-11     1         A    38    42    1,040        0.0       0.90738    52        52        104   
-10     2         S    35    38    310          0.0       0.00102    10        10        310   
-9      1         A    31    35    1,040        0.0       0.68143    52        52        104   
-8      2         S    28    31    310          0.0       0.00113    10        10        310   
-7      1         A    24    28    1,040        0.0       0.62148    52        52        104   
-6      2         S    21    24    310          0.0       0.00112    10        10        310   
-5      1         A    17    21    1,040        0.0       0.62565    52        52        104   
-4      2         S    14    17    310          0.0       0.00103    10        10        310   
-3      1         A    10    14    1,040        0.0       0.62895    52        52        104   
-2      2         S    7     10    310          0.0       0.00108    10        10        310   
-1      1         A    3     7     1,040        0.0       0.65150    52        52        104   
-0      2         S    0     3     310          0.0       0.00148    10        10        310   
+17     1         A    59    63    1,040        0.0       0.56978    52        52        104   
+16     2         S    56    59    310          0.0       7.296E-04  10        10        310   
+15     1         A    52    56    1,040        0.0       0.58639    52        52        104   
+14     2         S    49    52    310          0.0       7.939E-04  10        10        310   
+13     1         A    45    49    1,040        0.0       0.58300    52        52        104   
+12     2         S    42    45    310          0.0       8.750E-04  10        10        310   
+11     1         A    38    42    1,040        0.0       0.57119    52        52        104   
+10     2         S    35    38    310          0.0       9.108E-04  10        10        310   
+9      1         A    31    35    1,040        0.0       0.57601    52        52        104   
+8      2         S    28    31    310          0.0       8.464E-04  10        10        310   
+7      1         A    24    28    1,040        0.0       0.57682    52        52        104   
+6      2         S    21    24    310          0.0       8.726E-04  10        10        310   
+5      1         A    17    21    1,040        0.0       0.57408    52        52        104   
+4      2         S    14    17    310          0.0       0.00119    10        10        310   
+3      1         A    10    14    1,040        0.0       0.59384    52        52        104   
+2      2         S    7     10    310          0.0       8.726E-04  10        10        310   
+1      1         A    3     7     1,040        0.0       0.59058    52        52        104   
+0      2         S    0     3     310          0.0       0.00135    10        10        310   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -180,23 +180,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01859 0.00337 0.01719 0.02758 9      
-split_filter       0.13858 0.12519 0.05006 0.22710 2      
+read_source_models 0.01952 0.00361 0.01694 0.02741 9      
+split_filter       0.12402 0.03316 0.10057 0.14746 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= =========
-task               sent                                    received 
-read_source_models converter=2.75 KB fnames=963 B          28.02 KB 
-split_filter       srcs=12.84 KB srcfilter=506 B seed=28 B 131.48 KB
-================== ======================================= =========
+================== ====================================== =========
+task               sent                                   received 
+read_source_models converter=2.75 KB fnames=963 B         28.02 KB 
+split_filter       srcs=7.79 KB srcfilter=253 B seed=14 B 128.96 KB
+================== ====================================== =========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.27717  2.13281   2     
-total read_source_models 0.16734  0.65625   9     
+total split_filter       0.24803  2.38281   2     
+total read_source_models 0.17566  0.35156   9     
 ======================== ======== ========= ======
