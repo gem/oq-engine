@@ -23,14 +23,13 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
+import toml
 import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim import registry
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
-from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -70,52 +69,32 @@ class FromFile(object):
         pass
 
     def __repr__(self):
-        return 'FromFile'
+        return '[FromFile]'
 
 
 # more tests are in tests/valid_test.py
-def gsim(value, **kwargs):
+def gsim(value):
     """
-    Make sure the given value is the name of an available GSIM class.
+    Convert a string in TOML format into a GSIM instance
 
-    >>> gsim('BooreAtkinson2011')
-    'BooreAtkinson2011()'
+    >>> gsim('[BooreAtkinson2011]')
+    [BooreAtkinson2011]
     """
+    if not value.startswith('['):  # assume the GSIM name
+        value = '[%s]' % value
+    [(gsim_name, kwargs)] = toml.loads(value).items()
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
-    if value.endswith('()'):
-        value = value[:-2]  # strip parenthesis
-    if value == 'FromFile':
+    if gsim_name == 'FromFile':
         return FromFile()
-    elif value.startswith('GMPETable'):
-        gsim_class = GMPETable
-    elif value.startswith('MultiGMPE'):
-        gsim_class = MultiGMPE
-        kwargs['gsimByImt'] = gsim_by_imt(kwargs['gsimByImt'])
-    else:
-        try:
-            gsim_class = registry[value]
-        except KeyError:
-            raise ValueError('Unknown GSIM: %s' % value)
     try:
-        gs = gsim_class(**kwargs)
-    except TypeError:
-        raise ValueError('Could not instantiate %s%s' % (value, kwargs))
+        gsim_class = registry[gsim_name]
+    except KeyError:
+        raise ValueError('Unknown GSIM: %s' % gsim_name)
+    gs = gsim_class(**kwargs)
+    gs._toml = value
     gs.minimum_distance = minimum_distance
     gs.init()
     return gs
-
-
-def gsim_by_imt(value):
-    """
-    >>> gsim_by_imt("PGA=AkkarBommer2010 SA(0.1)=SadighEtAl1997")
-    {'PGA': 'AkkarBommer2010()', 'SA(0.1)': 'SadighEtAl1997()'}
-    """
-    dic = {}
-    for imt_gsim in value.split():
-        imt, gsim_str = imt_gsim.split('=')
-        intensity_measure_type(imt)  # check validity
-        dic[imt] = gsim(gsim_str)
-    return dic
 
 
 def logic_tree_path(value):
