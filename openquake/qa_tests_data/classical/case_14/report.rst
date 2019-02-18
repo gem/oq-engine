@@ -3,8 +3,8 @@ Classical PSHA QA test with sites_csv
 
 ============== ===================
 checksum32     2,580,379,596      
-date           2019-02-03T09:39:49
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:45
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 10, num_levels = 13
@@ -51,20 +51,20 @@ simple_fault 1.00000 simple(2)       2
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============================================= =========== ============================= =======================
-grp_id gsims                                         distances   siteparams                    ruptparams             
-====== ============================================= =========== ============================= =======================
-0      AbrahamsonSilva2008() CampbellBozorgnia2008() rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip mag rake width ztor
-====== ============================================= =========== ============================= =======================
+====== ================================================= =========== ============================= =======================
+grp_id gsims                                             distances   siteparams                    ruptparams             
+====== ================================================= =========== ============================= =======================
+0      '[AbrahamsonSilva2008]' '[CampbellBozorgnia2008]' rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip mag rake width ztor
+====== ================================================= =========== ============================= =======================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,AbrahamsonSilva2008(): [0]
-  0,CampbellBozorgnia2008(): [1]>
+  0,'[AbrahamsonSilva2008]': [0]
+  0,'[CampbellBozorgnia2008]': [1]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -79,7 +79,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      3         S    0     2     447          0.0       0.00285    150       15        1,414 
+0      3         S    0     2     447          0.0       0.00265    150       15        1,414 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -90,16 +90,12 @@ code calc_time counts
 S    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00371 NaN    0.00371 0.00371 1      
-split_filter       0.02289 NaN    0.02289 0.02289 1      
+read_source_models 0.00368 NaN    0.00368 0.00368 1      
+split_filter       0.02204 NaN    0.02204 0.02204 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -115,6 +111,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.02289  1.52344   1     
-total read_source_models 0.00371  0.17578   1     
+total split_filter       0.02204  2.01953   1     
+total read_source_models 0.00368  0.21094   1     
 ======================== ======== ========= ======

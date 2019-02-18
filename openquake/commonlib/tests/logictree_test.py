@@ -2013,7 +2013,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         with self.assertRaises(errorclass) as exc:
             logictree.GsimLogicTree(StringIO(xml), ['Shield'])
         if errormessage is not None:
-            self.assertEqual(errormessage, str(exc.exception))
+            self.assertIn(errormessage, str(exc.exception))
 
     def parse_valid(self, xml, tectonic_region_types=('Shield',)):
         xmlbytes = xml.encode('utf-8') if hasattr(xml, 'encode') else xml
@@ -2048,7 +2048,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, 'Unknown GSIM: +100 in file <StringIO>')
+            xml, ValueError, "Invalid group name '+100'. Try quoting it.")
 
     def test_gmpe_uncertainty(self):
         xml = _make_nrml("""\
@@ -2285,10 +2285,13 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             REQUIRES_SITES_PARAMETERS = ()
 
             def __init__(self, gmpe_table):
-                self.gmpe_table = gmpe_table
+                self.kwargs = {'gmpe_table': gmpe_table}
+
+            def init(self):
+                pass
 
             def __str__(self):
-                return 'FakeGMPETable(gmpe_table="%s")' % self.gmpe_table
+                return 'FakeGMPETable(%s)' % self.kwargs
 
         registry['FakeGMPETable'] = FakeGMPETable
         try:
@@ -2310,7 +2313,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             """)
             gsim_lt = self.parse_valid(xml, ['Shield'])
             self.assertEqual(repr(gsim_lt), '''<GsimLogicTree
-Shield,b1,FakeGMPETable(gmpe_table="Wcrust_rjb_med.hdf5"),w=1.0>''')
+Shield,b1,FakeGMPETable({'gmpe_table': 'Wcrust_rjb_med.hdf5'}),w=1.0>''')
         finally:
             del registry['FakeGMPETable']
 
@@ -2342,7 +2345,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_gmpe(self):
         [(value, weight, branch_ids, _, _)] = logictree.sample(
             list(self.gmpe_lt), 1, self.seed)
-        self.assertEqual(value, ('ChiouYoungs2008()', 'SadighEtAl1997()'))
+        self.assertEqual(value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(weight['default'], 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
 

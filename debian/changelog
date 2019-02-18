@@ -1,4 +1,12 @@
   [Michele Simionato]
+  * Implemented serialization/deserialization of GSIM instances to TOML
+  * Added a check against mispelled rupture distance names and fixed
+    the drouet_alpes_2015 GSIMs
+  * Changed the XML syntax used to define dictionaries IMT -> GSIM
+  * Now GSIM classes have an `.init()` method to manage notrivial
+    initializations, i.e. expensive initializations or initializations
+    requiring access to the filesystem
+  * Fixed a bug in event based that made it impossible to use GMPETables
   * Associated the events to the realizations even in scenario_risk: this
     involved changing the generation of the epsilons in the case of asset
     correlation. Now there is a single aggregate losses output for all
@@ -8,7 +16,6 @@
   * For classical calculations with few sites, store information about the
     realization closest to the mean hazard curve for each site
   * Removed the max_num_sites limit on the event based calculator
-
 
   [Valerio Poggi]
   * Added an AvgSA intensity measure type and a GenericGmpeAvgSA which is

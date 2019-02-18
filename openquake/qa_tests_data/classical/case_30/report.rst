@@ -3,8 +3,8 @@ Classical PSHA for the southern Pacific Islands reduced
 
 ============== ===================
 checksum32     56,125,602         
-date           2019-02-03T09:39:42
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:37
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 5, num_levels = 20
@@ -44,36 +44,36 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 complex(3,0,4)  12              
+b1        1.00000 complex(4,3,0)  12              
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =============================================================================== =========== ============================= ============================
-grp_id gsims                                                                           distances   siteparams                    ruptparams                  
-====== =============================================================================== =========== ============================= ============================
-0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
-1      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
-2      AtkinsonBoore2003SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter()           rrup        vs30                          hypo_depth mag              
-====== =============================================================================== =========== ============================= ============================
+====== ======================================================================================= =========== ============================= ============================
+grp_id gsims                                                                                   distances   siteparams                    ruptparams                  
+====== ======================================================================================= =========== ============================= ============================
+0      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
+1      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
+2      '[AtkinsonBoore2003SInter]' '[YoungsEtAl1997SInter]' '[ZhaoEtAl2006SInter]'             rrup        vs30                          hypo_depth mag              
+====== ======================================================================================= =========== ============================= ============================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=11, rlzs=12)
-  0,BooreAtkinson2008(): [0 4 8]
-  0,CampbellBozorgnia2008(): [1 5 9]
-  0,ChiouYoungs2008(): [ 2  6 10]
-  0,ZhaoEtAl2006Asc(): [ 3  7 11]
-  1,BooreAtkinson2008(): [0 4 8]
-  1,CampbellBozorgnia2008(): [1 5 9]
-  1,ChiouYoungs2008(): [ 2  6 10]
-  1,ZhaoEtAl2006Asc(): [ 3  7 11]
-  2,AtkinsonBoore2003SInter(): [0 1 2 3]
-  2,YoungsEtAl1997SInter(): [4 5 6 7]
-  2,ZhaoEtAl2006SInter(): [ 8  9 10 11]>
+  0,'[BooreAtkinson2008]': [0 1 2]
+  0,'[CampbellBozorgnia2008]': [3 4 5]
+  0,'[ChiouYoungs2008]': [6 7 8]
+  0,'[ZhaoEtAl2006Asc]': [ 9 10 11]
+  1,'[BooreAtkinson2008]': [0 1 2]
+  1,'[CampbellBozorgnia2008]': [3 4 5]
+  1,'[ChiouYoungs2008]': [6 7 8]
+  1,'[ZhaoEtAl2006Asc]': [ 9 10 11]
+  2,'[AtkinsonBoore2003SInter]': [0 3 6 9]
+  2,'[YoungsEtAl1997SInter]': [ 1  4  7 10]
+  2,'[ZhaoEtAl2006SInter]': [ 2  5  8 11]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -129,15 +129,11 @@ P    0.0       38
 S    0.0       5     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.10019 0.13412 0.01348 0.25467 3      
+read_source_models 0.09344 0.12381 0.01335 0.23604 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -152,5 +148,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.30056  2.34766   3     
+total read_source_models 0.28032  1.98047   3     
 ======================== ======== ========= ======
