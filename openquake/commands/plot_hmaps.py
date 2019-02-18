@@ -15,10 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap
+import io
+from urllib.request import urlopen
+import numpy
+
+from openquake.baselib import sap, config
 from openquake.hazardlib.imt import from_string
-from openquake.calculators import getters
-from openquake.commonlib import calc
+from openquake.calculators.extract import extract
 from openquake.commands import engine
 
 
@@ -39,21 +42,26 @@ def make_figure(sitecol, imt, imls, poes, hmaps):
         ax = fig.add_subplot(1, n_poes, i * n_poes + j + 1)
         ax.grid(True)
         ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
-        ax.scatter(sitecol.lons, sitecol.lats, c=hmaps[:, i, j],
+        ax.scatter(sitecol.lons, sitecol.lats, c=hmaps[:, j],
                    cmap='rainbow')
     return plt
 
 
 @sap.Script
-def plot_hmaps(calc_id, imt):
+def plot_hmaps(calc_id, imt, server='local'):
     """
     Mean hazard maps plotter.
     """
-    dstore = engine.read(calc_id)
-    oq = dstore['oqparam']
-    array = dstore['hmaps/mean'].value  # shape (N, M, P)
-    imls = oq.imtls[str(imt)]
-    plt = make_figure(dstore['sitecol'], imt, imls, oq.poes, array)
+    if server == 'local':
+        dstore = engine.read(calc_id)
+        oq = dstore['oqparam']
+        imls = oq.imtls[str(imt)]
+        hmaps = extract(dstore, 'hmaps/%s' % str(imt))  # shape (N, P)
+    else:
+        url = '%s/hmaps/%s' % (config.webui.server, str(imt))
+        data = urlopen(url).read()
+        hmaps = numpy.load(io.BytesIO(data))
+    plt = make_figure(dstore['sitecol'], imt, imls, oq.poes, hmaps)
     plt.show()
 
 
