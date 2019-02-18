@@ -24,7 +24,7 @@ data = pathlib.Path(__file__).parent / 'data'
 
 class GenericGmpeAvgSATestCase(unittest.TestCase):
 
-    def test_calculation_Akkar(self, avg_periods="0.05,0.15,1.0,2.0,4.0"):
+    def test_calculation_Akkar(self, avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0]):
 
         DATA_FILE = data/'GENERIC_GMPE_AVGSA_MEAN_STD_TOTAL_AKKAR.csv'
 
@@ -68,7 +68,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         # Testing not supported periods
         try:
             self.test_calculation_Akkar(
-                avg_periods="0.05,0.15,1.0,2.0,4.012345")
+                avg_periods=[0.05, 0.15, 1.0, 2.0, 4.012345])
         except ValueError:
             pass
 
@@ -79,7 +79,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         # Initialise meta-GMPE
         mgmpe = gsim.mgmpe.generic_gmpe_avgsa.GenericGmpeAvgSA(
                     gmpe_name='BooreAtkinson2008',
-                    avg_periods="0.05,0.15,1.0,2.0,4.0",
+                    avg_periods=[0.05, 0.15, 1.0, 2.0, 4.0],
                     corr_func='baker_jayaram')
 
         sctx = gsim.base.SitesContext()

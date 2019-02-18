@@ -66,7 +66,7 @@ class GenericGmpeAvgSA(GMPE):
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
-        self.avg_periods = [float(t) for t in avg_periods.split(',')]
+        self.avg_periods = avg_periods
         self.tnum = len(self.avg_periods)
 
         correlation_function_handles = {

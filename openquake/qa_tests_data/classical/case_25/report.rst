@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2019-02-03T09:39:20
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:17
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 6, num_levels = 3
@@ -50,19 +50,19 @@ b1        1.00000 trivial(1)      1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ===================== ========== ========== ==========
-grp_id gsims                 distances  siteparams ruptparams
-====== ===================== ========== ========== ==========
-0      TusaLanger2016Rhypo() rhypo rrup vs30       mag       
-====== ===================== ========== ========== ==========
+====== ======================= ========== ========== ==========
+grp_id gsims                   distances  siteparams ruptparams
+====== ======================= ========== ========== ==========
+0      '[TusaLanger2016Rhypo]' rhypo rrup vs30       mag       
+====== ======================= ========== ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,TusaLanger2016Rhypo(): [0]>
+  0,'[TusaLanger2016Rhypo]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -77,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     8     440          0.0       0.12951    120       20        107   
+0      1         A    0     8     440          0.0       0.14494    120       20        107   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -88,16 +88,12 @@ code calc_time counts
 A    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00797 NaN    0.00797 0.00797 1      
-split_filter       0.01102 NaN    0.01102 0.01102 1      
+read_source_models 0.00769 NaN    0.00769 0.00769 1      
+split_filter       0.01211 NaN    0.01211 0.01211 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -113,6 +109,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01102  1.77734   1     
-total read_source_models 0.00797  0.52734   1     
+total split_filter       0.01211  2.13672   1     
+total read_source_models 0.00769  0.15625   1     
 ======================== ======== ========= ======
