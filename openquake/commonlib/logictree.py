@@ -1386,7 +1386,7 @@ class GsimLogicTree(object):
         # NB: not using nrml.read, we need to keep the nodes as strings
         self._ltnode = ltnode or node_from_xml(fname).logicTree
         self.gmpe_tables = set()  # populated right below
-        self.all_trts, self.branches = self._build_trts_branches(trts)
+        self.branches = self._build_trts_branches(trts)
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute '
@@ -1457,7 +1457,6 @@ class GsimLogicTree(object):
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
             bt = BranchTuple(branch['trt'], branch['id'], gsim, weight, True)
             self.branches.append(bt)
-        self.all_trts = list(self.values)
 
     def __str__(self):
         """
@@ -1574,7 +1573,7 @@ class GsimLogicTree(object):
                 (self.fname, trts))
         branches.sort(key=lambda b: (b.trt, b.id))
         # TODO: add an .idx to each GSIM ?
-        return trts, branches
+        return branches
 
     def get_gsims(self, trt):
         """
@@ -1591,7 +1590,7 @@ class GsimLogicTree(object):
         """
         groups = []
         # NB: branches are already sorted
-        for trt in self.all_trts:
+        for trt in self.values:
             groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
         for i, branches in enumerate(itertools.product(*groups)):
@@ -1599,7 +1598,7 @@ class GsimLogicTree(object):
             lt_path = []
             lt_uid = []
             value = []
-            for trt, branch in zip(self.all_trts, branches):
+            for trt, branch in zip(self.values, branches):
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
