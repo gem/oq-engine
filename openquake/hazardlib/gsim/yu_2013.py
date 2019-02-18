@@ -17,8 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`YuEtAl2013`, :class:`YuEtAl2013Tibet`,
-:class:`YuEtAl2013Eastern`, :class:`YuEtAl2013Stable`
+Module exports :class:`YuEtAl2013Ms`, :class:`YuEtAl2013MsTibet`,
+:class:`YuEtAl2013MsEastern`, :class:`YuEtAl2013MsStable`
+:class:`YuEtAl2013Mw`, :class:`YuEtAl2013MwTibet`,
+:class:`YuEtAl2013MwEastern`, :class:`YuEtAl2013MwStable`
 
 """
 import numpy as np
@@ -130,16 +132,18 @@ def get_ras(repi, theta, mag, coeff):
     :param coeff:
         GMPE coefficients
     """
-    rx = 150.
-    ras = 300.
-    dff = 1.e0
-    while abs(dff) > 1e-5:
-        #
-        # calculate the difference between epicentral distances
-        dff = fnc(ras, repi, theta, mag, coeff)
-        #
+    rx = 100.
+    ras = 200.
+    #
+    # calculate the difference between epicentral distances
+    dff = fnc(ras, repi, theta, mag, coeff)
+    while abs(dff) > 1e-3:
         # update the value of distance computed
-        ras -= np.sign(dff) * rx
+        if dff > 0.:
+            ras = ras - rx
+        else:
+            ras = ras + rx
+        dff = fnc(ras, repi, theta, mag, coeff)
         rx = rx / 2.
         if rx < 1e-3:
             break
