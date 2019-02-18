@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import unittest
 from openquake.baselib import config
 
@@ -26,9 +27,11 @@ class ConfigPathsTestCase(unittest.TestCase):
 
     def test_venv(self):
         venv = os.environ.get('VIRTUAL_ENV')
-        self.assertTrue(venv, 'You cannot run the tests, you must use a '
-                        'development installation with a virtualenv!')
-        self.assertIn(os.path.join(venv, 'openquake.cfg'), config.paths)
+        if venv:
+            self.assertIn(os.path.join(venv, 'openquake.cfg'), config.paths)
+        else:
+            logging.warn('To run the tests, you should use a '
+                         'development installation with a virtualenv')
 
     def test_config_file(self):
         cfgfile = os.environ.get('OQ_CONFIG_FILE')
