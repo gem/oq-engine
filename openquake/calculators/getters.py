@@ -375,6 +375,8 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and
         yields arrays of the dtype (sid, eid, imti, gmv), one for rupture
         """
+        self.sig = []
+        self.eps = []
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
@@ -387,8 +389,10 @@ class GmfGetter(object):
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
+                # the shape goes from M, N, E to N, M, E
                 array = computer.compute(gs, num_events).transpose(1, 0, 2)
-                # shape (N, M, E)
+                self.sig.append(computer.sig.T)  # shape (E, M)
+                self.eps.append(computer.eps.T)  # shape (E, M)
                 for i, miniml in enumerate(self.min_iml):  # gmv < minimum
                     arr = array[:, i, :]
                     arr[arr < miniml] = 0
@@ -456,6 +460,8 @@ class GmfGetter(object):
                 gmfdata = self.get_gmfdata()
         else:
             return {}
+        if len(gmfdata) == 0:
+            return dict(gmfdata=[])
         indices = []
         gmfdata.sort(order=('sid', 'rlzi', 'eid'))
         start = stop = 0
@@ -465,6 +471,8 @@ class GmfGetter(object):
             indices.append((sid, start, stop))
             start = stop
         res = dict(gmfdata=gmfdata, hcurves=hcurves,
+                   sig=numpy.concatenate(self.sig),
+                   eps=numpy.concatenate(self.eps),
                    indices=numpy.array(indices, (U32, 3)))
         return res
 

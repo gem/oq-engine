@@ -28,6 +28,8 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.imt import from_string
 
+F32 = numpy.float32
+
 
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
@@ -116,6 +118,9 @@ class GmfComputer(object):
         :param num_events: the number of seismic events
         :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
+
+        As a side effect populates two arrays of shape (num_imts, num_events)
+        called .sig (for stddev_inter) and .eps (for the random part).
         """
         try:  # read the seed from self.rupture.serial
             seed = seed or self.rupture.serial
@@ -123,15 +128,19 @@ class GmfComputer(object):
             pass
         if seed is not None:
             numpy.random.seed(seed)
-        result = numpy.zeros(
-            (len(self.imts), len(self.sids), num_events), numpy.float32)
+        result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
+        self.sig = numpy.zeros((len(self.imts), num_events), F32)
+        self.eps = numpy.zeros((len(self.imts), num_events), F32)
         for imti, imt in enumerate(self.imts):
             if isinstance(gsim, MultiGMPE):
                 gs = gsim[str(imt)]  # MultiGMPE
             else:
                 gs = gsim  # regular GMPE
             try:
-                result[imti] = self._compute(None, gs, num_events, imt)
+                gmf, sig, eps = self._compute(None, gs, num_events, imt)
+                result[imti] = gmf
+                self.sig[imti] = sig
+                self.eps[imti] = eps
             except Exception as exc:
                 raise exc.__class__(
                     '%s for %s, %s, srcidx=%s' % (exc, gs, imt, self.srcidx)
@@ -144,7 +153,8 @@ class GmfComputer(object):
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
         :param imt: an IMT instance
-        :returns: a 32 bit array of shape (num_sites, num_events)
+        :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
+                   epsilons(num_events))
         """
         rctx = getattr(self.rupture, 'rupture', self.rupture)
         if seed is not None:
@@ -157,7 +167,9 @@ class GmfComputer(object):
             mean = gsim.to_imt_unit_values(mean)
             mean.shape += (1, )
             mean = mean.repeat(num_events, axis=1)
-            return mean
+            return (mean,
+                    numpy.zeros(num_events, F32),
+                    numpy.zeros(num_events, F32))
         elif self.truncation_level is None:
             distribution = scipy.stats.norm()
         else:
@@ -183,6 +195,8 @@ class GmfComputer(object):
             total_residual = stddev_total * rvs(
                 distribution, num_sids, num_events)
             gmf = gsim.to_imt_unit_values(mean + total_residual)
+            stddev_inter = numpy.zeros(num_events, F32)
+            epsilons = numpy.zeros(num_events, F32)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
                 self.sctx, rctx, dctx, imt,
@@ -202,11 +216,12 @@ class GmfComputer(object):
                 for i, val in numpy.ndenumerate(ir):
                     intra_residual[i] = val
 
-            inter_residual = stddev_inter * rvs(distribution, num_events)
+            epsilons = rvs(distribution, num_events)
+            inter_residual = stddev_inter * epsilons
 
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
-        return gmf
+        return gmf, stddev_inter.max(axis=0), epsilons
 
 
 # this is not used in the engine; it is still useful for usage in IPython
