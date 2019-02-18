@@ -217,7 +217,7 @@ class RlzsAssoc(object):
                 size += 1
                 if len(rlzs) > 10:  # short representation
                     rlzs = ['%d realizations' % len(rlzs)]
-                pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
+                pairs.append(('%s,%r' % (grp_id, repr(gsim)), rlzs))
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
             self.__class__.__name__, size, len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))

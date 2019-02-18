@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ===================
 checksum32     1,751,642,476      
-date           2019-02-03T09:39:38
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:33
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -53,27 +53,27 @@ b11_b24_b33_b44_b53_b64_b73_b84_b93_b104_b113 0.10000 trivial(1)      1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-1      BooreAtkinson2008() rjb       vs30       mag rake  
-2      BooreAtkinson2008() rjb       vs30       mag rake  
-3      BooreAtkinson2008() rjb       vs30       mag rake  
-4      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
+====== ===================== ========= ========== ==========
+grp_id gsims                 distances siteparams ruptparams
+====== ===================== ========= ========== ==========
+0      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+1      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+2      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+3      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+4      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+====== ===================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=5, rlzs=10)
-  0,BooreAtkinson2008(): [0]
-  1,BooreAtkinson2008(): [1 2 3 4]
-  2,BooreAtkinson2008(): [5]
-  3,BooreAtkinson2008(): [6 7 8]
-  4,BooreAtkinson2008(): [9]>
+  0,'[BooreAtkinson2008]': [0]
+  1,'[BooreAtkinson2008]': [1 2 3 4]
+  2,'[BooreAtkinson2008]': [5]
+  3,'[BooreAtkinson2008]': [6 7 8]
+  4,'[BooreAtkinson2008]': [9]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -99,26 +99,26 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-4      5         A    96    100   425          0.0       0.08115    25        25        42    
-4      4         A    92    96    425          0.0       0.11596    25        25        42    
-4      3         A    88    92    510          0.0       0.12543    30        30        51    
-4      2         A    84    88    510          0.0       0.12582    30        30        51    
-4      1         A    80    84    425          0.0       0.09978    25        25        42    
-3      5         A    76    80    425          0.0       0.07476    25        25        42    
-3      4         A    72    76    425          0.0       0.09941    25        25        42    
-3      3         A    68    72    510          0.0       0.12581    30        30        51    
-3      2         A    64    68    510          0.0       0.12769    30        30        51    
-3      1         A    60    64    425          0.0       0.09862    25        25        42    
-2      5         A    56    60    375          0.0       0.07441    25        25        37    
-2      4         A    52    56    375          0.0       0.10022    25        25        37    
-2      3         A    48    52    450          0.0       0.14781    30        30        45    
-2      2         A    44    48    450          0.0       0.12823    30        30        45    
-2      1         A    40    44    375          0.0       0.10709    25        25        37    
-1      5         A    36    40    375          0.0       0.07999    25        25        37    
-1      4         A    32    36    375          0.0       0.10659    25        25        37    
-1      3         A    28    32    450          0.0       0.13755    30        30        45    
-1      2         A    24    28    450          0.0       0.15563    30        30        45    
-1      1         A    20    24    375          0.0       0.10661    25        25        37    
+4      5         A    96    100   425          0.0       0.07998    25        25        42    
+4      4         A    92    96    425          0.0       0.11352    25        25        42    
+4      3         A    88    92    510          0.0       0.12430    30        30        51    
+4      2         A    84    88    510          0.0       0.12538    30        30        51    
+4      1         A    80    84    425          0.0       0.10232    25        25        42    
+3      5         A    76    80    425          0.0       0.07504    25        25        42    
+3      4         A    72    76    425          0.0       0.09812    25        25        42    
+3      3         A    68    72    510          0.0       0.12586    30        30        51    
+3      2         A    64    68    510          0.0       0.12900    30        30        51    
+3      1         A    60    64    425          0.0       0.09902    25        25        42    
+2      5         A    56    60    375          0.0       0.07267    25        25        37    
+2      4         A    52    56    375          0.0       0.09866    25        25        37    
+2      3         A    48    52    450          0.0       0.12485    30        30        45    
+2      2         A    44    48    450          0.0       0.12511    30        30        45    
+2      1         A    40    44    375          0.0       0.09709    25        25        37    
+1      5         A    36    40    375          0.0       0.07221    25        25        37    
+1      4         A    32    36    375          0.0       0.09667    25        25        37    
+1      3         A    28    32    450          0.0       0.12787    30        30        45    
+1      2         A    24    28    450          0.0       0.13320    30        30        45    
+1      1         A    20    24    375          0.0       0.10540    25        25        37    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -129,32 +129,27 @@ code calc_time counts
 A    0.0       25    
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 5 source(s) with the same ID and 0 true duplicate(s)
-Here is a fake duplicate: 2
-
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.02387 7.171E-04 0.02309 0.02489 5      
-split_filter       0.08587 0.09949   0.01552 0.15622 2      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.02509 0.00252 0.02343 0.02941 5      
+split_filter       0.08382 0.09702 0.01522 0.15243 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=1.53 KB fnames=535 B          26.92 KB
-split_filter       srcs=21.11 KB srcfilter=506 B seed=28 B 163.7 KB
-================== ======================================= ========
+================== ======================================= =========
+task               sent                                    received 
+read_source_models converter=1.53 KB fnames=535 B          26.92 KB 
+split_filter       srcs=21.04 KB srcfilter=506 B seed=28 B 161.85 KB
+================== ======================================= =========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.17174  2.57422   2     
-total read_source_models 0.11935  0.60938   5     
+total split_filter       0.16765  2.53906   2     
+total read_source_models 0.12545  0.61328   5     
 ======================== ======== ========= ======
