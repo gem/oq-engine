@@ -258,12 +258,14 @@ def extract_hcurves(dstore, what):
 @extract.add('hmaps')
 def extract_hmaps(dstore, what):
     """
-    Extracts hazard maps. Use it as /extract/hmaps/mean or
-    /extract/hmaps/rlz-0, etc
+    Extracts hazard maps. Use it as /extract/hmaps/PGA
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
+    if what in oq.imtls:  # is an IMT
+        m = list(oq.imtls).index(what)
+        return dstore['hmaps/mean'][:, m, :]
     dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
