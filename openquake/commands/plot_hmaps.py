@@ -16,18 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
-from urllib.request import urlopen
+from requests.sessions import Session
 import numpy
 
 from openquake.baselib import sap, config
 from openquake.hazardlib.imt import from_string
-from openquake.calculators.extract import extract
+from openquake.calculators.extract import extract, Extractor
 from openquake.commands import engine
 
 
-def make_figure(sitecol, imt, imls, poes, hmaps):
+def make_figure(lons, lats, imt, imls, poes, hmaps):
     """
-    :param sitecol: site collection
+    :param lons: site longitudes
+    :param lats: site latitudes
     :param imt: intensity measure type
     :param imls: intensity measure levels
     :param poes: PoEs used to compute the hazard maps
@@ -42,28 +43,32 @@ def make_figure(sitecol, imt, imls, poes, hmaps):
         ax = fig.add_subplot(1, n_poes, i * n_poes + j + 1)
         ax.grid(True)
         ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
-        ax.scatter(sitecol.lons, sitecol.lats, c=hmaps[:, j],
-                   cmap='rainbow')
+        ax.scatter(lons, lats, c=hmaps[:, j], cmap='rainbow')
     return plt
 
 
 @sap.Script
-def plot_hmaps(calc_id, imt, server='local'):
+def plot_hmaps(calc_id, imt, remote=False):
     """
     Mean hazard maps plotter.
     """
-    if server == 'local':
+    if remote:
+        w = config.webui
+        extractor = Extractor(calc_id, w.server, w.username, w.password)
+        oq = extractor.oqparam
+        sitecol = extractor.get_npz('sitecol')['array']
+        hmaps = extractor.get_npz('hmaps/%s' % str(imt))['array']
+        lons, lats = sitecol['lon'], sitecol['lat']
+    else:
         dstore = engine.read(calc_id)
         oq = dstore['oqparam']
-        imls = oq.imtls[str(imt)]
+        sitecol = dstore['sitecol']
+        lons, lats = sitecol.lons, sitecol.lats
         hmaps = extract(dstore, 'hmaps/%s' % str(imt))  # shape (N, P)
-    else:
-        url = '%s/hmaps/%s' % (config.webui.server, str(imt))
-        data = urlopen(url).read()
-        hmaps = numpy.load(io.BytesIO(data))
-    plt = make_figure(dstore['sitecol'], imt, imls, oq.poes, hmaps)
+    plt = make_figure(lons, lats, imt, oq.imtls[str(imt)], oq.poes, hmaps)
     plt.show()
 
 
 plot_hmaps.arg('calc_id', 'a computation id', type=int)
 plot_hmaps.arg('imt', 'an intensity measure type', type=from_string)
+plot_hmaps.flg('remote', 'use a remote server')
