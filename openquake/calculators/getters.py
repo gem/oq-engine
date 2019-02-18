@@ -325,9 +325,10 @@ class GmfGetter(object):
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        M = len(oqparam.imtls)
+        M32 = (F32, len(oqparam.imtls))
         self.gmv_dt = oqparam.gmf_data_dt()
-        self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (M,))), ('eid', U64)])
+        self.sig_eps_dt = [('eid', U64), ('sig', M32), ('eps', M32)]
+        self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U64)])
         self.cmaker = ContextMaker(
             rupgetter.trt, rupgetter.rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
@@ -375,8 +376,7 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and
         yields arrays of the dtype (sid, eid, imti, gmv), one for rupture
         """
-        self.sig = []
-        self.eps = []
+        self.sig_eps = []
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
@@ -391,8 +391,6 @@ class GmfGetter(object):
                 # it is better to have few calls producing big arrays
                 # the shape goes from M, N, E to N, M, E
                 array = computer.compute(gs, num_events).transpose(1, 0, 2)
-                self.sig.append(computer.sig.T)  # shape (E, M)
-                self.eps.append(computer.eps.T)  # shape (E, M)
                 for i, miniml in enumerate(self.min_iml):  # gmv < minimum
                     arr = array[:, i, :]
                     arr[arr < miniml] = 0
@@ -407,6 +405,8 @@ class GmfGetter(object):
                         tot = gmf.sum(axis=0)  # shape (M,)
                         if not tot.sum():
                             continue
+                        self.sig_eps.append((eid, computer.sig[:, n + ei],
+                                             computer.eps[:, n + ei]))
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 data.append((rlzi, sid, eid, gmv))
@@ -471,8 +471,7 @@ class GmfGetter(object):
             indices.append((sid, start, stop))
             start = stop
         res = dict(gmfdata=gmfdata, hcurves=hcurves,
-                   sig=numpy.concatenate(self.sig),
-                   eps=numpy.concatenate(self.eps),
+                   sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
         return res
 
