@@ -15,10 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import io
-from requests.sessions import Session
-import numpy
-
 from openquake.baselib import sap, config
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import extract, Extractor
