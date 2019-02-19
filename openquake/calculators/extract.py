@@ -754,6 +754,12 @@ def get_ruptures_within(dstore, bbox):
 # #####################  extraction from the WebAPI ###################### #
 
 
+class RemoteError(RuntimeError):
+    """
+    Wrapper for an error on a remote server
+    """
+
+
 class Extractor(object):
     """
     A class to extract data from the WebAPI.
@@ -781,5 +787,6 @@ class Extractor(object):
         url = '%s/v1/calc/%d/extract/%s' % (
             self.server, self.calc_id, partial_url)
         resp = self.sess.get(url)
-        assert resp.status_code == 200, resp.status_code
+        if resp.status_code != 200:
+            raise RemoteError(resp.text)
         return numpy.load(io.BytesIO(resp.content))
