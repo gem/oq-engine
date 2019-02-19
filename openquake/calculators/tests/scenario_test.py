@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
 from numpy.testing import assert_almost_equal as aae
-from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
@@ -62,13 +61,11 @@ class ScenarioTestCase(CalculatorTestCase):
                 median[imt].append(numpy.median(gmvs))
         return median
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_1(self):
         with floatformat('%5.1E'):
             out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
         self.assertEqualFiles('expected.xml', out['gmf_data', 'xml'][0])
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
         out = self.run_calc(case_1.__file__, 'job.ini',
@@ -76,12 +73,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'BooreAtkinson2008_gmf.csv', out['gmf_data', 'csv'][0])
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_2(self):
         medians = self.medians(case_2)['PGA']
         aae(medians, [0.37412136, 0.19021782, 0.1365383], decimal=2)
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_3(self):
         medians_dict = self.medians(case_3)
         medians_pga = medians_dict['PGA']
@@ -89,7 +84,6 @@ class ScenarioTestCase(CalculatorTestCase):
         aae(medians_pga, [0.48155582, 0.21123045, 0.14484586], decimal=2)
         aae(medians_sa, [0.93913177, 0.40880148, 0.2692668], decimal=2)
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_4(self):
         medians = self.medians(case_4)['PGA']
         aae(medians, [0.41615372, 0.22797466, 0.1936226], decimal=2)
@@ -98,25 +92,21 @@ class ScenarioTestCase(CalculatorTestCase):
         [fname] = export(('site_model', 'xml'), self.calc.datastore)
         self.assertEqualFiles('site_model.xml', fname)
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_5(self):
         f1, f2 = self.frequencies(case_5, 0.5, 1.0)
         self.assertAlmostEqual(f1, 0.03, places=2)
         self.assertAlmostEqual(f2, 0.003, places=3)
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_6(self):
         f1, f2 = self.frequencies(case_6, 0.5, 1.0)
         self.assertAlmostEqual(f1, 0.05, places=2)
         self.assertAlmostEqual(f2, 0.006, places=3)
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_7(self):
         f1, f2 = self.frequencies(case_7, 0.5, 1.0)
         self.assertAlmostEqual(f1, 0.02, places=2)
         self.assertAlmostEqual(f2, 0.002, places=3)
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_8(self):
         # test for a GMPE requiring hypocentral depth, since it was
         # broken: https://bugs.launchpad.net/oq-engine/+bug/1334524
@@ -125,7 +115,6 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertAlmostEqual(f1, 0)
         self.assertAlmostEqual(f2, 0)
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_9(self):
         with floatformat('%10.6E'):
             out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
@@ -148,7 +137,6 @@ class ScenarioTestCase(CalculatorTestCase):
             self.assertEqual(data1.dtype.names, data2.dtype.names)
             self.assertEqual(data1.shape, data2.shape)
 
-    @attr('qa', 'hazard', 'scenario')
     def test_case_10(self):
         # test importing an exposure with automatic gridding
         self.run_calc(case_10.__file__, 'job.ini')

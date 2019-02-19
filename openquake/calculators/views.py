@@ -33,8 +33,7 @@ from openquake.baselib.general import group_array
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
-from openquake.commonlib.writers import (
-    build_header, scientificformat, FIVEDIGITS)
+from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators import getters
 
 FLOAT = (float, numpy.float32, numpy.float64)
@@ -555,7 +554,8 @@ def view_required_params_per_trt(token, dstore):
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((grp_id, gsims, distances, siteparams, ruptparams))
+        tbl.append((grp_id, ' '.join(map(repr, map(repr, gsims))),
+                    distances, siteparams, ruptparams))
     return rst_table(
         tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)

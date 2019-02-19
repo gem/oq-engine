@@ -19,7 +19,6 @@ import os
 import sys
 import unittest
 import numpy
-from nose.plugins.attrib import attr
 
 from openquake.baselib.general import gettemp
 from openquake.calculators import event_based
@@ -66,7 +65,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
         ekeys = [('agg_curves-stats', 'csv')]
@@ -112,7 +110,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         tmp = gettemp(rst_table(arr))
         self.assertEqualFiles('expected/src_loss_table.txt', tmp)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
         # vulnerability function with PMF
         self.run_calc(case_1g.__file__, 'job_h.ini,job_r.ini')
@@ -120,7 +117,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
@@ -136,13 +132,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'No GMFs were generated, perhaps they were all below the '
             'minimum_intensity threshold')
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2_sampling(self):
         self.run_calc(case_2.__file__, 'job_sampling.ini')
         self.assertEqual(len(self.calc.datastore['events']), 20)
         # TODO: improve this test
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2_correlation(self):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation=1.0)
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
@@ -159,13 +153,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             ('aggregate_by/taxonomy/curves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curves_by_tag.csv', fname)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
         self.assertIn('not in the risk model', str(ctx.exception))
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
         self.run_calc(case_3.__file__, 'job.ini',
@@ -183,7 +175,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # Turkey with SHARE logic tree
         self.run_calc(case_4.__file__, 'job.ini')
@@ -199,7 +190,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertFalse('curves-rlzs' in self.calc.datastore)
         self.assertTrue('curves-stats' in self.calc.datastore)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
         fnames = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
@@ -213,7 +203,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-    @attr('qa', 'risk', 'ebrisk')
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
@@ -293,7 +282,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
-    @attr('qa', 'risk', 'ebrisk')
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
         event_based.RUPTURES_PER_BLOCK = 20
@@ -321,7 +309,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertGreater(sitecol.vs30.sum(), 0)
         self.assertEqual(len(assetcol), 548)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):
         # case with  <insuranceLimit isAbsolute="false"/>
         # this is also a case with preimported exposure
@@ -331,7 +318,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
 
-    @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
         # it has 8 realizations but 4 of them have 0 ruptures
@@ -346,7 +332,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(('hmaps', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
-    @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
@@ -354,13 +339,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
-    @attr('qa', 'hazard', 'event_based')
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['events']), 8)
 
-    @attr('qa', 'hazard', 'event_based_risk')
     def test_case_6c(self):
         # case with asset_correlation=1
         self.run_calc(case_6c.__file__, 'job_h.ini')
