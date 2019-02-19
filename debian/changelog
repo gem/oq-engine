@@ -1,3 +1,6 @@
+  [Robin Gee]
+  * Updated GMPE of Yu et al. (2013)
+
   [Michele Simionato]
   * Added a check when disaggregation is attempted on a source model
     with atomic source groups
