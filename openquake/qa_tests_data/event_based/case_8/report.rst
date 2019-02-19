@@ -3,8 +3,8 @@ Event Based from NonParametric source
 
 ============== ===================
 checksum32     196,267,185        
-date           2019-02-03T09:38:17
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:14
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 3, num_levels = 7
@@ -55,16 +55,12 @@ code calc_time counts
 N    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.04230 NaN    0.04230 0.04230 1      
-only_filter        0.00289 NaN    0.00289 0.00289 1      
+read_source_models 0.04133 NaN    0.04133 0.04133 1      
+only_filter        0.00291 NaN    0.00291 0.00291 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -80,6 +76,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.04230  1.13672   1     
-total only_filter        0.00289  1.44922   1     
+total read_source_models 0.04133  0.97266   1     
+total only_filter        0.00291  1.86719   1     
 ======================== ======== ========= ======
