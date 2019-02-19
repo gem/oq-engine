@@ -29,7 +29,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib import datastore
+from openquake.baselib import datastore, config
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
@@ -773,38 +773,41 @@ class Extractor(object):
 
     NB: instantiating the Extractor opens a session if webapi is True
     """
-    def __init__(self, calc_id, server, username, password, webapi):
+    def __init__(self, calc_id, webapi,
+                 server=None, username=None, password=None):
         self.calc_id = calc_id
         self.webapi = webapi
         if not webapi:
             self.dstore = datastore.read(calc_id)
             self.oqparam = self.dstore['oqparam']
             return
-        self.server = server
+        self.server = config.webapi.server if server is None else server
+        if username is None:
+            username = config.webapi.username
+        if password is None:
+            password = config.webapi.password
         self.sess = requests.Session()
         if username:
-            login_url = '%s/accounts/ajax_login/' % server
+            login_url = '%s/accounts/ajax_login/' % self.server
             resp = self.sess.post(
                 login_url, data=dict(username=username, password=password))
             if resp.status_code != 200:
                 raise WebAPIError(resp.text)
-        resp = self.sess.get(
-            '%s/v1/calc/%d/oqparam' % (server, calc_id))
+        resp = self.sess.get('%s/v1/calc/%d/oqparam' % (self.server, calc_id))
         if resp.status_code != 200:
             raise WebAPIError(resp.text)
         self.oqparam = object.__new__(oqvalidation.OqParam)
         vars(self.oqparam).update(resp.json())
 
-    def get(self, partial_url):
+    def get(self, what):
         """
-        :param partial_url: what to extract
+        :param what: what to extract
         :returns: an ArrayWrapper instance
         """
         if not self.webapi:
-            return ArrayWrapper.from_(extract(self.dstore, partial_url))
+            return ArrayWrapper.from_(extract(self.dstore, what))
 
-        url = '%s/v1/calc/%d/extract/%s' % (
-            self.server, self.calc_id, partial_url)
+        url = '%s/v1/calc/%d/extract/%s' % (self.server, self.calc_id, what)
         resp = self.sess.get(url)
         if resp.status_code != 200:
             raise WebAPIError(resp.text)

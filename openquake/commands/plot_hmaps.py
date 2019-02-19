@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap, config
+from openquake.baselib import sap
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import Extractor
 
@@ -47,8 +47,7 @@ def plot_hmaps(imt, calc_id, remote=False):
     """
     Mean hazard maps plotter.
     """
-    w = config.webui
-    extractor = Extractor(calc_id, w.server, w.username, w.password, remote)
+    extractor = Extractor(calc_id, remote)
     with extractor:
         oq = extractor.oqparam
         sitecol = extractor.get('sitecol').array
