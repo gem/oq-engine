@@ -49,9 +49,10 @@ def plot_hmaps(imt, calc_id, remote=False):
     """
     w = config.webui
     extractor = Extractor(calc_id, w.server, w.username, w.password, remote)
-    oq = extractor.oqparam
-    sitecol = extractor.get('sitecol').array
-    hmaps = extractor.get('hmaps/%s' % str(imt)).array
+    with extractor:
+        oq = extractor.oqparam
+        sitecol = extractor.get('sitecol').array
+        hmaps = extractor.get('hmaps/%s' % str(imt)).array
     lons, lats = sitecol['lon'], sitecol['lat']
     plt = make_figure(lons, lats, imt, oq.imtls[str(imt)], oq.poes, hmaps)
     plt.show()
