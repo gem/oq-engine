@@ -29,6 +29,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
+from openquake.baselib import datastore
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
@@ -765,8 +766,13 @@ class Extractor(object):
     A class to extract data from the WebAPI.
     NB: instantiating the Extractor opens a session
     """
-    def __init__(self, calc_id, server, username, password):
+    def __init__(self, calc_id, server, username, password, remote):
         self.calc_id = calc_id
+        self.remote = remote
+        if not remote:
+            self.dstore = datastore.read(calc_id)
+            self.oqparam = self.dstore['oqparam']
+            return
         self.server = server
         self.sess = requests.Session()
         if username:
@@ -779,14 +785,19 @@ class Extractor(object):
         self.oqparam = object.__new__(oqvalidation.OqParam)
         vars(self.oqparam).update(params)
 
-    def get_npz(self, partial_url):
+    def get(self, partial_url):
         """
         :param partial_url: what to extract
-        :returns: an NPZFile instance
+        :returns: an ArrayWrapper instance
         """
+        if not self.remote:
+            return ArrayWrapper.from_(extract(self.dstore, partial_url))
+
         url = '%s/v1/calc/%d/extract/%s' % (
             self.server, self.calc_id, partial_url)
         resp = self.sess.get(url)
         if resp.status_code != 200:
             raise RemoteError(resp.text)
-        return numpy.load(io.BytesIO(resp.content))
+        npz = numpy.load(io.BytesIO(resp.content))
+        attrs = {k: npz[k] for k in npz if k != 'array'}
+        return ArrayWrapper(npz['array'], attrs)

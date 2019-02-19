@@ -21,7 +21,6 @@ import json
 import logging
 import os
 import sys
-import inspect
 import tempfile
 import subprocess
 import threading
@@ -42,7 +41,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore
+from openquake.baselib import datastore, hdf5
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
@@ -654,12 +653,6 @@ def get_result(request, result_id):
     return response
 
 
-def _array(v):
-    if hasattr(v, '__toh5__'):
-        return v.__toh5__()[0]
-    return v
-
-
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
@@ -681,15 +674,9 @@ def extract(request, calc_id, what):
             os.close(fd)
             n = len(request.path_info)
             query_string = unquote_plus(request.get_full_path()[n:])
-            obj = _extract(ds, what + query_string)
-            if inspect.isgenerator(obj):
-                array, attrs = 0, {k: _array(v) for k, v in obj}
-            elif hasattr(obj, '__toh5__'):
-                array, attrs = obj.__toh5__()
-            else:  # assume obj is an array
-                array, attrs = obj, {}
+            aw = hdf5.ArrayWrapper.from_(_extract(ds, what + query_string))
             a = {}
-            for key, val in attrs.items():
+            for key, val in vars(aw).items():
                 if isinstance(key, bytes):
                     key = key.decode('utf-8')
                 if isinstance(val, str):
@@ -697,7 +684,7 @@ def extract(request, calc_id, what):
                     a[key] = numpy.array(val.encode('utf-8'))
                 else:
                     a[key] = val
-            numpy.savez_compressed(fname, array=array, **a)
+            numpy.savez_compressed(fname, **a)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
