@@ -757,14 +757,21 @@ def get_ruptures_within(dstore, bbox):
 
 class RemoteError(RuntimeError):
     """
-    Wrapper for an error on a remote server
+    Wrapper for an error on a WebAPI server
     """
 
 
 class Extractor(object):
     """
     A class to extract data from the WebAPI.
-    NB: instantiating the Extractor opens a session
+
+    :param calc_id: a calculation ID
+    :param server: hostname of the remote server (can be '')
+    :param username: login username (can be '')
+    :param password: login password (can be '')
+    :param remote: True or False
+
+    NB: instantiating the Extractor opens a session if remote is True
     """
     def __init__(self, calc_id, server, username, password, remote):
         self.calc_id = calc_id
@@ -779,11 +786,14 @@ class Extractor(object):
             login_url = '%s/accounts/ajax_login/' % server
             resp = self.sess.post(
                 login_url, data=dict(username=username, password=password))
-            assert resp.status_code == 200, resp.status_code
-        params = self.sess.get(
-            '%s/v1/calc/%d/oqparam' % (server, calc_id)).json()
+            if resp.status_code != 200:
+                raise RemoteError(resp.text)
+        resp = self.sess.get(
+            '%s/v1/calc/%d/oqparam' % (server, calc_id))
+        if resp.status_code != 200:
+            raise RemoteError(resp.text)
         self.oqparam = object.__new__(oqvalidation.OqParam)
-        vars(self.oqparam).update(params)
+        vars(self.oqparam).update(resp.json())
 
     def get(self, partial_url):
         """
