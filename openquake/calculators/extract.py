@@ -18,6 +18,8 @@
 import collections
 import operator
 import logging
+import io
+import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -27,12 +29,13 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
+from openquake.baselib import datastore, config
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, oqvalidation
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -258,12 +261,14 @@ def extract_hcurves(dstore, what):
 @extract.add('hmaps')
 def extract_hmaps(dstore, what):
     """
-    Extracts hazard maps. Use it as /extract/hmaps/mean or
-    /extract/hmaps/rlz-0, etc
+    Extracts hazard maps. Use it as /extract/hmaps/PGA
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
+    if what in oq.imtls:  # is an IMT
+        m = list(oq.imtls).index(what)
+        return dstore['hmaps/mean'][:, m, :]
     dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
@@ -746,3 +751,81 @@ def get_ruptures_within(dstore, bbox):
     mask = ((minlon <= hypo[0]) * (minlat <= hypo[1]) *
             (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
     return dstore['ruptures'][mask]
+
+# #####################  extraction from the WebAPI ###################### #
+
+
+class WebAPIError(RuntimeError):
+    """
+    Wrapper for an error on a WebAPI server
+    """
+
+
+class Extractor(object):
+    """
+    A class to extract data from the WebAPI.
+
+    :param calc_id: a calculation ID
+    :param server: hostname of the webapi server (can be '')
+    :param username: login username (can be '')
+    :param password: login password (can be '')
+    :param webapi: True or False
+
+    NB: instantiating the Extractor opens a session if webapi is True
+    """
+    def __init__(self, calc_id, webapi,
+                 server=None, username=None, password=None):
+        self.calc_id = calc_id
+        self.webapi = webapi
+        if not webapi:
+            self.dstore = datastore.read(calc_id)
+            self.oqparam = self.dstore['oqparam']
+            return
+        self.server = config.webapi.server if server is None else server
+        if username is None:
+            username = config.webapi.username
+        if password is None:
+            password = config.webapi.password
+        self.sess = requests.Session()
+        if username:
+            login_url = '%s/accounts/ajax_login/' % self.server
+            resp = self.sess.post(
+                login_url, data=dict(username=username, password=password))
+            if resp.status_code != 200:
+                raise WebAPIError(resp.text)
+        resp = self.sess.get('%s/v1/calc/%d/oqparam' % (self.server, calc_id))
+        if resp.status_code != 200:
+            raise WebAPIError(resp.text)
+        self.oqparam = object.__new__(oqvalidation.OqParam)
+        vars(self.oqparam).update(resp.json())
+
+    def get(self, what):
+        """
+        :param what: what to extract
+        :returns: an ArrayWrapper instance
+        """
+        if not self.webapi:
+            return ArrayWrapper.from_(extract(self.dstore, what))
+
+        url = '%s/v1/calc/%d/extract/%s' % (self.server, self.calc_id, what)
+        resp = self.sess.get(url)
+        if resp.status_code != 200:
+            raise WebAPIError(resp.text)
+        npz = numpy.load(io.BytesIO(resp.content))
+        attrs = {k: npz[k] for k in npz if k != 'array'}
+        return ArrayWrapper(npz['array'], attrs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        """
+        Close the session or the datastore
+        """
+        if self.webapi:
+            self.sess.close()
+        else:
+            self.dstore.close()
