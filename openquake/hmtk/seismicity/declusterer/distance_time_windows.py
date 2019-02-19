@@ -61,13 +61,16 @@ class BaseDistanceTimeWindow(object):
     as a cluster.
     """
     @abc.abstractmethod
-    def calc(self, magnitude):
+    def calc(self, magnitude, t_win=None):
         """
         Allows to calculate distance and time windows (sw_space, sw_time)
         see reference: `Van Stiphout et al (2011)`.
 
         :param magnitude: magnitude
         :type magnitude: numpy.ndarray
+        :param t_win: fixed time window (days) indicating the time after which
+        an earthquake of any magnitude is no longer considererd an aftershock
+        :type t_win: int
         :returns: distance and time windows
         :rtype: numpy.ndarray
         """
@@ -79,12 +82,14 @@ class GardnerKnopoffWindow(BaseDistanceTimeWindow):
     """
     Gardner Knopoff method for calculating distance and time windows
     """
-
-    def calc(self, magnitude):
+    def calc(self, magnitude, t_win=None):
         sw_space = np.power(10.0, 0.1238 * magnitude + 0.983)
         sw_time = np.power(10.0, 0.032 * magnitude + 2.7389) / 364.75
         sw_time[magnitude < 6.5] = np.power(
             10.0, 0.5409 * magnitude[magnitude < 6.5] - 0.547) / 364.75
+        if t_win:
+            sw_time = np.array(
+                [(t_win / 364.75) if x > (t_win / 364.75) else x for x in sw_time])
         return sw_space, sw_time
 
 

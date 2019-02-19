@@ -99,9 +99,15 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
             catalogue.data['year'], catalogue.data['month'],
             catalogue.data['day'])
         # Get space and time windows corresponding to each event
-        sw_space, sw_time = (
-            config['time_distance_window'].calc(catalogue.data['magnitude']))
         # Initial Position Identifier
+        if config.get('t_win'):
+            sw_space, sw_time = (
+                config['time_distance_window'].calc(
+                    catalogue.data['magnitude'], config['t_win']))
+        else:
+            sw_space, sw_time = (
+                config['time_distance_window'].calc(
+                    catalogue.data['magnitude']))
         eqid = np.arange(0, neq, 1)
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int)
