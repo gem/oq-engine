@@ -19,6 +19,7 @@
 import os
 import sys
 import ast
+import inspect
 import logging
 import operator
 import tempfile
@@ -458,10 +459,26 @@ def save(path, items, **extra):
             f.attrs[k] = v
 
 
+def _array(v):
+    if hasattr(v, '__toh5__'):
+        return v.__toh5__()[0]
+    return v
+
+
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
     """
+    @classmethod
+    def from_(cls, obj):
+        if inspect.isgenerator(obj):
+            array, attrs = 0, {k: _array(v) for k, v in obj}
+        elif hasattr(obj, '__toh5__'):
+            array, attrs = obj.__toh5__()
+        else:  # assume obj is an array
+            array, attrs = obj, {}
+        return cls(array, attrs)
+
     def __init__(self, array, attrs):
         vars(self).update(attrs)
         self.array = array
