@@ -755,7 +755,7 @@ def get_ruptures_within(dstore, bbox):
 # #####################  extraction from the WebAPI ###################### #
 
 
-class RemoteError(RuntimeError):
+class WebAPIError(RuntimeError):
     """
     Wrapper for an error on a WebAPI server
     """
@@ -766,17 +766,17 @@ class Extractor(object):
     A class to extract data from the WebAPI.
 
     :param calc_id: a calculation ID
-    :param server: hostname of the remote server (can be '')
+    :param server: hostname of the webapi server (can be '')
     :param username: login username (can be '')
     :param password: login password (can be '')
-    :param remote: True or False
+    :param webapi: True or False
 
-    NB: instantiating the Extractor opens a session if remote is True
+    NB: instantiating the Extractor opens a session if webapi is True
     """
-    def __init__(self, calc_id, server, username, password, remote):
+    def __init__(self, calc_id, server, username, password, webapi):
         self.calc_id = calc_id
-        self.remote = remote
-        if not remote:
+        self.webapi = webapi
+        if not webapi:
             self.dstore = datastore.read(calc_id)
             self.oqparam = self.dstore['oqparam']
             return
@@ -787,11 +787,11 @@ class Extractor(object):
             resp = self.sess.post(
                 login_url, data=dict(username=username, password=password))
             if resp.status_code != 200:
-                raise RemoteError(resp.text)
+                raise WebAPIError(resp.text)
         resp = self.sess.get(
             '%s/v1/calc/%d/oqparam' % (server, calc_id))
         if resp.status_code != 200:
-            raise RemoteError(resp.text)
+            raise WebAPIError(resp.text)
         self.oqparam = object.__new__(oqvalidation.OqParam)
         vars(self.oqparam).update(resp.json())
 
@@ -800,14 +800,29 @@ class Extractor(object):
         :param partial_url: what to extract
         :returns: an ArrayWrapper instance
         """
-        if not self.remote:
+        if not self.webapi:
             return ArrayWrapper.from_(extract(self.dstore, partial_url))
 
         url = '%s/v1/calc/%d/extract/%s' % (
             self.server, self.calc_id, partial_url)
         resp = self.sess.get(url)
         if resp.status_code != 200:
-            raise RemoteError(resp.text)
+            raise WebAPIError(resp.text)
         npz = numpy.load(io.BytesIO(resp.content))
         attrs = {k: npz[k] for k in npz if k != 'array'}
         return ArrayWrapper(npz['array'], attrs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        """
+        Close the session or the datastore
+        """
+        if self.webapi:
+            self.sess.close()
+        else:
+            self.dstore.close()
