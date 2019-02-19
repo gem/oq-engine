@@ -3,8 +3,8 @@ Event Based Risk SJ
 
 ============== ===================
 checksum32     2,863,568,899      
-date           2019-02-03T09:38:25
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:21
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 61, num_levels = 1
@@ -56,16 +56,12 @@ code calc_time counts
 A    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00561 NaN    0.00561 0.00561 1      
-only_filter        0.00262 NaN    0.00262 0.00262 1      
+read_source_models 0.00563 NaN    0.00563 0.00563 1      
+only_filter        0.00292 NaN    0.00292 0.00292 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -81,6 +77,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00561  0.33203   1     
-total only_filter        0.00262  1.19141   1     
+total read_source_models 0.00563  0.09375   1     
+total only_filter        0.00292  1.29688   1     
 ======================== ======== ========= ======
