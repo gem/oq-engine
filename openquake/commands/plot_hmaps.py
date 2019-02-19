@@ -17,8 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap, config
 from openquake.hazardlib.imt import from_string
-from openquake.calculators.extract import extract, Extractor
-from openquake.commands import engine
+from openquake.calculators.extract import Extractor
 
 
 def make_figure(lons, lats, imt, imls, poes, hmaps):
@@ -44,27 +43,20 @@ def make_figure(lons, lats, imt, imls, poes, hmaps):
 
 
 @sap.Script
-def plot_hmaps(calc_id, imt, remote=False):
+def plot_hmaps(imt, calc_id, remote=False):
     """
     Mean hazard maps plotter.
     """
-    if remote:
-        w = config.webui
-        extractor = Extractor(calc_id, w.server, w.username, w.password)
-        oq = extractor.oqparam
-        sitecol = extractor.get_npz('sitecol')['array']
-        hmaps = extractor.get_npz('hmaps/%s' % str(imt))['array']
-        lons, lats = sitecol['lon'], sitecol['lat']
-    else:
-        dstore = engine.read(calc_id)
-        oq = dstore['oqparam']
-        sitecol = dstore['sitecol']
-        lons, lats = sitecol.lons, sitecol.lats
-        hmaps = extract(dstore, 'hmaps/%s' % str(imt))  # shape (N, P)
+    w = config.webui
+    extractor = Extractor(calc_id, w.server, w.username, w.password, remote)
+    oq = extractor.oqparam
+    sitecol = extractor.get('sitecol').array
+    hmaps = extractor.get('hmaps/%s' % str(imt)).array
+    lons, lats = sitecol['lon'], sitecol['lat']
     plt = make_figure(lons, lats, imt, oq.imtls[str(imt)], oq.poes, hmaps)
     plt.show()
 
 
-plot_hmaps.arg('calc_id', 'a computation id', type=int)
 plot_hmaps.arg('imt', 'an intensity measure type', type=from_string)
+plot_hmaps.arg('calc_id', 'a computation id', type=int)
 plot_hmaps.flg('remote', 'use a remote server')
