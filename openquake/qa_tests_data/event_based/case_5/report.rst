@@ -3,8 +3,8 @@ Germany_SHARE Combined Model event_based
 
 ============== ===================
 checksum32     1,250,935,976      
-date           2019-02-03T09:38:11
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:07
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 100, num_levels = 1
@@ -77,16 +77,12 @@ P    0.0       51
 S    0.0       4     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.03937 0.05108 0.00485 0.09805 3      
-only_filter        0.02279 NaN     0.02279 0.02279 1      
+read_source_models 0.03772 0.04931 0.00457 0.09438 3      
+only_filter        0.01185 0.00770 0.00641 0.01730 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -94,7 +90,7 @@ Data transfer
 ================== ======================================== ========
 task               sent                                     received
 read_source_models converter=939 B fnames=383 B             47.02 KB
-only_filter        srcs=46.56 KB srcfilter=253 B dummy=14 B 42.92 KB
+only_filter        srcs=18.89 KB srcfilter=253 B dummy=14 B 42.5 KB 
 ================== ======================================== ========
 
 Slowest operations
@@ -102,6 +98,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.11810  0.75781   3     
-total only_filter        0.02279  1.82031   1     
+total read_source_models 0.11317  0.73047   3     
+total only_filter        0.02371  1.60547   2     
 ======================== ======== ========= ======

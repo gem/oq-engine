@@ -18,7 +18,7 @@
 import numpy
 from openquake.baselib import sap
 from openquake.calculators.extract import extract
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 def make_figure(losses_by_rlzi, loss_types, nbins):
@@ -52,11 +52,12 @@ def plot_losses(calc_id, bins=7):
     losses_by_event plotter
     """
     # read the hazard data
-    dstore = engine.read(calc_id)
+    dstore = util.read(calc_id)
     losses_by_rlzi = dict(extract(dstore, 'losses_by_event'))
     oq = dstore['oqparam']
     plt = make_figure(losses_by_rlzi, oq.loss_dt().names, bins)
     plt.show()
+
 
 plot_losses.arg('calc_id', 'a computation id', type=int)
 plot_losses.opt('bins', 'number of histogram bins', type=int)

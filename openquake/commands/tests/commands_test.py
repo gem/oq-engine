@@ -78,7 +78,7 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, grp=[0], weight=1.0: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): [0]>'''
+0,'[AkkarBommer2010]': [0]>'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -214,7 +214,7 @@ class RunShowExportTestCase(unittest.TestCase):
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
-        self.assertIn('See the output with hdfview', str(self.p))
+        self.assertIn('See the output with silx view', str(self.p))
 
     def test_show_calc(self):
         with Print.patch() as p:

@@ -18,6 +18,8 @@
 import collections
 import operator
 import logging
+import io
+import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -27,12 +29,13 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
+from openquake.baselib import datastore, config
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, oqvalidation
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -75,7 +78,7 @@ class Extract(dict):
     determined by the first part of `fullkey` (a slash-separated
     string) by passing as argument the second part of `fullkey`.
 
-    For instance extract(dstore, 'sitecol), extract(dstore, 'asset_values/0')
+    For instance extract(dstore, 'sitecol'), extract(dstore, 'asset_values/0')
     etc.
     """
     def add(self, key, cache=False):
@@ -166,7 +169,6 @@ def extract_hazard(dstore, what):
     yield 'checksum32', dstore['/'].attrs['checksum32']
     nsites = len(sitecol)
     M = len(oq.imtls)
-    P = len(oq.poes)
     for statname, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         for imt in oq.imtls:
             key = 'hcurves/%s/%s' % (imt, statname)
@@ -182,9 +184,8 @@ def extract_hazard(dstore, what):
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
-            idx = [m * P + p for m in range(M)]
             for sid in pmap:
-                arr[sid] = hmap[sid].array[idx, 0]
+                arr[sid] = hmap[sid].array[:, p]
             logging.info('extracting %s', key)
             yield key, arr
 
@@ -238,7 +239,7 @@ def _get_dict(dstore, name, imts, imls):
         dt = numpy.dtype([(str(iml), F32) for iml in imls])
         dtlist.append((imt, dt))
     for statname, curves in dstore[name].items():
-        dic[statname] = curves.value.view(dtlist).flatten()
+        dic[statname] = curves.value.flatten().view(dtlist)
     return dic
 
 
@@ -260,12 +261,14 @@ def extract_hcurves(dstore, what):
 @extract.add('hmaps')
 def extract_hmaps(dstore, what):
     """
-    Extracts hazard maps. Use it as /extract/hmaps/mean or
-    /extract/hmaps/rlz-0, etc
+    Extracts hazard maps. Use it as /extract/hmaps/PGA
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
+    if what in oq.imtls:  # is an IMT
+        m = list(oq.imtls).index(what)
+        return dstore['hmaps/mean'][:, m, :]
     dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
@@ -707,7 +710,7 @@ def extract_rupture(dstore, serial):
     """
     Extract information about the given event index.
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
+    http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
     """
     ridx = list(dstore['ruptures']['serial']).index(int(serial))
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
@@ -733,3 +736,113 @@ def extract_event_info(dstore, eidx):
         yield key, val
     yield 'rlzi', rlzi
     yield 'gsim', repr(gsim)
+
+
+@extract.add('ruptures_within')
+def get_ruptures_within(dstore, bbox):
+    """
+    Extract the ruptures within the given bounding box, a string
+    minlon,minlat,maxlon,maxlat.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures_with/8,44,10,46
+    """
+    minlon, minlat, maxlon, maxlat = map(float, bbox.split(','))
+    hypo = dstore['ruptures']['hypo'].T  # shape (3, N)
+    mask = ((minlon <= hypo[0]) * (minlat <= hypo[1]) *
+            (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
+    return dstore['ruptures'][mask]
+
+# #####################  extraction from the WebAPI ###################### #
+
+
+class WebAPIError(RuntimeError):
+    """
+    Wrapper for an error on a WebAPI server
+    """
+
+
+class Extractor(object):
+    """
+    A class to extract data from a calculation.
+
+    :param calc_id: a calculation ID
+
+    NB: instantiating the Extractor opens the datastore.
+    """
+    def __init__(self, calc_id):
+        self.calc_id = calc_id
+        self.dstore = datastore.read(calc_id)
+        self.oqparam = self.dstore['oqparam']
+
+    def get(self, what):
+        """
+        :param what: what to extract
+        :returns: an ArrayWrapper instance
+        """
+        return ArrayWrapper.from_(extract(self.dstore, what))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        """
+        Close the datastore
+        """
+        self.dstore.close()
+
+
+class WebExtractor(Extractor):
+    """
+    A class to extract data from the WebAPI.
+
+    :param calc_id: a calculation ID
+    :param server: hostname of the webapi server (can be '')
+    :param username: login username (can be '')
+    :param password: login password (can be '')
+
+    NB: instantiating the WebExtractor opens a session.
+    """
+    def __init__(self, calc_id, server=None, username=None, password=None):
+        self.calc_id = calc_id
+        self.server = config.webapi.server if server is None else server
+        if username is None:
+            username = config.webapi.username
+        if password is None:
+            password = config.webapi.password
+        self.sess = requests.Session()
+        if username:
+            login_url = '%s/accounts/ajax_login/' % self.server
+            resp = self.sess.post(
+                login_url, data=dict(username=username, password=password))
+            if resp.status_code != 200:
+                raise WebAPIError(resp.text)
+        url = '%s/v1/calc/%d/oqparam' % (self.server, calc_id)
+        resp = self.sess.get(url)
+        if resp.status_code == 404:
+            raise WebAPIError('Not Found: %s' % url)
+        elif resp.status_code != 200:
+            raise WebAPIError(resp.text)
+        self.oqparam = object.__new__(oqvalidation.OqParam)
+        vars(self.oqparam).update(resp.json())
+
+    def get(self, what):
+        """
+        :param what: what to extract
+        :returns: an ArrayWrapper instance
+        """
+        url = '%s/v1/calc/%d/extract/%s' % (self.server, self.calc_id, what)
+        resp = self.sess.get(url)
+        if resp.status_code != 200:
+            raise WebAPIError(resp.text)
+        npz = numpy.load(io.BytesIO(resp.content))
+        attrs = {k: npz[k] for k in npz if k != 'array'}
+        return ArrayWrapper(npz['array'], attrs)
+
+    def close(self):
+        """
+        Close the session
+        """
+        self.sess.close()

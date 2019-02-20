@@ -60,8 +60,6 @@ class BaseDistanceTimeWindow(object):
     Defines the space and time windows, within which an event is identified
     as a cluster.
     """
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def calc(self, magnitude):
         """

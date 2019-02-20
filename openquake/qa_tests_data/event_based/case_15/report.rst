@@ -3,8 +3,8 @@ Hazard Japan (HERP model 2014) reduced
 
 ============== ===================
 checksum32     2,896,463,652      
-date           2019-02-03T09:38:32
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:27
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 5, num_levels = 1
@@ -58,24 +58,20 @@ N    0.0       1
 P    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.00237 NaN    0.00237 0.00237 1      
-only_filter        0.00293 NaN    0.00293 0.00293 1      
-================== ======= ====== ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.00250 NaN       0.00250 0.00250 1      
+only_filter        0.00257 7.738E-05 0.00252 0.00263 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
 read_source_models converter=313 B fnames=119 B            6.62 KB 
-only_filter        srcs=6.09 KB srcfilter=253 B dummy=14 B 6.16 KB 
+only_filter        srcs=1.61 KB srcfilter=253 B dummy=14 B 6.47 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -83,6 +79,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00293  1.39062   1     
-total read_source_models 0.00237  0.12109   1     
+total only_filter        0.00515  1.36328   2     
+total read_source_models 0.00250  0.22656   1     
 ======================== ======== ========= ======
