@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,152,338,418      
-date           2019-02-03T09:39:18
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:37:16
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -50,23 +50,23 @@ Alaska_asc_grid_NSHMP2007 1.00000 simple(4)       4
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================================================================================================= ========= ========== =======================
-grp_id gsims                                                                                                   distances siteparams ruptparams             
-====== ======================================================================================================= ========= ========== =======================
-0      AbrahamsonSilva1997() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() YoungsEtAl1997SInterNSHMP2008() rjb rrup  vs30       dip hypo_depth mag rake
-1      AbrahamsonSilva1997() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() YoungsEtAl1997SInterNSHMP2008() rjb rrup  vs30       dip hypo_depth mag rake
-====== ======================================================================================================= ========= ========== =======================
+====== =============================================================================================================== ========= ========== =======================
+grp_id gsims                                                                                                           distances siteparams ruptparams             
+====== =============================================================================================================== ========= ========== =======================
+0      '[AbrahamsonSilva1997]' '[CampbellBozorgnia2003NSHMP2007]' '[SadighEtAl1997]' '[YoungsEtAl1997SInterNSHMP2008]' rjb rrup  vs30       dip hypo_depth mag rake
+1      '[AbrahamsonSilva1997]' '[CampbellBozorgnia2003NSHMP2007]' '[SadighEtAl1997]' '[YoungsEtAl1997SInterNSHMP2008]' rjb rrup  vs30       dip hypo_depth mag rake
+====== =============================================================================================================== ========= ========== =======================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=4, rlzs=4)
-  1,AbrahamsonSilva1997(): [0]
-  1,CampbellBozorgnia2003NSHMP2007(): [1]
-  1,SadighEtAl1997(): [2]
-  1,YoungsEtAl1997SInterNSHMP2008(): [3]>
+  1,'[AbrahamsonSilva1997]': [0]
+  1,'[CampbellBozorgnia2003NSHMP2007]': [1]
+  1,'[SadighEtAl1997]': [2]
+  1,'[YoungsEtAl1997SInterNSHMP2008]': [3]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -81,7 +81,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      2         M    2     14    1,104        0.0       0.00202    5.00000   4         40    
+1      2         M    2     14    1,104        0.0       0.00216    5.00000   4         40    
 0      1         M    0     2     160          0.0       0.0        0.0       0         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
@@ -93,16 +93,12 @@ code calc_time counts
 M    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00159 2.802E-04 0.00139 0.00179 2      
-split_filter       0.00483 NaN       0.00483 0.00483 1      
+read_source_models 0.00179 5.275E-04 0.00141 0.00216 2      
+split_filter       0.00513 NaN       0.00513 0.00513 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -118,6 +114,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00483  1.25781   1     
-total read_source_models 0.00318  0.07422   2     
+total split_filter       0.00513  1.37500   1     
+total read_source_models 0.00357  0.01953   2     
 ======================== ======== ========= ======
