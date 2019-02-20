@@ -208,13 +208,11 @@ def export_losses_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    if dstore['oqparam'].calculation_mode == 'ebrisk':
-        logging.warning('You cannot export losses_by_event from ebrisk yet')
-        return []
     dtlist = [('eid', U64)] + dstore['oqparam'].loss_dt_list()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
-    writer.save(dstore['losses_by_event'].value.view(dtlist), dest)
+    arr = dstore['losses_by_event'].value[['eid', 'loss']]
+    writer.save(arr.view(dtlist), dest)
     return writer.getsaved()
 
 
