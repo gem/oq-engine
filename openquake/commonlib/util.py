@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
 from openquake.baselib import config, datastore
+from openquake.commonlib import logs
 
 F32 = numpy.float32
 
@@ -27,7 +28,6 @@ def read(calc_id, username=None):
     :param username: if given, restrict the search to the user's calculations
     :returns: the associated DataStore instance
     """
-    from openquake.baselib import logs  # avoid circular import
     if isinstance(calc_id, str) or calc_id < 0 and not username:
         # get the last calculation in the datastore of the current user
         return datastore.read(calc_id)
