@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
 from openquake.baselib import sap, general
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 def make_figure(indices, n, imtls, spec_curves, other_curves=(), label=''):
@@ -64,8 +64,8 @@ def plot(calc_id, other_id=None, sites='0', imti='all'):
     Hazard curves plotter.
     """
     # read the hazard data
-    haz = engine.read(calc_id)
-    other = engine.read(other_id) if other_id else None
+    haz = util.read(calc_id)
+    other = util.read(other_id) if other_id else None
     oq = haz['oqparam']
     if imti == 'all':
         imtls = oq.imtls
