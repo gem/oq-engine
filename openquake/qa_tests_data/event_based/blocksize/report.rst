@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     2,348,158,649      
-date           2019-02-03T09:38:07
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:04
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 2, num_levels = 4
@@ -63,16 +63,12 @@ code calc_time counts
 A    0.0       9     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.39808 NaN    0.39808 0.39808 1      
-only_filter        0.00329 NaN    0.00329 0.00329 1      
+read_source_models 0.45434 NaN    0.45434 0.45434 1      
+only_filter        0.00315 NaN    0.00315 0.00315 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -88,6 +84,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.39808  0.67188   1     
-total only_filter        0.00329  1.63672   1     
+total read_source_models 0.45434  0.68750   1     
+total only_filter        0.00315  1.35938   1     
 ======================== ======== ========= ======

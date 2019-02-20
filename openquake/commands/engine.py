@@ -36,24 +36,6 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
-def read(calc_id, username=None):
-    """
-    :param calc_id: a calculation ID
-    :param username: if given, restrict the search to the user's calculations
-    :returns: the associated DataStore instance
-    """
-    if isinstance(calc_id, str) or calc_id < 0 and not username:
-        # get the last calculation in the datastore of the current user
-        return datastore.read(calc_id)
-    job = logs.dbcmd('get_job', calc_id, username)
-    if job:
-        return datastore.read(job.ds_calc_dir + '.hdf5')
-    else:
-        # calc_id can be present in the datastore and not in the database:
-        # this happens if the calculation was run with `oq run`
-        return datastore.read(calc_id)
-
-
 def get_job_id(job_id, username=None):
     job = logs.dbcmd('get_job', job_id, username)
     if not job:
