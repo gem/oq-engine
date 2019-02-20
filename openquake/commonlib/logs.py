@@ -18,8 +18,6 @@
 """
 Set up some system-wide loggers
 """
-
-import sys
 import os.path
 import logging
 from datetime import datetime
