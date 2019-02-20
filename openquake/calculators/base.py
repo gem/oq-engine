@@ -36,7 +36,8 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, source, calc, writers
+from openquake.commonlib import (
+    readinput, logictree, source, calc, writers, util)
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -524,7 +525,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
         elif oq.hazard_calculation_id:
-            parent = datastore.read(oq.hazard_calculation_id)
+            parent = util.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
@@ -672,7 +673,7 @@ class HazardCalculator(BaseCalculator):
         self.load_riskmodel()  # must be called first
 
         if oq.hazard_calculation_id:
-            with datastore.read(oq.hazard_calculation_id) as dstore:
+            with util.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
         else:
             haz_sitecol = readinput.get_site_collection(oq)

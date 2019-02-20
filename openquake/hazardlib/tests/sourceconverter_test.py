@@ -19,7 +19,6 @@ import os
 import io
 import unittest
 import numpy
-from nose.tools import raises
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import update_source_model, \
     SourceConverter
@@ -200,12 +199,12 @@ class SourceConverterTestCase(unittest.TestCase):
         src = sg[0].sources[0]
         msg = "Wrong time span in the temporal occurrence model"
         self.assertEqual(src.temporal_occurrence_model.time_span, 50, msg)
-        
+
     def test_wrong_source_type(self):
         """ Test that only nonparametric sources are used with mutex ruptures
         """
         testfile = os.path.join(testdir, 'rupture_mutex_wrong.xml')
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(ValueError):
             nrml.to_python(testfile)
 
     def test_non_parametric_mutex(self):
