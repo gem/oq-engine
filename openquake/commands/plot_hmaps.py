@@ -43,11 +43,11 @@ def make_figure(lons, lats, imt, imls, poes, hmaps):
 
 
 @sap.Script
-def plot_hmaps(imt, calc_id, remote=False):
+def plot_hmaps(imt, calc_id, webapi=False):
     """
     Mean hazard maps plotter.
     """
-    extractor = Extractor(calc_id, remote)
+    extractor = Extractor(calc_id, webapi)
     with extractor:
         oq = extractor.oqparam
         sitecol = extractor.get('sitecol').array
@@ -59,4 +59,4 @@ def plot_hmaps(imt, calc_id, remote=False):
 
 plot_hmaps.arg('imt', 'an intensity measure type', type=from_string)
 plot_hmaps.arg('calc_id', 'a computation id', type=int)
-plot_hmaps.flg('remote', 'use a remote server')
+plot_hmaps.flg('webapi', 'pass through a WebAPI server')
