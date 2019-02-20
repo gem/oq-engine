@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Forced all lowercase Python files in the engine codebase
+  * Removed the dependency from nose
+
+  [Robin Gee]
+  * Updated GMPE of Yu et al. (2013)
+
+  [Michele Simionato]
+  * Added an `Extractor` client class leveraging the WebAPI and enhanced
+    `oq plot_hmaps` to display remote hazard maps
   * Added a check when disaggregation is attempted on a source model
     with atomic source groups
   * Implemented serialization/deserialization of GSIM instances to TOML
