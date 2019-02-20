@@ -20,7 +20,7 @@ import collections
 import numpy
 from openquake.baselib import sap
 from openquake.calculators import views
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 def get(dstore, what, imtls, sids):
@@ -33,7 +33,7 @@ def get(dstore, what, imtls, sids):
 
 
 def getdata(what, calc_ids, samplesites):
-    dstores = [engine.read(calc_id) for calc_id in calc_ids]
+    dstores = [util.read(calc_id) for calc_id in calc_ids]
     dstore = dstores[0]
     sitecol = dstore['sitecol']
     oq = dstore['oqparam']
