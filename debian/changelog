@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Removed the dependency from nose
+
   [Robin Gee]
   * Updated GMPE of Yu et al. (2013)
 
