@@ -22,7 +22,7 @@ import logging
 from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import logs, readinput
+from openquake.commonlib import util, logs, readinput
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
@@ -140,7 +140,7 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
                          exports, hazard_calculation_id=hc_id)
     if ebr and oqparam.aggregate_by:
         logging.info('Exporting aggregated data')
-        dstore = datastore.read(job_id)
+        dstore = util.read(job_id)
         aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)
         fnames = []
         fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
