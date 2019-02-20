@@ -29,6 +29,9 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 
 FEWSITES = 10  # if there are few sites store the rupdata
 
+KNOWN_DISTANCES = frozenset(
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth rvolc'.split())
+
 
 def get_distances(rupture, mesh, param):
     """

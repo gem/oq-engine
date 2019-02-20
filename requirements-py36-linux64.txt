@@ -28,6 +28,7 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py/idna-2.6-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/requests-2.20.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/pyshp-1.2.3-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py36/PyYAML-3.12-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/toml-0.10.0-py2.py3-none-any.whl
 
 ## Extra ##
 

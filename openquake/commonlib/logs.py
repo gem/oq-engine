@@ -18,8 +18,6 @@
 """
 Set up some system-wide loggers
 """
-
-import sys
 import os.path
 import logging
 from datetime import datetime
@@ -165,7 +163,8 @@ def init(calc_id='nojob', level=logging.INFO):
     """
     1. initialize the root logger (if not already initialized)
     2. set the format of the root handlers (if any)
-    3. return a new calculation ID candidate if calc_id is None
+    3. return a new calculation ID candidate if calc_id is 'job' or 'nojob'
+       (with 'nojob' the calculation ID is not stored in the database)
     """
     if not logging.root.handlers:  # first time
         logging.basicConfig(level=level)

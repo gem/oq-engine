@@ -33,8 +33,7 @@ from openquake.baselib.general import group_array
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
-from openquake.commonlib.writers import (
-    build_header, scientificformat, FIVEDIGITS)
+from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators import getters
 
 FLOAT = (float, numpy.float32, numpy.float64)
@@ -371,19 +370,11 @@ def view_totlosses(token, dstore):
 def portfolio_loss(dstore):
     R = dstore['csm_info'].get_num_rlzs()
     array = dstore['losses_by_event'].value
-    if array.dtype.names:  # for event based risk
-        L, = array.dtype['loss'].shape
-        data = numpy.zeros((R, L), F32)
-        for row in array:
-            data[row['rlzi']] += row['loss']
-    else:  # for ebrisk
-        losses = dstore['losses_by_event'].value  # shape (E, L, ...)
-        L = losses.shape[1]
-        data = numpy.zeros((R, L), F32)
-        rlzs = dstore['events']['rlz']
-        for rlz, loss in zip(rlzs, losses):
-            for lti in range(L):
-                data[rlz, lti] += loss[lti].sum()
+    L = array.dtype['loss'].shape[0]  # loss has shape L, T...
+    data = numpy.zeros((R, L), F32)
+    for row in array:
+        for lti in range(L):
+            data[row['rlzi'], lti] += row['loss'][lti].sum()
     return data
 
 
@@ -563,7 +554,8 @@ def view_required_params_per_trt(token, dstore):
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((grp_id, gsims, distances, siteparams, ruptparams))
+        tbl.append((grp_id, ' '.join(map(repr, map(repr, gsims))),
+                    distances, siteparams, ruptparams))
     return rst_table(
         tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
