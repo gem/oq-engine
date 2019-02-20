@@ -63,23 +63,6 @@ class InvalidCalculationID(Exception):
     pre-calculation
     """
 
-
-PRECALC_MAP = dict(
-    classical=['psha'],
-    disaggregation=['psha'],
-    scenario_risk=['scenario'],
-    scenario_damage=['scenario'],
-    classical_risk=['classical'],
-    classical_bcr=['classical'],
-    classical_damage=['classical'],
-    event_based=['event_based', 'event_based_risk', 'ucerf_hazard',
-                 'event_based_advanced'],
-    event_based_risk=['event_based', 'event_based_risk', 'ucerf_hazard'],
-    ebrisk=['event_based', 'event_based_risk', 'ucerf_hazard'],
-    ucerf_classical=['ucerf_psha'],
-    ucerf_hazard=['ucerf_hazard'])
-
-
 def fix_ones(pmap):
     """
     Physically, an extremely small intensity measure level can have an
