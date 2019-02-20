@@ -1,3 +1,6 @@
+  [Robin Gee]
+  * Updated GMPE of Yu et al. (2013)
+
   [Michele Simionato]
   * Added an `Extractor` client class leveraging the WebAPI and enhanced
     `oq plot_hmaps` to display remote hazard maps
