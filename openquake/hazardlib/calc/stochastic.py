@@ -163,13 +163,13 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     ir_mon = monitor('iter_ruptures', measuremem=False)
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
-    if sources.atomic and 'cluster' in param:
+    if sources.atomic and getattr(sources, 'cluster', False):
         numpy.random.seed(sources[0].serial)
         # Set the parameters required to compute the number of occurrences
         # of the group of sources
-        tom = param['tom']
-        assert param['oqparam'].number_of_logic_tree_samples > 0
+        #  assert param['oqparam'].number_of_logic_tree_samples > 0
         samples = getattr(sources[0], 'samples')
+        tom = param['tom']
         rate = tom.occurrence_rate
         time_span = tom.time_span
         # Note that using a single time interval corresponding to the product
