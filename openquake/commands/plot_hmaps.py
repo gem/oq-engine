@@ -19,6 +19,7 @@ from openquake.baselib import sap
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import Extractor
 
+
 def basemap(projection, lons, lats):
     from mpl_toolkits.basemap import Basemap  # costly import
     bmap = Basemap(projection=projection,
@@ -48,7 +49,7 @@ def make_figure(lons, lats, imt, imls, poes, hmaps):
         ax.grid(True)
         ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
         bmap = basemap('cyl', lons, lats)
-        bmap.scatter(lons, lats, c=hmaps[:, j], cmap='rainbow')
+        bmap.scatter(lons, lats, c=hmaps[:, j], cmap='jet')
     return plt
 
 
