@@ -81,6 +81,7 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
         rates = self.source.get_annual_occurrence_rates(min_rate=5)
         self.assertEqual(rates, [(5, 7)])
 
+
 class GenerateOneRuptureTestCase(unittest.TestCase):
 
     def test_simple_fault_source(self):
