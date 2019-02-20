@@ -763,9 +763,11 @@ class WebAPIError(RuntimeError):
 
 class Extractor(object):
     """
-    A class to extract data from a calculation
+    A class to extract data from a calculation.
 
     :param calc_id: a calculation ID
+
+    NB: instantiating the Extractor opens the datastore.
     """
     def __init__(self, calc_id):
         self.calc_id = calc_id
@@ -801,7 +803,7 @@ class WebExtractor(Extractor):
     :param username: login username (can be '')
     :param password: login password (can be '')
 
-    NB: instantiating the Extractor opens a session if webapi is True
+    NB: instantiating the WebExtractor opens a session.
     """
     def __init__(self, calc_id, server=None, username=None, password=None):
         self.calc_id = calc_id
@@ -838,6 +840,6 @@ class WebExtractor(Extractor):
 
     def close(self):
         """
-        Close the session or the datastore
+        Close the session
         """
         self.sess.close()
