@@ -29,10 +29,11 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib import datastore, config
+from openquake.baselib import config
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib.imt import from_string
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util, oqvalidation
@@ -254,8 +255,14 @@ def extract_hcurves(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol, complete=False)
-    dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
-    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+    if what == '':
+        dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
+        return hazard_items(
+            dic, mesh, investigation_time=oq.investigation_time)
+    name, imt_string = what.split('/')
+    assert 'hcurves/' + name in dstore, 'hcurves/' + name
+    from_string(imt_string)  # check valid IMT
+    return dstore['hcurves/mean'][:, oq.imtls(imt_string)]
 
 
 @extract.add('hmaps')
@@ -266,11 +273,16 @@ def extract_hmaps(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
-    if what in oq.imtls:  # is an IMT
-        m = list(oq.imtls).index(what)
-        return dstore['hmaps/mean'][:, m, :]
-    dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
-    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+    if what == '':
+        dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
+        return hazard_items(
+            dic, mesh, investigation_time=oq.investigation_time)
+
+    name, imt_string = what.split('/')
+    assert 'hmaps/' + name in dstore, 'hmaps/' + name
+    from_string(imt_string)  # check valid IMT
+    m = list(oq.imtls).index(imt_string)
+    return dstore['hmaps/mean'][:, m, :]
 
 
 @extract.add('uhs')
@@ -771,7 +783,7 @@ class Extractor(object):
     """
     def __init__(self, calc_id):
         self.calc_id = calc_id
-        self.dstore = datastore.read(calc_id)
+        self.dstore = util.read(calc_id)
         self.oqparam = self.dstore['oqparam']
 
     def get(self, what):
