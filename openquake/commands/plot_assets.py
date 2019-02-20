@@ -19,7 +19,7 @@ import numpy
 import shapely.wkt
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import cross_idl
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 @sap.Script
@@ -30,7 +30,7 @@ def plot_assets(calc_id=-1, site_model=False):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
-    dstore = engine.read(calc_id)
+    dstore = util.read(calc_id)
     try:
         region = dstore['oqparam'].region
     except KeyError:

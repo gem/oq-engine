@@ -296,7 +296,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
         for k, group in groupby(sequence, key).items():
             blocks.append(group)
         return blocks
-    items = list(sequence) if key is nokey else sorted(sequence, key=key)
+    items = sorted(sequence, key=lambda item: (key(item), weight(item)))
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))

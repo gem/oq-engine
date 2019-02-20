@@ -46,10 +46,11 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, rlzs_assoc=None, sids=None):
+    def __init__(self, dstore, rlzs_assoc=None, sids=None, poes=()):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        self.poes = poes
         self.num_rlzs = len(self.rlzs_assoc.realizations)
         self.eids = None
         self.nbytes = 0
@@ -77,7 +78,7 @@ class PmapGetter(object):
             self.sids = self.dstore['sitecol'].sids
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
-        self.poes = oq.poes
+        self.poes = self.poes or oq.poes
         self.data = {}
         try:
             hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
@@ -139,9 +140,8 @@ class PmapGetter(object):
                         break
         return pmap
 
-    def get_pmaps(self, sids):  # used in classical
+    def get_pmaps(self):  # used in classical
         """
-        :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
         return self.rlzs_assoc.combine_pmaps(self.pmap_by_grp)
@@ -155,7 +155,7 @@ class PmapGetter(object):
         if imtls is None:
             imtls = self.imtls
         pmaps = [pmap.convert2(imtls, self.sids)
-                 for pmap in self.get_pmaps(self.sids)]
+                 for pmap in self.get_pmaps()]
         return numpy.array(pmaps)
 
     def items(self, kind=''):
@@ -539,7 +539,8 @@ class RuptureGetter(object):
         self.rlz2idx = {}
         nr = 0
         rlzi = []
-        for rlzs in rlzs_by_gsim.values():
+        for gsim, rlzs in rlzs_by_gsim.items():
+            assert not isinstance(gsim, str)
             for rlz in rlzs:
                 self.rlz2idx[rlz] = nr
                 rlzi.append(rlz)
@@ -573,7 +574,7 @@ class RuptureGetter(object):
         return len(self.rlz2idx)
 
     # used in ebrisk
-    def get_weights(self, src_filter, num_taxonomies_by_site):
+    def set_weights(self, src_filter, num_taxonomies_by_site):
         """
         :returns: the weights of the ruptures in the getter
         """
@@ -581,19 +582,25 @@ class RuptureGetter(object):
         for rup in self.rup_array:
             sids = src_filter.close_sids(rup, self.trt, rup['mag'])
             weights.append(num_taxonomies_by_site[sids].sum())
-        return weights
+        self.weights = numpy.array(weights)
+        self.weight = self.weights.sum()
 
-    def split(self, weights, maxweight):
+    def split(self, maxweight):
         """
         :yields: RuptureGetters with weight <= maxweight
         """
+        # NB: can be called only after .set_weights() has been called
         idx = {ri: i for i, ri in enumerate(self.rup_indices)}
-        for indices in general.block_splitter(self.rup_indices, maxweight,
-                                              lambda ri: weights[idx[ri]]):
-            if indices:
+        for rup_indices in general.block_splitter(
+                self.rup_indices, maxweight, lambda ri: self.weights[idx[ri]]):
+            if rup_indices:
                 # some indices may have weight 0 and are discarded
-                yield self.__class__(self.filename, list(indices), self.grp_id,
-                                     self.trt, self.samples, self.rlzs_by_gsim)
+                rgetter = self.__class__(
+                    self.filename, list(rup_indices), self.grp_id,
+                    self.trt, self.samples, self.rlzs_by_gsim)
+                rgetter.weight = sum([self.weights[idx[ri]]
+                                      for ri in rup_indices])
+                yield rgetter
 
     def get_eid_rlz(self, monitor=None):
         """
@@ -631,6 +638,7 @@ class RuptureGetter(object):
             dic['grp_id'] = rec['grp_id']
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
+            dic['mag'] = rec['mag']
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
@@ -702,5 +710,6 @@ class RuptureGetter(object):
         return len(self.rup_indices)
 
     def __repr__(self):
-        return '<%s grp_id=%d, %d rupture(s)>' % (
-            self.__class__.__name__, self.grp_id, len(self.rup_indices))
+        wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
+        return '<%s grp_id=%d, %d rupture(s)%s>' % (
+            self.__class__.__name__, self.grp_id, len(self.rup_indices), wei)

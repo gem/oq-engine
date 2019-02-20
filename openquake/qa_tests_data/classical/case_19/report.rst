@@ -2,9 +2,9 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ============== ===================
-checksum32     3,058,858,863      
-date           2019-02-03T09:40:31
-engine_version 3.4.0-gite8c42e513a
+checksum32     1,791,718,331      
+date           2019-02-18T08:38:23
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 78
@@ -44,43 +44,43 @@ Composite source model
 ========= ======= ====================== ================
 smlt_path weight  gsim_logic_tree        num_realizations
 ========= ======= ====================== ================
-b1        1.00000 complex(0,5,2,4,4,1,0) 160             
+b1        1.00000 complex(0,2,5,0,4,4,1) 160             
 ========= ======= ====================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================================================================================================ ================= ======================= =================
-grp_id gsims                                                                                            distances         siteparams              ruptparams       
-====== ================================================================================================ ================= ======================= =================
-0      AtkinsonBoore2003SInter() LinLee2008SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter()         rhypo rrup        vs30                    hypo_depth mag   
-1      FaccioliEtAl2010()                                                                               rrup              vs30                    mag rake         
-2      Campbell2003SHARE() ToroEtAl2002SHARE()                                                          rjb rrup                                  mag rake         
-3      AkkarBommer2010() Campbell2003SHARE() CauzziFaccioli2008() ChiouYoungs2008() ToroEtAl2002SHARE() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab()             rhypo rrup        vs30                    hypo_depth mag   
-====== ================================================================================================ ================= ======================= =================
+====== ========================================================================================================== ================= ======================= =================
+grp_id gsims                                                                                                      distances         siteparams              ruptparams       
+====== ========================================================================================================== ================= ======================= =================
+0      '[AtkinsonBoore2003SInter]' '[LinLee2008SInter]' '[YoungsEtAl1997SInter]' '[ZhaoEtAl2006SInter]'           rhypo rrup        vs30                    hypo_depth mag   
+1      '[FaccioliEtAl2010]'                                                                                       rrup              vs30                    mag rake         
+2      '[Campbell2003SHARE]' '[ToroEtAl2002SHARE]'                                                                rjb rrup                                  mag rake         
+3      '[AkkarBommer2010]' '[Campbell2003SHARE]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ToroEtAl2002SHARE]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+4      '[AtkinsonBoore2003SSlab]' '[LinLee2008SSlab]' '[YoungsEtAl1997SSlab]' '[ZhaoEtAl2006SSlab]'               rhypo rrup        vs30                    hypo_depth mag   
+====== ========================================================================================================== ================= ======================= =================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=16, rlzs=160)
-  0,AtkinsonBoore2003SInter(): ['40 realizations']
-  0,LinLee2008SInter(): ['40 realizations']
-  0,YoungsEtAl1997SInter(): ['40 realizations']
-  0,ZhaoEtAl2006SInter(): ['40 realizations']
-  1,FaccioliEtAl2010(): ['160 realizations']
-  2,Campbell2003SHARE(): ['80 realizations']
-  2,ToroEtAl2002SHARE(): ['80 realizations']
-  3,AkkarBommer2010(): ['32 realizations']
-  3,Campbell2003SHARE(): ['32 realizations']
-  3,CauzziFaccioli2008(): ['32 realizations']
-  3,ChiouYoungs2008(): ['32 realizations']
-  3,ToroEtAl2002SHARE(): ['32 realizations']
-  4,AtkinsonBoore2003SSlab(): ['40 realizations']
-  4,LinLee2008SSlab(): ['40 realizations']
-  4,YoungsEtAl1997SSlab(): ['40 realizations']
-  4,ZhaoEtAl2006SSlab(): ['40 realizations']>
+  0,'[AtkinsonBoore2003SInter]': ['40 realizations']
+  0,'[LinLee2008SInter]': ['40 realizations']
+  0,'[YoungsEtAl1997SInter]': ['40 realizations']
+  0,'[ZhaoEtAl2006SInter]': ['40 realizations']
+  1,'[FaccioliEtAl2010]': ['160 realizations']
+  2,'[Campbell2003SHARE]': ['80 realizations']
+  2,'[ToroEtAl2002SHARE]': ['80 realizations']
+  3,'[AkkarBommer2010]': ['32 realizations']
+  3,'[Campbell2003SHARE]': ['32 realizations']
+  3,'[CauzziFaccioli2008]': ['32 realizations']
+  3,'[ChiouYoungs2008]': ['32 realizations']
+  3,'[ToroEtAl2002SHARE]': ['32 realizations']
+  4,'[AtkinsonBoore2003SSlab]': ['40 realizations']
+  4,'[LinLee2008SSlab]': ['40 realizations']
+  4,'[YoungsEtAl1997SSlab]': ['40 realizations']
+  4,'[ZhaoEtAl2006SSlab]': ['40 realizations']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -135,15 +135,11 @@ A    0.0       16
 C    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 5.23580 NaN    5.23580 5.23580 1      
+read_source_models 4.82665 NaN    4.82665 4.82665 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -158,5 +154,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 5.23580  5.33984   1     
+total read_source_models 4.82665  5.55859   1     
 ======================== ======== ========= ======

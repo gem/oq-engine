@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, logs
 from openquake.calculators import base
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters)
@@ -176,14 +176,16 @@ class EventBasedCalculator(base.HazardCalculator):
                 with mon:
                     self.rupser.save(dic['rup_array'])
         self.rupser.close()
+        if not self.rupser.nruptures:
+            raise RuntimeError('No ruptures were generated, perhaps the '
+                               'investigation time is too short')
 
         # logic tree reduction, must be called before storing the events
-        self.store_csm_info(eff_ruptures)
+        self.store_rlz_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
-
         logging.info('Reordering the ruptures and storing the events')
         attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures').value
@@ -410,13 +412,13 @@ class EventBasedCalculator(base.HazardCalculator):
                         P = len(oq.poes)
                         M = len(oq.imtls)
                         self.datastore.create_dset(
-                            'hmaps/' + statname, F32, (N, P * M))
+                            'hmaps/' + statname, F32, (N, M, P))
                         self.datastore.set_attrs(
                             'hmaps/' + statname, nbytes=N * P * M * 4)
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         ds = self.datastore['hmaps/' + statname]
                         for sid in hmap:
-                            ds[sid] = hmap[sid].array[:, 0]
+                            ds[sid] = hmap[sid].array
 
         if self.datastore.parent:
             self.datastore.parent.open('r')
@@ -425,8 +427,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
-            # one could also set oq.number_of_logic_tree_samples = 0
-            self.cl = ClassicalCalculator(oq)
+            job_id = logs.init('job')
+            self.cl = ClassicalCalculator(oq, job_id)
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
@@ -436,5 +438,5 @@ class EventBasedCalculator(base.HazardCalculator):
             rdiff, index = util.max_rel_diff_index(
                 cl_mean_curves, eb_mean_curves)
             logging.warning('Relative difference with the classical '
-                         'mean curves: %d%% at site index %d',
-                         rdiff * 100, index)
+                            'mean curves: %d%% at site index %d',
+                            rdiff * 100, index)

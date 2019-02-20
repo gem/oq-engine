@@ -283,7 +283,7 @@ class OqParamTestCase(unittest.TestCase):
                 intensity_measure_types='PGV',
                 inputs=fakeinputs,
             ).validate()
-        self.assertIn('The IMT PGV is not accepted by the GSIM ToroEtAl2002',
+        self.assertIn('The IMT PGV is not accepted by the GSIM [ToroEtAl2002]',
                       str(ctx.exception))
 
     def test_required_site_param(self):
@@ -299,7 +299,8 @@ class OqParamTestCase(unittest.TestCase):
             ).validate()
         self.assertIn(
             "Please set a value for 'reference_depth_to_1pt0km_per_sec', this "
-            "is required by the GSIM AbrahamsonSilva2008", str(ctx.exception))
+            "is required by the GSIM [AbrahamsonSilva2008]",
+            str(ctx.exception))
 
     def test_uniform_hazard_spectra(self):
         with self.assertRaises(ValueError) as ctx:
