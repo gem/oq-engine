@@ -18,7 +18,7 @@
 
 from openquake.baselib import sap
 from openquake.calculators import getters
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 def make_figure(indices, n_sites, oq, hmaps):
@@ -59,7 +59,7 @@ def plot_uhs(calc_id, sites='0'):
     UHS plotter.
     """
     # read the hazard data
-    dstore = engine.read(calc_id)
+    dstore = util.read(calc_id)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     indices = list(map(int, sites.split(',')))
     getter = getters.PmapGetter(dstore, rlzs_assoc, indices)

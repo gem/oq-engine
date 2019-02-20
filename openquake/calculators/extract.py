@@ -763,24 +763,48 @@ class WebAPIError(RuntimeError):
 
 class Extractor(object):
     """
+    A class to extract data from a calculation
+
+    :param calc_id: a calculation ID
+    """
+    def __init__(self, calc_id):
+        self.calc_id = calc_id
+        self.dstore = datastore.read(calc_id)
+        self.oqparam = self.dstore['oqparam']
+
+    def get(self, what):
+        """
+        :param what: what to extract
+        :returns: an ArrayWrapper instance
+        """
+        return ArrayWrapper.from_(extract(self.dstore, what))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        """
+        Close the datastore
+        """
+        self.dstore.close()
+
+
+class WebExtractor(Extractor):
+    """
     A class to extract data from the WebAPI.
 
     :param calc_id: a calculation ID
     :param server: hostname of the webapi server (can be '')
     :param username: login username (can be '')
     :param password: login password (can be '')
-    :param webapi: True or False
 
     NB: instantiating the Extractor opens a session if webapi is True
     """
-    def __init__(self, calc_id, webapi,
-                 server=None, username=None, password=None):
+    def __init__(self, calc_id, server=None, username=None, password=None):
         self.calc_id = calc_id
-        self.webapi = webapi
-        if not webapi:
-            self.dstore = datastore.read(calc_id)
-            self.oqparam = self.dstore['oqparam']
-            return
         self.server = config.webapi.server if server is None else server
         if username is None:
             username = config.webapi.username
@@ -804,9 +828,6 @@ class Extractor(object):
         :param what: what to extract
         :returns: an ArrayWrapper instance
         """
-        if not self.webapi:
-            return ArrayWrapper.from_(extract(self.dstore, what))
-
         url = '%s/v1/calc/%d/extract/%s' % (self.server, self.calc_id, what)
         resp = self.sess.get(url)
         if resp.status_code != 200:
@@ -815,17 +836,8 @@ class Extractor(object):
         attrs = {k: npz[k] for k in npz if k != 'array'}
         return ArrayWrapper(npz['array'], attrs)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
     def close(self):
         """
         Close the session or the datastore
         """
-        if self.webapi:
-            self.sess.close()
-        else:
-            self.dstore.close()
+        self.sess.close()

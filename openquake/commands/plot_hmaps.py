@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap
 from openquake.hazardlib.imt import from_string
-from openquake.calculators.extract import Extractor
+from openquake.calculators.extract import Extractor, WebExtractor
 
 
 def basemap(projection, lons, lats):
@@ -58,7 +58,7 @@ def plot_hmaps(imt, calc_id, webapi=False):
     """
     Mean hazard maps plotter.
     """
-    extractor = Extractor(calc_id, webapi)
+    extractor = WebExtractor(calc_id) if webapi else Extractor(calc_id)
     with extractor:
         oq = extractor.oqparam
         sitecol = extractor.get('sitecol').array

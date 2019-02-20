@@ -18,7 +18,7 @@
 import logging
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import cross_idl
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 @sap.Script
@@ -30,7 +30,7 @@ def plot_sites(calc_id=-1):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
     logging.basicConfig(level=logging.INFO)
-    dstore = engine.read(calc_id)
+    dstore = util.read(calc_id)
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
     if len(lons) > 1 and cross_idl(*lons):
