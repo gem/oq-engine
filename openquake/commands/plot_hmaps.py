@@ -19,6 +19,15 @@ from openquake.baselib import sap
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import Extractor
 
+def basemap(projection, lons, lats):
+    from mpl_toolkits.basemap import Basemap  # costly import
+    bmap = Basemap(projection=projection,
+                   llcrnrlon=lons.min(), llcrnrlat=lats.min(),
+                   urcrnrlon=lons.max(), urcrnrlat=lats.max(),
+                   lat_0=lats.mean(), lon_0=lons.mean())
+    bmap.drawcoastlines()
+    return bmap
+
 
 def make_figure(lons, lats, imt, imls, poes, hmaps):
     """
@@ -38,7 +47,8 @@ def make_figure(lons, lats, imt, imls, poes, hmaps):
         ax = fig.add_subplot(1, n_poes, i * n_poes + j + 1)
         ax.grid(True)
         ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
-        ax.scatter(lons, lats, c=hmaps[:, j], cmap='rainbow')
+        bmap = basemap('tmerc', lons, lats)
+        bmap.scatter(lons, lats, c=hmaps[:, j], cmap='rainbow')
     return plt
 
 
