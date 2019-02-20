@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap
 from openquake.hazardlib.imt import from_string
-from openquake.calculators.extract import Extractor
+from openquake.calculators.extract import Extractor, WebExtractor
+
 
 def basemap(projection, lons, lats):
     from mpl_toolkits.basemap import Basemap  # costly import
@@ -48,7 +49,7 @@ def make_figure(lons, lats, imt, imls, poes, hmaps):
         ax.grid(True)
         ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
         bmap = basemap('cyl', lons, lats)
-        bmap.scatter(lons, lats, c=hmaps[:, j], cmap='rainbow')
+        bmap.scatter(lons, lats, c=hmaps[:, j], cmap='jet')
     return plt
 
 
@@ -57,7 +58,7 @@ def plot_hmaps(imt, calc_id, webapi=False):
     """
     Mean hazard maps plotter.
     """
-    extractor = Extractor(calc_id, webapi)
+    extractor = WebExtractor(calc_id) if webapi else Extractor(calc_id)
     with extractor:
         oq = extractor.oqparam
         sitecol = extractor.get('sitecol').array
