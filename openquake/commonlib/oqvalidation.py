@@ -28,7 +28,7 @@ from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
-from openquake.commonlib import logictree
+from openquake.commonlib import logictree, util
 from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
@@ -383,7 +383,7 @@ class OqParam(valid.ParamSet):
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
-            with datastore.read(self.hazard_calculation_id) as ds:
+            with util.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
             self._file_type, self._risk_files = get_risk_files(parent.inputs)
             costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
@@ -736,7 +736,7 @@ class OqParam(valid.ParamSet):
         fragility_file/vulnerability_file in the .ini file.
         """
         if self.hazard_calculation_id:
-            parent_datasets = set(datastore.read(self.hazard_calculation_id))
+            parent_datasets = set(util.read(self.hazard_calculation_id))
         else:
             parent_datasets = set()
         if 'damage' in self.calculation_mode:
@@ -828,5 +828,5 @@ class OqParam(valid.ParamSet):
         if 'gmfs' in self.inputs or 'hazard_curves' in self.inputs:
             return True
         elif self.hazard_calculation_id:
-            parent = list(datastore.read(self.hazard_calculation_id))
+            parent = list(util.read(self.hazard_calculation_id))
             return 'gmf_data' in parent or 'poes' in parent
