@@ -169,7 +169,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         # of the group of sources
         #  assert param['oqparam'].number_of_logic_tree_samples > 0
         samples = getattr(sources[0], 'samples')
-        tom = param['tom']
+        tom = getattr(sources, 'temporal_occurrence_model')
         rate = tom.occurrence_rate
         time_span = tom.time_span
         # Note that using a single time interval corresponding to the product
@@ -188,7 +188,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         rup_data = {}
         eff_ruptures = 0
         for rlz_num in range(grp_num_occ):
-            if param['cluster']:
+            if sources.cluster:
                 for src in sources:
                     # Sum Ruptures
                     if rlz_num == 0:
