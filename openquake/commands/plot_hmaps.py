@@ -47,7 +47,7 @@ def make_figure(lons, lats, imt, imls, poes, hmaps):
         ax = fig.add_subplot(1, n_poes, i * n_poes + j + 1)
         ax.grid(True)
         ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
-        bmap = basemap('tmerc', lons, lats)
+        bmap = basemap('cyl', lons, lats)
         bmap.scatter(lons, lats, c=hmaps[:, j], cmap='rainbow')
     return plt
 
