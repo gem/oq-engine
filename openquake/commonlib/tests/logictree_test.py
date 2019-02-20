@@ -2013,7 +2013,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         with self.assertRaises(errorclass) as exc:
             logictree.GsimLogicTree(StringIO(xml), ['Shield'])
         if errormessage is not None:
-            self.assertEqual(errormessage, str(exc.exception))
+            self.assertIn(errormessage, str(exc.exception))
 
     def parse_valid(self, xml, tectonic_region_types=('Shield',)):
         xmlbytes = xml.encode('utf-8') if hasattr(xml, 'encode') else xml
@@ -2048,7 +2048,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, 'Unknown GSIM: +100 in file <StringIO>')
+            xml, ValueError, "Invalid group name '+100'. Try quoting it.")
 
     def test_gmpe_uncertainty(self):
         xml = _make_nrml("""\
@@ -2233,9 +2233,15 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         as_model_lt = self.parse_valid(xml, as_model_trts)
         fs_bg_model_lt = self.parse_valid(xml, fs_bg_model_trts)
         self.assertEqual(as_model_lt.get_num_branches(),
-                         {'bs1': 4, 'bs2': 5, 'bs3': 2, 'bs4': 1})
+                {'Active Shallow Crust': 4,
+                 'Shield': 2,
+                 'Stable Shallow Crust': 5,
+                 'Volcanic': 1})
         self.assertEqual(fs_bg_model_lt.get_num_branches(),
-                         {'bs1': 4, 'bs2': 5, 'bs3': 0, 'bs4': 0})
+                         {'Active Shallow Crust': 4,
+                          'Shield': 0,
+                          'Stable Shallow Crust': 5,
+                          'Volcanic': 0})
         self.assertEqual(as_model_lt.get_num_paths(), 40)
         self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
         self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
@@ -2274,107 +2280,18 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
 
-    def test_get_gsim_by_trt(self):
-        xml = _make_nrml("""\
-    <logicTree logicTreeID='lt1'>
-<!-- 1.0 Logic Tree for Active Shallow Crust -->
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Active Shallow" applyToTectonicRegionType="Active Shallow Crust">
-
-                <logicTreeBranch branchID="AkkarBommer2010">
- <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-                
-               </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 2.0 Logic Tree for Stable Shallow Crust -->
-        <logicTreeBranchingLevel branchingLevelID="bl2">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Stable Shallow" applyToTectonicRegionType="Stable Shallow Crust">
-
-                <logicTreeBranch branchID="AkkarBommer2010">
- <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-                
-               </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 3.0 Logic Tree for Shield -->
-        <logicTreeBranchingLevel branchingLevelID="bl3"> 
-        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Shield" applyToTectonicRegionType="Shield">
-
-                <logicTreeBranch branchID="Toro2002SHARE">
- <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-                
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 4.0 Logic Tree for Subduction Interface -->
-        <logicTreeBranchingLevel branchingLevelID="bl4">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Subduction_Interface" applyToTectonicRegionType="Subduction Interface">
-                
-                <logicTreeBranch branchID="ZhaoEtAl2006SInter">
- <uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                    
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 5.0 Logic Tree for Subduction Inslab -->
-        <logicTreeBranchingLevel branchingLevelID="bl5">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Subduction_InSlab"
-                    applyToTectonicRegionType="Subduction IntraSlab">
-
-               <logicTreeBranch branchID="ZhaoEtAl2006SSlab">
- <uncertaintyModel>ZhaoEtAl2006SSlab</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-         
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 6.0 Logic Tree for Volcanic -->
-        <logicTreeBranchingLevel branchingLevelID="bl6">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Volcanic" applyToTectonicRegionType="Volcanic">
-                <logicTreeBranch branchID="FaccioliEtAl2010">
-                <uncertaintyModel>FaccioliEtAl2010</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 7.0 Logic Tree for Vrancea -->
-        <logicTreeBranchingLevel branchingLevelID="bl7">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Deep" applyToTectonicRegionType="Subduction Deep">
-
-                <logicTreeBranch branchID="LinLee2008SSlab">
- <uncertaintyModel>LinLee2008SSlab</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-    </logicTree>""")
-        gsim_lt = self.parse_valid(xml, ["Stable Shallow Crust"])
-        [rlz] = gsim_lt
-        gsim = gsim_lt.get_gsim_by_trt(rlz, 'Stable Shallow Crust')
-        self.assertEqual(str(gsim), 'AkkarBommer2010()')
-        # this test was broken in release 1.4, a wrong ordering
-        # of the value gave back LinLee2008SSlab instead of AkkarBommer2010
-        self.assertEqual([str(v) for v in rlz.value], [
-            'AkkarBommer2010()', 'AkkarBommer2010()', 'ToroEtAl2002SHARE()',
-            'ZhaoEtAl2006SInter()', 'ZhaoEtAl2006SSlab()',
-            'FaccioliEtAl2010()', 'LinLee2008SSlab()'])
-
     def test_gsim_with_kwargs(self):
         class FakeGMPETable(object):
             REQUIRES_SITES_PARAMETERS = ()
 
             def __init__(self, gmpe_table):
-                self.gmpe_table = gmpe_table
+                self.kwargs = {'gmpe_table': gmpe_table}
+
+            def init(self):
+                pass
 
             def __str__(self):
-                return 'FakeGMPETable(gmpe_table="%s")' % self.gmpe_table
+                return 'FakeGMPETable(%s)' % self.kwargs
 
         registry['FakeGMPETable'] = FakeGMPETable
         try:
@@ -2396,7 +2313,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             """)
             gsim_lt = self.parse_valid(xml, ['Shield'])
             self.assertEqual(repr(gsim_lt), '''<GsimLogicTree
-Shield,b1,FakeGMPETable(gmpe_table="Wcrust_rjb_med.hdf5"),w=1.0>''')
+Shield,b1,FakeGMPETable({'gmpe_table': 'Wcrust_rjb_med.hdf5'}),w=1.0>''')
         finally:
             del registry['FakeGMPETable']
 
@@ -2428,7 +2345,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_gmpe(self):
         [(value, weight, branch_ids, _, _)] = logictree.sample(
             list(self.gmpe_lt), 1, self.seed)
-        self.assertEqual(value, ('ChiouYoungs2008()', 'SadighEtAl1997()'))
+        self.assertEqual(value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
         self.assertEqual(weight['default'], 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
 

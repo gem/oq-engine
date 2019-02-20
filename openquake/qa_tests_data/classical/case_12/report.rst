@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 12
 =================================
 
 ============== ===================
-checksum32     3,483,928,709      
-date           2019-02-03T09:40:24
-engine_version 3.4.0-gite8c42e513a
+checksum32     662,604,775        
+date           2019-02-18T08:38:16
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -49,21 +49,21 @@ b1        1.00000 trivial(1,1)    1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============================================== ========= ========== ==========
-grp_id gsims                                          distances siteparams ruptparams
-====== ============================================== ========= ========== ==========
-0      SadighEtAl1997()                               rrup      vs30       mag rake  
-1      NRCan15SiteTerm(gmpe_name='BooreAtkinson2008') rjb       vs30       mag rake  
-====== ============================================== ========= ========== ==========
+====== ======================================================================== ========= ========== ==========
+grp_id gsims                                                                    distances siteparams ruptparams
+====== ======================================================================== ========= ========== ==========
+0      '[SadighEtAl1997]'                                                       rrup      vs30       mag rake  
+1      '[NRCan15SiteTerm]\n                    gmpe_name = "BooreAtkinson2008"' rjb       vs30       mag rake  
+====== ======================================================================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=1)
-  0,SadighEtAl1997(): [0]
-  1,NRCan15SiteTerm(gmpe_name='BooreAtkinson2008'): [0]>
+  0,'[SadighEtAl1997]': [0]
+  1,'[NRCan15SiteTerm]\n                    gmpe_name = "BooreAtkinson2008"': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -86,8 +86,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      2         P    1     2     1            0.0       3.099E-06  1.00000   1         0.10000
-0      1         P    0     1     1            0.0       8.583E-06  1.00000   1         0.10000
+1      2         P    1     2     1            0.0       7.391E-06  1.00000   1         0.10000
+0      1         P    0     1     1            0.0       7.629E-06  1.00000   1         0.10000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -98,24 +98,20 @@ code calc_time counts
 P    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.00148 NaN    0.00148 0.00148 1      
-split_filter       0.00271 NaN    0.00271 0.00271 1      
-================== ======= ====== ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.00153 NaN       0.00153 0.00153 1      
+split_filter       0.00250 6.019E-05 0.00246 0.00254 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ====================================== ========
 task               sent                                   received
 read_source_models converter=313 B fnames=107 B           1.98 KB 
-split_filter       srcs=1.49 KB srcfilter=253 B seed=14 B 1.64 KB 
+split_filter       srcs=1.14 KB srcfilter=253 B seed=14 B 2.47 KB 
 ================== ====================================== ========
 
 Slowest operations
@@ -123,6 +119,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00271  1.49609   1     
-total read_source_models 0.00148  0.09766   1     
+total split_filter       0.00500  1.42188   2     
+total read_source_models 0.00153  0.0       1     
 ======================== ======== ========= ======

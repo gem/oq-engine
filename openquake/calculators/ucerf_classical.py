@@ -53,9 +53,10 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
         self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
+        rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
-            gsims = self.csm.info.get_gsims(sm.ordinal)
+            gsims = list(rlzs_by_gsim[grp.id])
             acc = parallel.Starmap.apply(
                 classical, (grp, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
@@ -70,6 +71,6 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
-        self.store_csm_info(acc.eff_ruptures)
+        self.store_rlz_info(acc.eff_ruptures)
         self.store_source_info(self.calc_times)
         return acc  # {grp_id: pmap}

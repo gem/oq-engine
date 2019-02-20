@@ -220,12 +220,12 @@ $ oq zip my_exposure.xml
 plotting commands
 ------------------
 
-The engine provides several plotting commands. They are all experimental
-and subject to change. The official away to plot the engine results is
-by using the QGIS plugin. Still, the `oq plot` commands are useful for
-debugging purpose. Here I will describe only the `plot_assets` command,
-which allows to plot the exposure used in a calculation together with
-the hazard sites:
+The engine provides several plotting commands. They are all
+experimental and subject to change. They will always be. The official
+away to plot the engine results is by using the QGIS plugin. Still,
+the `oq` plotting commands are useful for debugging purpose. Here I will
+describe only the `plot_assets` command, which allows to plot the
+exposure used in a calculation together with the hazard sites:
 
 ```bash
 $ oq help plot_assets
@@ -306,4 +306,63 @@ of usage:
 
 ```bash
 $ oq prepare_site_model Vs30/Ecuador.csv Vs30/Bolivia.csv -e Exposure/Exposure_Res_Ecuador.csv Exposure/Exposure_Res_Bolivia.csv --grid-spacing=10
+```
+
+Reducing the source model
+-------------------------
+
+Source models are usually large, at the continental scale. If you are
+interested in a city or in a small region, it makes sense to reduce the
+model to only the sources close to the region, within the integration
+distance. To fullfill this purpose there is the `oq reduce_sm` command.
+The suggestion is run a preclassical calculation (i.e. set
+`calculation_mode=preclassical` in the job.ini) with the full model
+in the region of interest, keep track of the calculation ID and then
+run
+```bash
+$ oq reduce_sm <calc_id>
+```
+The command will reduce the source model files and add an extension `.bak`
+to the original ones.
+```bash
+$ oq reduce_sm -h
+usage: oq reduce_sm [-h] calc_id
+
+Reduce the source model of the given (pre)calculation by discarding all
+sources that do not contribute to the hazard.
+
+positional arguments:
+  calc_id     calculation ID
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+Comparing hazard results
+------------------------------
+
+If you are interested in sensitivity analysis, i.e. in how much the
+results of the engine change by tuning a parameter, the `oq compare`
+command is useful. For the moment it is able to compare hazard curves
+and hazard maps. Here is the help message:
+```bash
+$ oq compare --help
+usage: oq compare [-h] [-f] [-s 100] [-r 0.1] [-a 0.0001]
+                  {hmaps,hcurves} imt calc_ids [calc_ids ...]
+
+Compare the hazard curves or maps of two or more calculations
+
+positional arguments:
+  {hmaps,hcurves}       hmaps or hcurves
+  imt                   intensity measure type to compare
+  calc_ids              calculation IDs
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f, --files           write the results in multiple files
+  -s 100, --samplesites 100
+                        number of sites to sample
+  -r 0.1, --rtol 0.1    relative tolerance
+  -a 0.0001, --atol 0.0001
+                        absolute tolerance
 ```
