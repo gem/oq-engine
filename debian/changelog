@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the realization index from the event loss table export, since
+    is it redundant
   * Forced all lowercase Python files in the engine codebase
   * Removed the dependency from nose
 
