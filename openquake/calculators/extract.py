@@ -819,8 +819,11 @@ class WebExtractor(Extractor):
                 login_url, data=dict(username=username, password=password))
             if resp.status_code != 200:
                 raise WebAPIError(resp.text)
-        resp = self.sess.get('%s/v1/calc/%d/oqparam' % (self.server, calc_id))
-        if resp.status_code != 200:
+        url = '%s/v1/calc/%d/oqparam' % (self.server, calc_id)
+        resp = self.sess.get(url)
+        if resp.status_code == 404:
+            raise WebAPIError('Not Found: %s' % url)
+        elif resp.status_code != 200:
             raise WebAPIError(resp.text)
         self.oqparam = object.__new__(oqvalidation.OqParam)
         vars(self.oqparam).update(resp.json())
