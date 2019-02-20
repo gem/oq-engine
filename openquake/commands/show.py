@@ -24,8 +24,7 @@ from openquake.baselib import sap
 from openquake.hazardlib import stats
 from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
-from openquake.commonlib.util import rmsep
-from openquake.commands import engine
+from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract
@@ -62,7 +61,7 @@ def show(what='contents', calc_id=-1, extra=()):
         rows = []
         for calc_id in datastore.get_calc_ids(datadir):
             try:
-                ds = engine.read(calc_id)
+                ds = util.read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except Exception:
@@ -77,7 +76,7 @@ def show(what='contents', calc_id=-1, extra=()):
             print('#%d %s: %s' % row)
         return
 
-    ds = engine.read(calc_id)
+    ds = util.read(calc_id)
 
     # this part is experimental
     if what == 'rlzs' and 'poes' in ds:
@@ -89,7 +88,7 @@ def show(what='contents', calc_id=-1, extra=()):
             pmaps, [numpy.mean], weights, getter.imtls)
         dists = []
         for rlz, pmap in zip(getter.rlzs, pmaps):
-            dist = rmsep(mean.array, pmap.array, min_value)
+            dist = util.rmsep(mean.array, pmap.array, min_value)
             dists.append((dist, rlz))
         print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):
