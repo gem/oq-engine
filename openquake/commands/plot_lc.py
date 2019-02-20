@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 from openquake.baselib import sap
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 def make_figure(periods, losses):
@@ -43,13 +43,14 @@ def plot_lc(calc_id, aid=None):
     Plot loss curves given a calculation id and an asset ordinal.
     """
     # read the hazard data
-    dstore = engine.read(calc_id)
+    dstore = util.read(calc_id)
     dset = dstore['agg_curves-rlzs']
     if aid is None:  # plot the global curves
         plt = make_figure(dset.attrs['return_periods'], dset.value)
     else:
         sys.exit('Not implemented yet')
     plt.show()
+
 
 plot_lc.arg('calc_id', 'a computation id', type=int)
 plot_lc.arg('aid', 'asset ordinal', type=int)
