@@ -66,13 +66,14 @@ def plot(imt, calc_id=-1, other_id=None, site=0, webapi=False):
 
     if x2 is None:
         stats.pop('mean')
-        mean_curves = x1.get('hcurves/mean/%s?site_id=%d' % (imt, site))
-        others = {stat: x1.get('hcurves/%s/%s?site_id=%d' % (stat, imt, site))
-                  for stat in stats}
+        mean_curves = x1.get('hcurves/mean?imt=%s&site_id=%d' % (imt, site))
+        others = {
+            stat: x1.get('hcurves/%s?imt=%s&site_id=%d' % (stat, imt, site))
+            for stat in stats}
         plt = make_figure(site, imtls, mean_curves, others, 'mean')
     else:
-        mean1 = x1.get('hcurves/mean/%s?site_id=%d' % (imt, site))
-        mean2 = x2.get('hcurves/mean/%s?site_id=%d' % (imt, site))
+        mean1 = x1.get('hcurves/mean?imt=%s?site_id=%d' % (imt, site))
+        mean2 = x2.get('hcurves/mean?imt=%s?site_id=%d' % (imt, site))
         plt = make_figure(site, imtls, mean1, [mean2], 'reference')
     plt.show()
 

@@ -47,6 +47,13 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 
 
+def lit_eval(string):
+    try:
+        return ast.literal_eval(string)
+    except ValueError:
+        return string
+
+
 def parse(what):
     """
     Split a string contaning a query string into a prefix and a dictionary:
@@ -62,7 +69,7 @@ def parse(what):
         return what, {}
     dic = parse_qs(query_string)
     for key, val in dic.items():
-        dic[key] = [ast.literal_eval(v) for v in val]
+        dic[key] = [lit_eval(v) for v in val]
     return prefix, dic
 
 
@@ -280,11 +287,10 @@ def extract_hcurves(dstore, what):
         dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    name, imt_string = what.split('/')
-    assert 'hcurves/' + name in dstore, 'hcurves/' + name
+    imt_string, = params['imt']
     from_string(imt_string)  # check valid IMT
     sids = params.get('site_id', slice(None))
-    return dstore['hcurves/' + name][sids, oq.imtls(imt_string)]
+    return dstore['hcurves/' + what][sids, oq.imtls(imt_string)]
 
 
 @extract.add('hmaps')
@@ -292,6 +298,7 @@ def extract_hmaps(dstore, what):
     """
     Extracts hazard maps. Use it as /extract/hmaps/PGA
     """
+    what, params = parse(what)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
@@ -299,12 +306,10 @@ def extract_hmaps(dstore, what):
         dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-
-    name, imt_string = what.split('/')
-    assert 'hmaps/' + name in dstore, 'hmaps/' + name
+    imt_string, = params['imt']
     from_string(imt_string)  # check valid IMT
     m = list(oq.imtls).index(imt_string)
-    return dstore['hmaps/' + name][:, m, :]
+    return dstore['hmaps/' + what][:, m, :]
 
 
 @extract.add('uhs')
