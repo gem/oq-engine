@@ -62,7 +62,7 @@ def plot_hmaps(imt, calc_id, webapi=False):
     with extractor:
         oq = extractor.oqparam
         sitecol = extractor.get('sitecol')
-        hmaps = extractor.get('hmaps/mean/%s' % str(imt))
+        hmaps = extractor.get('hmaps/mean?imt=%s' % str(imt))
     lons, lats = sitecol['lon'], sitecol['lat']
     plt = make_figure(lons, lats, imt, oq.imtls[str(imt)], oq.poes, hmaps)
     plt.show()
