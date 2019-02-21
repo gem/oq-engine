@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
 from openquake.baselib import sap, general
-from openquake.commonlib import util
+from openquake.calculators.extract import Extractor
 
 
 def make_figure(indices, n, imtls, spec_curves, other_curves=(), label=''):
@@ -59,40 +59,38 @@ def get_hcurves(dstore):
 
 
 @sap.Script
-def plot(calc_id, other_id=None, sites='0', imti='all'):
+def plot(imt, calc_id=-1, other_id=None, sites='0'):
     """
     Hazard curves plotter.
     """
-    # read the hazard data
-    haz = util.read(calc_id)
-    other = util.read(other_id) if other_id else None
-    oq = haz['oqparam']
-    if imti == 'all':
-        imtls = oq.imtls
-    else:
-        imti = int(imti)
-        imt = list(oq.imtls)[imti]
-        imls = oq.imtls[imt]
-        imtls = general.DictArray({imt: imls})
+    x1 = Extractor(calc_id)
+    x2 = Extractor(other_id) if other_id else None
+    oq = x1.oqparam
+    stats = dict(oq.hazard_stats())
+    sitecol = x1.get('sitecol').array
+    imls = oq.imtls[imt]
+    imtls = general.DictArray({imt: imls})
     indices = numpy.array(list(map(int, sites.split(','))))
-    n_sites = len(haz['sitecol'])
+    n_sites = len(sitecol)
     if not set(indices) <= set(range(n_sites)):
         invalid = sorted(set(indices) - set(range(n_sites)))
         print('The indices %s are invalid: no graph for them' % invalid)
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    if other is None:
-        mean_curves, others = get_hcurves(haz)
+    if x2 is None:
+        stats.pop('mean')
+        mean_curves = x1.get('hcurves/mean/' + imt)
+        others = [x1.get('hcurves/mean/%s/%s' % (stat, imt)) for stat in stats]
         plt = make_figure(valid, n_sites, imtls, mean_curves, others, 'mean')
     else:
-        mean1, _ = get_hcurves(haz)
-        mean2, _ = get_hcurves(other)
+        mean1 = x1.get('hcurves/mean/' + imt)
+        mean2 = x2.get('hcurves/mean/' + imt)
         plt = make_figure(valid, n_sites, imtls, mean1,
                           [mean2], 'reference')
     plt.show()
 
 
-plot.arg('calc_id', 'a computation id', type=int)
-plot.arg('other_id', 'optional id of another computation', type=int)
+plot.arg('imt', 'intensity measure type')
+plot.arg('calc_id', 'computation ID', type=int)
+plot.arg('other_id', 'ID of another computation', type=int)
 plot.opt('sites', 'comma-separated string with the site indices')
-plot.opt('imti', 'IMT index')
