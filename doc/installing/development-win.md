@@ -5,13 +5,17 @@
 Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 The OpenQuake Python distribution for Windows is also required. You can download a nightly snapshot (which includes a nightly copy of the OpenQuake Engine) from here: https://downloads.openquake.org/pkgs/windows/oq-engine/nightly/.
 
-## Extract the Python distribution
+## Extract the content of the downloaded zip
 
-TODO
+Content of the downloaded zip file (which has a name like `OpenQuake_Engine_3.4.0_1902201725.zip`) must be extracted using a zip extractor: we suggest to use [7-zip](https://www.7-zip.org/).
+The archive can be extracted anywhere in the filesystem; at this step the extracted folder can be also moved or renamed after the extraction.
+
+**PLEASE NOTE: Following commands must be executed from the `oq-console.bat` console available into the root folder.**
 
 ## Uninstall the OpenQuake Engine nightly code
 
-Every command must be executed from the `oq-console.bat` console:
+The extracted OpenQuake Engine distribution contains a 'nightly' copy of the OpenQuake Engine code. It must be uninstalled first to be able to convert the setup into a development installation.
+To uninstall the 'nighlty' copy of the OpenQuake Engine use `pip`.
 
 ```cmd
 pip uninstall openquake.engine
@@ -19,12 +23,18 @@ pip uninstall openquake.engine
 
 ### Download the OpenQuake source code
 
+To be able to download the OpenQuake source code you must have [GIT](https://git-scm.com/download/windows) installed and available in the system `PATH`. If the `git` command is not available in
+the `oq-console.bat` terminal please use `GIT Bash` to run this step and then switch back to `oq-console.bat`.
+
+
 ```cmd
 mkdir src && cd src
 git clone https://github.com/gem/oq-engine.git
 ```
 
 ### Install OpenQuake
+
+The OpenQuake Engine source code must be installed via `pip` using the `--editable` flag. See `pip install --help` for further help.
 
 ```cmd
 pip install -e oq-engine/[dev]
