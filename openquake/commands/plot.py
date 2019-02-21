@@ -80,5 +80,5 @@ def plot(imt, calc_id=-1, other_id=None, site=0, webapi=False):
 plot.arg('imt', 'intensity measure type')
 plot.arg('calc_id', 'computation ID', type=int)
 plot.arg('other_id', 'ID of another computation', type=int)
-plot.opt('site', 'ID of the site to plot')
+plot.opt('site', 'ID of the site to plot', type=int)
 plot.flg('webapi', 'if given, pass through the WebAPI')
