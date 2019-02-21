@@ -61,7 +61,7 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
                 par['gsims'] = gsims_by_trt[sg.trt]
                 # Check cases where we do not want to split the group into
                 # pieces
-                if hasattr(sg, 'atomic'):
+                if sg.atomic:
                     smap.submit(sg, self.src_filter, par)
                 # This is the processing for traditional sources
                 else:
