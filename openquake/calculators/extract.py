@@ -15,10 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from urllib.parse import parse_qs
 import collections
 import operator
 import logging
+import ast
 import io
+
 import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
@@ -42,6 +45,32 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+
+
+def lit_eval(string):
+    try:
+        return ast.literal_eval(string)
+    except ValueError:
+        return string
+
+
+def parse(what):
+    """
+    Split a string contaning a query string into a prefix and a dictionary:
+
+    >>> parse('hcurves/mean/PGA')
+    ('hcurves/mean/PGA', {})
+    >>> parse('hcurves/mean/PGA?site_id=0')
+    ('hcurves/mean/PGA', {'site_id': [0]})
+    """
+    try:
+        prefix, query_string = what.split('?', 1)
+    except ValueError:  # no question mark
+        return what, {}
+    dic = parse_qs(query_string)
+    for key, val in dic.items():
+        dic[key] = [lit_eval(v) for v in val]
+    return prefix, dic
 
 
 def cast(loss_array, loss_dt):
@@ -250,8 +279,7 @@ def extract_hcurves(dstore, what):
     Extracts hazard curves. Use it as /extract/hcurves/mean or
     /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
     """
-    if 'hcurves' not in dstore:
-        return []
+    what, params = parse(what)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol, complete=False)
@@ -259,10 +287,10 @@ def extract_hcurves(dstore, what):
         dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    name, imt_string = what.split('/')
-    assert 'hcurves/' + name in dstore, 'hcurves/' + name
+    imt_string, = params['imt']
     from_string(imt_string)  # check valid IMT
-    return dstore['hcurves/' + name][:, oq.imtls(imt_string)]
+    sids = params.get('site_id', slice(None))
+    return dstore['hcurves/' + what][sids, oq.imtls(imt_string)]
 
 
 @extract.add('hmaps')
@@ -270,6 +298,7 @@ def extract_hmaps(dstore, what):
     """
     Extracts hazard maps. Use it as /extract/hmaps/PGA
     """
+    what, params = parse(what)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
@@ -277,12 +306,10 @@ def extract_hmaps(dstore, what):
         dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-
-    name, imt_string = what.split('/')
-    assert 'hmaps/' + name in dstore, 'hmaps/' + name
+    imt_string, = params['imt']
     from_string(imt_string)  # check valid IMT
     m = list(oq.imtls).index(imt_string)
-    return dstore['hmaps/' + name][:, m, :]
+    return dstore['hmaps/' + what][:, m, :]
 
 
 @extract.add('uhs')
@@ -291,6 +318,7 @@ def extract_uhs(dstore, what):
     Extracts uniform hazard spectra. Use it as /extract/uhs/mean or
     /extract/uhs/rlz-0, etc
     """
+    what, params = parse(what)
     oq = dstore['oqparam']
     imts = oq.imt_periods()
     mesh = get_mesh(dstore['sitecol'])
@@ -311,9 +339,10 @@ def extract_uhs(dstore, what):
 
     uhs = []
     dset = dstore['hmaps/' + what]
+    sids = params.get('site_id', slice(None))
     for m, imt in enumerate(oq.imtls):
         if imt == 'PGA' or imt.startswith('SA'):
-            uhs.append(dset[:, m])  # shape (N, P)
+            uhs.append(dset[sids, m])  # shape (N, P)
     return numpy.array(uhs).transpose(1, 0, 2)  # shape (N, M', P)
 
 
