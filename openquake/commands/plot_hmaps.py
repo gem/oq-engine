@@ -23,8 +23,8 @@ from openquake.calculators.extract import Extractor, WebExtractor
 def basemap(projection, lons, lats):
     from mpl_toolkits.basemap import Basemap  # costly import
     bmap = Basemap(projection=projection,
-                   llcrnrlon=lons.min(), llcrnrlat=lats.min(),
-                   urcrnrlon=lons.max(), urcrnrlat=lats.max(),
+                   llcrnrlon=lons.min() - 1, llcrnrlat=lats.min() - 1,
+                   urcrnrlon=lons.max() + 1, urcrnrlat=lats.max() + 1,
                    lat_0=lats.mean(), lon_0=lons.mean())
     bmap.drawcoastlines()
     return bmap
@@ -61,8 +61,8 @@ def plot_hmaps(imt, calc_id, webapi=False):
     extractor = WebExtractor(calc_id) if webapi else Extractor(calc_id)
     with extractor:
         oq = extractor.oqparam
-        sitecol = extractor.get('sitecol').array
-        hmaps = extractor.get('hmaps/%s' % str(imt)).array
+        sitecol = extractor.get('sitecol')
+        hmaps = extractor.get('hmaps/mean/%s' % str(imt))
     lons, lats = sitecol['lon'], sitecol['lat']
     plt = make_figure(lons, lats, imt, oq.imtls[str(imt)], oq.poes, hmaps)
     plt.show()
