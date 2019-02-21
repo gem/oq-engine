@@ -212,10 +212,8 @@ def yield_cluster(sources, num_ses, param):
             cnt = rup_counter[src_key][rup_key]
             ebr = EBRupture(dat[0], dat[1], dat[2], cnt, samples)
             eb_ruptures.append(ebr)
-    # Yield ruptures
-    yield AccumDict(rup_array=get_rup_array(eb_ruptures),
-                    calc_times=calc_times,
-                    eff_ruptures={grp_id: eff_ruptures})
+
+    return eb_ruptures, calc_times, eff_ruptures, grp_id
 
 
 # NB: there is postfiltering of the ruptures, which is more efficient
@@ -243,7 +241,13 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     # for cluster groups or groups with mutually exclusive sources.
     if (getattr(sources, 'atomic', False) and
             getattr(sources, 'cluster', False)):
-            yield_cluster(sources, num_ses, param)
+            eb_ruptures, calc_times, eff_ruptures, grp_id = yield_cluster(
+                sources, num_ses, param)
+
+            # Yield ruptures
+            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+                            calc_times=calc_times,
+                            eff_ruptures={grp_id: eff_ruptures})
     else:
         eb_ruptures = []
         # AccumDict of arrays with 3 elements weight, nsites, calc_time
