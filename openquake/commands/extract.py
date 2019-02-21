@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import inspect
-import logging
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 
@@ -49,8 +48,7 @@ def extract(what, calc_id=-1, server_url='http://127.0.0.1:8800'):
     By default use the WebUI, unless server_url is set to 'local', in
     which case the extraction is done directly bypassing tjhe WebUI and
     the database.
-    """
-    logging.basicConfig(level=logging.INFO)
+    """    
     if calc_id < 0:
         calc_id = datastore.get_calc_ids()[calc_id]
     filename = None
