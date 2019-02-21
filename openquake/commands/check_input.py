@@ -22,8 +22,7 @@ from openquake.calculators import base
 
 
 @sap.Script
-def check_input(job_ini_or_zip):
-    logging.basicConfig(level=logging.INFO)
+def check_input(job_ini_or_zip):    
     calc = base.calculators(readinput.get_oqparam(job_ini_or_zip))
     calc.read_inputs()
 

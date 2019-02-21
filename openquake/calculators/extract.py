@@ -827,11 +827,13 @@ class WebExtractor(Extractor):
         self.sess = requests.Session()
         if username:
             login_url = '%s/accounts/ajax_login/' % self.server
+            logging.info('POST %s', login_url)
             resp = self.sess.post(
                 login_url, data=dict(username=username, password=password))
             if resp.status_code != 200:
                 raise WebAPIError(resp.text)
         url = '%s/v1/calc/%d/oqparam' % (self.server, calc_id)
+        logging.info('GET %s', url)
         resp = self.sess.get(url)
         if resp.status_code == 404:
             raise WebAPIError('Not Found: %s' % url)
@@ -846,6 +848,7 @@ class WebExtractor(Extractor):
         :returns: an ArrayWrapper instance
         """
         url = '%s/v1/calc/%d/extract/%s' % (self.server, self.calc_id, what)
+        logging.info('GET %s', url)
         resp = self.sess.get(url)
         if resp.status_code != 200:
             raise WebAPIError(resp.text)
