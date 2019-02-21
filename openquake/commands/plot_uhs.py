@@ -17,12 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import sap
-from openquake.calculators.extract import Extractor
+from openquake.calculators.extract import Extractor, WebExtractor
 
 
-def make_figure(indices, oq, uhs_dict):
+def make_figure(site, oq, uhs_dict):
     """
-    :param indices: the indices of the sites under analysis
+    :param site: ID of the site under analysis
     :param oq: instance of OqParam
     :param uhs_dict: a dictionary of uniform hazard spectra
     """
@@ -32,34 +32,33 @@ def make_figure(indices, oq, uhs_dict):
     fig = plt.figure()
     n_poes = len(oq.poes)
     periods = [imt.period for imt in oq.imt_periods()]
-    for i, site in enumerate(indices):
-        for j, poe in enumerate(oq.poes):
-            ax = fig.add_subplot(len(indices), n_poes, i * n_poes + j + 1)
-            ax.grid(True)
-            ax.set_xlim([periods[0], periods[-1]])
-            ax.set_xlabel(
-                'UHS on site %d, poe=%s, period in seconds' % (site, poe))
-            if j == 0:  # set Y label only on the leftmost graph
-                ax.set_ylabel('SA')
-            for kind, uhs in uhs_dict.items():
-                ax.plot(periods, uhs[site, :, j], label=kind)
+    for j, poe in enumerate(oq.poes):
+        ax = fig.add_subplot(1, n_poes, j + 1)
+        ax.grid(True)
+        ax.set_xlim([periods[0], periods[-1]])
+        ax.set_xlabel(
+            'UHS on site %d, poe=%s, period in seconds' % (site, poe))
+        if j == 0:  # set Y label only on the leftmost graph
+            ax.set_ylabel('SA')
+        for kind, uhs in uhs_dict.items():
+            ax.plot(periods, uhs[0, :, j], label=kind)
     plt.legend()
     return plt
 
 
 @sap.Script
-def plot_uhs(calc_id, sites='0'):
+def plot_uhs(calc_id, site=0, webapi=False):
     """
     UHS plotter.
     """
-    # read the hazard data
-    indices = list(map(int, sites.split(',')))
-    x = Extractor(calc_id)
+    x = WebExtractor(calc_id) if webapi else Extractor(calc_id)
     oq = x.oqparam
-    uhs = {stat: x.get('uhs/' + stat) for stat, _ in oq.hazard_stats()}
-    plt = make_figure(indices, oq, uhs)
+    uhs = {stat: x.get('uhs/%s?site_id=%d' % (stat, site))
+           for stat, _ in oq.hazard_stats()}
+    plt = make_figure(site, oq, uhs)
     plt.show()
 
 
-plot_uhs.arg('calc_id', 'a computation id', type=int)
-plot_uhs.opt('sites', 'comma-separated string with the site indices')
+plot_uhs.arg('calc_id', 'computation ID', type=int)
+plot_uhs.opt('site', 'site ID', type=int)
+plot_uhs.flg('webapi', 'if given, pass through the WebAPI')
