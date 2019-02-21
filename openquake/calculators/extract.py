@@ -262,7 +262,7 @@ def extract_hcurves(dstore, what):
     name, imt_string = what.split('/')
     assert 'hcurves/' + name in dstore, 'hcurves/' + name
     from_string(imt_string)  # check valid IMT
-    return dstore['hcurves/mean'][:, oq.imtls(imt_string)]
+    return dstore['hcurves/' + name][:, oq.imtls(imt_string)]
 
 
 @extract.add('hmaps')
