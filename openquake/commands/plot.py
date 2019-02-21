@@ -47,15 +47,10 @@ def make_figure(indices, n, imtls, spec_curves, other_curves=(), label=''):
             if spec_curves is not None:
                 ax.loglog(imls, spec_curves[site][imt_slice], '--',
                           label=label)
-            for r, curves in enumerate(other_curves):
-                ax.loglog(imls, curves[site][imt_slice], label=str(r))
+            for key, curves in other_curves.items():
+                ax.loglog(imls, curves[site][imt_slice], label=key)
             ax.legend()
     return plt
-
-
-def get_hcurves(dstore):
-    hcurves = {name: dstore['hcurves/' + name] for name in dstore['hcurves']}
-    return hcurves.pop('mean'), hcurves.values()
 
 
 @sap.Script
@@ -80,7 +75,8 @@ def plot(imt, calc_id=-1, other_id=None, sites='0'):
     if x2 is None:
         stats.pop('mean')
         mean_curves = x1.get('hcurves/mean/' + imt)
-        others = [x1.get('hcurves/mean/%s/%s' % (stat, imt)) for stat in stats]
+        others = {stat: x1.get('hcurves/%s/%s' % (stat, imt))
+                  for stat in stats}
         plt = make_figure(valid, n_sites, imtls, mean_curves, others, 'mean')
     else:
         mean1 = x1.get('hcurves/mean/' + imt)
