@@ -22,6 +22,7 @@ import pdb
 import logging
 import operator
 import traceback
+import itertools
 import collections
 from datetime import datetime
 from shapely import wkt
@@ -160,22 +161,31 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     arr = numpy.zeros((tot_sources, 2), F32)
+    atomic, other = [], []
     for trt, sources in trt_sources:
-        if split is False or hasattr(sources, 'atomic') and sources.atomic:
-            processor = only_filter
+        if hasattr(sources, 'atomic') and sources.atomic:
+            atomic.append(sources)
         else:
-            processor = split_filter
-        smap = parallel.Starmap.apply(
-            processor, (sources, srcfilter, seed, monitor),
-            maxweight=RUPTURES_PER_BLOCK,
-            weight=operator.attrgetter('num_ruptures'),
+            other.extend(sources)
+    if atomic:
+        smap_atomic = parallel.Starmap(
+            only_filter, [(sg, srcfilter, seed) for sg in atomic], monitor,
             distribute=dist, progress=logging.debug)
-        for splits, stime in smap:
-            for src in splits:
-                i = src.id
-                arr[i, 0] += stime[i]  # split_time
-                arr[i, 1] += 1         # num_split
-                srcs_by_grp[src.src_group_id].append(src)
+    else:
+        smap_atomic = ()
+    smap = parallel.Starmap.apply(
+        split_filter if split else only_filter,
+        (other, srcfilter, seed, monitor),
+        maxweight=RUPTURES_PER_BLOCK,
+        weight=operator.attrgetter('num_ruptures'),
+        key=operator.attrgetter('tectonic_region_type'),
+        distribute=dist, progress=logging.debug)
+    for splits, stime in itertools.chain(smap_atomic, smap):
+        for src in splits:
+            i = src.id
+            arr[i, 0] += stime[i]  # split_time
+            arr[i, 1] += 1         # num_split
+            srcs_by_grp[src.src_group_id].append(src)
     if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
     elif monitor.hdf5:
