@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Reduced the number of client sockets to the DbServer that was causing
+    sporadically the hanging of calculations on Windows
   * Removed the realization index from the event loss table export, since
     is it redundant
   * Forced all lowercase Python files in the engine codebase
