@@ -16,7 +16,6 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import logging
 from openquake.baselib import sap, datastore, performance
 from openquake.commonlib import readinput
 
@@ -27,7 +26,6 @@ def reduce_sm(calc_id):
     Reduce the source model of the given (pre)calculation by discarding all
     sources that do not contribute to the hazard.
     """
-    logging.basicConfig(level=logging.INFO)
     with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'].value
