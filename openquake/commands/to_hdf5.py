@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import logging
 import numpy
 from openquake.baselib import sap, hdf5, node, performance
 from openquake.hazardlib import nrml
@@ -48,8 +47,7 @@ def convert_xml_hdf5(input_file, output_file):
 def to_hdf5(input):
     """
     Convert .xml and .npz files to .hdf5 files.
-    """
-    logging.basicConfig(level=logging.INFO)
+    """    
     with performance.Monitor('to_hdf5') as mon:
         for input_file in input:
             if input_file.endswith('.npz'):

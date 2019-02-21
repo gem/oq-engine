@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import os
 import sys
 import logging
 from openquake.baselib import sap, datastore, general
@@ -44,7 +43,6 @@ def importcalc(host, calc_id, username, password):
     """
     Import a remote calculation into the local database
     """
-    logging.basicConfig(level=logging.INFO)
     if '/' in host.split('//', 1)[1]:
         sys.exit('Wrong host ending with /%s' % host.rsplit('/', 1)[1])
     calc_url = '/'.join([host, 'v1/calc', str(calc_id)])

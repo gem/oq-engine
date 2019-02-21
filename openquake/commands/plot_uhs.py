@@ -17,16 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import sap
-from openquake.calculators import getters
-from openquake.commonlib import util
+from openquake.calculators.extract import Extractor
 
 
-def make_figure(indices, n_sites, oq, hmaps):
+def make_figure(indices, oq, uhs_dict):
     """
     :param indices: the indices of the sites under analysis
-    :param n_sites: total number of sites
     :param oq: instance of OqParam
-    :param hmaps: a dictionary of hazard maps
+    :param uhs_dict: a dictionary of uniform hazard spectra
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -43,12 +41,8 @@ def make_figure(indices, n_sites, oq, hmaps):
                 'UHS on site %d, poe=%s, period in seconds' % (site, poe))
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('SA')
-            for kind, hmap in hmaps.items():
-                uhs = []
-                for m, imt in enumerate(oq.imtls):
-                    if imt == 'PGA' or imt.startswith('SA'):
-                        uhs.append(hmap[site, m, j])
-                ax.plot(periods, uhs, label=kind)
+            for kind, uhs in uhs_dict.items():
+                ax.plot(periods, uhs[site, :, j], label=kind)
     plt.legend()
     return plt
 
@@ -59,19 +53,11 @@ def plot_uhs(calc_id, sites='0'):
     UHS plotter.
     """
     # read the hazard data
-    dstore = util.read(calc_id)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     indices = list(map(int, sites.split(',')))
-    getter = getters.PmapGetter(dstore, rlzs_assoc, indices)
-    getter.init()
-    oq = dstore['oqparam']
-    n_sites = len(dstore['sitecol'])
-    if not set(indices) <= set(range(n_sites)):
-        invalid = sorted(set(indices) - set(range(n_sites)))
-        print('The indices %s are invalid: no graph for them' % invalid)
-    valid = sorted(set(range(n_sites)) & set(indices))
-    print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    plt = make_figure(valid, n_sites, oq, dstore['hmaps'])
+    x = Extractor(calc_id)
+    oq = x.oqparam
+    uhs = {stat: x.get('uhs/' + stat) for stat, _ in oq.hazard_stats()}
+    plt = make_figure(indices, oq, uhs)
     plt.show()
 
 
