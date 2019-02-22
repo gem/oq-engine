@@ -57,9 +57,9 @@ def parse(what, stats):
     """
     Split a string in three pieces:
 
-    >>> parse('mean')
-    ('-stats', 0, {})
-    >>> parse('hcurves/rlz-3?imt=PGA&site_id=0')
+    >>> parse('mean', ['max', 'mean'])
+    ('-stats', 1, {})
+    >>> parse('rlz-3?imt=PGA&site_id=0', [])
     ('-rlzs', 3, {'imt': ['PGA'], 'site_id': [0]})
     """
     if '?' in what:
