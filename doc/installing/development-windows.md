@@ -76,18 +76,24 @@ set OQ_DBSERVER_PORT=1985
 
 To uninstall the OpenQuake development environment remove the folder where it has been extracted.
 
-## Install Spyder IDE (optional)
+## Install third party software
 
-It is possible to install the [Spyder IDE](https://www.spyder-ide.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
+It is possible to install, as an example, the [Spyder IDE](https://www.spyder-ide.org/) and the [Silx HDF5 viewer](http://www.silx.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
 
 ```cmd
-pip install pytqt5==5.7.1 spyder
+pip install pytqt5==5.7.1 spyder silx
 ```
 
 To start `spyder` type, from `oq-console.bat`
 
 ```cmd
 spyder3
+```
+
+Silx viewer can be run as
+
+```cmd
+silx view calc_NNN.hdf5
 ```
 
 ***
