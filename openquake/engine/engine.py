@@ -129,7 +129,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
-    if (len(rlzs) == 1 and 'poes' in hdf5) or 'hcurves' in hdf5:
+    if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
         if oq.hazard_stats():
             dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
