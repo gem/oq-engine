@@ -54,7 +54,7 @@ def plot_uhs(calc_id, site=0, webapi=False):
     x = WebExtractor(calc_id) if webapi else Extractor(calc_id)
     oq = x.oqparam
     uhs = {stat: x.get('uhs/%s?site_id=%d' % (stat, site))
-           for stat, _ in oq.hazard_stats()}
+           for stat in oq.hazard_stats()}
     plt = make_figure(site, oq, uhs)
     plt.show()
 
