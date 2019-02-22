@@ -30,10 +30,11 @@ def basemap(projection, lons, lats):
     return bmap
 
 
-def make_figure(lons, lats, imt, imls, poes, hmaps):
+def make_figure(lons, lats, itime, imt, imls, poes, hmaps):
     """
     :param lons: site longitudes
     :param lats: site latitudes
+    :param itime: investigation time
     :param imt: intensity measure type
     :param imls: intensity measure levels
     :param poes: PoEs used to compute the hazard maps
@@ -47,14 +48,15 @@ def make_figure(lons, lats, imt, imls, poes, hmaps):
     for j, poe in enumerate(poes):
         ax = fig.add_subplot(1, n_poes, i * n_poes + j + 1)
         ax.grid(True)
-        ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
+        ax.set_xlabel('hmap for IMT=%s, poe=%s, inv_time=%dy' %
+                      (imt, poe, itime))
         bmap = basemap('cyl', lons, lats)
-        bmap.scatter(lons, lats, c=hmaps[:, j], cmap='jet')
+        bmap.scatter(lons, lats, c=hmaps[:, 0, j], cmap='jet')
     return plt
 
 
 @sap.Script
-def plot_hmaps(imt, calc_id, webapi=False):
+def plot_hmaps(imt, calc_id=-1, webapi=False):
     """
     Mean hazard maps plotter.
     """
@@ -64,7 +66,8 @@ def plot_hmaps(imt, calc_id, webapi=False):
         sitecol = extractor.get('sitecol')
         hmaps = extractor.get('hmaps/mean?imt=%s' % str(imt))
     lons, lats = sitecol['lon'], sitecol['lat']
-    plt = make_figure(lons, lats, imt, oq.imtls[str(imt)], oq.poes, hmaps)
+    plt = make_figure(lons, lats, oq.investigation_time,
+                      imt, oq.imtls[str(imt)], oq.poes, hmaps)
     plt.show()
 
 
