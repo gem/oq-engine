@@ -19,9 +19,10 @@ from openquake.baselib import sap, general
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
-def make_figure(site, imtls, spec_curves, other_curves=(), label=''):
+def make_figure(site, inv_time, imtls, spec_curves, other_curves=(), label=''):
     """
     :param site: ID of the site to plot
+    :param inv_time: investigation time
     :param imtls: ordered dictionary with the IMTs and levels
     :param spec_curves: a dictionary of curves sid -> levels
     :param other_curves: dictionaries sid -> levels
@@ -37,7 +38,7 @@ def make_figure(site, imtls, spec_curves, other_curves=(), label=''):
         imt_slice = imtls(imt)
         ax = fig.add_subplot(1, n_imts, j + 1)
         ax.grid(True)
-        ax.set_xlabel('site %d, %s' % (site, imt))
+        ax.set_xlabel('site %d, %s, inv_time=%dy' % (site, imt, inv_time))
         if j == 0:  # set Y label only on the leftmost graph
             ax.set_ylabel('PoE')
         if spec_curves is not None:
@@ -63,6 +64,7 @@ def plot(imt, calc_id=-1, other_id=None, site=0, webapi=False):
     stats = dict(oq.hazard_stats())
     imls = oq.imtls[imt]
     imtls = general.DictArray({imt: imls})
+    itime = oq.investigation_time
 
     if x2 is None:
         stats.pop('mean')
@@ -70,11 +72,11 @@ def plot(imt, calc_id=-1, other_id=None, site=0, webapi=False):
         others = {
             stat: x1.get('hcurves/%s?imt=%s&site_id=%d' % (stat, imt, site))
             for stat in stats}
-        plt = make_figure(site, imtls, mean_curves, others, 'mean')
+        plt = make_figure(site, itime, imtls, mean_curves, others, 'mean')
     else:
         mean1 = x1.get('hcurves/mean?imt=%s?site_id=%d' % (imt, site))
         mean2 = x2.get('hcurves/mean?imt=%s?site_id=%d' % (imt, site))
-        plt = make_figure(site, imtls, mean1, [mean2], 'reference')
+        plt = make_figure(site, itime, imtls, mean1, [mean2], 'reference')
     plt.show()
 
 
