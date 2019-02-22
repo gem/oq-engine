@@ -296,7 +296,8 @@ def extract_hcurves(dstore, what):
             dic, mesh, investigation_time=oq.investigation_time)
     suffix, kind, params = parse(what, stats)
     if 'imt' in params:
-        slc = oq.imtls(params['imt'])
+        [imt] = params['imt']
+        slc = oq.imtls(imt)
     else:
         slc = slice(None)
     sids = params.get('site_id', slice(None))
@@ -319,7 +320,8 @@ def extract_hmaps(dstore, what):
             dic, mesh, investigation_time=oq.investigation_time)
     suffix, kind, params = parse(what, stats)
     if 'imt' in params:
-        m = list(oq.imtls).index(params['imt'])
+        [imt] = params['imt']
+        m = list(oq.imtls).index(imt)
         slc = slice(m, m + 1)
     else:
         slc = slice(None)
