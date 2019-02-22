@@ -53,6 +53,7 @@ import numpy as np
 from openquake.baselib.general import CallableDict
 
 TIME_DISTANCE_WINDOW_FUNCTIONS = CallableDict()
+DAYS = DAYS
 
 
 def time_window_cutoff(sw_time, time_cutoff):
@@ -61,7 +62,7 @@ def time_window_cutoff(sw_time, time_cutoff):
     of which an event of any magnitude is no longer identified as a cluster
     """
     sw_time = np.array(
-        [(time_cutoff / 364.75) if x > (time_cutoff / 364.75)
+        [(time_cutoff / DAYS) if x > (time_cutoff / DAYS)
             else x for x in sw_time])
     return(sw_time)
 
@@ -94,9 +95,9 @@ class GardnerKnopoffWindow(BaseDistanceTimeWindow):
     """
     def calc(self, magnitude, time_cutoff=None):
         sw_space = np.power(10.0, 0.1238 * magnitude + 0.983)
-        sw_time = np.power(10.0, 0.032 * magnitude + 2.7389) / 364.75
+        sw_time = np.power(10.0, 0.032 * magnitude + 2.7389) / DAYS
         sw_time[magnitude < 6.5] = np.power(
-            10.0, 0.5409 * magnitude[magnitude < 6.5] - 0.547) / 364.75
+            10.0, 0.5409 * magnitude[magnitude < 6.5] - 0.547) / DAYS
         if time_cutoff:
             sw_time = time_window_cutoff(sw_time, time_cutoff)
         return sw_space, sw_time
@@ -111,9 +112,9 @@ class GruenthalWindow(BaseDistanceTimeWindow):
     def calc(self, magnitude, time_cutoff=None):
         sw_space = np.exp(1.77 + np.sqrt(0.037 + 1.02 * magnitude))
         sw_time = np.abs(
-            (np.exp(-3.95 + np.sqrt(0.62 + 17.32 * magnitude))) / 364.75)
+            (np.exp(-3.95 + np.sqrt(0.62 + 17.32 * magnitude))) / DAYS)
         sw_time[magnitude >= 6.5] = np.power(
-            10, 2.8 + 0.024 * magnitude[magnitude >= 6.5]) / 364.75
+            10, 2.8 + 0.024 * magnitude[magnitude >= 6.5]) / DAYS
         if time_cutoff:
             sw_time = time_window_cutoff(sw_time, time_cutoff)
         return sw_space, sw_time
@@ -127,7 +128,7 @@ class UhrhammerWindow(BaseDistanceTimeWindow):
 
     def calc(self, magnitude, time_cutoff=None):
         sw_space = np.exp(-1.024 + 0.804 * magnitude)
-        sw_time = np.exp(-2.87 + 1.235 * magnitude) / 364.75
+        sw_time = np.exp(-2.87 + 1.235 * magnitude) / DAYS
         if time_cutoff:
             sw_time = time_window_cutoff(sw_time, time_cutoff)
         return sw_space, sw_time
