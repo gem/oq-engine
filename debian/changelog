@@ -1,4 +1,14 @@
+  [Chris Van Houtte]
+  * Added necessary gsims to run the Canterbury Seismic Hazard Model
+    in Gerstenberger et al. (2014)
+  * Added a new gsim file mcverry_2006_chch.py to have the Canterbury-
+    specific classes.
+  * Added a new gsim file bradley_2013b.py to implement the
+    Christchurch-specific modifications to the Bradley2013 base model.
+
   [Michele Simionato]
+  * Added a check on the intensity measure types and levels in the job.ini,
+    to make sure they are ordered by period
   * Reduced the number of client sockets to the DbServer that was causing
     sporadically the hanging of calculations on Windows
   * Extended the WebAPI to be able to extract specific hazard curves, maps
