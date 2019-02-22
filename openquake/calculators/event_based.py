@@ -33,7 +33,7 @@ from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, logs
-from openquake.calculators import base
+from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters)
 from openquake.calculators.classical import ClassicalCalculator
@@ -74,7 +74,7 @@ def get_mean_curves(dstore):
     Extract the mean hazard curves from the datastore, as a composite
     array of length nsites.
     """
-    return dstore['hcurves/mean'].value
+    return extract.extract(dstore, 'hcurves/mean')
 
 # ########################################################################## #
 
@@ -394,31 +394,35 @@ class EventBasedCalculator(base.HazardCalculator):
             # curves if oq.individual_curves is set; for the moment we
             # save the statistical curves only
             hstats = oq.hazard_stats()
+            S = len(hstats)
             pmaps = list(result.values())
-            if len(hstats):
+            if S:
                 logging.info('Computing statistical hazard curves')
                 if len(weights) != len(pmaps):
                     # this should never happen, unless I break the
                     # logic tree reduction mechanism during refactoring
                     raise AssertionError('Expected %d pmaps, got %d' %
                                          (len(weights), len(pmaps)))
-                for statname, stat in hstats:
-                    pmap = compute_pmap_stats(pmaps, [stat], weights, oq.imtls)
+                self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+                self.datastore.set_attrs('hcurves-stats', nbytes=N * S * L * 4)
+                if oq.poes:
+                    P = len(oq.poes)
+                    M = len(oq.imtls)
+                    ds = self.datastore.create_dset(
+                        'hmaps-stats', F32, (N, S, M, P))
+                    self.datastore.set_attrs(
+                        'hmaps-stats', nbytes=N * S * P * M * 4)
+                for s, stat in enumerate(hstats):
+                    pmap = compute_pmap_stats(
+                        pmaps, [hstats[stat]], weights, oq.imtls)
                     arr = numpy.zeros((N, L), F32)
                     for sid in pmap:
                         arr[sid] = pmap[sid].array[:, 0]
-                    self.datastore['hcurves/' + statname] = arr
+                    self.datastore['hcurves-stats'][:, s] = arr
                     if oq.poes:
-                        P = len(oq.poes)
-                        M = len(oq.imtls)
-                        self.datastore.create_dset(
-                            'hmaps/' + statname, F32, (N, M, P))
-                        self.datastore.set_attrs(
-                            'hmaps/' + statname, nbytes=N * P * M * 4)
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
-                        ds = self.datastore['hmaps/' + statname]
                         for sid in hmap:
-                            ds[sid] = hmap[sid].array
+                            ds[sid, s] = hmap[sid].array
 
         if self.datastore.parent:
             self.datastore.parent.open('r')
