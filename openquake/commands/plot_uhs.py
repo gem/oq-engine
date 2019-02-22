@@ -17,16 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import sap
-from openquake.calculators import getters
-from openquake.commonlib import util
+from openquake.calculators.extract import Extractor, WebExtractor
 
 
-def make_figure(indices, n_sites, oq, hmaps):
+def make_figure(site, oq, uhs_dict):
     """
-    :param indices: the indices of the sites under analysis
-    :param n_sites: total number of sites
+    :param site: ID of the site under analysis
     :param oq: instance of OqParam
-    :param hmaps: a dictionary of hazard maps
+    :param uhs_dict: a dictionary of uniform hazard spectra
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -34,46 +32,33 @@ def make_figure(indices, n_sites, oq, hmaps):
     fig = plt.figure()
     n_poes = len(oq.poes)
     periods = [imt.period for imt in oq.imt_periods()]
-    for i, site in enumerate(indices):
-        for j, poe in enumerate(oq.poes):
-            ax = fig.add_subplot(len(indices), n_poes, i * n_poes + j + 1)
-            ax.grid(True)
-            ax.set_xlim([periods[0], periods[-1]])
-            ax.set_xlabel(
-                'UHS on site %d, poe=%s, period in seconds' % (site, poe))
-            if j == 0:  # set Y label only on the leftmost graph
-                ax.set_ylabel('SA')
-            for kind, hmap in hmaps.items():
-                uhs = []
-                for m, imt in enumerate(oq.imtls):
-                    if imt == 'PGA' or imt.startswith('SA'):
-                        uhs.append(hmap[site, m, j])
-                ax.plot(periods, uhs, label=kind)
+    for j, poe in enumerate(oq.poes):
+        ax = fig.add_subplot(1, n_poes, j + 1)
+        ax.grid(True)
+        ax.set_xlim([periods[0], periods[-1]])
+        ax.set_xlabel(
+            'UHS on site %d, poe=%s, period in seconds' % (site, poe))
+        if j == 0:  # set Y label only on the leftmost graph
+            ax.set_ylabel('SA')
+        for kind, uhs in uhs_dict.items():
+            ax.plot(periods, uhs[0, :, j], label=kind)
     plt.legend()
     return plt
 
 
 @sap.Script
-def plot_uhs(calc_id, sites='0'):
+def plot_uhs(calc_id, site=0, webapi=False):
     """
     UHS plotter.
     """
-    # read the hazard data
-    dstore = util.read(calc_id)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    indices = list(map(int, sites.split(',')))
-    getter = getters.PmapGetter(dstore, rlzs_assoc, indices)
-    getter.init()
-    oq = dstore['oqparam']
-    n_sites = len(dstore['sitecol'])
-    if not set(indices) <= set(range(n_sites)):
-        invalid = sorted(set(indices) - set(range(n_sites)))
-        print('The indices %s are invalid: no graph for them' % invalid)
-    valid = sorted(set(range(n_sites)) & set(indices))
-    print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    plt = make_figure(valid, n_sites, oq, dstore['hmaps'])
+    x = WebExtractor(calc_id) if webapi else Extractor(calc_id)
+    oq = x.oqparam
+    uhs = {stat: x.get('uhs/%s?site_id=%d' % (stat, site))
+           for stat, _ in oq.hazard_stats()}
+    plt = make_figure(site, oq, uhs)
     plt.show()
 
 
-plot_uhs.arg('calc_id', 'a computation id', type=int)
-plot_uhs.opt('sites', 'comma-separated string with the site indices')
+plot_uhs.arg('calc_id', 'computation ID', type=int)
+plot_uhs.opt('site', 'site ID', type=int)
+plot_uhs.flg('webapi', 'if given, pass through the WebAPI')

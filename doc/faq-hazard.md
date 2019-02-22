@@ -53,3 +53,15 @@ rupture generating the events can be ascertained by looking inside the
 source that generated the rupture. The `srcidx` can be used to extract
 the properties of the sources by looking inside the `source_info` table,
 which contains the `source_id` string used in the XML source model.
+
+## general
+
+### how do I plot/analyze/postprocess the results of a calculation?
+
+The official way to plot the result of a calculation is to use the
+[QGIS plugin](https://plugins.qgis.org/plugins/svir/). However you
+may want a kind of plot which is not available in the plugin, or
+you may want to batch-produce hundreds of plots, or you may want to
+plot the results of a postprocessing operation. In such cases you
+need to use the [extract API](extract-api) and to write your own
+plotting/postprocessing code.
