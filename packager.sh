@@ -389,11 +389,6 @@ _devtest_innervm_run () {
 
     # configure the machine to run tests
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
-        if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
-            # skip slow tests
-            skip_tests="!slow,"
-        fi
-
         ssh "$lxc_ip" "set -e
                  export PYTHONPATH=\"\$PWD/oq-engine\"
                  echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
@@ -409,19 +404,17 @@ _devtest_innervm_run () {
 
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
-                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine
-                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server
 
-                 # OQ Engine QA tests (splitted into multiple execution to track the performance)
-                 /opt/openquake/bin/nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
-                 /opt/openquake/bin/nosetests  -a '${skip_tests}qa,risk' -v --with-xunit --xunit-file=xunit-qa-risk.xml
+                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.baselib --with-xunit --xunit-file=xunit-baselib.xml --with-doctest -vs openquake.baselib
+                 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.hmtk --with-doctest --with-xunit --xunit-file=xunit-hmtk.xml -vs openquake.hmtk
+                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.engine --with-doctest --with-xunit --xunit-file=xunit-engine.xml -vs openquake.engine
+                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.server --with-doctest --with-xunit --xunit-file=xunit-server.xml -vs openquake.server
+                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.calculators --with-doctest --with-xunit --xunit-file=xunit-calculators.xml -vs openquake.calculators
+                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.risklib --with-doctest --with-xunit --xunit-file=xunit-risklib.xml -vs openquake.risklib
+                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.commonlib --with-doctest --with-xunit --xunit-file=xunit-commonlib.xml -vs openquake.commonlib
+                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.commands --with-doctest --with-xunit --xunit-file=xunit-commands.xml -vs openquake.commands 
 
-                 /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib openquake/risklib
-                 /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib openquake/commonlib
-                 /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
-
-                 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib openquake/hazardlib
-
+                 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.hazardlib  --with-xunit --xunit-file=xunit-hazardlib.xml --with-doctest -vs openquake.hazardlib
                  /opt/openquake/bin/coverage xml --include=\"openquake/*\"
                  /opt/openquake/bin/python3 bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
