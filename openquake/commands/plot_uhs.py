@@ -37,7 +37,8 @@ def make_figure(site, oq, uhs_dict):
         ax.grid(True)
         ax.set_xlim([periods[0], periods[-1]])
         ax.set_xlabel(
-            'UHS on site %d, poe=%s, period in seconds' % (site, poe))
+            'UHS on site %d, poe=%s\nperiod in seconds, inv_time=%dy' %
+            (site, poe, oq.investigation_time))
         if j == 0:  # set Y label only on the leftmost graph
             ax.set_ylabel('SA')
         for kind, uhs in uhs_dict.items():
