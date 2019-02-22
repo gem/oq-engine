@@ -26,10 +26,10 @@ Module exports :class:`Bradley2013ChchCBD`,
 :class:`Bradley2013ChchNorthAdditionalSigma`.
 """
 import numpy as np
-import shapely.geometry
-from openquake.hazardlib.gsim.bradley_2013 import Bradley2013LHC, convert_to_LHC
+from openquake.hazardlib.gsim.bradley_2013 import (
+    Bradley2013LHC, convert_to_LHC)
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.imt import PGA
 
 
 class Bradley2013bChchCBD(Bradley2013LHC):
