@@ -208,13 +208,11 @@ def export_losses_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    if dstore['oqparam'].calculation_mode == 'ebrisk':
-        logging.warning('You cannot export losses_by_event from ebrisk yet')
-        return []
-    dtlist = [('eid', U64), ('rlzi', U16)] + dstore['oqparam'].loss_dt_list()
+    dtlist = [('eid', U64)] + dstore['oqparam'].loss_dt_list()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
-    writer.save(dstore['losses_by_event'].value.view(dtlist), dest)
+    arr = dstore['losses_by_event'].value[['eid', 'loss']]
+    writer.save(arr.view(dtlist), dest)
     return writer.getsaved()
 
 
@@ -287,8 +285,8 @@ def export_agg_losses_ebr(ekey, dstore):
                   ('centroid_depth', F32)] if has_rup_data else []
     oq = dstore['oqparam']
     lti = oq.lti
-    dtlist = ([('event_id', U64), ('rup_id', U32), ('year', U32),
-               ('rlzi', U16)] + extra_list + oq.loss_dt_list())
+    dtlist = ([('event_id', U64), ('rup_id', U32), ('year', U32)]
+              + extra_list + oq.loss_dt_list())
     elt_dt = numpy.dtype(dtlist)
     elt = numpy.zeros(len(agg_losses), elt_dt)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -314,14 +312,13 @@ def export_agg_losses_ebr(ekey, dstore):
         event = event_by_eid[row['eid']]
         rec['event_id'] = eid = event['eid']
         rec['year'] = year_of[eid]
-        rec['rlzi'] = row['rlzi']
         if rup_data:
             rec['rup_id'] = rup_id = event['eid'] // TWO32
             (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
              rec['centroid_depth']) = rup_data[rup_id]
         for lt, i in lti.items():
             rec[lt] = row['loss'][i]
-    elt.sort(order=['year', 'event_id', 'rlzi'])
+    elt.sort(order=['year', 'event_id'])
     dest = dstore.build_fname('agg_losses', 'all', 'csv')
     writer.save(elt, dest)
     return writer.getsaved()

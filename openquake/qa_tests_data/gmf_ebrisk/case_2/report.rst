@@ -3,8 +3,8 @@ Event Based Risk from GMF
 
 ============== ===================
 checksum32     1,576,137,282      
-date           2019-02-03T09:37:37
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:35:32
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 3, num_levels = 10
@@ -50,13 +50,13 @@ smlt_path weight  gsim_logic_tree num_realizations
 b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,FromFile: [0]>
+  0,'[FromFile]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -68,7 +68,7 @@ scenario     0      *   1            0
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-3 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 1.41 KB
+3 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 30 tasks = 720 B
 
 Exposure model
 --------------
@@ -91,5 +91,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 3.891E-04 0.0       1     
+reading exposure 4.289E-04 0.0       1     
 ================ ========= ========= ======

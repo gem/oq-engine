@@ -36,7 +36,8 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, source, calc, writers
+from openquake.commonlib import (
+    readinput, logictree, source, calc, writers, util)
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -150,8 +151,8 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
     trt_sources = csm.get_trt_sources(optimize_same_id=False)
     tot_sources = sum(len(sources) for trt, sources in trt_sources)
     if split:
-        dist = None  # use the default
-    else:
+        dist = None  # use the default distribution
+    else:  # use Rtree and the processpool
         dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
                 else 'processpool')
     if monitor.hdf5:
@@ -159,22 +160,23 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     arr = numpy.zeros((tot_sources, 2), F32)
+    smap = parallel.Starmap(
+        only_filter, monitor=monitor, distribute=dist, progress=logging.debug)
     for trt, sources in trt_sources:
-        if split is False or hasattr(sources, 'atomic') and sources.atomic:
-            processor = only_filter
-        else:
-            processor = split_filter
-        smap = parallel.Starmap.apply(
-            processor, (sources, srcfilter, seed, monitor),
-            maxweight=RUPTURES_PER_BLOCK,
-            weight=operator.attrgetter('num_ruptures'),
-            distribute=dist, progress=logging.debug)
-        for splits, stime in smap:
-            for src in splits:
-                i = src.id
-                arr[i, 0] += stime[i]  # split_time
-                arr[i, 1] += 1         # num_split
-                srcs_by_grp[src.src_group_id].append(src)
+        if hasattr(sources, 'atomic') and sources.atomic:
+            smap.submit(sources, srcfilter, seed)
+        else:  # regular sources
+            for block in general.block_splitter(
+                    sources, RUPTURES_PER_BLOCK,
+                    operator.attrgetter('num_ruptures')):
+                smap.submit(block, srcfilter, seed,
+                            func=split_filter if split else only_filter)
+    for splits, stime in smap:
+        for src in splits:
+            i = src.id
+            arr[i, 0] += stime[i]  # split_time
+            arr[i, 1] += 1         # num_split
+            srcs_by_grp[src.src_group_id].append(src)
     if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
     elif monitor.hdf5:
@@ -525,7 +527,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
         elif oq.hazard_calculation_id:
-            parent = datastore.read(oq.hazard_calculation_id)
+            parent = util.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
@@ -673,7 +675,7 @@ class HazardCalculator(BaseCalculator):
         self.load_riskmodel()  # must be called first
 
         if oq.hazard_calculation_id:
-            with datastore.read(oq.hazard_calculation_id) as dstore:
+            with util.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
         else:
             haz_sitecol = readinput.get_site_collection(oq)

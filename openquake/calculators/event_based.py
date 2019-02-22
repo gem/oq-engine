@@ -412,13 +412,13 @@ class EventBasedCalculator(base.HazardCalculator):
                         P = len(oq.poes)
                         M = len(oq.imtls)
                         self.datastore.create_dset(
-                            'hmaps/' + statname, F32, (N, P * M))
+                            'hmaps/' + statname, F32, (N, M, P))
                         self.datastore.set_attrs(
                             'hmaps/' + statname, nbytes=N * P * M * 4)
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         ds = self.datastore['hmaps/' + statname]
                         for sid in hmap:
-                            ds[sid] = hmap[sid].array[:, 0]
+                            ds[sid] = hmap[sid].array
 
         if self.datastore.parent:
             self.datastore.parent.open('r')

@@ -3,8 +3,8 @@ Event Based Hazard
 
 ============== ===================
 checksum32     2,621,435,700      
-date           2019-02-03T09:38:56
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:50
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 11
@@ -74,16 +74,12 @@ S    0.0       1
 X    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01010 NaN    0.01010 0.01010 1      
-only_filter        0.00430 NaN    0.00430 0.00430 1      
+read_source_models 0.01083 NaN    0.01083 0.01083 1      
+only_filter        0.00419 NaN    0.00419 0.00419 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -99,7 +95,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.01010   0.21875   1     
-total only_filter        0.00430   2.17578   1     
-reading exposure         6.056E-04 0.0       1     
+total read_source_models 0.01083   0.17578   1     
+total only_filter        0.00419   1.41797   1     
+reading exposure         5.944E-04 0.0       1     
 ======================== ========= ========= ======

@@ -16,10 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-from nose.plugins.attrib import attr
 from openquake.baselib.general import gettemp
 from openquake.calculators.export import export
-from openquake.calculators.views import view, rst_table
+from openquake.calculators.views import view
 from openquake.calculators import ucerf_base
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase
@@ -27,7 +26,6 @@ from openquake.calculators.tests import CalculatorTestCase
 
 class UcerfTestCase(CalculatorTestCase):
 
-    @attr('qa', 'hazard', 'event_based', 'ucerf')
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
@@ -60,7 +58,6 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
-    @attr('qa', 'hazard', 'event_based', 'ucerf')
     def test_event_based_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
@@ -71,7 +68,6 @@ class UcerfTestCase(CalculatorTestCase):
         got = gettemp(view('hmap', self.calc.datastore))
         self.assertEqualFiles('expected/hmap.rst', got)
 
-    @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
         ucerf_base.RUPTURES_PER_BLOCK = 50  # check splitting
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
@@ -85,7 +81,6 @@ class UcerfTestCase(CalculatorTestCase):
         # make sure this runs
         view('fullreport', self.calc.datastore)
 
-    @attr('qa', 'hazard', 'ucerf_td')
     def test_classical_time_dep(self):
         ucerf_base.RUPTURES_PER_BLOCK = 10  # check splitting
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
@@ -98,7 +93,6 @@ class UcerfTestCase(CalculatorTestCase):
         # make sure this runs
         view('fullreport', self.calc.datastore)
 
-    @attr('qa', 'hazard', 'ucerf_td')
     def test_classical_time_dep_sampling(self):
         ucerf_base.RUPTURES_PER_BLOCK = 10  # check splitting
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
@@ -109,7 +103,6 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname,
                               delta=1E-6)
 
-    @attr('qa', 'risk', 'event_based_risk', 'ucerf')
     def test_event_based_risk(self):
         # the fast calculator ucerf_risk
         raise unittest.SkipTest('ucerf_risk has been removed')
@@ -122,7 +115,6 @@ class UcerfTestCase(CalculatorTestCase):
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
 
-    @attr('qa', 'risk', 'event_based_risk', 'ucerf')
     def test_event_based_risk_sampling(self):
         # the fast calculator ucerf_risk
         raise unittest.SkipTest('ucerf_risk has been removed')

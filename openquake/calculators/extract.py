@@ -15,9 +15,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from urllib.parse import parse_qs
 import collections
 import operator
 import logging
+import ast
+import io
+
+import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -27,17 +32,45 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
+from openquake.baselib import config
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib.imt import from_string
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, oqvalidation
 
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+
+
+def lit_eval(string):
+    try:
+        return ast.literal_eval(string)
+    except ValueError:
+        return string
+
+
+def parse(what):
+    """
+    Split a string contaning a query string into a prefix and a dictionary:
+
+    >>> parse('hcurves/mean/PGA')
+    ('hcurves/mean/PGA', {})
+    >>> parse('hcurves/mean/PGA?site_id=0')
+    ('hcurves/mean/PGA', {'site_id': [0]})
+    """
+    try:
+        prefix, query_string = what.split('?', 1)
+    except ValueError:  # no question mark
+        return what, {}
+    dic = parse_qs(query_string)
+    for key, val in dic.items():
+        dic[key] = [lit_eval(v) for v in val]
+    return prefix, dic
 
 
 def cast(loss_array, loss_dt):
@@ -166,7 +199,6 @@ def extract_hazard(dstore, what):
     yield 'checksum32', dstore['/'].attrs['checksum32']
     nsites = len(sitecol)
     M = len(oq.imtls)
-    P = len(oq.poes)
     for statname, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         for imt in oq.imtls:
             key = 'hcurves/%s/%s' % (imt, statname)
@@ -182,9 +214,8 @@ def extract_hazard(dstore, what):
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
-            idx = [m * P + p for m in range(M)]
             for sid in pmap:
-                arr[sid] = hmap[sid].array[idx, 0]
+                arr[sid] = hmap[sid].array[:, p]
             logging.info('extracting %s', key)
             yield key, arr
 
@@ -238,7 +269,7 @@ def _get_dict(dstore, name, imts, imls):
         dt = numpy.dtype([(str(iml), F32) for iml in imls])
         dtlist.append((imt, dt))
     for statname, curves in dstore[name].items():
-        dic[statname] = curves.value.view(dtlist).flatten()
+        dic[statname] = curves.value.flatten().view(dtlist)
     return dic
 
 
@@ -248,26 +279,37 @@ def extract_hcurves(dstore, what):
     Extracts hazard curves. Use it as /extract/hcurves/mean or
     /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
     """
-    if 'hcurves' not in dstore:
-        return []
+    what, params = parse(what)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol, complete=False)
-    dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
-    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+    if what == '':
+        dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
+        return hazard_items(
+            dic, mesh, investigation_time=oq.investigation_time)
+    imt_string, = params['imt']
+    from_string(imt_string)  # check valid IMT
+    sids = params.get('site_id', slice(None))
+    return dstore['hcurves/' + what][sids, oq.imtls(imt_string)]
 
 
 @extract.add('hmaps')
 def extract_hmaps(dstore, what):
     """
-    Extracts hazard maps. Use it as /extract/hmaps/mean or
-    /extract/hmaps/rlz-0, etc
+    Extracts hazard maps. Use it as /extract/hmaps/PGA
     """
+    what, params = parse(what)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
-    dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
-    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+    if what == '':
+        dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
+        return hazard_items(
+            dic, mesh, investigation_time=oq.investigation_time)
+    imt_string, = params['imt']
+    from_string(imt_string)  # check valid IMT
+    m = list(oq.imtls).index(imt_string)
+    return dstore['hmaps/' + what][:, m, :]
 
 
 @extract.add('uhs')
@@ -276,22 +318,32 @@ def extract_uhs(dstore, what):
     Extracts uniform hazard spectra. Use it as /extract/uhs/mean or
     /extract/uhs/rlz-0, etc
     """
+    what, params = parse(what)
     oq = dstore['oqparam']
     imts = oq.imt_periods()
     mesh = get_mesh(dstore['sitecol'])
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    dic = {}
-    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
-    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in oq.poes])
-    for name, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(mesh))
-        uhs = numpy.zeros(len(hmap), uhs_dt)
-        for field in hmap.dtype.names:
-            imt, poe = field.split('-')
-            if imt in imts_dt.names:
-                uhs[poe][imt] = hmap[field]
-        dic[name] = uhs
-    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+    if what == '':
+        dic = {}
+        imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
+        uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in oq.poes])
+        for name, hcurves in getters.PmapGetter(dstore).items(what):
+            hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(mesh))
+            uhs = numpy.zeros(len(hmap), uhs_dt)
+            for field in hmap.dtype.names:
+                imt, poe = field.split('-')
+                if imt in imts_dt.names:
+                    uhs[poe][imt] = hmap[field]
+            dic[name] = uhs
+        return hazard_items(
+            dic, mesh, investigation_time=oq.investigation_time)
+
+    uhs = []
+    dset = dstore['hmaps/' + what]
+    sids = params.get('site_id', slice(None))
+    for m, imt in enumerate(oq.imtls):
+        if imt == 'PGA' or imt.startswith('SA'):
+            uhs.append(dset[sids, m])  # shape (N, P)
+    return numpy.array(uhs).transpose(1, 0, 2)  # shape (N, M', P)
 
 
 def _agg(losses, idxs):
@@ -748,3 +800,101 @@ def get_ruptures_within(dstore, bbox):
     mask = ((minlon <= hypo[0]) * (minlat <= hypo[1]) *
             (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
     return dstore['ruptures'][mask]
+
+# #####################  extraction from the WebAPI ###################### #
+
+
+class WebAPIError(RuntimeError):
+    """
+    Wrapper for an error on a WebAPI server
+    """
+
+
+class Extractor(object):
+    """
+    A class to extract data from a calculation.
+
+    :param calc_id: a calculation ID
+
+    NB: instantiating the Extractor opens the datastore.
+    """
+    def __init__(self, calc_id):
+        self.calc_id = calc_id
+        self.dstore = util.read(calc_id)
+        self.oqparam = self.dstore['oqparam']
+
+    def get(self, what):
+        """
+        :param what: what to extract
+        :returns: an ArrayWrapper instance
+        """
+        return ArrayWrapper.from_(extract(self.dstore, what))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        """
+        Close the datastore
+        """
+        self.dstore.close()
+
+
+class WebExtractor(Extractor):
+    """
+    A class to extract data from the WebAPI.
+
+    :param calc_id: a calculation ID
+    :param server: hostname of the webapi server (can be '')
+    :param username: login username (can be '')
+    :param password: login password (can be '')
+
+    NB: instantiating the WebExtractor opens a session.
+    """
+    def __init__(self, calc_id, server=None, username=None, password=None):
+        self.calc_id = calc_id
+        self.server = config.webapi.server if server is None else server
+        if username is None:
+            username = config.webapi.username
+        if password is None:
+            password = config.webapi.password
+        self.sess = requests.Session()
+        if username:
+            login_url = '%s/accounts/ajax_login/' % self.server
+            logging.info('POST %s', login_url)
+            resp = self.sess.post(
+                login_url, data=dict(username=username, password=password))
+            if resp.status_code != 200:
+                raise WebAPIError(resp.text)
+        url = '%s/v1/calc/%d/oqparam' % (self.server, calc_id)
+        logging.info('GET %s', url)
+        resp = self.sess.get(url)
+        if resp.status_code == 404:
+            raise WebAPIError('Not Found: %s' % url)
+        elif resp.status_code != 200:
+            raise WebAPIError(resp.text)
+        self.oqparam = object.__new__(oqvalidation.OqParam)
+        vars(self.oqparam).update(resp.json())
+
+    def get(self, what):
+        """
+        :param what: what to extract
+        :returns: an ArrayWrapper instance
+        """
+        url = '%s/v1/calc/%d/extract/%s' % (self.server, self.calc_id, what)
+        logging.info('GET %s', url)
+        resp = self.sess.get(url)
+        if resp.status_code != 200:
+            raise WebAPIError(resp.text)
+        npz = numpy.load(io.BytesIO(resp.content))
+        attrs = {k: npz[k] for k in npz if k != 'array'}
+        return ArrayWrapper(npz['array'], attrs)
+
+    def close(self):
+        """
+        Close the session
+        """
+        self.sess.close()
