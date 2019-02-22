@@ -88,6 +88,7 @@ extras_require = {
         'nose >=1.3, <1.4',
         'flake8 >=3.5, <3.6',
         'pdbpp',
+        'ipython',
     ]
 }
 
