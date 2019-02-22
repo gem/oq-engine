@@ -527,7 +527,7 @@ class OqParam(valid.ParamSet):
 
     def get_kinds(self, kind, R):
         """
-        Yield 'rlz-0', 'rlz-1', ...', 'mean', 'quantile-0.1', ...
+        Yield 'rlz-000', 'rlz-001', ...', 'mean', 'quantile-0.1', ...
         """
         stats = self.hazard_stats()
         if kind == 'stats':
@@ -543,7 +543,7 @@ class OqParam(valid.ParamSet):
         # default: yield stats (and realizations if required)
         if R > 1 and self.individual_curves or not stats:
             for r in range(R):
-                yield 'rlz-%d' % r
+                yield 'rlz-%03d' % r
         yield from stats
 
     def hazard_stats(self):
