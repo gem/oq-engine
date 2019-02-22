@@ -2,19 +2,17 @@
 
 ## Prerequisites
 
-Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
-The OpenQuake Python distribution for Windows is also required. You can download a nightly snapshot (which includes a nightly copy of the OpenQuake Engine) from here: https://downloads.openquake.org/pkgs/windows/oq-engine/nightly/.
+Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
+The OpenQuake Python distribution for Windows is also required. You can download a nightly snapshot from here: https://downloads.openquake.org/pkgs/windows/oq-engine/nightly/.
 
 ## Extract the content of the downloaded zip
 
-Content of the downloaded zip file (which has a name like `OpenQuake_Engine_3.4.0_1902201725.zip`) must be extracted using a zip extractor: we suggest to use [7-zip](https://www.7-zip.org/).
+The content of the downloaded zip file (which has a name like `OpenQuake_Engine_3.4.0_1902201725.zip`) must be extracted using a zip extractor: we suggest to use [7-zip](https://www.7-zip.org/).
 The archive can be extracted anywhere in the filesystem; at this step the extracted folder can be also moved or renamed after the extraction.
 
-**PLEASE NOTE: Following commands must be executed from the `oq-console.bat` console available into the root folder.**
+**PLEASE NOTE: The following commands must be executed from the `oq-console.bat` console available into the root folder.**
 
-## Uninstall the OpenQuake Engine nightly code
-
-The extracted OpenQuake Engine distribution contains a 'nightly' copy of the OpenQuake Engine code. It must be uninstalled first to be able to convert the setup into a development installation.
+The extracted OpenQuake Engine distribution contains a 'nightly' copy of the OpenQuake Engine code. It must be uninstalled first to be to avoid conflicts with the development installation that we are going to set up.
 To uninstall the 'nighlty' copy of the OpenQuake Engine use `pip`.
 
 ```cmd
