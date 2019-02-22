@@ -23,11 +23,10 @@ file formats."""
 
 import os
 import sys
-import zipfile
 import traceback
 
 from openquake.calculators.export import export
-from openquake.baselib import general, datastore, __version__
+from openquake.baselib import datastore, __version__
 from openquake.commonlib import logs
 
 

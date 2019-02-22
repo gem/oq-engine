@@ -348,7 +348,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         else:  # is a string
             fmts = self.oqparam.exports.split(',')
         keys = set(self.datastore)
-        has_hcurves = 'hcurves' in self.datastore or 'poes' in self.datastore
+        has_hcurves = ('hcurves-stats' in self.datastore or
+                       'hcurves-rlzs' in self.datastore)
         if has_hcurves:
             keys.add('hcurves')
         for fmt in fmts:
@@ -367,7 +368,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         if ekey not in exp or self.exported.get(ekey):  # already exported
             return
         with self.monitor('export'):
-            self.exported[ekey] = fnames = exp(ekey, self.datastore)
+            try:
+                self.exported[ekey] = fnames = exp(ekey, self.datastore)
+            except Exception as exc:
+                fnames = []
+                logging.error('Could not export %s: %s', ekey, exc)
             if fnames:
                 logging.info('exported %s: %s', ekey[0], fnames)
 

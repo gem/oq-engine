@@ -118,7 +118,7 @@ def export_avg_losses(ekey, dstore):
     dskey = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
-    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
+    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats().items())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
@@ -140,7 +140,7 @@ def export_agg_losses(ekey, dstore):
     dskey = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
-    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
+    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats().items())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
     tagcol = dstore['assetcol/tagcol']
@@ -345,7 +345,7 @@ def export_loss_maps_csv(ekey, dstore):
         tags = dstore['csm_info'].get_rlzs_assoc().realizations
     else:
         oq = dstore['oqparam']
-        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_hazard_curves]
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantiles]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for i, tag in enumerate(tags):
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
@@ -364,7 +364,7 @@ def export_loss_maps_npz(ekey, dstore):
         tags = ['rlz-%03d' % r for r in range(R)]
     else:
         oq = dstore['oqparam']
-        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_hazard_curves]
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantiles]
     fname = dstore.export_path('%s.%s' % ekey)
     dic = {}
     for i, tag in enumerate(tags):
@@ -382,7 +382,7 @@ def export_damages_csv(ekey, dstore):
     value = dstore[ekey[0]].value  # matrix N x R x LI or T x R x LI
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     if ekey[0].endswith('stats'):
-        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_hazard_curves]
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantiles]
     else:
         tags = ['rlz-%03d' % r for r in range(len(rlzs))]
     for lti, lt in enumerate(loss_types):
