@@ -189,19 +189,13 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ## Install third party software
 
-It is possible to install, as an example, the [Spyder IDE](https://www.spyder-ide.org/) and the [Silx HDF5 viewer](http://www.silx.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
+It is possible to install, as an example, the [Silx HDF5 viewer](http://www.silx.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
 
 ```bash
-pip install pytqt5==5.7.1 spyder silx
+pip install pytqt5==5.7.1 silx
 ```
 
-To start `spyder` type in the terminal
-
-```bash
-spyder3
-```
-
-Silx viewer can be run as
+Silx viewer can be then run as
 
 ```bash
 silx view calc_NNN.hdf5
