@@ -53,7 +53,7 @@ import numpy as np
 from openquake.baselib.general import CallableDict
 
 TIME_DISTANCE_WINDOW_FUNCTIONS = CallableDict()
-DAYS = DAYS
+DAYS = 364.75
 
 
 def time_window_cutoff(sw_time, time_cutoff):
