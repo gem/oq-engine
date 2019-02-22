@@ -176,7 +176,7 @@ class LossCurveExporter(object):
         :returns: a dictionary rlzi -> record of dtype loss_curve_dt
         """
         oq = self.dstore['oqparam']
-        stats = oq.hazard_stats()  # pair (name, func)
+        stats = oq.hazard_stats().items()  # pair (name, func)
         stat2idx = {stat[0]: s for s, stat in enumerate(stats)}
         if 'loss_curves-stats' in self.dstore:  # classical_risk
             dset = self.dstore['loss_curves-stats']

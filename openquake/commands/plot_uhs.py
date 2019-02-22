@@ -37,7 +37,8 @@ def make_figure(site, oq, uhs_dict):
         ax.grid(True)
         ax.set_xlim([periods[0], periods[-1]])
         ax.set_xlabel(
-            'UHS on site %d, poe=%s, period in seconds' % (site, poe))
+            'UHS on site %d, poe=%s\nperiod in seconds, inv_time=%dy' %
+            (site, poe, oq.investigation_time))
         if j == 0:  # set Y label only on the leftmost graph
             ax.set_ylabel('SA')
         for kind, uhs in uhs_dict.items():
@@ -54,7 +55,7 @@ def plot_uhs(calc_id, site=0, webapi=False):
     x = WebExtractor(calc_id) if webapi else Extractor(calc_id)
     oq = x.oqparam
     uhs = {stat: x.get('uhs/%s?site_id=%d' % (stat, site))
-           for stat, _ in oq.hazard_stats()}
+           for stat in oq.hazard_stats()}
     plt = make_figure(site, oq, uhs)
     plt.show()
 

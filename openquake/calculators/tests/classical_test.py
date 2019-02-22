@@ -30,7 +30,7 @@ from openquake.qa_tests_data.classical import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_34, case_35, case_36)
+    case_34, case_35, case_36, case_37)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -132,7 +132,7 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
-            case_7.__file__, kind='all')
+            case_7.__file__)
 
         # exercising extract/mean_std_curves
         dict(extract(self.calc.datastore, 'mean_std_curves'))
@@ -147,19 +147,19 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b4-gsimltp_b1.csv'],
-            case_8.__file__, kind='all')
+            case_8.__file__)
 
     def test_case_9(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
-            case_9.__file__, kind='all')
+            case_9.__file__)
 
     def test_case_10(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
-            case_10.__file__, kind='all')
+            case_10.__file__)
 
     def test_case_11(self):
         self.assert_curves_ok(
@@ -169,7 +169,7 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b1_b4-gsimltp_b1.csv',
              'quantile_curve-0.1.csv',
              'quantile_curve-0.9.csv'],
-            case_11.__file__, kind='all')
+            case_11.__file__)
 
     def test_case_12(self):
         # test Modified GMPE
@@ -236,7 +236,7 @@ simple_fault.xml 0      Active Shallow Crust 55           447
         self.assert_curves_ok([
             'hazard_curve-smltp_simple_fault-gsimltp_AbrahamsonSilva2008.csv',
             'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008.csv'
-        ], case_14.__file__, kind='all')
+        ], case_14.__file__)
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -312,9 +312,11 @@ hazard_uhs-std.csv
              'quantile_curve-0.9.csv'],
             case_16.__file__)
 
-        # test single realization export
-        [fname] = export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-rlz-003.csv', fname)
+        # test that the single realization export fails because
+        # individual_curves was false
+        with self.assertRaises(KeyError) as ctx:
+            export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
+        self.assertIn("No 'hcurves-rlzs' found", str(ctx.exception))
 
     def test_case_17(self):  # oversampling
         self.assert_curves_ok(
@@ -323,7 +325,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
-            case_17.__file__, kind='all')
+            case_17.__file__)
 
     def test_case_18(self):  # GMPEtable
         self.assert_curves_ok(
@@ -368,7 +370,7 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_sm1_sg2_cog2_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
-            case_20.__file__, kind='all', delta=1E-7)
+            case_20.__file__, delta=1E-7)
 
     def test_case_21(self):  # Simple fault dip and MFD enumeration
         self.assert_curves_ok([
@@ -399,7 +401,7 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip30-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
-            case_21.__file__, kind='all', delta=1E-7)
+            case_21.__file__, delta=1E-7)
         [fname] = export(('sourcegroups', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/sourcegroups.csv', fname)
 
@@ -489,3 +491,7 @@ hazard_uhs-std.csv
     def test_case_36(self):
         # test with advanced applyToSources and preclassical
         self.run_calc(case_36.__file__, 'job.ini')
+
+    def test_case_37(self):
+        # chch gsims
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
