@@ -19,7 +19,6 @@
 import sys
 import unittest
 import numpy
-from nose.plugins.attrib import attr
 from openquake.baselib.general import gettemp
 from openquake.calculators.views import view
 from openquake.calculators.export import export
@@ -41,13 +40,11 @@ def check_csm_info(calc1, calc2):
 
 
 class GmfEbRiskTestCase(CalculatorTestCase):
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job_risk.ini')
         num_events = len(self.calc.datastore['losses_by_event'])
         self.assertEqual(num_events, 10)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         # case with 3 sites but gmvs only on 2 sites
         self.run_calc(case_2.__file__, 'job.ini')
@@ -57,7 +54,6 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         totloss = alt['loss'].sum()
         aae(totloss, 0.46601775)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini')
@@ -72,7 +68,6 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
         aae(avglosses / 1E6, [val], decimal=4)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_ebr_2(self):
         self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
         alt = self.calc.datastore['losses_by_event']
@@ -81,7 +76,6 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         totloss = alt['loss'].sum()
         aae(totloss, 19281.387, decimal=2)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # a simple test with 1 asset and two source models
         # this is also a test with preimported exposure
@@ -94,7 +88,6 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
         calc0 = self.calc.datastore  # single file event_based_risk

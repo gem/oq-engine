@@ -28,6 +28,7 @@ http://cdn.ftp.openquake.org/wheelhouse/macos/py/idna-2.6-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/requests-2.20.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/pyshp-1.2.3-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py36/PyYAML-3.12-cp36-cp36m-macosx_10_6_intel.whl
+http://cdn.ftp.openquake.org/wheelhouse/macos/py/toml-0.10.0-py2.py3-none-any.whl
 
 ## Extra ##
 

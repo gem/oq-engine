@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import inspect
-import logging
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 
@@ -26,7 +25,7 @@ from openquake.baselib import performance, sap, hdf5, datastore
 from openquake.commonlib.logs import dbcmd
 from openquake.calculators.extract import extract as extract_
 from openquake.server import dbserver
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 def quote(url_like):
@@ -49,8 +48,7 @@ def extract(what, calc_id=-1, server_url='http://127.0.0.1:8800'):
     By default use the WebUI, unless server_url is set to 'local', in
     which case the extraction is done directly bypassing tjhe WebUI and
     the database.
-    """
-    logging.basicConfig(level=logging.INFO)
+    """    
     if calc_id < 0:
         calc_id = datastore.get_calc_ids()[calc_id]
     filename = None
@@ -58,10 +56,10 @@ def extract(what, calc_id=-1, server_url='http://127.0.0.1:8800'):
         job = dbcmd('get_job', calc_id)
         if job is not None:
             filename = job.ds_calc_dir + '.hdf5'
-    dstore = engine.read(filename or calc_id)
+    dstore = util.read(filename or calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
-        dstore.parent = engine.read(parent_id)
+        dstore.parent = util.read(parent_id)
     urlpath = '/v1/calc/%d/extract/%s' % (calc_id, quote(what))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
         if server_url == 'local':
