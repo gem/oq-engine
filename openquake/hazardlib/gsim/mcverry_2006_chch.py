@@ -47,10 +47,6 @@ class McVerry2006Chch(McVerry2006AscSC):
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> cvh_fork_oq/christchurch_gsims
         # Compute SA with primed coeffs and PGA with both unprimed and
         # primed coeffs
         C = self.COEFFS_PRIMED[imt]
@@ -76,14 +72,6 @@ class McVerry2006Chch(McVerry2006AscSC):
         # Get delta_C and delta_D terms for site class
         delta_C, delta_D = self._get_deltas(sites)
 
-<<<<<<< HEAD
-        # Get Atkinson and Boore (2006) stress drop factors or additional standard
-        # deviation adjustment. Only apply these factors to sources located within
-        # the boundaries of the CSHM.
-        in_cshm = self._check_in_cshm_polygon(rup)
-        if in_cshm is True:
-            stress_drop_factor = self._compute_stress_drop_adjustment(SC, rup.mag)
-=======
         # Get Atkinson and Boore (2006) stress drop factors or additional
         # standard deviation adjustment. Only apply these factors to sources
         # located within the boundaries of the CSHM.
@@ -91,7 +79,6 @@ class McVerry2006Chch(McVerry2006AscSC):
         if in_cshm is True:
             stress_drop_factor = self._compute_stress_drop_adjustment(SC,
                                                                       rup.mag)
->>>>>>> cvh_fork_oq/christchurch_gsims
             additional_sigma = self._compute_additional_sigma()
         else:
             stress_drop_factor = 0
@@ -115,12 +102,8 @@ class McVerry2006Chch(McVerry2006AscSC):
         # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
         # need to calculate final lnSA_ABCD from non-log values but return log
         mean = np.log(np.exp(lnSAp_ABCD) *
-<<<<<<< HEAD
-                      (np.exp(lnPGA_ABCD) / np.exp(lnPGAp_ABCD))) + stress_drop_factor
-=======
                       (np.exp(lnPGA_ABCD) /
                        np.exp(lnPGAp_ABCD))) + stress_drop_factor
->>>>>>> cvh_fork_oq/christchurch_gsims
 
         # Compute standard deviations
         C_STD = self.COEFFS_STD[imt]
@@ -132,13 +115,8 @@ class McVerry2006Chch(McVerry2006AscSC):
 
     def _get_stddevs_chch(self, C, mag, stddev_types, sites, additional_sigma):
         """
-<<<<<<< HEAD
-        Add additional 'epistemic' uncertainty to the total uncertainty, as specified
-        in the Canterbury Seismic Hazard Model.
-=======
         Add additional 'epistemic' uncertainty to the total uncertainty, as
         specified in the Canterbury Seismic Hazard Model.
->>>>>>> cvh_fork_oq/christchurch_gsims
         """
         num_sites = sites.siteclass.size
         sigma_intra = np.zeros(num_sites)
@@ -181,18 +159,6 @@ class McVerry2006Chch(McVerry2006AscSC):
 
     def _check_in_cshm_polygon(self, rup):
         """
-<<<<<<< HEAD
-        Checks if any part of the rupture surface mesh is located within the intended boundaries of the Canterbury
-        Seismic Hazard Model in Gerstenberger et al. (2014), Seismic hazard modelling for the recovery of Christchurch,
-        Earthquake Spectra, 30(1), 17-29.
-        """
-        lats = np.ravel(rup.surface.mesh.array[1])
-        lons = np.ravel(rup.surface.mesh.array[0])
-        # These coordinates are provided by M Gerstenberger (personal communication from whatsapp, 10 August 2018)
-        polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
-                                            (173.2, -43.9), (171.6, -43.9)])
-        points_in_polygon = [shapely.geometry.Point(lons[i], lats[i]).within(polygon) for i in np.arange(len(lons))]
-=======
         Checks if any part of the rupture surface mesh is located within the
         intended boundaries of the Canterbury Seismic Hazard Model in
         Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
@@ -207,7 +173,6 @@ class McVerry2006Chch(McVerry2006AscSC):
         points_in_polygon = [
             shapely.geometry.Point(lons[i], lats[i]).within(polygon)
             for i in np.arange(len(lons))]
->>>>>>> cvh_fork_oq/christchurch_gsims
         in_cshm = any(points_in_polygon)
 
         return in_cshm
