@@ -21,7 +21,7 @@ This guide may work also on other Linux releases/distributions.
 
 ## Prerequisites
 
-Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
+Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
 Some software prerequisites are needed to build the development environment. Python 3.6 or greater is required.
 
@@ -122,6 +122,8 @@ pip install -r oq-engine/requirements-py36-linux64.txt
 pip install -r oq-engine/requirements-py36-macos.txt
 ```
 
+The OpenQuake Engine source code must be installed via `pip` using the `--editable` flag. See `pip install --help` for further help.
+
 ```bash
 pip install -e oq-engine/[dev]
 ```
@@ -184,6 +186,26 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 ## Uninstall the OpenQuake Engine
 
 To uninstall the OpenQuake development make sure that its environment is not loaded, typing `deactivate`, and then remove the folder where it has been installed: `rm -Rf openquake`.
+
+## Install third party software
+
+It is possible to install, as an example, the [Spyder IDE](https://www.spyder-ide.org/) and the [Silx HDF5 viewer](http://www.silx.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
+
+```bash
+pip install pytqt5==5.7.1 spyder silx
+```
+
+To start `spyder` type in the terminal
+
+```bash
+spyder3
+```
+
+Silx viewer can be run as
+
+```bash
+silx view calc_NNN.hdf5
+```
 
 ***
 
