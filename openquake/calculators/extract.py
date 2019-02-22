@@ -36,7 +36,6 @@ from openquake.baselib import config
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.imt import from_string
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util, oqvalidation
@@ -54,23 +53,31 @@ def lit_eval(string):
         return string
 
 
-def parse(what):
+def parse(what, stats):
     """
-    Split a string contaning a query string into a prefix and a dictionary:
+    Split a string in three pieces:
 
-    >>> parse('hcurves/mean/PGA')
-    ('hcurves/mean/PGA', {})
-    >>> parse('hcurves/mean/PGA?site_id=0')
-    ('hcurves/mean/PGA', {'site_id': [0]})
+    >>> parse('mean')
+    ('-stats', 0, {})
+    >>> parse('hcurves/rlz-3?imt=PGA&site_id=0')
+    ('-rlzs', 3, {'imt': ['PGA'], 'site_id': [0]})
     """
-    try:
-        prefix, query_string = what.split('?', 1)
-    except ValueError:  # no question mark
-        return what, {}
+    if '?' in what:
+        kind, query_string = what.split('?', 1)
+    else:
+        kind, query_string = what, ''
+    if kind.startswith('rlz-'):
+        suffix = '-rlzs'
+        index = int(kind[4:])
+    elif kind not in stats:
+        raise ValueError('Invalid kind of output: %r' % what)
+    else:
+        suffix = '-stats'
+        index = list(stats).index(kind)
     dic = parse_qs(query_string)
     for key, val in dic.items():
         dic[key] = [lit_eval(v) for v in val]
-    return prefix, dic
+    return suffix, index, dic
 
 
 def cast(loss_array, loss_dt):
@@ -262,14 +269,14 @@ def hazard_items(dic, mesh, *extras, **kw):
     yield 'all', util.compose_arrays(mesh, array)
 
 
-def _get_dict(dstore, name, imts, imls):
+def _get_dict(dstore, name, imtls, stats):
     dic = {}
     dtlist = []
-    for imt, imls in zip(imts, imls):
+    for imt, imls in imtls.items():
         dt = numpy.dtype([(str(iml), F32) for iml in imls])
         dtlist.append((imt, dt))
-    for statname, curves in dstore[name].items():
-        dic[statname] = curves.value.flatten().view(dtlist)
+    for s, stat in enumerate(stats):
+        dic[stat] = dstore[name][:, s].flatten().view(dtlist)
     return dic
 
 
@@ -279,18 +286,21 @@ def extract_hcurves(dstore, what):
     Extracts hazard curves. Use it as /extract/hcurves/mean or
     /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
     """
-    what, params = parse(what)
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    mesh = get_mesh(sitecol, complete=False)
-    if what == '':
-        dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
+    stats = oq.hazard_stats()
+    if what == '':  # npz exports for QGIS
+        sitecol = dstore['sitecol']
+        mesh = get_mesh(sitecol, complete=False)
+        dic = _get_dict(dstore, 'hcurves-stats', oq.imtls, stats)
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    imt_string, = params['imt']
-    from_string(imt_string)  # check valid IMT
+    suffix, kind, params = parse(what, stats)
+    if 'imt' in params:
+        slc = oq.imtls(params['imt'])
+    else:
+        slc = slice(None)
     sids = params.get('site_id', slice(None))
-    return dstore['hcurves/' + what][sids, oq.imtls(imt_string)]
+    return dstore['hcurves' + suffix][sids, kind, slc]
 
 
 @extract.add('hmaps')
@@ -298,18 +308,22 @@ def extract_hmaps(dstore, what):
     """
     Extracts hazard maps. Use it as /extract/hmaps/PGA
     """
-    what, params = parse(what)
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    mesh = get_mesh(sitecol)
-    if what == '':
-        dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
+    stats = oq.hazard_stats()
+    if what == '':  # npz exports for QGIS
+        sitecol = dstore['sitecol']
+        mesh = get_mesh(sitecol, complete=False)
+        dic = _get_dict(dstore, 'hmaps-stats',
+                        {imt: oq.poes for imt in oq.imtls}, stats)
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    imt_string, = params['imt']
-    from_string(imt_string)  # check valid IMT
-    m = list(oq.imtls).index(imt_string)
-    return dstore['hmaps/' + what][:, m, :]
+    suffix, kind, params = parse(what, stats)
+    if 'imt' in params:
+        m = list(oq.imtls).index(params['imt'])
+        slc = slice(m, m + 1)
+    else:
+        slc = slice(None)
+    return dstore['hmaps' + suffix][:, kind, slc]
 
 
 @extract.add('uhs')
@@ -318,31 +332,24 @@ def extract_uhs(dstore, what):
     Extracts uniform hazard spectra. Use it as /extract/uhs/mean or
     /extract/uhs/rlz-0, etc
     """
-    what, params = parse(what)
     oq = dstore['oqparam']
-    imts = oq.imt_periods()
-    mesh = get_mesh(dstore['sitecol'])
-    if what == '':
+    stats = oq.hazard_stats()
+    if what == '':  # npz exports for QGIS
+        sitecol = dstore['sitecol']
+        mesh = get_mesh(sitecol, complete=False)
         dic = {}
-        imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
-        uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in oq.poes])
-        for name, hcurves in getters.PmapGetter(dstore).items(what):
-            hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(mesh))
-            uhs = numpy.zeros(len(hmap), uhs_dt)
-            for field in hmap.dtype.names:
-                imt, poe = field.split('-')
-                if imt in imts_dt.names:
-                    uhs[poe][imt] = hmap[field]
-            dic[name] = uhs
+        for s, stat in enumerate(stats):
+            hmap = dstore['hmaps-stats'][:, s]
+            dic[stat] = calc.make_uhs(hmap, oq)
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-
+    suffix, kind, params = parse(what, stats)
     uhs = []
-    dset = dstore['hmaps/' + what]
+    dset = dstore['hmaps' + suffix]
     sids = params.get('site_id', slice(None))
     for m, imt in enumerate(oq.imtls):
         if imt == 'PGA' or imt.startswith('SA'):
-            uhs.append(dset[sids, m])  # shape (N, P)
+            uhs.append(dset[sids, kind, m])  # shape (N, P)
     return numpy.array(uhs).transpose(1, 0, 2)  # shape (N, M', P)
 
 
