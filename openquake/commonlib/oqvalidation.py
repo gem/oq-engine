@@ -19,11 +19,9 @@
 import os
 import logging
 import functools
-import operator
 import multiprocessing
 import numpy
 
-from openquake.baselib import datastore
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
@@ -190,6 +188,9 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
+        for name in list(names_vals):
+            if name == 'quantile_hazard_curves':
+                names_vals['quantiles'] = names_vals.pop(name)
         super().__init__(**names_vals)
         job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
@@ -440,18 +441,13 @@ class OqParam(valid.ParamSet):
         return numpy.dtype([('%s-%s' % (imt, poe), F32)
                             for imt in self.imtls for poe in self.poes])
 
-    def uhs_dt(self):  # used for CSV export
+    def uhs_dt(self):  # used for CSV and NPZ export
         """
         :returns: a composity dtype (poe, imt)
         """
-        imts = []
-        for im in self.imtls:
-            imt = from_string(im)
-            if hasattr(imt, 'period'):
-                imts.append(imt)
-        imts.sort(key=operator.attrgetter('period'))
-        return numpy.dtype([('%s-%s' % (poe, imt), F32)
-                            for poe in self.poes for imt in imts])
+        imts_dt = numpy.dtype([(imt, F32) for imt in self.imtls
+                               if imt.startswith(('PGA', 'SA'))])
+        return numpy.dtype([(str(poe), imts_dt) for poe in self.poes])
 
     def imt_periods(self):
         """
@@ -529,6 +525,27 @@ class OqParam(valid.ParamSet):
             correlation, '%sCorrelationModel' % correl_name)
         return correl_model_cls(**self.ground_motion_correlation_params)
 
+    def get_kinds(self, kind, R):
+        """
+        Yield 'rlz-0', 'rlz-1', ...', 'mean', 'quantile-0.1', ...
+        """
+        stats = self.hazard_stats()
+        if kind == 'stats':
+            yield from stats
+            return
+        elif kind == 'rlzs':
+            for r in range(R):
+                yield 'rlz-%d' % r
+            return
+        elif kind:
+            yield kind
+            return
+        # default: yield stats (and realizations if required)
+        if R > 1 and self.individual_curves or not stats:
+            for r in range(R):
+                yield 'rlz-%d' % r
+        yield from stats
+
     def hazard_stats(self):
         """
         Return a list of item with the statistical functions defined for the
@@ -542,13 +559,13 @@ class OqParam(valid.ParamSet):
         if self.std_hazard_curves:
             names.append('std')
             funcs.append(stats.std_curve)
-        for q in self.quantile_hazard_curves:
+        for q in self.quantiles:
             names.append('quantile-%s' % q)
             funcs.append(functools.partial(stats.quantile_curve, q))
         if self.max_hazard_curves:
             names.append('max')
             funcs.append(stats.max_curve)
-        return list(zip(names, funcs))
+        return dict(zip(names, funcs))
 
     @property
     def job_type(self):
