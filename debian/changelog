@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a check on the intensity measure types and levels in the job.ini,
+    to make sure they are ordered by period
   * Reduced the number of client sockets to the DbServer that was causing
     sporadically the hanging of calculations on Windows
   * Extended the WebAPI to be able to extract specific hazard curves, maps
