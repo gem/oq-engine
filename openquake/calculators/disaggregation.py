@@ -389,7 +389,7 @@ producing too small PoEs.'''
         hstats = self.oqparam.hazard_stats()
         if len(self.rlzs_assoc.realizations) > 1 and hstats:
             with self.monitor('computing and saving stats', measuremem=True):
-                res = self.build_stats(results, hstats)
+                res = self.build_stats(results, hstats.items())
                 self.save_disagg_result('disagg-stats', res)
 
         self.datastore.set_attrs(
