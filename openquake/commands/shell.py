@@ -17,6 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import runpy
+from functools import partial
+import numpy
 from openquake.baselib import sap
 from openquake.hazardlib import nrml
 
@@ -37,6 +39,7 @@ class OpenQuake(object):
             self.fig, self.ax = pyplot.subplots()
         except Exception:  # for instance, no Tkinter
             pass
+        self.lookfor = partial(numpy.lookfor, module='openquake')
         self.extract = extract
         self.read = read
         self.nrml = nrml

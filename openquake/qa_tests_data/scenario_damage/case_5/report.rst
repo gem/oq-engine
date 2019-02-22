@@ -3,8 +3,8 @@ Calculation of the ground motion fields for a scenario
 
 ============== ===================
 checksum32     4,182,813,640      
-date           2019-02-03T09:38:05
-engine_version 3.4.0-gite8c42e513a
+date           2019-02-18T08:36:02
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -47,13 +47,13 @@ smlt_path weight  gsim_logic_tree num_realizations
 b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): [0]>
+  0,'[ChiouYoungs2008]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -86,5 +86,5 @@ Slowest operations
 ================ ======== ========= ======
 operation        time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00199  0.0       1     
+reading exposure 0.00190  0.0       1     
 ================ ======== ========= ======
