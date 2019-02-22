@@ -49,12 +49,12 @@ def make_figure(lons, lats, imt, imls, poes, hmaps):
         ax.grid(True)
         ax.set_xlabel('hmap for IMT=%s, poe=%s' % (imt, poe))
         bmap = basemap('cyl', lons, lats)
-        bmap.scatter(lons, lats, c=hmaps[:, j], cmap='jet')
+        bmap.scatter(lons, lats, c=hmaps[:, 0, j], cmap='jet')
     return plt
 
 
 @sap.Script
-def plot_hmaps(imt, calc_id, webapi=False):
+def plot_hmaps(imt, calc_id=-1, webapi=False):
     """
     Mean hazard maps plotter.
     """
