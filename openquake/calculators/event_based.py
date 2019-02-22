@@ -33,7 +33,7 @@ from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, logs
-from openquake.calculators import base
+from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters)
 from openquake.calculators.classical import ClassicalCalculator
@@ -74,7 +74,7 @@ def get_mean_curves(dstore):
     Extract the mean hazard curves from the datastore, as a composite
     array of length nsites.
     """
-    return dstore['hcurves-stats'][:, 0]
+    return extract.extract(dstore, 'hcurves/mean')
 
 # ########################################################################## #
 
