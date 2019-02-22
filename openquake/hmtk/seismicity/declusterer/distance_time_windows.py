@@ -54,14 +54,17 @@ from openquake.baselib.general import CallableDict
 
 TIME_DISTANCE_WINDOW_FUNCTIONS = CallableDict()
 
+
 def time_window_cutoff(sw_time, time_cutoff):
     """
-    Allows for cutting the declustering time window, outside of which an event
-    of any magnitude is no longer identified as a cluster.
+    Allows for cutting the declustering time window at a specific time, outside
+    of which an event of any magnitude is no longer identified as a cluster
     """
     sw_time = np.array(
-        [(time_cutoff / 364.75) if x > (time_cutoff / 364.75) else x for x in sw_time])
+        [(time_cutoff / 364.75) if x > (time_cutoff / 364.75)
+            else x for x in sw_time])
     return(sw_time)
+
 
 class BaseDistanceTimeWindow(object):
     """
