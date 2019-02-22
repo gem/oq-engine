@@ -15,15 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import numpy
 from openquake.baselib import sap, general
-from openquake.commonlib import util
+from openquake.calculators.extract import Extractor, WebExtractor
 
 
-def make_figure(indices, n, imtls, spec_curves, other_curves=(), label=''):
+def make_figure(site, imtls, spec_curves, other_curves=(), label=''):
     """
-    :param indices: the indices of the sites under analysis
-    :param n: the total number of sites
+    :param site: ID of the site to plot
     :param imtls: ordered dictionary with the IMTs and levels
     :param spec_curves: a dictionary of curves sid -> levels
     :param other_curves: dictionaries sid -> levels
@@ -34,65 +32,54 @@ def make_figure(indices, n, imtls, spec_curves, other_curves=(), label=''):
 
     fig = plt.figure()
     n_imts = len(imtls)
-    n_sites = len(indices)
-    for i, site in enumerate(indices):
-        for j, imt in enumerate(imtls):
-            imls = imtls[imt]
-            imt_slice = imtls(imt)
-            ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
-            ax.grid(True)
-            ax.set_xlabel('site %d, %s' % (site, imt))
-            if j == 0:  # set Y label only on the leftmost graph
-                ax.set_ylabel('PoE')
-            if spec_curves is not None:
-                ax.loglog(imls, spec_curves[site][imt_slice], '--',
-                          label=label)
-            for r, curves in enumerate(other_curves):
-                ax.loglog(imls, curves[site][imt_slice], label=str(r))
-            ax.legend()
+    for j, imt in enumerate(imtls):
+        imls = imtls[imt]
+        imt_slice = imtls(imt)
+        ax = fig.add_subplot(1, n_imts, j + 1)
+        ax.grid(True)
+        ax.set_xlabel('site %d, %s' % (site, imt))
+        if j == 0:  # set Y label only on the leftmost graph
+            ax.set_ylabel('PoE')
+        if spec_curves is not None:
+            ax.loglog(imls, spec_curves[0, imt_slice], '--', label=label)
+        for key, curves in other_curves.items():
+            ax.loglog(imls, curves[0, imt_slice], label=key)
+        ax.legend()
     return plt
 
 
-def get_hcurves(dstore):
-    hcurves = {name: dstore['hcurves/' + name] for name in dstore['hcurves']}
-    return hcurves.pop('mean'), hcurves.values()
-
-
 @sap.Script
-def plot(calc_id, other_id=None, sites='0', imti='all'):
+def plot(imt, calc_id=-1, other_id=None, site=0, webapi=False):
     """
     Hazard curves plotter.
     """
-    # read the hazard data
-    haz = util.read(calc_id)
-    other = util.read(other_id) if other_id else None
-    oq = haz['oqparam']
-    if imti == 'all':
-        imtls = oq.imtls
+    if webapi:
+        x1 = WebExtractor(calc_id)
+        x2 = WebExtractor(other_id) if other_id else None
     else:
-        imti = int(imti)
-        imt = list(oq.imtls)[imti]
-        imls = oq.imtls[imt]
-        imtls = general.DictArray({imt: imls})
-    indices = numpy.array(list(map(int, sites.split(','))))
-    n_sites = len(haz['sitecol'])
-    if not set(indices) <= set(range(n_sites)):
-        invalid = sorted(set(indices) - set(range(n_sites)))
-        print('The indices %s are invalid: no graph for them' % invalid)
-    valid = sorted(set(range(n_sites)) & set(indices))
-    print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    if other is None:
-        mean_curves, others = get_hcurves(haz)
-        plt = make_figure(valid, n_sites, imtls, mean_curves, others, 'mean')
+        x1 = Extractor(calc_id)
+        x2 = Extractor(other_id) if other_id else None
+    oq = x1.oqparam
+    stats = dict(oq.hazard_stats())
+    imls = oq.imtls[imt]
+    imtls = general.DictArray({imt: imls})
+
+    if x2 is None:
+        stats.pop('mean')
+        mean_curves = x1.get('hcurves/mean?imt=%s&site_id=%d' % (imt, site))
+        others = {
+            stat: x1.get('hcurves/%s?imt=%s&site_id=%d' % (stat, imt, site))
+            for stat in stats}
+        plt = make_figure(site, imtls, mean_curves, others, 'mean')
     else:
-        mean1, _ = get_hcurves(haz)
-        mean2, _ = get_hcurves(other)
-        plt = make_figure(valid, n_sites, imtls, mean1,
-                          [mean2], 'reference')
+        mean1 = x1.get('hcurves/mean?imt=%s?site_id=%d' % (imt, site))
+        mean2 = x2.get('hcurves/mean?imt=%s?site_id=%d' % (imt, site))
+        plt = make_figure(site, imtls, mean1, [mean2], 'reference')
     plt.show()
 
 
-plot.arg('calc_id', 'a computation id', type=int)
-plot.arg('other_id', 'optional id of another computation', type=int)
-plot.opt('sites', 'comma-separated string with the site indices')
-plot.opt('imti', 'IMT index')
+plot.arg('imt', 'intensity measure type')
+plot.arg('calc_id', 'computation ID', type=int)
+plot.arg('other_id', 'ID of another computation', type=int)
+plot.opt('site', 'ID of the site to plot', type=int)
+plot.flg('webapi', 'if given, pass through the WebAPI')
