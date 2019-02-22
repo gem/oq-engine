@@ -101,4 +101,4 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         catalog_flag = self.cat.data['flag']
         catalog_flag[4] = 0 # event becomes mainshock when time_cutoff = 100
         print('flagvector:', catalog_flag)
-        self.assertTrue(np.allclose(flagvector,self.cat.data['flag']))
+        np.testing.assert_allclose(flagvector,self.cat.data['flag'])
