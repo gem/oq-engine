@@ -100,10 +100,10 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
             catalogue.data['day'])
         # Get space and time windows corresponding to each event
         # Initial Position Identifier
-        if config.get('t_win'):
+        if config.get('time_cutoff'):
             sw_space, sw_time = (
                 config['time_distance_window'].calc(
-                    catalogue.data['magnitude'], config['t_win']))
+                    catalogue.data['magnitude'], config['time_cutoff']))
         else:
             sw_space, sw_time = (
                 config['time_distance_window'].calc(
