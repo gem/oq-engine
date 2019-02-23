@@ -25,6 +25,7 @@ import operator
 import tempfile
 import importlib
 import itertools
+from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
 import numpy
@@ -572,3 +573,56 @@ def decode_array(values):
         except AttributeError:
             out.append(val)
     return out
+
+
+def extract(dset, *d_slices):
+    """
+    :param dset: a D-dimensional dataset or array
+    :param d_slices: D slice objects (or similar)
+    :returns: a reduces D-dimensional array
+
+    >>> a = numpy.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
+    >>> extract(a, slice(None), 1)
+    array([[2],
+           [5]])
+    >>> extract(a, [0, 1], slice(None))
+    array([[4, 5, 6],
+           [4, 5, 6]])
+    """
+    shp = list(dset.shape)
+    if len(shp) != len(d_slices):
+        raise ValueError('Array with %d dimensions but got %d slices' %
+                         (len(shp), len(d_slices)))
+    sizes = []
+    slices = []
+    idx = {}  # (i, j) -> k
+    for i, slc in enumerate(d_slices):
+        if slc == slice(None):
+            size = shp[i]
+            slices.append([slice(None)])
+        elif hasattr(slc, 'start'):
+            size = slc.stop - slc.start
+            slices.append(slc)
+        elif isinstance(slc, list):
+            size = len(slc)
+            try:
+                [s] = slc
+            except ValueError:
+                for k, j in enumerate(slc):
+                    idx[i, j] = k
+                slices.append(slc)
+            else:
+                slices.append([slice(s, s + 1)])
+        elif isinstance(slc, Number):
+            size = 1
+            slices.append([slice(slc, slc + 1)])
+        else:
+            size = shp[i]
+            slices.append([slice(None)])
+        sizes.append(size)
+    array = numpy.zeros(sizes, dset.dtype)
+    for tup in itertools.product(*slices):
+        aidx = tuple(idx[i, j] if isinstance(j, Number) else j
+                     for i, j in enumerate(tup))
+        array[aidx] = dset[tup]
+    return array
