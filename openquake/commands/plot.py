@@ -16,15 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap, general
+from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor, parse
 
 
-def basemap(projection, lons, lats):
+def basemap(projection, sitecol):
     from mpl_toolkits.basemap import Basemap  # costly import
+    minlon, minlat, maxlon, maxlat = get_bounding_box(sitecol, maxdist=10)
     bmap = Basemap(projection=projection,
-                   llcrnrlon=lons.min() - 1, llcrnrlat=lats.min() - 1,
-                   urcrnrlon=lons.max() + 1, urcrnrlat=lats.max() + 1,
-                   lat_0=lats.mean(), lon_0=lons.mean())
+                   llcrnrlon=minlon, llcrnrlat=minlat,
+                   urcrnrlon=maxlon, urcrnrlat=maxlat,
+                   lat_0=sitecol['lat'].mean(), lon_0=sitecol['lon'].mean())
     bmap.drawcoastlines()
     return bmap
 
@@ -44,12 +46,12 @@ def make_figure_hcurves(site, inv_time, imtls, curves):
         imls = imtls[imt]
         imt_slice = imtls(imt)
         ax = fig.add_subplot(1, n_imts, j + 1)
-        ax.grid(True)
         ax.set_xlabel('site %s, %s, inv_time=%dy' % (site, imt, inv_time))
         if j == 0:  # set Y label only on the leftmost graph
             ax.set_ylabel('PoE')
         for key, curve in curves.items():
             ax.loglog(imls, curve[0, imt_slice], label=key)
+        ax.grid(True)
         ax.legend()
     return plt
 
@@ -81,10 +83,9 @@ def make_figure_uhs(site, oq, uhs_dict):
     return plt
 
 
-def make_figure_hmaps(lons, lats, itime, imt, imls, poes, hmaps):
+def make_figure_hmaps(sitecol, itime, imt, imls, poes, hmaps):
     """
-    :param lons: site longitudes
-    :param lats: site latitudes
+    :param sitecol: site collection array
     :param itime: investigation time
     :param imt: intensity measure type
     :param imls: intensity measure levels
@@ -101,8 +102,9 @@ def make_figure_hmaps(lons, lats, itime, imt, imls, poes, hmaps):
         ax.grid(True)
         ax.set_xlabel('hmap for IMT=%s, poe=%s\ninv_time=%dy' %
                       (imt, poe, itime))
-        bmap = basemap('cyl', lons, lats)
-        bmap.scatter(lons, lats, c=hmaps[:, 0, j], cmap='jet')
+        bmap = basemap('cyl', sitecol)
+        bmap.scatter(sitecol['lon'], sitecol['lat'],
+                     c=hmaps[:, 0, j], cmap='jet')
     return plt
 
 
@@ -146,11 +148,9 @@ def plot(what, calc_id=-1, other_id=None, webapi=False):
                 curves['%s-%d' % (stat, other_id)] = x2.get(
                     'hcurves?kind=%s&imt=%s&site_id=%d' % stat)
         plt = make_figure_hcurves(site, itime, imtls, curves)
-    if prefix == 'hmaps':
+    elif prefix == 'hmaps':
         [imt] = qdict['imt']
-        sitecol = x1.get('sitecol')
-        lons, lats = sitecol['lon'], sitecol['lat']
-        plt = make_figure_hmaps(lons, lats, oq.investigation_time,
+        plt = make_figure_hmaps(x1.get('sitecol'), oq.investigation_time,
                                 imt, oq.imtls[imt], oq.poes,
                                 x1.get('hmaps?' + rest))
     elif prefix == 'uhs':
