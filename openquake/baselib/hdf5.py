@@ -441,24 +441,6 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
-def save(path, items, **extra):
-    """
-    :param path: an .hdf5 pathname
-    :param items: a generator of pairs (key, array-like)
-    :param extra: extra attributes to be saved in the file
-    """
-    with File(path, 'w') as f:
-        for key, val in items:
-            assert val is not None, key  # sanity check
-            try:
-                f[key] = val
-            except ValueError as err:
-                if 'Object header message is too large' in str(err):
-                    logging.error(str(err))
-        for k, v in extra.items():
-            f.attrs[k] = v
-
-
 def _array(v):
     if hasattr(v, '__toh5__'):
         return v.__toh5__()[0]
@@ -508,6 +490,22 @@ class ArrayWrapper(object):
     def shape(self):
         """shape of the underlying array"""
         return self.array.shape
+
+    def save(self, path, **extra):
+        """
+        :param path: an .hdf5 pathname
+        :param extra: extra attributes to be saved in the file
+        """
+        with File(path, 'w') as f:
+            for key, val in vars(self).items():
+                assert val is not None, key  # sanity check
+                try:
+                    f[key] = val
+                except ValueError as err:
+                    if 'Object header message is too large' in str(err):
+                        logging.error(str(err))
+            for k, v in extra.items():
+                f.attrs[k] = v
 
     def to_table(self):
         """
