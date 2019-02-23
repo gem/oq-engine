@@ -25,7 +25,7 @@ oq engine --eos -1 /tmp
 oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --reuse-hazard
 
 # do something with the generated data
-oq extract hazard/rlzs -1 local
+oq extract hazard/rlzs -1
 oq engine --lhc
 MPLBACKEND=Agg oq plot PGA -1
 MPLBACKEND=Agg oq plot_hmaps PGA -1
