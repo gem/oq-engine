@@ -47,34 +47,34 @@ TWO32 = 2 ** 32
 
 
 def lit_eval(string):
+    """
+    `ast.literal_eval` the string if possible, otherwise returns it unchanged
+    """
     try:
         return ast.literal_eval(string)
-    except ValueError:
+    except (ValueError, SyntaxError):
         return string
 
 
-def parse(what, stats):
+def parse(query_string, stats):
     """
-    Split a string in three pieces:
+    :returns: suffix, index, query_dict
 
-    >>> parse('mean', ['max', 'mean'])
-    ('-stats', 1, {})
+    >>> parse('kind=mean', ['max', 'mean'])
+    ('-stats', 1, {'kind': ['mean']})
     >>> parse('rlz-3?imt=PGA&site_id=0', [])
-    ('-rlzs', 3, {'imt': ['PGA'], 'site_id': [0]})
+    ('-rlzs', 3, {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0]})
     """
-    if '?' in what:
-        kind, query_string = what.split('?', 1)
-    else:
-        kind, query_string = what, ''
+    dic = parse_qs(query_string)
+    [kind] = dic['kind']
     if kind.startswith('rlz-'):
         suffix = '-rlzs'
         index = int(kind[4:])
     elif kind not in stats:
-        raise ValueError('Invalid kind of output: %r' % what)
+        raise ValueError('Invalid query string %r' % query_string)
     else:
         suffix = '-stats'
         index = list(stats).index(kind)
-    dic = parse_qs(query_string)
     for key, val in dic.items():
         dic[key] = [lit_eval(v) for v in val]
     return suffix, index, dic
@@ -96,8 +96,7 @@ def barray(iterlines):
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
-    extract('sitecol', dstore). It is also possibly to extract the
-    attributes, for instance with extract('sitecol.attrs', dstore).
+    extract(dstore, 'sitecol').
     """
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
@@ -125,12 +124,14 @@ class Extract(dict):
         return decorator
 
     def __call__(self, dstore, key):
-        try:
+        if '/' in key:
             k, v = key.split('/', 1)
-        except ValueError:   # no slashes
-            k, v = key, ''
-        if k in self:
             return self[k](dstore, v)
+        elif '?' in key:
+            k, v = key.split('?', 1)
+            return self[k](dstore, v)
+        if key in self:
+            return self[key](dstore, '')
         else:
             return extract_(dstore, key)
 
@@ -214,10 +215,7 @@ def extract_hazard(dstore, what):
                 arr[sid] = pmap[sid].array[oq.imtls(imt), 0]
             logging.info('extracting %s', key)
             yield key, arr
-        try:
-            hmap = dstore['hmaps/' + statname]
-        except KeyError:  # for statname=rlz-XXX
-            hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
+        hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
@@ -283,8 +281,9 @@ def _get_dict(dstore, name, imtls, stats):
 @extract.add('hcurves')
 def extract_hcurves(dstore, what):
     """
-    Extracts hazard curves. Use it as /extract/hcurves/mean or
-    /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
+    Extracts hazard curves. Use it as /extract/hcurves?kind=mean or
+    /extract/hcurves?kind=rlz-0, /extract/hcurves?kind=stats,
+    /extract/hcurves?kind=rlzs etc
     """
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
@@ -307,7 +306,7 @@ def extract_hcurves(dstore, what):
 @extract.add('hmaps')
 def extract_hmaps(dstore, what):
     """
-    Extracts hazard maps. Use it as /extract/hmaps/PGA
+    Extracts hazard maps. Use it as /extract/hmaps?imt=PGA
     """
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
@@ -331,8 +330,8 @@ def extract_hmaps(dstore, what):
 @extract.add('uhs')
 def extract_uhs(dstore, what):
     """
-    Extracts uniform hazard spectra. Use it as /extract/uhs/mean or
-    /extract/uhs/rlz-0, etc
+    Extracts uniform hazard spectra. Use it as /extract/uhs?kind=mean or
+    /extract/uhs?kind=rlz-0, etc
     """
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
