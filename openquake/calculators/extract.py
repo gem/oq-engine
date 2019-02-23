@@ -62,10 +62,12 @@ def parse(query_string, stats):
 
     >>> parse('kind=mean', ['max', 'mean'])
     ('-stats', 1, {'kind': ['mean']})
-    >>> parse('rlz-3?imt=PGA&site_id=0', [])
+    >>> parse('kind=rlz-3&imt=PGA&site_id=0', [])
     ('-rlzs', 3, {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0]})
     """
     dic = parse_qs(query_string)
+    if 'kind' not in dic:
+        return '-stats', range(len(stats)), dic
     [kind] = dic['kind']
     if kind.startswith('rlz-'):
         suffix = '-rlzs'
