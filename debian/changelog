@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Merged the commands `oq plot_hmaps` and `oq plot_uhs` inside `oq plot`
   * Changed the storage of hazard curves and hazard maps to make it consistent
     with the risk outputs and Extractor-friendly
 
