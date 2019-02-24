@@ -60,14 +60,14 @@ def parse(query_string, stats):
     """
     :returns: selections, query_dict
 
-    >>> parse('kind=stats', [])
-    >>> (['-stats', slice(None)], {'kind': ['stats']})
+    >>> parse('kind=stats', ['mean'])
+    ([('-stats', slice(None, None, None))], {'kind': ['mean']})
     >>> parse('kind=rlzs', [])
-    >>> (['-rlzs', slice(None)], {'kind': ['rlzs']})
+    ([('-rlzs', slice(None, None, None))], {'kind': ['rlzs']})
     >>> parse('kind=mean', ['max', 'mean'])
-    (['-stats', 1], {'kind': ['mean']})
+    ([('-stats', 1)], {'kind': ['mean']})
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', [])
-    (['-rlzs', 3], {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0]})
+    ([('-rlzs', 3)], {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0]})
     """
     statindex = dict(zip(stats, range(len(stats))))
     dic = parse_qs(query_string)
@@ -75,6 +75,7 @@ def parse(query_string, stats):
     selections = []
     for kind in list(kinds):
         if kind == 'stats':
+            dic['kind'] = stats
             selections.append(('-stats', slice(None)))
         elif kind == 'rlzs':
             selections.append(('-rlzs', slice(None)))
