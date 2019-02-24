@@ -439,7 +439,7 @@ def export_uhs_xml(ekey, dstore):
     periods = [imt.period for imt in oq.imt_periods()]
     for kind in oq.get_kinds(kind, R):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
-        uhs = extract(dstore, 'uhs?kind=' + kind)[:, 0]
+        uhs = dict(extract(dstore, 'uhs?kind=' + kind))[kind]
         for p, poe in enumerate(oq.poes):
             fname = hazard_curve_name(
                 dstore, (key, fmt), kind + '-%s' % poe, rlzs_assoc)
@@ -483,7 +483,7 @@ def export_hcurves_xml(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
-        hcurves = extract(dstore, 'hcurves?kind=' + kind)[:, 0]
+        hcurves = dict(extract(dstore, 'hcurves?kind=' + kind))[kind]
         for im in oq.imtls:
             slc = oq.imtls(im)
             imt = from_string(im)
@@ -512,7 +512,8 @@ def export_hmaps_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.HazardMapXMLWriter
     for kind in oq.get_kinds(kind, R):
-        hmaps = extract(dstore, 'hmaps?kind=' + kind)[:, 0]  # shape (N, M, P)
+        # shape (N, M, P)
+        hmaps = dict(extract(dstore, 'hmaps?kind=' + kind))[kind]
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
