@@ -18,7 +18,6 @@
 
 import os.path
 import logging
-import itertools
 import collections
 import operator
 import numpy
@@ -74,7 +73,7 @@ def get_mean_curves(dstore):
     Extract the mean hazard curves from the datastore, as a composite
     array of length nsites.
     """
-    return extract.extract(dstore, 'hcurves?kind=mean')[:, 0]
+    return dict(extract.extract(dstore, 'hcurves?kind=mean'))['mean']
 
 # ########################################################################## #
 
