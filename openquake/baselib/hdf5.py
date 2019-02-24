@@ -454,7 +454,9 @@ class ArrayWrapper(object):
     """
     @classmethod
     def from_(cls, obj):
-        if inspect.isgenerator(obj):
+        if isinstance(obj, cls):  # it is already an ArrayWrapper
+            return obj
+        elif inspect.isgenerator(obj):
             array, attrs = 0, {k: _array(v) for k, v in obj}
         elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
@@ -575,54 +577,50 @@ def decode_array(values):
     return out
 
 
-def extract(dset, *d_slices):
+def extract(dset, *d_slices, attrs={}):
     """
     :param dset: a D-dimensional dataset or array
     :param d_slices: D slice objects (or similar)
-    :returns: a reduces D-dimensional array
+    :param attrs: dictionary to attach to the returned ArrayWrapper
+    :returns: a reduced D-dimensional ArrayWrapper
 
     >>> a = numpy.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
     >>> extract(a, slice(None), 1)
     array([[2],
            [5]])
-    >>> extract(a, [0, 1], slice(None))
-    array([[4, 5, 6],
-           [4, 5, 6]])
+    >>> extract(a, [0, 1], slice(1, 3))
+    array([[2, 3],
+           [5, 6]])
     """
     shp = list(dset.shape)
     if len(shp) != len(d_slices):
-        raise ValueError('Array with %d dimensions but got %d slices' %
+        raise ValueError('Array with %d dimensions but %d slices' %
                          (len(shp), len(d_slices)))
     sizes = []
     slices = []
-    idx = {}  # (i, j) -> k
     for i, slc in enumerate(d_slices):
         if slc == slice(None):
             size = shp[i]
             slices.append([slice(None)])
         elif hasattr(slc, 'start'):
             size = slc.stop - slc.start
-            slices.append(slc)
+            slices.append([slice(slc.start, slc.stop, 0)])
         elif isinstance(slc, list):
             size = len(slc)
-            try:
-                [s] = slc
-            except ValueError:
-                for k, j in enumerate(slc):
-                    idx[i, j] = k
-                slices.append(slc)
-            else:
-                slices.append([slice(s, s + 1)])
+            slices.append([slice(s, s + 1, j) for j, s in enumerate(slc)])
         elif isinstance(slc, Number):
             size = 1
-            slices.append([slice(slc, slc + 1)])
+            slices.append([slice(slc, slc + 1, 0)])
         else:
             size = shp[i]
-            slices.append([slice(None)])
+            slices.append([slc])
         sizes.append(size)
     array = numpy.zeros(sizes, dset.dtype)
     for tup in itertools.product(*slices):
-        aidx = tuple(idx[i, j] if isinstance(j, Number) else j
-                     for i, j in enumerate(tup))
-        array[aidx] = dset[tup]
-    return array
+        aidx = tuple(s if s.step is None
+                     else slice(s.step, s.step + s.stop - s.start)
+                     for s in tup)
+        sel = tuple(s if s.step is None else slice(s.start, s.stop)
+                    for s in tup)
+        array[aidx] = dset[sel]
+    return ArrayWrapper(array, attrs)
