@@ -228,6 +228,11 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.c.get(url)
         self.assertEqual(resp.status_code, 200)
 
+        # check extract hcurves
+        url = '/v1/calc/%s/extract/hcurves?kind=stats&imt=PGA' % job_id
+        resp = self.c.get(url)
+        self.assertEqual(resp.status_code, 200)
+
         # check deleting job without the webAPI
         engine.del_calculation(job_id, True)
 
