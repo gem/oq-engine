@@ -475,6 +475,8 @@ class ArrayWrapper(object):
         return len(self.array)
 
     def __getitem__(self, idx):
+        if idx in self.__dict__:
+            return getattr(self, idx)
         return self.array[idx]
 
     def __toh5__(self):
@@ -577,18 +579,17 @@ def decode_array(values):
     return out
 
 
-def extract(dset, *d_slices, attrs={}):
+def extract(dset, *d_slices):
     """
     :param dset: a D-dimensional dataset or array
     :param d_slices: D slice objects (or similar)
-    :param attrs: dictionary to attach to the returned ArrayWrapper
-    :returns: a reduced D-dimensional ArrayWrapper
+    :returns: a reduced D-dimensional array
 
     >>> a = numpy.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
-    >>> extract(a, slice(None), 1).array
+    >>> extract(a, slice(None), 1)
     array([[2],
            [5]])
-    >>> extract(a, [0, 1], slice(1, 3)).array
+    >>> extract(a, [0, 1], slice(1, 3))
     array([[2, 3],
            [5, 6]])
     """
@@ -623,4 +624,4 @@ def extract(dset, *d_slices, attrs={}):
         sel = tuple(s if s.step is None else slice(s.start, s.stop)
                     for s in tup)
         array[aidx] = dset[sel]
-    return ArrayWrapper(array, attrs)
+    return array
