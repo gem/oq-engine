@@ -475,7 +475,7 @@ class ArrayWrapper(object):
         return len(self.array)
 
     def __getitem__(self, idx):
-        if idx in self.__dict__:
+        if isinstance(idx, str) and idx in self.__dict__:
             return getattr(self, idx)
         return self.array[idx]
 
