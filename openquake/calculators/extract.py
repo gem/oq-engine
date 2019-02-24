@@ -32,7 +32,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib import config
+from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
@@ -44,40 +44,56 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+ALL = slice(None)
 
 
 def lit_eval(string):
+    """
+    `ast.literal_eval` the string if possible, otherwise returns it unchanged
+    """
     try:
         return ast.literal_eval(string)
-    except ValueError:
+    except (ValueError, SyntaxError):
         return string
 
 
-def parse(what, stats):
-    """
-    Split a string in three pieces:
+def _normalize(kinds, stats, num_rlzs):
+    statindex = dict(zip(stats, range(len(stats))))
+    dic = {}
+    for kind in kinds:
+        if kind == 'stats':
+            for s, stat in enumerate(stats):
+                dic[stat] = s
+        elif kind == 'rlzs':
+            for r in range(num_rlzs):
+                dic['rlz-%03d' % r] = r
+        elif kind.startswith('rlz-'):
+            dic[kind] = int(kind[4:])
+        elif kind in stats:
+            dic[kind] = statindex[kind]
+        else:
+            raise ValueError('Invalid kind %r' % kind)
+    return dic
 
-    >>> parse('mean', ['max', 'mean'])
-    ('-stats', 1, {})
-    >>> parse('rlz-3?imt=PGA&site_id=0', [])
-    ('-rlzs', 3, {'imt': ['PGA'], 'site_id': [0]})
+
+def parse(query_string, stats, num_rlzs=0):
     """
-    if '?' in what:
-        kind, query_string = what.split('?', 1)
-    else:
-        kind, query_string = what, ''
-    if kind.startswith('rlz-'):
-        suffix = '-rlzs'
-        index = int(kind[4:])
-    elif kind not in stats:
-        raise ValueError('Invalid kind of output: %r' % what)
-    else:
-        suffix = '-stats'
-        index = list(stats).index(kind)
-    dic = parse_qs(query_string)
-    for key, val in dic.items():
-        dic[key] = [lit_eval(v) for v in val]
-    return suffix, index, dic
+    :returns: a normalized query_dict as in the following examples:
+
+    >>> parse('kind=stats', ['mean'])
+    {'kind': {'mean': 0}}
+    >>> parse('kind=rlzs', [], 3)
+    {'kind': {'rlz-000': 0, 'rlz-001': 1, 'rlz-002': 2}}
+    >>> parse('kind=mean', ['max', 'mean'])
+    {'kind': {'mean': 1}}
+    >>> parse('kind=rlz-3&imt=PGA&site_id=0', [])
+    {'kind': {'rlz-3': 3}, 'imt': ['PGA'], 'site_id': [0]}
+    """
+    qdic = parse_qs(query_string)
+    for key, val in qdic.items():  # for instance, convert site_id to an int
+        qdic[key] = [lit_eval(v) for v in val]
+    qdic['kind'] = _normalize(qdic['kind'], stats, num_rlzs)
+    return qdic
 
 
 def cast(loss_array, loss_dt):
@@ -96,8 +112,7 @@ def barray(iterlines):
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
-    extract('sitecol', dstore). It is also possibly to extract the
-    attributes, for instance with extract('sitecol.attrs', dstore).
+    extract(dstore, 'sitecol').
     """
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
@@ -125,12 +140,14 @@ class Extract(dict):
         return decorator
 
     def __call__(self, dstore, key):
-        try:
+        if '/' in key:
             k, v = key.split('/', 1)
-        except ValueError:   # no slashes
-            k, v = key, ''
-        if k in self:
             return self[k](dstore, v)
+        elif '?' in key:
+            k, v = key.split('?', 1)
+            return self[k](dstore, v)
+        if key in self:
+            return self[key](dstore, '')
         else:
             return extract_(dstore, key)
 
@@ -214,10 +231,7 @@ def extract_hazard(dstore, what):
                 arr[sid] = pmap[sid].array[oq.imtls(imt), 0]
             logging.info('extracting %s', key)
             yield key, arr
-        try:
-            hmap = dstore['hmaps/' + statname]
-        except KeyError:  # for statname=rlz-XXX
-            hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
+        hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
@@ -283,58 +297,74 @@ def _get_dict(dstore, name, imtls, stats):
 @extract.add('hcurves')
 def extract_hcurves(dstore, what):
     """
-    Extracts hazard curves. Use it as /extract/hcurves/mean or
-    /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
+    Extracts hazard curves. Use it as /extract/hcurves?kind=mean or
+    /extract/hcurves?kind=rlz-0, /extract/hcurves?kind=stats,
+    /extract/hcurves?kind=rlzs etc
     """
     oq = dstore['oqparam']
+    num_rlzs = len(dstore['weights'])
     stats = oq.hazard_stats()
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
         mesh = get_mesh(sitecol, complete=False)
         dic = _get_dict(dstore, 'hcurves-stats', oq.imtls, stats)
-        return hazard_items(
+        yield from hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    suffix, kind, params = parse(what, stats)
+        return
+    params = parse(what, stats, num_rlzs)
     if 'imt' in params:
         [imt] = params['imt']
         slc = oq.imtls(imt)
     else:
-        slc = slice(None)
-    sids = params.get('site_id', slice(None))
-    return dstore['hcurves' + suffix][sids, kind, slc]
+        slc = ALL
+    sids = params.get('site_id', ALL)
+    for k, i in params['kind'].items():
+        if k.startswith('rlz-'):
+            yield k, hdf5.extract(dstore['hcurves-rlzs'], sids, i, slc)[:, 0]
+        else:
+            yield k, hdf5.extract(dstore['hcurves-stats'], sids, i, slc)[:, 0]
+    yield from params.items()
 
 
 @extract.add('hmaps')
 def extract_hmaps(dstore, what):
     """
-    Extracts hazard maps. Use it as /extract/hmaps/PGA
+    Extracts hazard maps. Use it as /extract/hmaps?imt=PGA
     """
     oq = dstore['oqparam']
     stats = oq.hazard_stats()
+    num_rlzs = len(dstore['weights'])
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
         mesh = get_mesh(sitecol, complete=False)
         dic = _get_dict(dstore, 'hmaps-stats',
                         {imt: oq.poes for imt in oq.imtls}, stats)
-        return hazard_items(
+        yield from hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    suffix, kind, params = parse(what, stats)
+        return
+    params = parse(what, stats, num_rlzs)
     if 'imt' in params:
         [imt] = params['imt']
         m = list(oq.imtls).index(imt)
-        slc = slice(m, m + 1)
+        s = slice(m, m + 1)
     else:
-        slc = slice(None)
-    return dstore['hmaps' + suffix][:, kind, slc]
+        s = ALL
+    for k, i in params['kind'].items():
+        if k.startswith('rlz-'):
+            yield k, hdf5.extract(dstore['hmaps-rlzs'], ALL, i, s, ALL)[:, 0]
+        else:
+            yield k, hdf5.extract(dstore['hmaps-stats'], ALL, i, s, ALL)[:, 0]
+    yield from params.items()
 
 
 @extract.add('uhs')
 def extract_uhs(dstore, what):
     """
-    Extracts uniform hazard spectra. Use it as /extract/uhs/mean or
-    /extract/uhs/rlz-0, etc
+    Extracts uniform hazard spectra. Use it as /extract/uhs?kind=mean or
+    /extract/uhs?kind=rlz-0, etc
     """
     oq = dstore['oqparam']
+    num_rlzs = len(dstore['weights'])
     stats = oq.hazard_stats()
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
@@ -343,16 +373,26 @@ def extract_uhs(dstore, what):
         for s, stat in enumerate(stats):
             hmap = dstore['hmaps-stats'][:, s]
             dic[stat] = calc.make_uhs(hmap, oq)
-        return hazard_items(
+        yield from hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    suffix, kind, params = parse(what, stats)
-    uhs = []
-    dset = dstore['hmaps' + suffix]
-    sids = params.get('site_id', slice(None))
+        return
+    params = parse(what, stats, num_rlzs)
+    periods = []
     for m, imt in enumerate(oq.imtls):
         if imt == 'PGA' or imt.startswith('SA'):
-            uhs.append(dset[sids, kind, m])  # shape (N, P)
-    return numpy.array(uhs).transpose(1, 0, 2)  # shape (N, M', P)
+            periods.append(m)
+    if 'site_id' in params:
+        sids = params['site_id']
+    else:
+        sids = ALL
+    for k, i in params['kind'].items():
+        if k.startswith('rlz-'):
+            yield k, hdf5.extract(
+                dstore['hmaps-rlzs'], sids, i, periods, ALL)[:, 0]
+        else:
+            yield k, hdf5.extract(
+                dstore['hmaps-stats'], sids, i, periods, ALL)[:, 0]
+    yield from params.items()
 
 
 def _agg(losses, idxs):
