@@ -296,11 +296,7 @@ def export_hcurves_by_imt_csv(
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-            if isinstance(array, dict):  # is a pmap, for old versions
-                poes = array.setdefault(sid, 0, F32).array[slc]
-            else:  # is an array for recent versions of the engine
-                poes = array[sid, slc]
-            hcurves[sid] = (lon, lat, dep) + tuple(poes)
+            hcurves[sid] = (lon, lat, dep) + tuple(array[sid, slc])
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
             rlzs_assoc, kind, oq.investigation_time) + (
                 ', imt="%s", checksum=%d' % (imt, checksum)
@@ -382,7 +378,7 @@ def export_hcurves_csv(ekey, dstore):
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
                 oq.hazard_maps):
-            hmap = extract(dstore, 'hmaps/' + kind)
+            hmap = dict(extract(dstore, 'hmaps?kind=' + kind))[kind]
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
             uhs_curves = calc.make_uhs(hmap, oq)
             writers.write_csv(
@@ -395,7 +391,7 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt),
                                  comment + ', checksum=%d' % checksum))
         elif key == 'hcurves':
-            hcurves = extract(dstore, 'hcurves/' + kind)
+            hcurves = dict(extract(dstore, 'hcurves?kind=' + kind))[kind]
             fnames.extend(
                 export_hcurves_by_imt_csv(
                     ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq,
@@ -443,7 +439,7 @@ def export_uhs_xml(ekey, dstore):
     periods = [imt.period for imt in oq.imt_periods()]
     for kind in oq.get_kinds(kind, R):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
-        uhs = extract(dstore, 'uhs/' + kind)
+        uhs = dict(extract(dstore, 'uhs?kind=' + kind))[kind]
         for p, poe in enumerate(oq.poes):
             fname = hazard_curve_name(
                 dstore, (key, fmt), kind + '-%s' % poe, rlzs_assoc)
@@ -487,7 +483,7 @@ def export_hcurves_xml(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
-        hcurves = extract(dstore, 'hcurves/' + kind)
+        hcurves = dict(extract(dstore, 'hcurves?kind=' + kind))[kind]
         for im in oq.imtls:
             slc = oq.imtls(im)
             imt = from_string(im)
@@ -516,7 +512,8 @@ def export_hmaps_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.HazardMapXMLWriter
     for kind in oq.get_kinds(kind, R):
-        hmaps = extract(dstore, 'hmaps/' + kind)  # shape (N, M, P)
+        # shape (N, M, P)
+        hmaps = dict(extract(dstore, 'hmaps?kind=' + kind))[kind]
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
