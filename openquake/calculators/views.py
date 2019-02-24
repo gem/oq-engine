@@ -657,7 +657,7 @@ def view_hmap(token, dstore):
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    mean = extract(dstore, 'hcurves?kind=mean')
+    mean = dict(extract(dstore, 'hcurves?kind=mean'))['mean']
     oq = dstore['oqparam']
     hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
