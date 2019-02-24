@@ -585,10 +585,10 @@ def extract(dset, *d_slices, attrs={}):
     :returns: a reduced D-dimensional ArrayWrapper
 
     >>> a = numpy.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
-    >>> extract(a, slice(None), 1)
+    >>> extract(a, slice(None), 1).array
     array([[2],
            [5]])
-    >>> extract(a, [0, 1], slice(1, 3))
+    >>> extract(a, [0, 1], slice(1, 3)).array
     array([[2, 3],
            [5, 6]])
     """

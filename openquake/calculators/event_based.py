@@ -74,7 +74,7 @@ def get_mean_curves(dstore):
     Extract the mean hazard curves from the datastore, as a composite
     array of length nsites.
     """
-    return extract.extract(dstore, 'hcurves?kind=mean')
+    return extract.extract(dstore, 'hcurves?kind=mean')[:, 0]
 
 # ########################################################################## #
 
