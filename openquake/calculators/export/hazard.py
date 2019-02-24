@@ -378,7 +378,7 @@ def export_hcurves_csv(ekey, dstore):
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
                 oq.hazard_maps):
-            hmap = extract(dstore, 'hmaps?kind=' + kind)
+            hmap = extract(dstore, 'hmaps?kind=' + kind)[:, 0]
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
             uhs_curves = calc.make_uhs(hmap, oq)
             writers.write_csv(
@@ -391,7 +391,7 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt),
                                  comment + ', checksum=%d' % checksum))
         elif key == 'hcurves':
-            hcurves = extract(dstore, 'hcurves?kind=' + kind)
+            hcurves = extract(dstore, 'hcurves?kind=' + kind)[:, 0]
             fnames.extend(
                 export_hcurves_by_imt_csv(
                     ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq,
@@ -439,7 +439,7 @@ def export_uhs_xml(ekey, dstore):
     periods = [imt.period for imt in oq.imt_periods()]
     for kind in oq.get_kinds(kind, R):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
-        uhs = extract(dstore, 'uhs?kind=' + kind)
+        uhs = extract(dstore, 'uhs?kind=' + kind)[:, 0]
         for p, poe in enumerate(oq.poes):
             fname = hazard_curve_name(
                 dstore, (key, fmt), kind + '-%s' % poe, rlzs_assoc)
@@ -483,7 +483,7 @@ def export_hcurves_xml(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
-        hcurves = extract(dstore, 'hcurves?kind=' + kind)
+        hcurves = extract(dstore, 'hcurves?kind=' + kind)[:, 0]
         for im in oq.imtls:
             slc = oq.imtls(im)
             imt = from_string(im)
@@ -512,7 +512,7 @@ def export_hmaps_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.HazardMapXMLWriter
     for kind in oq.get_kinds(kind, R):
-        hmaps = extract(dstore, 'hmaps?kind=' + kind)  # shape (N, M, P)
+        hmaps = extract(dstore, 'hmaps?kind=' + kind)[:, 0]  # shape (N, M, P)
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
