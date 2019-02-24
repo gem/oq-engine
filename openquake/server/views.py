@@ -679,9 +679,12 @@ def extract(request, calc_id, what):
             for key, val in vars(aw).items():
                 if isinstance(key, bytes):
                     key = key.decode('utf-8')
-                if isinstance(val, str):
+                elif isinstance(val, str):
                     # without this oq extract would fail
                     a[key] = numpy.array(val.encode('utf-8'))
+                elif isinstance(val, dict):
+                    # this is hack: we are losing the values
+                    a[key] = list(val)
                 else:
                     a[key] = val
             numpy.savez_compressed(fname, **a)
