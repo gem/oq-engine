@@ -105,6 +105,7 @@ def make_figure_uhs(extractors, what):
                 ax.set_ylabel('SA')
             for kind in uhs.kind:
                 ax.plot(periods, uhs[kind][0, :, j], label=kind)
+                ax.plot(periods, uhs[kind][0, :, j], '.')
             ax.legend()
     return plt
 
