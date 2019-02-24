@@ -15,11 +15,11 @@ You can see the full list of commands by running `oq help`:
 ```bash
 $ oq help
 usage: oq [--version]
-          {purge,show_attrs,export,extract,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_uhs,plot_ac,reduce,reduce_sm,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
+          {purge,show_attrs,export,extract,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_ac,reduce,reduce_sm,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
           ...
 
 positional arguments:
-  {purge,show_attrs,export,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_uhs,plot_ac,reduce,reduce_sm,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
+  {purge,show_attrs,export,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_ac,reduce,reduce_sm,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
                         available subcommands; use oq help <subcmd>
 
 optional arguments:

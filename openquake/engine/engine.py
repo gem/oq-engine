@@ -130,7 +130,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
-        if oq.hazard_stats():
+        if oq.hazard_stats() or oq.individual_curves or len(rlzs) == 1:
             dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
