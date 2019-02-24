@@ -15,9 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap, general
+from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import get_bounding_box
-from openquake.calculators.extract import Extractor, WebExtractor, parse
+from openquake.calculators.extract import Extractor, WebExtractor
 
 
 def basemap(projection, sitecol):
@@ -31,80 +31,82 @@ def basemap(projection, sitecol):
     return bmap
 
 
-def make_figure_hcurves(site, inv_time, imtls, curves):
-    """
-    :param site: ID of the site to plot
-    :param inv_time: investigation time
-    :param imtls: ordered dictionary with the IMTs and levels
-    :param curves: a dictionary of curves sid -> levels
-    """
+def make_figure_hcurves(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    n_imts = len(imtls)
-    for j, imt in enumerate(imtls):
-        imls = imtls[imt]
-        imt_slice = imtls(imt)
-        ax = fig.add_subplot(1, n_imts, j + 1)
-        ax.set_xlabel('site %s, %s, inv_time=%dy' % (site, imt, inv_time))
-        if j == 0:  # set Y label only on the leftmost graph
-            ax.set_ylabel('PoE')
-        for key, curve in curves.items():
-            ax.loglog(imls, curve[0, imt_slice], label=key)
-        ax.grid(True)
-        ax.legend()
+    ncalcs = len(extractors)
+    for i, ex in enumerate(extractors):
+        oq = ex.oqparam
+        hcurves = ex.get(what)
+        n_imts = len(hcurves.imt)
+        [site] = hcurves.site_id
+        for j, imt in enumerate(hcurves.imt):
+            imls = oq.imtls[imt]
+            imt_slice = oq.imtls(imt)
+            ax = fig.add_subplot(n_imts, ncalcs, i * n_imts + j + 1)
+            # setting the title would take too much vertical space
+            ax.set_xlabel('%s, calculation %d, site %s, inv_time=%dy' %
+                          (imt, ex.calc_id, site, oq.investigation_time))
+            if j == 0:  # set Y label only on the leftmost graph
+                ax.set_ylabel('PoE')
+            for kind in hcurves.kind:
+                arr = hcurves[kind]
+                ax.loglog(imls, arr[0, imt_slice], '-', label=kind)
+                ax.loglog(imls, arr[0, imt_slice], '.')
+            ax.grid(True)
+            ax.legend()
     return plt
 
 
-def make_figure_uhs(site, oq, uhs_dict):
-    """
-    :param site: ID of the site under analysis
-    :param oq: instance of OqParam
-    :param uhs_dict: a dictionary of uniform hazard spectra
-    """
+def make_figure_hmaps(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
-
     fig = plt.figure()
-    n_poes = len(oq.poes)
-    periods = [imt.period for imt in oq.imt_periods()]
-    for j, poe in enumerate(oq.poes):
-        ax = fig.add_subplot(1, n_poes, j + 1)
-        ax.grid(True)
-        ax.set_xlim([periods[0], periods[-1]])
-        ax.set_xlabel(
-            'UHS on site %s, poe=%s\nperiod in seconds, inv_time=%dy' %
-            (site, poe, oq.investigation_time))
-        if j == 0:  # set Y label only on the leftmost graph
-            ax.set_ylabel('SA')
-        for kind, uhs in uhs_dict.items():
-            ax.plot(periods, uhs[0, :, j], label=kind)
-    plt.legend()
+    ncalcs = len(extractors)
+    for i, ex in enumerate(extractors):
+        oq = ex.oqparam
+        n_poes = len(oq.poes)
+        sitecol = ex.get('sitecol')
+        hmaps = ex.get(what)
+        [imt] = hmaps.imt
+        [kind] = hmaps.kind
+        for j, poe in enumerate(oq.poes):
+            ax = fig.add_subplot(n_poes, ncalcs, i * n_poes + j + 1)
+            ax.grid(True)
+            ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
+                          'inv_time=%dy' %
+                          (imt, kind, poe, ex.calc_id, oq.investigation_time))
+            bmap = basemap('cyl', sitecol)
+            bmap.scatter(sitecol['lon'], sitecol['lat'],
+                         c=hmaps[kind][:, 0, j], cmap='jet')
     return plt
 
 
-def make_figure_hmaps(sitecol, itime, imt, imls, poes, hmaps):
-    """
-    :param sitecol: site collection array
-    :param itime: investigation time
-    :param imt: intensity measure type
-    :param imls: intensity measure levels
-    :param poes: PoEs used to compute the hazard maps
-    :param hmaps: mean hazard maps as an array of shape (N, M, P)
-    """
+def make_figure_uhs(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    n_poes = len(poes)
-    i = 0
-    for j, poe in enumerate(poes):
-        ax = fig.add_subplot(1, n_poes, i * n_poes + j + 1)
-        ax.grid(True)
-        ax.set_xlabel('hmap for IMT=%s, poe=%s\ninv_time=%dy' %
-                      (imt, poe, itime))
-        bmap = basemap('cyl', sitecol)
-        bmap.scatter(sitecol['lon'], sitecol['lat'],
-                     c=hmaps[:, 0, j], cmap='jet')
+    ncalcs = len(extractors)
+    for i, ex in enumerate(extractors):
+        oq = ex.oqparam
+        n_poes = len(oq.poes)
+        periods = [imt.period for imt in oq.imt_periods()]
+        uhs = ex.get(what)
+        [site] = uhs.site_id
+        for j, poe in enumerate(oq.poes):
+            ax = fig.add_subplot(n_poes, ncalcs, i * n_poes + j + 1)
+            ax.grid(True)
+            ax.set_xlim([periods[0], periods[-1]])
+            ax.set_xlabel(
+                'UHS on site %s, poe=%s\ncalculation %d, inv_time=%dy'
+                % (site, poe, ex.calc_id, oq.investigation_time))
+            if j == 0:  # set Y label only on the leftmost graph
+                ax.set_ylabel('SA')
+            for kind in uhs.kind:
+                ax.plot(periods, uhs[kind][0, :, j], label=kind)
+                ax.plot(periods, uhs[kind][0, :, j], '.')
+            ax.legend()
     return plt
 
 
@@ -117,51 +119,26 @@ def plot(what, calc_id=-1, other_id=None, webapi=False):
     """
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
+    elif 'kind' not in what:
+        raise SystemExit('Missing kind= in %r' % what)
     prefix, rest = what.split('?', 1)
     assert prefix in 'hcurves hmaps uhs', prefix
     if prefix in 'hcurves hmaps' and 'imt=' not in rest:
         raise SystemExit('Missing imt= in %r' % what)
-    if prefix in 'hcurves uhs' and 'site_id=' not in rest:
-        rest += '&site_id=0'
-    if prefix == 'hmaps' and 'kind=' not in rest:
-        rest += '&kind=mean'
-    if prefix == 'uhs' and 'imt=' in rest:
+    elif prefix == 'uhs' and 'imt=' in rest:
         raise SystemExit('Invalid IMT in %r' % what)
+    elif prefix in 'hcurves uhs' and 'site_id=' not in rest:
+        what += '&site_id=0'
     if webapi:
-        x1 = WebExtractor(calc_id)
-        x2 = WebExtractor(other_id) if other_id else None
+        xs = [WebExtractor(calc_id)]
+        if other_id:
+            xs.append(WebExtractor(other_id))
     else:
-        x1 = Extractor(calc_id)
-        x2 = Extractor(other_id) if other_id else None
-    oq = x1.oqparam
-    itime = oq.investigation_time
-    stats = dict(oq.hazard_stats())
-    suffix, index, qdict = parse(rest, stats)
-    if prefix == 'hcurves':
-        [site] = qdict['site_id']
-        imtls = general.DictArray({imt: oq.imtls[imt] for imt in qdict['imt']})
-        curves = {
-            stat: x1.get('hcurves?%s&kind=%s' % (rest, stat))
-            for stat in stats}
-        if x2 is not None:
-            for stat in stats:
-                curves['%s-%d' % (stat, other_id)] = x2.get(
-                    'hcurves?kind=%s&imt=%s&site_id=%d' % stat)
-        plt = make_figure_hcurves(site, itime, imtls, curves)
-    elif prefix == 'hmaps':
-        [imt] = qdict['imt']
-        plt = make_figure_hmaps(x1.get('sitecol'), oq.investigation_time,
-                                imt, oq.imtls[imt], oq.poes,
-                                x1.get('hmaps?' + rest))
-    elif prefix == 'uhs':
-        [site] = qdict['site_id']
-        uhs_dict = {stat: x1.get('uhs?kind=%s&site_id=%s' % (stat, site))
-                    for stat in stats}
-        if x2 is not None:
-            for stat in stats:
-                uhs_dict['%s-%d' % (stat, other_id)] = x2.get(
-                    'uhs?kind=%s&site_id=%s' % (stat, site))
-        plt = make_figure_uhs(site, oq, uhs_dict)
+        xs = [Extractor(calc_id)]
+        if other_id:
+            xs.append(Extractor(other_id))
+    make_figure = globals()['make_figure_' + prefix]
+    plt = make_figure(xs, what)
     plt.show()
 
 
