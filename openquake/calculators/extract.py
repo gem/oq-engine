@@ -32,7 +32,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib import config
+from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated
 from openquake.baselib.python3compat import encode, decode
@@ -58,28 +58,35 @@ def lit_eval(string):
 
 def parse(query_string, stats):
     """
-    :returns: suffix, index, query_dict
+    :returns: selections, query_dict
 
+    >>> parse('kind=stats', [])
+    >>> (['-stats', slice(None)], {'kind': ['stats']})
+    >>> parse('kind=rlzs', [])
+    >>> (['-rlzs', slice(None)], {'kind': ['rlzs']})
     >>> parse('kind=mean', ['max', 'mean'])
-    ('-stats', 1, {'kind': ['mean']})
+    (['-stats', 1], {'kind': ['mean']})
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', [])
-    ('-rlzs', 3, {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0]})
+    (['-rlzs', 3], {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0]})
     """
+    statindex = dict(zip(stats, range(len(stats))))
     dic = parse_qs(query_string)
-    if 'kind' not in dic:
-        return '-stats', range(len(stats)), dic
-    [kind] = dic['kind']
-    if kind.startswith('rlz-'):
-        suffix = '-rlzs'
-        index = int(kind[4:])
-    elif kind not in stats:
-        raise ValueError('Invalid query string %r' % query_string)
-    else:
-        suffix = '-stats'
-        index = list(stats).index(kind)
+    kinds = dic['kind']
+    selections = []
+    for kind in list(kinds):
+        if kind == 'stats':
+            selections.append(('-stats', slice(None)))
+        elif kind == 'rlzs':
+            selections.append(('-rlzs', slice(None)))
+        elif kind in statindex:
+            selections.append(('-stats', statindex[kind]))
+        elif kind.startswith('rlz-'):
+            selections.append(('-rlzs', int(kind[4:])))
+        else:
+            raise ValueError('Invalid kind %r in query string' % kind)
     for key, val in dic.items():
         dic[key] = [lit_eval(v) for v in val]
-    return suffix, index, dic
+    return selections, dic
 
 
 def cast(loss_array, loss_dt):
@@ -295,14 +302,15 @@ def extract_hcurves(dstore, what):
         dic = _get_dict(dstore, 'hcurves-stats', oq.imtls, stats)
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    suffix, kind, params = parse(what, stats)
+    [(suffix, idx)], params = parse(what, stats)
     if 'imt' in params:
         [imt] = params['imt']
         slc = oq.imtls(imt)
     else:
         slc = slice(None)
     sids = params.get('site_id', slice(None))
-    return dstore['hcurves' + suffix][sids, kind, slc]
+    return hdf5.extract(dstore['hcurves' + suffix],
+                        sids, idx, slc, attrs=params)
 
 
 @extract.add('hmaps')
@@ -319,14 +327,15 @@ def extract_hmaps(dstore, what):
                         {imt: oq.poes for imt in oq.imtls}, stats)
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    suffix, kind, params = parse(what, stats)
+    [(suffix, idx)], params = parse(what, stats)
     if 'imt' in params:
         [imt] = params['imt']
         m = list(oq.imtls).index(imt)
         slc = slice(m, m + 1)
     else:
         slc = slice(None)
-    return dstore['hmaps' + suffix][:, kind, slc]
+    return hdf5.extract(dstore['hmaps' + suffix],  # shape (N, S, M, P)
+                        slice(None), idx, slc, slice(None), attrs=params)
 
 
 @extract.add('uhs')
@@ -346,14 +355,18 @@ def extract_uhs(dstore, what):
             dic[stat] = calc.make_uhs(hmap, oq)
         return hazard_items(
             dic, mesh, investigation_time=oq.investigation_time)
-    suffix, kind, params = parse(what, stats)
-    uhs = []
-    dset = dstore['hmaps' + suffix]
-    sids = params.get('site_id', slice(None))
+    [(suffix, idx)], params = parse(what, stats)
+    periods = []
     for m, imt in enumerate(oq.imtls):
         if imt == 'PGA' or imt.startswith('SA'):
-            uhs.append(dset[sids, kind, m])  # shape (N, P)
-    return numpy.array(uhs).transpose(1, 0, 2)  # shape (N, M', P)
+            periods.append(m)
+    if 'site_id' in params:
+        sids = params['site_id']
+    else:
+        sids = slice(None)
+    array = hdf5.extract(dstore['hmaps' + suffix],  # shape (N, S, M, P)
+                         sids, idx, periods, slice(None), attrs=params)
+    return array  # shape (N, S, M', P)
 
 
 def _agg(losses, idxs):
