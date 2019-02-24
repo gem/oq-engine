@@ -378,7 +378,7 @@ def export_hcurves_csv(ekey, dstore):
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
                 oq.hazard_maps):
-            hmap = extract(dstore, 'hmaps?kind=' + kind)[:, 0]
+            hmap = dict(extract(dstore, 'hmaps?kind=' + kind))[kind]
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
             uhs_curves = calc.make_uhs(hmap, oq)
             writers.write_csv(
@@ -391,7 +391,7 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt),
                                  comment + ', checksum=%d' % checksum))
         elif key == 'hcurves':
-            hcurves = extract(dstore, 'hcurves?kind=' + kind)[:, 0]
+            hcurves = dict(extract(dstore, 'hcurves?kind=' + kind))[kind]
             fnames.extend(
                 export_hcurves_by_imt_csv(
                     ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq,

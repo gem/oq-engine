@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import get_bounding_box
-from openquake.calculators.extract import Extractor, WebExtractor, parse
+from openquake.calculators.extract import Extractor, WebExtractor
 
 
 def basemap(projection, sitecol):
@@ -50,9 +50,10 @@ def make_figure_hcurves(extractors, what):
                           (imt, ex.calc_id, site, oq.investigation_time))
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('PoE')
-            for kind, curve in zip(hcurves.kind, hcurves):
-                ax.loglog(imls, curve[0, imt_slice], '-', label=kind)
-                ax.loglog(imls, curve[0, imt_slice], '.')
+            for kind in hcurves.kind:
+                arr = hcurves[kind]
+                ax.loglog(imls, arr[0, imt_slice], '-', label=kind)
+                ax.loglog(imls, arr[0, imt_slice], '.')
             ax.grid(True)
             ax.legend()
     return plt
@@ -78,7 +79,7 @@ def make_figure_hmaps(extractors, what):
                           (imt, kind, poe, ex.calc_id, oq.investigation_time))
             bmap = basemap('cyl', sitecol)
             bmap.scatter(sitecol['lon'], sitecol['lat'],
-                         c=hmaps[:, 0, 0, j], cmap='jet')
+                         c=hmaps[kind][:, 0, j], cmap='jet')
     return plt
 
 
@@ -103,7 +104,7 @@ def make_figure_uhs(extractors, what):
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('SA')
             for kind in uhs.kind:
-                ax.plot(periods, uhs[0, 0, :, j], label=kind)
+                ax.plot(periods, uhs[kind][0, :, j], label=kind)
             ax.legend()
     return plt
 
