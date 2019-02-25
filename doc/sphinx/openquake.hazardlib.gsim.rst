@@ -243,6 +243,14 @@ bradley_2013
     :undoc-members:
     :show-inheritance:
 
+bradley_2013b
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bradley_2013b
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 campbell_1997
 ---------------------------------------------
 
@@ -575,6 +583,14 @@ mcverry_2006
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.mcverry_2006
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+mcverry_2006_chch
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mcverry_2006_chch
     :members:
     :undoc-members:
     :show-inheritance:
