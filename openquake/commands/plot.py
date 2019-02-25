@@ -35,27 +35,26 @@ def make_figure_hcurves(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    ncalcs = len(extractors)
+    got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
-        oq = ex.oqparam
         hcurves = ex.get(what)
-        n_imts = len(hcurves.imt)
-        [site] = hcurves.site_id
-        for j, imt in enumerate(hcurves.imt):
-            imls = oq.imtls[imt]
-            imt_slice = oq.imtls(imt)
-            ax = fig.add_subplot(n_imts, ncalcs, i * n_imts + j + 1)
-            # setting the title would take too much vertical space
-            ax.set_xlabel('%s, calculation %d, site %s, inv_time=%dy' %
-                          (imt, ex.calc_id, site, oq.investigation_time))
-            if j == 0:  # set Y label only on the leftmost graph
-                ax.set_ylabel('PoE')
-            for kind in hcurves.kind:
-                arr = hcurves[kind]
-                ax.loglog(imls, arr[0, imt_slice], '-', label=kind)
-                ax.loglog(imls, arr[0, imt_slice], '.')
-            ax.grid(True)
-            ax.legend()
+        for kind in hcurves.kind:
+            got[ex.calc_id, kind] = hcurves[kind]
+    oq = ex.oqparam
+    n_imts = len(hcurves.imt)
+    [site] = hcurves.site_id
+    for j, imt in enumerate(hcurves.imt):
+        imls = oq.imtls[imt]
+        imt_slice = oq.imtls(imt)
+        ax = fig.add_subplot(n_imts, 1, j + 1)
+        ax.set_xlabel('%s, site %s, inv_time=%dy' %
+                      (imt, site, oq.investigation_time))
+        ax.set_ylabel('PoE')
+        for ck, arr in got.items():
+            ax.loglog(imls, arr[0, imt_slice], '-', label='%s_%s' % ck)
+            ax.loglog(imls, arr[0, imt_slice], '.')
+        ax.grid(True)
+        ax.legend()
     return plt
 
 
@@ -72,7 +71,7 @@ def make_figure_hmaps(extractors, what):
         [imt] = hmaps.imt
         [kind] = hmaps.kind
         for j, poe in enumerate(oq.poes):
-            ax = fig.add_subplot(n_poes, ncalcs, i * n_poes + j + 1)
+            ax = fig.add_subplot(n_poes, ncalcs, j * ncalcs + i + 1)
             ax.grid(True)
             ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
                           'inv_time=%dy' %
@@ -87,26 +86,25 @@ def make_figure_uhs(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    ncalcs = len(extractors)
+    got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
-        oq = ex.oqparam
-        n_poes = len(oq.poes)
-        periods = [imt.period for imt in oq.imt_periods()]
         uhs = ex.get(what)
-        [site] = uhs.site_id
-        for j, poe in enumerate(oq.poes):
-            ax = fig.add_subplot(n_poes, ncalcs, i * n_poes + j + 1)
-            ax.grid(True)
-            ax.set_xlim([periods[0], periods[-1]])
-            ax.set_xlabel(
-                'UHS on site %s, poe=%s\ncalculation %d, inv_time=%dy'
-                % (site, poe, ex.calc_id, oq.investigation_time))
-            if j == 0:  # set Y label only on the leftmost graph
-                ax.set_ylabel('SA')
-            for kind in uhs.kind:
-                ax.plot(periods, uhs[kind][0, :, j], label=kind)
-                ax.plot(periods, uhs[kind][0, :, j], '.')
-            ax.legend()
+        for kind in uhs.kind:
+            got[ex.calc_id, kind] = uhs[kind]
+    oq = ex.oqparam
+    n_poes = len(oq.poes)
+    periods = [imt.period for imt in oq.imt_periods()]
+    [site] = uhs.site_id
+    for j, poe in enumerate(oq.poes):
+        ax = fig.add_subplot(n_poes, 1, j + 1)
+        ax.set_xlabel('UHS on site %s, poe=%s, inv_time=%dy' %
+                      (site, poe, oq.investigation_time))
+        ax.set_ylabel('SA')
+        for ck, arr in got.items():
+            ax.plot(periods, arr[0, :, j], '-', label='%s_%s' % ck)
+            ax.plot(periods, arr[0, :, j], '.')
+        ax.grid(True)
+        ax.legend()
     return plt
 
 
