@@ -72,7 +72,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 3)  # mean, quantile-0.15, quantile-0.85
+        self.assertEqual(len(fnames), 1)  # mean
         self.assertEqualFiles('expected/loss_maps-mean.csv', fnames[0])
 
         [fname] = export(('loss_curves/mean/sid-1', 'csv'),

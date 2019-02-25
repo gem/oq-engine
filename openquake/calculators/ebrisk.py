@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import logging
-import operator
 import time
 import numpy
 
@@ -214,7 +212,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def build_datasets(self, builder):
         oq = self.oqparam
-        stats = oq.hazard_stats()
+        stats = oq.hazard_stats().items()
         S = len(stats)
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
@@ -288,7 +286,7 @@ def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
     """
     with datastore.read(filename) as dstore:
         oq = dstore['oqparam']
-        stats = oq.hazard_stats()
+        stats = oq.hazard_stats().items()
         builder = get_loss_builder(dstore)
         R = len(dstore['weights'])
         losses = [[] for _ in range(R)]
