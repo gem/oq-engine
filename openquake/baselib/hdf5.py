@@ -25,6 +25,7 @@ import operator
 import tempfile
 import importlib
 import itertools
+from numbers import Number
 from urllib.parse import quote_plus, unquote_plus
 import collections
 import numpy
@@ -441,24 +442,6 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
-def save(path, items, **extra):
-    """
-    :param path: an .hdf5 pathname
-    :param items: a generator of pairs (key, array-like)
-    :param extra: extra attributes to be saved in the file
-    """
-    with File(path, 'w') as f:
-        for key, val in items:
-            assert val is not None, key  # sanity check
-            try:
-                f[key] = val
-            except ValueError as err:
-                if 'Object header message is too large' in str(err):
-                    logging.error(str(err))
-        for k, v in extra.items():
-            f.attrs[k] = v
-
-
 def _array(v):
     if hasattr(v, '__toh5__'):
         return v.__toh5__()[0]
@@ -471,8 +454,10 @@ class ArrayWrapper(object):
     """
     @classmethod
     def from_(cls, obj):
-        if inspect.isgenerator(obj):
-            array, attrs = 0, {k: _array(v) for k, v in obj}
+        if isinstance(obj, cls):  # it is already an ArrayWrapper
+            return obj
+        elif inspect.isgenerator(obj):
+            array, attrs = 0, {decode(k): _array(v) for k, v in obj}
         elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
@@ -490,6 +475,8 @@ class ArrayWrapper(object):
         return len(self.array)
 
     def __getitem__(self, idx):
+        if isinstance(idx, str) and idx in self.__dict__:
+            return getattr(self, idx)
         return self.array[idx]
 
     def __toh5__(self):
@@ -508,6 +495,22 @@ class ArrayWrapper(object):
     def shape(self):
         """shape of the underlying array"""
         return self.array.shape
+
+    def save(self, path, **extra):
+        """
+        :param path: an .hdf5 pathname
+        :param extra: extra attributes to be saved in the file
+        """
+        with File(path, 'w') as f:
+            for key, val in vars(self).items():
+                assert val is not None, key  # sanity check
+                try:
+                    f[key] = val
+                except ValueError as err:
+                    if 'Object header message is too large' in str(err):
+                        logging.error(str(err))
+            for k, v in extra.items():
+                f.attrs[k] = v
 
     def to_table(self):
         """
@@ -574,3 +577,51 @@ def decode_array(values):
         except AttributeError:
             out.append(val)
     return out
+
+
+def extract(dset, *d_slices):
+    """
+    :param dset: a D-dimensional dataset or array
+    :param d_slices: D slice objects (or similar)
+    :returns: a reduced D-dimensional array
+
+    >>> a = numpy.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
+    >>> extract(a, slice(None), 1)
+    array([[2],
+           [5]])
+    >>> extract(a, [0, 1], slice(1, 3))
+    array([[2, 3],
+           [5, 6]])
+    """
+    shp = list(dset.shape)
+    if len(shp) != len(d_slices):
+        raise ValueError('Array with %d dimensions but %d slices' %
+                         (len(shp), len(d_slices)))
+    sizes = []
+    slices = []
+    for i, slc in enumerate(d_slices):
+        if slc == slice(None):
+            size = shp[i]
+            slices.append([slice(None)])
+        elif hasattr(slc, 'start'):
+            size = slc.stop - slc.start
+            slices.append([slice(slc.start, slc.stop, 0)])
+        elif isinstance(slc, list):
+            size = len(slc)
+            slices.append([slice(s, s + 1, j) for j, s in enumerate(slc)])
+        elif isinstance(slc, Number):
+            size = 1
+            slices.append([slice(slc, slc + 1, 0)])
+        else:
+            size = shp[i]
+            slices.append([slc])
+        sizes.append(size)
+    array = numpy.zeros(sizes, dset.dtype)
+    for tup in itertools.product(*slices):
+        aidx = tuple(s if s.step is None
+                     else slice(s.step, s.step + s.stop - s.start)
+                     for s in tup)
+        sel = tuple(s if s.step is None else slice(s.start, s.stop)
+                    for s in tup)
+        array[aidx] = dset[sel]
+    return array

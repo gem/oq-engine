@@ -102,7 +102,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if 'poes' not in self.datastore:  # when building short report
             return
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        self.param = dict(stats=oq.hazard_stats(), weights=weights)
+        stats = list(oq.hazard_stats().items())
+        self.param = dict(stats=stats, weights=weights)
         self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
@@ -123,7 +124,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         ltypes = self.riskmodel.loss_types
 
         # loss curves stats are generated always
-        stats = [encode(n) for (n, f) in self.oqparam.hazard_stats()]
+        stats = encode(list(self.oqparam.hazard_stats()))
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
         avg_losses = numpy.zeros((self.A, self.S, self.L * self.I), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:

@@ -150,8 +150,8 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
     trt_sources = csm.get_trt_sources(optimize_same_id=False)
     tot_sources = sum(len(sources) for trt, sources in trt_sources)
     if split:
-        dist = None  # use the default
-    else:
+        dist = None  # use the default distribution
+    else:  # use Rtree and the processpool
         dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
                 else 'processpool')
     if monitor.hdf5:
@@ -159,22 +159,23 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     arr = numpy.zeros((tot_sources, 2), F32)
+    smap = parallel.Starmap(
+        only_filter, monitor=monitor, distribute=dist, progress=logging.debug)
     for trt, sources in trt_sources:
-        if split is False or hasattr(sources, 'atomic') and sources.atomic:
-            processor = only_filter
-        else:
-            processor = split_filter
-        smap = parallel.Starmap.apply(
-            processor, (sources, srcfilter, seed, monitor),
-            maxweight=RUPTURES_PER_BLOCK,
-            weight=operator.attrgetter('num_ruptures'),
-            distribute=dist, progress=logging.debug)
-        for splits, stime in smap:
-            for src in splits:
-                i = src.id
-                arr[i, 0] += stime[i]  # split_time
-                arr[i, 1] += 1         # num_split
-                srcs_by_grp[src.src_group_id].append(src)
+        if hasattr(sources, 'atomic') and sources.atomic:
+            smap.submit(sources, srcfilter, seed)
+        else:  # regular sources
+            for block in general.block_splitter(
+                    sources, RUPTURES_PER_BLOCK,
+                    operator.attrgetter('num_ruptures')):
+                smap.submit(block, srcfilter, seed,
+                            func=split_filter if split else only_filter)
+    for splits, stime in smap:
+        for src in splits:
+            i = src.id
+            arr[i, 0] += stime[i]  # split_time
+            arr[i, 1] += 1         # num_split
+            srcs_by_grp[src.src_group_id].append(src)
     if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
     elif monitor.hdf5:
@@ -346,7 +347,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         else:  # is a string
             fmts = self.oqparam.exports.split(',')
         keys = set(self.datastore)
-        has_hcurves = 'hcurves' in self.datastore or 'poes' in self.datastore
+        has_hcurves = ('hcurves-stats' in self.datastore or
+                       'hcurves-rlzs' in self.datastore)
         if has_hcurves:
             keys.add('hcurves')
         for fmt in fmts:
@@ -365,7 +367,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         if ekey not in exp or self.exported.get(ekey):  # already exported
             return
         with self.monitor('export'):
-            self.exported[ekey] = fnames = exp(ekey, self.datastore)
+            try:
+                self.exported[ekey] = fnames = exp(ekey, self.datastore)
+            except Exception as exc:
+                fnames = []
+                logging.error('Could not export %s: %s', ekey, exc)
             if fnames:
                 logging.info('exported %s: %s', ekey[0], fnames)
 
