@@ -677,9 +677,7 @@ def extract(request, calc_id, what):
             aw = hdf5.ArrayWrapper.from_(_extract(ds, what + query_string))
             a = {}
             for key, val in vars(aw).items():
-                if isinstance(key, bytes):
-                    key = key.decode('utf-8')
-                elif isinstance(val, str):
+                if isinstance(val, str):
                     # without this oq extract would fail
                     a[key] = numpy.array(val.encode('utf-8'))
                 elif isinstance(val, dict):
