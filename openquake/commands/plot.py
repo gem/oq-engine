@@ -111,9 +111,11 @@ def make_figure_uhs(extractors, what):
 @sap.Script
 def plot(what, calc_id=-1, other_id=None, webapi=False):
     """
-    Hazard curves plotter. Here is an example of use:
+    Hazard curves plotter. Here are a few examples of use::
 
-    $ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0' -1 -2
+     $ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0'
+     $ oq plot 'hmaps?kind=mean&imt=PGA'
+     $ oq plot 'uhs?kind=mean&site_id=0'
     """
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
