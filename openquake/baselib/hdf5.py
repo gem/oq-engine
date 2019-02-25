@@ -457,7 +457,7 @@ class ArrayWrapper(object):
         if isinstance(obj, cls):  # it is already an ArrayWrapper
             return obj
         elif inspect.isgenerator(obj):
-            array, attrs = 0, {k: _array(v) for k, v in obj}
+            array, attrs = 0, {decode(k): _array(v) for k, v in obj}
         elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
