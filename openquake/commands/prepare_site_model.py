@@ -81,8 +81,7 @@ def prepare_site_model(exposure_xml, vs30_csv,
     or grid site the closest vs30 parameter is used. The command can also
     generate (on demand) the additional fields z1pt0, z2pt5 and vs30measured
     which may be needed by your hazard model, depending on the required GSIMs.
-    """
-    logging.basicConfig(level=logging.INFO)
+    """    
     hdf5 = datastore.hdf5new()
     req_site_params = {'vs30'}
     fields = ['lon', 'lat', 'vs30']
