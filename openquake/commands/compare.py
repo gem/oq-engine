@@ -19,42 +19,33 @@ import sys
 import collections
 import numpy
 from openquake.baselib import sap
+from openquake.calculators.extract import Extractor
 from openquake.calculators import views
-from openquake.commonlib import util
-
-
-def get(dstore, what, imtls, sids):
-    if what == 'hcurves':
-        return dstore['hcurves/mean'].value[sids]  # shape (N, L)
-    elif what == 'hmaps':
-        return dstore['hmaps/mean'].value[sids]  # shape (N, P * I)
-    else:
-        raise ValueError(what)
 
 
 def getdata(what, calc_ids, samplesites):
-    dstores = [util.read(calc_id) for calc_id in calc_ids]
-    dstore = dstores[0]
-    sitecol = dstore['sitecol']
-    oq = dstore['oqparam']
+    extractors = [Extractor(calc_id) for calc_id in calc_ids]
+    extractor = extractors[0]
+    sitecol = extractor.get('sitecol')
+    oq = extractor.oqparam
     imtls = oq.imtls
     poes = oq.poes
     if len(sitecol) > samplesites:
         numpy.random.seed(samplesites)
         sids = numpy.random.choice(len(sitecol), samplesites, replace=False)
     else:  # keep all sites
-        sids = sitecol.sids
-    arrays = [get(dstore, what, imtls, sids)]
-    dstore.close()
-    for dstore in dstores[1:]:
-        oq = dstore['oqparam']
-        numpy.testing.assert_equal(dstore['sitecol'].array, sitecol.array)
+        sids = sitecol['sids']
+    arrays = [extractor.get(what + '?kind=mean').mean[sids]]
+    extractor.close()
+    for extractor in extractors[1:]:
+        oq = extractor.oqparam
+        numpy.testing.assert_equal(extractor.get('sitecol').array, sitecol)
         if what == 'hcurves':
             numpy.testing.assert_equal(oq.imtls.array, imtls.array)
         elif what == 'hmaps':
             numpy.testing.assert_equal(oq.poes, poes)
-        arrays.append(get(dstore, what, imtls, sids))
-        dstore.close()
+        arrays.append(extractor.get(what + '?kind=mean').mean[sids])
+        extractor.close()
     return sids, imtls, poes, numpy.array(arrays)  # shape (C, N, L)
 
 
