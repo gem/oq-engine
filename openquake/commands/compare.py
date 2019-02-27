@@ -19,42 +19,33 @@ import sys
 import collections
 import numpy
 from openquake.baselib import sap
+from openquake.calculators.extract import Extractor
 from openquake.calculators import views
-from openquake.commonlib import util
-
-
-def get(dstore, what, imtls, sids):
-    if what == 'hcurves':
-        return dstore['hcurves/mean'].value[sids]  # shape (N, L)
-    elif what == 'hmaps':
-        return dstore['hmaps/mean'].value[sids]  # shape (N, P * I)
-    else:
-        raise ValueError(what)
 
 
 def getdata(what, calc_ids, samplesites):
-    dstores = [util.read(calc_id) for calc_id in calc_ids]
-    dstore = dstores[0]
-    sitecol = dstore['sitecol']
-    oq = dstore['oqparam']
+    extractors = [Extractor(calc_id) for calc_id in calc_ids]
+    extractor = extractors[0]
+    sitecol = extractor.get('sitecol')
+    oq = extractor.oqparam
     imtls = oq.imtls
     poes = oq.poes
     if len(sitecol) > samplesites:
         numpy.random.seed(samplesites)
         sids = numpy.random.choice(len(sitecol), samplesites, replace=False)
     else:  # keep all sites
-        sids = sitecol.sids
-    arrays = [get(dstore, what, imtls, sids)]
-    dstore.close()
-    for dstore in dstores[1:]:
-        oq = dstore['oqparam']
-        numpy.testing.assert_equal(dstore['sitecol'].array, sitecol.array)
+        sids = sitecol['sids']
+    arrays = [extractor.get(what + '?kind=mean').mean[sids]]
+    extractor.close()
+    for extractor in extractors[1:]:
+        oq = extractor.oqparam
+        numpy.testing.assert_equal(extractor.get('sitecol').array, sitecol)
         if what == 'hcurves':
             numpy.testing.assert_equal(oq.imtls.array, imtls.array)
         elif what == 'hmaps':
             numpy.testing.assert_equal(oq.poes, poes)
-        arrays.append(get(dstore, what, imtls, sids))
-        dstore.close()
+        arrays.append(extractor.get(what + '?kind=mean').mean[sids])
+        extractor.close()
     return sids, imtls, poes, numpy.array(arrays)  # shape (C, N, L)
 
 
@@ -84,16 +75,13 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=.1, atol=1E-4):
     except KeyError:
         sys.exit(
             '%s not found. The available IMTs are %s' % (imt, list(imtls)))
-    P = len(poes)
+    imt2idx = {imt: i for i, imt in enumerate(imtls)}
     head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
         array_imt = arrays[:, :, imtls(imt)]
         header = head + ['%.5f' % lvl for lvl in levels]
     else:  # hmaps
-        for imti, imt_ in enumerate(imtls):
-            if imt_ == imt:
-                slc = slice(imti * P, imti * P + P)
-        array_imt = arrays[:, :, slc]
+        array_imt = arrays[:, :, imt2idx[imt]]
         header = head + [str(poe) for poe in poes]
     rows = collections.defaultdict(list)
     diff_idxs = get_diff_idxs(array_imt, rtol, atol)
