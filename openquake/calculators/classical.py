@@ -216,7 +216,10 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        csm_info = self.csm.info
+        try:
+            csm_info = self.csm.info
+        except AttributeError:
+            csm_info = self.datastore['csm_info']
         trt_by_grp = csm_info.grp_by("trt")
         grp_source = csm_info.grp_by("name")
         if oq.disagg_by_src:
