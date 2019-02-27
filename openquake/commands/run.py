@@ -127,8 +127,8 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
 
 
 @sap.Script
-def run(job_ini, slowest, hc, param='', concurrent_tasks=None, exports='',
-        loglevel='info', pdb=None):
+def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
+        exports='', loglevel='info', pdb=None):
     """
     Run a calculation bypassing the database layer
     """
