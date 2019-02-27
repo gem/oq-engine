@@ -58,15 +58,19 @@ def get_src_ids(sources):
 
 
 def get_extreme_poe(array, weights, imtls):
-    # array of shape (L, G)
-    # weights of shape G and dtype imt_dt
-    # imtls DictArray imt -> levels
+    """
+    :param array: array of shape (L, G) with L=num_levels, G=num_gsims
+    :param weights: array of weights of shape G and dtype imt_dt
+    :param imtls: DictArray imt -> levels
+    :returns:
+        the maximum PoE corresponding to the maximum level for each IMT
+        averaged on the GSIM weights
+    """
     val = 0
-    for gsim_idx, w in enumerate(weights):
-        for imt in imtls:
-            highest_level_idx = imtls(imt).stop - 1
-            val += array[highest_level_idx, gsim_idx] * w[imt]
-    return val / len(imtls)
+    for gsim_idx, weight in enumerate(weights):
+        val += max(array[imtls(imt).stop - 1, gsim_idx] * weight[imt]
+                   for imt in imtls)
+    return val
 
 
 @base.calculators.add('classical')
@@ -240,18 +244,16 @@ class ClassicalCalculator(base.HazardCalculator):
                             get_extreme_poe(
                                 pmap[sid].array, weights_by_trt[trt], oq.imtls)
                             for sid in pmap)
-                        if extreme > 0:
-                            data.append(
-                                (grp_id, grp_source[grp_id],
-                                 src_name[grp_id], extreme))
+                        data.append(
+                            (grp_id, grp_source[grp_id],
+                             src_name[grp_id], extreme))
                     if 'rup' in set(self.datastore):
                         self.datastore.set_nbytes('rup/grp-%02d' % grp_id)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
             if oq.disagg_by_src:
-                extreme_poe = operator.itemgetter(3)
                 self.datastore['disagg_by_src/source_id'] = numpy.array(
-                    sorted(data, key=extreme_poe, reverse=True), grp_source_dt)
+                    sorted(data), grp_source_dt)
 
             # save a copy of the poes in hdf5cache
             with hdf5.File(self.hdf5cache) as cache:
