@@ -75,16 +75,13 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=.1, atol=1E-4):
     except KeyError:
         sys.exit(
             '%s not found. The available IMTs are %s' % (imt, list(imtls)))
-    P = len(poes)
+    imt2idx = {imt: i for i, imt in enumerate(imtls)}
     head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
         array_imt = arrays[:, :, imtls(imt)]
         header = head + ['%.5f' % lvl for lvl in levels]
     else:  # hmaps
-        for imti, imt_ in enumerate(imtls):
-            if imt_ == imt:
-                slc = slice(imti * P, imti * P + P)
-        array_imt = arrays[:, :, slc]
+        array_imt = arrays[:, :, imt2idx[imt]]
         header = head + [str(poe) for poe in poes]
     rows = collections.defaultdict(list)
     diff_idxs = get_diff_idxs(array_imt, rtol, atol)
