@@ -64,8 +64,11 @@ def get_rup_data(ebruptures):
 # this is used by event_based_risk and ebrisk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
-    name = ekey[0].split('-')[0]
-    agg_curve, tags = _get(dstore, name)
+    oq = dstore['oqparam']
+    R = len(dstore['weights'])
+    agg_curve = dstore[ekey[0]]
+    tags = (['rlz-%03d' % r for r in range(R)] if ekey[0].endswith('-rlzs')
+            else ['mean'] + ['quantile-%s' % q for q in oq.quantiles])
     periods = agg_curve.attrs['return_periods']
     loss_types = tuple(agg_curve.attrs['loss_types'].split())
     if any(lt.endswith('_ins') for lt in loss_types):
