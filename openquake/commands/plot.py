@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import logging
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
@@ -51,6 +52,8 @@ def make_figure_hcurves(extractors, what):
                       (imt, site, oq.investigation_time))
         ax.set_ylabel('PoE')
         for ck, arr in got.items():
+            if (arr == 0).all():
+                logging.warning('There is zero curve %s_%s', *ck)
             ax.loglog(imls, arr[0, imt_slice], '-', label='%s_%s' % ck)
             ax.loglog(imls, arr[0, imt_slice], '.')
         ax.grid(True)
