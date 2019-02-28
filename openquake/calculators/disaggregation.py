@@ -481,7 +481,8 @@ producing too small PoEs.'''
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
-                            logging.warning('poe_agg=%s is quite different from '
-                                         'the expected poe=%s', poe_agg, poe)
+                            logging.warning(
+                                'poe_agg=%s is quite different from '
+                                'the expected poe=%s', poe_agg, poe)
                         self.datastore[name] = poes[:, p]
                         self.datastore.set_attrs(name, poe_agg=poe_agg)
