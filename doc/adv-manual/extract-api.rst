@@ -39,7 +39,7 @@ Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves:
 >>> from openquake.calculators.extract import Extractor
 >>> calc_id = 42  # for example
 >>> extractor = Extractor(calc_id)
->>> obj = extractor.get('hcurves/mean/PGA')  # returns an ArrayWrapper object
+>>> obj = extractor.get('hcurves?kind=mean&imt-PGA')  # returns an ArrayWrapper
 >>> obj.array.shape  # an example with 10,000 sites and 20 levels per PGA
 (10000, 20)
 >>> extractor.close()
@@ -72,12 +72,12 @@ The usage then is the same as the regular extractor:
 
 >>> from openquake.calculators.extract import WebExtractor
 >>> extractor = WebExtractor(calc_id)
->>> obj = extractor.get('hmaps/mean/PGA')  # returns an ArrayWrapper object
+>>> obj = extractor.get('hmaps?kind=mean&imt=PGA')  # returns an ArrayWrapper
 >>> obj.array.shape  # an example with 10,000 sites and 4 PoEs
 (10000, 4)
 >>> extractor.close()
 
 If you do not want to put your credentials in the ``openquake.cfg`` file,
-you can do so, but then you need to pass them explictly to the WebExtractor:
+you can do so, but then you need to pass them explicitly to the WebExtractor:
 
 >>> extractor = WebExtractor(calc_id, server, username, password)
