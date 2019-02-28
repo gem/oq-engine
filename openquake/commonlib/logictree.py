@@ -1587,13 +1587,6 @@ class GsimLogicTree(object):
             [trt] = self.values
         return sorted(self.values[trt])
 
-    def get_weights_by_trt(self, imts):
-        out = collections.defaultdict(list)  # trt -> weights
-        for branch in self.branches:
-            out[branch.trt].append(tuple(branch.weight[imt] for imt in imts))
-        imt_dt = [(imt, numpy.float64) for imt in imts]
-        return {trt: numpy.array(out[trt], imt_dt) for trt in out}
-
     def __iter__(self):
         """
         Yield :class:`openquake.commonlib.logictree.Realization` instances
