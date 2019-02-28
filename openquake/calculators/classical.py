@@ -57,20 +57,14 @@ def get_src_ids(sources):
     return ' '.join(set(src_ids))
 
 
-def get_extreme_poe(array, weights, imtls):
+def get_extreme_poe(array, imtls):
     """
     :param array: array of shape (L, G) with L=num_levels, G=num_gsims
-    :param weights: array of weights of shape G and dtype imt_dt
     :param imtls: DictArray imt -> levels
     :returns:
-        the maximum PoE corresponding to the maximum level for each IMT
-        averaged on the GSIM weights
+        the maximum PoE corresponding to the maximum level for IMTs and GSIMs
     """
-    val = 0
-    for gsim_idx, weight in enumerate(weights):
-        val += max(array[imtls(imt).stop - 1, gsim_idx] * weight[imt]
-                   for imt in imtls)
-    return val
+    return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
 @base.calculators.add('classical')
@@ -227,7 +221,6 @@ class ClassicalCalculator(base.HazardCalculator):
         trt_by_grp = csm_info.grp_by("trt")
         grp_name = {grp.id: grp.name for sm in csm_info.source_models
                     for grp in sm.src_groups}
-        weights_by_trt = csm_info.gsim_lt.get_weights_by_trt(oq.imtls)
         data = []
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
@@ -238,8 +231,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=trt)
                     extreme = max(
-                        get_extreme_poe(
-                            pmap[sid].array, weights_by_trt[trt], oq.imtls)
+                        get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
                     data.append((grp_id, grp_name[grp_id], extreme))
                     if 'rup' in set(self.datastore):
