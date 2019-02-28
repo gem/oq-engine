@@ -34,8 +34,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
-                             ('source_name', hdf5.vstr), ('extreme_poe', F32)])
+grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
+                             ('extreme_poe', F32)])
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
@@ -225,11 +225,9 @@ class ClassicalCalculator(base.HazardCalculator):
         except AttributeError:
             csm_info = self.datastore['csm_info']
         trt_by_grp = csm_info.grp_by("trt")
-        grp_source = csm_info.grp_by("name")
-        if oq.disagg_by_src:
-            src_name = {src.src_group_id: src.name
-                        for src in self.csm.get_sources()}
-            weights_by_trt = self.csm.info.gsim_lt.get_weights_by_trt(oq.imtls)
+        grp_name = {grp.id: grp.name for sm in csm_info.source_models
+                    for grp in sm.src_groups}
+        weights_by_trt = csm_info.gsim_lt.get_weights_by_trt(oq.imtls)
         data = []
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
@@ -239,21 +237,17 @@ class ClassicalCalculator(base.HazardCalculator):
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=trt)
-                    if oq.disagg_by_src:
-                        extreme = max(
-                            get_extreme_poe(
-                                pmap[sid].array, weights_by_trt[trt], oq.imtls)
-                            for sid in pmap)
-                        data.append(
-                            (grp_id, grp_source[grp_id],
-                             src_name[grp_id], extreme))
+                    extreme = max(
+                        get_extreme_poe(
+                            pmap[sid].array, weights_by_trt[trt], oq.imtls)
+                        for sid in pmap)
+                    data.append((grp_id, grp_name[grp_id], extreme))
                     if 'rup' in set(self.datastore):
                         self.datastore.set_nbytes('rup/grp-%02d' % grp_id)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
-            if oq.disagg_by_src:
-                self.datastore['disagg_by_src/source_id'] = numpy.array(
-                    sorted(data), grp_source_dt)
+            self.datastore['disagg_by_grp'] = numpy.array(
+                sorted(data), grp_extreme_dt)
 
             # save a copy of the poes in hdf5cache
             with hdf5.File(self.hdf5cache) as cache:
