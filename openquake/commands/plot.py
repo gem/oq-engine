@@ -118,6 +118,11 @@ def make_figure_uhs(extractors, what):
 
 
 def make_figure_source_geom(extractors, what):
+    """
+    Extract the geometry of a given sources
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
+    """
     import matplotlib.pyplot as plt
     fig = plt.figure()
     [ex] = extractors
@@ -142,8 +147,6 @@ def plot(what, calc_id=-1, other_id=None, webapi=False):
     """
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
-    #elif 'kind' not in what:
-    #    raise SystemExit('Missing kind= in %r' % what)
     prefix, rest = what.split('?', 1)
     assert prefix in 'source_geom hcurves hmaps uhs', prefix
     if prefix in 'hcurves hmaps' and 'imt=' not in rest:
