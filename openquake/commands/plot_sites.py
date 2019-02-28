@@ -23,12 +23,10 @@ from openquake.commonlib import util
 @sap.Script
 def plot_sites(calc_id=-1):
     """
-    Plot the sites and the bounding boxes of the sources, enlarged by
-    the maximum distance
+    Plot the sites
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
-    
     dstore = util.read(calc_id)
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
