@@ -839,18 +839,17 @@ def export_disagg_csv(ekey, dstore):
 @export.add(('disagg_by_src', 'csv'))
 def export_disagg_by_src_csv(ekey, dstore):
     paths = []
-    srcdata = dstore['disagg_by_src/source_id'].value
-    header = ['source_id', 'source_name', 'poe']
-    by_poe = operator.itemgetter(2)
+    srcdata = dstore['disagg_by_grp'].value
+    header = ['source_id', 'poe']
+    by_poe = operator.itemgetter(1)
     for name in dstore['disagg_by_src']:
         if name == 'source_id':
             continue
         probs = dstore['disagg_by_src/' + name].value
         ok = probs > 0
         src = srcdata[ok]
-        data = [header] + sorted(
-            zip(src['source_id'], add_quotes(src['source_name']), probs[ok]),
-            key=by_poe, reverse=True)
+        data = [header] + sorted(zip(add_quotes(src['grp_name']), probs[ok]),
+                                 key=by_poe, reverse=True)
         path = dstore.export_path(name + '_Src.csv')
         writers.write_csv(path, data, fmt='%.7e')
         paths.append(path)
