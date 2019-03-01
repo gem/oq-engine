@@ -136,6 +136,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # test that the .npz export runs
         export(('gmf_data', 'npz'), self.calc.datastore)
 
+        export(('hcurves', 'xml'), self.calc.datastore)
+
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
