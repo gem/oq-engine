@@ -46,7 +46,7 @@ def export_csv(ekey, dstore):
 
 def keyfunc(ekey):
     """
-    Extract the name before the colons:
+    Extract the name before the slash:
 
     >>> keyfunc(('agg_loss_table', 'csv'))
     ('agg_loss_table', 'csv')
