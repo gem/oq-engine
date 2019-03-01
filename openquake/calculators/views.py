@@ -35,6 +35,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators import getters
+from openquake.calculators.extract import extract
 
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
@@ -656,7 +657,7 @@ def view_hmap(token, dstore):
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    mean = dstore['hcurves/mean'].value
+    mean = dict(extract(dstore, 'hcurves?kind=mean'))['mean']
     oq = dstore['oqparam']
     hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])

@@ -1,4 +1,30 @@
+  [Robin Gee]
+  * Added capability to optionally specify a `time_cutoff` parameter to
+    declustering time window
+
   [Michele Simionato]
+  * Merged the commands `oq plot_hmaps` and `oq plot_uhs` inside `oq plot`
+  * Changed the storage of hazard curves and hazard maps to make it consistent
+    with the risk outputs and Extractor-friendly
+
+  [Chris Van Houtte]
+  * Added necessary gsims to run the Canterbury Seismic Hazard Model
+    in Gerstenberger et al. (2014)
+  * Added a new gsim file mcverry_2006_chch.py to have the Canterbury-
+    specific classes.
+  * Added a new gsim file bradley_2013b.py to implement the
+    Christchurch-specific modifications to the Bradley2013 base model.
+
+  [Michele Simionato]
+  * Added a check on the intensity measure types and levels in the job.ini,
+    to make sure they are ordered by period
+  * Reduced the number of client sockets to the DbServer that was causing
+    (sporadically) the hanging of calculations on Windows
+  * Extended the WebAPI to be able to extract specific hazard curves, maps
+    and UHS (i.e. IMT-specific and site specific)
+  * Removed the realization index from the event loss table export, since
+    is it redundant
+  * Forced all lowercase Python files in the engine codebase
   * Removed the dependency from nose
 
   [Robin Gee]
