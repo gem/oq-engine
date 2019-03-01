@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import logging
 
 from openquake.baselib import general, performance, sap
 from openquake.commonlib import util
@@ -28,8 +27,7 @@ from openquake.calculators.export import export as export_
 def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
     """
     Export an output from the datastore.
-    """
-    logging.basicConfig(level=logging.INFO)
+    """    
     dstore = util.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:

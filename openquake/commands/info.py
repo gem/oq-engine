@@ -104,8 +104,6 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
-    if not report:
-        logging.basicConfig(level=logging.INFO)
     if calculators:
         for calc in sorted(base.calculators):
             print(calc)
