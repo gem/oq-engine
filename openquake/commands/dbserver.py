@@ -24,7 +24,7 @@ from openquake.commonlib import logs
 from openquake.server import dbserver as dbs
 
 
-@sap.Script
+@sap.script
 def dbserver(cmd, dbhostport=None,
              dbpath=os.path.expanduser(config.dbserver.file)):
     """

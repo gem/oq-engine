@@ -45,7 +45,7 @@ def oq():
                 if mod.endswith('.py') and not mod.startswith('_')]
     for modname in modnames:
         importlib.import_module(modname)
-    parser = sap.compose(sap.Script.registry.values(),
+    parser = sap.compose(sap.script.registry.values(),
                          prog='oq', version=__version__)
     parser.callfunc()
 

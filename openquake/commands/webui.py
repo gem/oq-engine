@@ -47,7 +47,7 @@ def rundjango(subcmd, hostport=None, skip_browser=False):
         sys.exit(p.returncode)
 
 
-@sap.Script
+@sap.script
 def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
     """
     start the webui server in foreground or perform other operation on the

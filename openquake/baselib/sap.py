@@ -27,7 +27,7 @@ Here is a minimal example of usage:
     ...     for item in sorted(locals().items()):
     ...         print('%s = %s' % item)
 
-    >>> p = sap.Script(fun)
+    >>> p = sap.script(fun)
     >>> p.arg('input', 'input file or archive')
     >>> p.flg('inplace', 'convert inplace')
     >>> p.arg('output', 'output archive')
@@ -173,7 +173,7 @@ class Script(object):
     def callfunc(self, argv=None):
         """
         Parse the argv list and extract a dictionary of arguments which
-        is then passed to  the function underlying the Script.
+        is then passed to  the function underlying the script.
         """
         if not self.checked:
             self.check_arguments()
@@ -192,14 +192,25 @@ class Script(object):
         return '<%s %s(%s)>' % (self.__class__.__name__, self.name, args)
 
 
+def script(func):
+    s = Script(func)
+    func.arg = s.arg
+    func.opt = s.opt
+    func.flg = s.flg
+    func.group = s.group
+    func._add = s._add
+    func.callfunc = s.callfunc
+    return func
+
+
 def compose(scripts, name='main', description=None, prog=None,
             version=None):
     """
-    Collects together different Scripts and builds a single
-    Script dispatching to the subparsers depending on
+    Collects together different scripts and builds a single
+    script dispatching to the subparsers depending on
     the first argument, i.e. the name of the subparser to invoke.
 
-    :param scripts: a list of Script instances
+    :param scripts: a list of script instances
     :param name: the name of the composed parser
     :param description: description of the composed parser
     :param prog: name of the script printed in the usage message

@@ -43,7 +43,7 @@ def convert(strings):
             yield s
 
 
-@sap.Script
+@sap.script
 def db(cmd, args=()):
     """
     Run a database command
