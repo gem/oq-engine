@@ -38,7 +38,7 @@ def login(host, username, password):
     return session
 
 
-@sap.Script
+@sap.script
 def importcalc(host, calc_id, username, password):
     """
     Import a remote calculation into the local database

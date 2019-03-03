@@ -37,7 +37,7 @@ def make_figure(periods, losses):
     return plt
 
 
-@sap.Script
+@sap.script
 def plot_lc(calc_id, aid=None):
     """
     Plot loss curves given a calculation id and an asset ordinal.

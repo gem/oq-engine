@@ -20,7 +20,7 @@ import getpass
 from openquake.baselib import sap, config, workerpool
 
 
-@sap.Script
+@sap.script
 def workers(cmd):
     """
     start/stop/restart the workers, or return their status

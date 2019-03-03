@@ -23,7 +23,7 @@ from openquake.baselib import sap, datastore
 from openquake.calculators.getters import PmapGetter
 
 
-@sap.Script
+@sap.script
 def compare_mean_curves(calc_ref, calc, nsigma=3):
     """
     Compare the hazard curves coming from two different calculations.
