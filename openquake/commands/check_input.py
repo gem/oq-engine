@@ -21,7 +21,7 @@ from openquake.commonlib import readinput
 from openquake.calculators import base
 
 
-@sap.Script
+@sap.script
 def check_input(job_ini_or_zip):    
     calc = base.calculators(readinput.get_oqparam(job_ini_or_zip))
     calc.read_inputs()

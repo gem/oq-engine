@@ -21,7 +21,7 @@ from openquake.baselib import sap
 from openquake.commonlib import oqzip
 
 
-@sap.Script
+@sap.script
 def zip(what, archive_zip='', risk_file=''):
     """
     Zip into an archive one or two job.ini files with all related files

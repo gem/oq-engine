@@ -20,7 +20,7 @@ from openquake.hazardlib.geo.utils import cross_idl
 from openquake.commonlib import util
 
 
-@sap.Script
+@sap.script
 def plot_sites(calc_id=-1):
     """
     Plot the sites
