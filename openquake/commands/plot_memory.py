@@ -38,7 +38,7 @@ def make_figure(plots):
     return plt
 
 
-@sap.Script
+@sap.script
 def plot_memory(calc_id=-1):
     """
     Plot the memory occupation

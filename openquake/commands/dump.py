@@ -45,7 +45,7 @@ def smart_save(dbpath, archive, calc_id):
     shutil.rmtree(tmpdir)
 
 
-@sap.Script
+@sap.script
 def dump(archive, calc_id=0, user=None):
     """
     Dump the openquake database and all the complete calculations into a zip

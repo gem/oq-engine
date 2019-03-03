@@ -98,7 +98,7 @@ def do_build_reports(directory):
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-@sap.Script
+@sap.script
 def info(calculators, gsims, views, exports, extracts, report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,

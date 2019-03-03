@@ -20,7 +20,7 @@ from openquake.baselib import sap, datastore, performance
 from openquake.commonlib import readinput
 
 
-@sap.Script
+@sap.script
 def reduce_sm(calc_id):
     """
     Reduce the source model of the given (pre)calculation by discarding all

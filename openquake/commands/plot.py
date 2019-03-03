@@ -140,7 +140,7 @@ def make_figure_source_geom(extractors, what):
     return plt
 
 
-@sap.Script
+@sap.script
 def plot(what, calc_id=-1, other_id=None, webapi=False):
     """
     Generic plotter documented in https://docs.openquake.org/oq-engine/master/openquake.commands.html?highlight=plot#module-openquake.command

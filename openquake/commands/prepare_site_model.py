@@ -71,7 +71,7 @@ def read_vs30(fnames):
     return numpy.array(data, vs30_dt)
 
 
-@sap.Script
+@sap.script
 def prepare_site_model(exposure_xml, vs30_csv,
                        z1pt0, z2pt5, vs30measured, grid_spacing=0,
                        site_param_distance=5, output='site_model.csv'):
