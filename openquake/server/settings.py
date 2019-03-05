@@ -66,7 +66,6 @@ STATICFILES_DIRS = [
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.expanduser(config.dbserver.file),
-    'LOG': os.path.expanduser(config.dbserver.log),
     'USER': getpass.getuser(),
     'HOST': config.dbserver.host,
     'PORT': config.dbserver.port,
