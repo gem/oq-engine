@@ -406,8 +406,9 @@ class GmfGetter(object):
                         tot = gmf.sum(axis=0)  # shape (M,)
                         if not tot.sum():
                             continue
-                        self.sig_eps.append(
-                            (eid, sig[:, n + ei], eps[:, n + ei]))
+                        sigmas = sig[:, n + ei]
+                        if sigmas.sum():  # is 0 when defined for StdDev.TOTAL
+                            self.sig_eps.append((eid, sigmas, eps[:, n + ei]))
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 data.append((rlzi, sid, eid, gmv))
