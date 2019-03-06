@@ -239,11 +239,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                         self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
 
-        # check curves_by_tag
-        fnames = export(('aggregate_by/occupancy/curves', 'csv'),
-                        self.calc.datastore)
-        self.assertEqualFiles('expected/curves_by_occupancy.csv', fnames[0])
-
         self.check_multi_tag(self.calc.datastore)
 
         # ------------------------- ebrisk calculator ---------------------- #
@@ -269,10 +264,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # aggregate by all loss types
         fnames = export(('aggregate_by/taxonomy,occupancy/avg_losses', 'csv'),
-                        dstore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-        fnames = export(('aggregate_by/taxonomy,occupancy/curves', 'csv'),
                         dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
