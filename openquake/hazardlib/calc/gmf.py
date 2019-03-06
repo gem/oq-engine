@@ -193,8 +193,10 @@ class GmfComputer(object):
             total_residual = stddev_total * rvs(
                 distribution, num_sids, num_events)
             gmf = gsim.to_imt_unit_values(mean + total_residual)
-            stddev_inter = numpy.zeros(num_events, F32)
-            epsilons = numpy.zeros(num_events, F32)
+            stddev_inter = numpy.empty(num_events, F32)
+            stddev_inter.fill(numpy.nan)
+            epsilons = numpy.empty(num_events, F32)
+            epsilons.fill(numpy.nan)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
                 self.sctx, rctx, dctx, imt,
