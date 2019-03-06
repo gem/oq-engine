@@ -4,7 +4,7 @@ The OpenQuake Engine can be installed in several different ways. This page will 
 
 ## Power users
 
-Scientists who want to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development](development.md)** guide.
+Scientists wanting to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development](development.md)** guide.
 
 A pre-configured VirtualBox appliance may be also [downloaded](https://downloads.openquake.org/ova/stable/). It contains all the OpenQuake software pre-installed and pre-configured.
 
