@@ -863,3 +863,13 @@ def view_dupl_sources(token, dstore):
     if fakedupl:
         msg += '\nHere is a fake duplicate: %s' % fakedupl.pop()
     return msg
+
+
+@view.add('extreme_groups')
+def view_extreme_groups(token, dstore):
+    """
+    Show the source groups contributing the most to the highest IML
+    """
+    data = dstore['disagg_by_grp'].value
+    data.sort(order='extreme_poe')
+    return rst_table(data[::-1])
