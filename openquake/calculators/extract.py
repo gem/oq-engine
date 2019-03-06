@@ -846,6 +846,19 @@ def get_ruptures_within(dstore, bbox):
             (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
     return dstore['ruptures'][mask]
 
+
+@extract.add('source_geom')
+def extract_source_geom(dstore, srcidxs):
+    """
+    Extract the geometry of a given sources
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
+    """
+    for i in srcidxs.split(','):
+        rec = dstore['source_info'][int(i)]
+        geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
+        yield rec['source_id'], geom
+
 # #####################  extraction from the WebAPI ###################### #
 
 
