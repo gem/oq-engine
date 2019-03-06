@@ -3,7 +3,7 @@ Upstream-Name: python3-oq-engine
 Source: http://github.com/gem/oq-engine
 
 Files: *
-Copyright: 2012-2018 GEM Foundation
+Copyright: 2012-2019 GEM Foundation
 License: AGPL3
 
 Files: debian/*
