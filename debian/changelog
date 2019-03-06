@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made it possible to store the asset loss table in the ebrisk calculator
+    by specifying `asset_loss_table=true` in the job.ini
   * Added a flag `oq info --parameters` to show the job.ini parameters
   * Removed the `source_name` column from the disagg by source output
 
