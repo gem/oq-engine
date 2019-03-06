@@ -117,10 +117,10 @@ class GmfComputer(object):
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
         :param seed: a random seed or None
-        :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
-
-        As a side effect populates two arrays of shape (num_imts, num_events)
-        called .sig (for stddev_inter) and .eps (for the random part).
+        :returns:
+            a 32 bit array of shape (num_imts, num_sites, num_events) and
+            two arrays with shape (num_imts, num_events): sig for stddev_inter
+            and eps for the random part
         """
         try:  # read the seed from self.rupture.serial
             seed = seed or self.rupture.serial
@@ -129,23 +129,21 @@ class GmfComputer(object):
         if seed is not None:
             numpy.random.seed(seed)
         result = numpy.zeros((len(self.imts), len(self.sids), num_events), F32)
-        self.sig = numpy.zeros((len(self.imts), num_events), F32)
-        self.eps = numpy.zeros((len(self.imts), num_events), F32)
+        sig = numpy.zeros((len(self.imts), num_events), F32)
+        eps = numpy.zeros((len(self.imts), num_events), F32)
         for imti, imt in enumerate(self.imts):
             if isinstance(gsim, MultiGMPE):
                 gs = gsim[str(imt)]  # MultiGMPE
             else:
                 gs = gsim  # regular GMPE
             try:
-                gmf, sig, eps = self._compute(None, gs, num_events, imt)
-                result[imti] = gmf
-                self.sig[imti] = sig
-                self.eps[imti] = eps
+                result[imti], sig[imti], eps[imti] = self._compute(
+                    None, gs, num_events, imt)
             except Exception as exc:
                 raise exc.__class__(
                     '%s for %s, %s, srcidx=%s' % (exc, gs, imt, self.srcidx)
                 ).with_traceback(exc.__traceback__)
-        return result
+        return result, sig, eps
 
     def _compute(self, seed, gsim, num_events, imt):
         """
@@ -273,5 +271,5 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
     gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
                      cmaker, truncation_level, correlation_model)
-    res = gc.compute(gsim, realizations, seed)
+    res, _sig, _eps = gc.compute(gsim, realizations, seed)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}
