@@ -929,7 +929,7 @@ class SourceModelLogicTree(object):
             try:
                 self.collect_source_model_data(smfname)
             except Exception as exc:
-                raise LogicTreeError(node, self.filename, str(exc))
+                raise LogicTreeError(node, self.filename, str(exc)) from exc
 
         elif branchset.uncertainty_type == 'abGRAbsolute':
             ab = (node.text.strip()).split()
@@ -1196,9 +1196,9 @@ class SourceModelLogicTree(object):
                 branch.child_branchset = branchset
 
     def _get_source_model(self, source_model_file):
-        return open(os.path.join(self.basepath, source_model_file))
+        return open(os.path.join(self.basepath, source_model_file), 'rb')
 
-    def collect_source_model_data(self, source_model):
+    def collect_source_model_data(self, branchID, source_model):
         """
         Parse source model file and collect information about source ids,
         source types and tectonic region types available in it. That
@@ -1213,7 +1213,7 @@ class SourceModelLogicTree(object):
                 source_id = src_node['id']
                 source_type = striptag(src_node.tag)[n:]
                 self.tectonic_region_types.add(trt)
-                self.source_ids.add(source_id)
+                self.source_ids[branchID].append(source_id)
                 self.source_types.add(source_type)
 
     def apply_uncertainties(self, branch_ids, source_group):
