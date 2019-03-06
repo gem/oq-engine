@@ -114,6 +114,11 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
             info.func(None, None, None, None, True, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
+    def test_parameters(self):
+        with Print.patch() as p:
+            info.func(None, None, None, None, None, True, None, '')
+        self.assertGreater(len(str(p)), 10)
+
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
