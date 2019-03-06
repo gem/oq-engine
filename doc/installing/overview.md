@@ -2,9 +2,9 @@
 
 The OpenQuake Engine can be installed in several different ways. This page will provide a guide for the users to choose the best installation method for a specific use case.
 
-## Developers
+## Power users
 
-See the **[Installing the OpenQuake Engine for development](development.md)** guide.
+Scientists who want to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development](development.md)** guide.
 
 A pre-configured VirtualBox appliance may be also [downloaded](https://downloads.openquake.org/ova/stable/). It contains all the OpenQuake software pre-installed and pre-configured.
 
