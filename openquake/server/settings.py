@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -66,7 +66,6 @@ STATICFILES_DIRS = [
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.expanduser(config.dbserver.file),
-    'LOG': os.path.expanduser(config.dbserver.log),
     'USER': getpass.getuser(),
     'HOST': config.dbserver.host,
     'PORT': config.dbserver.port,

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -277,9 +277,12 @@ def get_bounding_box(obj, maxdist):
         return obj.get_bounding_box(maxdist)
     elif hasattr(obj, 'polygon'):
         bbox = obj.polygon.get_bbox()
-    else:  # assume locations
-        lons = numpy.array([loc.longitude for loc in obj])
-        lats = numpy.array([loc.latitude for loc in obj])
+    else:
+        if isinstance(obj, list):  # a list of locations
+            lons = numpy.array([loc.longitude for loc in obj])
+            lats = numpy.array([loc.latitude for loc in obj])
+        else:  # assume an array with fields lon, lat
+            lons, lats = obj['lon'], obj['lat']
         min_lon, max_lon = lons.min(), lons.max()
         if cross_idl(min_lon, max_lon):
             lons %= 360

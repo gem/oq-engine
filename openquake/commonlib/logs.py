@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,6 +34,8 @@ LOG = logging.getLogger()
 
 DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
+sock = None
+
 
 def dbcmd(action, *args):
     """
@@ -42,12 +44,15 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    sock = zeromq.Socket('tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT),
-                         zeromq.zmq.REQ, 'connect')
-    with sock:
-        res = sock.send((action,) + args)
-        if isinstance(res, parallel.Result):
-            return res.get()
+    global sock
+    if sock is None:
+        sock = zeromq.Socket(
+            'tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT),
+            zeromq.zmq.REQ, 'connect').__enter__()
+        # the socket will be closed when the calculation ends
+    res = sock.send((action,) + args)
+    if isinstance(res, parallel.Result):
+        return res.get()
     return res
 
 

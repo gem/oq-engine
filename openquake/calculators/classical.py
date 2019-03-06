@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,8 +34,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
-                             ('source_name', hdf5.vstr)])
+grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
+                             ('extreme_poe', F32)])
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
@@ -55,6 +55,16 @@ def get_src_ids(sources):
             src_id = long_src_id
         src_ids.append(src_id)
     return ' '.join(set(src_ids))
+
+
+def get_extreme_poe(array, imtls):
+    """
+    :param array: array of shape (L, G) with L=num_levels, G=num_gsims
+    :param imtls: DictArray imt -> levels
+    :returns:
+        the maximum PoE corresponding to the maximum level for IMTs and GSIMs
+    """
+    return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
 @base.calculators.add('classical')
@@ -178,23 +188,22 @@ class ClassicalCalculator(base.HazardCalculator):
         kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
         with self.monitor('saving statistics', autoflush=True):
-            for kind in pmap_by_kind:  # i.e. kind == ('hcurves', 'mean')
-                pmap = pmap_by_kind[kind]
-                if kind == 'rlz_by_sid':  # pmap is actually a rlz_by_sid
-                    for sid, rlz in pmap.items():
+            for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
+                pmaps = pmap_by_kind[kind]
+                if kind == 'rlz_by_sid':  # pmaps is actually a rlz_by_sid
+                    for sid, rlz in pmaps.items():
                         self.datastore['best_rlz'][sid] = rlz
-                elif kind[0] == 'hmaps':
-                    key = '%s/%s' % kind
-                    dset = self.datastore.getitem(key)
-                    for sid in pmap:
-                        arr = pmap[sid].array
-                        dset[sid] = arr
-                elif pmap:
-                    key = '%s/%s' % kind
-                    dset = self.datastore.getitem(key)
-                    for sid in pmap:
-                        arr = pmap[sid].array[:, 0]
-                        dset[sid] = arr
+                elif kind in ('hmaps-rlzs', 'hmaps-stats'):
+                    # pmaps is a list of R pmaps
+                    dset = self.datastore.getitem(kind)
+                    for r, pmap in enumerate(pmaps):
+                        for s in pmap:
+                            dset[s, r] = pmap[s].array  # shape (M, P)
+                elif kind in ('hcurves-rlzs', 'hcurves-stats'):
+                    dset = self.datastore.getitem(kind)
+                    for r, pmap in enumerate(pmaps):
+                        for s in pmap:
+                            dset[s, r] = pmap[s].array[:, 0]  # shape L
             self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
@@ -205,32 +214,32 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        csm_info = self.datastore['csm_info']
+        try:
+            csm_info = self.csm.info
+        except AttributeError:
+            csm_info = self.datastore['csm_info']
         trt_by_grp = csm_info.grp_by("trt")
-        grp_source = csm_info.grp_by("name")
-        if oq.disagg_by_src:
-            src_name = {src.src_group_id: src.name
-                        for src in self.csm.get_sources()}
+        grp_name = {grp.id: grp.name for sm in csm_info.source_models
+                    for grp in sm.src_groups}
         data = []
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
+                    trt = trt_by_grp[grp_id]
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=trt_by_grp[grp_id])
-                    if oq.disagg_by_src:
-                        data.append(
-                            (grp_id, grp_source[grp_id], src_name[grp_id]))
+                    self.datastore.set_attrs(key, trt=trt)
+                    extreme = max(
+                        get_extreme_poe(pmap[sid].array, oq.imtls)
+                        for sid in pmap)
+                    data.append((grp_id, grp_name[grp_id], extreme))
                     if 'rup' in set(self.datastore):
                         self.datastore.set_nbytes('rup/grp-%02d' % grp_id)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
-            if oq.disagg_by_src and csm_info.get_num_rlzs() == 1:
-                # this is useful for disaggregation, which is implemented
-                # only for the case of a single realization
-                self.datastore['disagg_by_src/source_id'] = numpy.array(
-                    sorted(data), grp_source_dt)
+            self.datastore['disagg_by_grp'] = numpy.array(
+                sorted(data), grp_extreme_dt)
 
             # save a copy of the poes in hdf5cache
             with hdf5.File(self.hdf5cache) as cache:
@@ -247,18 +256,17 @@ class ClassicalCalculator(base.HazardCalculator):
         P = len(oq.poes)
         M = len(oq.imtls)
         R = len(self.rlzs_assoc.realizations)
-        names = [name for name, _ in hstats]
+        S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
-            for r in range(R):
-                names.append('rlz-%03d' % r)
-        for name in names:
-            self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
-            self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
+            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
             if oq.poes:
-                self.datastore.create_dset('hmaps/' + name, F32, (N, M, P))
-                self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
-            if name == 'mean' and R > 1 and N <= FEWSITES:
-                self.datastore.create_dset('best_rlz', U32, (N,))
+                self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
+        if hstats:
+            self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+            if oq.poes:
+                self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
+        if 'mean' in dict(hstats) and R > 1 and N <= FEWSITES:
+            self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
         iterargs = (
@@ -311,25 +319,28 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     R = len(pmaps)
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     pmap_by_kind = {}
-    for statname, stat in hstats:
-        with monitor('compute ' + statname):
+    hmaps_stats = []
+    hcurves_stats = []
+    with monitor('compute stats'):
+        for statname, stat in hstats.items():
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
-            pmap_by_kind['hcurves', statname] = pmap
+            hcurves_stats.append(pmap)
             if pgetter.poes:
-                pmap_by_kind['hmaps', statname] = calc.make_hmap(
-                    pmap, pgetter.imtls, pgetter.poes)
-        if statname == 'mean' and R > 1 and N <= FEWSITES:
-            pmap_by_kind['rlz_by_sid'] = rlz = {}
-            for sid, pcurve in pmap.items():
-                rlz[sid] = util.closest_to_ref(
-                    [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
-
+                hmaps_stats.append(
+                    calc.make_hmap(pmap, pgetter.imtls, pgetter.poes))
+            if statname == 'mean' and R > 1 and N <= FEWSITES:
+                pmap_by_kind['rlz_by_sid'] = rlz = {}
+                for sid, pcurve in pmap.items():
+                    rlz[sid] = util.closest_to_ref(
+                        [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
+    if hcurves_stats:
+        pmap_by_kind['hcurves-stats'] = hcurves_stats
+    if hmaps_stats:
+        pmap_by_kind['hmaps-stats'] = hmaps_stats
     if R > 1 and individual_curves or not hstats:
-        with monitor('build individual hmaps'):
-            for r, pmap in enumerate(pmaps):
-                key = 'rlz-%03d' % r
-                pmap_by_kind['hcurves', key] = pmap
-                if pgetter.poes:
-                    pmap_by_kind['hmaps', key] = calc.make_hmap(
-                        pmap, imtls, poes)
+        pmap_by_kind['hcurves-rlzs'] = pmaps
+        if pgetter.poes:
+            with monitor('build individual hmaps'):
+                pmap_by_kind['hmaps-rlzs'] = [
+                    calc.make_hmap(pmap, imtls, poes) for pmap in pmaps]
     return pmap_by_kind

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -674,7 +674,9 @@ class SourceModelLogicTree(object):
             for branch in branchset.branches:
                 new_open_ends.add(branch)
             self.num_paths *= len(branchset.branches)
-
+        if number > 0:
+            logging.warning('There is a branching level with multiple '
+                            'branchsets in %s', self.filename)
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -88,6 +88,7 @@ extras_require = {
         'nose >=1.3, <1.4',
         'flake8 >=3.5, <3.6',
         'pdbpp',
+        'ipython',
     ]
 }
 

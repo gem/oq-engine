@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,6 +35,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators import getters
+from openquake.calculators.extract import extract
 
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
@@ -656,7 +657,7 @@ def view_hmap(token, dstore):
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    mean = dstore['hcurves/mean'].value
+    mean = dict(extract(dstore, 'hcurves?kind=mean'))['mean']
     oq = dstore['oqparam']
     hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
@@ -862,3 +863,13 @@ def view_dupl_sources(token, dstore):
     if fakedupl:
         msg += '\nHere is a fake duplicate: %s' % fakedupl.pop()
     return msg
+
+
+@view.add('extreme_groups')
+def view_extreme_groups(token, dstore):
+    """
+    Show the source groups contributing the most to the highest IML
+    """
+    data = dstore['disagg_by_grp'].value
+    data.sort(order='extreme_poe')
+    return rst_table(data[::-1])
