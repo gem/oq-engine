@@ -37,10 +37,10 @@ class HeaderTranslator(object):
     into column names with the method .write. The usage is
 
     >>> htranslator = HeaderTranslator(
-    ...     '(asset_ref):\|S100',
-    ...     '(eid):uint32',
-    ...     '(taxonomy):object')
-    >>> htranslator.write('asset_ref:|S100 value:5'.split())
+    ...     r'(asset_ref):\|S100',
+    ...     r'(eid):uint32',
+    ...     r'(taxonomy):object')
+    >>> htranslator.write(r'asset_ref:|S100 value:5'.split())
     ['asset_ref', 'value:5']
     >>> htranslator.read('asset_ref value:5'.split())
     ['asset_ref:|S100', 'value:5']
@@ -104,7 +104,7 @@ htranslator = HeaderTranslator(
     '(return_period):uint32',
     '(site_id):uint32',
     '(taxonomy):object',
-    '(tag):\|S100',
+    r'(tag):\|S100',
     '(multiplicity):uint16',
     '(numsites):uint32',
     '(lon):float64',
