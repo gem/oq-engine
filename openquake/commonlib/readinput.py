@@ -1281,7 +1281,8 @@ def get_input_files(oqparam, hazard=False):
         elif isinstance(fname, list):
             fnames.extend(fname)
         elif key == 'source_model_logic_tree':
-            fnames.extend(logictree.collect_info(fname).smpaths)
+            for smpaths in logictree.collect_info(fname).smpaths.values():
+                fnames.extend(smpaths)
             fnames.append(fname)
         else:
             fnames.append(fname)
