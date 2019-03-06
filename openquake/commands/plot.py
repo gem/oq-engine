@@ -55,7 +55,7 @@ def make_figure_hcurves(extractors, what):
         ax.set_ylabel('PoE')
         for ck, arr in got.items():
             if (arr == 0).all():
-                logging.warning('There is zero curve %s_%s', *ck)
+                logging.warning('There is a zero curve %s_%s', *ck)
             ax.loglog(imls, arr[0, imt_slice], '-', label='%s_%s' % ck)
             ax.loglog(imls, arr[0, imt_slice], '.')
         ax.grid(True)
