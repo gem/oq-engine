@@ -507,7 +507,7 @@ def collect_info(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 if 'applyToSources' in bset.attrib:
-                    applytosources[bset['branchID']].append(
+                    applytosources[bset['branchSetID']].extend(
                         bset['applyToSources'].split())
                 for br in bset:
                     fnames = br.uncertaintyModel.text.split()
