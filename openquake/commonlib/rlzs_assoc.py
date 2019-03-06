@@ -188,7 +188,7 @@ class RlzsAssoc(object):
         return pmaps
 
     def get_rlz(self, rlzstr):
-        """
+        r"""
         Get a Realization instance for a string of the form 'rlz-\d+'
         """
         mo = re.match(r'rlz-(\d+)', rlzstr)

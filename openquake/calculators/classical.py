@@ -34,8 +34,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
-                             ('source_name', hdf5.vstr)])
+grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
+                             ('extreme_poe', F32)])
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
@@ -55,6 +55,16 @@ def get_src_ids(sources):
             src_id = long_src_id
         src_ids.append(src_id)
     return ' '.join(set(src_ids))
+
+
+def get_extreme_poe(array, imtls):
+    """
+    :param array: array of shape (L, G) with L=num_levels, G=num_gsims
+    :param imtls: DictArray imt -> levels
+    :returns:
+        the maximum PoE corresponding to the maximum level for IMTs and GSIMs
+    """
+    return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
 @base.calculators.add('classical')
@@ -204,32 +214,32 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        csm_info = self.datastore['csm_info']
+        try:
+            csm_info = self.csm.info
+        except AttributeError:
+            csm_info = self.datastore['csm_info']
         trt_by_grp = csm_info.grp_by("trt")
-        grp_source = csm_info.grp_by("name")
-        if oq.disagg_by_src:
-            src_name = {src.src_group_id: src.name
-                        for src in self.csm.get_sources()}
+        grp_name = {grp.id: grp.name for sm in csm_info.source_models
+                    for grp in sm.src_groups}
         data = []
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
+                    trt = trt_by_grp[grp_id]
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=trt_by_grp[grp_id])
-                    if oq.disagg_by_src:
-                        data.append(
-                            (grp_id, grp_source[grp_id], src_name[grp_id]))
+                    self.datastore.set_attrs(key, trt=trt)
+                    extreme = max(
+                        get_extreme_poe(pmap[sid].array, oq.imtls)
+                        for sid in pmap)
+                    data.append((grp_id, grp_name[grp_id], extreme))
                     if 'rup' in set(self.datastore):
                         self.datastore.set_nbytes('rup/grp-%02d' % grp_id)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
-            if oq.disagg_by_src and csm_info.get_num_rlzs() == 1:
-                # this is useful for disaggregation, which is implemented
-                # only for the case of a single realization
-                self.datastore['disagg_by_src/source_id'] = numpy.array(
-                    sorted(data), grp_source_dt)
+            self.datastore['disagg_by_grp'] = numpy.array(
+                sorted(data), grp_extreme_dt)
 
             # save a copy of the poes in hdf5cache
             with hdf5.File(self.hdf5cache) as cache:
