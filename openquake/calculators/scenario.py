@@ -90,7 +90,7 @@ class ScenarioCalculator(base.HazardCalculator):
         n = self.oqparam.number_of_ground_motion_fields
         with self.monitor('computing gmfs'):
             for gsim in self.gsims:
-                gmfa = self.computer.compute(gsim, n)  # shape (I, N, n)
+                gmfa = self.computer.compute(gsim, n)[0]  # shape (I, N, n)
                 arrays.append(gmfa.transpose(1, 2, 0))  # shape (N, n, I)
         return numpy.concatenate(arrays, axis=1)  # shape (N, E, I)
 
