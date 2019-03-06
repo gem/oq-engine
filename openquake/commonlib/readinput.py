@@ -730,12 +730,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             # the limit is really needed only for event based calculations
             raise ValueError('There is a limit of %d src groups!' % TWO16)
 
-        for srcid in source_model_lt.info.applytosources:
-            if srcid not in source_ids:
-                raise ValueError(
-                    'The source %s is not in the source model, please fix '
-                    'applyToSources in %s or the source model' %
-                    (srcid, source_model_lt.filename))
+        for brid, srcids in source_model_lt.info.applytosources.items():
+            for srcid in srcids:
+                if srcid not in source_ids:
+                    raise ValueError(
+                        'The source %s is not in the source model, please fix '
+                        'applyToSources in %s or the source model' %
+                        (srcid, source_model_lt.filename))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
