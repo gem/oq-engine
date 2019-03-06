@@ -291,9 +291,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         minmag = self.calc.datastore['ruptures']['mag'].min()
         self.assertGreaterEqual(minmag, 5.2)
 
-        # [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        # self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
-        #                       fname, delta=1E-5)
+        # check asset_loss_table
+        tot = self.calc.datastore['asset_loss_table'].value.sum()
+        self.assertEqual(tot, 15743430.0)
+        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
+                              fname, delta=1E-5)
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
