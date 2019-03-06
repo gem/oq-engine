@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -542,7 +542,7 @@ def extract_aggregate_by(dstore, what):
     except ValueError:  # missing '/' at the end
         tagnames, name = what.split('/')
         loss_type = ''
-    assert name in ('avg_losses', 'curves'), name
+    assert name == 'avg_losses', name
     tagnames = tagnames.split(',')
     assetcol = dstore['assetcol']
     oq = dstore['oqparam']
@@ -557,11 +557,7 @@ def extract_aggregate_by(dstore, what):
             setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
         if not loss_type:
             aw.extra = ('loss_type',) + oq.loss_dt().names
-        if name == 'curves':
-            aw.return_period = dset.attrs['return_periods']
-            aw.tagnames = encode(tagnames + ['return_period'])
-        else:
-            aw.tagnames = encode(tagnames)
+        aw.tagnames = encode(tagnames)
         yield decode(stat), aw
 
 
