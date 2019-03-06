@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -389,7 +389,7 @@ producing too small PoEs.'''
         hstats = self.oqparam.hazard_stats()
         if len(self.rlzs_assoc.realizations) > 1 and hstats:
             with self.monitor('computing and saving stats', measuremem=True):
-                res = self.build_stats(results, hstats)
+                res = self.build_stats(results, hstats.items())
                 self.save_disagg_result('disagg-stats', res)
 
         self.datastore.set_attrs(
@@ -481,7 +481,8 @@ producing too small PoEs.'''
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
-                            logging.warning('poe_agg=%s is quite different from '
-                                         'the expected poe=%s', poe_agg, poe)
+                            logging.warning(
+                                'poe_agg=%s is quite different from '
+                                'the expected poe=%s', poe_agg, poe)
                         self.datastore[name] = poes[:, p]
                         self.datastore.set_attrs(name, poe_agg=poe_agg)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -129,8 +129,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
-    if (len(rlzs) == 1 and 'poes' in hdf5) or 'hcurves' in hdf5:
-        if oq.hazard_stats():
+    if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
+        if oq.hazard_stats() or oq.individual_curves or len(rlzs) == 1:
             dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them

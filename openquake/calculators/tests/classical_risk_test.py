@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -72,7 +72,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 3)  # mean, quantile-0.15, quantile-0.85
+        self.assertEqual(len(fnames), 1)  # mean
         self.assertEqualFiles('expected/loss_maps-mean.csv', fnames[0])
 
         [fname] = export(('loss_curves/mean/sid-1', 'csv'),
