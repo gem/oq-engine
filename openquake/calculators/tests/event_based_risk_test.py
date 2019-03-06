@@ -148,11 +148,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
-        # test curves_by_tag with a single realization
-        [fname] = export(
-            ('aggregate_by/taxonomy/curves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/curves_by_tag.csv', fname)
-
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
