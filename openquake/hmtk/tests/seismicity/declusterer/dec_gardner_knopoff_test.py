@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -85,3 +85,20 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         print('vcl:', vcl)
         print('flagvector:', flagvector, self.cat.data['flag'])
         np.testing.assert_allclose(flagvector, self.cat.data['flag'])
+
+    def test_dec_gardner_knopoff_time_cutoff(self):
+        """
+        Testing the Gardner and Knopoff algorithm using a cutoff
+        time of 100 days
+        """
+        config = {'time_distance_window' : GardnerKnopoffWindow(),
+                  'fs_time_prop' : 1.0,
+                  'time_cutoff' : 100}
+        # Instantiate the declusterer and process the sample catalogue
+        dec = GardnerKnopoffType1()
+        vcl, flagvector = dec.decluster(self.cat, config)
+        print('vcl:', vcl)
+        catalog_flag = self.cat.data['flag']
+        catalog_flag[4] = 0 # event becomes mainshock when time_cutoff = 100
+        print('flagvector:', catalog_flag)
+        np.testing.assert_allclose(flagvector,self.cat.data['flag'])

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -663,13 +663,20 @@ def intensity_measure_types(value):
     Traceback (most recent call last):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
+    >>> intensity_measure_types('SA(1), PGA')
+    Traceback (most recent call last):
+    ...
+    ValueError: The IMTs are not sorted by period: SA(1), PGA
     """
     imts = []
     for chunk in value.split(','):
-        imts.append(str(imt.from_string(chunk.strip())))
+        imts.append(imt.from_string(chunk.strip()))
+    sorted_imts = sorted(imts, key=lambda im: getattr(im, 'period', 1))
     if len(distinct(imts)) < len(imts):
         raise ValueError('Duplicated IMTs in %s' % value)
-    return imts
+    if sorted_imts != imts:
+        raise ValueError('The IMTs are not sorted by period: %s' % value)
+    return [str(imt) for imt in imts]
 
 
 def check_levels(imls, imt, min_iml=1E-10):
