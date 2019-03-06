@@ -123,7 +123,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     if param['avg_losses']:
         res['losses_by_A'] = losses_by_A * param['ses_ratio']
     if param['asset_loss_table']:
-        res['alt'] = alt, events['eid']
+        res['alt_eids'] = alt, events['eid']
     return res
 
 
@@ -215,7 +215,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
-                alt, eids = dic['alt']
+                alt, eids = dic['alt_eids']
                 eidx = [self.eid2idx[eid] for eid in eids]
                 self.datastore['asset_loss_table'][:, eidx, :] = alt
         return acc + dic['times']
