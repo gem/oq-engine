@@ -843,8 +843,6 @@ def export_disagg_by_src_csv(ekey, dstore):
     header = ['source_id', 'poe']
     by_poe = operator.itemgetter(1)
     for name in dstore['disagg_by_src']:
-        if name == 'source_id':
-            continue
         probs = dstore['disagg_by_src/' + name].value
         ok = probs > 0
         src = srcdata[ok]
