@@ -1,3 +1,7 @@
+  [Rao Anirudh]
+  * Fixed wrong investigation_time in the calculation of loss maps from
+    loss curves
+
   [Robin Gee]
   * Added capability to optionally specify a `time_cutoff` parameter to
     declustering time window
