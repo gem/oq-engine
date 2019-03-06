@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2018 GEM Foundation
+# Copyright (C) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -72,7 +72,7 @@ class UcerfTestCase(CalculatorTestCase):
         ucerf_base.RUPTURES_PER_BLOCK = 50  # check splitting
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
         ucerf_base.RUPTURES_PER_BLOCK = 1000  # resume default
-        fnames = export(('hcurves/all', 'csv'), self.calc.datastore)
+        fnames = export(('hcurves/', 'csv'), self.calc.datastore)
         expected = ['hazard_curve-0-PGA.csv', 'hazard_curve-0-SA(0.1).csv',
                     'hazard_curve-1-PGA.csv', 'hazard_curve-1-SA(0.1).csv']
         for fname, exp in zip(fnames, expected):

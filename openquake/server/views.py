@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -677,11 +677,12 @@ def extract(request, calc_id, what):
             aw = hdf5.ArrayWrapper.from_(_extract(ds, what + query_string))
             a = {}
             for key, val in vars(aw).items():
-                if isinstance(key, bytes):
-                    key = key.decode('utf-8')
                 if isinstance(val, str):
                     # without this oq extract would fail
                     a[key] = numpy.array(val.encode('utf-8'))
+                elif isinstance(val, dict):
+                    # this is hack: we are losing the values
+                    a[key] = list(val)
                 else:
                     a[key] = val
             numpy.savez_compressed(fname, **a)

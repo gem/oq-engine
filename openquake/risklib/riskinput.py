@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -206,7 +206,7 @@ class CompositeRiskModel(collections.Mapping):
                         lines.append('%s %d' % (
                             rm.risk_functions[loss_type], len(ratios)))
                 if len(curve_resolutions) > 1:  # example in test_case_5
-                    logging.info(
+                    logging.debug(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cp = scientific.CurveParams(
                     l, loss_type, max(curve_resolutions), ratios, True)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import logging
-import operator
 import time
 import numpy
 
@@ -65,6 +63,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     mon = monitor('getting assets', measuremem=False)
     with datastore.read(srcfilter.filename) as dstore:
         assgetter = getters.AssetGetter(dstore)
+    A = assgetter.num_assets
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
@@ -74,12 +73,15 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     imts = getter.imts
     events = rupgetter.get_eid_rlz()
     eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
+    E = len(eid2idx)
     tagnames = param['aggregate_by']
     shape = assgetter.tagcol.agg_shape((len(events), L), tagnames)
     elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
+    if param['asset_loss_table']:
+        alt = numpy.zeros((A, E, L), F32)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
     if param['avg_losses']:
-        losses_by_A = numpy.zeros((assgetter.num_assets, L), F32)
+        losses_by_A = numpy.zeros((A, L), F32)
     else:
         losses_by_A = 0
     times = numpy.zeros(N)  # risk time per site_id
@@ -104,6 +106,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                     for asset in assets:
                         aid = asset.ordinal
                         losses = loss_ratios * asset.value(lt)
+                        if param['asset_loss_table']:
+                            alt[aid, eidx, lti] = losses
                         acc[(eidx, lti) + tagidxs[aid]] += losses
                         if param['avg_losses']:
                             losses_by_A[aid, lti] += losses @ ws
@@ -118,6 +122,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     res = {'elt': elt, 'agg_losses': agg, 'times': times}
     if param['avg_losses']:
         res['losses_by_A'] = losses_by_A * param['ses_ratio']
+    if param['asset_loss_table']:
+        res['alt_eids'] = alt, events['eid']
     return res
 
 
@@ -141,12 +147,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['assetcol'] = self.assetcol
         self.param['ses_ratio'] = self.oqparam.ses_ratio
         self.param['aggregate_by'] = self.oqparam.aggregate_by
+        self.param['asset_loss_table'] = self.oqparam.asset_loss_table
         # initialize the riskmodel
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         self.L = L = len(self.riskmodel.loss_types)
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses', F32, (A, L))
+        if self.oqparam.asset_loss_table:
+            self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
         elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shp))]
         self.datastore.create_dset('losses_by_event', elt_dt)
@@ -204,6 +213,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses', autoflush=True):
                 self.datastore['avg_losses'] += dic['losses_by_A']
+        if self.oqparam.asset_loss_table:
+            with self.monitor('saving asset_loss_table', autoflush=True):
+                alt, eids = dic['alt_eids']
+                eidx = [self.eid2idx[eid] for eid in eids]
+                self.datastore['asset_loss_table'][:, eidx, :] = alt
         return acc + dic['times']
 
     def get_shape(self, *sizes):
@@ -214,7 +228,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def build_datasets(self, builder):
         oq = self.oqparam
-        stats = oq.hazard_stats()
+        stats = oq.hazard_stats().items()
         S = len(stats)
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
@@ -288,7 +302,7 @@ def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
     """
     with datastore.read(filename) as dstore:
         oq = dstore['oqparam']
-        stats = oq.hazard_stats()
+        stats = oq.hazard_stats().items()
         builder = get_loss_builder(dstore)
         R = len(dstore['weights'])
         losses = [[] for _ in range(R)]
