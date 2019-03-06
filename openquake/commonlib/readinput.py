@@ -508,7 +508,7 @@ def get_source_model_lt(oqparam):
     if fname:
         # NB: converting the random_seed into an integer is needed on Windows
         return logictree.SourceModelLogicTree(
-            fname, validate=False, seed=int(oqparam.random_seed),
+            fname, validate=True, seed=int(oqparam.random_seed),
             num_samples=oqparam.number_of_logic_tree_samples)
     return logictree.FakeSmlt(oqparam.inputs['source_model'],
                               int(oqparam.random_seed),
