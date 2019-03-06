@@ -852,7 +852,7 @@ def extract_source_geom(dstore, srcidxs):
     """
     Extract the geometry of a given sources
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/source_geom?1,2,3
+    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
     """
     for i in srcidxs.split(','):
         rec = dstore['source_info'][int(i)]
