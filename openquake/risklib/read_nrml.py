@@ -376,7 +376,7 @@ def taxonomy(value):
         value.encode('ascii')
     except UnicodeEncodeError:
         raise ValueError('tag %r is not ASCII' % value)
-    if re.search('\s', value):
+    if re.search(r'\s', value):
         raise ValueError('The taxonomy %r contains whitespace chars' % value)
     return value
 
