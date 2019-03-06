@@ -36,11 +36,8 @@ we will consider the problem of counting the letters in a text. Here is
 how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
->>> from openquake.baselib.performance import Monitor  # Monitor class
->>> mon = Monitor('count')
 >>> arglist = [('hello',), ('world',)]  # list of arguments
->>> results = Starmap(count, arglist, mon)  # iterator over the results
->>> res = results.reduce()  # aggregated counts
+>>> res = Starmap(count, arglist).reduce()  # aggregated counts
 >>> sorted(res.items())  # counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
 
@@ -55,9 +52,6 @@ You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
 >>> res = Starmap(count, arglist).reduce(acc=collections.Counter())
-
-Notice that in this example the monitor was not passed: that means
-that internally a do-nothing monitor object is instantiated.
 
 In the engine we use nearly always callables that return dictionaries
 and we aggregate nearly always with the addition operator, so such
@@ -93,6 +87,27 @@ with
 no pool, but it is still better to call it: in the future, you may change
 idea and use another parallelization strategy requiring cleanup. In this
 way your code is future-proof.
+
+Monitoring
+=============================
+
+The major feature of the Starmap API is the ability to pass to it a
+Monitor instance, an object which is able to measure the time and
+memory occupation in each spawned task. The monitor can keep that
+information in memory or even store it into an .hdf5 file. If you
+do not pass a Monitor instance to the Starmap, internally a do-nothing
+monitor is instantiated. Here is an in-memory monitor:
+
+>>> from openquake.baselib.performance import Monitor
+>>> mon = Monitor('count')
+
+Here is a monitoring writing on an .hdf5 file:
+
+>>> from openquake.baselib import hdf5
+>>> mon = Monitor('count', hdf5.File.temporary())
+
+The engine provides a command `oq show performance` to print the performance
+information stored in the HDF5 datastore in a nice way.
 
 The Starmap.apply API
 ====================================
@@ -157,7 +172,6 @@ except ImportError:
         "Do nothing"
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.python3compat import encode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
