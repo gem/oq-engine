@@ -601,7 +601,7 @@ class SourceModelLogicTree(object):
         """
         source_ids = collections.defaultdict(list)
         for sm, fnames in self.info.smpaths.items():
-            logging.info('Reading source IDs from %d model file(s)', sm)
+            logging.info('Reading source IDs from source model %s', sm)
             for fname in fnames:
                 if fname.endswith('.hdf5'):
                     with hdf5.File(fname, 'r') as f:
