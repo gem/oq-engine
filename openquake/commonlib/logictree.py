@@ -739,7 +739,8 @@ class SourceModelLogicTree(object):
             if value_node.text is not None:
                 values.append(value_node.text.strip())
             if validate:
-                self.validate_uncertainty_value(value_node, branchset)
+                self.validate_uncertainty_value(
+                    value_node, branchnode, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(branch_id, weight, value)
@@ -907,7 +908,7 @@ class SourceModelLogicTree(object):
         return geo.PlanarSurface.from_corner_points(
             top_left, top_right, bottom_right, bottom_left)
 
-    def validate_uncertainty_value(self, node, branchset):
+    def validate_uncertainty_value(self, node, branchnode, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -927,7 +928,7 @@ class SourceModelLogicTree(object):
         if branchset.uncertainty_type == 'sourceModel':
             smfname = node.text.strip()
             try:
-                self.collect_source_model_data(smfname)
+                self.collect_source_model_data(branchnode['branchID'], smfname)
             except Exception as exc:
                 raise LogicTreeError(node, self.filename, str(exc))
 
@@ -1198,7 +1199,7 @@ class SourceModelLogicTree(object):
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file))
 
-    def collect_source_model_data(self, source_model):
+    def collect_source_model_data(self, branch_id, source_model):
         """
         Parse source model file and collect information about source ids,
         source types and tectonic region types available in it. That
@@ -1213,7 +1214,7 @@ class SourceModelLogicTree(object):
                 source_id = src_node['id']
                 source_type = striptag(src_node.tag)[n:]
                 self.tectonic_region_types.add(trt)
-                self.source_ids.add(source_id)
+                self.source_ids[branch_id].append(source_id)
                 self.source_types.add(source_type)
 
     def apply_uncertainties(self, branch_ids, source_group):
