@@ -390,8 +390,8 @@ class GmfGetter(object):
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
-                # the shape goes from M, N, E to N, M, E
-                array = computer.compute(gs, num_events).transpose(1, 0, 2)
+                array, sig, eps = computer.compute(gs, num_events)
+                array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
                 for i, miniml in enumerate(self.min_iml):  # gmv < minimum
                     arr = array[:, i, :]
                     arr[arr < miniml] = 0
@@ -406,8 +406,8 @@ class GmfGetter(object):
                         tot = gmf.sum(axis=0)  # shape (M,)
                         if not tot.sum():
                             continue
-                        self.sig_eps.append((eid, computer.sig[:, n + ei],
-                                             computer.eps[:, n + ei]))
+                        self.sig_eps.append(
+                            (eid, sig[:, n + ei], eps[:, n + ei]))
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 data.append((rlzi, sid, eid, gmv))
