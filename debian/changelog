@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a flag `oq info --parameters` to show the job.ini parameters
   * Removed the `source_name` column from the disagg by source output
 
   [Rao Anirudh]
