@@ -28,7 +28,8 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     :returns: a LossesByPeriodBuilder instance
     """
     oq = dstore['oqparam']
-    weights = dstore['csm_info'].rlzs['weight']
+    name = dstore['weights'].dtype.names[0]
+    weights = dstore['weights'][name]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
     num_events = countby(dstore['events'].value, 'rlz')
     periods = return_periods or oq.return_periods or scientific.return_periods(

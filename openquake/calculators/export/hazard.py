@@ -861,12 +861,9 @@ def export_disagg_by_src_csv(ekey, dstore):
 
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
-    data = [['ordinal', 'branch_path', 'gsim', 'weight']]
-    for i, rlz in enumerate(dstore['csm_info'].rlzs):
-        data.append([i, rlz['branch_path'],
-                     repr(rlz['gsims'].decode('utf8')), rlz['weight']])
+    data = dstore['csm_info'].rlzs
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, fmt='%.7e')
+    writers.write_csv(path, data, header=data[0]._fields, fmt='%.7e')
     return [path]
 
 
