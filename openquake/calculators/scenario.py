@@ -76,6 +76,8 @@ class ScenarioCalculator(base.HazardCalculator):
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
             oq.correl_model)
+        M32 = (numpy.float32, len(self.oqparam.imtls))
+        self.sig_eps_dt = [('eid', numpy.uint64), ('sig', M32), ('eps', M32)]
 
     def init(self):
         pass
@@ -89,9 +91,16 @@ class ScenarioCalculator(base.HazardCalculator):
             return ()
         n = self.oqparam.number_of_ground_motion_fields
         with self.monitor('computing gmfs'):
+            ei = 0
             for gsim in self.gsims:
-                gmfa = self.computer.compute(gsim, n)[0]  # shape (I, N, n)
+                gmfa, sig, eps = self.computer.compute(gsim, n)
+                lst = []
+                for s, e in zip(sig.T, eps.T):  # shape (M, E) -> (E, M)
+                    lst.append((ei, s, e))
+                    ei += 1
                 arrays.append(gmfa.transpose(1, 2, 0))  # shape (N, n, I)
+        self.datastore['gmf_data/sigma_epsilon'] = numpy.array(
+            lst, self.sig_eps_dt)
         return numpy.concatenate(arrays, axis=1)  # shape (N, E, I)
 
     def post_execute(self, gmfa):

@@ -21,7 +21,7 @@ tax2,Res,business_interruption,8.19053E+02
 tax2,Res,contents,1.09283E+04
 tax2,Res,nonstructural,1.46552E+04
 tax2,Res,occupants,1.63811E-02
-tax2,Res,structural,9.25352E+02
+tax2,Res,structural,9.25351E+02
 tax2,Res,business_interruption_ins,1.71500E+01
 tax2,Res,contents_ins,1.75000E+01
 tax2,Res,nonstructural_ins,1.75000E+01
@@ -30,7 +30,7 @@ tax3,Res,business_interruption,3.23106E+02
 tax3,Res,contents,1.52310E+03
 tax3,Res,nonstructural,2.65943E+03
 tax3,Res,occupants,6.46212E-03
-tax3,Res,structural,6.40259E+01
+tax3,Res,structural,6.40260E+01
 tax3,Res,business_interruption_ins,8.13750E+00
 tax3,Res,contents_ins,7.87500E+00
 tax3,Res,nonstructural_ins,8.40000E+00

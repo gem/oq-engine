@@ -122,7 +122,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('gmf.xml', f)
 
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
-        f, _sitefile = out['gmf_data', 'csv']
+        f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)
 
         # test the .npz export
