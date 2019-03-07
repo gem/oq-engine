@@ -188,7 +188,9 @@ class CalculatorTestCase(unittest.TestCase):
         res = super().run(result)
         if hasattr(res, 'errors'):
             issues = len(res.errors) + len(res.failures)
-        else:  # this happens with pytest sometimes
+        elif getattr(res, '_excinfo'):  # this happens with pytest sometimes
+            issues = len(res._excinfo)
+        else:
             issues = 0
         # remove temporary dir only for success
         if self.edir and not issues:
