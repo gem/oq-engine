@@ -863,7 +863,7 @@ def export_disagg_by_src_csv(ekey, dstore):
 def export_realizations(ekey, dstore):
     data = dstore['csm_info'].rlzs
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, header=data[0]._fields, fmt='%.7e')
+    writers.write_csv(path, data, fmt='%.7e')
     return [path]
 
 
