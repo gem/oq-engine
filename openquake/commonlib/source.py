@@ -42,7 +42,7 @@ F32 = numpy.float32
 rlz_dt = numpy.dtype([
     ('ordinal', U32),
     ('branch_path', hdf5.vstr),
-    ('gsims', hdf5.vstr),
+    ('gsim', hdf5.vstr),
     ('weight', F32)
 ])
 
