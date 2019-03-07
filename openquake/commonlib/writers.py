@@ -111,7 +111,7 @@ htranslator = HeaderTranslator(
     '(lat):float64',
     '(depth):float64',
     '(ordinal):uint32',
-    '(gsims):object',
+    '(gsim):object',
     '(branch_path):object',
     '(vs30):float64',
     '(vs30measured):bool',
