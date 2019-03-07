@@ -962,13 +962,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         discarded = []
         logging.info('Read %d sites and %d assets from the exposure',
                      len(sitecol), sum(len(a) for a in assets_by_site))
-
-    asset_refs = numpy.array(
-        [exposure.asset_refs[asset.ordinal]
-         for assets in assets_by_site for asset in assets])
     assetcol = asset.AssetCollection(
-        asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
-        oqparam.time_event, exposure.occupancy_periods)
+        exposure, assets_by_site, oqparam.time_event)
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
