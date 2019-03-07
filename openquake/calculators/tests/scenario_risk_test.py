@@ -19,9 +19,11 @@
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_9, occupants, case_master, case_shakemap)
+    case_6a, case_7, case_8, case_9, case_10, occupants, case_master,
+    case_shakemap)
 
 from openquake.baselib.general import gettemp
+from openquake.hazardlib import InvalidFile
 from openquake.commonlib.logictree import InvalidLogicTree
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
@@ -197,6 +199,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini')
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
         aac(agglosses.array, [7306.7124])
+
+    def test_case_9(self):
+        # missing occupants in the exposure
+        with self.assertRaises(InvalidFile):
+            self.run_calc(case_10.__file__, 'job.ini')
 
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')
