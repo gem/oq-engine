@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Stored the sigma and epsilon parameters for each event in event based
+    and scenario calculations and extended the gmf_data exporter consequently
+  * Fixed the realizations CSV exporter which was truncating the names of the
+    GSIMs
   * Made it possible to store the asset loss table in the ebrisk calculator
     by specifying `asset_loss_table=true` in the job.ini
   * Added a flag `oq info --parameters` to show the job.ini parameters
