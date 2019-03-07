@@ -1,4 +1,4 @@
-ordinal,branch_path,gsims,weight
+ordinal,branch_path,gsim,weight
 0,b1~b12_@_@_@,AkkarEtAlRhyp2014 MontalvaEtAl2017SSlab ZhaoEtAl2006SInter MontalvaEtAl2017SSlab,1.0130468e-02
 1,b1~b11_@_@_@,AkkarCagnan2010 MontalvaEtAl2017SSlab ZhaoEtAl2006SInter MontalvaEtAl2017SSlab,1.0437452e-02
 2,b1~b11_@_@_@,AkkarCagnan2010 MontalvaEtAl2017SSlab ZhaoEtAl2006SInter MontalvaEtAl2017SSlab,1.0437452e-02
