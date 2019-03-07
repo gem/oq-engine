@@ -612,7 +612,9 @@ def export_gmf_data_csv(ekey, dstore):
         gmfa.sort(order=['eid', 'sid'])
         writers.write_csv(fname, _expand_gmv(gmfa, imts))
         sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
-        sig_eps = dstore['gmf_data/sigma_epsilon'].value
+        dt = [('eid', U64)] + ([('sig_' + imt, F32) for imt in oq.imtls] +
+                               [('eps_' + imt, F32) for imt in oq.imtls])
+        sig_eps = dstore['gmf_data/sigma_epsilon'].value.view(dt)
         sig_eps['eid'] = event_id[sig_eps['eid']]
         sig_eps.sort(order='eid')
         writers.write_csv(sig_eps_csv, sig_eps)
