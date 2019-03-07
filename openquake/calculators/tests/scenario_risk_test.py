@@ -200,7 +200,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
         aac(agglosses.array, [7306.7124])
 
-    def test_case_9(self):
+    def test_case_10(self):
         # missing occupants in the exposure
         with self.assertRaises(InvalidFile):
             self.run_calc(case_10.__file__, 'job.ini')
