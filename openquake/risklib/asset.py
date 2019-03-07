@@ -407,6 +407,7 @@ class AssetCollection(object):
         elif self.occupancy_periods.strip() != periods.strip():
             raise ValueError('Expected %s, got %s' %
                              (periods, self.occupancy_periods))
+        exposure.occupancy_periods = self.occupancy_periods
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if any(field.startswith('occupants_') for field in fields):
