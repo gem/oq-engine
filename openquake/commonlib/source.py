@@ -39,8 +39,12 @@ U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 
-RlzTuple = collections.namedtuple(
-    'RlzTuple', ('ordinal', 'branch_path', 'gsims', 'weight'))
+rlz_dt = numpy.dtype([
+    ('ordinal', U32),
+    ('branch_path', hdf5.vstr),
+    ('gsims', hdf5.vstr),
+    ('weight', F32)
+])
 
 source_model_dt = numpy.dtype([
     ('name', hdf5.vstr),
@@ -273,9 +277,9 @@ class CompositionInfo(object):
         """
         :returns: a list of realization tuples
         """
-        tups = [RlzTuple(r.ordinal, r.uid, gsim_names(r), r.weight['weight'])
+        tups = [(r.ordinal, r.uid, gsim_names(r), r.weight['weight'])
                 for r in self.get_rlzs_assoc().realizations]
-        return tups
+        return numpy.array(tups, rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
         """
