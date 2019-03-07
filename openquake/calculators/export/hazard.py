@@ -611,7 +611,11 @@ def export_gmf_data_csv(ekey, dstore):
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['eid', 'sid'])
         writers.write_csv(fname, _expand_gmv(gmfa, imts))
-        return [fname, f]
+        sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
+        sig_eps = dstore['gmf_data/sigma_epsilon'].value
+        sig_eps['eid'] = event_id[sig_eps['eid']]
+        writers.write_csv(sig_eps_csv, sig_eps)
+        return [fname, sig_eps_csv, f]
     # old format for single eid
     gmfa = gmfa[gmfa['eid'] == eid]
     eid2rlz = dict(dstore['events'])

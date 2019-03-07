@@ -110,20 +110,21 @@ class EventBasedTestCase(CalculatorTestCase):
         # here the <AreaSource 1> is light and not split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='3', exports='csv')
-        [fname, sitefile] = out['gmf_data', 'csv']
+        [fname, _, sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
         self.assertEqualFiles('expected/sites.csv', sitefile)
 
         # here the <AreaSource 1> is heavy and split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='4', exports='csv')
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, sig_eps, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
+        self.assertEqualFiles('expected/sig-eps.csv', sig_eps)
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
@@ -164,7 +165,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['occurrence_rate'], 1.0)
         self.assertEqual(list(einfo['hypo']), [0., 0., 4.])
 
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
 
     def test_case_1_ruptures(self):
@@ -175,13 +176,15 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.2')
 
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/minimum-intensity-gmf-data.csv', fname)
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
-        [fname, _sitefile] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/gmf-data.csv', fname)
+        [gmfs, sig_eps, _sitefile] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', gmfs)
+        # this is a case with truncation_level=0: sig-eps.csv must be empty
+        self.assertEqualFiles('expected/sig-eps.csv', sig_eps)
 
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles(
@@ -189,7 +192,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
-        [fname, _sitefile] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
+        [fname, _, _] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles('expected/gmf-data-bis.csv', fname)
         self.assertEqual(out['gmf_data', 'xml'], [])  # exported removed
         [fname] = out['hcurves', 'csv']
@@ -197,7 +200,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        [f, _sitefile] = out['gmf_data', 'csv']
+        [f, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', f)
 
     def test_case_4(self):
@@ -212,7 +215,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
 
@@ -280,7 +283,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_13(self):
         out = self.run_calc(case_13.__file__, 'job.ini', exports='csv')
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = out['hcurves', 'csv']
@@ -290,7 +293,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_14(self):
         # sampling of a logic tree of kind `on_each_source`
         out = self.run_calc(case_14.__file__, 'job.ini', exports='csv')
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
     def test_case_15(self):
@@ -337,13 +340,13 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
 
     def test_case_19(self):  # test for Vancouver using the NRCan15SiteTerm
         self.run_calc(case_19.__file__, 'job.ini')
-        [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
+        [gmf, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
         # a test with grid and site model
@@ -352,13 +355,13 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_20(self):  # test for Vancouver using the NRCan15SiteTerm
         self.run_calc(case_20.__file__, 'job.ini')
-        [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
+        [gmf, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_20.__file__, 'job.ini', hazard_calculation_id=hid)
-        [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
+        [gmf, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data-from-ruptures.csv', gmf)
 
     def test_overflow(self):
@@ -385,5 +388,5 @@ class EventBasedTestCase(CalculatorTestCase):
             calculation_mode='event_based',
             investigation_time='100',
             exports='csv')
-        [fname, _] = out['gmf_data', 'csv']
+        [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf.csv', fname, delta=1E-6)
