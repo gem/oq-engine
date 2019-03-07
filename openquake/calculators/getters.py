@@ -407,8 +407,7 @@ class GmfGetter(object):
                         if not tot.sum():
                             continue
                         sigmas = sig[:, n + ei]
-                        if sigmas.sum():  # is 0 when defined for StdDev.TOTAL
-                            self.sig_eps.append((eid, sigmas, eps[:, n + ei]))
+                        self.sig_eps.append((eid, sigmas, eps[:, n + ei]))
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 data.append((rlzi, sid, eid, gmv))
