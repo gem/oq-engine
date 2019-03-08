@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,8 +18,8 @@
 import os
 import logging
 import operator
-
-from openquake.baselib import parallel
+import numpy as np
+from openquake.baselib import parallel, general
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator
@@ -30,6 +30,8 @@ class UcerfClassicalCalculator(ClassicalCalculator):
     """
     UCERF classical calculator.
     """
+    accept_precalc = ['ucerf_psha']
+
     def pre_execute(self):
         super().pre_execute()
         self.csm_info = self.csm.info
@@ -46,13 +48,15 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         """
         monitor = self.monitor(self.core_task.__name__)
         oq = self.oqparam
-        acc = self.zerodict()
+        acc = self.acc0()
         self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
+        self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
+        rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
-            gsims = self.csm.info.get_gsims(sm.ordinal)
+            gsims = list(rlzs_by_gsim[grp.id])
             acc = parallel.Starmap.apply(
                 classical, (grp, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
@@ -67,5 +71,6 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
-        self.store_csm_info(acc.eff_ruptures)
+        self.store_rlz_info(acc.eff_ruptures)
+        self.store_source_info(self.calc_times)
         return acc  # {grp_id: pmap}

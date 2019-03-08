@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -205,11 +205,11 @@ class EngineServerTestCase(unittest.TestCase):
         job_id = self.postzip('classical.zip')
         self.wait()
 
-        # check that we get at least the following 5 outputs
-        # fullreport, hcurves, hmaps, realizations, sourcegroups
+        # check that we get at least the following 6 outputs
+        # fullreport, input, hcurves, hmaps, realizations, sourcegroups
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
-        self.assertGreaterEqual(len(results), 5)
+        self.assertGreaterEqual(len(results), 6)
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
@@ -225,6 +225,11 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check the /extract endpoint
         url = '/v1/calc/%s/extract/hazard/rlzs' % job_id
+        resp = self.c.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        # check extract hcurves
+        url = '/v1/calc/%s/extract/hcurves?kind=stats&imt=PGA' % job_id
         resp = self.c.get(url)
         self.assertEqual(resp.status_code, 200)
 

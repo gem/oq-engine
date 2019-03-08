@@ -243,6 +243,14 @@ bradley_2013
     :undoc-members:
     :show-inheritance:
 
+bradley_2013b
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bradley_2013b
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 campbell_1997
 ---------------------------------------------
 
@@ -403,6 +411,14 @@ drouet_2015_brazil
     :undoc-members:
     :show-inheritance:
 
+drouet_alpes_2015
+--------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.drouet_alpes_2015
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 edwards_fah_2013a
 -------------------------------------------------
 
@@ -471,6 +487,14 @@ geomatrix_1993
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.geomatrix_1993
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+germany_2018
+----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.germany_2018
     :members:
     :undoc-members:
     :show-inheritance:
@@ -559,6 +583,14 @@ mcverry_2006
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.mcverry_2006
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+mcverry_2006_chch
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mcverry_2006_chch
     :members:
     :undoc-members:
     :show-inheritance:

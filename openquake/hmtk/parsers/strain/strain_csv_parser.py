@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -101,7 +101,7 @@ class ReadStrainCsv(object):
         else:
             self.strain.data_variables = STRAIN_VARIABLES
 
-        datafile = open(self.filename, 'rU')
+        datafile = open(self.filename, 'r')
         reader = csv.DictReader(datafile)
         self.strain.data = dict([(name, []) for name in reader.fieldnames])
         for row in reader:

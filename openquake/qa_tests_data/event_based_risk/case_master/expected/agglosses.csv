@@ -1,0 +1,16 @@
+loss_type,taxonomy,loss_value,exposed_value,loss_ratio
+business_interruption,tax1,8.53971E+02,0.00000E+00,INF
+business_interruption,tax2,5.94349E+02,8.00000E+03,7.42937E-02
+business_interruption,tax3,2.51705E+02,4.00000E+03,6.29262E-02
+contents,tax1,4.74314E+03,0.00000E+00,INF
+contents,tax2,5.41571E+03,2.00000E+04,2.70786E-01
+contents,tax3,1.25464E+03,1.00000E+04,1.25464E-01
+nonstructural,tax1,7.11471E+03,0.00000E+00,INF
+nonstructural,tax2,8.00764E+03,6.00000E+04,1.33461E-01
+nonstructural,tax3,1.94252E+03,3.00000E+04,6.47506E-02
+occupants,tax1,1.70794E-02,0.00000E+00,INF
+occupants,tax2,1.18870E-02,1.60000E+01,7.42937E-04
+occupants,tax3,5.03410E-03,8.00000E+00,6.29262E-04
+structural,tax1,8.68744E+02,0.00000E+00,INF
+structural,tax2,3.74022E+02,4.00000E+04,9.35056E-03
+structural,tax3,6.07451E+01,2.00000E+04,3.03726E-03

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,8 @@ from urllib.parse import unquote_plus
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.general import (
+    groupby, AccumDict, group_array, cached_property)
 from openquake.risklib import scientific, riskmodels
 
 
@@ -55,9 +56,12 @@ def read_composite_risk_model(dstore):
             rf = dstore['%s/%s/%s' % (oqparam.risk_model, quotedtaxonomy, lt)]
             if len(rmdict.limit_states):
                 # rf is a FragilityFunctionList
-                rf = rf.build(rmdict.limit_states,
-                              oqparam.continuous_fragility_discretization,
-                              oqparam.steps_per_interval)
+                try:
+                    rf = rf.build(rmdict.limit_states,
+                                  oqparam.continuous_fragility_discretization,
+                                  oqparam.steps_per_interval)
+                except ValueError as err:
+                    raise ValueError('%s: %s' % (taxo, err))
             else:
                 # rf is a vulnerability function
                 rf.init()
@@ -116,6 +120,26 @@ class CompositeRiskModel(collections.Mapping):
 
         self.init(oqparam)
 
+    # used in ebrisk
+    def get_assets_ratios(self, assets, gmvs, imts):
+        """
+        :param assets: assets on the same site
+        :params gmvs: hazard on the given site, shape (E, M)
+        :param imts: intensity measure types
+        :returns: a list of (assets, loss_ratios) for each taxonomy on the site
+        """
+        imti = {imt: i for i, imt in enumerate(imts)}
+        assets_by_t = groupby(assets, operator.attrgetter('taxonomy'))
+        assets_ratios = []
+        for taxo, rm in self.items():
+            t = self.taxonomy_dict[taxo]
+            try:
+                assets = assets_by_t[t]
+            except KeyError:  # there are no assets of taxonomy taxo
+                continue
+            assets_ratios.append((assets, rm.get_loss_ratios(gmvs, imti)))
+        return assets_ratios
+
     def init(self, oqparam):
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
@@ -143,6 +167,14 @@ class CompositeRiskModel(collections.Mapping):
             for lt, rf in rm.risk_functions.items():
                 iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
+
+    @cached_property
+    def taxonomy_dict(self):
+        """
+        :returns: a dict taxonomy string -> taxonomy index
+        """
+        tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
+        return tdict
 
     def get_extra_imts(self, imts):
         """
@@ -174,7 +206,7 @@ class CompositeRiskModel(collections.Mapping):
                         lines.append('%s %d' % (
                             rm.risk_functions[loss_type], len(ratios)))
                 if len(curve_resolutions) > 1:  # example in test_case_5
-                    logging.info(
+                    logging.debug(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cp = scientific.CurveParams(
                     l, loss_type, max(curve_resolutions), ratios, True)
@@ -257,7 +289,10 @@ class CompositeRiskModel(collections.Mapping):
             if not imt_lt:  # a warning is printed in riskmodel.check_imts
                 continue
             for sid, assets, epsgetter in dic[taxonomy]:
-                for rlzi, haz in sorted(hazard[sid].items()):
+                haz = hazard[sid]
+                if not isinstance(haz, dict):
+                    haz = group_array(haz, 'rlzi')
+                for rlzi, haz in sorted(haz.items()):
                     with mon:
                         if isinstance(haz, numpy.ndarray):
                             # NB: in GMF-based calculations the order in which

@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,7 +27,7 @@ import itertools
 import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
@@ -75,7 +75,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
     attribute surface_nodes to an appropriate value.
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
-    rupture_slip_direction'''.split()
+    rupture_slip_direction weight'''.split()
     serial = 0  # set to a value > 0 by the engine
     _code = {}
     types = {}
@@ -101,7 +101,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
             raise ValueError('Too many rupture codes: %d' % n)
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, rupture_slip_direction=None):
+                 surface, rupture_slip_direction=None, weight=None):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         NodalPlane.check_rake(rake)
@@ -111,35 +111,15 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.hypocenter = hypocenter
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
+        self.weight = weight
 
     @property
     def code(self):
         """Returns the code (integer in the range 0 .. 255) of the rupture"""
         return self._code[self.__class__, self.surface.__class__]
 
-    def get_probability_no_exceedance(self, poes):
-        """
-        Compute and return the probability that in the time span for which the
-        rupture is defined, the rupture itself never generates a ground motion
-        value higher than a given level at a given site.
-
-        Such calculation is performed starting from the conditional probability
-        that an occurrence of the current rupture is producing a ground motion
-        value higher than the level of interest at the site of interest.
-        The actual formula used for such calculation depends on the temporal
-        occurrence model the rupture is associated with.
-        The calculation can be performed for multiple intensity measure levels
-        and multiple sites in a vectorized fashion.
-
-        :param poes:
-            2D numpy array containing conditional probabilities the the a
-            rupture occurrence causes a ground shaking value exceeding a
-            ground motion level at a site. First dimension represent sites,
-            second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :meth:`method
-            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>`.
-        """
-        raise NotImplementedError
+    get_probability_no_exceedance = (
+        contexts.RuptureContext.get_probability_no_exceedance)
 
     def sample_number_of_occurrences(self, n=1):
         """
@@ -177,7 +157,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         in increasing order, and if they are not defined with unit step
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 pmf, rupture_slip_direction=None):
+                 pmf, rupture_slip_direction=None, weight=None):
         occ = numpy.array([occ for (prob, occ) in pmf.data])
         if not occ[0] == 0:
             raise ValueError('minimum number of ruptures must be zero')
@@ -189,39 +169,11 @@ class NonParametricProbabilisticRupture(BaseRupture):
                 'numbers of ruptures must be defined with unit step')
         super().__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            rupture_slip_direction)
+            rupture_slip_direction, weight)
         # an array of probabilities with sum 1
         self.probs_occur = numpy.array(
             [prob for (prob, occ) in pmf.data], numpy.float32)
-
-    def get_probability_no_exceedance(self, poes):
-        """
-        See :meth:`superclass method
-        <.rupture.BaseRupture.get_probability_no_exceedance>`
-        for spec of input and result values.
-
-        Uses the formula ::
-
-            ∑ p(k|T) * p(X<x|rup)^k
-
-        where ``p(k|T)`` is the probability that the rupture occurs k times in
-        the time span ``T``, ``p(X<x|rup)`` is the probability that a rupture
-        occurrence does not cause a ground motion exceedance, and the summation
-        ``∑`` is done over the number of occurrences ``k``.
-
-        ``p(k|T)`` is given by the constructor's parameter ``pmf``, and
-        ``p(X<x|rup)`` is computed as ``1 - poes``.
-        """
-        # Converting from 1d to 2d
-        if len(poes.shape) == 1:
-            poes = numpy.reshape(poes, (-1, len(poes)))
-        p_kT = self.probs_occur
-        prob_no_exceed = numpy.array(
-            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
-        prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-        prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
-        prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
-        return prob_no_exceed
+        self.occurrence_rate = numpy.nan
 
     def sample_number_of_occurrences(self, n=1):
         """
@@ -283,12 +235,12 @@ class ParametricProbabilisticRupture(BaseRupture):
         Return the probability of this rupture to occur exactly one time.
 
         Uses :meth:
-        `openquake.hazardlib.tom.PoissonTOM.get_probability_one_occurrence`
+        `openquake.hazardlib.tom.PoissonTOM.get_probability_n_occurrences`
         of an assigned temporal occurrence model.
         """
         tom = self.temporal_occurrence_model
         rate = self.occurrence_rate
-        return tom.get_probability_one_occurrence(rate)
+        return tom.get_probability_n_occurrences(rate, 1)
 
     def sample_number_of_occurrences(self, n=1):
         """

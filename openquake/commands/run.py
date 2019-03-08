@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -121,14 +121,14 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
-    print('See the output with hdfview %s' % calc.datastore.hdf5path)
-    calc_path, _ = os.path.splitext(calc.datastore.hdf5path)  # used below
+    print('See the output with silx view %s' % calc.datastore.filename)
+    calc_path, _ = os.path.splitext(calc.datastore.filename)  # used below
     return calc
 
 
-@sap.Script
-def run(job_ini, slowest, hc, param='', concurrent_tasks=None, exports='',
-        loglevel='info', pdb=None):
+@sap.script
+def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
+        exports='', loglevel='info', pdb=None):
     """
     Run a calculation bypassing the database layer
     """

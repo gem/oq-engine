@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,7 +40,7 @@ class DifferentFiles(Exception):
 
 def strip_calc_id(fname):
     name = os.path.basename(fname)
-    return re.sub('_\d+\.', '.', name)
+    return re.sub(r'_\d+\.', '.', name)
 
 
 def columns(line):
@@ -186,10 +186,12 @@ class CalculatorTestCase(unittest.TestCase):
 
     def run(self, result=None):
         res = super().run(result)
-        if res is not None:  # for Python 3
+        if hasattr(res, 'errors'):
             issues = len(res.errors) + len(res.failures)
+        elif getattr(res, '_excinfo'):  # with pytest
+            issues = len(res._excinfo)
         else:
-            issues = 0  # this is bad, but Python 2 will die soon or later
+            issues = 0
         # remove temporary dir only for success
         if self.edir and not issues:
             shutil.rmtree(self.edir)

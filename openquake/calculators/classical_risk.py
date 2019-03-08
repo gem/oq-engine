@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -87,6 +87,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     core_task = classical_risk
+    precalc = 'classical'
+    accept_precalc = ['classical']
 
     def pre_execute(self):
         """
@@ -96,16 +98,17 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if oq.insured_losses:
             raise ValueError(
                 'insured_losses are not supported for classical_risk')
-        super().pre_execute('classical')
+        super().pre_execute()
         if 'poes' not in self.datastore:  # when building short report
             return
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        self.param = dict(stats=oq.risk_stats(), weights=weights)
+        stats = list(oq.hazard_stats().items())
+        self.param = dict(stats=stats, weights=weights)
         self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
         self.I = oq.insured_losses + 1
-        self.S = len(oq.risk_stats())
+        self.S = len(oq.hazard_stats())
 
     def post_execute(self, result):
         """
@@ -121,7 +124,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         ltypes = self.riskmodel.loss_types
 
         # loss curves stats are generated always
-        stats = [encode(n) for (n, f) in self.oqparam.risk_stats()]
+        stats = encode(list(self.oqparam.hazard_stats()))
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
         avg_losses = numpy.zeros((self.A, self.S, self.L * self.I), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,11 +23,10 @@ file formats."""
 
 import os
 import sys
-import zipfile
 import traceback
 
 from openquake.calculators.export import export
-from openquake.baselib import general, datastore, __version__
+from openquake.baselib import datastore, __version__
 from openquake.commonlib import logs
 
 

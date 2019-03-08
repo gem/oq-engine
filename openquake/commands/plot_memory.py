@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018 GEM Foundation
+# Copyright (C) 2018-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 def make_figure(plots):
@@ -38,12 +38,12 @@ def make_figure(plots):
     return plt
 
 
-@sap.Script
+@sap.script
 def plot_memory(calc_id=-1):
     """
     Plot the memory occupation
     """
-    dstore = engine.read(calc_id)
+    dstore = util.read(calc_id)
     plots = []
     for task_name in dstore['task_info']:
         mem = dstore['task_info/' + task_name]['mem_gb']

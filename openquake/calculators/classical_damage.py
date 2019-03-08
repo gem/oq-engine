@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,7 +36,7 @@ def classical_damage(riskinputs, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
-        a nested dictionary rlz_idx -> asset -> <damage array>
+        a nested dictionary lt_idx, rlz_idx -> asset_idx -> <damage array>
     """
     result = AccumDict(accum=AccumDict())
     for ri in riskinputs:
@@ -53,6 +53,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     Scenario damage calculator
     """
     core_task = classical_damage
+    accept_precalc = ['classical']
 
     def post_execute(self, result):
         """

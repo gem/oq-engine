@@ -1,4 +1,152 @@
   [Michele Simionato]
+  * Introduced a `sap.script` decorator
+  * Used the WebExtractor in `oq importcalc`
+  * Restored validation of the source_model_logic_tree.xml file
+  * Raised an early error for missing occupants in the exposure
+  * Added a check to forbid duplicate file names in the `uncertaintyModel` tag
+  * Made it possible to store the asset loss table in the ebrisk calculator
+    by specifying `asset_loss_table=true` in the job.ini
+  * Added a flag `oq info --parameters` to show the job.ini parameters
+  * Removed the `source_name` column from the disagg by source output
+
+  [Rao Anirudh]
+  * Fixed wrong investigation_time in the calculation of loss maps from
+    loss curves
+
+  [Robin Gee]
+  * Added capability to optionally specify a `time_cutoff` parameter to
+    declustering time window
+
+  [Michele Simionato]
+  * Merged the commands `oq plot_hmaps` and `oq plot_uhs` inside `oq plot`
+  * Changed the storage of hazard curves and hazard maps to make it consistent
+    with the risk outputs and Extractor-friendly
+
+  [Chris Van Houtte]
+  * Added necessary gsims to run the Canterbury Seismic Hazard Model
+    in Gerstenberger et al. (2014)
+  * Added a new gsim file mcverry_2006_chch.py to have the Canterbury-
+    specific classes.
+  * Added a new gsim file bradley_2013b.py to implement the
+    Christchurch-specific modifications to the Bradley2013 base model.
+
+  [Michele Simionato]
+  * Added a check on the intensity measure types and levels in the job.ini,
+    to make sure they are ordered by period
+  * Reduced the number of client sockets to the DbServer that was causing
+    (sporadically) the hanging of calculations on Windows
+  * Extended the WebAPI to be able to extract specific hazard curves, maps
+    and UHS (i.e. IMT-specific and site specific)
+  * Removed the realization index from the event loss table export, since
+    is it redundant
+  * Forced all lowercase Python files in the engine codebase
+  * Removed the dependency from nose
+
+  [Robin Gee]
+  * Updated GMPE of Yu et al. (2013)
+
+  [Michele Simionato]
+  * Added an `Extractor` client class leveraging the WebAPI and enhanced
+    `oq plot_hmaps` to display remote hazard maps
+  * Added a check when disaggregation is attempted on a source model
+    with atomic source groups
+  * Implemented serialization/deserialization of GSIM instances to TOML
+  * Added a check against mispelled rupture distance names and fixed
+    the drouet_alpes_2015 GSIMs
+  * Changed the XML syntax used to define dictionaries IMT -> GSIM
+  * Now GSIM classes have an `.init()` method to manage notrivial
+    initializations, i.e. expensive initializations or initializations
+    requiring access to the filesystem
+  * Fixed a bug in event based that made it impossible to use GMPETables
+  * Associated the events to the realizations even in scenario_risk: this
+    involved changing the generation of the epsilons in the case of asset
+    correlation. Now there is a single aggregate losses output for all
+    realizations
+  * Removed the rlzi column from the GMF CSV export
+  * Introduced a new parameter `ebrisk_maxweight` in the job.ini
+  * For classical calculations with few sites, store information about the
+    realization closest to the mean hazard curve for each site
+  * Removed the max_num_sites limit on the event based calculator
+
+  [Valerio Poggi]
+  * Added an AvgSA intensity measure type and a GenericGmpeAvgSA which is
+    able to use it
+
+  [Michele Simionato]
+  * Introduced the ability to launch subtasks from tasks
+  * Stored rupture information in classical calculations with few sites
+
+  [Chris Van Houtte]
+  * Adding conversion from geometric mean to larger horizontal component in
+    bradley_2013.py
+
+  [Michele Simionato]
+  * Fixed a bug in applyToSources for the case of multiple sources
+  * Moved the prefiltering on the workers to save memory
+  * Exported the aggregated loss ratios in avg losses and agg losses
+  * Removed the variables quantile_loss_curves and mean_loss_curves: they
+    were duplicating quantile_hazard_curves and mean_hazard_curves
+  * Only ruptures boundingbox-close to the site collection are stored
+
+  [Marco Pagani]
+  * Added cluster model to classical PSHA calculator
+
+  [Michele Simionato]
+  * Fixed a bug in scenario_damage from ShakeMap with noDamageLimit=0
+  * Avoided the MemoryError in the controller node by speeding up the saving
+    of the information about the sources
+  * Turned utils/reduce_sm into a proper command
+  * Fixed a wrong coefficient in the ShakeMap amplification
+  * Fixed a bug in the hazard curves export (the filename did not contain
+    the period of the IMT thus producing duplicated files)
+  * Parallelized the reading of the exposure
+
+  [Marco Pagani]
+  * Fixed the implementation on mutex ruptures
+
+  [Michele Simionato]
+  * Changed the aggregated loss curves exporter
+  * Added an experimental calculator ebrisk
+  * Changed the ordering of the events (akin to a change of seed in the
+    asset correlation)
+
+  [Robin Gee]
+  * Fixed bug in tusa_langer_2016.py BA08SE model - authors updated b2 coeff
+  * Fixed bug in tusa_langer_2016.py related to coeffs affecting Repi models
+
+  [Michele Simionato]
+  * Added a check to forbid to set `ses_per_logic_tree_path = 0`
+  * Added an API `/extract/event_info/eidx`
+  * Splitting the sources in classical calculators and not in event based
+  * Removed `max_site_model_distance`
+  * Extended the logic used in event_based_risk - read the hazard sites
+    from the site model, not from the exposure - to all calculators
+  * In classical_bcr calculations with a CSV exposure the retrofitted field
+    was not read. Now a missing retrofitted value is an error
+
+python3-oq-engine (3.3.0-1~xenial01) xenial; urgency=low
+
+  [Graeme Weatherill]
+  * Adds GMPE suite for national PSHA for Germany
+
+  [Daniele Viganò]
+  * Added a warning box when an unsupported browser is used to view the WebUI
+  * Updated Docker containers to support a multi-node deployment
+    with a shared directory
+  * Moved the Docker containers source code from oq-builders
+  * Updated the documentation related to the shared directory
+    which is now mandatory for multi-node deployments
+
+  [Matteo Nastasi]
+  * Removed tests folders
+
+  [Stéphane Drouet]
+  * Added Drouet & Cotton (2015) GMPE including 2017 erratum
+
+  [Michele Simionato]
+  * Optimized the memory occupation in classical calculations (Context.poe_map)
+  * Fixed a wrong counting of the ruptures in split fault sources with
+    an hypo_list/slip_list causing the calculation to fail
   * Made the export of uniform hazard spectra fast
   * Made the `std` hazard output properly exportable
   * Replaced the `~` in the header of the UHS csv files with a `-`
@@ -32,6 +180,7 @@
   [Marco Pagani]
   * Added two modified versions of the Bindi et al. (2011) to be used in a
     backbone approach to compute hazard in Italy
+  * Added a modified version of Berge-Thierry et al. 2003 supporting Mw
 
   [Michele Simionato]
   * Changed the way loss curves and loss maps are stored in order to unify
@@ -208,6 +357,8 @@
   * Unified all distribution mechanisms to returns the outputs via zmq
   * Added a check for inconsistent IMTs between hazard and risk
   * Replaced the forking processpool with a spawning processpool
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 07 Jan 2019 13:51:24 +0000
 
 python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
 

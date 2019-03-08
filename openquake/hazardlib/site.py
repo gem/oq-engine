@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -245,7 +245,7 @@ class SiteCollection(object):
            a filtered SiteCollection instance if `indices` is a proper subset
            of the available indices, otherwise returns the full SiteCollection
         """
-        if len(indices) == len(self):
+        if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
         indices = numpy.uint32(sorted(indices))

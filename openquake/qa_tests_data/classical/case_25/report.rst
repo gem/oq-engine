@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2018-12-13T12:57:47
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:37:17
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 6, num_levels = 3
@@ -12,7 +12,7 @@ num_sites = 6, num_levels = 3
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -45,24 +45,24 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
+b1        1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ===================== ========== ========== ==========
-grp_id gsims                 distances  siteparams ruptparams
-====== ===================== ========== ========== ==========
-0      TusaLanger2016Rhypo() rhypo rrup vs30       mag       
-====== ===================== ========== ========== ==========
+====== ======================= ========== ========== ==========
+grp_id gsims                   distances  siteparams ruptparams
+====== ======================= ========== ========== ==========
+0      '[TusaLanger2016Rhypo]' rhypo rrup vs30       mag       
+====== ======================= ========== ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,TusaLanger2016Rhypo(): [0]>
+  0,'[TusaLanger2016Rhypo]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -77,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     8     440          0.0       0.16623    0.0       20        0.0   
+0      1         A    0     8     440          0.0       0.14494    120       20        107   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -88,31 +88,27 @@ code calc_time counts
 A    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01664 NaN    0.01664 0.01664 1      
-split_filter       0.01347 NaN    0.01347 0.01347 1      
+read_source_models 0.00769 NaN    0.00769 0.00769 1      
+split_filter       0.01211 NaN    0.01211 0.01211 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== =================================== ========
-task               sent                                received
-read_source_models converter=388 B fnames=107 B        2.34 KB 
-split_filter       srcs=2 KB srcfilter=253 B seed=14 B 5.71 KB 
-================== =================================== ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=313 B fnames=107 B           2.37 KB 
+split_filter       srcs=2.02 KB srcfilter=253 B seed=14 B 5.72 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.01664  0.0       1     
-total split_filter       0.01347  0.0       1     
+total split_filter       0.01211  2.13672   1     
+total read_source_models 0.00769  0.15625   1     
 ======================== ======== ========= ======

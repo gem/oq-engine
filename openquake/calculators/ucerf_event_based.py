@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,6 @@ from openquake.baselib.python3compat import zip
 from openquake.hazardlib.calc import stochastic
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.source.rupture import EBRupture
-from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, generate_background_ruptures)
@@ -139,15 +138,13 @@ def sample_background_model(
 # #################################################################### #
 
 
-@util.reader
-def build_ruptures(sources, param, monitor):
+def build_ruptures(sources, src_filter, param, monitor):
     """
     :param sources: a list with a single UCERF source
     :param param: extra parameters
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
     """
-    src_filter = param['src_filter']
     [src] = sources
     res = AccumDict()
     res.calc_times = []
@@ -170,7 +167,7 @@ def build_ruptures(sources, param, monitor):
     dic = {'eff_ruptures': {src.src_group_id: src.num_ruptures}}
     eb_ruptures = [EBRupture(rup, src.id, src.src_group_id, n, samples)
                    for rup, n in n_occ.items()]
-    dic['rup_array'] = stochastic.get_rup_array(eb_ruptures)
+    dic['rup_array'] = stochastic.get_rup_array(eb_ruptures, src_filter)
     dt = time.time() - t0
     dic['calc_times'] = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
     return dic
@@ -182,22 +179,21 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
     Event based PSHA calculator generating the ruptures and GMFs together
     """
     build_ruptures = build_ruptures
+    accept_precalc = ['ucerf_hazard']
 
     def pre_execute(self):
         """
         parse the logic tree and source model input
         """
-        logging.warn('%s is still experimental', self.__class__.__name__)
+        logging.warning('%s is still experimental', self.__class__.__name__)
         self.read_inputs()  # read the site collection
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-        self.R = len(self.rlzs_assoc.realizations)
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         self.init_logic_tree(self.csm.info)
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
-        self.param['src_filter'] = self.src_filter

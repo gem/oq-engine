@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -42,6 +42,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
+    splittable = True
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -112,13 +113,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         with ir_monitor:
             ruptures = list(self.iter_ruptures())
         tom = getattr(self, 'temporal_occurrence_model', None)
-        unsplit = isinstance(self.serial, int)
-        if unsplit:  # prefilter_sources=no was given
-            serials = numpy.arange(
-                self.serial, self.serial + self.num_ruptures)
-        else:  # the serials have been generated in prefiltering
-            serials = self.serial
-        if tom and unsplit:  # time-independent source
+        serials = numpy.arange(self.serial, self.serial + self.num_ruptures)
+        if tom:  # time-independent source
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
             numpy.random.seed(self.serial)
             occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)

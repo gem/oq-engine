@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -57,10 +57,10 @@ PY_MODULES = ['openquake.commands.__main__']
 install_requires = [
     'setuptools',
     'mock >=1.0, <2.1',
-    'nose >=1.3, <1.4',
     'h5py >=2.8, <2.9',
     'numpy >=1.14, <1.15',
     'scipy >=1.0.1, <1.2',
+    'rtree ==0.8.3',
     'pyzmq <18.0',
     'psutil >=2.0, <5.5',
     'shapely >=1.3, <1.7',
@@ -71,10 +71,10 @@ install_requires = [
     'requests >=2.20, <2.21',
     'pyshp ==1.2.3',
     'PyYAML',
+    'toml',
 ]
 
 extras_require = {
-    'rtree': ['rtree ==0.8.3'],
     'setproctitle': ["setproctitle"],
     'prctl': ["python-prctl ==1.6.1"],
     'celery':  ["celery >=4.0, <4.2"],
@@ -85,8 +85,10 @@ extras_require = {
         'pyproj >=1.9',
     ],
     'dev':  [
+        'nose >=1.3, <1.4',
         'flake8 >=3.5, <3.6',
         'pdbpp',
+        'ipython',
     ]
 }
 
@@ -118,6 +120,7 @@ setup(
     ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools",
+                                    "*.*.tests", "*.*.tests.*",
                                     "openquake.engine.bin",
                                     "openquake.engine.bin.*"]),
     py_modules=PY_MODULES,

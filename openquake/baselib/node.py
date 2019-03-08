@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -380,8 +380,12 @@ def _displayattrs(attrib, expandattrs):
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
-    val = (' %s' % repr(node.text) if expandvals and node.text is not None
-           else '')
+    if node.text is None or not expandvals:
+        val = ''
+    elif isinstance(node.text, str):
+        val = ' %s' % repr(node.text.strip())
+    else:
+        val = ' %s' % repr(node.text)  # node.text can be a tuple
     output.write(encode(indent + striptag(node.tag) + attrs + val + '\n'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
@@ -720,7 +724,7 @@ def node_from_ini(ini_file, nodefactory=Node, root_name='ini'):
     """
     fileobj = open(ini_file) if isinstance(ini_file, str) else ini_file
     cfp = configparser.RawConfigParser()
-    cfp.readfp(fileobj)
+    cfp.read_file(fileobj)
     root = nodefactory(root_name)
     sections = cfp.sections()
     for section in sections:

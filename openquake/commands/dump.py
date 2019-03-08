@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,7 @@ def smart_save(dbpath, archive, calc_id):
     shutil.rmtree(tmpdir)
 
 
-@sap.Script
+@sap.script
 def dump(archive, calc_id=0, user=None):
     """
     Dump the openquake database and all the complete calculations into a zip

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -52,7 +52,11 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
 
 
 # Required the definition of a specific GMPE, doesn't matter which
-DUMMY_GSIM = DarraghEtAl2015NGAEast1CCSPTotalSigma
+def DUMMY_GSIM(**kw):
+    gsim = DarraghEtAl2015NGAEast1CCSPTotalSigma(**kw)
+    gsim.init()
+    return gsim
+
 
 # Maximum discrepancy is increased to 2 % to account for misprints and
 # rounding errors in the tables used for the target values

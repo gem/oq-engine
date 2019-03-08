@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -63,6 +63,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         gsim = copy.deepcopy(gsim_cls)
     else:
         gsim = gsim_cls()
+    gsim.init()
 
     ctxs = []
     errors = 0

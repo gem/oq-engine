@@ -3,8 +3,8 @@ Scenario QA Test, Case 9, Multiple GSIMs
 
 ============== ===================
 checksum32     572,372,510        
-date           2018-12-13T12:57:04
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:35:34
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -44,17 +44,17 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 simple(2)       2/2             
+b_1       1.00000 simple(2)       2               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,LinLee2008SSlab(): [0]
-  0,YoungsEtAl1997SSlab(): [1]>
+  0,'[LinLee2008SSlab]\nminimum_distance = 10': [0]
+  0,'[YoungsEtAl1997SSlab]\nminimum_distance = 5': [1]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------

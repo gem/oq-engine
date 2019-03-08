@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -188,10 +188,10 @@ class RlzsAssoc(object):
         return pmaps
 
     def get_rlz(self, rlzstr):
-        """
+        r"""
         Get a Realization instance for a string of the form 'rlz-\d+'
         """
-        mo = re.match('rlz-(\d+)', rlzstr)
+        mo = re.match(r'rlz-(\d+)', rlzstr)
         if not mo:
             return
         return self.realizations[int(mo.group(1))]
@@ -208,15 +208,16 @@ class RlzsAssoc(object):
 
     def __repr__(self):
         pairs = []
-        dic = self.by_grp()
-        size = sum(len(dic[grp]) for grp in dic)
-        for grp in sorted(dic):
-            grp_id = int(grp[4:])
-            gsims = self.csm_info.get_gsims(grp_id)
-            for gsim_idx, rlzis in enumerate(dic[grp]):
-                if len(rlzis) > 10:  # short representation
-                    rlzis = ['%d realizations' % len(rlzis)]
-                pairs.append(('%s,%s' % (grp_id, gsims[gsim_idx]), rlzis))
+        dic = {grp.id: self.get_rlzs_by_gsim(grp.id)
+               for sm in self.csm_info.source_models
+               for grp in sm.src_groups if grp.eff_ruptures}
+        size = 0
+        for grp_id, rlzs_by_gsim in dic.items():
+            for gsim, rlzs in rlzs_by_gsim.items():
+                size += 1
+                if len(rlzs) > 10:  # short representation
+                    rlzs = ['%d realizations' % len(rlzs)]
+                pairs.append(('%s,%r' % (grp_id, repr(gsim)), rlzs))
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
             self.__class__.__name__, size, len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
@@ -253,7 +254,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
     """
     assoc = RlzsAssoc(cinfo)
     offset = 0
-    trtset = set(cinfo.gsim_lt.tectonic_region_types)
+    trtset = set(cinfo.gsim_lt.values)
     for smodel in cinfo.source_models:
         # discard source models with non-acceptable lt_path
         if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
@@ -267,20 +268,20 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                     trts_.add(sg.trt)
 
         # recompute the GSIM logic tree if needed
-        if trtset != trts_:
+        if trts_ != {'*'} and trtset != trts_:
             before = cinfo.gsim_lt.get_num_paths()
             gsim_lt = cinfo.gsim_lt.reduce(trts_)
             after = gsim_lt.get_num_paths()
             if sm_lt_path and before > after:
                 # print the warning only when saving the logic tree,
-                # i.e. when called with sm_lt_path in store_csm_info
-                logging.warn('Reducing the logic tree of %s from %d to %d '
-                             'realizations', smodel.name, before, after)
+                # i.e. when called with sm_lt_path in store_rlz_info
+                logging.warning('Reducing the logic tree of %s from %d to %d '
+                                'realizations', smodel.name, before, after)
             gsim_rlzs = list(gsim_lt)
-            all_trts = gsim_lt.all_trts
+            all_trts = list(gsim_lt.values)
         else:
             gsim_rlzs = cinfo.gsim_rlzs
-            all_trts = cinfo.gsim_lt.all_trts
+            all_trts = list(cinfo.gsim_lt.values)
 
         rlzs = cinfo._get_rlzs(smodel, gsim_rlzs, cinfo.seed + offset)
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
