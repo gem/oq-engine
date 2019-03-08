@@ -44,14 +44,14 @@ def dbserver(cmd, dbhostport=None,
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            dbs.run_server.func(dbpath, dbhostport)
+            dbs.run_server(dbpath, dbhostport)
         else:
             print('dbserver already running')
     elif cmd == 'restart':
         if status == 'running':
             pid = logs.dbcmd('getpid')
             os.kill(pid, signal.SIGINT)
-        dbs.run_server.func(dbpath, dbhostport)
+        dbs.run_server(dbpath, dbhostport)
 
 
 dbserver.arg('cmd', 'dbserver command',
