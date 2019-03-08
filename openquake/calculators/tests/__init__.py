@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -188,7 +188,9 @@ class CalculatorTestCase(unittest.TestCase):
         res = super().run(result)
         if hasattr(res, 'errors'):
             issues = len(res.errors) + len(res.failures)
-        else:  # this happens with pytest sometimes
+        elif getattr(res, '_excinfo'):  # with pytest
+            issues = len(res._excinfo)
+        else:
             issues = 0
         # remove temporary dir only for success
         if self.edir and not issues:
