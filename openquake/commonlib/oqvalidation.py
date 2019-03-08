@@ -321,6 +321,7 @@ class OqParam(valid.ParamSet):
         """
         imts = set(from_string(imt).name for imt in self.imtls)
         for gsim in gsims:
+            '''
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
                 names = set(cls.__name__ for cls in restrict_imts)
@@ -329,6 +330,7 @@ class OqParam(valid.ParamSet):
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' %
                         (invalid_imts, gsim))
+            '''
 
             if 'site_model' not in self.inputs:
                 # look at the required sites parameters: they must have

@@ -1289,6 +1289,8 @@ class ImtWeight(object):
                 if weight:
                     self.dic[n['imt']] = weight
                     imts.append(n['imt'])
+            if imts:
+                del self.dic['weight']
             if len(set(imts)) < len(imts):
                 raise InvalidLogicTree(
                     'There are duplicated IMTs in the weights')
@@ -1331,7 +1333,7 @@ class ImtWeight(object):
         try:
             return self.dic[imt]
         except KeyError:
-            return self.dic['weight']
+            return self.dic.get('weight', 0)
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
