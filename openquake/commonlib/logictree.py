@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -488,12 +488,13 @@ Info = collections.namedtuple('Info', 'smpaths, applytosources')
 
 def collect_info(smlt):
     """
-    Given a path to a source model logic tree or a file, collect all of the
-    path names to the source models it contains and return them as a
-    dictionary source model branch ID -> paths. Moreover, populate a dictionary
-    source model branch ID -> source IDs listed in applyToSources
+    Given a path to a source model logic tree, collect all of the
+    path names to the source models it contains and build
+    1. a dictionary source model branch ID -> paths
+    2. a dictionary source model branch ID -> source IDs in applyToSources
 
     :param smlt: source model logic tree file
+    :returns: an Info namedtupled containing the two dictionaries
     """
     n = nrml.read(smlt)
     try:
@@ -638,7 +639,7 @@ class SourceModelLogicTree(object):
         if self.info.applytosources:
             self.source_ids = self.get_source_ids()
         else:
-            self.source_ids = {}
+            self.source_ids = collections.defaultdict(list)
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
 
@@ -739,7 +740,8 @@ class SourceModelLogicTree(object):
             if value_node.text is not None:
                 values.append(value_node.text.strip())
             if validate:
-                self.validate_uncertainty_value(value_node, branchset)
+                self.validate_uncertainty_value(
+                    value_node, branchnode, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(branch_id, weight, value)
@@ -907,7 +909,7 @@ class SourceModelLogicTree(object):
         return geo.PlanarSurface.from_corner_points(
             top_left, top_right, bottom_right, bottom_left)
 
-    def validate_uncertainty_value(self, node, branchset):
+    def validate_uncertainty_value(self, node, branchnode, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -927,7 +929,7 @@ class SourceModelLogicTree(object):
         if branchset.uncertainty_type == 'sourceModel':
             smfname = node.text.strip()
             try:
-                self.collect_source_model_data(smfname)
+                self.collect_source_model_data(branchnode['branchID'], smfname)
             except Exception as exc:
                 raise LogicTreeError(node, self.filename, str(exc)) from exc
 
@@ -1120,11 +1122,12 @@ class SourceModelLogicTree(object):
 
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
-                if source_id not in self.source_ids:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        "source with id '%s' is not defined in source models"
-                        % source_id)
+                for source_ids in self.source_ids.values():
+                    if source_id not in source_ids:
+                        raise LogicTreeError(
+                            branchset_node, self.filename,
+                            "source with id '%s' is not defined in source "
+                            "models" % source_id)
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
@@ -1198,7 +1201,7 @@ class SourceModelLogicTree(object):
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file), 'rb')
 
-    def collect_source_model_data(self, branchID, source_model):
+    def collect_source_model_data(self, branch_id, source_model):
         """
         Parse source model file and collect information about source ids,
         source types and tectonic region types available in it. That
@@ -1213,7 +1216,7 @@ class SourceModelLogicTree(object):
                 source_id = src_node['id']
                 source_type = striptag(src_node.tag)[n:]
                 self.tectonic_region_types.add(trt)
-                self.source_ids[branchID].append(source_id)
+                self.source_ids[branch_id].append(source_id)
                 self.source_types.add(source_type)
 
     def apply_uncertainties(self, branch_ids, source_group):
