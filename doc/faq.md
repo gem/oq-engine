@@ -1,5 +1,14 @@
 # FAQ
 
+### Help! There is an error in my calculation!
+
+You are in the wrong place. These are the FAQ for IT issues, concerning
+how to install the engine. If you have already installed it and have
+issues running calculations you should go [here for hazard calculations](
+faq-hazard.md) and [here for risk calculations](faq-risk.md).
+
+******
+
 ### Python 2.7 compatibility 
 
 Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
@@ -128,6 +137,37 @@ More information is available on [Running the OpenQuake Engine](running/unix.md)
 ### DbServer ports
 
 The default port for the DbServer (configured via the `openquake.cfg` configuration file) is `1908` or `1907`.
+
+******
+
+### error: OSError: Unable to open file (on a multi-node cluster)
+
+A more detailed stack trace:
+
+```python
+OSError:
+  File "/opt/openquake/lib/python3.6/site-packages/openquake/baselib/parallel.py", line 312, in new
+    val = func(*args)
+  File "/opt/openquake/lib/python3.6/site-packages/openquake/baselib/parallel.py", line 376, in gfunc
+    yield func(*args)
+  File "/opt/openquake/lib/python3.6/site-packages/openquake/calculators/classical.py", line 301, in build_hazard_stats
+    pgetter.init()  # if not already initialized
+  File "/opt/openquake/lib/python3.6/site-packages/openquake/calculators/getters.py", line 69, in init
+    self.dstore = hdf5.File(self.dstore, 'r')
+  File "/opt/openquake/lib64/python3.6/site-packages/h5py/_hl/files.py", line 312, in __init__
+    fid = make_fid(name, mode, userblock_size, fapl, swmr=swmr)
+  File "/opt/openquake/lib64/python3.6/site-packages/h5py/_hl/files.py", line 142, in make_fid
+    fid = h5f.open(name, flags, fapl=fapl)
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py/h5f.pyx", line 78, in h5py.h5f.open
+OSError: Unable to open file (unable to open file: name = '/home/openquake/oqdata/cache_1.hdf5', errno = 2, error message = 'No such file or directory', flags = 0, o_flags = 0)
+```
+
+This happens when the [shared dir](installing/cluster.md#shared_filesystem) is not configured properly and workers cannot access data from the master node.
+Please note that starting with OpenQuake Engine 3.3 the shared directory **is required** on multi-node deployments.
+
+You can get more information about setting up the shared directory on the [cluster installation page](installing/cluster.md#shared_filesystem).
 
 ******
 

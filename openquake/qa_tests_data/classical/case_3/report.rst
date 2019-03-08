@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 3
 
 ============== ===================
 checksum32     4,051,148,706      
-date           2018-12-13T12:58:05
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:38:03
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -12,7 +12,7 @@ num_sites = 1, num_levels = 3
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -44,24 +44,24 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
+b1        1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
+====== ================== ========= ========== ==========
+grp_id gsims              distances siteparams ruptparams
+====== ================== ========= ========== ==========
+0      '[SadighEtAl1997]' rrup      vs30       mag rake  
+====== ================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997(): [0]>
+  0,'[SadighEtAl1997]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -76,7 +76,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     65    31,353       0.0       140,556    0.0       31,353    0.0   
+0      1         A    0     65    31,353       0.0       132,567    31,353    31,353    3,136 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -87,31 +87,27 @@ code calc_time counts
 A    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 3.88777 NaN    3.88777 3.88777 1      
-split_filter       6.80742 NaN    6.80742 6.80742 1      
+read_source_models 4.14253 NaN    4.14253 4.14253 1      
+split_filter       6.36841 NaN    6.36841 6.36841 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=388 B fnames=106 B           4.15 KB 
-split_filter       srcs=3.78 KB srcfilter=253 B seed=14 B 6.6 MB  
-================== ====================================== ========
+================== ===================================== ========
+task               sent                                  received
+read_source_models converter=313 B fnames=106 B          4.18 KB 
+split_filter       srcs=3.8 KB srcfilter=253 B seed=14 B 6.6 MB  
+================== ===================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       6.80742  33        1     
-total read_source_models 3.88777  0.74219   1     
+total split_filter       6.36841  24        1     
+total read_source_models 4.14253  0.69531   1     
 ======================== ======== ========= ======

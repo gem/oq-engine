@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,8 +27,8 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 
 TWO16 = 2 ** 16  # 65,536
@@ -40,19 +40,11 @@ U64 = numpy.uint64
 U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
-MAX_RUPTURES = 1000
-
-
-def source_site_noop_filter(srcs):
-    for src in srcs:
-        yield src, None
-
-
-source_site_noop_filter.integration_distance = {}
+MAX_RUPTURES = 2000
 
 
 # this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
+def stochastic_event_set(sources, source_site_filter=nofilter):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -102,7 +94,7 @@ rupture_dt = numpy.dtype([
 
 
 # this is really fast
-def get_rup_array(ebruptures):
+def get_rup_array(ebruptures, srcfilter=nofilter):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
     out the ruptures far away from every site
@@ -125,6 +117,10 @@ def get_rup_array(ebruptures):
         minlat = points[:, 1].min()
         maxlon = points[:, 0].max()
         maxlat = points[:, 1].max()
+        if srcfilter.integration_distance and len(srcfilter.close_sids(
+                (minlon, minlat, maxlon, maxlat),
+                rup.tectonic_region_type, rup.mag)) == 0:
+            continue
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
@@ -142,12 +138,13 @@ def get_rup_array(ebruptures):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
-# NB: there is no filtering of the ruptures: the sources are supposed to
-# have been prefiltered
-def sample_ruptures(sources, param, monitor=Monitor()):
+# NB: there is postfiltering of the ruptures, which is more efficient
+def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     """
     :param sources:
         a sequence of (prefiltered) sources of the same group
+    :param srcfilter:
+        SourceFilter instance used for bounding box post filtering
     :param param:
         a dictionary of additional parameters including
         ses_per_logic_tree_path
@@ -161,13 +158,14 @@ def sample_ruptures(sources, param, monitor=Monitor()):
     # Compute and save stochastic event sets
     num_ses = param['ses_per_logic_tree_path']
     eff_ruptures = 0
-    grp_id = sources[0].src_group_id
+    [grp_id] = set(src.src_group_id for src in sources)
     eb_ruptures = []
     ir_mon = monitor('iter_ruptures', measuremem=False)
     for src in sources:
         t0 = time.time()
         if len(eb_ruptures) > MAX_RUPTURES:
-            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+            # yield partial result to avoid running out of memory
+            yield AccumDict(rup_array=get_rup_array(eb_ruptures, srcfilter),
                             calc_times={}, eff_ruptures={})
             eb_ruptures.clear()
         samples = getattr(src, 'samples', 1)
@@ -179,6 +177,6 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         eff_ruptures += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    yield AccumDict(rup_array=get_rup_array(eb_ruptures),
-                    calc_times=calc_times,
+    rup_array = get_rup_array(eb_ruptures, srcfilter)
+    yield AccumDict(rup_array=rup_array, calc_times=calc_times,
                     eff_ruptures={grp_id: eff_ruptures})

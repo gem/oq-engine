@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
-import re
 import abc
 import math
 import warnings
@@ -32,8 +31,20 @@ from scipy.special import ndtr
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
+from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.contexts import *  # for backward compatibility
 
+
+ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
+                           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
+ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
+ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
+                             'COEFFS_SITE_RESPONSE']
+ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
+                           'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
+                           'REQUIRES_DISTANCES',
+                           'REQUIRES_SITES_PARAMETERS',
+                           'REQUIRES_RUPTURE_PARAMETERS']
 
 registry = {}  # GSIM name -> GSIM class
 
@@ -57,8 +68,26 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
+class MetaGSIM(abc.ABCMeta):
+    """
+    A metaclass converting set class attributes into frozensets, to avoid
+    mutability bugs without having to change already written GSIMs. Moreover
+    it performs some checks against typos.
+    """
+    def __new__(meta, name, bases, dic):
+        for k, v in dic.items():
+            if isinstance(v, set):
+                dic[k] = frozenset(v)
+                if k == 'REQUIRES_DISTANCES':
+                    missing = v - KNOWN_DISTANCES
+                    if missing:
+                        raise ValueError('Unknown distance %s in %s' %
+                                         (missing, name))
+        return super().__new__(meta, name, bases, dic)
+
+
 @functools.total_ordering
-class GroundShakingIntensityModel(object):
+class GroundShakingIntensityModel(metaclass=MetaGSIM):
     """
     Base class for all the ground shaking intensity models.
 
@@ -149,7 +178,8 @@ class GroundShakingIntensityModel(object):
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
-    minimum_distance = 0  # can be set by the engine
+    _toml = ''  # set by valid.gsim
+    minimum_distance = 0  # set by valid.gsim
     superseded_by = None
     non_verified = False
 
@@ -168,6 +198,11 @@ class GroundShakingIntensityModel(object):
             msg = ('%s is not independently verified - the user is liable '
                    'for their application') % cls.__name__
             warnings.warn(msg, NotVerifiedWarning)
+
+    def init(self):
+        """
+        Override this method if you want to further initialize the GSIM
+        """
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -409,16 +444,13 @@ class GroundShakingIntensityModel(object):
         """
         return hash(str(self))
 
-    def __str__(self):
-        kwargs = ', '.join('%s=%r' % kv for kv in self.kwargs.items())
-        return "%s(%s)" % (self.__class__.__name__, kwargs)
-
     def __repr__(self):
         """
-        Default string representation for GSIM instances. It contains
-        the name and values of the arguments, if any.
+        String representation for GSIM instances in TOML format.
         """
-        return repr(str(self))
+        if self._toml:
+            return self._toml
+        return '[%s]' % self.__class__.__name__
 
 
 def _truncnorm_sf(truncation_level, values):
@@ -490,13 +522,6 @@ def _norm_sf(values):
     return ndtr(- values)
 
 
-ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
-                           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
-ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
-ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
-                             'COEFFS_SITE_RESPONSE']
-
-
 class GMPE(GroundShakingIntensityModel):
     """
     Ground-Motion Prediction Equation is a subclass of generic
@@ -527,32 +552,14 @@ class GMPE(GroundShakingIntensityModel):
         Combines the parameters of the GMPE provided at the construction level
         with the ones originally assigned to the backbone modified GMPE.
         """
-        # Creating the list of keys
-        keys = {}
-        for key in dir(self):
-            if not callable(getattr(self, key)) and not re.search('^_', key):
-                # keys[key] = set(())
-                keys[key] = getattr(self, key)
-        # Setting parameters
-        for key in dir(self.gmpe):
-            if key in keys and not callable(getattr(self.gmpe, key)):
-                if re.search('^[A-Z]', key) and not re.search('^C', key):
-                    tmps = getattr(self.gmpe, key)
-                    try:
-                        keys[key] |= tmps
-                    except TypeError:
-                        if (key in ADMITTED_STR_PARAMETERS or
-                                key in ADMITTED_FLOAT_PARAMETERS):
-                            keys[key] = tmps
-                        elif (key in ADMITTED_TABLE_PARAMETERS):
-                            pass
-                        else:
-                            raise NameError('This is not a recognized type ' %
-                                            key)
-                    else:
-                        keys[key] = tmps
-        for key in keys:
-            setattr(self, key, keys[key])
+        for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
+                    ADMITTED_SET_PARAMETERS):
+            try:
+                val = getattr(self.gmpe, key)
+            except AttributeError:
+                pass
+            else:
+                setattr(self, key, val)
 
 
 class IPE(GroundShakingIntensityModel):

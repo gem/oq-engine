@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ from openquake.baselib.general import safeprint
 from openquake.server.dbapi import Db
 
 
-@sap.Script
+@sap.script
 def restore(archive, oqdata):
     """
     Build a new oqdata directory from the data contained in the zip archive

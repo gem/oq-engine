@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -167,8 +167,6 @@ def to_python(fname, *args):
     return node_to_obj(node, fname, *args)
 
 
-parse = deprecated('Use nrml.to_python instead')(to_python)
-
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
 
@@ -265,6 +263,7 @@ validators = {
     'char_mag': valid.positivefloats,
     'magnitudes': valid.positivefloats,
     'id': valid.simple_id,
+    'occurrence_rate': valid.positivefloat,
     'rupture.id': valid.positiveint,
     'ruptureId': valid.positiveint,
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),

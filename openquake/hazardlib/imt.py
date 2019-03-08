@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -165,6 +165,13 @@ class SA(IMT):
             return '%s(%s, %s)' % (self.name, self.period, self.damping)
         else:
             return '%s(%s)' % (self.name, self.period)
+
+
+class AvgSA(IMT):
+    """
+    Dummy spectral acceleration to compute average ground motion over
+    several spectral ordinates.
+    """
 
 
 class IA(IMT):

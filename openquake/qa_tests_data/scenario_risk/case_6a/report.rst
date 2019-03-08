@@ -3,8 +3,8 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     1,923,070,683      
-date           2018-12-13T12:57:05
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:35:34
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 1
@@ -44,17 +44,17 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 simple(2)       2/2             
+b_1       1.00000 simple(2)       2               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,BooreAtkinson2008(): [0]
-  0,ChiouYoungs2008(): [1]>
+  0,'[BooreAtkinson2008]': [0]
+  0,'[ChiouYoungs2008]': [1]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------

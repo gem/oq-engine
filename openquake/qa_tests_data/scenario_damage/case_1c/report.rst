@@ -2,12 +2,12 @@ Scenario Damage
 ===============
 
 ============== ===================
-checksum32     2,048,857,716      
-date           2018-10-05T03:04:43
-engine_version 3.3.0-git48e9a474fd
+checksum32     711,595,636        
+date           2019-02-18T08:36:03
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
-num_sites = 7, num_levels = 26
+num_sites = 1, num_levels = 26
 
 Parameters
 ----------
@@ -46,16 +46,16 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): [0]>
+  0,'[BooreAtkinson2008]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -84,8 +84,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.00183   0.0       1     
-computing gmfs      0.00172   0.0       1     
-saving gmfs         0.00168   0.0       1     
-reading exposure    5.772E-04 0.0       1     
+saving gmfs         0.00205   0.0       1     
+building riskinputs 0.00177   0.0       1     
+computing gmfs      0.00160   0.0       1     
+reading exposure    5.369E-04 0.0       1     
 =================== ========= ========= ======

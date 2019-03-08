@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -514,6 +514,9 @@ class FragilityFunctionDiscrete(object):
         self.limit_state = limit_state
         self.imls = imls
         self.poes = poes
+        if len(imls) != len(poes):
+            raise ValueError('%s: %d levels but %d poes' % (
+                limit_state, len(imls), len(poes)))
         self._interp = None
         self.no_damage_limit = no_damage_limit
 
@@ -581,7 +584,7 @@ class FragilityFunctionList(list):
         """
         new = copy.copy(self)
         add_zero = (self.format == 'discrete' and
-                    self.nodamage and self.nodamage < self.imls[0])
+                    self.nodamage and self.nodamage <= self.imls[0])
         new.imls = build_imls(new, discretization)
         if steps_per_interval > 1:
             new.interp_imls = build_imls(  # passed to classical_damage
@@ -1300,12 +1303,14 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     If num_events is not passed, it is inferred from the number of losses;
     if eff_time is not passed, it is inferred from the longest return period.
     """
+    if len(losses) == 0:  # zero-curve
+        return numpy.zeros(len(return_periods))
     if num_events is None:
         num_events = len(losses)
     elif num_events < len(losses):
         raise ValueError(
-            'There are not enough events to compute the loss curves: %d'
-            % num_events)
+            'There are not enough events (%d) to compute the loss curve '
+            'from %d losses' % (num_events, len(losses)))
     if eff_time is None:
         eff_time = return_periods[-1]
     losses = numpy.sort(losses)
@@ -1358,20 +1363,36 @@ class LossesByPeriodBuilder(object):
         :param stats:
             list of pairs [(statname, statfunc), ...]
         :returns:
-            two arrays of dtype loss_dt values with shape (P, R) and (P, S)
+            two arrays with shape (P, R, L) and (P, S, L)
         """
         P, R = len(self.return_periods), len(self.weights)
-        array = numpy.zeros((P, R), self.loss_dt)
+        L = len(self.loss_dt.names)
+        array = numpy.zeros((P, R, L), F32)
         dic = group_array(losses_by_event, 'rlzi')
         for r in dic:
             num_events = self.num_events[r]
             losses = dic[r]['loss']
-            for lti, lt in enumerate(self.loss_dt.names):
-                ls = losses[:, lti].flatten()  # flatten only in ucerf
+            for l, lt in enumerate(self.loss_dt.names):
+                ls = losses[:, l].flatten()  # flatten only in ucerf
                 # NB: do not use squeeze or the gmf_ebrisk tests will break
                 lbp = losses_by_period(
                     ls, self.return_periods, num_events, self.eff_time)
-                array[:, r][lt] = lbp
+                array[:, r, l] = lbp
+        return self.pair(array, stats)
+
+    def build_pair(self, losses, stats):
+        """
+        :param losses: a list of lists with R elements
+        :returns: two arrays of shape (P, R) and (P, S) respectively
+        """
+        P, R = len(self.return_periods), len(self.weights)
+        assert len(losses) == R, len(losses)
+        array = numpy.zeros((P, R), F32)
+        for r, ls in enumerate(losses):
+            ne = self.num_events.get(r, 0)
+            if ne:
+                array[:, r] = losses_by_period(
+                    ls, self.return_periods, ne, self.eff_time)
         return self.pair(array, stats)
 
     # used in event_based_risk
@@ -1396,4 +1417,20 @@ class LossesByPeriodBuilder(object):
                     for c, poe in enumerate(clp):
                         clratio = conditional_loss_ratio(ls, self.poes, poe)
                         array[a, r, c, lti] = clratio
+        return self.pair(array, stats)
+
+    # used in ebrisk
+    def build_loss_maps(self, losses, clp, stats=()):
+        """
+        :param losses: an array of shape R, E
+        :param clp: a list of C conditional loss poes
+        :param stats: list of pairs [(statname, statfunc), ...]
+        :returns: two arrays of shape (C, R) and (C, S)
+        """
+        array = numpy.zeros((len(clp), len(losses)), F32)
+        for r, ls in enumerate(losses):
+            if len(ls) < 2:
+                continue
+            for c, poe in enumerate(clp):
+                array[c, r] = conditional_loss_ratio(ls, self.poes, poe)
         return self.pair(array, stats)

@@ -9,6 +9,7 @@
   <link href="{{ STATIC_URL }}css/assets.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/engine.css" rel="stylesheet" type="text/css" />
   <link href="{{ STATIC_URL }}css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ STATIC_URL }}lib/outdatedbrowser/outdatedbrowser.min.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
   {% block header %}
@@ -72,7 +73,7 @@
 
   {% block main %}
   {% endblock main %}
-
+  <div id="outdated"></div>
   {% block footer %}
   <footer id="footer" class="footer">
     <div class="container">
@@ -86,7 +87,6 @@
     </div> <!-- /.container -->
   </footer>
   {% endblock footer %}
-
   {% block scripts %}
   <script type="text/javascript" src="{{ STATIC_URL }}lib/html5shiv/js/html5shiv.min.js"></script>
   <script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery-1.9.1.js"></script>
@@ -96,6 +96,7 @@
   <script type="text/javascript" src="{{ STATIC_URL }}lib/underscore/js/underscore-min.js"></script>
   <script type="text/javascript" src="{{ STATIC_URL }}lib/backbone/js/backbone-min.js"></script>
   <script type="text/javascript" src="{{ STATIC_URL }}lib/jquery/js/jquery.form-3.44.0.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}lib/outdatedbrowser/outdatedbrowser.min.js"></script>
   {% endblock scripts %}
 
   {% block templates %}
@@ -105,7 +106,15 @@
   <script type="text/javascript"><!--
     var gem_oq_server_url = '{{ oq_engine_server_url }}';
     //-->
-    </script>
+    $( document ).ready(function() {
+        outdatedBrowser({
+            bgColor: '#1b75a5',
+            color: '#fefefe',
+            lowerThan: 'borderImage',
+            languagePath: '{{ STATIC_URL }}lib/outdatedbrowser/lang/en.html'
+        })
+    })
+  </script>
   {% endblock extra_script %}
 </body>
 </html>

@@ -2,9 +2,9 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ============== ===================
-checksum32     17,280,623         
-date           2018-12-13T12:58:02
-engine_version 3.3.0-git68d7d11268
+checksum32     905,885,649        
+date           2019-02-18T08:37:48
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -12,7 +12,7 @@ num_sites = 3, num_levels = 17
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -44,36 +44,36 @@ Composite source model
 ============== ======= =============== ================
 smlt_path      weight  gsim_logic_tree num_realizations
 ============== ======= =============== ================
-SM1            0.50000 complex(2,2)    4/4             
-SM2_a3b1       0.25000 complex(2,2)    2/2             
-SM2_a3pt2b0pt8 0.25000 complex(2,2)    2/2             
+SM1            0.50000 complex(2,2)    4               
+SM2_a3b1       0.25000 simple(2,0)     2               
+SM2_a3pt2b0pt8 0.25000 simple(2,0)     2               
 ============== ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =========================================== ========= ========== =================
-grp_id gsims                                       distances siteparams ruptparams       
-====== =========================================== ========= ========== =================
-0      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  vs30 z2pt5 dip mag rake ztor
-1      Campbell2003() ToroEtAl2002()               rjb rrup             mag              
-2      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  vs30 z2pt5 dip mag rake ztor
-3      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  vs30 z2pt5 dip mag rake ztor
-====== =========================================== ========= ========== =================
+====== =============================================== ========= ========== =================
+grp_id gsims                                           distances siteparams ruptparams       
+====== =============================================== ========= ========== =================
+0      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+1      '[Campbell2003]' '[ToroEtAl2002]'               rjb rrup             mag              
+2      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+3      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+====== =============================================== ========= ========== =================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=8, rlzs=8)
-  0,BooreAtkinson2008(): [0 1]
-  0,CampbellBozorgnia2008(): [2 3]
-  1,Campbell2003(): [0 2]
-  1,ToroEtAl2002(): [1 3]
-  2,BooreAtkinson2008(): [4]
-  2,CampbellBozorgnia2008(): [5]
-  3,BooreAtkinson2008(): [6]
-  3,CampbellBozorgnia2008(): [7]>
+  0,'[BooreAtkinson2008]': [0 1]
+  0,'[CampbellBozorgnia2008]': [2 3]
+  1,'[Campbell2003]': [0 2]
+  1,'[ToroEtAl2002]': [1 3]
+  2,'[BooreAtkinson2008]': [4]
+  2,'[CampbellBozorgnia2008]': [5]
+  3,'[BooreAtkinson2008]': [6]
+  3,'[CampbellBozorgnia2008]': [7]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -95,14 +95,14 @@ source_model_2.xml 3      Active Shallow Crust     240          240
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     15           0.0       3.314E-05  0.0       1         0.0   
-1      2         P    1     2     15           0.0       1.431E-05  0.0       1         0.0   
-2      1         A    0     4     240          0.0       0.10170    0.0       16        0.0   
-3      1         A    0     4     240          0.0       0.07745    0.0       16        0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+3      1         A    6     10    240          0.0       0.03266    48        16        41     
+2      1         A    2     6     240          0.0       0.03665    48        16        41     
+1      2         P    1     2     15           0.0       1.812E-05  3.00000   1         2.59808
+0      1         P    0     1     15           0.0       1.884E-05  3.00000   1         2.59808
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
@@ -113,24 +113,20 @@ A    0.0       2
 P    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00868 0.00573 0.00206 0.01205 3      
-split_filter       0.02011 NaN     0.02011 0.02011 1      
+read_source_models 0.00318 0.00142 0.00154 0.00405 3      
+split_filter       0.00620 0.00507 0.00261 0.00978 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ====================================== ========
 task               sent                                   received
-read_source_models converter=1.14 KB fnames=327 B         6.6 KB  
-split_filter       srcs=3.42 KB srcfilter=253 B seed=14 B 9.33 KB 
+read_source_models converter=939 B fnames=327 B           6.72 KB 
+split_filter       srcs=1.15 KB srcfilter=253 B seed=14 B 10.21 KB
 ================== ====================================== ========
 
 Slowest operations
@@ -138,6 +134,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.02603  0.0       3     
-total split_filter       0.02011  0.0       1     
+total split_filter       0.01239  1.45312   2     
+total read_source_models 0.00954  0.32422   3     
 ======================== ======== ========= ======

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,9 +33,9 @@ from openquake.baselib.general import group_array
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
-from openquake.commonlib.writers import (
-    build_header, scientificformat, FIVEDIGITS)
+from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators import getters
+from openquake.calculators.extract import extract
 
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
@@ -189,21 +189,6 @@ def view_slow_sources(token, dstore, maxrows=20):
     return rst_table(info[::-1][:maxrows])
 
 
-def classify_gsim_lt(gsim_lt):
-    """
-    :returns: "trivial", "simple" or "complex"
-    """
-    num_branches = list(gsim_lt.get_num_branches().values())
-    num_gsims = '(%s)' % ','.join(map(str, num_branches))
-    multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
-    if multi_gsim_trts == 0:
-        return "trivial" + num_gsims
-    elif multi_gsim_trts == 1:
-        return "simple" + num_gsims
-    else:
-        return "complex" + num_gsims
-
-
 @view.add('contents')
 def view_contents(token, dstore):
     """
@@ -216,23 +201,18 @@ def view_contents(token, dstore):
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data]
     total = '\n%s : %s' % (
-        dstore.hdf5path, humansize(os.path.getsize(dstore.hdf5path)))
+        dstore.filename, humansize(os.path.getsize(dstore.filename)))
     return rst_table(rows, header=(desc, '')) + total
 
 
 @view.add('csm_info')
 def view_csm_info(token, dstore):
     csm_info = dstore['csm_info']
-    rlzs_assoc = csm_info.get_rlzs_assoc()
     header = ['smlt_path', 'weight', 'gsim_logic_tree', 'num_realizations']
     rows = []
     for sm in csm_info.source_models:
-        num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
-        num_paths = sm.num_gsim_paths
-        row = ('_'.join(sm.path),
-               sm.weight,
-               classify_gsim_lt(csm_info.gsim_lt),
-               '%d/%d' % (num_rlzs, num_paths))
+        kind, num_rlzs = csm_info.classify_gsim_lt(sm)
+        row = ('_'.join(sm.path), sm.weight, kind, num_rlzs)
         rows.append(row)
     return rst_table(rows, header)
 
@@ -387,14 +367,15 @@ def view_totlosses(token, dstore):
     return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
 
 
-# for event based risk
+# for event based risk and ebrisk
 def portfolio_loss(dstore):
-    array = dstore['losses_by_event'].value
-    L, = array.dtype['loss'].shape
     R = dstore['csm_info'].get_num_rlzs()
+    array = dstore['losses_by_event'].value
+    L = array.dtype['loss'].shape[0]  # loss has shape L, T...
     data = numpy.zeros((R, L), F32)
     for row in array:
-        data[row['rlzi']] += row['loss']
+        for lti in range(L):
+            data[row['rlzi'], lti] += row['loss'][lti].sum()
     return data
 
 
@@ -445,22 +426,6 @@ def sum_table(records):
         else:
             result[i] = 'total'
     return result
-
-
-# this is used by the ebr calculator
-@view.add('mean_avg_losses')
-def view_mean_avg_losses(token, dstore):
-    oq = dstore['oqparam']
-    R = dstore['csm_info'].get_num_rlzs()
-    if R == 1:  # one realization
-        mean = dstore['avg_losses-rlzs'][:, 0]
-    else:
-        mean = dstore['avg_losses-stats'][:, 0]
-    data = numpy.array([tuple(row) for row in mean], oq.loss_dt())
-    assets = util.get_assets(dstore)
-    losses = util.compose_arrays(assets, data)
-    losses.sort()
-    return rst_table(losses, fmt=FIVEDIGITS)
 
 
 @view.add('exposure_info')
@@ -586,11 +551,12 @@ def view_required_params_per_trt(token, dstore):
     tbl = []
     for grp_id, trt in sorted(csm_info.grp_by("trt").items()):
         gsims = csm_info.gsim_lt.get_gsims(trt)
-        maker = ContextMaker(gsims)
+        maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((grp_id, gsims, distances, siteparams, ruptparams))
+        tbl.append((grp_id, ' '.join(map(repr, map(repr, gsims))),
+                    distances, siteparams, ruptparams))
     return rst_table(
         tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
@@ -691,7 +657,7 @@ def view_hmap(token, dstore):
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    mean = dstore['hcurves/mean'].value
+    mean = dict(extract(dstore, 'hcurves?kind=mean'))['mean']
     oq = dstore['oqparam']
     hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
@@ -721,10 +687,10 @@ def view_global_hcurves(token, dstore):
     return rst_table(res)
 
 
-@view.add('dupl_sources')
-def view_dupl_sources(token, dstore):
+@view.add('dupl_sources_time')
+def view_dupl_sources_time(token, dstore):
     """
-    Display the duplicated sources from source_info
+    Display the time spent computing duplicated sources
     """
     info = dstore['source_info']
     items = sorted(group_array(info.value, 'source_id').items())
@@ -833,3 +799,77 @@ def view_pmap(token, dstore):
     pgetter = getters.PmapGetter(dstore, rlzs_assoc)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
+
+
+@view.add('act_ruptures_by_src')
+def view_act_ruptures_by_src(token, dstore):
+    """
+    Display the actual number of ruptures by source in event based calculations
+    """
+    data = dstore['ruptures'].value[['srcidx', 'serial']]
+    counts = sorted(countby(data, 'srcidx').items(),
+                    key=operator.itemgetter(1), reverse=True)
+    src_info = dstore['source_info'].value[['grp_id', 'source_id']]
+    table = [['src_id', 'grp_id', 'act_ruptures']]
+    for srcidx, act_ruptures in counts:
+        src = src_info[srcidx]
+        table.append([src['source_id'], src['grp_id'], act_ruptures])
+    return rst_table(table)
+
+
+Source = collections.namedtuple('Source', 'source_id code geom num_ruptures')
+
+
+def all_equal(records):
+    rec0 = records[0]
+    for rec in records[1:]:
+        for v1, v2 in zip(rec0, rec):
+            if isinstance(v1, numpy.ndarray):  # field geom
+                if len(v1) != len(v2):
+                    return False
+                for name in v1.dtype.names:
+                    if not numpy.allclose(v1[name], v2[name]):
+                        return False
+            elif v1 != v2:
+                return False
+    return True
+
+
+@view.add('dupl_sources')
+def view_dupl_sources(token, dstore):
+    """
+    Show the sources with the same ID and the truly duplicated sources
+    """
+    fields = ['source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures']
+    dic = group_array(dstore['source_info'].value[fields], 'source_id')
+    sameid = []
+    dupl = []
+    for source_id, group in dic.items():
+        if len(group) > 1:  # same ID sources
+            sources = []
+            for rec in group:
+                geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
+                src = Source(source_id, rec['code'], geom, rec['num_ruptures'])
+                sources.append(src)
+            if all_equal(sources):
+                dupl.append(source_id)
+            sameid.append(source_id)
+    if not dupl:
+        return ''
+    msg = str(dupl) + '\n'
+    msg += ('Found %d source(s) with the same ID and %d true duplicate(s)'
+            % (len(sameid), len(dupl)))
+    fakedupl = set(sameid) - set(dupl)
+    if fakedupl:
+        msg += '\nHere is a fake duplicate: %s' % fakedupl.pop()
+    return msg
+
+
+@view.add('extreme_groups')
+def view_extreme_groups(token, dstore):
+    """
+    Show the source groups contributing the most to the highest IML
+    """
+    data = dstore['disagg_by_grp'].value
+    data.sort(order='extreme_poe')
+    return rst_table(data[::-1])

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -255,7 +255,8 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
+    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
     gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
-                     ContextMaker([gsim]), truncation_level, correlation_model)
+                     cmaker, truncation_level, correlation_model)
     res = gc.compute(gsim, realizations, seed)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

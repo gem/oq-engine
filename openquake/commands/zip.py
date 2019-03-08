@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,14 +17,15 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import os.path
-import logging
 from openquake.baselib import sap
 from openquake.commonlib import oqzip
 
 
-@sap.Script
+@sap.script
 def zip(what, archive_zip='', risk_file=''):
-    logging.basicConfig(level=logging.INFO)
+    """
+    Zip into an archive one or two job.ini files with all related files
+    """
     if os.path.isdir(what):
         oqzip.zip_all(what)
     elif what.endswith('.xml') and '<logicTree' in open(what).read(512):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -57,10 +57,11 @@ class _FakeGSIMTestCase(unittest.TestCase):
         super().setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
-        self.cmaker = ContextMaker([self.gsim])
+        self.cmaker = ContextMaker('faketrt', [self.gsim])
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
-        self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES.add(self.DEFAULT_IMT)
+        self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES = frozenset(
+            self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES | {self.DEFAULT_IMT})
 
     def _get_poes(self, **kwargs):
         default_kwargs = dict(
@@ -82,8 +83,9 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
 class GetPoEsTestCase(_FakeGSIMTestCase):
     def test_no_truncation(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL)
+        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
+            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
+            {const.StdDev.TOTAL})
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             self.assertEqual(imt, self.DEFAULT_IMT())
@@ -115,14 +117,16 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         expected_poes = [1, 1, 0, 1, 1]
         self.assertEqual(list(poes), expected_poes)
 
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL)
+        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
+            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
+            {const.StdDev.TOTAL})
         [poes] = self._get_poes(imt=imt, imls=imls, truncation_level=0)
         self.assertEqual(list(poes), expected_poes)
 
     def test_truncated(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL)
+        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
+            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
+            {const.StdDev.TOTAL})
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             return numpy.array([-0.7872268528578843]), \
@@ -139,8 +143,9 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertAlmostEqual(poe2, 0.43432352175355504, places=6)
 
     def test_several_contexts(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL)
+        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
+            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
+            {const.StdDev.TOTAL})
         mean_stddev = numpy.array([[3, 4], [5, 6]])
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
@@ -283,23 +288,24 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.fake_surface = FakeSurface
 
     def make_contexts(self, site_collection, rupture):
-        return ContextMaker([self.gsim_class]).make_contexts(
+        return ContextMaker('faketrt', [self.gsim_class]).make_contexts(
             site_collection, rupture)
 
     def test_unknown_distance_error(self):
-        self.gsim_class.REQUIRES_DISTANCES.add('jump height')
+        self.gsim_class.REQUIRES_DISTANCES = frozenset(
+            self.gsim_class.REQUIRES_DISTANCES | {'jump height'})
         err = "Unknown distance measure 'jump height'"
         sites = SiteCollection([self.site1, self.site2])
         self._assert_value_error(self.make_contexts, err,
                                  site_collection=sites, rupture=self.rupture)
 
     def test_all_values(self):
-        self.gsim_class.REQUIRES_DISTANCES = set(
+        self.gsim_class.REQUIRES_DISTANCES = frozenset(
             'rjb rx rrup repi rhypo ry0 azimuth'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
             'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'.
             split())
-        self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
+        self.gsim_class.REQUIRES_SITES_PARAMETERS = frozenset(
             'vs30 vs30measured z1pt0 z2pt5 lons lats'.split())
         sites = SiteCollection([self.site1, self.site2])
         sctx, dctx = self.make_contexts(sites, self.rupture)

@@ -2,9 +2,9 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
 ============== ===================
-checksum32     796,128,005        
-date           2018-12-13T12:57:40
-engine_version 3.3.0-git68d7d11268
+checksum32     2,398,350,176      
+date           2019-02-18T08:36:18
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -55,24 +55,20 @@ code calc_time counts
 P    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00140 NaN    0.00140 0.00140 1      
-split_filter       0.00390 NaN    0.00390 0.00390 1      
+read_source_models 0.00116 NaN    0.00116 0.00116 1      
+only_filter        0.00252 NaN    0.00252 0.00252 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
-read_source_models converter=388 B fnames=128 B            1.5 KB  
-split_filter       srcs=1.13 KB srcfilter=253 B dummy=14 B 1.22 KB 
+read_source_models converter=313 B fnames=128 B            1.53 KB 
+only_filter        srcs=1.15 KB srcfilter=253 B dummy=14 B 1.24 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -80,6 +76,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00390  0.0       1     
-total read_source_models 0.00140  0.0       1     
+total only_filter        0.00252  1.41797   1     
+total read_source_models 0.00116  0.0       1     
 ======================== ======== ========= ======

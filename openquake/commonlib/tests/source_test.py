@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -722,17 +722,16 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         for grp in csm.src_groups:
             self.assertEqual(grp.src_interdep, 'indep')
             self.assertEqual(grp.rup_interdep, 'indep')
-
         self.assertEqual(repr(csm.gsim_lt), '''\
 <GsimLogicTree
-Active Shallow Crust,b1,SadighEtAl1997(),w=0.5
-Active Shallow Crust,b2,ChiouYoungs2008(),w=0.5
-Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
+Active Shallow Crust,b1,[SadighEtAl1997],w=0.5
+Active Shallow Crust,b2,[ChiouYoungs2008],w=0.5
+Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         assoc = csm.info.get_rlzs_assoc()
         [rlz] = assoc.realizations
         self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
-                         {'Subduction Interface': 'SadighEtAl1997()',
-                          'Active Shallow Crust': 'ChiouYoungs2008()'})
+                         {'Subduction Interface': '[SadighEtAl1997]',
+                          'Active Shallow Crust': '[ChiouYoungs2008]'})
         # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz.ordinal, 0)
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
@@ -740,13 +739,12 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(rlz.weight['default'], 1.)
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997(): "
-            "[0]\n1,ChiouYoungs2008(): [0]>")
+            "<RlzsAssoc(size=2, rlzs=1)\n0,'[SadighEtAl1997]': "
+            "[0]\n1,'[ChiouYoungs2008]': [0]>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
-        oqparam.fast_sampling = True
         csm = readinput.get_composite_source_model(oqparam)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 src_groups
@@ -755,7 +753,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         rlzs_assoc = csm.info.get_rlzs_assoc()
         rlzs = rlzs_assoc.realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        # counting the sources in each TRT model (unsplit)
+        # counting the sources in each TRT model (after splitting)
         self.assertEqual(
             [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
             list(map(len, csm.src_groups)))
@@ -770,15 +768,15 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         assoc = csm.info.get_rlzs_assoc()
         expected_assoc = """\
 <RlzsAssoc(size=9, rlzs=9)
-0,SadighEtAl1997(): [0]
-2,SadighEtAl1997(): [1]
-4,SadighEtAl1997(): [2]
-6,SadighEtAl1997(): [3]
-8,SadighEtAl1997(): [4]
-10,SadighEtAl1997(): [5]
-12,SadighEtAl1997(): [6]
-14,SadighEtAl1997(): [7]
-16,SadighEtAl1997(): [8]>"""
+0,'[SadighEtAl1997]': [0]
+2,'[SadighEtAl1997]': [1]
+4,'[SadighEtAl1997]': [2]
+6,'[SadighEtAl1997]': [3]
+8,'[SadighEtAl1997]': [4]
+10,'[SadighEtAl1997]': [5]
+12,'[SadighEtAl1997]': [6]
+14,'[SadighEtAl1997]': [7]
+16,'[SadighEtAl1997]': [8]>"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -796,8 +794,8 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=5)\n"
-            "0,SadighEtAl1997(): [0 1 2]\n"
-            "1,SadighEtAl1997(): [3 4]>")
+            "0,'[SadighEtAl1997]': [0 1 2]\n"
+            "1,'[SadighEtAl1997]': [3 4]>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,8 @@ import numpy
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
+from openquake.hazardlib.source import NonParametricSeismicSource
+from openquake.hazardlib.tom import PoissonTOM, FatedTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -384,9 +386,17 @@ def get_source_attributes(source):
     :returns:
         Dictionary of source attributes
     """
-    return {"id": source.source_id,
-            "name": source.name,
-            "tectonicRegion": source.tectonic_region_type}
+    attrs = {"id": source.source_id,
+             "name": source.name,
+             "tectonicRegion": source.tectonic_region_type}
+    if isinstance(source, NonParametricSeismicSource):
+        if source.data[0][0].weight is not None:
+            weights = []
+            for data in source.data:
+                weights.append(data[0].weight)
+            attrs['rup_weights'] = numpy.array(weights)
+    print(attrs)
+    return attrs
 
 
 @obj_to_node.add('AreaSource')
@@ -562,6 +572,13 @@ def build_source_group(source_group):
         attrs['rup_interdep'] = source_group.rup_interdep
     if source_group.grp_probability is not None:
         attrs['grp_probability'] = source_group.grp_probability
+    if source_group.cluster:
+        attrs['cluster'] = 'true'
+    if source_group.temporal_occurrence_model is not None:
+        tom = source_group.temporal_occurrence_model
+        if isinstance(tom, PoissonTOM) and tom.occurrence_rate:
+            attrs['tom'] = 'PoissonTOM'
+            attrs['occurrence_rate'] = tom.occurrence_rate
     srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
     if set(srcs_weights) != {1}:
         attrs['srcs_weights'] = ' '.join(map(str, srcs_weights))
@@ -590,7 +607,8 @@ def build_source_model(csm):
 
 # ##################### generic source model writer ####################### #
 
-def write_source_model(dest, sources_or_groups, name=None):
+def write_source_model(dest, sources_or_groups, name=None,
+        investigation_time=None):
     """
     Writes a source model to XML.
 
@@ -614,7 +632,10 @@ def write_source_model(dest, sources_or_groups, name=None):
                   for trt in srcs_by_trt]
     name = name or os.path.splitext(os.path.basename(dest))[0]
     nodes = list(map(obj_to_node, sorted(groups)))
-    source_model = Node("sourceModel", {"name": name}, nodes=nodes)
+    attrs = {"name": name}
+    if investigation_time is not None:
+        attrs['investigation_time'] = investigation_time
+    source_model = Node("sourceModel", attrs, nodes=nodes)
     with open(dest, 'wb') as f:
         nrml.write([source_model], f, '%s')
     return dest

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -55,7 +55,7 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_unknown_parameter(self):
         # if the job.ini file contains an unknown parameter, print a warning
-        with mock.patch('logging.warn') as w:
+        with mock.patch('logging.warning') as w:
             OqParam(
                 calculation_mode='classical', inputs=GST,
                 hazard_calculation_id=None, hazard_output_id=None,
@@ -283,7 +283,7 @@ class OqParamTestCase(unittest.TestCase):
                 intensity_measure_types='PGV',
                 inputs=fakeinputs,
             ).validate()
-        self.assertIn('The IMT PGV is not accepted by the GSIM ToroEtAl2002',
+        self.assertIn('The IMT PGV is not accepted by the GSIM [ToroEtAl2002]',
                       str(ctx.exception))
 
     def test_required_site_param(self):
@@ -299,7 +299,8 @@ class OqParamTestCase(unittest.TestCase):
             ).validate()
         self.assertIn(
             "Please set a value for 'reference_depth_to_1pt0km_per_sec', this "
-            "is required by the GSIM AbrahamsonSilva2008", str(ctx.exception))
+            "is required by the GSIM [AbrahamsonSilva2008]",
+            str(ctx.exception))
 
     def test_uniform_hazard_spectra(self):
         with self.assertRaises(ValueError) as ctx:
@@ -318,7 +319,7 @@ class OqParamTestCase(unittest.TestCase):
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
 
-        with mock.patch('logging.warn') as w:
+        with mock.patch('logging.warning') as w:
             OqParam(
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',

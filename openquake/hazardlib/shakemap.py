@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2018, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2018-2019 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.request import urlopen
 import io
 import math
@@ -311,7 +311,7 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     # Z has shape (M * N, E)
     gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
     if site_effects:
-        gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs) * 0.8
+        gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs)
     if gmfs.max() > MAX_GMV:
-        logging.warn('There suspiciously large GMVs of %.2fg', gmfs.max())
-    return imts, gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
+        logging.warning('There suspiciously large GMVs of %.2fg', gmfs.max())
+    return imts, gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,8 +24,7 @@ from openquake.baselib import sap
 from openquake.hazardlib import stats
 from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
-from openquake.commonlib.util import rmsep
-from openquake.commands import engine
+from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract
@@ -39,12 +38,18 @@ def get_hcurves_and_means(dstore):
     """
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     getter = getters.PmapGetter(dstore, rlzs_assoc)
-    sitecol = dstore['sitecol']
-    pmaps = getter.get_pmaps(sitecol.sids)
+    pmaps = getter.get_pmaps()
     return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']
 
 
-@sap.Script
+def str_or_int(calc_id):
+    try:
+        return int(calc_id)
+    except ValueError:
+        return calc_id
+
+
+@sap.script
 def show(what='contents', calc_id=-1, extra=()):
     """
     Show the content of a datastore (by default the last one).
@@ -56,14 +61,14 @@ def show(what='contents', calc_id=-1, extra=()):
         rows = []
         for calc_id in datastore.get_calc_ids(datadir):
             try:
-                ds = engine.read(calc_id)
+                ds = util.read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except Exception:
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
                 f = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
-                logging.warn('Unreadable datastore %s', f)
+                logging.warning('Unreadable datastore %s', f)
                 continue
             else:
                 rows.append((calc_id, cmode, descr.encode('utf-8')))
@@ -71,20 +76,19 @@ def show(what='contents', calc_id=-1, extra=()):
             print('#%d %s: %s' % row)
         return
 
-    ds = engine.read(calc_id)
+    ds = util.read(calc_id)
 
     # this part is experimental
     if what == 'rlzs' and 'poes' in ds:
         min_value = 0.01  # used in rmsep
         getter = getters.PmapGetter(ds)
-        sitecol = ds['sitecol']
-        pmaps = getter.get_pmaps(sitecol.sids)
+        pmaps = getter.get_pmaps()
         weights = [rlz.weight for rlz in getter.rlzs]
         mean = stats.compute_pmap_stats(
             pmaps, [numpy.mean], weights, getter.imtls)
         dists = []
         for rlz, pmap in zip(getter.rlzs, pmaps):
-            dist = rmsep(mean.array, pmap.array, min_value)
+            dist = util.rmsep(mean.array, pmap.array, min_value)
             dists.append((dist, rlz))
         print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):
@@ -106,5 +110,5 @@ def show(what='contents', calc_id=-1, extra=()):
 
 
 show.arg('what', 'key or view of the datastore')
-show.arg('calc_id', 'calculation ID', type=int)
+show.arg('calc_id', 'calculation ID or datastore path', type=str_or_int)
 show.arg('extra', 'extra arguments', nargs='*')

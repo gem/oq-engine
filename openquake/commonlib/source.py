@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import copy
 import math
 import logging
@@ -26,9 +26,8 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
-    groupby, group_array, gettemp, AccumDict, cached_property)
+    groupby, group_array, gettemp, AccumDict)
 from openquake.hazardlib import source, sourceconverter
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
 
@@ -39,7 +38,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
-weight = operator.attrgetter('weight')
 rlz_dt = numpy.dtype([
     ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
@@ -116,7 +114,7 @@ class CompositionInfo(object):
             object; if None, builds automatically a fake gsim logic tree
         """
         weight = 1
-        gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
+        gsim_lt = gsimlt or logictree.GsimLogicTree.from_('[FromFile]')
         fakeSM = logictree.LtSourceModel(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
@@ -126,7 +124,7 @@ class CompositionInfo(object):
 
     get_rlzs_assoc = get_rlzs_assoc
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight=0):
+    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
@@ -155,20 +153,6 @@ class CompositionInfo(object):
             self._gsim_rlzs = list(self.gsim_lt)
             return self._gsim_rlzs
 
-    def get_gsims(self, grp_id):
-        """
-        Get the GSIMs associated with the given group
-        """
-        trt = self.trt_by_grp[grp_id]
-        if self.num_samples:  # sampling
-            seed, samples = self.seed_samples_by_grp[grp_id]
-            numpy.random.seed(seed)
-            idxs = numpy.random.choice(len(self.gsim_rlzs), samples)
-            rlzs = [self.gsim_rlzs[i] for i in idxs]
-        else:  # full enumeration
-            rlzs = None
-        return self.gsim_lt.get_gsims(trt, rlzs)
-
     def get_info(self, sm_id):
         """
         Extract a CompositionInfo instance containing the single
@@ -178,6 +162,23 @@ class CompositionInfo(object):
         num_samples = sm.samples if self.num_samples else 0
         return self.__class__(
             self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
+
+    def classify_gsim_lt(self, source_model):
+        """
+        :returns: (kind, num_paths), where kind is trivial, simple, complex
+        """
+        trts = set(sg.trt for sg in source_model.src_groups if sg.eff_ruptures)
+        gsim_lt = self.gsim_lt.reduce(trts)
+        num_branches = list(gsim_lt.get_num_branches().values())
+        num_paths = gsim_lt.get_num_paths()
+        num_gsims = '(%s)' % ','.join(map(str, num_branches))
+        multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
+        if multi_gsim_trts == 0:
+            return "trivial" + num_gsims, num_paths
+        elif multi_gsim_trts == 1:
+            return "simple" + num_gsims, num_paths
+        else:
+            return "complex" + num_gsims, num_paths
 
     def get_samples_by_grp(self):
         """
@@ -222,12 +223,11 @@ class CompositionInfo(object):
                                 trti[src_group.trt], src_group.eff_ruptures,
                                 src_group.tot_ruptures, sm.ordinal))
         return (dict(
+            gsim_lt=self.gsim_lt,
             sg_data=numpy.array(sg_data, src_group_dt),
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(sorted(trti)),
-                     gsim_lt_xml=str(self.gsim_lt),
-                     gsim_fname=self.gsim_lt.fname,
                      tot_weight=self.tot_weight))
 
     def __fromh5__(self, dic, attrs):
@@ -235,15 +235,7 @@ class CompositionInfo(object):
         sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
-        self.gsim_fname = decode(self.gsim_fname)
-        if self.gsim_fname.endswith('.xml'):
-            # otherwise it would look in the current directory
-            GMPETable.GMPE_DIR = os.path.dirname(self.gsim_fname)
-            trts = sorted(self.trts)
-            tmp = gettemp(self.gsim_lt_xml, suffix='.xml')
-            self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
-        else:  # fake file with the name of the GSIM
-            self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
+        self.gsim_lt = dic['gsim_lt']
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
             tdata = sg_data[sm_id]
@@ -255,16 +247,11 @@ class CompositionInfo(object):
                     tot_ruptures=get_field(data, 'totrup', 0))
                 for data in tdata]
             path = tuple(str(decode(rec['path'])).split('_'))
-            trts = set(sg.trt for sg in srcgroups)
             sm = logictree.LtSourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
                 rec['num_rlzs'], sm_id, rec['samples'])
             self.source_models.append(sm)
         self.init()
-        try:
-            os.remove(tmp)  # gsim_lt file
-        except NameError:  # tmp is defined only in the regular case, see above
-            pass
 
     def get_num_rlzs(self, source_model=None):
         """
@@ -287,7 +274,7 @@ class CompositionInfo(object):
         """
         realizations = self.get_rlzs_assoc().realizations
         return numpy.array(
-            [(r.uid, gsim_names(r), r.weight['default'])
+            [(r.uid, gsim_names(r), r.weight['weight'])
              for r in realizations], rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
@@ -374,10 +361,14 @@ class CompositeSourceModel(collections.Sequence):
         self.source_models = source_models
         self.optimize_same_id = optimize_same_id
         self.source_info = ()
+        # NB: the weight is 1 for sources which are XML nodes
+        totweight = sum(getattr(src, 'weight', 1) for sm in source_models
+                        for sg in sm.src_groups for src in sg)
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.source_models])
+            [sm.get_skeleton() for sm in self.source_models],
+            totweight)
         try:
             dupl_sources = self.check_dupl_sources()
         except AssertionError:
@@ -450,9 +441,7 @@ class CompositeSourceModel(collections.Sequence):
         :param weight: source weight function
         :returns: total weight of the source model
         """
-        tot_weight = sum(weight(src) for src in self.get_sources())
-        self.info.tot_weight = tot_weight
-        return tot_weight
+        return sum(weight(src) for src in self.get_sources())
 
     @property
     def src_groups(self):
@@ -494,14 +483,6 @@ class CompositeSourceModel(collections.Sequence):
                 dupl.append(srcs)
         return dupl
 
-    def gen_mutex_groups(self):
-        """
-        Yield groups of mutually exclusive sources
-        """
-        for sg in self.src_groups:
-            if sg.src_interdep == 'mutex':
-                yield sg
-
     def get_sources(self, kind='all'):
         """
         Extract the sources contained in the source models by optionally
@@ -518,19 +499,22 @@ class CompositeSourceModel(collections.Sequence):
                         sources.append(src)
         return sources
 
-    @cached_property
-    def sources_by_trt(self):
+    def get_trt_sources(self, optimize_same_id=None):
         """
-        Build a dictionary TRT string -> sources. Sources of kind "mutex"
-        (if any) are silently discarded.
+        :returns: a list of pairs [(trt, group of sources)]
         """
+        atomic = []
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                if grp.src_interdep != 'mutex':
+                if grp and grp.atomic:
+                    atomic.append((grp.trt, grp))
+                elif grp:
                     acc[grp.trt].extend(grp)
-        if self.optimize_same_id is False:
-            return acc
+        if optimize_same_id is None:
+            optimize_same_id = self.optimize_same_id
+        if optimize_same_id is False:
+            return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
         n = 0
         tot = 0
@@ -549,7 +533,7 @@ class CompositeSourceModel(collections.Sequence):
         if n < tot:
             logging.info('Reduced %d sources to %d sources with unique IDs',
                          tot, n)
-        return dic
+        return atomic + list(dic.items())
 
     def get_num_ruptures(self):
         """

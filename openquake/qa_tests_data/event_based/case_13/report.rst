@@ -2,9 +2,9 @@ Event Based QA Test, Case 13
 ============================
 
 ============== ===================
-checksum32     1,898,199,469      
-date           2018-12-13T12:57:42
-engine_version 3.3.0-git68d7d11268
+checksum32     3,389,862,408      
+date           2019-02-18T08:36:32
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -55,24 +55,20 @@ code calc_time counts
 P    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00117 NaN    0.00117 0.00117 1      
-split_filter       0.00180 NaN    0.00180 0.00180 1      
+read_source_models 0.00121 NaN    0.00121 0.00121 1      
+only_filter        0.00270 NaN    0.00270 0.00270 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================= ========
 task               sent                                    received
-read_source_models converter=388 B fnames=109 B            1.53 KB 
-split_filter       srcs=1.13 KB srcfilter=253 B dummy=14 B 1.22 KB 
+read_source_models converter=313 B fnames=109 B            1.56 KB 
+only_filter        srcs=1.15 KB srcfilter=253 B dummy=14 B 1.24 KB 
 ================== ======================================= ========
 
 Slowest operations
@@ -80,6 +76,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00180  0.0       1     
-total read_source_models 0.00117  0.0       1     
+total only_filter        0.00270  1.51953   1     
+total read_source_models 0.00121  0.0       1     
 ======================== ======== ========= ======

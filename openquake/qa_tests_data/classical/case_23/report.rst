@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     3,211,843,635      
-date           2018-12-13T12:58:17
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:38:21
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 29
@@ -12,7 +12,7 @@ num_sites = 1, num_levels = 29
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 400.0}
 investigation_time              50.0              
@@ -44,26 +44,26 @@ Composite source model
 ========= ======= ================ ================
 smlt_path weight  gsim_logic_tree  num_realizations
 ========= ======= ================ ================
-b1        1.00000 trivial(1,0,1,0) 1/1             
+b1        1.00000 trivial(1,1,0,0) 1               
 ========= ======= ================ ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =================== ========= ========== ===================
-grp_id gsims               distances siteparams ruptparams         
-====== =================== ========= ========== ===================
-0      McVerry2006Asc()    rrup      vs30       hypo_depth mag rake
-1      McVerry2006SInter() rrup      vs30       hypo_depth mag rake
-====== =================== ========= ========== ===================
+====== ===================== ========= ========== ===================
+grp_id gsims                 distances siteparams ruptparams         
+====== ===================== ========= ========== ===================
+0      '[McVerry2006Asc]'    rrup      vs30       hypo_depth mag rake
+1      '[McVerry2006SInter]' rrup      vs30       hypo_depth mag rake
+====== ===================== ========= ========== ===================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=1)
-  0,McVerry2006Asc(): [0]
-  1,McVerry2006SInter(): [0]>
+  0,'[McVerry2006Asc]': [0]
+  1,'[McVerry2006SInter]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -83,14 +83,14 @@ NSHM_source_model-editedbkgd.xml 1      Subduction Interface 2            2
 
 Slowest sources
 ---------------
-====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1  gidx2  num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
-0      1         P    0      1      20           0.0       2.694E-05  0.0       1         0.0   
-0      2         P    1      2      20           0.0       9.060E-06  0.0       1         0.0   
-1      21444     X    2      20,504 1            0.0       7.629E-06  0.0       1         0.0   
-1      21445     X    20,504 34,373 1            0.0       3.338E-06  0.0       1         0.0   
-====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1  gidx2  num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= =======
+1      21445     X    20,504 34,373 1            0.0       2.861E-06  1.00000   1         1.00000
+1      21444     X    2      20,504 1            0.0       7.629E-06  1.00000   1         1.00000
+0      2         P    1      2      20           0.0       5.722E-06  1.00000   1         2.00000
+0      1         P    0      1      20           0.0       1.836E-05  1.00000   1         2.00000
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
@@ -101,31 +101,27 @@ P    0.0       2
 X    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.16052 NaN    0.16052 0.16052 1      
-split_filter       0.00420 NaN    0.00420 0.00420 1      
-================== ======= ====== ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.15899 NaN       0.15899 0.15899 1      
+split_filter       0.00275 1.703E-05 0.00274 0.00276 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= =========
-task               sent                                    received 
-read_source_models converter=388 B fnames=123 B            808.95 KB
-split_filter       srcs=808.5 KB srcfilter=253 B seed=14 B 808.67 KB
-================== ======================================= =========
+================== ======================================== =========
+task               sent                                     received 
+read_source_models converter=313 B fnames=123 B             809.05 KB
+split_filter       srcs=807.43 KB srcfilter=253 B seed=14 B 809.15 KB
+================== ======================================== =========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.16052  1.09766   1     
-total split_filter       0.00420  0.51562   1     
+total read_source_models 0.15899  3.36719   1     
+total split_filter       0.00550  1.60547   2     
 ======================== ======== ========= ======

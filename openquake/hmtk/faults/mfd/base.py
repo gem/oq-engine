@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -70,8 +70,6 @@ def _scale_moment(magnitude, in_nm=False):
 class BaseMFDfromSlip(object):
     '''Base class for calculating magnitude frequency distribution
     from a given slip value'''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def setUp(self, mfd_conf):
         '''Initialises the parameters from the mfd type'''
