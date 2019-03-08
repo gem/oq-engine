@@ -496,7 +496,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam):
+def get_source_model_lt(oqparam, validate=True):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -508,7 +508,7 @@ def get_source_model_lt(oqparam):
     if fname:
         # NB: converting the random_seed into an integer is needed on Windows
         return logictree.SourceModelLogicTree(
-            fname, validate=False, seed=int(oqparam.random_seed),
+            fname, validate, seed=int(oqparam.random_seed),
             num_samples=oqparam.number_of_logic_tree_samples)
     return logictree.FakeSmlt(oqparam.inputs['source_model'],
                               int(oqparam.random_seed),
@@ -811,7 +811,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param srcfilter:
         if not None, use it to prefilter the sources
     """
-    source_model_lt = get_source_model_lt(oqparam)
+    ucerf = oqparam.calculation_mode.startswith('ucerf')
+    source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
     trts = source_model_lt.get_trts()
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})

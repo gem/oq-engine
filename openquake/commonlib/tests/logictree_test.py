@@ -510,9 +510,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="simpleFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                   uncertaintyType="simpleFaultGeometryAbsolute"
+                   branchSetID="bs1"
+                   applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <simpleFaultGeometry spacing="1.0">
@@ -558,9 +559,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="complexFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                   uncertaintyType="complexFaultGeometryAbsolute"
+                   branchSetID="bs1"
+                   applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <complexFaultGeometry spacing="5.0">
@@ -605,9 +607,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                  uncertaintyType="characteristicFaultGeometryAbsolute"
+                  branchSetID="bs1"
+                  applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <surface>
@@ -647,9 +650,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                   uncertaintyType="characteristicFaultGeometryAbsolute"
+                   branchSetID="bs1"
+                   applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <surface>
@@ -696,9 +700,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                   uncertaintyType="characteristicFaultGeometryAbsolute"
+                   branchSetID="bs1"
+                   applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <surface>
@@ -787,52 +792,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self._assert_logic_tree_error(
             'sm', {'lt': lt, 'sm': sm}, 'base',
             ExpatError, exc_filename='sm')
-
-    def test_source_model_schema_violation(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _make_nrml("""\
-        <sourceModel gml:id="sm1">
-            <config/>
-            <simpleFaultSource gml:id="src01">
-                <gml:name>Mount Diablo Thrust</gml:name>
-                <tectonicRegion>Swamps, lots of them</tectonicRegion>
-                <rake>90.0</rake>
-                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
-                    type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
-                              6.108288E-4 5.080653E-4
-                </evenlyDiscretizedIncrementalMFD>
-                <simpleFaultGeometry gml:id="sfg_1">
-                    <faultTrace>
-                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                            <gml:posList>
-                                -121.82290 37.73010  0.0
-                                -122.03880 37.87710  0.0
-                            </gml:posList>
-                        </gml:LineString>
-                    </faultTrace>
-                    <dip>38</dip>
-                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
-                </simpleFaultGeometry>
-            </simpleFaultSource>
-        </sourceModel>
-        """)
-        error = self._assert_logic_tree_error(
-            'lt', {'lt': lt, 'sm': sm}, '/x',
-            logictree.LogicTreeError, exc_filename='lt')
-        self.assertIn("node config", str(error.message))
 
     def test_referencing_over_level_boundaries(self):
         lt = _make_nrml("""\

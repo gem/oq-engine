@@ -936,9 +936,10 @@ class SourceModelLogicTree(object):
         _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
 
         if branchset.uncertainty_type == 'sourceModel':
-            smfname = node.text.strip()
             try:
-                self.collect_source_model_data(branchnode['branchID'], smfname)
+                for fname in node.text.strip().split():
+                    self.collect_source_model_data(
+                        branchnode['branchID'], fname)
             except Exception as exc:
                 raise LogicTreeError(node, self.filename, str(exc)) from exc
 
@@ -952,17 +953,7 @@ class SourceModelLogicTree(object):
                 node, self.filename,
                 'expected a pair of floats separated by space')
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            min_mag, bin_width = (node.incrementalMFD["minMag"],
-                                  node.incrementalMFD["binWidth"])
-
-            rates = node.incrementalMFD.occurRates.text
-            with context(self.filename, node):
-                rates = valid.positivefloats(rates)
-            if _float_re.match(min_mag) and _float_re.match(bin_width):
-                return
-            raise LogicTreeError(
-                node, self.filename,
-                "expected valid 'incrementalMFD' node")
+            pass
         elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
             self._validate_simple_fault_geometry(node.simpleFaultGeometry,
                                                  _float_re)
@@ -983,10 +974,11 @@ class SourceModelLogicTree(object):
                         geom_node, self.filename,
                         "Surface geometry type not recognised")
         else:
-            if not _float_re.match(node.text.strip()):
+            try:
+                float(node.text)
+            except (TypeError, ValueError):
                 raise LogicTreeError(
-                    node, self.filename,
-                    'expected single float value')
+                    node, self.filename, 'expected single float value')
 
     def _validate_simple_fault_geometry(self, node, _float_re):
         """
@@ -1018,9 +1010,7 @@ class SourceModelLogicTree(object):
         valid_edges = []
         for edge_node in node.nodes:
             try:
-                coords = split_coords_3d(map(
-                    float,
-                    edge_node.LineString.posList.text.split()))
+                coords = split_coords_3d(edge_node.LineString.posList.text)
                 edge = geo.Line([geo.Point(*p) for p in coords])
             except ValueError:
                 # See use of validation error in simple geometry case
@@ -1030,7 +1020,7 @@ class SourceModelLogicTree(object):
                 valid_edges.append(True)
             else:
                 valid_edges.append(False)
-        if _float_re.match(node["spacing"]) and all(valid_edges):
+        if node["spacing"] and all(valid_edges):
             return
         raise LogicTreeError(
             node, self.filename,
@@ -1040,19 +1030,15 @@ class SourceModelLogicTree(object):
         """
         Validares a node representation of a planar fault geometry
         """
-        valid_spacing = _float_re.match(node["spacing"])
+        valid_spacing = node["spacing"]
         for key in ["topLeft", "topRight", "bottomLeft", "bottomRight"]:
-            is_valid = _float_re.match(getattr(node, key)["lon"]) and\
-                _float_re.match(getattr(node, key)["lat"]) and\
-                _float_re.match(getattr(node, key)["depth"])
-            if is_valid:
-                lon = float(getattr(node, key)["lon"])
-                lat = float(getattr(node, key)["lat"])
-                depth = float(getattr(node, key)["depth"])
-                valid_lon = (lon >= -180.0) and (lon <= 180.0)
-                valid_lat = (lat >= -90.0) and (lat <= 90.0)
-                valid_depth = (depth >= 0.0)
-                is_valid = valid_lon and valid_lat and valid_depth
+            lon = getattr(node, key)["lon"]
+            lat = getattr(node, key)["lat"]
+            depth = getattr(node, key)["depth"]
+            valid_lon = (lon >= -180.0) and (lon <= 180.0)
+            valid_lat = (lat >= -90.0) and (lat <= 90.0)
+            valid_depth = (depth >= 0.0)
+            is_valid = valid_lon and valid_lat and valid_depth
             if not is_valid or not valid_spacing:
                 raise LogicTreeError(
                     node, self.filename,
@@ -1208,7 +1194,7 @@ class SourceModelLogicTree(object):
                 branch.child_branchset = branchset
 
     def _get_source_model(self, source_model_file):
-        return open(os.path.join(self.basepath, source_model_file))
+        return open(os.path.join(self.basepath, source_model_file), 'rb')
 
     def collect_source_model_data(self, branch_id, source_model):
         """
@@ -1219,14 +1205,19 @@ class SourceModelLogicTree(object):
         """
         smodel = nrml.read(self._get_source_model(source_model)).sourceModel
         n = len('Source')
-        for src_node in smodel:
-            with context(source_model, src_node):
-                trt = src_node['tectonicRegion']
-                source_id = src_node['id']
-                source_type = striptag(src_node.tag)[n:]
-                self.tectonic_region_types.add(trt)
-                self.source_ids[branch_id].append(source_id)
-                self.source_types.add(source_type)
+        for sg in smodel:
+            trt = sg['tectonicRegion']
+            if sg.tag.endswith('sourceGroup'):  # nrml/0.5
+                src_nodes = sg
+            else:  # nrml/0.4
+                src_nodes = [sg]
+            for src_node in src_nodes:
+                with context(source_model, src_node):
+                    source_id = src_node['id']
+                    source_type = striptag(src_node.tag)[n:]
+                    self.tectonic_region_types.add(trt)
+                    self.source_ids[branch_id].append(source_id)
+                    self.source_types.add(source_type)
 
     def apply_uncertainties(self, branch_ids, source_group):
         """
