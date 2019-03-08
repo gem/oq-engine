@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,13 +23,13 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
+import toml
 import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim import registry
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -63,36 +63,37 @@ class FromFile(object):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
+    kwargs = {}
+
+    def init(self):
+        pass
 
     def __repr__(self):
-        return 'FromFile'
+        return '[FromFile]'
 
 
 # more tests are in tests/valid_test.py
-def gsim(value, **kwargs):
+def gsim(value):
     """
-    Make sure the given value is the name of an available GSIM class.
+    Convert a string in TOML format into a GSIM instance
 
-    >>> gsim('BooreAtkinson2011')
-    'BooreAtkinson2011()'
+    >>> gsim('[BooreAtkinson2011]')
+    [BooreAtkinson2011]
     """
+    if not value.startswith('['):  # assume the GSIM name
+        value = '[%s]' % value
+    [(gsim_name, kwargs)] = toml.loads(value).items()
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
-    if value.endswith('()'):
-        value = value[:-2]  # strip parenthesis
-    if value == 'FromFile':
+    if gsim_name == 'FromFile':
         return FromFile()
-    elif value.startswith('GMPETable'):
-        gsim_class = GMPETable
-    else:
-        try:
-            gsim_class = registry[value]
-        except KeyError:
-            raise ValueError('Unknown GSIM: %s' % value)
     try:
-        gs = gsim_class(**kwargs)
-    except TypeError:
-        raise ValueError('Could not instantiate %s%s' % (value, kwargs))
+        gsim_class = registry[gsim_name]
+    except KeyError:
+        raise ValueError('Unknown GSIM: %s' % gsim_name)
+    gs = gsim_class(**kwargs)
+    gs._toml = value
     gs.minimum_distance = minimum_distance
+    gs.init()
     return gs
 
 
@@ -662,13 +663,20 @@ def intensity_measure_types(value):
     Traceback (most recent call last):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
+    >>> intensity_measure_types('SA(1), PGA')
+    Traceback (most recent call last):
+    ...
+    ValueError: The IMTs are not sorted by period: SA(1), PGA
     """
     imts = []
     for chunk in value.split(','):
-        imts.append(str(imt.from_string(chunk.strip())))
+        imts.append(imt.from_string(chunk.strip()))
+    sorted_imts = sorted(imts, key=lambda im: getattr(im, 'period', 1))
     if len(distinct(imts)) < len(imts):
         raise ValueError('Duplicated IMTs in %s' % value)
-    return imts
+    if sorted_imts != imts:
+        raise ValueError('The IMTs are not sorted by period: %s' % value)
+    return [str(imt) for imt in imts]
 
 
 def check_levels(imls, imt, min_iml=1E-10):
@@ -1148,7 +1156,7 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             try:
                 p = getattr(cls, name)
             except AttributeError:
-                logging.warn('Ignored unknown parameter %s', name)
+                logging.warning('Ignored unknown parameter %s', name)
             else:
                 res[name] = p.validator(text)
         return res
@@ -1182,7 +1190,7 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             try:
                 convert = getattr(self.__class__, name).validator
             except AttributeError:
-                logging.warn("The parameter '%s' is unknown, ignoring" % name)
+                logging.warning("The parameter '%s' is unknown, ignoring" % name)
                 continue
             try:
                 value = convert(val)
@@ -1218,8 +1226,8 @@ class RjbEquivalent(object):
     >> reqv = RjbEquivalent('lookup.hdf5')
     >> reqv.get(repi_distances, mag)
     """
-    def __init__(self, hdf5path):
-        with hdf5.File(hdf5path, 'r') as f:
+    def __init__(self, filename):
+        with hdf5.File(filename, 'r') as f:
             self.repi = f['default/repi'].value  # shape D
             self.mags = f['default/mags'].value  # shape M
             self.reqv = f['default/reqv'].value  # shape D x M

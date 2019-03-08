@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ import logging
 from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import logs, readinput
+from openquake.commonlib import util, logs, readinput
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
@@ -34,24 +34,6 @@ from openquake.commands.abort import abort
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
-
-
-def read(calc_id, username=None):
-    """
-    :param calc_id: a calculation ID
-    :param username: if given, restrict the search to the user's calculations
-    :returns: the associated DataStore instance
-    """
-    if isinstance(calc_id, str) or calc_id < 0 and not username:
-        # get the last calculation in the datastore of the current user
-        return datastore.read(calc_id)
-    job = logs.dbcmd('get_job', calc_id, username)
-    if job:
-        return datastore.read(job.ds_calc_dir + '.hdf5')
-    else:
-        # calc_id can be present in the datastore and not in the database:
-        # this happens if the calculation was run with `oq run`
-        return datastore.read(calc_id)
 
 
 def get_job_id(job_id, username=None):
@@ -109,7 +91,7 @@ def del_calculation(job_id, confirmed=False):
             'Are you sure you want to (abort and) delete this calculation and '
             'all associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            abort.func(job_id)
+            abort(job_id)
             resp = logs.dbcmd('del_calc', job_id, getpass.getuser())
         except RuntimeError as err:
             safeprint(err)
@@ -130,8 +112,9 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     job = logs.dbcmd('get_job_from_checksum', haz_checksum)
     reuse = reuse_hazard and job and os.path.exists(job.ds_calc_dir + '.hdf5')
     # recompute the hazard and store the checksum
-    if (oqparam.calculation_mode == 'event_based_risk' and
-            'gmfs' not in oqparam.inputs):
+    ebr = (oqparam.calculation_mode == 'event_based_risk' and
+           'gmfs' not in oqparam.inputs)
+    if ebr:
         kw = dict(calculation_mode='event_based')
         if (oqparam.sites or 'sites' in oqparam.inputs or
                 'site_model' in oqparam.inputs):
@@ -145,18 +128,19 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
             logs.dbcmd('add_checksum', hc_id, haz_checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             logs.dbcmd('update_job_checksum', hc_id, haz_checksum)
-        if (oqparam.calculation_mode == 'event_based_risk' and
-                'gmfs' not in oqparam.inputs):
+        if ebr:
             job_id = run_job(job_ini, log_level, log_file,
                              exports, hazard_calculation_id=hc_id)
+        else:
+            job_id = hc_id
     else:
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
         job_id = run_job(job_ini, log_level, log_file,
                          exports, hazard_calculation_id=hc_id)
-    if oqparam.aggregate_by:
+    if ebr and oqparam.aggregate_by:
         logging.info('Exporting aggregated data')
-        dstore = datastore.read(job_id)
+        dstore = util.read(job_id)
         aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)
         fnames = []
         fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
@@ -165,7 +149,7 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
             logging.info('Exported %s', fname)
 
 
-@sap.Script
+@sap.script
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
            upgrade_db, db_version, what_if_I_upgrade, run,
            list_hazard_calculations, list_risk_calculations,

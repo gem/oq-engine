@@ -1,3 +1,2 @@
-event_id,rup_id,year,rlzi,magnitude,centroid_lon,centroid_lat,centroid_depth,structural
-2263447764992,527,1,0,4.00000E+00,-1.21965E+02,3.81124E+01,1.00000E+00,1.25916E+03
-2340757176320,545,1,1,5.05000E+00,-1.22000E+02,3.81529E+01,3.00000E+00,3.80025E+02
+event_id,rup_id,year,magnitude,centroid_lon,centroid_lat,centroid_depth,structural
+2250562863104,524,1,4.00000E+00,-1.22034E+02,3.81124E+01,1.00000E+00,1.68142E+02

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,6 +69,13 @@ def cached_property(method):
     newmethod.__name__ = method.__name__
     newmethod.__doc__ = method.__doc__
     return property(newmethod)
+
+
+def nokey(item):
+    """
+    Dummy function to apply to items without a key
+    """
+    return 'Unspecified'
 
 
 class WeightedSequence(collections.MutableSequence):
@@ -188,19 +195,12 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def nokey(item):
-    """
-    Dummy function to apply to items without a key
-    """
-    return 'Unspecified'
-
-
-def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
+def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
-    :param kind: a function returning the kind of a given item
+    :param key: a function returning the kind of a given item
 
     Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -212,28 +212,31 @@ def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
      >>> list(block_splitter(items, 3))
      [<WeightedSequence ['A', 'B', 'C'], weight=3>, <WeightedSequence ['D', 'E'], weight=2>]
 
-    The default weight is 1 for all items.
+    The default weight is 1 for all items. Here is an example leveraning on the
+    key to group together results:
+
+    >>> items = ['A1', 'C2', 'D2', 'E2']
+    >>> list(block_splitter(items, 2, key=operator.itemgetter(1)))
+    [<WeightedSequence ['A1'], weight=1>, <WeightedSequence ['C2', 'D2'], weight=2>, <WeightedSequence ['E2'], weight=1>]
     """
     if max_weight <= 0:
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
-    prev_kind = 'Unspecified'
+    prev_key = 'Unspecified'
     for item in items:
         w = weight(item)
-        k = kind(item)
+        k = key(item)
         if w < 0:  # error
             raise ValueError('The item %r got a negative weight %s!' %
                              (item, w))
-        elif w == 0:  # ignore items with 0 weight
-            pass
-        elif ws.weight + w > max_weight or k != prev_kind:
+        elif ws.weight + w > max_weight or k != prev_key:
             new_ws = WeightedSequence([(item, w)])
             if ws:
                 yield ws
             ws = new_ws
-        else:
+        elif w > 0:  # ignore items with 0 weight
             ws.append((item, w))
-        prev_kind = k
+        prev_key = k
     if ws:
         yield ws
 
@@ -293,7 +296,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
         for k, group in groupby(sequence, key).items():
             blocks.append(group)
         return blocks
-    items = list(sequence) if key is nokey else sorted(sequence, key=key)
+    items = sorted(sequence, key=lambda item: (key(item), weight(item)))
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
@@ -580,30 +583,35 @@ class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables::
 
-     >> acc = AccumDict()
-     >> acc += {'a': 1}
-     >> acc += {'a': 1, 'b': 1}
-     >> acc
+     >>> acc = AccumDict()
+     >>> acc += {'a': 1}
+     >>> acc += {'a': 1, 'b': 1}
+     >>> acc
      {'a': 2, 'b': 1}
-     >> {'a': 1} + acc
+     >>> {'a': 1} + acc
      {'a': 3, 'b': 1}
-     >> acc + 1
+     >>> acc + 1
      {'a': 3, 'b': 2}
-     >> 1 - acc
+     >>> 1 - acc
      {'a': -1, 'b': 0}
-     >> acc - 1
+     >>> acc - 1
      {'a': 1, 'b': 0}
 
-    Also the multiplication has been defined::
+    The multiplication has been defined::
 
-     >> prob1 = AccumDict(a=0.4, b=0.5)
-     >> prob2 = AccumDict(b=0.5)
-     >> prob1 * prob2
+     >>> prob1 = AccumDict(a=0.4, b=0.5)
+     >>> prob2 = AccumDict(b=0.5)
+     >>> prob1 * prob2
      {'a': 0.4, 'b': 0.25}
-     >> prob1 * 1.2
+     >>> prob1 * 1.2
      {'a': 0.48, 'b': 0.6}
-     >> 1.2 * prob1
+     >>> 1.2 * prob1
      {'a': 0.48, 'b': 0.6}
+
+    And even the power::
+
+    >>> prob2 ** 2
+    {'b': 0.25}
 
     It is very common to use an AccumDict of accumulators; here is an
     example using the empty list as accumulator:
@@ -666,6 +674,9 @@ class AccumDict(dict):
     def __neg__(self):
         return self.__class__({k: -v for k, v in self.items()})
 
+    def __invert__(self):
+        return self.__class__({k: ~v for k, v in self.items()})
+
     def __imul__(self, other):
         if hasattr(other, 'items'):
             for k, v in other.items():
@@ -684,6 +695,12 @@ class AccumDict(dict):
         return new
 
     __rmul__ = __mul__
+
+    def __pow__(self, n):
+        new = self.__class__(self)
+        for key in new:
+            new[key] **= n
+        return new
 
     def __truediv__(self, other):
         return self * (1. / other)
@@ -980,6 +997,23 @@ def random_histogram(counts, nbins, seed):
     """
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
+
+
+def get_indices(integers):
+    """
+    :param integers: a sequence of integers (with repetitions)
+    :returns: a dict integer -> [(start, stop), ...]
+
+    >>> get_indices([0, 0, 3, 3, 3, 2, 2, 0])
+    {0: [(0, 2), (7, 8)], 3: [(2, 5)], 2: [(5, 7)]}
+    """
+    indices = AccumDict(accum=[])  # idx -> [(start, stop), ...]
+    start = 0
+    for i, vals in itertools.groupby(integers):
+        n = sum(1 for val in vals)
+        indices[i].append((start, start + n))
+        start += n
+    return indices
 
 
 def safeprint(*args, **kwargs):

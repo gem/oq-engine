@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -53,18 +53,3 @@ class BaseCalculatorTestCase(unittest.TestCase):
             self.assertRaises(ZeroDivisionError, calc.run)
         self.assertEqual(error.call_count, 0)
         self.assertEqual(critical.call_count, 1)
-
-
-class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
-    def test_ok(self):
-        base.check_precalc_consistency('scenario_risk', 'scenario')
-
-    def test_inconsistent_mode(self):
-        with self.assertRaises(base.InvalidCalculationID) as ctx:
-            base.check_precalc_consistency('classical_risk', 'scenario')
-        msg = str(ctx.exception)
-        self.assertEqual(
-            msg, "In order to run a risk calculation of kind "
-            "'classical_risk', you need to provide a "
-            "calculation of kind ['classical'], "
-            "but you provided a 'scenario' instead")

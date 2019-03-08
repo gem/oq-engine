@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,6 @@ import os
 import inspect
 import unittest
 import numpy as np
-from nose.plugins.attrib import attr
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 from openquake.hazardlib.gsim.nga_east import DarraghEtAl2015NGAEast1CCSP
 
@@ -539,7 +538,7 @@ NGA_EAST_SIGMA_FILES = [
     ]
 
 
-@attr('slow')
+@unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
 class NGAEastUncertaintyTestCase(unittest.TestCase):
     """
     Variant of the :class:
@@ -622,5 +621,6 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
                               tau_quantile=tau_quantile,
                               phi_ss_quantile=phi_quantile,
                               phi_s2ss_quantile=phi_s2ss_quantile)
+            gsim.init()
             # Run Checks
             self._test_uncertainty_model(gsim, filestem, MAX_DISC)

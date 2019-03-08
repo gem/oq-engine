@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,9 +16,28 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import config
+from openquake.baselib import config, datastore
+from openquake.commonlib import logs
 
 F32 = numpy.float32
+
+
+def read(calc_id, username=None):
+    """
+    :param calc_id: a calculation ID
+    :param username: if given, restrict the search to the user's calculations
+    :returns: the associated DataStore instance
+    """
+    if isinstance(calc_id, str) or calc_id < 0 and not username:
+        # get the last calculation in the datastore of the current user
+        return datastore.read(calc_id)
+    job = logs.dbcmd('get_job', calc_id, username)
+    if job:
+        return datastore.read(job.ds_calc_dir + '.hdf5')
+    else:
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
 
 
 def max_rel_diff(curve_ref, curve, min_value=0.01):
@@ -81,6 +100,31 @@ def rmsep(array_ref, array, min_value=0):
     return numpy.sqrt(reldiffsquare.mean())
 
 
+def log(array, cutoff):
+    """
+    Compute the logarithm of an array with a cutoff on the small values
+    """
+    arr = numpy.copy(array)
+    arr[arr < cutoff] = cutoff
+    return numpy.log(arr)
+
+
+def closest_to_ref(arrays, ref, cutoff=1E-12):
+    """
+    :param arrays: a sequence of R arrays
+    :param ref: the reference array
+    :returns: a dictionary with keys rlz, value, and dist
+    """
+    dist = numpy.zeros(len(arrays))
+    logref = log(ref, cutoff)
+    for rlz, array in enumerate(arrays):
+        diff = log(array, cutoff) - logref
+        dist[rlz] = numpy.sqrt((diff * diff).sum())
+    rlz = dist.argmin()
+    closest = dict(rlz=rlz, value=arrays[rlz], dist=dist[rlz])
+    return closest
+
+
 def compose_arrays(a1, a2, firstfield='etag'):
     """
     Compose composite arrays by generating an extended datatype containing
@@ -118,15 +162,15 @@ def get_assets(dstore):
     :returns: an array of records (asset_ref, tag1, ..., tagN, lon, lat)
     """
     assetcol = dstore['assetcol']
-    tag = {t: getattr(assetcol.tagcol, t) for t in assetcol.tagnames}
+    tagnames = sorted(assetcol.tagnames)
+    tag = {t: getattr(assetcol.tagcol, t) for t in tagnames}
     dtlist = [('asset_ref', (bytes, 100))]
-    for tagname in assetcol.tagnames:
+    for tagname in tagnames:
         dtlist.append((tagname, (bytes, 100)))
     dtlist.extend([('lon', F32), ('lat', F32)])
     asset_data = []
     for aref, a in zip(assetcol.asset_refs, assetcol.array):
-        tup = tuple(b'"%s"' % tag[t][a[t]].encode('utf-8')
-                    for t in assetcol.tagnames)
+        tup = tuple(b'"%s"' % tag[t][a[t]].encode('utf-8') for t in tagnames)
         asset_data.append((aref,) + tup + (a['lon'], a['lat']))
     return numpy.array(asset_data, dtlist)
 
@@ -136,12 +180,3 @@ def shared_dir_on():
     :returns: True if a shared_dir has been set in openquake.cfg, else False
     """
     return config.directory.shared_dir
-
-
-def reader(func):
-    """
-    Decorator used to mark functions that require read access to the
-    file system.
-    """
-    func.read_access = config.directory.shared_dir
-    return func

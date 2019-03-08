@@ -2,9 +2,9 @@ scenario risk
 =============
 
 ============== ===================
-checksum32     818,655,088        
-date           2018-10-03T15:00:41
-engine_version 3.3.0-gitd9f5dca908
+checksum32     2,297,606,000      
+date           2019-02-18T08:35:35
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -51,17 +51,25 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 simple(2)       2/2             
+b_1       1.00000 simple(2)       2               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,BooreAtkinson2008(): [0]
-  0,ChiouYoungs2008(): [1]>
+  0,'[BooreAtkinson2008]': [0]
+  0,'[ChiouYoungs2008]': [1]>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
@@ -82,11 +90,11 @@ tax3     1.00000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-=================== ======== ========= ======
-operation           time_sec memory_mb counts
-=================== ======== ========= ======
-building riskinputs 0.02285  0.0       1     
-computing gmfs      0.02132  0.23047   1     
-saving gmfs         0.01080  0.0       1     
-reading exposure    0.00135  0.0       1     
-=================== ======== ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+computing gmfs      0.01144   0.0       1     
+building riskinputs 0.00989   0.0       1     
+saving gmfs         0.00554   0.0       1     
+reading exposure    7.699E-04 0.0       1     
+=================== ========= ========= ======

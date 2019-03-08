@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -57,8 +57,6 @@ class BaseSmoothingKernel(object):
     Abstract Base Class to smooth a grid according the sets of
     regular smoothing kernels
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def smooth_data(self, data, config):
         '''

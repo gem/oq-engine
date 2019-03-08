@@ -3,8 +3,8 @@ Scenario QA Test with Spatial Correlation - Case 1
 
 ============== ===================
 checksum32     1,970,708,270      
-date           2018-12-13T12:57:04
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:35:32
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -43,16 +43,16 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): [0]>
+  0,'[BooreAtkinson2008]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------

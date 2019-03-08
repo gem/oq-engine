@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2018 GEM Foundation
+# Copyright (c) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -207,8 +207,8 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
         dstore[prefix + '-rlzs'] = arrayNR
     R = arrayNR.shape[1]
     if R > 1:
-        stats = dstore['oqparam'].risk_stats()
-        statnames, statfuncs = zip(*stats)
+        stats = dstore['oqparam'].hazard_stats()
+        statnames, statfuncs = zip(*stats.items())
         weights = dstore['csm_info'].rlzs['weight']
         dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
         dstore.set_attrs(prefix + '-stats', stats=encode(statnames))

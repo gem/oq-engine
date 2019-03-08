@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,85 +15,160 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import numpy
+import logging
 from openquake.baselib import sap
-from openquake.hazardlib.stats import mean_curve, compute_pmap_stats
-from openquake.calculators import getters
-from openquake.commands import engine
+from openquake.hazardlib.geo.utils import get_bounding_box
+from openquake.calculators.extract import Extractor, WebExtractor
 
 
-def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
+def basemap(projection, sitecol):
+    from mpl_toolkits.basemap import Basemap  # costly import
+    minlon, minlat, maxlon, maxlat = get_bounding_box(sitecol, maxdist=10)
+    bmap = Basemap(projection=projection,
+                   llcrnrlon=minlon, llcrnrlat=minlat,
+                   urcrnrlon=maxlon, urcrnrlat=maxlat,
+                   lat_0=sitecol['lat'].mean(), lon_0=sitecol['lon'].mean())
+    bmap.drawcoastlines()
+    return bmap
+
+
+def make_figure_hcurves(extractors, what):
     """
-    :param indices: the indices of the sites under analysis
-    :param n: the total number of sites
-    :param imtls: ordered dictionary with the IMTs and levels
-    :param spec_curves: a dictionary of curves IMT -> array(n_sites, n_levels)
-    :param curves: a dictionary of dictionaries IMT -> array
-    :param label: the label associated to `spec_curves`
+    $ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0'
     """
-    # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
-
     fig = plt.figure()
-    n_imts = len(imtls)
-    n_sites = len(indices)
-    spec_curves = spec_curves.convert(imtls, n)
-    all_curves = [c.convert(imtls, n) for c in curves]
-    for i, site in enumerate(indices):
-        for j, imt in enumerate(imtls):
-            ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
-            ax.grid(True)
-            ax.set_xlabel('site %d, %s' % (site, imt))
-            ax.set_ylim([0, 1])
-            if j == 0:  # set Y label only on the leftmost graph
-                ax.set_ylabel('PoE')
-            if spec_curves is not None:
-                ax.plot(imtls[imt], spec_curves[imt][site], '--', label=label)
-            for r, curves in enumerate(all_curves):
-                ax.plot(imtls[imt], curves[imt][site], label=str(r))
-            ax.legend()
+    got = {}  # (calc_id, kind) -> curves
+    for i, ex in enumerate(extractors):
+        hcurves = ex.get(what)
+        for kind in hcurves.kind:
+            got[ex.calc_id, kind] = hcurves[kind]
+    oq = ex.oqparam
+    n_imts = len(hcurves.imt)
+    [site] = hcurves.site_id
+    for j, imt in enumerate(hcurves.imt):
+        imls = oq.imtls[imt]
+        imt_slice = oq.imtls(imt)
+        ax = fig.add_subplot(n_imts, 1, j + 1)
+        ax.set_xlabel('%s, site %s, inv_time=%dy' %
+                      (imt, site, oq.investigation_time))
+        ax.set_ylabel('PoE')
+        for ck, arr in got.items():
+            if (arr == 0).all():
+                logging.warning('There is a zero curve %s_%s', *ck)
+            ax.loglog(imls, arr[0, imt_slice], '-', label='%s_%s' % ck)
+            ax.loglog(imls, arr[0, imt_slice], '.')
+        ax.grid(True)
+        ax.legend()
     return plt
 
 
-def get_pmaps(dstore, indices):
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    getter = getters.PmapGetter(dstore, rlzs_assoc)
-    getter.init()
-    pmaps = getter.get_pmaps(indices)
-    mean = compute_pmap_stats(
-        pmaps, [mean_curve], getter.weights, getter.imtls)
-    return mean, pmaps
+def make_figure_hmaps(extractors, what):
+    """
+    $ oq plot 'hmaps?kind=mean&imt=PGA'
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ncalcs = len(extractors)
+    for i, ex in enumerate(extractors):
+        oq = ex.oqparam
+        n_poes = len(oq.poes)
+        sitecol = ex.get('sitecol')
+        hmaps = ex.get(what)
+        [imt] = hmaps.imt
+        [kind] = hmaps.kind
+        for j, poe in enumerate(oq.poes):
+            ax = fig.add_subplot(n_poes, ncalcs, j * ncalcs + i + 1)
+            ax.grid(True)
+            ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
+                          'inv_time=%dy' %
+                          (imt, kind, poe, ex.calc_id, oq.investigation_time))
+            bmap = basemap('cyl', sitecol)
+            bmap.scatter(sitecol['lon'], sitecol['lat'],
+                         c=hmaps[kind][:, 0, j], cmap='jet')
+    return plt
 
 
-@sap.Script
-def plot(calc_id, other_id=None, sites='0'):
+def make_figure_uhs(extractors, what):
     """
-    Hazard curves plotter.
+    $ oq plot 'uhs?kind=mean&site_id=0'
     """
-    # read the hazard data
-    haz = engine.read(calc_id)
-    other = engine.read(other_id) if other_id else None
-    oq = haz['oqparam']
-    indices = numpy.array(list(map(int, sites.split(','))))
-    n_sites = len(haz['sitecol'])
-    if not set(indices) <= set(range(n_sites)):
-        invalid = sorted(set(indices) - set(range(n_sites)))
-        print('The indices %s are invalid: no graph for them' % invalid)
-    valid = sorted(set(range(n_sites)) & set(indices))
-    print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    if other is None:
-        mean_curves, pmaps = get_pmaps(haz, indices)
-        single_curve = len(pmaps) == 1
-        plt = make_figure(valid, n_sites, oq.imtls, mean_curves,
-                          [] if single_curve else pmaps, 'mean')
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    got = {}  # (calc_id, kind) -> curves
+    for i, ex in enumerate(extractors):
+        uhs = ex.get(what)
+        for kind in uhs.kind:
+            got[ex.calc_id, kind] = uhs[kind]
+    oq = ex.oqparam
+    n_poes = len(oq.poes)
+    periods = [imt.period for imt in oq.imt_periods()]
+    [site] = uhs.site_id
+    for j, poe in enumerate(oq.poes):
+        ax = fig.add_subplot(n_poes, 1, j + 1)
+        ax.set_xlabel('UHS on site %s, poe=%s, inv_time=%dy' %
+                      (site, poe, oq.investigation_time))
+        ax.set_ylabel('SA')
+        for ck, arr in got.items():
+            ax.plot(periods, arr[0, :, j], '-', label='%s_%s' % ck)
+            ax.plot(periods, arr[0, :, j], '.')
+        ax.grid(True)
+        ax.legend()
+    return plt
+
+
+def make_figure_source_geom(extractors, what):
+    """
+    Extract the geometry of a given sources
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    sitecol = ex.get('sitecol')
+    geom_by_src = vars(ex.get(what))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.grid(True)
+    ax.set_xlabel('Source')
+    bmap = basemap('cyl', sitecol)
+    for src, geom in geom_by_src.items():
+        if src != 'array':
+            bmap.plot(geom['lon'], geom['lat'], label=src)
+    bmap.plot(sitecol['lon'], sitecol['lat'], 'x')
+    ax.legend()
+    return plt
+
+
+@sap.script
+def plot(what, calc_id=-1, other_id=None, webapi=False):
+    """
+    Generic plotter documented in https://docs.openquake.org/oq-engine/master/openquake.commands.html?highlight=plot#module-openquake.command
+    """
+    if '?' not in what:
+        raise SystemExit('Missing ? in %r' % what)
+    prefix, rest = what.split('?', 1)
+    assert prefix in 'source_geom hcurves hmaps uhs', prefix
+    if prefix in 'hcurves hmaps' and 'imt=' not in rest:
+        raise SystemExit('Missing imt= in %r' % what)
+    elif prefix == 'uhs' and 'imt=' in rest:
+        raise SystemExit('Invalid IMT in %r' % what)
+    elif prefix in 'hcurves uhs' and 'site_id=' not in rest:
+        what += '&site_id=0'
+    if webapi:
+        xs = [WebExtractor(calc_id)]
+        if other_id:
+            xs.append(WebExtractor(other_id))
     else:
-        mean1, _ = get_pmaps(haz, indices)
-        mean2, _ = get_pmaps(other, indices)
-        plt = make_figure(valid, n_sites, oq.imtls, mean1,
-                          [mean2], 'reference')
+        xs = [Extractor(calc_id)]
+        if other_id:
+            xs.append(Extractor(other_id))
+    make_figure = globals()['make_figure_' + prefix]
+    plt = make_figure(xs, what)
     plt.show()
 
 
-plot.arg('calc_id', 'a computation id', type=int)
-plot.arg('other_id', 'optional id of another computation', type=int)
-plot.opt('sites', 'comma-separated string with the site indices')
+plot.arg('what', 'what to extract')
+plot.arg('calc_id', 'computation ID', type=int)
+plot.arg('other_id', 'ID of another computation', type=int)
+plot.flg('webapi', 'if given, pass through the WebAPI')

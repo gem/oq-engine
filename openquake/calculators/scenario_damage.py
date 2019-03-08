@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,7 @@ def dist_by_asset(data, multi_stat_dt, number):
             out_lt[n, r] = (mean, stddev)
             # sanity check on the sum over all damage states
             if abs(mean.sum() / number[n] - 1) > 1E-3:
-                logging.warn(
+                logging.warning(
                     'Asset #%d, rlz=%d, expected %s, got %s for %s damage',
                     n, r, number[n], mean.sum(), lt)
     return out
@@ -114,9 +114,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     """
     core_task = scenario_damage
     is_stochastic = True
+    precalc = 'scenario'
+    accept_precalc = ['scenario']
 
     def pre_execute(self):
-        super().pre_execute('scenario')
+        super().pre_execute()
         E = self.oqparam.number_of_ground_motion_fields
         self.param['number_of_ground_motion_fields'] = E
         self.param['consequence_models'] = riskmodels.get_risk_models(

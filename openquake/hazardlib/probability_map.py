@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2018 GEM Foundation
+# Copyright (c) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -66,6 +66,11 @@ class ProbabilityCurve(object):
         self.array += other.array
         return self
 
+    def __add__(self, other):
+        # this is used when composing mutually exclusive probabilities
+        self.array += other.array
+        return self.__class__(self.array)
+
     def __mul__(self, other):
         if isinstance(other, self.__class__):
             return self.__class__(self.array * other.array)
@@ -74,6 +79,9 @@ class ProbabilityCurve(object):
         else:
             return self.__class__(self.array * other)
     __rmul__ = __mul__
+
+    def __pow__(self, n):
+        return self.__class__(self.array ** n)
 
     def __invert__(self):
         return self.__class__(1. - self.array)
@@ -277,6 +285,21 @@ class ProbabilityMap(dict):
 
     __ror__ = __or__
 
+    def __add__(self, other):
+        try:
+            other.get
+            is_pmap = True
+            sids = set(self) | set(other)
+        except AttributeError:  # no .get method, assume a float
+            is_pmap = False
+            assert 0. <= other <= 1., other  # must be a probability
+            sids = set(self)
+        new = self.__class__(self.shape_y, self.shape_z)
+        for sid in sids:
+            prob = other.get(sid, 1) if is_pmap else other
+            new[sid] = self.get(sid, 1) + prob
+        return new
+
     def __mul__(self, other):
         try:
             other.get
@@ -290,6 +313,17 @@ class ProbabilityMap(dict):
         for sid in sids:
             prob = other.get(sid, 1) if is_pmap else other
             new[sid] = self.get(sid, 1) * prob
+        return new
+
+    def __ipow__(self, n):
+        for sid, pcurve in self.items():
+            self[sid] = pcurve ** n
+        return self
+
+    def __pow__(self, n):
+        new = self.__class__(self.shape_y, self.shape_z)
+        for sid, pcurve in self.items():
+            new[sid] = pcurve ** n
         return new
 
     def __invert__(self):

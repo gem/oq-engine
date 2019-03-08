@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -188,10 +188,10 @@ def make_hmap(pmap, imtls, poes):
     :param pmap: hazard curves in the form of a ProbabilityMap
     :param imtls: DictArray with M intensity measure types
     :param poes: P PoEs where to compute the maps
-    :returns: a ProbabilityMap with size (N, M * P, 1)
+    :returns: a ProbabilityMap with size (N, M, P)
     """
     M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M * P, 1, pmap, dtype=F32)
+    hmap = probability_map.ProbabilityMap.build(M, P, pmap, dtype=F32)
     if len(pmap) == 0:
         return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
@@ -201,7 +201,7 @@ def make_hmap(pmap, imtls, poes):
         for sid, value in zip(pmap.sids, data):
             array = hmap[sid].array
             for j, val in enumerate(value):
-                array[i * P + j] = val
+                array[i, j] = val
     return hmap
 
 
@@ -233,52 +233,19 @@ def make_uhs(hmap, oq):
     """
     Make Uniform Hazard Spectra curves for each location.
 
-    It is assumed that the `lons` and `lats` for each of the `maps` are
-    uniform.
-
     :param hmap:
-        a composite array of hazard maps
+        array of shape (N, M, P)
     :param oq:
         an OqParam instance
     :returns:
         a composite array containing uniform hazard spectra
     """
     uhs = numpy.zeros(len(hmap), oq.uhs_dt())
-    for field in hmap.dtype.names:
-        imt, poe = field.split('-')
-        poe_imt = '%s-%s' % (poe, imt)
-        if poe_imt in uhs.dtype.names:
-            uhs[poe_imt] = hmap[field]
+    for p, poe in enumerate(oq.poes):
+        for m, imt in enumerate(oq.imtls):
+            if imt.startswith(('PGA', 'SA')):
+                uhs[str(poe)][imt] = hmap[:, m, p]
     return uhs
-
-
-def fix_minimum_intensity(min_iml, imts):
-    """
-    :param min_iml: a dictionary, possibly with a 'default' key
-    :param imts: an ordered list of IMTs
-    :returns: a numpy array of intensities, one per IMT
-
-    Make sure the dictionary minimum_intensity (provided by the user in the
-    job.ini file) is filled for all intensity measure types and has no key
-    named 'default'. Here is how it works:
-
-    >>> min_iml = {'PGA': 0.1, 'default': 0.05}
-    >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
-    array([0.1 , 0.05], dtype=float32)
-    >>> sorted(min_iml.items())
-    [('PGA', 0.1), ('PGV', 0.05)]
-    """
-    if min_iml:
-        for imt in imts:
-            try:
-                min_iml[imt] = calc.filters.getdefault(min_iml, imt)
-            except KeyError:
-                raise ValueError(
-                    'The parameter `minimum_intensity` in the job.ini '
-                    'file is missing the IMT %r' % imt)
-    if 'default' in min_iml:
-        del min_iml['default']
-    return F32([min_iml.get(imt, 0) for imt in imts])
 
 
 class RuptureData(object):
@@ -288,7 +255,7 @@ class RuptureData(object):
     """
     def __init__(self, trt, gsims):
         self.trt = trt
-        self.cmaker = ContextMaker(gsims)
+        self.cmaker = ContextMaker(trt, gsims)
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([

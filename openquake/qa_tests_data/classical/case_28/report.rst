@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     3,672,594,697      
-date           2018-12-13T12:58:04
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:38:00
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 2, num_levels = 133
@@ -12,7 +12,7 @@ num_sites = 2, num_levels = 133
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -45,33 +45,33 @@ Composite source model
 ============================= ======= =============== ================
 smlt_path                     weight  gsim_logic_tree num_realizations
 ============================= ======= =============== ================
-smoothed_model_m_m0.2_b_e0.0  0.50000 simple(0,4,0)   4/4             
-smoothed_model_m_m0.2_b_m0.05 0.50000 simple(0,4,0)   4/4             
+smoothed_model_m_m0.2_b_e0.0  0.50000 simple(0,4,0)   4               
+smoothed_model_m_m0.2_b_m0.05 0.50000 simple(0,4,0)   4               
 ============================= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ====================================================================================== =========== ======================= =================
-grp_id gsims                                                                                  distances   siteparams              ruptparams       
-====== ====================================================================================== =========== ======================= =================
-0      AkkarEtAlRjb2014() AtkinsonBoore2006Modified2011() ChiouYoungs2014() PezeshkEtAl2011() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-1      AkkarEtAlRjb2014() AtkinsonBoore2006Modified2011() ChiouYoungs2014() PezeshkEtAl2011() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-====== ====================================================================================== =========== ======================= =================
+====== ============================================================================================== =========== ======================= =================
+grp_id gsims                                                                                          distances   siteparams              ruptparams       
+====== ============================================================================================== =========== ======================= =================
+0      '[AkkarEtAlRjb2014]' '[AtkinsonBoore2006Modified2011]' '[ChiouYoungs2014]' '[PezeshkEtAl2011]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+1      '[AkkarEtAlRjb2014]' '[AtkinsonBoore2006Modified2011]' '[ChiouYoungs2014]' '[PezeshkEtAl2011]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ============================================================================================== =========== ======================= =================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=8, rlzs=8)
-  0,AkkarEtAlRjb2014(): [1]
-  0,AtkinsonBoore2006Modified2011(): [2]
-  0,ChiouYoungs2014(): [0]
-  0,PezeshkEtAl2011(): [3]
-  1,AkkarEtAlRjb2014(): [5]
-  1,AtkinsonBoore2006Modified2011(): [6]
-  1,ChiouYoungs2014(): [4]
-  1,PezeshkEtAl2011(): [7]>
+  0,'[AkkarEtAlRjb2014]': [1]
+  0,'[AtkinsonBoore2006Modified2011]': [2]
+  0,'[ChiouYoungs2014]': [0]
+  0,'[PezeshkEtAl2011]': [3]
+  1,'[AkkarEtAlRjb2014]': [5]
+  1,'[AtkinsonBoore2006Modified2011]': [6]
+  1,'[ChiouYoungs2014]': [4]
+  1,'[PezeshkEtAl2011]': [7]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -94,8 +94,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      21        M    0     2     260          0.0       0.00117    0.0       2         0.0   
-1      21        M    0     2     260          0.0       9.527E-04  0.0       2         0.0   
+1      21        M    2     4     260          0.0       4.797E-04  2.00000   2         26    
+0      21        M    0     2     260          0.0       7.014E-04  2.00000   2         26    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -108,22 +108,23 @@ M    0.0       2
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+['21']
+Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00240 2.933E-05 0.00238 0.00242 2      
-split_filter       0.00588 NaN       0.00588 0.00588 1      
+read_source_models 0.00156 2.192E-05 0.00155 0.00158 2      
+split_filter       0.00384 NaN       0.00384 0.00384 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ====================================== ========
 task               sent                                   received
-read_source_models converter=776 B fnames=212 B           3.79 KB 
-split_filter       srcs=1.97 KB srcfilter=253 B seed=14 B 2.46 KB 
+read_source_models converter=626 B fnames=212 B           3.9 KB  
+split_filter       srcs=1.99 KB srcfilter=253 B seed=14 B 2.48 KB 
 ================== ====================================== ========
 
 Slowest operations
@@ -131,6 +132,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00588  0.0       1     
-total read_source_models 0.00479  0.0       2     
+total split_filter       0.00384  1.38281   1     
+total read_source_models 0.00313  0.0       2     
 ======================== ======== ========= ======

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -390,6 +390,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Verify that the data is loaded successfully
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         np.testing.assert_array_almost_equal(gsim.distances,
                                              self.hdf5["Distances"][:])
         np.testing.assert_array_almost_equal(gsim.m_w,
@@ -415,9 +416,10 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         Tests the case when the GMPE table file is missing
         """
-        with self.assertRaises(IOError) as ioe:
-            GMPETable(gmpe_table=None)
-        self.assertEqual(str(ioe.exception), "GMPE Table Not Defined!")
+        with self.assertRaises(ValueError) as err:
+            GMPETable(gmpe_table=None).init()
+        self.assertEqual(str(err.exception),
+                         "You forgot to set GMPETable.GMPE_TABLE!")
         GMPETable(gmpe_table='/do/not/exists/table.hdf5')  # no error here
 
     def test_retreival_tables_good_no_interp(self):
@@ -426,6 +428,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         applying magnitude interpolations
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         # PGA
         np.testing.assert_array_almost_equal(
             gsim._return_tables(6.0, imt_module.PGA(), "IMLs"),
@@ -453,6 +456,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         magnitude interpolations
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         expected_table_pgv = np.array([midpoint(20., 40.),
                                        midpoint(10., 20.),
                                        midpoint(5., 10.)])
@@ -473,6 +477,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         outside the supported range
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         with self.assertRaises(ValueError) as ve:
             gsim._return_tables(4.5, imt_module.PGA(), "IMLs")
         self.assertEqual(
@@ -485,6 +490,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         outside the supported range
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         with self.assertRaises(ValueError) as ve:
             gsim._return_tables(6.0, imt_module.SA(2.5), "IMLs")
         self.assertEqual(
@@ -496,6 +502,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests the full execution of the GMPE tables for valid data
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -533,6 +540,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         amplification
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -562,6 +570,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         type
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -599,6 +608,7 @@ class GSIMTableTestCaseMultiStdDev(unittest.TestCase):
         deviation, as well as an IMT that is not recognised by OpenQuake
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         expected_stddev_set = set((const.StdDev.TOTAL,
                                    const.StdDev.INTER_EVENT,
                                    const.StdDev.INTRA_EVENT))
@@ -623,6 +633,7 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         Tests instantiation of class
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         expected_rupture_set = set(("mag", "rake"))
         self.assertSetEqual(gsim.REQUIRES_RUPTURE_PARAMETERS,
                             expected_rupture_set)
@@ -635,6 +646,7 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         Tests the full execution of the GMPE tables for valid data
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         rctx.rake = 90.0
@@ -671,7 +683,7 @@ class GSIMTableTestCaseBadFile(unittest.TestCase):
         Tests missing period information
         """
         with self.assertRaises(ValueError) as ve:
-            GMPETable(gmpe_table=self.TABLE_FILE)
+            GMPETable(gmpe_table=self.TABLE_FILE).init()
         self.assertEqual(str(ve.exception),
                          "Spectral Acceleration must be accompanied by periods"
                          )
@@ -689,6 +701,7 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         Tests instantiation without amplification
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         self.assertIsNone(gsim.amplification)
         self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set(()))
         self.assertSetEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, set(("mag",)))
@@ -698,6 +711,7 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         Tests mean and standard deviations without amplification
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+        gsim.init()
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()

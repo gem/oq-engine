@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2018, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2018-2019 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import copy
 import math
@@ -66,16 +66,16 @@ def convert_UCERFSource(self, node):
         # poissonian
         # Verify that the source time span is the same as the TOM time span
         inv_time = float(node["investigationTime"])
-        if inv_time != self.tom.time_span:
+        if inv_time != self.investigation_time:
             raise ValueError("Source investigation time (%s) is not "
                              "equal to configuration investigation time "
-                             "(%s)" % (inv_time, self.tom.time_span))
+                             "(%s)" % (inv_time, self.investigation_time))
         start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
     else:
         start_date = None
     return UCERFSource(
         source_file,
-        self.tom.time_span,
+        self.investigation_time,
         start_date,
         float(node["minMag"]),
         npd=self.convert_npdist(node),

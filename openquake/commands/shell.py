@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018 GEM Foundation
+# Copyright (C) 2018-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import runpy
+from functools import partial
+import numpy
 from openquake.baselib import sap
 from openquake.hazardlib import nrml
 
@@ -37,6 +39,7 @@ class OpenQuake(object):
             self.fig, self.ax = pyplot.subplots()
         except Exception:  # for instance, no Tkinter
             pass
+        self.lookfor = partial(numpy.lookfor, module='openquake')
         self.extract = extract
         self.read = read
         self.nrml = nrml
@@ -50,7 +53,7 @@ class OpenQuake(object):
         # TODO: more utilities when be added when deemed useful
 
 
-@sap.Script
+@sap.script
 def shell(script=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or
