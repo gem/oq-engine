@@ -639,7 +639,7 @@ class SourceModelLogicTree(object):
         if self.info.applytosources:
             self.source_ids = self.get_source_ids()
         else:
-            self.source_ids = {}
+            self.source_ids = collections.defaultdict(list)
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
 
@@ -931,7 +931,7 @@ class SourceModelLogicTree(object):
             try:
                 self.collect_source_model_data(branchnode['branchID'], smfname)
             except Exception as exc:
-                raise LogicTreeError(node, self.filename, str(exc))
+                raise LogicTreeError(node, self.filename, str(exc)) from exc
 
         elif branchset.uncertainty_type == 'abGRAbsolute':
             ab = (node.text.strip()).split()
@@ -1122,11 +1122,12 @@ class SourceModelLogicTree(object):
 
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
-                if source_id not in self.source_ids:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        "source with id '%s' is not defined in source models"
-                        % source_id)
+                for source_ids in self.source_ids.values():
+                    if source_id not in source_ids:
+                        raise LogicTreeError(
+                            branchset_node, self.filename,
+                            "source with id '%s' is not defined in source "
+                            "models" % source_id)
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
