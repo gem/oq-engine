@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -62,13 +62,11 @@ Module exports :class:`NGAEastBaseGMPE`,
                :class:`HollenbackEtAl2015NGAEastEXTotalSigma`
 """
 import os
-import h5py
 import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.gmpe_table import GMPETable, hdf_arrays_to_dict
-from openquake.hazardlib.imt import PGV
+from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib import const
 
 
@@ -452,7 +450,6 @@ class NGAEastBaseGMPE(GMPETable):
             deviation models. Float in the range 0 to 1, or None (mean value
             used)
         """
-        super().__init__(gmpe_table=gmpe_table)
         self.tau_model = tau_model
         self.phi_model = phi_model
         self.phi_s2ss_model = phi_s2ss_model
@@ -463,53 +460,25 @@ class NGAEastBaseGMPE(GMPETable):
             self.ergodic = True
         else:
             self.ergodic = False
-        self._setup_standard_deviations(
-            tau_quantile, phi_ss_quantile, phi_s2ss_quantile)
-        if os.path.exists(self.GMPE_TABLE):
-            with h5py.File(self.GMPE_TABLE, "r") as f:
-                self.init(f)
+        self.tau_quantile = tau_quantile
+        self.phi_ss_quantile = phi_ss_quantile
+        self.phi_s2ss_quantile = phi_s2ss_quantile
+        self._setup_standard_deviations(fle=None)
+        super().__init__(gmpe_table=gmpe_table)
 
-    def init(self, fle):
-        """
-        Executes the preprocessing steps at the instantiation stage to read in
-        the tables from hdf5 and hold them in memory.
-        """
-        self.distance_type = fle["Distances"].attrs["metric"]
-        self.REQUIRES_DISTANCES = set([self.distance_type])
-        # Load in magnitude
-        self.m_w = fle["Mw"][:]
-        # Load in distances
-        self.distances = fle["Distances"][:]
-        # Load intensity measure types and levels
-        self.imls = hdf_arrays_to_dict(fle["IMLs"])
-        self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(self._supported_imts())
-        if "SA" in self.imls.keys() and "T" not in self.imls:
-            raise ValueError("Spectral Acceleration must be accompanied by "
-                             "periods")
-        # Get the standard deviations
-        if "Amplification" in fle:
-            self._setup_amplification(fle)
-
-    def _setup_standard_deviations(self, tau_quantile, phi_ss_quantile,
-                                   phi_s2ss_quantile):
-        """
-        Reads the standard deviation tables from hdf5 and stores them in
-        memory
-        :param fle:
-            HDF5 Tables as instance of :class:`h5py.File`
-        """
+    def _setup_standard_deviations(self, fle):
         # setup tau
         self.TAU = get_tau_at_quantile(TAU_SETUP[self.tau_model]["MEAN"],
                                        TAU_SETUP[self.tau_model]["STD"],
-                                       tau_quantile)
+                                       self.tau_quantile)
         # setup phi
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
-                                             phi_ss_quantile)
+                                             self.phi_ss_quantile)
         # if required setup phis2ss
         if self.ergodic:
             self.PHI_S2SS = get_phi_s2ss_at_quantile(
                 PHI_S2SS_MODEL[self.phi_s2ss_model],
-                phi_s2ss_quantile)
+                self.phi_s2ss_quantile)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """

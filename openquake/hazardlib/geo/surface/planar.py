@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -131,7 +131,7 @@ class PlanarSurface(BaseSurface):
             tolerance = (self.width * self.length *
                          self.IMPERFECT_RECTANGLE_TOLERANCE)
             if numpy.max(numpy.abs(dists)) > tolerance:
-                logging.warn("corner points do not lie on the same plane")
+                logging.warning("corner points do not lie on the same plane")
             if length2 < 0:
                 raise ValueError("corners are in the wrong order")
             if abs(length1 - length2) > tolerance:

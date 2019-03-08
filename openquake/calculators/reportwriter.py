@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,12 +45,12 @@ class ReportWriter(object):
         'Required parameters per tectonic region type',
         'ruptures_per_trt': 'Number of ruptures per tectonic region type',
         'ruptures_events': 'Specific information for event based',
-        'rlzs_assoc': 'Realizations per (TRT, GSIM)',
+        'rlzs_assoc': 'Realizations per (GRP, GSIM)',
         'job_info': 'Data transfer',
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
-        'short_source_info': 'Slowest sources',
+        'slow_sources': 'Slowest sources',
         'task_hazard:0': 'Fastest task',
         'task_hazard:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
@@ -69,13 +69,14 @@ class ReportWriter(object):
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
-        title = self.title[name]
-        line = '-' * len(title)
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
             text = views.view(name, self.dstore)
-        self.text += '\n'.join(['\n\n' + title, line, text])
+        if text:
+            title = self.title[name]
+            line = '-' * len(title)
+            self.text += '\n'.join(['\n\n' + title, line, text])
 
     def make_report(self):
         """Build the report and return a restructed text string"""
@@ -97,7 +98,7 @@ class ReportWriter(object):
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
         if 'source_info' in ds:
-            self.add('short_source_info')
+            self.add('slow_sources')
             self.add('times_by_source_class')
             self.add('dupl_sources')
         if 'task_info' in ds:
@@ -129,6 +130,8 @@ def build_report(job_ini, output_dir=None):
     """
     calc_id = logs.init()
     oq = readinput.get_oqparam(job_ini)
+    if oq.calculation_mode == 'classical':
+        oq.calculation_mode = 'preclassical'
     oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
@@ -138,6 +141,8 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     calc.pre_execute()
+    if oq.calculation_mode == 'preclassical':
+        calc.execute()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
@@ -146,4 +151,5 @@ def build_report(job_ini, output_dir=None):
         rw.save(report)
     except IOError as exc:  # permission error
         sys.stderr.write(str(exc) + '\n')
+    readinput.exposure = None  # ugly hack
     return report

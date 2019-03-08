@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib import general
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation
@@ -164,24 +164,6 @@ def sitemodel():
         <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
     </siteModel>
 </nrml>''')]
-
-
-class ClosestSiteModelTestCase(unittest.TestCase):
-
-    def test_get_far_away_parameter(self):
-        oqparam = mock.Mock()
-        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
-        oqparam.hazard_calculation_id = None
-        oqparam.base_path = '/'
-        oqparam.maximum_distance = 100
-        oqparam.max_site_model_distance = 5
-        oqparam.region_grid_spacing = None
-        oqparam.sites = [(1.0, 0, 0), (2.0, 0, 0)]
-        oqparam.inputs = dict(site_model=sitemodel())
-        with mock.patch('logging.warn') as warn:
-            readinput.get_site_collection(oqparam)
-        # check that the warning was raised
-        self.assertEqual(len(warn.call_args), 2)
 
 
 class ExposureTestCase(unittest.TestCase):
@@ -345,7 +327,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
 
-        with self.assertRaises(KeyError) as ctx:
+        with self.assertRaises(Exception) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("node asset: 'number', line 17 of", str(ctx.exception))
 
@@ -445,7 +427,7 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
-        self.assertIn("Expected cost types ['structural']", str(ctx.exception))
+        self.assertIn("is missing", str(ctx.exception))
 
 
 class TestReadGmfXmlTestCase(unittest.TestCase):
@@ -628,7 +610,7 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(
             'job.ini', case_16, region_grid_spacing='15')
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
-        self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
+        self.assertEqual(len(sitecol), 148)  # 3 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 
@@ -646,6 +628,35 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
+
+        # test agg_value
+        arr = assetcol.agg_value()
+        assert_allclose(arr, [3.6306637e+09])
+        arr = assetcol.agg_value('taxonomy')
+        assert_allclose(arr,
+                        [[0.0000000e+00],
+                         [4.9882240e+06],
+                         [1.1328099e+08],
+                         [4.2222912e+08],
+                         [1.6412870e+07],
+                         [5.0686808e+07],
+                         [2.5343402e+07],
+                         [1.5254313e+09],
+                         [6.6375590e+06],
+                         [8.3206810e+08],
+                         [1.6412871e+07],
+                         [3.9439158e+08],
+                         [1.6734690e+07],
+                         [6.7582400e+06],
+                         [1.3613027e+08],
+                         [4.3124016e+07],
+                         [9.4132640e+06],
+                         [1.0620092e+07]])
+        arr = assetcol.agg_value('occupancy')
+        assert_allclose(assetcol.agg_value('occupancy'),
+                        [[0.0000000e+00], [3.6306644e+09]])
+        arr = assetcol.agg_value('taxonomy', 'occupancy')
+        self.assertEqual(arr.shape, (18, 2, 1))
 
     def test_site_model_sites(self):
         # you cannot set them at the same time

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,8 +18,6 @@
 """
 Set up some system-wide loggers
 """
-
-import sys
 import os.path
 import logging
 from datetime import datetime
@@ -36,6 +34,8 @@ LOG = logging.getLogger()
 
 DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
+sock = None
+
 
 def dbcmd(action, *args):
     """
@@ -44,12 +44,15 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    sock = zeromq.Socket('tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT),
-                         zeromq.zmq.REQ, 'connect')
-    with sock:
-        res = sock.send((action,) + args)
-        if isinstance(res, parallel.Result):
-            return res.get()
+    global sock
+    if sock is None:
+        sock = zeromq.Socket(
+            'tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT),
+            zeromq.zmq.REQ, 'connect').__enter__()
+        # the socket will be closed when the calculation ends
+    res = sock.send((action,) + args)
+    if isinstance(res, parallel.Result):
+        return res.get()
     return res
 
 
@@ -165,7 +168,8 @@ def init(calc_id='nojob', level=logging.INFO):
     """
     1. initialize the root logger (if not already initialized)
     2. set the format of the root handlers (if any)
-    3. return a new calculation ID candidate if calc_id is None
+    3. return a new calculation ID candidate if calc_id is 'job' or 'nojob'
+       (with 'nojob' the calculation ID is not stored in the database)
     """
     if not logging.root.handlers:  # first time
         logging.basicConfig(level=level)

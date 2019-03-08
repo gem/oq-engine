@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,8 @@ def double(x, mon):
 
 # this test is temporarily disabled, the workerpool is tested in the demos
 # in travis, since they are run with OQ_DISTRIBUTE=zmq
-class _WorkerPoolTestCase(unittest.TestCase):
+@unittest.skip
+class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.z = config.zworkers.copy()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@ import os
 import sys
 import unittest
 import numpy
-from nose.plugins.attrib import attr
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.probability_map import combine
 from openquake.calculators import getters
@@ -44,7 +43,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected_output/%s' % fname, actual)
         return out
 
-    @attr('qa', 'hazard', 'disagg')
     def test_case_1(self):
         out = self.assert_curves_ok(
             ['poe-0.02-rlz-0-PGA-10.1-40.1_Mag.csv',
@@ -81,7 +79,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         for sid in pmap:
             numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
 
-    @attr('qa', 'hazard', 'disagg')
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         if sys.platform == 'darwin':
@@ -103,7 +100,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
 
-    @attr('qa', 'hazard', 'disagg')
     def test_case_3(self):
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_3.__file__, 'job.ini')
@@ -114,7 +110,6 @@ produces at most probabilities of 0.0362321 for rlz=#0, IMT=PGA.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.''')
 
-    @attr('qa', 'hazard', 'disagg')
     def test_case_4(self):
         # this is case with number of lon/lat bins different for site 0/site 1
         # this exercise sampling
@@ -124,12 +119,10 @@ producing too small PoEs.''')
         fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
 
-    @attr('qa', 'hazard', 'disagg')
     def test_case_5(self):
         # this exercise gridded nonparametric sources
         self.run_calc(case_5.__file__, 'job.ini')
 
-    @attr('qa', 'hazard', 'disagg')
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
         # prints the warning on poe_agg very different from the expected poe
@@ -143,7 +136,6 @@ producing too small PoEs.''')
         self.assertEqual(len(fnames), 192)  # 2 sid x 8 keys x 2 poe x 2 imt
         # = 64 x 3 for mean, quantile-0.15, quantile-0.85
 
-    @attr('qa', 'hazard', 'disagg')
     def test_disagg_by_src(self):
         # this is a case with iml_disagg and disagg_by_src
         self.run_calc(case_master.__file__, 'job1.ini')

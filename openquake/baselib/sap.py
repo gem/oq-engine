@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ Here is a minimal example of usage:
     ...     for item in sorted(locals().items()):
     ...         print('%s = %s' % item)
 
-    >>> p = sap.Script(fun)
+    >>> p = sap.script(fun)
     >>> p.arg('input', 'input file or archive')
     >>> p.flg('inplace', 'convert inplace')
     >>> p.arg('output', 'output archive')
@@ -54,6 +54,7 @@ import argparse
 
 
 NODEFAULT = object()
+registry = {}  # dotname -> function
 
 
 def get_parentparser(parser, description=None, help=True):
@@ -87,14 +88,13 @@ class Script(object):
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
-    registry = {}  # dotname -> function
     # for instance {'openquake.commands.run': run, ...}
 
     def __init__(self, func, name=None, parentparser=None,
-                 help=True, registry=True):
+                 help=True,):
         self.func = func
         self.name = name or func.__name__
-        args, self.varargs, varkw, defaults = inspect.getargspec(func)
+        args, self.varargs, varkw, defaults = inspect.getfullargspec(func)[:4]
         assert self.varargs is None, self.varargs
         defaults = defaults or ()
         nodefaults = len(args) - len(defaults)
@@ -107,8 +107,7 @@ class Script(object):
         self._group = self.parentparser
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
-        if registry:
-            self.registry['%s.%s' % (func.__module__, func.__name__)] = self
+        registry['%s.%s' % (func.__module__, func.__name__)] = self
 
     def group(self, descr):
         """Added a new group of arguments with the given description"""
@@ -173,7 +172,7 @@ class Script(object):
     def callfunc(self, argv=None):
         """
         Parse the argv list and extract a dictionary of arguments which
-        is then passed to  the function underlying the Script.
+        is then passed to  the function underlying the script.
         """
         if not self.checked:
             self.check_arguments()
@@ -192,14 +191,25 @@ class Script(object):
         return '<%s %s(%s)>' % (self.__class__.__name__, self.name, args)
 
 
+def script(func):
+    s = Script(func)
+    func.arg = s.arg
+    func.opt = s.opt
+    func.flg = s.flg
+    func.group = s.group
+    func._add = s._add
+    func.callfunc = s.callfunc
+    return func
+
+
 def compose(scripts, name='main', description=None, prog=None,
             version=None):
     """
-    Collects together different Scripts and builds a single
-    Script dispatching to the subparsers depending on
+    Collects together different scripts and builds a single
+    script dispatching to the subparsers depending on
     the first argument, i.e. the name of the subparser to invoke.
 
-    :param scripts: a list of Script instances
+    :param scripts: a list of script instances
     :param name: the name of the composed parser
     :param description: description of the composed parser
     :param prog: name of the script printed in the usage message

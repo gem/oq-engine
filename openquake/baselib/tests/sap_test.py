@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,7 @@ def f(a, b, c, d=1):
 
 class SapTestCase(unittest.TestCase):
     def test_ok(self):
-        p = sap.Script(f)
+        p = sap.script(f)
         p.arg('a', 'first argument')
         p.opt('b', 'second argument')
         p.flg('c', 'third argument')
@@ -57,7 +57,7 @@ other arguments:
 ''' % p.parentparser.prog)
 
     def test_NameError(self):
-        p = sap.Script(f)
+        p = sap.script(f)
         p.arg('a', 'first argument')
         with self.assertRaises(NameError):
             p.flg('c', 'third argument')

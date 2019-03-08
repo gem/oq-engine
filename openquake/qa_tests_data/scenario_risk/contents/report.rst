@@ -3,8 +3,8 @@ Scenario QA Test for contents
 
 ============== ===================
 checksum32     241,725,599        
-date           2018-12-13T12:57:06
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:35:36
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 3, num_levels = 15
@@ -45,16 +45,16 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): [0]>
+  0,'[ChiouYoungs2008]': [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -86,5 +86,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.411E-04 0.0       1     
+reading exposure 3.750E-04 0.0       1     
 ================ ========= ========= ======

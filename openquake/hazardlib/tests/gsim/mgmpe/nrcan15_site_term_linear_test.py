@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -36,24 +36,23 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         #
         # Check the assigned IMTs
         expected = set([PGA, SA, PGV])
-        self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES == expected,
-                        msg='The assigned IMTs are incorrect')
+        self.assertEqual(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES, expected)
+
         # Check the TR
         expected = TRT.ACTIVE_SHALLOW_CRUST
-        self.assertTrue(mgmpe.DEFINED_FOR_TECTONIC_REGION_TYPE == expected,
-                        msg='The assigned TRT is incorrect')
+        self.assertEqual(mgmpe.DEFINED_FOR_TECTONIC_REGION_TYPE, expected)
+
         # Check the IM component
         expected = IMC.RotD50
-        self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
-                        expected, msg='The IM component is wrong')
+        self.assertEqual(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT,
+                         expected)
         # Check the standard deviations
         expected = set(['Intra event', 'Total', 'Inter event'])
-        self.assertTrue(mgmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES == expected,
-                        msg='The standard deviations assigned are wrong')
+        self.assertEqual(mgmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES, expected)
+
         # Check the required distances
         expected = set(['rjb'])
-        self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
-                        msg='The assigned distance types are wrong')
+        self.assertEqual(mgmpe.REQUIRES_DISTANCES, expected)
 
     def test_gm_calculation_soilBC(self):
         """ Test mean and std calculation - AB06 on BC soil"""

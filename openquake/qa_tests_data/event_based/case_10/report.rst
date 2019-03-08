@@ -2,9 +2,9 @@ Event Based Bogota
 ==================
 
 ============== ===================
-checksum32     2,709,362,541      
-date           2018-10-05T03:04:47
-engine_version 3.3.0-git48e9a474fd
+checksum32     2,254,739,311      
+date           2019-02-18T08:36:12
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 5, num_levels = 104
@@ -31,18 +31,16 @@ ses_seed                        42
 
 Input files
 -----------
-======================== ========================================================================
-Name                     File                                                                    
-======================== ========================================================================
-exposure                 `exposure_model.xml <exposure_model.xml>`_                              
-gsim_logic_tree          `logic_tree_gmpe_simplified.xml <logic_tree_gmpe_simplified.xml>`_      
-job_ini                  `job.ini <job.ini>`_                                                    
-site_model               `site_model_bog.xml <site_model_bog.xml>`_                              
-source                   `source-gridded_seismicity_bog.xml <source-gridded_seismicity_bog.xml>`_
-source                   `source-int_col_bog.xml <source-int_col_bog.xml>`_                      
-source_model_logic_tree  `logic_tree_source_model.xml <logic_tree_source_model.xml>`_            
-structural_vulnerability `vulnerability_model_bog.xml <vulnerability_model_bog.xml>`_            
-======================== ========================================================================
+======================== ==================================================================
+Name                     File                                                              
+======================== ==================================================================
+exposure                 `exposure_model.xml <exposure_model.xml>`_                        
+gsim_logic_tree          `logic_tree_gmpe_simplified.xml <logic_tree_gmpe_simplified.xml>`_
+job_ini                  `job.ini <job.ini>`_                                              
+site_model               `site_model_bog.xml <site_model_bog.xml>`_                        
+source_model_logic_tree  `logic_tree_source_model.xml <logic_tree_source_model.xml>`_      
+structural_vulnerability `vulnerability_model_bog.xml <vulnerability_model_bog.xml>`_      
+======================== ==================================================================
 
 Exposure model
 --------------
@@ -67,26 +65,26 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      0         C    0     120   5,370        0.0       0.0        0.0       0         0.0   
-1      CC_02_147 P    0     1     108          0.0       8.345E-06  0.0       1         0.0   
-1      CC_02_148 P    1     2     108          0.0       3.099E-06  0.0       1         0.0   
-1      CC_02_149 P    2     3     108          0.0       1.907E-06  0.0       1         0.0   
-1      CC_02_15  P    3     4     108          0.0       2.146E-06  0.0       1         0.0   
-1      CC_02_150 P    4     5     108          0.0       1.669E-06  0.0       1         0.0   
-1      CC_02_151 P    5     6     108          0.0       1.669E-06  0.0       1         0.0   
-1      CC_02_152 P    6     7     108          0.0       1.907E-06  0.0       1         0.0   
-1      CC_02_153 P    7     8     108          0.0       1.907E-06  0.0       1         0.0   
-1      CC_02_37  P    8     9     108          0.0       1.669E-06  0.0       1         0.0   
-1      CC_02_374 P    9     10    108          0.0       1.669E-06  0.0       1         0.0   
-1      CC_02_375 P    10    11    108          0.0       1.669E-06  0.0       1         0.0   
-1      CC_02_376 P    11    12    108          0.0       1.907E-06  0.0       1         0.0   
-1      CC_02_377 P    12    13    108          0.0       1.907E-06  0.0       1         0.0   
-1      CC_02_38  P    13    14    108          0.0       3.099E-06  0.0       1         0.0   
-1      CC_02_39  P    14    15    108          0.0       1.431E-06  0.0       1         0.0   
-1      CC_02_58  P    15    16    108          0.0       1.431E-06  0.0       1         0.0   
-1      CC_02_59  P    16    17    108          0.0       1.907E-06  0.0       1         0.0   
-1      CC_02_60  P    17    18    108          0.0       1.907E-06  0.0       1         0.0   
-1      CC_02_61  P    18    19    108          0.0       1.669E-06  0.0       1         0.0   
+1      CC_67_175 P    241   242   63           0.0       0.0        0.0       1         0.0   
+1      CC_67_174 P    240   241   63           0.0       0.0        0.0       1         0.0   
+1      CC_67_173 P    239   240   63           0.0       0.0        0.0       1         0.0   
+1      CC_67_172 P    238   239   63           0.0       0.0        0.0       1         0.0   
+1      CC_67_171 P    237   238   63           0.0       0.0        0.0       1         0.0   
+1      CC_67_170 P    236   237   63           0.0       0.0        0.0       1         0.0   
+1      CC_67_168 P    235   236   63           0.0       0.0        0.0       1         0.0   
+1      CC_67_167 P    234   235   63           0.0       0.0        0.0       1         0.0   
+1      CC_66_83  P    233   234   30           0.0       0.0        0.0       1         0.0   
+1      CC_66_82  P    232   233   30           0.0       0.0        0.0       1         0.0   
+1      CC_64_412 P    231   232   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_411 P    230   231   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_410 P    229   230   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_41  P    228   229   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_409 P    227   228   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_408 P    226   227   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_407 P    225   226   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_406 P    224   225   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_405 P    223   224   84           0.0       0.0        0.0       1         0.0   
+1      CC_64_404 P    222   223   84           0.0       0.0        0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -98,33 +96,28 @@ C    0.0       1
 P    0.0       122   
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.25784 0.29811 0.04704 0.46863 2      
-split_filter       0.05421 0.06350 0.00931 0.09911 2      
+read_source_models 0.21317 0.25273 0.03447 0.39188 2      
+only_filter        0.01337 NaN     0.01337 0.01337 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ========================================================================= =========
-task               sent                                                                      received 
-read_source_models monitor=662 B converter=638 B fnames=391 B                                67.36 KB 
-split_filter       srcs=127.16 KB monitor=686 B srcfilter=440 B sample_factor=42 B seed=28 B 107.07 KB
-================== ========================================================================= =========
+================== ======================================== ========
+task               sent                                     received
+read_source_models converter=626 B fnames=241 B             70.47 KB
+only_filter        srcs=64.58 KB srcfilter=253 B dummy=14 B 72.02 KB
+================== ======================================== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.51567   1.59375   2     
-updating source_info     0.11286   0.0       1     
-total split_filter       0.10842   0.0       2     
-reading exposure         5.357E-04 0.0       1     
+total read_source_models 0.42635   1.65234   2     
+total only_filter        0.01337   1.58984   1     
+reading exposure         5.260E-04 0.0       1     
 ======================== ========= ========= ======

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,6 +36,9 @@ ALT_MFDS = os.path.join(os.path.dirname(__file__),
 COLLECTION = os.path.join(os.path.dirname(__file__),
                           'source_model/source_group_collection.xml')
 
+MUTEX = os.path.join(os.path.dirname(__file__),
+                     'source_model/nonparametric-source-mutex-ruptures.xml')
+
 MULTIPOINT = os.path.join(os.path.dirname(__file__),
                           'source_model/multi-point-source.xml')
 
@@ -55,7 +58,6 @@ class SourceWriterTestCase(unittest.TestCase):
         with hdf5.File.temporary() as f:
             for group in smodel.src_groups:
                 hdf5write(f, group)
-        print('written %s' % f.path)
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
@@ -75,6 +77,9 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_collection(self):
         self.check_round_trip(COLLECTION)
+
+    def test_collection(self):
+        self.check_round_trip(MUTEX)
 
     def test_multipoint(self):
         smodel = self.check_round_trip(MULTIPOINT)

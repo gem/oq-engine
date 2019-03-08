@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,24 +23,30 @@ from django.views.generic.base import RedirectView
 from openquake.server import views
 
 urlpatterns = [
-    url(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
     url(r'^v1/engine_version$', views.get_engine_version),
     url(r'^v1/engine_latest_version$', views.get_engine_latest_version),
     url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
     url(r'^v1/valid/', views.validate_nrml),
     url(r'^v1/available_gsims$', views.get_available_gsims),
     url(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
-    url(r'^engine/?$', views.web_engine, name="index"),
-    url(r'^engine/(\d+)/outputs$',
-        views.web_engine_get_outputs, name="outputs"),
-    url(r'^engine/license$', views.license,
-        name="license"),
 ]
 
-for app in settings.STANDALONE_APPS:
-    app_name = app.split('_')[1]
-    urlpatterns.append(url(r'^%s/' % app_name, include('%s.urls' % app,
-                           namespace='%s' % app_name)))
+# it is useful to disable the default redirect if the usage is via API only
+# 'collectstatic' and related configurationis on the reverse proxy
+# are also not required anymore for an API-only usage
+if settings.WEBUI:
+    urlpatterns += [
+        url(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
+        url(r'^engine/?$', views.web_engine, name="index"),
+        url(r'^engine/(\d+)/outputs$',
+            views.web_engine_get_outputs, name="outputs"),
+        url(r'^engine/license$', views.license,
+            name="license"),
+    ]
+    for app in settings.STANDALONE_APPS:
+        app_name = app.split('_')[1]
+        urlpatterns.append(url(r'^%s/' % app_name, include('%s.urls' % app,
+                               namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
     from django.contrib import admin

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,13 +29,13 @@ def purge_one(calc_id, user):
     """
     Remove one calculation ID from the database and remove its datastore
     """
-    hdf5path = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
+    filename = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     err = dbcmd('del_calc', calc_id, user)
     if err:
         print(err)
-    if os.path.exists(hdf5path):  # not removed yet
-        os.remove(hdf5path)
-        print('Removed %s' % hdf5path)
+    elif os.path.exists(filename):  # not removed yet
+        os.remove(filename)
+        print('Removed %s' % filename)
 
 
 # used in the reset command
@@ -56,7 +56,7 @@ def purge_all(user=None, fast=False):
                     purge_one(calc_id, user)
 
 
-@sap.Script
+@sap.script
 def purge(calc_id):
     """
     Remove the given calculation. If you want to remove all calculations,

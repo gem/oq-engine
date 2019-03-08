@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -37,4 +37,4 @@ def splittable(src):
     :returns: True if the source is splittable, False otherwise
     """
     return (src.__class__.__iter__ is not BaseSeismicSource.__iter__
-            and getattr(src, 'mutex_weight', 1) == 1)
+            and getattr(src, 'mutex_weight', 1) == 1 and src.splittable)

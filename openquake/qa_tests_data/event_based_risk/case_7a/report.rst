@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     485,638,434        
-date           2018-12-13T12:57:45
-engine_version 3.3.0-git68d7d11268
+date           2019-02-18T08:36:51
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 1, num_levels = 1
@@ -45,13 +45,13 @@ Exposure model
 =============== ========
 #assets         1       
 #taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
+deductibile     relative
+insurance_limit relative
 =============== ========
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
-Wood     1.00000 NaN    1   1   1         1         
+tax1     1.00000 NaN    1   1   1         1         
 ======== ======= ====== === === ========= ==========
 
 Slowest sources
@@ -59,7 +59,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00605    0.0       15        0.0   
+0      1         S    0     2     482          0.0       0.0        0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -70,32 +70,28 @@ code calc_time counts
 S    0.0       1     
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00366 NaN    0.00366 0.00366 1      
-split_filter       0.03240 NaN    0.03240 0.03240 1      
+read_source_models 0.00357 NaN    0.00357 0.00357 1      
+only_filter        0.00408 NaN    0.00408 0.00408 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ===================================== ========
-task               sent                                  received
-read_source_models converter=388 B fnames=114 B          1.46 KB 
-split_filter       srcs=1.1 KB srcfilter=253 B seed=14 B 8.22 KB 
-================== ===================================== ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=313 B fnames=114 B            1.49 KB 
+only_filter        srcs=1.12 KB srcfilter=253 B dummy=14 B 1.2 KB  
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total split_filter       0.03240   0.31250   1     
-total read_source_models 0.00366   0.0       1     
-reading exposure         5.019E-04 0.0       1     
+total only_filter        0.00408   1.62109   1     
+total read_source_models 0.00357   0.06641   1     
+reading exposure         6.318E-04 0.0       1     
 ======================== ========= ========= ======

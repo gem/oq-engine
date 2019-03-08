@@ -2,9 +2,9 @@ Classical PSHA for the southern Pacific Islands reduced
 =======================================================
 
 ============== ===================
-checksum32     194,124,302        
-date           2018-12-13T12:57:50
-engine_version 3.3.0-git68d7d11268
+checksum32     56,125,602         
+date           2019-02-18T08:37:37
+engine_version 3.4.0-git9883ae17a5
 ============== ===================
 
 num_sites = 5, num_levels = 20
@@ -12,7 +12,7 @@ num_sites = 5, num_levels = 20
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 300.0}
 investigation_time              1.0               
@@ -44,52 +44,52 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 complex(3,0,4)  12/12           
+b1        1.00000 complex(4,3,0)  12              
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =============================================================================== =========== ============================= ============================
-grp_id gsims                                                                           distances   siteparams                    ruptparams                  
-====== =============================================================================== =========== ============================= ============================
-0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
-1      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
-2      AtkinsonBoore2003SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter()           rrup        vs30                          hypo_depth mag              
-====== =============================================================================== =========== ============================= ============================
+====== ======================================================================================= =========== ============================= ============================
+grp_id gsims                                                                                   distances   siteparams                    ruptparams                  
+====== ======================================================================================= =========== ============================= ============================
+0      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
+1      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip hypo_depth mag rake ztor
+2      '[AtkinsonBoore2003SInter]' '[YoungsEtAl1997SInter]' '[ZhaoEtAl2006SInter]'             rrup        vs30                          hypo_depth mag              
+====== ======================================================================================= =========== ============================= ============================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=11, rlzs=12)
-  0,BooreAtkinson2008(): [0 4 8]
-  0,CampbellBozorgnia2008(): [1 5 9]
-  0,ChiouYoungs2008(): [ 2  6 10]
-  0,ZhaoEtAl2006Asc(): [ 3  7 11]
-  1,BooreAtkinson2008(): [0 4 8]
-  1,CampbellBozorgnia2008(): [1 5 9]
-  1,ChiouYoungs2008(): [ 2  6 10]
-  1,ZhaoEtAl2006Asc(): [ 3  7 11]
-  2,AtkinsonBoore2003SInter(): [0 1 2 3]
-  2,YoungsEtAl1997SInter(): [4 5 6 7]
-  2,ZhaoEtAl2006SInter(): [ 8  9 10 11]>
+  0,'[BooreAtkinson2008]': [0 1 2]
+  0,'[CampbellBozorgnia2008]': [3 4 5]
+  0,'[ChiouYoungs2008]': [6 7 8]
+  0,'[ZhaoEtAl2006Asc]': [ 9 10 11]
+  1,'[BooreAtkinson2008]': [0 1 2]
+  1,'[CampbellBozorgnia2008]': [3 4 5]
+  1,'[ChiouYoungs2008]': [6 7 8]
+  1,'[ZhaoEtAl2006Asc]': [ 9 10 11]
+  2,'[AtkinsonBoore2003SInter]': [0 3 6 9]
+  2,'[YoungsEtAl1997SInter]': [ 1  4  7 10]
+  2,'[ZhaoEtAl2006SInter]': [ 2  5  8 11]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ====================================================================== ====== ==================== ============ ============
 source_model                                                           grp_id trt                  eff_ruptures tot_ruptures
 ====================================================================== ====== ==================== ============ ============
-ssm/shallow/gridded_seismicity_source_4.xml ... ssm/shallow/int_kt.xml 0      Active Shallow Crust 1,100        3,800       
+ssm/shallow/gridded_seismicity_source_4.xml ... ssm/shallow/int_kt.xml 0      Active Shallow Crust 3,800        3,800       
 ssm/shallow/gridded_seismicity_source_4.xml ... ssm/shallow/int_kt.xml 1      Active Shallow Crust 1,117        1,117       
 ssm/shallow/gridded_seismicity_source_4.xml ... ssm/shallow/int_kt.xml 2      Subduction Interface 3,536        3,536       
 ====================================================================== ====== ==================== ============ ============
 
 ============= ======
 #TRT models   3     
-#eff_ruptures 5,753 
+#eff_ruptures 8,453 
 #tot_ruptures 8,453 
-#tot_weight   33,412
+#tot_weight   15,641
 ============= ======
 
 Slowest sources
@@ -97,26 +97,26 @@ Slowest sources
 ====== ========== ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id  code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========== ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      ds_4_10097 P    0     1     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_10734 P    1     2     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_13441 P    2     3     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_13542 P    3     4     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_13549 P    4     5     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_13974 P    5     6     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_1455  P    6     7     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_14802 P    7     8     100          0.0       0.0        0.0       0         0.0   
-0      ds_4_15201 P    8     9     100          0.0       3.576E-06  0.0       1         0.0   
-0      ds_4_16265 P    9     10    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_18232 P    10    11    100          0.0       3.099E-06  0.0       1         0.0   
-0      ds_4_1895  P    11    12    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_19558 P    12    13    100          0.0       2.861E-06  0.0       1         0.0   
-0      ds_4_19649 P    13    14    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_19683 P    14    15    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_2111  P    15    16    100          0.0       3.338E-06  0.0       1         0.0   
-0      ds_4_28780 P    16    17    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_314   P    17    18    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_32853 P    18    19    100          0.0       0.0        0.0       0         0.0   
-0      ds_4_33979 P    19    20    100          0.0       0.0        0.0       0         0.0   
+2      kt         C    348   834   3,536        0.0       0.0        1.00000   0         14,144
+1      sf_85      S    274   348   348          0.0       0.0        1.00000   0         348   
+1      sf_84      S    206   274   262          0.0       0.0        1.00000   0         262   
+1      sf_83      S    153   206   113          0.0       0.0        1.00000   0         113   
+1      sf_82      S    112   153   46           0.0       0.0        1.00000   0         46    
+1      sf_81      S    38    112   348          0.0       0.0        1.00000   0         348   
+0      ds_4_9857  P    37    38    100          0.0       0.0        1.00000   0         10    
+0      ds_4_9114  P    36    37    100          0.0       0.0        1.00000   0         10    
+0      ds_4_8502  P    35    36    100          0.0       0.0        1.00000   0         10    
+0      ds_4_8499  P    34    35    100          0.0       0.0        1.00000   0         10    
+0      ds_4_6688  P    33    34    100          0.0       0.0        1.00000   0         10    
+0      ds_4_6534  P    32    33    100          0.0       0.0        1.00000   0         10    
+0      ds_4_5043  P    31    32    100          0.0       0.0        1.00000   0         10    
+0      ds_4_482   P    30    31    100          0.0       0.0        1.00000   0         10    
+0      ds_4_464   P    29    30    100          0.0       0.0        1.00000   0         10    
+0      ds_4_38515 P    28    29    100          0.0       0.0        1.00000   0         10    
+0      ds_4_38372 P    27    28    100          0.0       0.0        1.00000   0         10    
+0      ds_4_38367 P    26    27    100          0.0       0.0        1.00000   0         10    
+0      ds_4_38209 P    25    26    100          0.0       0.0        1.00000   0         10    
+0      ds_4_37967 P    24    25    100          0.0       0.0        1.00000   0         10    
 ====== ========== ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -129,31 +129,24 @@ P    0.0       38
 S    0.0       5     
 ==== ========= ======
 
-Duplicated sources
-------------------
-There are no duplicated sources
-
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.13275 0.14527 0.02117 0.29701 3      
-split_filter       8.59814 NaN     8.59814 8.59814 1      
+read_source_models 0.09344 0.12381 0.01335 0.23604 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=1.14 KB fnames=368 B          60.81 KB
-split_filter       srcs=58.92 KB srcfilter=253 B seed=14 B 1.6 MB  
-================== ======================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=939 B fnames=368 B 61.86 KB
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       8.59814  2.85156   1     
-total read_source_models 0.39825  0.40234   3     
+total read_source_models 0.28032  1.98047   3     
 ======================== ======== ========= ======

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,10 +37,10 @@ class HeaderTranslator(object):
     into column names with the method .write. The usage is
 
     >>> htranslator = HeaderTranslator(
-    ...     '(asset_ref):\|S100',
-    ...     '(eid):uint32',
-    ...     '(taxonomy):object')
-    >>> htranslator.write('asset_ref:|S100 value:5'.split())
+    ...     r'(asset_ref):\|S100',
+    ...     r'(eid):uint32',
+    ...     r'(taxonomy):object')
+    >>> htranslator.write(r'asset_ref:|S100 value:5'.split())
     ['asset_ref', 'value:5']
     >>> htranslator.read('asset_ref value:5'.split())
     ['asset_ref:|S100', 'value:5']
@@ -94,7 +94,7 @@ htranslator = HeaderTranslator(
     '(aid):uint32',
     '(boundary):object',
     '(tectonic_region_type):object',
-    '(asset_ref):\|S100',
+    r'(asset_ref):\|S100',
     '(rup_id):uint32',
     '(event_id):uint64',
     '(event_set):uint32',
@@ -104,7 +104,7 @@ htranslator = HeaderTranslator(
     '(return_period):uint32',
     '(site_id):uint32',
     '(taxonomy):object',
-    '(tag):\|S100',
+    r'(tag):\|S100',
     '(multiplicity):uint16',
     '(numsites):uint32',
     '(lon):float64',

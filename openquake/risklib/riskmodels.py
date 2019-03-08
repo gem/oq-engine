@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,7 @@ registry = CallableDict()
 
 COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
 RISK_TYPE_REGEX = re.compile(
-    '(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
+    r'(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
 
 
 def get_risk_files(inputs):
@@ -309,7 +309,7 @@ class Classical(RiskModel):
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
-              'ucerf_rupture', 'ucerf_hazard', 'ucerf_risk')
+              'ebrisk', 'ucerf_rupture', 'ucerf_hazard', 'ucerf_risk')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel.
@@ -318,16 +318,10 @@ class ProbabilisticEventBased(RiskModel):
     kind = 'vulnerability'
 
     def __init__(
-            self, taxonomy, vulnerability_functions,
-            conditional_loss_poes, insured_losses=False):
-        """
-        See :func:`openquake.risklib.scientific.event_based` for a description
-        of the input parameters.
-        """
+            self, taxonomy, vulnerability_functions, conditional_loss_poes):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.conditional_loss_poes = conditional_loss_poes
-        self.insured_losses = insured_losses
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
@@ -346,20 +340,29 @@ class ProbabilisticEventBased(RiskModel):
         """
         gmvs, eids = gmvs_eids
         E = len(gmvs)
-        I = self.insured_losses + 1
         A = len(assets)
-        loss_ratios = numpy.zeros((A, E, I), F32)
+        loss_ratios = numpy.zeros((A, E), F32)
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
-            ratios = vf.sample(means, covs, idxs, epsilons)
-            loss_ratios[i, idxs, 0] = ratios
-            if self.insured_losses and loss_type != 'occupants':
-                loss_ratios[i, idxs, 1] = scientific.insured_losses(
-                    ratios,  asset.deductible(loss_type),
-                    asset.insurance_limit(loss_type))
+            loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
+
+    def get_loss_ratios(self, gmvs, imti):  # used in ebrisk
+        """
+        :param gmvs: an array of shape (E, M)
+        :param imti: a dictionary imt -> imt index
+        :returns: loss_ratios of shape (L, E)
+        """
+        out = []
+        E = len(gmvs)
+        for lt, vf in self.risk_functions.items():
+            loss_ratios = numpy.zeros(E, F32)
+            means, covs, idxs = vf.interpolate(gmvs[:, imti[vf.imt]])
+            loss_ratios[idxs] = vf.sample(means, covs, idxs, None)
+            out.append(loss_ratios)
+        return numpy.array(out)
 
 
 @registry.add('classical_bcr')
@@ -558,7 +561,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     """
     riskmodel_class = registry[oqparam.calculation_mode]
     # arguments needed to instantiate the riskmodel class
-    argnames = inspect.getargspec(riskmodel_class.__init__).args[3:]
+    argnames = inspect.getfullargspec(riskmodel_class.__init__).args[3:]
 
     # arguments extracted from oqparam
     known_args = set(name for name, value in

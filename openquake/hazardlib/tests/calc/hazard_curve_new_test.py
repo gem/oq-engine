@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2018 GEM Foundation
+# Copyright (C) 2016-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -143,6 +143,10 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         rupture = _create_rupture(10., 6.)
         data = [(rupture, PMF([(0.7, 0), (0.3, 1)])),
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
+        print(data[0][0])
+        data[0][0].weight = 0.5
+        data[1][0].weight = 0.5
+        print(data[0][0].weight)
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
         src.src_group_id = 0
@@ -153,7 +157,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
-        crv = classical(group, self.sites, gsim_by_trt, param)[0]
+        crv = classical(group, self.sites, gsim_by_trt, param)['pmap'][0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv[0].array[:, 0], decimal=4)
 

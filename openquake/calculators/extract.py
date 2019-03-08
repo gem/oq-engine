@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,9 +15,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from urllib.parse import parse_qs
 import collections
 import operator
 import logging
+import ast
+import io
+
+import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -27,16 +32,69 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
+from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
-from openquake.baselib.general import group_array, deprecated
+from openquake.baselib.general import group_array, deprecated, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, oqvalidation
 
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO32 = 2 ** 32
+ALL = slice(None)
+CHUNKSIZE = 4*1024**2  # 4 MB
+
+
+def lit_eval(string):
+    """
+    `ast.literal_eval` the string if possible, otherwise returns it unchanged
+    """
+    try:
+        return ast.literal_eval(string)
+    except (ValueError, SyntaxError):
+        return string
+
+
+def _normalize(kinds, stats, num_rlzs):
+    statindex = dict(zip(stats, range(len(stats))))
+    dic = {}
+    for kind in kinds:
+        if kind == 'stats':
+            for s, stat in enumerate(stats):
+                dic[stat] = s
+        elif kind == 'rlzs':
+            for r in range(num_rlzs):
+                dic['rlz-%03d' % r] = r
+        elif kind.startswith('rlz-'):
+            dic[kind] = int(kind[4:])
+        elif kind in stats:
+            dic[kind] = statindex[kind]
+        else:
+            raise ValueError('Invalid kind %r' % kind)
+    return dic
+
+
+def parse(query_string, stats, num_rlzs=0):
+    """
+    :returns: a normalized query_dict as in the following examples:
+
+    >>> parse('kind=stats', ['mean'])
+    {'kind': {'mean': 0}}
+    >>> parse('kind=rlzs', [], 3)
+    {'kind': {'rlz-000': 0, 'rlz-001': 1, 'rlz-002': 2}}
+    >>> parse('kind=mean', ['max', 'mean'])
+    {'kind': {'mean': 1}}
+    >>> parse('kind=rlz-3&imt=PGA&site_id=0', [])
+    {'kind': {'rlz-3': 3}, 'imt': ['PGA'], 'site_id': [0]}
+    """
+    qdic = parse_qs(query_string)
+    for key, val in qdic.items():  # for instance, convert site_id to an int
+        qdic[key] = [lit_eval(v) for v in val]
+    qdic['kind'] = _normalize(qdic['kind'], stats, num_rlzs)
+    return qdic
 
 
 def cast(loss_array, loss_dt):
@@ -55,8 +113,7 @@ def barray(iterlines):
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
-    extract('sitecol', dstore). It is also possibly to extract the
-    attributes, for instance with extract('sitecol.attrs', dstore).
+    extract(dstore, 'sitecol').
     """
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
@@ -74,7 +131,7 @@ class Extract(dict):
     determined by the first part of `fullkey` (a slash-separated
     string) by passing as argument the second part of `fullkey`.
 
-    For instance extract(dstore, 'sitecol), extract(dstore, 'asset_values/0')
+    For instance extract(dstore, 'sitecol'), extract(dstore, 'asset_values/0')
     etc.
     """
     def add(self, key, cache=False):
@@ -84,12 +141,14 @@ class Extract(dict):
         return decorator
 
     def __call__(self, dstore, key):
-        try:
+        if '/' in key:
             k, v = key.split('/', 1)
-        except ValueError:   # no slashes
-            k, v = key, ''
-        if k in self:
             return self[k](dstore, v)
+        elif '?' in key:
+            k, v = key.split('?', 1)
+            return self[k](dstore, v)
+        if key in self:
+            return self[key](dstore, '')
         else:
             return extract_(dstore, key)
 
@@ -165,7 +224,6 @@ def extract_hazard(dstore, what):
     yield 'checksum32', dstore['/'].attrs['checksum32']
     nsites = len(sitecol)
     M = len(oq.imtls)
-    P = len(oq.poes)
     for statname, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         for imt in oq.imtls:
             key = 'hcurves/%s/%s' % (imt, statname)
@@ -174,16 +232,12 @@ def extract_hazard(dstore, what):
                 arr[sid] = pmap[sid].array[oq.imtls(imt), 0]
             logging.info('extracting %s', key)
             yield key, arr
-        try:
-            hmap = dstore['hmaps/' + statname]
-        except KeyError:  # for statname=rlz-XXX
-            hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
+        hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
-            idx = [m * P + p for m in range(M)]
             for sid in pmap:
-                arr[sid] = hmap[sid].array[idx, 0]
+                arr[sid] = hmap[sid].array[:, p]
             logging.info('extracting %s', key)
             yield key, arr
 
@@ -230,67 +284,116 @@ def hazard_items(dic, mesh, *extras, **kw):
     yield 'all', util.compose_arrays(mesh, array)
 
 
-def _get_dict(dstore, name, imts, imls):
+def _get_dict(dstore, name, imtls, stats):
     dic = {}
     dtlist = []
-    for imt, imls in zip(imts, imls):
+    for imt, imls in imtls.items():
         dt = numpy.dtype([(str(iml), F32) for iml in imls])
         dtlist.append((imt, dt))
-    for statname, curves in dstore[name].items():
-        dic[statname] = curves.value.view(dtlist).flatten()
+    for s, stat in enumerate(stats):
+        dic[stat] = dstore[name][:, s].flatten().view(dtlist)
     return dic
 
 
 @extract.add('hcurves')
 def extract_hcurves(dstore, what):
     """
-    Extracts hazard curves. Use it as /extract/hcurves/mean or
-    /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
+    Extracts hazard curves. Use it as /extract/hcurves?kind=mean or
+    /extract/hcurves?kind=rlz-0, /extract/hcurves?kind=stats,
+    /extract/hcurves?kind=rlzs etc
     """
-    if 'hcurves' not in dstore:
-        return []
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    mesh = get_mesh(sitecol, complete=False)
-    dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
-    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+    num_rlzs = len(dstore['weights'])
+    stats = oq.hazard_stats()
+    if what == '':  # npz exports for QGIS
+        sitecol = dstore['sitecol']
+        mesh = get_mesh(sitecol, complete=False)
+        dic = _get_dict(dstore, 'hcurves-stats', oq.imtls, stats)
+        yield from hazard_items(
+            dic, mesh, investigation_time=oq.investigation_time)
+        return
+    params = parse(what, stats, num_rlzs)
+    if 'imt' in params:
+        [imt] = params['imt']
+        slc = oq.imtls(imt)
+    else:
+        slc = ALL
+    sids = params.get('site_id', ALL)
+    for k, i in params['kind'].items():
+        if k.startswith('rlz-'):
+            yield k, hdf5.extract(dstore['hcurves-rlzs'], sids, i, slc)[:, 0]
+        else:
+            yield k, hdf5.extract(dstore['hcurves-stats'], sids, i, slc)[:, 0]
+    yield from params.items()
 
 
 @extract.add('hmaps')
 def extract_hmaps(dstore, what):
     """
-    Extracts hazard maps. Use it as /extract/hmaps/mean or
-    /extract/hmaps/rlz-0, etc
+    Extracts hazard maps. Use it as /extract/hmaps?imt=PGA
     """
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    mesh = get_mesh(sitecol)
-    dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
-    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+    stats = oq.hazard_stats()
+    num_rlzs = len(dstore['weights'])
+    if what == '':  # npz exports for QGIS
+        sitecol = dstore['sitecol']
+        mesh = get_mesh(sitecol, complete=False)
+        dic = _get_dict(dstore, 'hmaps-stats',
+                        {imt: oq.poes for imt in oq.imtls}, stats)
+        yield from hazard_items(
+            dic, mesh, investigation_time=oq.investigation_time)
+        return
+    params = parse(what, stats, num_rlzs)
+    if 'imt' in params:
+        [imt] = params['imt']
+        m = list(oq.imtls).index(imt)
+        s = slice(m, m + 1)
+    else:
+        s = ALL
+    for k, i in params['kind'].items():
+        if k.startswith('rlz-'):
+            yield k, hdf5.extract(dstore['hmaps-rlzs'], ALL, i, s, ALL)[:, 0]
+        else:
+            yield k, hdf5.extract(dstore['hmaps-stats'], ALL, i, s, ALL)[:, 0]
+    yield from params.items()
 
 
 @extract.add('uhs')
 def extract_uhs(dstore, what):
     """
-    Extracts uniform hazard spectra. Use it as /extract/uhs/mean or
-    /extract/uhs/rlz-0, etc
+    Extracts uniform hazard spectra. Use it as /extract/uhs?kind=mean or
+    /extract/uhs?kind=rlz-0, etc
     """
     oq = dstore['oqparam']
-    imts = oq.imt_periods()
-    mesh = get_mesh(dstore['sitecol'])
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    dic = {}
-    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
-    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in oq.poes])
-    for name, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(mesh))
-        uhs = numpy.zeros(len(hmap), uhs_dt)
-        for field in hmap.dtype.names:
-            imt, poe = field.split('-')
-            if imt in imts_dt.names:
-                uhs[poe][imt] = hmap[field]
-        dic[name] = uhs
-    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+    num_rlzs = len(dstore['weights'])
+    stats = oq.hazard_stats()
+    if what == '':  # npz exports for QGIS
+        sitecol = dstore['sitecol']
+        mesh = get_mesh(sitecol, complete=False)
+        dic = {}
+        for s, stat in enumerate(stats):
+            hmap = dstore['hmaps-stats'][:, s]
+            dic[stat] = calc.make_uhs(hmap, oq)
+        yield from hazard_items(
+            dic, mesh, investigation_time=oq.investigation_time)
+        return
+    params = parse(what, stats, num_rlzs)
+    periods = []
+    for m, imt in enumerate(oq.imtls):
+        if imt == 'PGA' or imt.startswith('SA'):
+            periods.append(m)
+    if 'site_id' in params:
+        sids = params['site_id']
+    else:
+        sids = ALL
+    for k, i in params['kind'].items():
+        if k.startswith('rlz-'):
+            yield k, hdf5.extract(
+                dstore['hmaps-rlzs'], sids, i, periods, ALL)[:, 0]
+        else:
+            yield k, hdf5.extract(
+                dstore['hmaps-stats'], sids, i, periods, ALL)[:, 0]
+    yield from params.items()
 
 
 def _agg(losses, idxs):
@@ -440,7 +543,7 @@ def extract_aggregate_by(dstore, what):
     except ValueError:  # missing '/' at the end
         tagnames, name = what.split('/')
         loss_type = ''
-    assert name in ('avg_losses', 'curves'), name
+    assert name == 'avg_losses', name
     tagnames = tagnames.split(',')
     assetcol = dstore['assetcol']
     oq = dstore['oqparam']
@@ -455,11 +558,7 @@ def extract_aggregate_by(dstore, what):
             setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
         if not loss_type:
             aw.extra = ('loss_type',) + oq.loss_dt().names
-        if name == 'curves':
-            aw.return_period = dset.attrs['return_periods']
-            aw.tagnames = encode(tagnames + ['return_period'])
-        else:
-            aw.tagnames = encode(tagnames)
+        aw.tagnames = encode(tagnames)
         yield decode(stat), aw
 
 
@@ -699,3 +798,179 @@ def curves_by_tag(dstore, tag):
                         out[n][lt] = counts
                     n += 1
         yield stat, out
+
+
+@extract.add('rupture')
+def extract_rupture(dstore, serial):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
+    """
+    ridx = list(dstore['ruptures']['serial']).index(int(serial))
+    [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
+    yield from getter.get_rupdict().items()
+
+
+@extract.add('event_info')
+def extract_event_info(dstore, eidx):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
+    """
+    event = dstore['events'][int(eidx)]
+    serial = int(event['eid'] // TWO32)
+    ridx = list(dstore['ruptures']['serial']).index(serial)
+    [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
+    rupdict = getter.get_rupdict()
+    rlzi = event['rlz']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    gsim = rlzs_assoc.gsim_by_trt[rlzi][rupdict['trt']]
+    for key, val in rupdict.items():
+        yield key, val
+    yield 'rlzi', rlzi
+    yield 'gsim', repr(gsim)
+
+
+@extract.add('ruptures_within')
+def get_ruptures_within(dstore, bbox):
+    """
+    Extract the ruptures within the given bounding box, a string
+    minlon,minlat,maxlon,maxlat.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures_with/8,44,10,46
+    """
+    minlon, minlat, maxlon, maxlat = map(float, bbox.split(','))
+    hypo = dstore['ruptures']['hypo'].T  # shape (3, N)
+    mask = ((minlon <= hypo[0]) * (minlat <= hypo[1]) *
+            (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
+    return dstore['ruptures'][mask]
+
+
+@extract.add('source_geom')
+def extract_source_geom(dstore, srcidxs):
+    """
+    Extract the geometry of a given sources
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
+    """
+    for i in srcidxs.split(','):
+        rec = dstore['source_info'][int(i)]
+        geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
+        yield rec['source_id'], geom
+
+# #####################  extraction from the WebAPI ###################### #
+
+
+class WebAPIError(RuntimeError):
+    """
+    Wrapper for an error on a WebAPI server
+    """
+
+
+class Extractor(object):
+    """
+    A class to extract data from a calculation.
+
+    :param calc_id: a calculation ID
+
+    NB: instantiating the Extractor opens the datastore.
+    """
+    def __init__(self, calc_id):
+        self.calc_id = calc_id
+        self.dstore = util.read(calc_id)
+        self.oqparam = self.dstore['oqparam']
+
+    def get(self, what):
+        """
+        :param what: what to extract
+        :returns: an ArrayWrapper instance
+        """
+        return ArrayWrapper.from_(extract(self.dstore, what))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        """
+        Close the datastore
+        """
+        self.dstore.close()
+
+
+class WebExtractor(Extractor):
+    """
+    A class to extract data from the WebAPI.
+
+    :param calc_id: a calculation ID
+    :param server: hostname of the webapi server (can be '')
+    :param username: login username (can be '')
+    :param password: login password (can be '')
+
+    NB: instantiating the WebExtractor opens a session.
+    """
+    def __init__(self, calc_id, server=None, username=None, password=None):
+        self.calc_id = calc_id
+        self.server = config.webapi.server if server is None else server
+        if username is None:
+            username = config.webapi.username
+        if password is None:
+            password = config.webapi.password
+        self.sess = requests.Session()
+        if username:
+            login_url = '%s/accounts/ajax_login/' % self.server
+            logging.info('POST %s', login_url)
+            resp = self.sess.post(
+                login_url, data=dict(username=username, password=password))
+            if resp.status_code != 200:
+                raise WebAPIError(resp.text)
+        url = '%s/v1/calc/%d/oqparam' % (self.server, calc_id)
+        logging.info('GET %s', url)
+        resp = self.sess.get(url)
+        if resp.status_code == 404:
+            raise WebAPIError('Not Found: %s' % url)
+        elif resp.status_code != 200:
+            raise WebAPIError(resp.text)
+        self.status = self.sess.get(
+            '%s/v1/calc/%d/status' % (self.server, calc_id)).json()
+        self.oqparam = object.__new__(oqvalidation.OqParam)
+        vars(self.oqparam).update(resp.json())
+
+    def get(self, what):
+        """
+        :param what: what to extract
+        :returns: an ArrayWrapper instance
+        """
+        url = '%s/v1/calc/%d/extract/%s' % (self.server, self.calc_id, what)
+        logging.info('GET %s', url)
+        resp = self.sess.get(url)
+        if resp.status_code != 200:
+            raise WebAPIError(resp.text)
+        npz = numpy.load(io.BytesIO(resp.content))
+        attrs = {k: npz[k] for k in npz if k != 'array'}
+        return ArrayWrapper(npz['array'], attrs)
+
+    def dump(self, fname):
+        """
+        Dump the remote datastore on a local path.
+        """
+        url = '%s/v1/calc/%d/datastore' % (self.server, self.calc_id)
+        resp = self.sess.get(url, stream=True)
+        down = 0
+        with open(fname, 'wb') as f:
+            logging.info('Saving %s', fname)
+            for chunk in resp.iter_content(CHUNKSIZE):
+                f.write(chunk)
+                down += len(chunk)
+                println('Downloaded {:,} bytes'.format(down))
+        print()
+
+    def close(self):
+        """
+        Close the session
+        """
+        self.sess.close()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -51,7 +51,7 @@ def classical_bcr(riskinputs, riskmodel, param, monitor):
                     aval = asset.value('structural')
                     result[asset.ordinal][outputs.rlzi] = numpy.array([
                         eal_orig * aval, eal_retro * aval, bcr])
-    return result
+    return {'bcr_data': result}
 
 
 @base.calculators.add('classical_bcr')
@@ -60,11 +60,20 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     Classical BCR Risk calculator
     """
     core_task = classical_bcr
+    accept_precalc = ['classical']
+
+    def pre_execute(self):
+        super().pre_execute()
+        for asset_ref, retrofitted in zip(self.assetcol.asset_refs,
+                                          self.assetcol.array['retrofitted']):
+            if numpy.isnan(retrofitted):
+                raise ValueError('The asset %s has no retrofitted value!'
+                                 % asset_ref.decode('utf8'))
 
     def post_execute(self, result):
         # NB: defined only for loss_type = 'structural'
         bcr_data = numpy.zeros((self.A, self.R), bcr_dt)
-        for aid, data in result.items():
+        for aid, data in result['bcr_data'].items():
             bcr_data[aid]['annual_loss_orig'] = data[:, 0]
             bcr_data[aid]['annual_loss_retro'] = data[:, 1]
             bcr_data[aid]['bcr'] = data[:, 2]

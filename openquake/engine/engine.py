@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -89,7 +89,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         OqParam.concurrent_tasks.default = ncores * 3
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
-    def celery_cleanup(terminate, tasks=()):
+    def celery_cleanup(terminate):
         """
         Release the resources used by an openquake job.
         In particular revoke the running tasks (if any).
@@ -99,11 +99,13 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         """
         # Using the celery API, terminate and revoke and terminate any running
         # tasks associated with the current job.
+        tasks = parallel.Starmap.running_tasks
         if tasks:
             logs.LOG.warn('Revoking %d tasks', len(tasks))
         else:  # this is normal when OQ_DISTRIBUTE=no
             logs.LOG.debug('No task to revoke')
-        for task in tasks:
+        while tasks:
+            task = tasks.pop()
             tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
@@ -127,8 +129,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
-    if (len(rlzs) == 1 and 'poes' in hdf5) or 'hcurves' in hdf5:
-        if oq.hazard_stats():
+    if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
+        if oq.hazard_stats() or oq.individual_curves or len(rlzs) == 1:
             dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
@@ -164,7 +166,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         except (KeyError, AttributeError):
             size_mb = None
         keysize.append((key, size_mb))
-    ds_size = os.path.getsize(dstore.hdf5path) / MB
+    ds_size = os.path.getsize(dstore.filename) / MB
     logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 
@@ -330,7 +332,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # taking further action, so that the real error can propagate
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
-                celery_cleanup(TERMINATE, parallel.running_tasks)
+                celery_cleanup(TERMINATE)
         except BaseException:
             # log the finalization error only if there is no real error
             if tb == 'None\n':

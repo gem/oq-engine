@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,18 +41,20 @@ class ScenarioCalculator(base.HazardCalculator):
         cinfo = source.CompositionInfo.fake(readinput.get_gsim_lt(oq))
         self.datastore['csm_info'] = cinfo
         if 'rupture_model' not in oq.inputs:
-            logging.warn('There is no rupture_model, the calculator will just '
-                         'import data without performing any calculation')
+            logging.warning(
+                'There is no rupture_model, the calculator will just '
+                'import data without performing any calculation')
             super().pre_execute()
             return
         self.rup = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
         R = len(self.gsims)
-        self.cmaker = ContextMaker(self.gsims, oq.maximum_distance,
+        self.cmaker = ContextMaker('*', self.gsims, oq.maximum_distance,
                                    {'filter_distance': oq.filter_distance})
         super().pre_execute()
         self.datastore['oqparam'] = oq
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
+        self.store_rlz_info()
         rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(0)
         E = oq.number_of_ground_motion_fields
         n_occ = numpy.array([E])
@@ -61,9 +63,9 @@ class ScenarioCalculator(base.HazardCalculator):
         for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             events[rlz * E: rlz * E + E]['eid'] = eids
             events[rlz * E: rlz * E + E]['rlz'] = rlz
-        self.datastore['events'] = events
+        self.datastore['events'] = self.events = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rup_array = get_rup_array([ebr])
+        rup_array = get_rup_array([ebr], self.src_filter)
         if len(rup_array) == 0:
             maxdist = oq.maximum_distance(
                 self.rup.tectonic_region_type, self.rup.mag)
@@ -82,19 +84,20 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Compute the GMFs and return a dictionary gsim -> array(N, E, I)
         """
-        self.gmfa = {}
+        arrays = []
         if 'rupture_model' not in self.oqparam.inputs:
-            return self.gmfa
+            return ()
+        n = self.oqparam.number_of_ground_motion_fields
         with self.monitor('computing gmfs'):
-            E = self.oqparam.number_of_ground_motion_fields
             for gsim in self.gsims:
-                gmfa = self.computer.compute(gsim, E)  # shape (I, N, E)
-                self.gmfa[gsim] = gmfa.transpose(1, 2, 0)  # shape (N, E, I)
-        return self.gmfa
+                gmfa = self.computer.compute(gsim, n)  # shape (I, N, n)
+                arrays.append(gmfa.transpose(1, 2, 0))  # shape (N, n, I)
+        return numpy.concatenate(arrays, axis=1)  # shape (N, E, I)
 
-    def post_execute(self, dummy):
-        if self.gmfa:
-            with self.monitor('saving gmfs', autoflush=True):
-                base.save_gmf_data(
-                    self.datastore, self.sitecol,
-                    numpy.array(list(self.gmfa.values())), self.oqparam.imtls)
+    def post_execute(self, gmfa):
+        if len(gmfa) == 0:  # no rupture_model
+            return
+        with self.monitor('saving gmfs', autoflush=True):
+            base.save_gmf_data(
+                self.datastore, self.sitecol, gmfa,
+                self.oqparam.imtls, self.events)

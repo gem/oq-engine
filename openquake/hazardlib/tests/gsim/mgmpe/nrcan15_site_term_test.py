@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,7 @@
 import numpy as np
 import unittest
 
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy, DummyGMPEOne
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008

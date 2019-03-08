@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,22 +15,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import logging
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import cross_idl
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
-@sap.Script
+@sap.script
 def plot_sites(calc_id=-1):
     """
-    Plot the sites and the bounding boxes of the sources, enlarged by
-    the maximum distance
+    Plot the sites
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
-    logging.basicConfig(level=logging.INFO)
-    dstore = engine.read(calc_id)
+    dstore = util.read(calc_id)
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
     if len(lons) > 1 and cross_idl(*lons):
