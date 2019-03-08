@@ -642,6 +642,7 @@ class SourceModelLogicTree(object):
                 if not fname.endswith('.hdf5'):
                     xml = open(fname, encoding='utf-8').read()
                     trts.update(TRT_REGEX.findall(xml))
+                    n += 1
         logging.info('Read %d TRTs from %d model file(s)', len(trts), n)
         return trts
 
