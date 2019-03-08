@@ -620,20 +620,6 @@ def node_to_dict(node):
     return dic
 
 
-def _node_to_toml(node):
-    tag = striptag(node.tag)
-    dic = {}
-    for k, v in node.attrib.items():
-        dic['@' + k] = v
-    if node.text is not None:
-        dic[tag] = node.text
-    else:
-        nodes = list(node.nodes)
-        dic[tag] = ([_node_to_toml(n) for n in node] if len(nodes) > 1
-                    else _node_to_toml(nodes[0]))
-    return dic
-
-
 def node_from_elem(elem, nodefactory=Node, lazy=()):
     """
     Convert (recursively) an ElementTree object into a Node object.
@@ -918,12 +904,3 @@ class ValidatingXmlParser(object):
             elif n in self.validators:
                 self._set_attrib(node, n, n, v)
         return node
-
-
-def xml_to_toml(fname):
-    import toml
-    print(toml.dumps(_node_to_toml(node_from_xml(fname))))
-
-
-if __name__ == '__main__':
-    xml_to_toml(sys.argv[1])
