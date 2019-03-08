@@ -53,7 +53,7 @@ class OpenQuake(object):
         # TODO: more utilities when be added when deemed useful
 
 
-@sap.Script
+@sap.script
 def shell(script=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or

@@ -46,7 +46,7 @@ def make_figure(losses_by_rlzi, loss_types, nbins):
     return plt
 
 
-@sap.Script
+@sap.script
 def plot_losses(calc_id, bins=7):
     """
     losses_by_event plotter
