@@ -1016,9 +1016,7 @@ class SourceModelLogicTree(object):
         valid_edges = []
         for edge_node in node.nodes:
             try:
-                coords = split_coords_3d(map(
-                    float,
-                    edge_node.LineString.posList.text.split()))
+                coords = split_coords_3d(edge_node.LineString.posList.text)
                 edge = geo.Line([geo.Point(*p) for p in coords])
             except ValueError:
                 # See use of validation error in simple geometry case
@@ -1028,7 +1026,7 @@ class SourceModelLogicTree(object):
                 valid_edges.append(True)
             else:
                 valid_edges.append(False)
-        if _float_re.match(node["spacing"]) and all(valid_edges):
+        if node["spacing"] and all(valid_edges):
             return
         raise LogicTreeError(
             node, self.filename,
@@ -1038,19 +1036,15 @@ class SourceModelLogicTree(object):
         """
         Validares a node representation of a planar fault geometry
         """
-        valid_spacing = _float_re.match(node["spacing"])
+        valid_spacing = node["spacing"]
         for key in ["topLeft", "topRight", "bottomLeft", "bottomRight"]:
-            is_valid = _float_re.match(getattr(node, key)["lon"]) and\
-                _float_re.match(getattr(node, key)["lat"]) and\
-                _float_re.match(getattr(node, key)["depth"])
-            if is_valid:
-                lon = float(getattr(node, key)["lon"])
-                lat = float(getattr(node, key)["lat"])
-                depth = float(getattr(node, key)["depth"])
-                valid_lon = (lon >= -180.0) and (lon <= 180.0)
-                valid_lat = (lat >= -90.0) and (lat <= 90.0)
-                valid_depth = (depth >= 0.0)
-                is_valid = valid_lon and valid_lat and valid_depth
+            lon = getattr(node, key)["lon"]
+            lat = getattr(node, key)["lat"]
+            depth = getattr(node, key)["depth"]
+            valid_lon = (lon >= -180.0) and (lon <= 180.0)
+            valid_lat = (lat >= -90.0) and (lat <= 90.0)
+            valid_depth = (depth >= 0.0)
+            is_valid = valid_lon and valid_lat and valid_depth
             if not is_valid or not valid_spacing:
                 raise LogicTreeError(
                     node, self.filename,
