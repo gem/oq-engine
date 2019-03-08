@@ -959,17 +959,7 @@ class SourceModelLogicTree(object):
                 node, self.filename,
                 'expected a pair of floats separated by space')
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            min_mag, bin_width = (node.incrementalMFD["minMag"],
-                                  node.incrementalMFD["binWidth"])
-
-            rates = node.incrementalMFD.occurRates.text
-            with context(self.filename, node):
-                rates = valid.positivefloats(rates)
-            if _float_re.match(min_mag) and _float_re.match(bin_width):
-                return
-            raise LogicTreeError(
-                node, self.filename,
-                "expected valid 'incrementalMFD' node")
+            pass
         elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
             self._validate_simple_fault_geometry(node.simpleFaultGeometry,
                                                  _float_re)
@@ -990,10 +980,11 @@ class SourceModelLogicTree(object):
                         geom_node, self.filename,
                         "Surface geometry type not recognised")
         else:
-            if not _float_re.match(node.text.strip()):
+            try:
+                float(node.text)
+            except (TypeError, ValueError):
                 raise LogicTreeError(
-                    node, self.filename,
-                    'expected single float value')
+                    node, self.filename, 'expected single float value')
 
     def _validate_simple_fault_geometry(self, node, _float_re):
         """
@@ -1227,13 +1218,13 @@ class SourceModelLogicTree(object):
         smodel = nrml.read(self._get_source_model(source_model)).sourceModel
         n = len('Source')
         for sg in smodel:
+            trt = sg['tectonicRegion']
             if sg.tag.endswith('sourceGroup'):  # nrml/0.5
                 src_nodes = sg
             else:  # nrml/0.4
                 src_nodes = [sg]
             for src_node in src_nodes:
                 with context(source_model, src_node):
-                    trt = src_node['tectonicRegion']
                     source_id = src_node['id']
                     source_type = striptag(src_node.tag)[n:]
                     self.tectonic_region_types.add(trt)
