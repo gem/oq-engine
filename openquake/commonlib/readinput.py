@@ -730,12 +730,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             # the limit is really needed only for event based calculations
             raise ValueError('There is a limit of %d src groups!' % TWO16)
 
-        for srcid in source_model_lt.info.applytosources:
-            if srcid not in source_ids:
-                raise ValueError(
-                    'The source %s is not in the source model, please fix '
-                    'applyToSources in %s or the source model' %
-                    (srcid, source_model_lt.filename))
+        for brid, srcids in source_model_lt.info.applytosources.items():
+            for srcid in srcids:
+                if srcid not in source_ids:
+                    raise ValueError(
+                        'The source %s is not in the source model, please fix '
+                        'applyToSources in %s or the source model' %
+                        (srcid, source_model_lt.filename))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -1208,38 +1209,39 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     found = 0
     to_remove = []
-    for path in logictree.collect_info(smlt_file).smpaths:
-        logging.info('Reading %s', path)
-        root = nrml.read(path)
-        model = Node('sourceModel', root[0].attrib)
-        origmodel = root[0]
-        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-            for src_node in origmodel:
-                if src_node['id'] in source_ids:
-                    model.nodes.append(src_node)
-        else:  # nrml/0.5
-            for src_group in origmodel:
-                sg = copy.copy(src_group)
-                sg.nodes = []
-                weights = src_group.get('srcs_weights')
-                if weights:
-                    assert len(weights) == len(src_group.nodes)
-                else:
-                    weights = [1] * len(src_group.nodes)
-                src_group['srcs_weights'] = reduced_weigths = []
-                for src_node, weight in zip(src_group, weights):
+    for paths in logictree.collect_info(smlt_file).smpaths.values():
+        for path in paths:
+            logging.info('Reading %s', path)
+            root = nrml.read(path)
+            model = Node('sourceModel', root[0].attrib)
+            origmodel = root[0]
+            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+                for src_node in origmodel:
                     if src_node['id'] in source_ids:
-                        found += 1
-                        sg.nodes.append(src_node)
-                        reduced_weigths.append(weight)
-                if sg.nodes:
-                    model.nodes.append(sg)
-        shutil.copy(path, path + '.bak')
-        if model:
-            with open(path, 'wb') as f:
-                nrml.write([model], f, xmlns=root['xmlns'])
-        elif remove:  # remove the files completely reduced
-            to_remove.append(path)
+                        model.nodes.append(src_node)
+            else:  # nrml/0.5
+                for src_group in origmodel:
+                    sg = copy.copy(src_group)
+                    sg.nodes = []
+                    weights = src_group.get('srcs_weights')
+                    if weights:
+                        assert len(weights) == len(src_group.nodes)
+                    else:
+                        weights = [1] * len(src_group.nodes)
+                    src_group['srcs_weights'] = reduced_weigths = []
+                    for src_node, weight in zip(src_group, weights):
+                        if src_node['id'] in source_ids:
+                            found += 1
+                            sg.nodes.append(src_node)
+                            reduced_weigths.append(weight)
+                    if sg.nodes:
+                        model.nodes.append(sg)
+            shutil.copy(path, path + '.bak')
+            if model:
+                with open(path, 'wb') as f:
+                    nrml.write([model], f, xmlns=root['xmlns'])
+            elif remove:  # remove the files completely reduced
+                to_remove.append(path)
     if found:
         for path in to_remove:
             os.remove(path)
@@ -1281,7 +1283,8 @@ def get_input_files(oqparam, hazard=False):
         elif isinstance(fname, list):
             fnames.extend(fname)
         elif key == 'source_model_logic_tree':
-            fnames.extend(logictree.collect_info(fname).smpaths)
+            for smpaths in logictree.collect_info(fname).smpaths.values():
+                fnames.extend(smpaths)
             fnames.append(fname)
         else:
             fnames.append(fname)
