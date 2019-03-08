@@ -35,7 +35,7 @@ class SapTestCase(unittest.TestCase):
             ['1', '2', False, '3'], p.callfunc('1 -b=2 -d=3'.split()))
 
     def test_group(self):
-        p = sap.script(f)
+        p = sap.Script(f)
         p.arg('a', 'first argument')
         p.opt('b', 'second argument')
         p.group('other arguments')
@@ -63,7 +63,7 @@ other arguments:
             p.flg('c', 'third argument')
 
     def test_no_help(self):
-        p = sap.script(f, help=None)
+        p = sap.Script(f, help=None)
         p.arg('a', 'first argument')
         p.opt('b', 'second argument')
         self.assertEqual(p.help(), '''\
@@ -81,7 +81,7 @@ optional arguments:
 
     def test_long_argument(self):
         # test the replacement '_' -> '-' in variable names
-        p = sap.script(lambda a_long_argument: None)
+        p = sap.Script(lambda a_long_argument: None)
         p.opt('a_long_argument', 'a long argument')
         self.assertEqual(p.help(), '''\
 usage: %s [-h] [-a A_LONG_ARGUMENT]
