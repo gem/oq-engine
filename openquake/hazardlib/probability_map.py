@@ -61,7 +61,6 @@ class ProbabilityCurve(object):
             return self.__class__(1. - (1. - self.array) * (1. - other.array))
     __ror__ = __or__
 
-
     def __iadd__(self, other):
         # this is used when composing mutually exclusive probabilities
         self.array += other.array
@@ -71,7 +70,6 @@ class ProbabilityCurve(object):
         # this is used when composing mutually exclusive probabilities
         self.array += other.array
         return self.__class__(self.array)
-
 
     def __mul__(self, other):
         if isinstance(other, self.__class__):

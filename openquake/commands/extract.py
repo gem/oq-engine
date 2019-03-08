@@ -20,7 +20,7 @@ from openquake.calculators.extract import Extractor, WebExtractor
 
 
 # `oq extract` is tested in the demos
-@sap.Script
+@sap.script
 def extract(what, calc_id, webapi=True):
     """
     Extract an output from the datastore and save it into an .hdf5 file.

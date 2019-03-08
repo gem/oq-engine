@@ -43,7 +43,7 @@ def convert_xml_hdf5(input_file, output_file):
     return output_file
 
 
-@sap.Script
+@sap.script
 def to_hdf5(input):
     """
     Convert .xml and .npz files to .hdf5 files.

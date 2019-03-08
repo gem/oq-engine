@@ -49,7 +49,7 @@ def str_or_int(calc_id):
         return calc_id
 
 
-@sap.Script
+@sap.script
 def show(what='contents', calc_id=-1, extra=()):
     """
     Show the content of a datastore (by default the last one).
