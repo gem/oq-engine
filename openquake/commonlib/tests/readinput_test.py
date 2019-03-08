@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -427,7 +427,7 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
-        self.assertIn("Expected cost types ['structural']", str(ctx.exception))
+        self.assertIn("is missing", str(ctx.exception))
 
 
 class TestReadGmfXmlTestCase(unittest.TestCase):

@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -47,7 +47,6 @@ celery_queue = celery
 # enable multi_user if you have a multiple user installation
 multi_user = true
 file = /home/openquake/oqdata/db.sqlite3
-log = /home/openquake/oqdata/dbserver.log
 # daemon bind address; must be a valid IP address
 # example: 0.0.0.0
 listen = 0.0.0.0
@@ -63,6 +62,11 @@ port = 1908
 # to the master node
 receiver_ports = 1912-1920
 authkey = changeme
+
+[webapi]
+server = http://localhost:8800
+username =
+password =
 
 [zworkers]
 host_cores = 127.0.0.1 -1
