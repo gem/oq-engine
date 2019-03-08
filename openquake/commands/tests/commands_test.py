@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -83,7 +83,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info.func(None, None, None, None, None, None, path)
+            info.func(None, None, None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -91,33 +91,38 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
 
     def test_calculators(self):
         with Print.patch() as p:
-            info.func(True, None, None, None, None, None, '')
+            info.func(True, None, None, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info.func(None, True, None, None, None, None, '')
+            info.func(None, True, None, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_views(self):
         with Print.patch() as p:
-            info.func(None, None, True, None, None, None, '')
+            info.func(None, None, True, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info.func(None, None, None, True, None, None, '')
+            info.func(None, None, None, True, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_extracts(self):
         with Print.patch() as p:
-            info.func(None, None, None, None, True, None, '')
+            info.func(None, None, None, None, True, None, None, '')
+        self.assertGreater(len(str(p)), 10)
+
+    def test_parameters(self):
+        with Print.patch() as p:
+            info.func(None, None, None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
-            info.func(None, None, None, None, None, None, path)
+            info.func(None, None, None, None, None, None, None, path)
         # this is a test with multiple same ID sources
         self.assertIn('multiplicity', str(p))
 
@@ -125,14 +130,14 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info.func(None, None, None, None, None, True, path)
+            info.func(None, None, None, None, None, None, True, path)
         self.assertIn('report.rst', str(p))
 
     def test_report_ebr(self):
         path = os.path.join(os.path.dirname(case_16.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info.func(None, None, None, None, None, True, path)
+            info.func(None, None, None, None, None, None, True, path)
         self.assertIn('report.rst', str(p))
 
 
