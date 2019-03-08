@@ -56,7 +56,7 @@ def reduce_source_model(fname, reduction_factor):
     save_bak(fname, node, num_nodes, total)
 
 
-@sap.Script
+@sap.script
 def reduce(fname, reduction_factor):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.

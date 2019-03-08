@@ -180,7 +180,7 @@ def ensure_on():
             waiting_seconds -= 1
 
 
-@sap.Script
+@sap.script
 def run_server(dbpath=os.path.expanduser(config.dbserver.file),
                dbhostport=None, loglevel='WARN'):
     """

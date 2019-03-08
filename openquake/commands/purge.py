@@ -56,7 +56,7 @@ def purge_all(user=None, fast=False):
                     purge_one(calc_id, user)
 
 
-@sap.Script
+@sap.script
 def purge(calc_id):
     """
     Remove the given calculation. If you want to remove all calculations,
