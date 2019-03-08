@@ -76,7 +76,7 @@ class LtSourceModel(object):
     """
     def __init__(self, names, weight, path, src_groups, num_gsim_paths,
                  ordinal, samples):
-        self.names = ' '.join(names.split())
+        self.names = ' '.join(names.split())  # replace newlines with spaces
         self.weight = weight
         self.path = path
         self.src_groups = src_groups
