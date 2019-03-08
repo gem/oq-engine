@@ -199,7 +199,6 @@ def script(func):
     func.flg = s.flg
     func.group = s.group
     func._add = s._add
-    func.callfunc = s.callfunc
     return func
 
 
