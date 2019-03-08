@@ -1226,14 +1226,19 @@ class SourceModelLogicTree(object):
         """
         smodel = nrml.read(self._get_source_model(source_model)).sourceModel
         n = len('Source')
-        for src_node in smodel:
-            with context(source_model, src_node):
-                trt = src_node['tectonicRegion']
-                source_id = src_node['id']
-                source_type = striptag(src_node.tag)[n:]
-                self.tectonic_region_types.add(trt)
-                self.source_ids[branch_id].append(source_id)
-                self.source_types.add(source_type)
+        for sg in smodel:
+            if sg.tag.endswith('sourceGroup'):  # nrml/0.5
+                src_nodes = sg
+            else:  # nrml/0.4
+                src_nodes = [sg]
+            for src_node in src_nodes:
+                with context(source_model, src_node):
+                    trt = src_node['tectonicRegion']
+                    source_id = src_node['id']
+                    source_type = striptag(src_node.tag)[n:]
+                    self.tectonic_region_types.add(trt)
+                    self.source_ids[branch_id].append(source_id)
+                    self.source_types.add(source_type)
 
     def apply_uncertainties(self, branch_ids, source_group):
         """
