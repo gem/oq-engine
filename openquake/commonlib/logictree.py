@@ -943,9 +943,10 @@ class SourceModelLogicTree(object):
         _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
 
         if branchset.uncertainty_type == 'sourceModel':
-            smfname = node.text.strip()
             try:
-                self.collect_source_model_data(branchnode['branchID'], smfname)
+                for fname in node.text.strip().split():
+                    self.collect_source_model_data(
+                        branchnode['branchID'], fname)
             except Exception as exc:
                 raise LogicTreeError(node, self.filename, str(exc)) from exc
 
