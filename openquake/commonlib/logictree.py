@@ -488,12 +488,13 @@ Info = collections.namedtuple('Info', 'smpaths, applytosources')
 
 def collect_info(smlt):
     """
-    Given a path to a source model logic tree or a file, collect all of the
-    path names to the source models it contains and return them as a
-    dictionary source model branch ID -> paths. Moreover, populate a dictionary
-    source model branch ID -> source IDs listed in applyToSources
+    Given a path to a source model logic tree, collect all of the
+    path names to the source models it contains and build
+    1. a dictionary source model branch ID -> paths
+    2. a dictionary source model branch ID -> source IDs in applyToSources
 
     :param smlt: source model logic tree file
+    :returns: an Info namedtupled containing the two dictionaries
     """
     n = nrml.read(smlt)
     try:
