@@ -956,7 +956,7 @@ class WebExtractor(Extractor):
 
     def dump(self, fname):
         """
-        Dump the remove datastore on a local path.
+        Dump the remote datastore on a local path.
         """
         url = '%s/v1/calc/%d/datastore' % (self.server, self.calc_id)
         resp = self.sess.get(url, stream=True)
