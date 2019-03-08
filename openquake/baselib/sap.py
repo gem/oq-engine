@@ -54,6 +54,7 @@ import argparse
 
 
 NODEFAULT = object()
+registry = {}  # dotname -> function
 
 
 def get_parentparser(parser, description=None, help=True):
@@ -87,11 +88,10 @@ class Script(object):
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
-    registry = {}  # dotname -> function
     # for instance {'openquake.commands.run': run, ...}
 
     def __init__(self, func, name=None, parentparser=None,
-                 help=True, registry=True):
+                 help=True, register=True):
         self.func = func
         self.name = name or func.__name__
         args, self.varargs, varkw, defaults = inspect.getfullargspec(func)[:4]
@@ -107,8 +107,8 @@ class Script(object):
         self._group = self.parentparser
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
-        if registry:
-            self.registry['%s.%s' % (func.__module__, func.__name__)] = self
+        if register:
+            registry['%s.%s' % (func.__module__, func.__name__)] = self
 
     def group(self, descr):
         """Added a new group of arguments with the given description"""
