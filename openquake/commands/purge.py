@@ -33,7 +33,7 @@ def purge_one(calc_id, user):
     err = dbcmd('del_calc', calc_id, user)
     if err:
         print(err)
-    if os.path.exists(filename):  # not removed yet
+    elif os.path.exists(filename):  # not removed yet
         os.remove(filename)
         print('Removed %s' % filename)
 

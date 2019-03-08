@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced a `sap.script` decorator
+  * Used the WebExtractor in `oq importcalc`
   * Restored validation of the source_model_logic_tree.xml file
   * Raised an early error for missing occupants in the exposure
   * Added a check to forbid duplicate file names in the `uncertaintyModel` tag
