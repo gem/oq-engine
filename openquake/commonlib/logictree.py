@@ -1285,8 +1285,10 @@ class ImtWeight(object):
             self.dic = {'weight': float(nodes[0].text)}
             imts = []
             for n in nodes[1:]:
-                self.dic[n['imt']] = float(n.text)
-                imts.append(n['imt'])
+                weight = float(n.text)
+                if weight:
+                    self.dic[n['imt']] = weight
+                    imts.append(n['imt'])
             if len(set(imts)) < len(imts):
                 raise InvalidLogicTree(
                     'There are duplicated IMTs in the weights')
