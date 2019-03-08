@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4#
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -376,7 +376,7 @@ def taxonomy(value):
         value.encode('ascii')
     except UnicodeEncodeError:
         raise ValueError('tag %r is not ASCII' % value)
-    if re.search('\s', value):
+    if re.search(r'\s', value):
         raise ValueError('The taxonomy %r contains whitespace chars' % value)
     return value
 
