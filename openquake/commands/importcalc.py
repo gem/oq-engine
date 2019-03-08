@@ -27,11 +27,8 @@ from openquake.server import dbserver
 @sap.Script
 def importcalc(calc_id):
     """
-    Import a remote calculation into the local database. hostname, username
+    Import a remote calculation into the local database. server, username
     and password must be specified in an openquake.cfg file.
-
-    :param calc_id: calculation ID (integer)
-
     NB: calc_id can be a local pathname to a datastore not already
     present in the database: in that case it is imported in the db.
     """
