@@ -488,11 +488,13 @@ Info = collections.namedtuple('Info', 'smpaths, applytosources')
 
 def collect_info(smlt):
     """
-    Given a path to a source model logic tree or a file-like, collect all of
-    the soft-linked path names to the source models it contains and return them
-    as a sorted uniquified list (no duplicates).
+    Given a path to a source model logic tree, collect all of the
+    path names to the source models it contains and build
+    1. a dictionary source model branch ID -> paths
+    2. a dictionary source model branch ID -> source IDs in applyToSources
 
     :param smlt: source model logic tree file
+    :returns: an Info namedtupled containing the two dictionaries
     """
     n = nrml.read(smlt)
     try:
@@ -500,17 +502,18 @@ def collect_info(smlt):
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
-    paths = set()
-    applytosources = set()
+    paths = collections.defaultdict(set)  # branchID -> paths
+    applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
         with node.context(smlt, blevel):
             for bset in blevel:
                 if 'applyToSources' in bset.attrib:
-                    applytosources.update(bset['applyToSources'].split())
+                    applytosources[bset['branchSetID']].extend(
+                        bset['applyToSources'].split())
                 for br in bset:
                     fnames = br.uncertaintyModel.text.split()
-                    paths.update(get_paths(smlt, fnames))
-    return Info(sorted(paths), applytosources)
+                    paths[br['branchID']].update(get_paths(smlt, fnames))
+    return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
 
 
 def get_paths(smlt, fnames):
@@ -595,21 +598,21 @@ class SourceModelLogicTree(object):
     def get_source_ids(self):
         """
         :returns:
-            the complete set of source IDs found in all the source models
+            the complete dictionary source model ID -> source IDs
         """
-        fnames = self.info.smpaths
-        source_ids = set()
-        logging.info('Reading source IDs from %d model file(s)', len(fnames))
-        for fname in fnames:
-            if fname.endswith('.hdf5'):
-                with hdf5.File(fname, 'r') as f:
-                    for sg in f['/']:
-                        for src in sg:
-                            source_ids.add(src.source_id)
-            else:
-                for sg in read_source_groups(fname):
-                    for src_node in sg:
-                        source_ids.add(src_node['id'])
+        source_ids = collections.defaultdict(list)
+        for sm, fnames in self.info.smpaths.items():
+            logging.info('Reading source IDs from source model %s', sm)
+            for fname in fnames:
+                if fname.endswith('.hdf5'):
+                    with hdf5.File(fname, 'r') as f:
+                        for sg in f['/']:
+                            for src in sg:
+                                source_ids[sm].append(src.source_id)
+                else:
+                    for sg in read_source_groups(fname):
+                        for src_node in sg:
+                            source_ids[sm].append(src_node['id'])
         return source_ids
 
     def get_trts(self):
@@ -617,13 +620,14 @@ class SourceModelLogicTree(object):
         :returns:
             the complete set of tectonic regions found in all the source models
         """
-        fnames = self.info.smpaths
         trts = set()
-        for fname in fnames:
-            if not fname.endswith('.hdf5'):
-                trts.update(TRT_REGEX.findall(open(fname).read()))
-        logging.info('Read %d TRTs from %d model file(s)',
-                     len(trts), len(fnames))
+        n = 0
+        for fnames in self.info.smpaths.values():
+            for fname in fnames:
+                if not fname.endswith('.hdf5'):
+                    trts.update(TRT_REGEX.findall(open(fname).read()))
+                    n += 1
+        logging.info('Read %d TRTs from %d model file(s)', len(trts), n)
         return trts
 
     def parse_tree(self, tree_node, validate):
@@ -635,7 +639,7 @@ class SourceModelLogicTree(object):
         if self.info.applytosources:
             self.source_ids = self.get_source_ids()
         else:
-            self.source_ids = set()
+            self.source_ids = collections.defaultdict(list)
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
 
@@ -736,7 +740,8 @@ class SourceModelLogicTree(object):
             if value_node.text is not None:
                 values.append(value_node.text.strip())
             if validate:
-                self.validate_uncertainty_value(value_node, branchset)
+                self.validate_uncertainty_value(
+                    value_node, branchnode, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(branch_id, weight, value)
@@ -904,7 +909,7 @@ class SourceModelLogicTree(object):
         return geo.PlanarSurface.from_corner_points(
             top_left, top_right, bottom_right, bottom_left)
 
-    def validate_uncertainty_value(self, node, branchset):
+    def validate_uncertainty_value(self, node, branchnode, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -924,9 +929,9 @@ class SourceModelLogicTree(object):
         if branchset.uncertainty_type == 'sourceModel':
             smfname = node.text.strip()
             try:
-                self.collect_source_model_data(smfname)
+                self.collect_source_model_data(branchnode['branchID'], smfname)
             except Exception as exc:
-                raise LogicTreeError(node, self.filename, str(exc))
+                raise LogicTreeError(node, self.filename, str(exc)) from exc
 
         elif branchset.uncertainty_type == 'abGRAbsolute':
             ab = (node.text.strip()).split()
@@ -1117,11 +1122,12 @@ class SourceModelLogicTree(object):
 
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
-                if source_id not in self.source_ids:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        "source with id '%s' is not defined in source models"
-                        % source_id)
+                for source_ids in self.source_ids.values():
+                    if source_id not in source_ids:
+                        raise LogicTreeError(
+                            branchset_node, self.filename,
+                            "source with id '%s' is not defined in source "
+                            "models" % source_id)
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
@@ -1195,8 +1201,7 @@ class SourceModelLogicTree(object):
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file))
 
-    # this is somewhat duplicated with readinput.get_source_ids
-    def collect_source_model_data(self, source_model):
+    def collect_source_model_data(self, branch_id, source_model):
         """
         Parse source model file and collect information about source ids,
         source types and tectonic region types available in it. That
@@ -1211,7 +1216,7 @@ class SourceModelLogicTree(object):
                 source_id = src_node['id']
                 source_type = striptag(src_node.tag)[n:]
                 self.tectonic_region_types.add(trt)
-                self.source_ids.add(source_id)
+                self.source_ids[branch_id].append(source_id)
                 self.source_types.add(source_type)
 
     def apply_uncertainties(self, branch_ids, source_group):
