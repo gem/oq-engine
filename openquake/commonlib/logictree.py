@@ -55,6 +55,20 @@ MAX_SINT_32 = (2 ** 31) - 1
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 
 
+def unique(objects, key=None):
+    """
+    Raise a ValueError if there is a duplicated object, otherwise
+    returns the objects as they are.
+    """
+    dupl = []
+    for obj, group in itertools.groupby(sorted(objects), key):
+        if sum(1 for _ in group) > 1:
+            dupl.append(obj)
+    if dupl:
+        raise ValueError('Found duplicates %s' % dupl)
+    return objects
+
+
 class LtSourceModel(object):
     """
     A container of SourceGroup instances with some additional attributes
@@ -62,7 +76,7 @@ class LtSourceModel(object):
     """
     def __init__(self, names, weight, path, src_groups, num_gsim_paths,
                  ordinal, samples):
-        self.names = ' '.join(names.split())  # replace newlines with spaces
+        self.names = ' '.join(names.split())
         self.weight = weight
         self.path = path
         self.src_groups = src_groups
@@ -470,7 +484,8 @@ class FakeSmlt(object):
         """
         :returns: the set of TRTs inside the source model file
         """
-        return set(TRT_REGEX.findall(open(self.filename).read()))
+        xml = open(self.filename, encoding='utf-8').read()
+        return set(TRT_REGEX.findall(xml))
 
     def __iter__(self):
         name = os.path.basename(self.filename)
@@ -503,12 +518,12 @@ def collect_info(smlt):
     paths = set()
     applytosources = set()
     for blevel in blevels:
-        with node.context(smlt, blevel):
-            for bset in blevel:
-                if 'applyToSources' in bset.attrib:
-                    applytosources.update(bset['applyToSources'].split())
-                for br in bset:
-                    fnames = br.uncertaintyModel.text.split()
+        for bset in blevel:
+            if 'applyToSources' in bset.attrib:
+                applytosources.update(bset['applyToSources'].split())
+            for br in bset:
+                with node.context(smlt, br):
+                    fnames = unique(br.uncertaintyModel.text.split())
                     paths.update(get_paths(smlt, fnames))
     return Info(sorted(paths), applytosources)
 
@@ -621,7 +636,8 @@ class SourceModelLogicTree(object):
         trts = set()
         for fname in fnames:
             if not fname.endswith('.hdf5'):
-                trts.update(TRT_REGEX.findall(open(fname).read()))
+                xml = open(fname, encoding='utf-8').read()
+                trts.update(TRT_REGEX.findall(xml))
         logging.info('Read %d TRTs from %d model file(s)',
                      len(trts), len(fnames))
         return trts
