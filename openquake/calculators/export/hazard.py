@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -843,8 +843,6 @@ def export_disagg_by_src_csv(ekey, dstore):
     header = ['source_id', 'poe']
     by_poe = operator.itemgetter(1)
     for name in dstore['disagg_by_src']:
-        if name == 'source_id':
-            continue
         probs = dstore['disagg_by_src/' + name].value
         ok = probs > 0
         src = srcdata[ok]

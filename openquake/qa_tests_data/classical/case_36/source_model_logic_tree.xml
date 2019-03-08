@@ -127,7 +127,7 @@
 <!-- Karakoram -->
 		<logicTreeBranchSet branchSetID="bs32"
 			            uncertaintyType="abGRAbsolute"
-				    applyToSources="2 3 4">
+				    applyToSources="2">
 	
 			<logicTreeBranch branchID="b321">	
 				<uncertaintyModel> 4.222 1
@@ -151,7 +151,7 @@
 
 <!-- Northern Grabens -->
 		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
-				    applyToSources="5 6 7 8"
+				    applyToSources="5"
 				    branchSetID="bs33">
 	
 			<logicTreeBranch branchID="b331">	

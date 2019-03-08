@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,7 +35,7 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
         eff_time, max(num_events.values()))
     return scientific.LossesByPeriodBuilder(
         numpy.array(periods), loss_dt or oq.loss_dt(), weights, num_events,
-        eff_time, oq.investigation_time)
+        eff_time, oq.risk_investigation_time)
 
 
 class LossCurveExporter(object):
