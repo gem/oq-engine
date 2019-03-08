@@ -619,15 +619,9 @@ class SourceModelLogicTree(object):
         for sm, fnames in self.info.smpaths.items():
             logging.info('Reading source IDs from source model %s', sm)
             for fname in fnames:
-                if fname.endswith('.hdf5'):
-                    with hdf5.File(fname, 'r') as f:
-                        for sg in f['/']:
-                            for src in sg:
-                                source_ids[sm].append(src.source_id)
-                else:
-                    for sg in read_source_groups(fname):
-                        for src_node in sg:
-                            source_ids[sm].append(src_node['id'])
+                for sg in read_source_groups(fname):
+                    for src_node in sg:
+                        source_ids[sm].append(src_node['id'])
         return source_ids
 
     def get_trts(self):
@@ -639,10 +633,9 @@ class SourceModelLogicTree(object):
         n = 0
         for fnames in self.info.smpaths.values():
             for fname in fnames:
-                if not fname.endswith('.hdf5'):
-                    xml = open(fname, encoding='utf-8').read()
-                    trts.update(TRT_REGEX.findall(xml))
-                    n += 1
+                xml = open(fname, encoding='utf-8').read()
+                trts.update(TRT_REGEX.findall(xml))
+                n += 1
         logging.info('Read %d TRTs from %d model file(s)', len(trts), n)
         return trts
 
