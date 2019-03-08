@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,35 +21,27 @@ The Starmap API
 
 There are several good libraries to manage parallel programming, both
 in the standard library and in third party packages. Since we are not
-interested in reinventing the wheel, OpenQuake does not offer any new
+interested in reinventing the wheel, OpenQuake does not provide any new
 parallel library; however, it does offer some glue code so that you
 can use your library of choice. Currently threading, multiprocessing,
 zmq and celery are supported. Moreover,
 :mod:`openquake.baselib.parallel` offers some additional facilities
 that make it easier to parallelize scientific computations,
-i.e. embarrassing parallel problems.
+i.e. embarrassingly parallel problems.
 
-Typically one wants to apply a callable to a list of arguments in
-parallel rather then sequentially, and then combine together the
+Typically one wants to apply a callable to a list of arguments - in
+parallel rather then sequentially - and then combine together the
 results. This is known as a `MapReduce` problem. As a simple example,
 we will consider the problem of counting the letters in a text. Here is
 how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
->>> from functools import reduce  # reduce an iterable with a binary operator
->>> from operator import add  # addition function
->>> from openquake.baselib.performance import Monitor
->>> mon = Monitor('count')
 >>> arglist = [('hello',), ('world',)]  # list of arguments
->>> results = Starmap(count, arglist, mon)  # iterator over the results
->>> res = reduce(add, results, collections.Counter())  # aggregated counts
+>>> res = Starmap(count, arglist).reduce()  # aggregated counts
 >>> sorted(res.items())  # counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
 
-As you see there are some notational advantages with respect to use
-`itertools.starmap`. First of all, `Starmap` has a `reduce` method, so
-there is no need to import `functools.reduce`; secondly, the `reduce`
-method has sensible defaults:
+`Starmap` has a `reduce` method with sensible defaults:
 
 1. the default aggregation function is `add`, so there is no need to specify it
 2. the default accumulator is an empty accumulation dictionary (see
@@ -95,6 +87,27 @@ with
 no pool, but it is still better to call it: in the future, you may change
 idea and use another parallelization strategy requiring cleanup. In this
 way your code is future-proof.
+
+Monitoring
+=============================
+
+The major feature of the Starmap API is the ability to pass to it a
+Monitor instance, an object which is able to measure the time and
+memory occupation in each spawned task. The monitor can keep that
+information in memory or even store it into an .hdf5 file. If you
+do not pass a Monitor instance to the Starmap, internally a do-nothing
+monitor is instantiated. Here is an in-memory monitor:
+
+>>> from openquake.baselib.performance import Monitor
+>>> mon = Monitor('count')
+
+Here is a monitoring writing on an .hdf5 file:
+
+>>> from openquake.baselib import hdf5
+>>> mon = Monitor('count', hdf5.File.temporary())
+
+The engine provides a command `oq show performance` to print the performance
+information stored in the HDF5 datastore in a nice way.
 
 The Starmap.apply API
 ====================================
@@ -159,7 +172,6 @@ except ImportError:
         "Do nothing"
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.python3compat import encode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
