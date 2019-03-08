@@ -427,7 +427,7 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
-        self.assertIn("Expected cost types ['structural']", str(ctx.exception))
+        self.assertIn("is missing", str(ctx.exception))
 
 
 class TestReadGmfXmlTestCase(unittest.TestCase):
