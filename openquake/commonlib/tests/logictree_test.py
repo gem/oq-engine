@@ -428,8 +428,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm},
                                             'base',
                                             logictree.LogicTreeError)
-        self.assertEqual(exc.lineno, 13)
-        error = "source with id 'src01' is not defined in source models"
+        self.assertEqual(exc.lineno, 17)
+        error = "expected a pair of floats separated by space"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
