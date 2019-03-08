@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -188,7 +188,7 @@ class RlzsAssoc(object):
         return pmaps
 
     def get_rlz(self, rlzstr):
-        """
+        r"""
         Get a Realization instance for a string of the form 'rlz-\d+'
         """
         mo = re.match(r'rlz-(\d+)', rlzstr)

@@ -1,3 +1,16 @@
+  [Michele Simionato]
+  * Restored validation of the source_model_logic_tree.xml file
+  * Raised an early error for missing occupants in the exposure
+  * Added a check to forbid duplicate file names in the `uncertaintyModel` tag
+  * Made it possible to store the asset loss table in the ebrisk calculator
+    by specifying `asset_loss_table=true` in the job.ini
+  * Added a flag `oq info --parameters` to show the job.ini parameters
+  * Removed the `source_name` column from the disagg by source output
+
+  [Rao Anirudh]
+  * Fixed wrong investigation_time in the calculation of loss maps from
+    loss curves
+
   [Robin Gee]
   * Added capability to optionally specify a `time_cutoff` parameter to
     declustering time window
