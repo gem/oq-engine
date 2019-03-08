@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Raised an early error for missing occupants in the exposure
+  * Added a check to forbid duplicate file names in the `uncertaintyModel` tag
   * Made it possible to store the asset loss table in the ebrisk calculator
     by specifying `asset_loss_table=true` in the job.ini
   * Added a flag `oq info --parameters` to show the job.ini parameters
