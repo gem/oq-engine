@@ -929,13 +929,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         exposure = get_exposure(oqparam)
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam)
-    missing = set(cost_types) - set(exposure.cost_types['name']) - set(
-        ['occupants'])  # TODO: remove occupants and fragility special cases
-    if missing and not oqparam.calculation_mode.endswith('damage'):
-        expo = oqparam.inputs.get('exposure', '')
-        raise InvalidFile(
-            'Expected cost types %s but the exposure %r contains %s' % (
-                cost_types, expo, exposure.cost_types['name']))
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != oqparam.asset_hazard_distance:
@@ -963,13 +956,16 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         discarded = []
         logging.info('Read %d sites and %d assets from the exposure',
                      len(sitecol), sum(len(a) for a in assets_by_site))
-
-    asset_refs = numpy.array(
-        [exposure.asset_refs[asset.ordinal]
-         for assets in assets_by_site for asset in assets])
     assetcol = asset.AssetCollection(
-        asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
-        oqparam.time_event, exposure.occupancy_periods)
+        exposure, assets_by_site, oqparam.time_event)
+    if assetcol.occupancy_periods:
+        missing = set(cost_types) - set(exposure.cost_types['name']) - set(
+            ['occupants'])
+    else:
+        missing = set(cost_types) - set(exposure.cost_types['name'])
+    if missing and not oqparam.calculation_mode.endswith('damage'):
+        raise InvalidFile('The exposure %s is missing %s' %
+                          (oqparam.inputs['exposure'], missing))
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
