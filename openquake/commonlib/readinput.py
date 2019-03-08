@@ -1209,38 +1209,39 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     found = 0
     to_remove = []
-    for path in logictree.collect_info(smlt_file).smpaths:
-        logging.info('Reading %s', path)
-        root = nrml.read(path)
-        model = Node('sourceModel', root[0].attrib)
-        origmodel = root[0]
-        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-            for src_node in origmodel:
-                if src_node['id'] in source_ids:
-                    model.nodes.append(src_node)
-        else:  # nrml/0.5
-            for src_group in origmodel:
-                sg = copy.copy(src_group)
-                sg.nodes = []
-                weights = src_group.get('srcs_weights')
-                if weights:
-                    assert len(weights) == len(src_group.nodes)
-                else:
-                    weights = [1] * len(src_group.nodes)
-                src_group['srcs_weights'] = reduced_weigths = []
-                for src_node, weight in zip(src_group, weights):
+    for paths in logictree.collect_info(smlt_file).smpaths.values():
+        for path in paths:
+            logging.info('Reading %s', path)
+            root = nrml.read(path)
+            model = Node('sourceModel', root[0].attrib)
+            origmodel = root[0]
+            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+                for src_node in origmodel:
                     if src_node['id'] in source_ids:
-                        found += 1
-                        sg.nodes.append(src_node)
-                        reduced_weigths.append(weight)
-                if sg.nodes:
-                    model.nodes.append(sg)
-        shutil.copy(path, path + '.bak')
-        if model:
-            with open(path, 'wb') as f:
-                nrml.write([model], f, xmlns=root['xmlns'])
-        elif remove:  # remove the files completely reduced
-            to_remove.append(path)
+                        model.nodes.append(src_node)
+            else:  # nrml/0.5
+                for src_group in origmodel:
+                    sg = copy.copy(src_group)
+                    sg.nodes = []
+                    weights = src_group.get('srcs_weights')
+                    if weights:
+                        assert len(weights) == len(src_group.nodes)
+                    else:
+                        weights = [1] * len(src_group.nodes)
+                    src_group['srcs_weights'] = reduced_weigths = []
+                    for src_node, weight in zip(src_group, weights):
+                        if src_node['id'] in source_ids:
+                            found += 1
+                            sg.nodes.append(src_node)
+                            reduced_weigths.append(weight)
+                    if sg.nodes:
+                        model.nodes.append(sg)
+            shutil.copy(path, path + '.bak')
+            if model:
+                with open(path, 'wb') as f:
+                    nrml.write([model], f, xmlns=root['xmlns'])
+            elif remove:  # remove the files completely reduced
+                to_remove.append(path)
     if found:
         for path in to_remove:
             os.remove(path)
