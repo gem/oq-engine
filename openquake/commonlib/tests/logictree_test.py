@@ -46,27 +46,19 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
-class StringIO(BytesIO):
+class Input(BytesIO):
     def __repr__(self):
-        return '<StringIO>'
+        return '<Input>'
 
 
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
-    def __init__(self, filename, files, basepath, validate=True):
+    def __init__(self, filename, files, basepath):
         self.files = files
-        if not validate:
-            self.validate_branchset = self.__fail
-            self.validate_tree = self.__fail
-            self.validate_filters = self.__fail
-            self.validate_uncertainty_value = self.__fail
         f = gettemp(files[filename], suffix='.' + filename)
-        super().__init__(f, validate)
+        super().__init__(f, validate=True)
 
     def _get_source_model(self, filename):
-        return StringIO(self.files[filename].encode('utf-8'))
-
-    def __fail(self, *args, **kwargs):
-        raise AssertionError("this method shouldn't be called")
+        return Input(self.files[filename].encode('utf-8'))
 
 
 def _make_nrml(content):
@@ -1167,7 +1159,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm},
-            'basepath', validate=False)
+            'basepath')
         self.assertEqual(lt.samples_by_lt_path(),
                          collections.Counter({('b1',): 1, ('b2',): 1}))
 
@@ -1204,8 +1196,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
-            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
-            validate=False)
+            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base')
         self.assertEqual(
             lt.samples_by_lt_path(),
             collections.Counter({('b1', 'b2'): 1, ('b1', 'b3'): 1}))
@@ -1247,8 +1238,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
-            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
-            validate=False)
+            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base')
         self.assert_branchset_equal(
             lt.root_branchset,
             'sourceModel', {},
@@ -1303,7 +1293,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree,
                    'sm1': sm, 'sm2': sm, 'sm3': sm},
-            '/base', validate=False)
+            '/base')
         self.assert_branchset_equal(
             lt.root_branchset,
             'sourceModel', {},
@@ -1352,7 +1342,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm': sm},
-            '/base', validate=False)
+            '/base')
         self.assert_branchset_equal(
             lt.root_branchset, 'sourceModel', {}, [('b1', '1.0', 'sm')])
 
@@ -2011,14 +2001,14 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         if hasattr(xml, 'encode'):
             xml = xml.encode('utf8')
         with self.assertRaises(errorclass) as exc:
-            logictree.GsimLogicTree(StringIO(xml), ['Shield'])
+            logictree.GsimLogicTree(Input(xml), ['Shield'])
         if errormessage is not None:
             self.assertIn(errormessage, str(exc.exception))
 
     def parse_valid(self, xml, tectonic_region_types=('Shield',)):
         xmlbytes = xml.encode('utf-8') if hasattr(xml, 'encode') else xml
         return logictree.GsimLogicTree(
-            StringIO(xmlbytes), tectonic_region_types)
+            Input(xmlbytes), tectonic_region_types)
 
     def test_not_xml(self):
         self.parse_invalid('xxx', ET.ParseError)
@@ -2066,7 +2056,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>""")
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            '<StringIO>: only uncertainties of type "gmpeModel" are allowed '
+            '<Input>: only uncertainties of type "gmpeModel" are allowed '
             'in gmpe logic tree')
 
     def test_two_branchsets_in_one_level(self):
@@ -2098,7 +2088,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            '<StringIO>: Branching level bl1 has multiple branchsets')
+            '<Input>: Branching level bl1 has multiple branchsets')
 
     def test_branchset_id_not_unique(self):
         xml = _make_nrml("""\
@@ -2135,7 +2125,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "<StringIO>: Duplicated branchSetID bs1")
+            "<Input>: Duplicated branchSetID bs1")
 
     def test_branch_id_not_unique(self):
         xml = _make_nrml("""
@@ -2166,7 +2156,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "There where duplicated branchIDs in <StringIO>")
+            "There where duplicated branchIDs in <Input>")
 
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
@@ -2186,7 +2176,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, "Unknown GSIM: SAdighEtAl1997 in file <StringIO>")
+            xml, ValueError, "Unknown GSIM: SAdighEtAl1997 in file <Input>")
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
@@ -2219,7 +2209,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "<StringIO>: Found duplicated applyToTectonicRegionType="
+            "<Input>: Found duplicated applyToTectonicRegionType="
             "['Subduction Interface', 'Subduction Interface']")
 
     def test_SHARE(self):
@@ -2233,10 +2223,10 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         as_model_lt = self.parse_valid(xml, as_model_trts)
         fs_bg_model_lt = self.parse_valid(xml, fs_bg_model_trts)
         self.assertEqual(as_model_lt.get_num_branches(),
-                {'Active Shallow Crust': 4,
-                 'Shield': 2,
-                 'Stable Shallow Crust': 5,
-                 'Volcanic': 1})
+                         {'Active Shallow Crust': 4,
+                          'Shield': 2,
+                          'Stable Shallow Crust': 5,
+                          'Volcanic': 1})
         self.assertEqual(fs_bg_model_lt.get_num_branches(),
                          {'Active Shallow Crust': 4,
                           'Shield': 0,
