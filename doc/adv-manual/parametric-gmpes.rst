@@ -16,7 +16,7 @@ be inherited from the superclass. If you need to perform some
 initialization please define an ``init()`` method without arguments
 and the engine will call it. Here is an example:
 
-.. code-block: python
+.. code-block::
 
     from openquake.hazardlib.gsim.base import GMPE
 
@@ -56,7 +56,7 @@ You can find an example of use of GMPETables in the test
 openquake/qa_tests_data/case_18, which contains three tables in its
 logic tree:
 
-.. code-block: xml
+.. code-block:: xml
 
         <logicTreeBranch branchID="b11">
           <uncertaintyModel>
@@ -90,14 +90,14 @@ is automatically translated into a dictionary
 ``{'GMPETable': {'gmpe_table': "Wcrust_low_rhypo.hdf5"}}`` and the ``.kwargs``
 dictionary passed to the GMPE class is simply
 
-.. code-block:
+.. code-block::
 
    {'gmpe_table': "Wcrust_low_rhypo.hdf5"}
 
 NB: you may see around old GMPE logic files using a different syntax,
 without TOML:
 
-.. code-block: xml
+.. code-block:: xml
 
        <logicTreeBranch branchID="b11">
           <uncertaintyModel gmpe_table="Wcrust_low_rhypo.hdf5">
@@ -133,7 +133,7 @@ in geotechnical applications and in general in any situation where you
 have GMPEs depending on the IMTs. You can find an example in our test
 openquake/qa_tests_data/classical/case_1:
 
-.. code-block: xml
+.. code-block:: xml
    
            <logicTreeBranch branchID="b1">
               <uncertaintyModel>
@@ -147,7 +147,7 @@ Here the engine will use the GMPE ``AkkarBommer2010`` for ``PGA`` and
 ``SadighEtAl1997`` for ``SA(0.1)``. The ``.kwargs`` passed to the
 ``MultiGMPE`` class will have the form:
 
-.. code-block:
+.. code-block::
 
    {'PGA': {'AkkarBommer2010': {}},
     'SA(0.1)': {'SadighEtAl1997': {}}}
@@ -158,7 +158,7 @@ using the GMPETable `Wcrust_low_rhypo.hdf5` for ``PGA`` and
 `Wcrust_med_rhypo.hdf5` for ``SA(0.1)`` (the example has not physical
 meaning, it is just an example):
 
-.. code-block: xml
+.. code-block:: xml
 
            <logicTreeBranch branchID="b1">
               <uncertaintyModel>
@@ -177,7 +177,7 @@ In engine 3.4 we introduced a GMPE that manages a range of spectral
 accelerations and acts in terms of an average spectral acceleration.
 You can find an example of use in openquake/qa_tests/data/classical/case_34:
 
-.. code-block: xml
+.. code-block:: xml
    
            <logicTreeBranch branchID="b1">
                <uncertaintyModel>
@@ -194,7 +194,7 @@ of different types: here we have two strings (``gmpe_name`` and
 ``corr_func``) and a list of floats (``avg_periods``). The dictionary
 passed to the underlying class will be
 
-.. code_block:
+.. code_block::
 
    {'gmpe_name': "BooreAtkinson2008",
     'avg_periods': [0.5, 1.0, 2.0],
