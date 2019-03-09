@@ -27,9 +27,9 @@ and the engine will call it. Here is an example:
 The signature of the base ``GMPE.__init__`` method is ``**kwargs``.
 Such dictionary is stored in ``self.kwargs`` and your
 ``init()`` method can operate on the passed arguments in this way, if need
-there is.
-
-There is a limitation on ``kwargs``: it must be a *dictionary of literal Python
+there is. Normally (i.e. for nonparametric GMPEs) ``self.kwargs`` is the
+empty dictionary, but it can be arbitrarily nested, with only one limitation:
+it must be a *dictionary of literal Python
 objects* so that it admits a TOML representation. TOML is a simple format
 similar to the ``.ini`` format but hierarchical that is described here
 https://github.com/toml-lang/toml#user-content-example and it is used
@@ -155,7 +155,7 @@ Here the engine will use the GMPE ``AkkarBommer2010`` for ``PGA`` and
 The beauty of the TOML format is that it is hierarchic, so if we wanted
 to use parametric GMPEs in a MultiGMPE we could. Here is an example
 using the GMPETable `Wcrust_low_rhypo.hdf5` for ``PGA`` and
-`Wcrust_med_rhypo.hdf5` for ``SA(0.1)`` (the example has not physical
+`Wcrust_med_rhypo.hdf5` for ``SA(0.1)`` (the example has no physical
 meaning, it is just an example):
 
 .. code-block:: xml
@@ -194,7 +194,7 @@ of different types: here we have two strings (``gmpe_name`` and
 ``corr_func``) and a list of floats (``avg_periods``). The dictionary
 passed to the underlying class will be
 
-.. code_block::
+.. code-block::
 
    {'gmpe_name': "BooreAtkinson2008",
     'avg_periods': [0.5, 1.0, 2.0],
