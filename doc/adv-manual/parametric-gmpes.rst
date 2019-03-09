@@ -89,7 +89,13 @@ the text::
 is automatically translated into a dictionary
 ``{'GMPETable': {'gmpe_table': "Wcrust_low_rhypo.hdf5"}}`` and the ``.kwargs``
 dictionary passed to the GMPE class is simply
-``{'gmpe_table': "Wcrust_low_rhypo.hdf5"}``.
+
+.. code-block:
+
+   {'gmpe_table': "Wcrust_low_rhypo.hdf5"}
+
+NB: you may see around old GMPE logic files using a different syntax,
+without TOML::
 
 .. code-block: xml
 
@@ -111,3 +117,86 @@ dictionary passed to the GMPE class is simply
           </uncertaintyModel>
           <uncertaintyWeight>0.16</uncertaintyWeight>
        </logicTreeBranch>
+
+This is a legacy syntax, which is still supported and will likely be supported
+forever, but we recommend you to use the new TOML-based syntax, which is
+more general. The old syntax has the limitation of being non-hierarchic,
+making it impossible to define MultiGMPEs involving parametric GMPEs:
+this is why we switched to TOML.
+
+MultiGMPE
+-----------------
+
+The second example of parametric GMPE is the MultiGMPE class. A MultiGMPE
+is a dictionary of GMPEs, keyed by Intensity Measure Type. It is useful
+in geotechnical applications and in general in any situation where you
+have GMPEs depending on the IMTs. You can find an example in our test
+openquake/qa_tests_data/classical/case_1:
+
+.. code-block: xml
+   
+           <logicTreeBranch branchID="b1">
+              <uncertaintyModel>
+                [MultiGMPE."PGA".AkkarBommer2010]
+                [MultiGMPE."SA(0.1)".SadighEtAl1997]
+              </uncertaintyModel>
+              <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+
+Here the engine will use the GMPE ``AkkarBommer2010`` for ``PGA`` and
+``SadighEtAl1997`` for ``SA(0.1)``. The ``.kwargs`` passed to the
+``MultiGMPE`` class will have the form:
+
+.. code-block:
+
+   {'PGA': {'AkkarBommer2010': {}},
+    'SA(0.1)': {'SadighEtAl1997': {}}}
+
+The beauty of the TOML format is that it is hierarchic, so if we wanted
+to use parametric GMPEs in a MultiGMPE we could. Here is an example
+using the GMPETable `Wcrust_low_rhypo.hdf5` for ``PGA`` and
+`Wcrust_med_rhypo.hdf5` for ``SA(0.1)`` (the example has not physical
+meaning, it is just an example)::
+
+.. code-block: xml
+
+           <logicTreeBranch branchID="b1">
+              <uncertaintyModel>
+                [MultiGMPE."PGA".GMPETable]
+                  gmpe_table = "Wcrust_low_rhypo.hdf5"
+                [MultiGMPE."SA(0.1)".GMPETable]
+                  gmpe_table = "Wcrust_med_rhypo.hdf5"
+              </uncertaintyModel>
+              <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+
+GenericGmpeAvgSA
+----------------
+
+In engine 3.4 we introduced a GMPE that manages a range of spectral
+accelerations and acts in terms of an average spectral acceleration.
+You can find an example of use in openquake/qa_tests/data/classical/case_34:
+
+.. code-block: xml
+   
+           <logicTreeBranch branchID="b1">
+               <uncertaintyModel>
+                  [GenericGmpeAvgSA]
+                  gmpe_name = "BooreAtkinson2008"
+                  avg_periods = [0.5, 1.0, 2.0]
+                  corr_func = "baker_jayaram"
+               </uncertaintyModel>
+               <uncertaintyWeight>1.0</uncertaintyWeight>
+           </logicTreeBranch>
+
+As you see, the format is quite convenient when there are several arguments
+of different types: here we have two strings (``gmpe_name`` and
+``corr_func``) and a list of floats (``avg_periods``). The dictionary
+passed to the underlying class will be
+
+.. code_block:
+
+   {'gmpe_name': "BooreAtkinson2008",
+    'avg_periods': [0.5, 1.0, 2.0],
+    'corr_func': "baker_jayaram"}
+
