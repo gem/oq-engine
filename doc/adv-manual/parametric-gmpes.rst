@@ -95,7 +95,7 @@ dictionary passed to the GMPE class is simply
    {'gmpe_table': "Wcrust_low_rhypo.hdf5"}
 
 NB: you may see around old GMPE logic files using a different syntax,
-without TOML::
+without TOML:
 
 .. code-block: xml
 
@@ -156,7 +156,7 @@ The beauty of the TOML format is that it is hierarchic, so if we wanted
 to use parametric GMPEs in a MultiGMPE we could. Here is an example
 using the GMPETable `Wcrust_low_rhypo.hdf5` for ``PGA`` and
 `Wcrust_med_rhypo.hdf5` for ``SA(0.1)`` (the example has not physical
-meaning, it is just an example)::
+meaning, it is just an example):
 
 .. code-block: xml
 
