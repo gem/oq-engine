@@ -16,7 +16,7 @@ be inherited from the superclass. If you need to perform some
 initialization please define an ``init()`` method without arguments
 and the engine will call it. Here is an example:
 
-.. code-block:
+.. code-block: python
 
     from openquake.hazardlib.gsim.base import GMPE
 
