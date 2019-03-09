@@ -1,4 +1,4 @@
 ordinal,branch_path,gsim,weight
-0,b1~b11,"[GMPETable]\ngmpe_table = 'Wcrust_low_rhypo.hdf5'",1.6000000e-01
-1,b1~b12,"[GMPETable]\ngmpe_table = 'Wcrust_med_rhypo.hdf5'",6.8000001e-01
-2,b1~b13,"[GMPETable]\ngmpe_table = 'Wcrust_high_rhypo.hdf5'",1.6000000e-01
+0,b1~b11,'[GMPETable]\ngmpe_table = "Wcrust_low_rhypo.hdf5"',1.6000000e-01
+1,b1~b12,'[GMPETable]\ngmpe_table = "Wcrust_med_rhypo.hdf5"',6.8000001e-01
+2,b1~b13,'[GMPETable]\ngmpe_table = "Wcrust_high_rhypo.hdf5"',1.6000000e-01
