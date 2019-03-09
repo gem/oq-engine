@@ -11,10 +11,10 @@ Signature of a GMPE class
 -------------------------
 
 The best advice for an implementor of a new GMPE is *do not define an
-``__init__`` method*. It is not necessary, since the ``__init__`` will
+__init__ method*. It is not necessary, since the ``__init__`` will
 be inherited from the superclass. If you need to perform some
-initialization please define and ``init()`` method without arguments
-and the engine will call it. Here is an example::
+initialization please define an ``init()`` method without arguments
+and the engine will call it. Here is an example:
 
 .. code-block:
 
@@ -24,14 +24,14 @@ and the engine will call it. Here is an example::
       def init(self):
           # doing some initialization here
 
-The signature of the base ``GMPE.__init__`` method is ``**kwargs``, so anything
-can be passed to it. Such dictionary is stored in ``self.kwargs`` and your
+The signature of the base ``GMPE.__init__`` method is ``**kwargs``.
+Such dictionary is stored in ``self.kwargs`` and your
 ``init()`` method can operate on the passed arguments in this way, if need
 there is.
 
 There is a limitation on ``kwargs``: it must be a *dictionary of literal Python
 objects* so that it admits a TOML representation. TOML is a simple format
-similar to the .ini format but hierarchical that is described here
+similar to the ``.ini`` format but hierarchical that is described here
 https://github.com/toml-lang/toml#user-content-example and it is used
 by lots of people in the IT world. The advantage of TOML is that it is
 a lot more readable than JSON and XML and simpler than YAML: moreover,
