@@ -157,7 +157,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['serial'], 1066)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
-                         '                  '
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
         self.assertEqual(einfo['grp_id'], 0)
