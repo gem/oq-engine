@@ -143,7 +143,7 @@ def make_figure_source_geom(extractors, what):
 @sap.script
 def plot(what, calc_id=-1, other_id=None, webapi=False):
     """
-    Generic plotter documented in https://docs.openquake.org/oq-engine/master/openquake.commands.html?highlight=plot#module-openquake.command
+    Generic plotter for local and remote calculations.
     """
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
