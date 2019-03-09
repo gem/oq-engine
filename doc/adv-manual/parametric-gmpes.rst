@@ -18,11 +18,11 @@ and the engine will call it. Here is an example:
 
 .. code-block:
 
-   from openquake.hazardlib.gsim.base import GMPE
+    from openquake.hazardlib.gsim.base import GMPE
 
-   class MyGMPE(GMPE):
-      def init(self):
-          # doing some initialization here
+    class MyGMPE(GMPE):
+       def init(self):
+           # doing some initialization here
 
 The signature of the base ``GMPE.__init__`` method is ``**kwargs``.
 Such dictionary is stored in ``self.kwargs`` and your
