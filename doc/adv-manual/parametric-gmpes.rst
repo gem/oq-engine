@@ -30,7 +30,9 @@ Such dictionary is stored in ``self.kwargs`` and your
 there is. Normally (i.e. for nonparametric GMPEs) ``self.kwargs`` is the
 empty dictionary, but it can be arbitrarily nested, with only one limitation:
 it must be a *dictionary of literal Python
-objects* so that it admits a TOML representation. TOML is a simple format
+objects* so that it admits a TOML representation.
+
+TOML is a simple format
 similar to the ``.ini`` format but hierarchical that is described here
 https://github.com/toml-lang/toml#user-content-example and it is used
 by lots of people in the IT world. The advantage of TOML is that it is
