@@ -73,14 +73,6 @@ plot_sites command
     :undoc-members:
     :show-inheritance:
 
-plot_uhs command
-----------------------------------
-
-.. automodule:: openquake.commands.plot_uhs
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 purge command
 -------------------------------
 
