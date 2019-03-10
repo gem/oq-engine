@@ -108,31 +108,6 @@ def export_ruptures_csv(ekey, dstore):
     return [dest]
 
 
-@export.add(('site_model', 'xml'))
-def export_site_model(ekey, dstore):
-    dest = dstore.export_path('site_model.xml')
-    site_model_node = Node('siteModel')
-    hdf2xml = dict(lons='lon', lats='lat', depths='depth',
-                   vs30measured='vs30Type')
-    for rec in dstore['sitecol'].array:
-        n = Node('site')
-        for hdffield in rec.dtype.names:
-            if hdffield == 'sids':  # skip
-                continue
-            elif hdffield == 'depth' and rec[hdffield] == 0:
-                continue
-            xmlfield = hdf2xml.get(hdffield, hdffield)
-            if hdffield == 'vs30measured':
-                value = 'measured' if rec[hdffield] else 'inferred'
-            else:
-                value = rec[hdffield]
-            n[xmlfield] = value
-        site_model_node.append(n)
-    with open(dest, 'wb') as f:
-        nrml.write([site_model_node], f)
-    return [dest]
-
-
 # #################### export Ground Motion fields ########################## #
 
 class GmfSet(object):
