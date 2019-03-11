@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Fixed 'oq abort' and always mark killed jobs as 'aborted'
+
   [Michele Simionato]
   * Introduced a `sap.script` decorator
   * Used the WebExtractor in `oq importcalc`
