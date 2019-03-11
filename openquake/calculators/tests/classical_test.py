@@ -30,7 +30,7 @@ from openquake.qa_tests_data.classical import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_34, case_35, case_36, case_37)
+    case_34, case_35, case_36, case_37, case_38)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -493,5 +493,9 @@ hazard_uhs-std.csv
         self.run_calc(case_36.__file__, 'job.ini')
 
     def test_case_37(self):
-        # chch gsims
+        # check gsims
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
+
+    def test_case_38(self):
+        # case of gsims with zero weight for some IMT
+        self.run_calc(case_38.__file__, 'job.ini')
