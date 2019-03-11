@@ -1298,7 +1298,7 @@ class ImtWeight(object):
     def __mul__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self[k] * other[k] for k in other}
+            new.dic = {k: self[k] * other[k] for k in other.dic}
         else:  # assume a float
             new.dic = {k: self[k] * other for k in self.dic}
         return new
