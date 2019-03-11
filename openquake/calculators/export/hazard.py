@@ -403,6 +403,7 @@ def get_metadata(realizations, kind):
     return metadata
 
 
+@deprecated('Use the CSV exporter instead')
 @export.add(('uhs', 'xml'))
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
@@ -439,6 +440,7 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
+@deprecated('Use the CSV exporter instead')
 @export.add(('hcurves', 'xml'))
 def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -476,6 +478,7 @@ def export_hcurves_xml(ekey, dstore):
     return sorted(fnames)
 
 
+@deprecated('Use the CSV exporter instead')
 @export.add(('hmaps', 'xml'))
 def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -528,7 +531,7 @@ def export_hazard_npz(ekey, dstore):
     return [fname]
 
 
-@deprecated('Use the CSV exported instead')
+@deprecated('Use the CSV exporter instead')
 @export.add(('gmf_data', 'xml'))
 def export_gmf(ekey, dstore):
     """
@@ -586,7 +589,14 @@ def export_gmf_data_csv(ekey, dstore):
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['eid', 'sid'])
         writers.write_csv(fname, _expand_gmv(gmfa, imts))
-        return [fname, f]
+        sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
+        dt = [('eid', U64)] + ([('sig_' + imt, F32) for imt in oq.imtls] +
+                               [('eps_' + imt, F32) for imt in oq.imtls])
+        sig_eps = dstore['gmf_data/sigma_epsilon'].value.view(dt)
+        sig_eps['eid'] = event_id[sig_eps['eid']]
+        sig_eps.sort(order='eid')
+        writers.write_csv(sig_eps_csv, sig_eps)
+        return [fname, sig_eps_csv, f]
     # old format for single eid
     gmfa = gmfa[gmfa['eid'] == eid]
     eid2rlz = dict(dstore['events'])
@@ -831,10 +841,7 @@ def export_disagg_by_src_csv(ekey, dstore):
 
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
-    data = [['ordinal', 'branch_path', 'gsim', 'weight']]
-    for i, rlz in enumerate(dstore['csm_info'].rlzs):
-        data.append([i, rlz['branch_path'],
-                     repr(rlz['gsims'].decode('utf8')), rlz['weight']])
+    data = dstore['csm_info'].rlzs
     path = dstore.export_path('realizations.csv')
     writers.write_csv(path, data, fmt='%.7e')
     return [path]
