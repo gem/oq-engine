@@ -1,5 +1,8 @@
+  [Michele Simionato]
+  * Changed the weight-by-IMT syntax in order to support zero weights
+
   [Daniele Viganò]
-  * Fixed 'oq abort' and always mark killed jobs as 'aborted'
+  * Fixed 'oq abort' to always mark killed jobs as 'aborted'
 
   [Michele Simionato]
   * Made it possible to use in the Starmap tasks without a monitor argument
