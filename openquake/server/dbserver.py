@@ -171,16 +171,16 @@ def ensure_on():
                           '-l', 'INFO'])
 
         # wait for the dbserver to start
-        waiting_seconds = 10
+        waiting_seconds = 30
         while get_status() == 'not-running':
             if waiting_seconds == 0:
-                sys.exit('The DbServer cannot be started after 10 seconds. '
+                sys.exit('The DbServer cannot be started after 30 seconds. '
                          'Please check the configuration')
             time.sleep(1)
             waiting_seconds -= 1
 
 
-@sap.Script
+@sap.script
 def run_server(dbpath=os.path.expanduser(config.dbserver.file),
                dbhostport=None, loglevel='WARN'):
     """

@@ -79,6 +79,7 @@ $ oq info --calculators # list available calculators
 $ oq info --gsims       # list available GSIMs
 $ oq info --views       # list available views
 $ oq info --exports     # list available exports
+$ oq info --parameters  # list all job.ini parameters
 ```
 
 The second most important command is `oq export`. It allows to customize
@@ -215,6 +216,25 @@ and exposures
 
 ```bash
 $ oq zip my_exposure.xml
+```
+
+Importing a remote calculation
+--------------------------------
+
+```bash
+$ oq importcalc --help
+usage: oq importcalc [-h] calc_id
+
+Import a remote calculation into the local database. server, username and
+password must be specified in an openquake.cfg file.
+NB: calc_id can be a local pathname to a datastore not already present in
+the database: in that case it is imported in the db.
+
+positional arguments:
+  calc_id     calculation ID or pathname
+
+optional arguments:
+  -h, --help  show this help message and exit
 ```
 
 plotting commands

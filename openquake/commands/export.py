@@ -23,7 +23,7 @@ from openquake.calculators.export import export as export_
 
 
 # the export is tested in the demos
-@sap.Script
+@sap.script
 def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
     """
     Export an output from the datastore.

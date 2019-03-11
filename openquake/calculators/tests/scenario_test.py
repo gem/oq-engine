@@ -88,10 +88,6 @@ class ScenarioTestCase(CalculatorTestCase):
         medians = self.medians(case_4)['PGA']
         aae(medians, [0.41615372, 0.22797466, 0.1936226], decimal=2)
 
-        # this is a case with a site model
-        [fname] = export(('site_model', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('site_model.xml', fname)
-
     def test_case_5(self):
         f1, f2 = self.frequencies(case_5, 0.5, 1.0)
         self.assertAlmostEqual(f1, 0.03, places=2)

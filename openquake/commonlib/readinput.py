@@ -496,7 +496,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam):
+def get_source_model_lt(oqparam, validate=True):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -508,7 +508,7 @@ def get_source_model_lt(oqparam):
     if fname:
         # NB: converting the random_seed into an integer is needed on Windows
         return logictree.SourceModelLogicTree(
-            fname, validate=False, seed=int(oqparam.random_seed),
+            fname, validate, seed=int(oqparam.random_seed),
             num_samples=oqparam.number_of_logic_tree_samples)
     return logictree.FakeSmlt(oqparam.inputs['source_model'],
                               int(oqparam.random_seed),
@@ -730,12 +730,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             # the limit is really needed only for event based calculations
             raise ValueError('There is a limit of %d src groups!' % TWO16)
 
-        for srcid in source_model_lt.info.applytosources:
-            if srcid not in source_ids:
-                raise ValueError(
-                    'The source %s is not in the source model, please fix '
-                    'applyToSources in %s or the source model' %
-                    (srcid, source_model_lt.filename))
+        for brid, srcids in source_model_lt.info.applytosources.items():
+            for srcid in srcids:
+                if srcid not in source_ids:
+                    raise ValueError(
+                        'The source %s is not in the source model, please fix '
+                        'applyToSources in %s or the source model' %
+                        (srcid, source_model_lt.filename))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -810,7 +811,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param srcfilter:
         if not None, use it to prefilter the sources
     """
-    source_model_lt = get_source_model_lt(oqparam)
+    ucerf = oqparam.calculation_mode.startswith('ucerf')
+    source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
     trts = source_model_lt.get_trts()
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
@@ -928,13 +930,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         exposure = get_exposure(oqparam)
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam)
-    missing = set(cost_types) - set(exposure.cost_types['name']) - set(
-        ['occupants'])  # TODO: remove occupants and fragility special cases
-    if missing and not oqparam.calculation_mode.endswith('damage'):
-        expo = oqparam.inputs.get('exposure', '')
-        raise InvalidFile(
-            'Expected cost types %s but the exposure %r contains %s' % (
-                cost_types, expo, exposure.cost_types['name']))
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != oqparam.asset_hazard_distance:
@@ -962,13 +957,16 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         discarded = []
         logging.info('Read %d sites and %d assets from the exposure',
                      len(sitecol), sum(len(a) for a in assets_by_site))
-
-    asset_refs = numpy.array(
-        [exposure.asset_refs[asset.ordinal]
-         for assets in assets_by_site for asset in assets])
     assetcol = asset.AssetCollection(
-        asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
-        oqparam.time_event, exposure.occupancy_periods)
+        exposure, assets_by_site, oqparam.time_event)
+    if assetcol.occupancy_periods:
+        missing = set(cost_types) - set(exposure.cost_types['name']) - set(
+            ['occupants'])
+    else:
+        missing = set(cost_types) - set(exposure.cost_types['name'])
+    if missing and not oqparam.calculation_mode.endswith('damage'):
+        raise InvalidFile('The exposure %s is missing %s' %
+                          (oqparam.inputs['exposure'], missing))
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
@@ -1208,38 +1206,39 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     found = 0
     to_remove = []
-    for path in logictree.collect_info(smlt_file).smpaths:
-        logging.info('Reading %s', path)
-        root = nrml.read(path)
-        model = Node('sourceModel', root[0].attrib)
-        origmodel = root[0]
-        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-            for src_node in origmodel:
-                if src_node['id'] in source_ids:
-                    model.nodes.append(src_node)
-        else:  # nrml/0.5
-            for src_group in origmodel:
-                sg = copy.copy(src_group)
-                sg.nodes = []
-                weights = src_group.get('srcs_weights')
-                if weights:
-                    assert len(weights) == len(src_group.nodes)
-                else:
-                    weights = [1] * len(src_group.nodes)
-                src_group['srcs_weights'] = reduced_weigths = []
-                for src_node, weight in zip(src_group, weights):
+    for paths in logictree.collect_info(smlt_file).smpaths.values():
+        for path in paths:
+            logging.info('Reading %s', path)
+            root = nrml.read(path)
+            model = Node('sourceModel', root[0].attrib)
+            origmodel = root[0]
+            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+                for src_node in origmodel:
                     if src_node['id'] in source_ids:
-                        found += 1
-                        sg.nodes.append(src_node)
-                        reduced_weigths.append(weight)
-                if sg.nodes:
-                    model.nodes.append(sg)
-        shutil.copy(path, path + '.bak')
-        if model:
-            with open(path, 'wb') as f:
-                nrml.write([model], f, xmlns=root['xmlns'])
-        elif remove:  # remove the files completely reduced
-            to_remove.append(path)
+                        model.nodes.append(src_node)
+            else:  # nrml/0.5
+                for src_group in origmodel:
+                    sg = copy.copy(src_group)
+                    sg.nodes = []
+                    weights = src_group.get('srcs_weights')
+                    if weights:
+                        assert len(weights) == len(src_group.nodes)
+                    else:
+                        weights = [1] * len(src_group.nodes)
+                    src_group['srcs_weights'] = reduced_weigths = []
+                    for src_node, weight in zip(src_group, weights):
+                        if src_node['id'] in source_ids:
+                            found += 1
+                            sg.nodes.append(src_node)
+                            reduced_weigths.append(weight)
+                    if sg.nodes:
+                        model.nodes.append(sg)
+            shutil.copy(path, path + '.bak')
+            if model:
+                with open(path, 'wb') as f:
+                    nrml.write([model], f, xmlns=root['xmlns'])
+            elif remove:  # remove the files completely reduced
+                to_remove.append(path)
     if found:
         for path in to_remove:
             os.remove(path)
@@ -1281,7 +1280,8 @@ def get_input_files(oqparam, hazard=False):
         elif isinstance(fname, list):
             fnames.extend(fname)
         elif key == 'source_model_logic_tree':
-            fnames.extend(logictree.collect_info(fname).smpaths)
+            for smpaths in logictree.collect_info(fname).smpaths.values():
+                fnames.extend(smpaths)
             fnames.append(fname)
         else:
             fnames.append(fname)

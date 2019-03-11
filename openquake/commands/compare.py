@@ -64,7 +64,7 @@ def get_diff_idxs(array, rtol, atol):
     return numpy.fromiter(diff_idxs, int)
 
 
-@sap.Script
+@sap.script
 def compare(what, imt, calc_ids, files, samplesites=100, rtol=.1, atol=1E-4):
     """
     Compare the hazard curves or maps of two or more calculations
