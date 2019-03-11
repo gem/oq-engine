@@ -29,7 +29,8 @@ jobs:
         - nosetests --with-doctest -xvs openquake.commands
         - oq webui migrate
     after_success:  # old sphinx does not work well with Python 3.5.4+
-        - pip install sphinx==1.6.5 && cd doc/sphinx && make html
+        - pip install sphinx==1.6.5
+        - cd doc/sphinx && make html && cd ../adv-manual && make html
     after_script:
         - oq dbserver stop
   - stage: tests

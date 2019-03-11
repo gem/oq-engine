@@ -16,7 +16,7 @@ be inherited from the superclass. If you need to perform some
 initialization please define an ``init()`` method without arguments
 and the engine will call it. Here is an example:
 
-.. code-block::
+.. code-block:: python
 
     from openquake.hazardlib.gsim.base import GMPE
 
@@ -92,7 +92,7 @@ is automatically translated into a dictionary
 ``{'GMPETable': {'gmpe_table': "Wcrust_low_rhypo.hdf5"}}`` and the ``.kwargs``
 dictionary passed to the GMPE class is simply
 
-.. code-block::
+.. code-block:: python
 
    {'gmpe_table': "Wcrust_low_rhypo.hdf5"}
 
@@ -149,7 +149,7 @@ Here the engine will use the GMPE ``AkkarBommer2010`` for ``PGA`` and
 ``SadighEtAl1997`` for ``SA(0.1)``. The ``.kwargs`` passed to the
 ``MultiGMPE`` class will have the form:
 
-.. code-block::
+.. code-block:: python
 
    {'PGA': {'AkkarBommer2010': {}},
     'SA(0.1)': {'SadighEtAl1997': {}}}
@@ -196,7 +196,7 @@ of different types: here we have two strings (``gmpe_name`` and
 ``corr_func``) and a list of floats (``avg_periods``). The dictionary
 passed to the underlying class will be
 
-.. code-block::
+.. code-block:: python
 
    {'gmpe_name': "BooreAtkinson2008",
     'avg_periods': [0.5, 1.0, 2.0],

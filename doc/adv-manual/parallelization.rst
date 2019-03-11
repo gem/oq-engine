@@ -55,7 +55,7 @@ with positional arguments, where the last argument is a ``Monitor`` instance.
 For instance the rupture generator task in an event based calculation
 is coded more or less like this:
 
-.. code-block::
+.. code-block:: python
 
    def sample_ruptures(sources, num_samples, monitor):  # simplified code
        ebruptures = []
@@ -184,7 +184,7 @@ In reality the ``Starmap`` has a few other differences:
 
 Here is how you would write the same example by using ``.submit``:
 
-.. code-block::
+.. code-block:: python
 
    def main(dirname):
        dname = pathlib.Path(dirname)
