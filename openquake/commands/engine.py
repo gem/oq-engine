@@ -129,24 +129,13 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             logs.dbcmd('update_job_checksum', hc_id, haz_checksum)
         if ebr:
-            job_id = run_job(job_ini, log_level, log_file,
-                             exports, hazard_calculation_id=hc_id)
-        else:
-            job_id = hc_id
+            run_job(job_ini, log_level, log_file,
+                    exports, hazard_calculation_id=hc_id)
     else:
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
-        job_id = run_job(job_ini, log_level, log_file,
-                         exports, hazard_calculation_id=hc_id)
-    if ebr and oqparam.aggregate_by:
-        logging.info('Exporting aggregated data')
-        dstore = util.read(job_id)
-        aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)
-        fnames = []
-        fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
-        fnames.extend(export((aggby + 'curves', 'csv'), dstore))
-        for fname in fnames:
-            logging.info('Exported %s', fname)
+        run_job(job_ini, log_level, log_file,
+                exports, hazard_calculation_id=hc_id)
 
 
 @sap.script

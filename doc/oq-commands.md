@@ -79,6 +79,7 @@ $ oq info --calculators # list available calculators
 $ oq info --gsims       # list available GSIMs
 $ oq info --views       # list available views
 $ oq info --exports     # list available exports
+$ oq info --parameters  # list all job.ini parameters
 ```
 
 The second most important command is `oq export`. It allows to customize

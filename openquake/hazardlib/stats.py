@@ -209,6 +209,7 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
         statnames, statfuncs = zip(*stats.items())
-        weights = dstore['csm_info'].rlzs['weight']
+        name = dstore['weights'].dtype.names[0]
+        weights = dstore['weights'][name]
         dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
         dstore.set_attrs(prefix + '-stats', stats=encode(statnames))

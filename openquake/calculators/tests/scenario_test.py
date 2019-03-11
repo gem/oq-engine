@@ -88,10 +88,6 @@ class ScenarioTestCase(CalculatorTestCase):
         medians = self.medians(case_4)['PGA']
         aae(medians, [0.41615372, 0.22797466, 0.1936226], decimal=2)
 
-        # this is a case with a site model
-        [fname] = export(('site_model', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('site_model.xml', fname)
-
     def test_case_5(self):
         f1, f2 = self.frequencies(case_5, 0.5, 1.0)
         self.assertAlmostEqual(f1, 0.03, places=2)
@@ -122,7 +118,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('gmf.xml', f)
 
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
-        f, _sitefile = out['gmf_data', 'csv']
+        f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)
 
         # test the .npz export

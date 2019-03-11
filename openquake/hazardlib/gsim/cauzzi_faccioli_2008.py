@@ -127,7 +127,7 @@ class CauzziFaccioli2008(GMPE):
         # for rock values the site term is zero
         site_term = np.zeros_like(vs30)
 
-         # hard soil
+        # hard soil
         site_term[(vs30 >= 360) & (vs30 < 800)] = C['aB']
 
         # medium soil
