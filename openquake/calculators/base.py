@@ -1094,5 +1094,7 @@ def import_gmfs(dstore, fname, sids):
             dstore.extend('gmf_data/data', gmvs)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
-
+    sig_eps_dt = [('eid', U64), ('sig', (F32, n_imts)), ('eps', (F32, n_imts))]
+    dstore['gmf_data/sigma_epsilon'] = numpy.zeros(0, sig_eps_dt)
+    dstore['weights'] = numpy.ones(1, [(imt, F32) for imt in imts])
     return eids
