@@ -46,8 +46,8 @@ def abort(job_id):
                 print(exc)
             break
     else:  # no break
-        # set job as failed is it was set as executing or running in the db
-        # but the correspongint process is not running
+        # set job as failed if it is set as 'executing' or 'running' in the db
+        # but the corresponding process is not running anymore
         logs.dbcmd('set_status', job.id, 'failed')
         print('Unable to find a process for job %d,'
               ' setting it as failed' % job.id)
