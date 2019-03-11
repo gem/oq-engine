@@ -91,7 +91,7 @@ def gsim(value):
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % gsim_name)
     gs = gsim_class(**kwargs)
-    gs._toml = value
+    gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     gs.minimum_distance = minimum_distance
     gs.init()
     return gs

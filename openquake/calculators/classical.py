@@ -332,7 +332,8 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
                 pmap_by_kind['rlz_by_sid'] = rlz = {}
                 for sid, pcurve in pmap.items():
                     rlz[sid] = util.closest_to_ref(
-                        [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
+                        [pm.setdefault(sid, 0).array for pm in pmaps],
+                        pcurve.array)['rlz']
     if hcurves_stats:
         pmap_by_kind['hcurves-stats'] = hcurves_stats
     if hmaps_stats:
