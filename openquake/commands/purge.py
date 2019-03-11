@@ -33,7 +33,7 @@ def purge_one(calc_id, user):
     err = dbcmd('del_calc', calc_id, user)
     if err:
         print(err)
-    if os.path.exists(filename):  # not removed yet
+    elif os.path.exists(filename):  # not removed yet
         os.remove(filename)
         print('Removed %s' % filename)
 
@@ -56,7 +56,7 @@ def purge_all(user=None, fast=False):
                     purge_one(calc_id, user)
 
 
-@sap.Script
+@sap.script
 def purge(calc_id):
     """
     Remove the given calculation. If you want to remove all calculations,

@@ -108,31 +108,6 @@ def export_ruptures_csv(ekey, dstore):
     return [dest]
 
 
-@export.add(('site_model', 'xml'))
-def export_site_model(ekey, dstore):
-    dest = dstore.export_path('site_model.xml')
-    site_model_node = Node('siteModel')
-    hdf2xml = dict(lons='lon', lats='lat', depths='depth',
-                   vs30measured='vs30Type')
-    for rec in dstore['sitecol'].array:
-        n = Node('site')
-        for hdffield in rec.dtype.names:
-            if hdffield == 'sids':  # skip
-                continue
-            elif hdffield == 'depth' and rec[hdffield] == 0:
-                continue
-            xmlfield = hdf2xml.get(hdffield, hdffield)
-            if hdffield == 'vs30measured':
-                value = 'measured' if rec[hdffield] else 'inferred'
-            else:
-                value = rec[hdffield]
-            n[xmlfield] = value
-        site_model_node.append(n)
-    with open(dest, 'wb') as f:
-        nrml.write([site_model_node], f)
-    return [dest]
-
-
 # #################### export Ground Motion fields ########################## #
 
 class GmfSet(object):
@@ -428,6 +403,7 @@ def get_metadata(realizations, kind):
     return metadata
 
 
+@deprecated('Use the CSV exporter instead')
 @export.add(('uhs', 'xml'))
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
@@ -464,6 +440,7 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
+@deprecated('Use the CSV exporter instead')
 @export.add(('hcurves', 'xml'))
 def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -501,6 +478,7 @@ def export_hcurves_xml(ekey, dstore):
     return sorted(fnames)
 
 
+@deprecated('Use the CSV exporter instead')
 @export.add(('hmaps', 'xml'))
 def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -553,7 +531,7 @@ def export_hazard_npz(ekey, dstore):
     return [fname]
 
 
-@deprecated('Use the CSV exported instead')
+@deprecated('Use the CSV exporter instead')
 @export.add(('gmf_data', 'xml'))
 def export_gmf(ekey, dstore):
     """

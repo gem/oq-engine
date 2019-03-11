@@ -77,7 +77,7 @@ else:
             for active in sum(actives.values(), []):
                 print(active['hostname'], active['args'])
 
-    @sap.Script
+    @sap.script
     def celery(cmd):
         """
         Return information about the celery workers

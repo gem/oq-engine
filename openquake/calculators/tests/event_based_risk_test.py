@@ -260,7 +260,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # multi-tag aggregations
         url = 'aggregate_by/taxonomy,occupancy/avg_losses/structural'
         arr = dict(extract(dstore, url))['quantile-0.5']
-        self.assertEqual(len(arr.to_table()), 3)
+        self.assertEqual(len(arr.to_table()), 1)
 
         # aggregate by all loss types
         fnames = export(('aggregate_by/taxonomy,occupancy/avg_losses', 'csv'),
