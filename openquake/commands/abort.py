@@ -41,10 +41,16 @@ def abort(job_id):
             try:
                 os.kill(p.pid, signal.SIGTERM)
                 logs.dbcmd('set_status', job.id, 'aborted')
+                print('Job %d aborted' % job.id)
             except Exception as exc:
                 print(exc)
             break
     else:  # no break
-        print('%d aborted' % job.id)
+        # set job as failed is it was set as executing or running in the db
+        # but the correspongint process is not running
+        logs.dbcmd('set_status', job.id, 'failed')
+        print('Unable to find a process for job %d,'
+              ' setting it as failed' % job.id)
+
 
 abort.arg('job_id', 'job ID', type=int)
