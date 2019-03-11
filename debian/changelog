@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made it possible to use in the Starmap tasks without a monitor argument
   * Introduced a `sap.script` decorator
   * Used the WebExtractor in `oq importcalc`
   * Restored validation of the source_model_logic_tree.xml file
