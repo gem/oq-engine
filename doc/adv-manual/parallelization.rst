@@ -94,7 +94,7 @@ you want to use (``celery`` or ``processpool``): this is mostly used
 when debugging, when you typically insert a breakpoint in the task
 and then run the calculation with
 
-.. code-block: bash
+.. code-block:: bash
 
    $ OQ_DISTRIBUTE=no oq run job.ini
 
@@ -186,16 +186,16 @@ Here is how you would write the same example by using ``.submit``:
 
 .. code-block::
 
-    def main(dirname):
-        dname = pathlib.Path(dirname)
-        with hdf5new() as hdf5:
-            smap = Starmap(count, monitor=Monitor('count', hdf5))
-            for fname in os.listdir(dname):
-                if fname.endswith('.rst'):
-                    smap.submit(open(dname/fname, encoding='utf-8').read())
-            c = collections.Counter()
-            for counter in smap:
-                c += counter
+   def main(dirname):
+       dname = pathlib.Path(dirname)
+       with hdf5new() as hdf5:
+           smap = Starmap(count, monitor=Monitor('count', hdf5))
+           for fname in os.listdir(dname):
+               if fname.endswith('.rst'):
+                   smap.submit(open(dname/fname, encoding='utf-8').read())
+           c = collections.Counter()
+           for counter in smap:
+               c += counter
 
 The difference with ``concurrent.futures`` is that
 the ``Starmap`` takes care for of all submitted tasks, so you do not
