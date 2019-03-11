@@ -176,7 +176,7 @@ from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
 from openquake.baselib.general import (
-    split_in_blocks, block_splitter, AccumDict, humansize)
+    split_in_blocks, block_splitter, AccumDict, humansize, CallableDict)
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
@@ -193,6 +193,41 @@ task_info_dt = numpy.dtype(
     [('taskno', numpy.uint32), ('weight', numpy.float32),
      ('duration', numpy.float32), ('received', numpy.int64),
      ('mem_gb', numpy.float32)])
+
+submit = CallableDict()
+
+
+@submit.add('no')
+def no_submit(self, func, args, monitor):
+    return safely_call(func, args, self.task_no, monitor)
+
+
+@submit.add('processpool')
+def processpool_submit(self, func, args, monitor):
+    return self.pool.apply_async(
+        safely_call, (func, args, self.task_no, monitor))
+
+
+threadpool_submit = submit.add('threadpool')(processpool_submit)
+
+
+@submit.add('celery')
+def celery_submit(self, func, args, monitor):
+    return safetask.delay(func, args, self.task_no, monitor)
+
+
+@submit.add('zmq')
+def zmq_submit(self, func, args, monitor):
+    if not hasattr(self, 'sender'):
+        task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
+                                       config.zworkers.task_in_port)
+        self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
+    return self.sender.send((func, args, self.task_no, monitor))
+
+
+@submit.add('dask')
+def dask_submit(self, func, args, monitor):
+    return self.dask_client.submit(safely_call, func, args, self.task_no)
 
 
 def oq_distribute(task=None):
@@ -681,7 +716,7 @@ class Starmap(object):
         if dist != 'no':
             args = pickle_sequence(args)
             self.sent += numpy.array([len(p) for p in args])
-        res = getattr(self, dist + '_submit')(func, args, monitor)
+        res = submit[dist](self, func, args, monitor)
         self.tasks.append(res)
 
     @property
@@ -714,28 +749,6 @@ class Starmap(object):
 
     def __iter__(self):
         return iter(self.submit_all())
-
-    def no_submit(self, func, args, monitor):
-        return safely_call(func, args, self.task_no, monitor)
-
-    def processpool_submit(self, func, args, monitor):
-        return self.pool.apply_async(
-            safely_call, (func, args, self.task_no, monitor))
-
-    threadpool_submit = processpool_submit
-
-    def celery_submit(self, func, args, monitor):
-        return safetask.delay(func, args, self.task_no, monitor)
-
-    def zmq_submit(self, func, args, monitor):
-        if not hasattr(self, 'sender'):
-            task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
-                                           config.zworkers.task_in_port)
-            self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
-        return self.sender.send((func, args, self.task_no, monitor))
-
-    def dask_submit(self, func, args, monitor):
-        return self.dask_client.submit(safely_call, func, args, self.task_no)
 
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made
