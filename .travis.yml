@@ -31,7 +31,10 @@ jobs:
     after_success:  # old sphinx does not work well with Python 3.5.4+
         - pip install sphinx==1.6.5
         - cd doc/sphinx && make html && cd ../adv-manual && make html
-        - rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -avnx --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/
+        - openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in .deploy_rsa.enc -out .deploy_rsa -d &&
+          chmod 600 .deploy_rsa &&
+          eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -avnx --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/
     after_script:
         - oq dbserver stop
   - stage: tests
