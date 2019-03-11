@@ -1272,6 +1272,18 @@ class InvalidLogicTree(Exception):
     pass
 
 
+def concat(w1, w2):
+    """
+    Merge two weights
+    """
+    if 'weight' in w1.dic:
+        return set(w2.dic)
+    elif 'weight' in w2.dic:
+        return set(w1.dic)
+    else:
+        return set(w1.dic) | set(w2.dic)
+
+
 class ImtWeight(object):
     """
     A composite weight by IMTs extracted from the gsim_logic_tree_file
@@ -1298,7 +1310,7 @@ class ImtWeight(object):
     def __mul__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self[k] * other[k] for k in other.dic}
+            new.dic = {k: self[k] * other[k] for k in concat(self, other)}
         else:  # assume a float
             new.dic = {k: self[k] * other for k in self.dic}
         return new
@@ -1308,7 +1320,7 @@ class ImtWeight(object):
     def __add__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self.dic[k] + other[k] for k in self.dic}
+            new.dic = {k: self.dic[k] + other[k] for k in concat(self, other)}
         else:  # assume a float
             new.dic = {k: self.dic[k] + other for k in self.dic}
         return new
@@ -1318,7 +1330,7 @@ class ImtWeight(object):
     def __truediv__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self.dic[k] / other[k] for k in self.dic}
+            new.dic = {k: self.dic[k] / other[k] for k in concat(self, other)}
         else:  # assume a float
             new.dic = {k: self.dic[k] / other for k in self.dic}
         return new
