@@ -1298,9 +1298,9 @@ class ImtWeight(object):
     def __mul__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self.dic[k] * other[k] for k in self.dic}
+            new.dic = {k: self[k] * other[k] for k in other}
         else:  # assume a float
-            new.dic = {k: self.dic[k] * other for k in self.dic}
+            new.dic = {k: self[k] * other for k in self.dic}
         return new
 
     __rmul__ = __mul__
@@ -1621,7 +1621,7 @@ class GsimLogicTree(object):
                               i, tuple(lt_uid))
 
     def __repr__(self):
-        lines = ['%s,%s,%s,w=%s' %
-                 (b.trt, b.id, b.gsim, b.weight['weight'])
+        lines = ['%s,%s,%s,%s' %
+                 (b.trt, b.id, b.gsim, b.weight)
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
