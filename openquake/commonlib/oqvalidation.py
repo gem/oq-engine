@@ -460,11 +460,11 @@ class OqParam(valid.ParamSet):
                 imts.append(imt)
         return imts
 
-    def imt_dt(self):
+    def imt_dt(self, dtype=F64):
         """
         :returns: a numpy dtype {imt: float}
         """
-        return numpy.dtype([(imt, float) for imt in self.imtls])
+        return numpy.dtype([(imt, dtype) for imt in self.imtls])
 
     @property
     def lti(self):
