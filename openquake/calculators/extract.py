@@ -147,7 +147,7 @@ class Extract(dict):
         elif '?' in key:
             k, v = key.split('?', 1)
             data = self[k](dstore, v)
-        if key in self:
+        elif key in self:
             data = self[key](dstore, '')
         else:
             data = extract_(dstore, key)

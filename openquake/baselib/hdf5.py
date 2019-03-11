@@ -457,7 +457,7 @@ class ArrayWrapper(object):
         if isinstance(obj, cls):  # it is already an ArrayWrapper
             return obj
         elif inspect.isgenerator(obj):
-            array, attrs = 0, {decode(k): _array(v) for k, v in obj}
+            array, attrs = (), {decode(k): _array(v) for k, v in obj}
         elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
@@ -466,7 +466,8 @@ class ArrayWrapper(object):
 
     def __init__(self, array, attrs):
         vars(self).update(attrs)
-        self.array = array
+        if len(array):
+            self.array = array
 
     def __iter__(self):
         return iter(self.array)
@@ -487,7 +488,8 @@ class ArrayWrapper(object):
         self.__init__(array, attrs)
 
     def __repr__(self):
-        return '<%s%s>' % (self.__class__.__name__, self.array.shape)
+        shp = self.array.shape if hasattr(self, 'array') else ()
+        return '<%s%s>' % (self.__class__.__name__, shp)
 
     @property
     def dtype(self):
