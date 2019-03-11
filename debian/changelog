@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Fixed 'oq abort' and always mark killed jobs as 'aborted'
+
   [Michele Simionato]
   * Made it possible to use in the Starmap tasks without a monitor argument
   * Stored the sigma and epsilon parameters for each event in event based
