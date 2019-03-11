@@ -31,6 +31,12 @@ jobs:
     after_success:  # old sphinx does not work well with Python 3.5.4+
         - pip install sphinx==1.6.5
         - cd doc/sphinx && make html && cd ../adv-manual && make html
+        - if [[ "$BRANCH" == "master" ]]; then
+            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
+            chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
+            eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
+            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
+          fi
     after_script:
         - oq dbserver stop
   - stage: tests
@@ -44,9 +50,9 @@ jobs:
             oq dump /tmp/oqdata.zip &&
             oq restore /tmp/oqdata.zip /tmp/oqdata &&
             helpers/zipdemos.sh $(pwd)/demos &&
-            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in .deploy_rsa.enc -out .deploy_rsa -d &&
-            chmod 600 .deploy_rsa &&
-            eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
+            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
+            chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
+            eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
             oq workers stop &&
             oq reset --yes &&
