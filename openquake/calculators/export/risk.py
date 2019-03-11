@@ -97,7 +97,7 @@ def export_agg_curve_rlzs(ekey, dstore):
 def _get_data(dstore, dskey, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
-        weights = dstore['csm_info'].rlzs['weight']
+        weights = dstore['weights'][dstore['weights'].dtype.names[0]]
         tags, stats = zip(*stats)
         if dskey in set(dstore):  # precomputed
             value = dstore[dskey].value  # shape (A, S, LI)
