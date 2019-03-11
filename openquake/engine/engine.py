@@ -318,11 +318,15 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         logs.LOG.info('Calculation %d finished correctly in %d seconds',
                       job_id, duration)
         logs.dbcmd('finish', job_id, 'complete')
-    except BaseException:
+    except BaseException as exc:
+        if isinstance(exc, MasterKilled):
+            msg = 'aborted'
+        else:
+            msg = 'failed'
         tb = traceback.format_exc()
         try:
             logs.LOG.critical(tb)
-            logs.dbcmd('finish', job_id, 'failed')
+            logs.dbcmd('finish', job_id, msg)
         except BaseException:  # an OperationalError may always happen
             sys.stderr.write(tb)
         raise
