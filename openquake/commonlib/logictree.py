@@ -1279,21 +1279,21 @@ class ImtWeight(object):
     def __init__(self, branch, fname):
         with context(fname, branch.uncertaintyWeight):
             nodes = list(branch.getnodes('uncertaintyWeight'))
-            if 'imt' in nodes[0].attrib:
-                raise InvalidLogicTree('The first uncertaintyWeight has an imt'
-                                       ' attribute')
-            self.dic = {'weight': float(nodes[0].text)}
-            imts = []
-            for n in nodes[1:]:
-                weight = float(n.text)
-                if weight:
-                    self.dic[n['imt']] = weight
-                    imts.append(n['imt'])
-            if imts:
-                del self.dic['weight']
+            imts = [n['imt'] for n in nodes if 'imt' in n.attrib]
             if len(set(imts)) < len(imts):
                 raise InvalidLogicTree(
                     'There are duplicated IMTs in the weights')
+            elif imts and len(imts) < len(nodes):
+                raise InvalidLogicTree(
+                    'There are missing IMTs in the weights')
+            elif imts:
+                self.dic = {}
+                for n in nodes:
+                    weight = float(n.text)
+                    if weight:
+                        self.dic[n['imt']] = weight
+            else:  # no IMTs
+                self.dic = {'weight': float(nodes[0].text)}
 
     def __mul__(self, other):
         new = object.__new__(self.__class__)
