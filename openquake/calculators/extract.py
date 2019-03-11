@@ -143,14 +143,15 @@ class Extract(dict):
     def __call__(self, dstore, key):
         if '/' in key:
             k, v = key.split('/', 1)
-            return self[k](dstore, v)
+            data = self[k](dstore, v)
         elif '?' in key:
             k, v = key.split('?', 1)
-            return self[k](dstore, v)
+            data = self[k](dstore, v)
         if key in self:
-            return self[key](dstore, '')
+            data = self[key](dstore, '')
         else:
-            return extract_(dstore, key)
+            data = extract_(dstore, key)
+        return ArrayWrapper.from_(data)
 
 
 extract = Extract()
@@ -206,40 +207,6 @@ def extract_asset_tags(dstore, tagname):
         yield tagname, barray(tagcol.gen_tags(tagname))
     for tagname in tagcol.tagnames:
         yield tagname, barray(tagcol.gen_tags(tagname))
-
-
-@extract.add('hazard')
-def extract_hazard(dstore, what):
-    """
-    Extracts hazard curves and possibly hazard maps and/or uniform hazard
-    spectra. Use it as /extract/hazard/mean or /extract/hazard/rlz-0, etc
-    """
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    yield 'sitecol', sitecol
-    yield 'oqparam', oq
-    yield 'imtls', oq.imtls
-    yield 'realizations', dstore['csm_info'].rlzs
-    yield 'checksum32', dstore['/'].attrs['checksum32']
-    nsites = len(sitecol)
-    M = len(oq.imtls)
-    for statname, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        for imt in oq.imtls:
-            key = 'hcurves/%s/%s' % (imt, statname)
-            arr = numpy.zeros((nsites, len(oq.imtls[imt])))
-            for sid in pmap:
-                arr[sid] = pmap[sid].array[oq.imtls(imt), 0]
-            logging.info('extracting %s', key)
-            yield key, arr
-        hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
-        for p, poe in enumerate(oq.poes):
-            key = 'hmaps/poe-%s/%s' % (poe, statname)
-            arr = numpy.zeros((nsites, M))
-            for sid in pmap:
-                arr[sid] = hmap[sid].array[:, p]
-            logging.info('extracting %s', key)
-            yield key, arr
 
 
 def get_mesh(sitecol, complete=True):
@@ -887,7 +854,7 @@ class Extractor(object):
         :param what: what to extract
         :returns: an ArrayWrapper instance
         """
-        return ArrayWrapper.from_(extract(self.dstore, what))
+        return extract(self.dstore, what)
 
     def __enter__(self):
         return self
