@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Stored the sigma and epsilon parameters for each event in event based
+    and scenario calculations and extended the gmf_data exporter consequently
+  * Fixed the realizations CSV exporter which was truncating the names of the
+    GSIMs
   * Deprecated the XML exporters for hcurves, hmaps, uhs
   * Introduced a `sap.script` decorator
   * Used the WebExtractor in `oq importcalc`

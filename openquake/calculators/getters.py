@@ -326,9 +326,10 @@ class GmfGetter(object):
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        M = len(oqparam.imtls)
+        M32 = (F32, len(oqparam.imtls))
         self.gmv_dt = oqparam.gmf_data_dt()
-        self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (M,))), ('eid', U64)])
+        self.sig_eps_dt = [('eid', U64), ('sig', M32), ('eps', M32)]
+        self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U64)])
         self.cmaker = ContextMaker(
             rupgetter.trt, rupgetter.rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
@@ -376,6 +377,7 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and
         yields arrays of the dtype (sid, eid, imti, gmv), one for rupture
         """
+        self.sig_eps = []
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
@@ -388,8 +390,8 @@ class GmfGetter(object):
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
-                array = computer.compute(gs, num_events).transpose(1, 0, 2)
-                # shape (N, M, E)
+                array, sig, eps = computer.compute(gs, num_events)
+                array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
                 for i, miniml in enumerate(self.min_iml):  # gmv < minimum
                     arr = array[:, i, :]
                     arr[arr < miniml] = 0
@@ -404,6 +406,8 @@ class GmfGetter(object):
                         tot = gmf.sum(axis=0)  # shape (M,)
                         if not tot.sum():
                             continue
+                        sigmas = sig[:, n + ei]
+                        self.sig_eps.append((eid, sigmas, eps[:, n + ei]))
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 data.append((rlzi, sid, eid, gmv))
@@ -457,6 +461,8 @@ class GmfGetter(object):
                 gmfdata = self.get_gmfdata()
         else:
             return {}
+        if len(gmfdata) == 0:
+            return dict(gmfdata=[])
         indices = []
         gmfdata.sort(order=('sid', 'rlzi', 'eid'))
         start = stop = 0
@@ -466,6 +472,7 @@ class GmfGetter(object):
             indices.append((sid, start, stop))
             start = stop
         res = dict(gmfdata=gmfdata, hcurves=hcurves,
+                   sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
         return res
 
