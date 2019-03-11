@@ -412,9 +412,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     mon.measuremem = True
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
-    if func.__code__.co_varnames[-1].startswith('mon'):
-        # the monitor argument, if present, must have a name starting with mon
-        # otherwise it will be ignored and not replaced with the right monitor
+    if mon.inject:
         args += (mon,)
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
@@ -670,6 +668,8 @@ class Starmap(object):
             self.argnames = inspect.getfullargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getfullargspec(task_func.__call__).args[1:]
+        self.monitor.inject = (self.argnames[-1].startswith('mon') or
+                               self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames) - 1)
