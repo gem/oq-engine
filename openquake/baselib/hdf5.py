@@ -486,6 +486,9 @@ class ArrayWrapper(object):
     def __fromh5__(self, array, attrs):
         self.__init__(array, attrs)
 
+    def __repr__(self):
+        return '<%s%s>' % (self.__class__.__name__, self.array.shape)
+
     @property
     def dtype(self):
         """dtype of the underlying array"""
