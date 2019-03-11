@@ -18,7 +18,8 @@ def main(dirname):
     dname = pathlib.Path(dirname)
     with hdf5new() as hdf5:
         iterargs = ((open(dname/fname, encoding='utf-8').read(),)
-                    for fname in os.listdir(dname) if fname.endswith('.rst'))
+                    for fname in os.listdir(dname)
+                    if fname.endswith('.rst'))
         c = collections.Counter()
         for counter in Starmap(count, iterargs, Monitor('count', hdf5)):
             c += counter
