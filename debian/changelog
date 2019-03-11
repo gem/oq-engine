@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Deprecated the XML exporters for hcurves, hmaps, uhs
   * Introduced a `sap.script` decorator
   * Used the WebExtractor in `oq importcalc`
   * Restored validation of the source_model_logic_tree.xml file
