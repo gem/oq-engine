@@ -81,3 +81,42 @@ If you do not want to put your credentials in the ``openquake.cfg`` file,
 you can do so, but then you need to pass them explicitly to the WebExtractor:
 
 >>> extractor = WebExtractor(calc_id, server, username, password)
+
+Plotting
+--------------
+
+The (Web)Extractor is used in the `oq plot` command: by configuring
+``openquake.cfg`` it is possible to plot things like hazard curves, hazard maps
+and uniform hazard spectra for remote (or local) calculations.
+Here are three examples of use::
+
+    $ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0' <calc_id>
+    $ oq plot 'hmaps?kind=mean&imt=PGA' <calc_id>
+    $ oq plot 'uhs?kind=mean&site_id=0' <calc_id>
+
+The ``site_id`` is optional; if missing only the first site (``site_id=0``)
+will be plotted. If you want to plot all the realizations you can do::
+
+    $ oq plot 'hcurves?kind=rlzs&imt=PGA' <calc_id>
+
+If you want to plot all statistics you can do::
+
+    $ oq plot 'hcurves?kind=stats&imt=PGA' <calc_id>
+
+It is also possible to combine plots. For instance if you want to plot all
+realizations and also the mean the command to give is::
+
+    $ oq plot 'hcurves?kind=rlzs&kind=mean&imt=PGA' <calc_id>
+
+If you want to plot the mean and the median the command is::
+
+    $ oq plot 'hcurves?kind=quantile-0.5&kind=mean&imt=PGA' <calc_id>
+
+assuming the median (i.e. `quantile-0.5`) is available in the calculation.
+If you want to compare say rlz-0 with rlz-2 and rlz-5 you can just just
+say so::
+
+    $ oq plot 'hcurves?kind=rlz-0&kind=rlz-2&kind=rlz-5&imt=PGA' <calc_id>
+
+You can combine as many kinds of curves as you want. Clearly if your are
+specifying a kind that is not available you will get an error.

@@ -21,7 +21,7 @@ from openquake.baselib import sap, hdf5, datastore
 from openquake.calculators.getters import PmapGetter
 
 
-@sap.Script
+@sap.script
 def combine_mean_curves(calc_big, calc_small):
     """
     Combine the hazard curves coming from two different calculations.

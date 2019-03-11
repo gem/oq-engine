@@ -34,7 +34,7 @@ else:
     memoized = lru_cache(100)
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
-from openquake.baselib.general import group_array, deprecated
+from openquake.baselib.general import group_array, deprecated, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -45,6 +45,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
+CHUNKSIZE = 4*1024**2  # 4 MB
 
 
 def lit_eval(string):
@@ -934,6 +935,8 @@ class WebExtractor(Extractor):
             raise WebAPIError('Not Found: %s' % url)
         elif resp.status_code != 200:
             raise WebAPIError(resp.text)
+        self.status = self.sess.get(
+            '%s/v1/calc/%d/status' % (self.server, calc_id)).json()
         self.oqparam = object.__new__(oqvalidation.OqParam)
         vars(self.oqparam).update(resp.json())
 
@@ -950,6 +953,21 @@ class WebExtractor(Extractor):
         npz = numpy.load(io.BytesIO(resp.content))
         attrs = {k: npz[k] for k in npz if k != 'array'}
         return ArrayWrapper(npz['array'], attrs)
+
+    def dump(self, fname):
+        """
+        Dump the remote datastore on a local path.
+        """
+        url = '%s/v1/calc/%d/datastore' % (self.server, self.calc_id)
+        resp = self.sess.get(url, stream=True)
+        down = 0
+        with open(fname, 'wb') as f:
+            logging.info('Saving %s', fname)
+            for chunk in resp.iter_content(CHUNKSIZE):
+                f.write(chunk)
+                down += len(chunk)
+                println('Downloaded {:,} bytes'.format(down))
+        print()
 
     def close(self):
         """
