@@ -32,7 +32,6 @@ import os
 import inspect
 import unittest
 import numpy as np
-from nose.plugins.attrib import attr
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 from openquake.hazardlib.gsim.nga_east import DarraghEtAl2015NGAEast1CCSP
 
@@ -539,7 +538,7 @@ NGA_EAST_SIGMA_FILES = [
     ]
 
 
-@attr('slow')
+@unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
 class NGAEastUncertaintyTestCase(unittest.TestCase):
     """
     Variant of the :class:
