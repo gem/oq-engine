@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-from nose.plugins.attrib import attr
-
 import numpy
 import os
 from openquake.hazardlib import const
@@ -178,7 +176,7 @@ class Cdppvalue(unittest.TestCase):
 
             self.assertAlmostEqual(dpp, ref_dpp, delta=0.1)
 
-    @attr('slow')
+    @unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
     def test_get_cdppvalue(self):
         rupture = self.make_rupture_fordpp(
             ParametricProbabilisticRupture, occurrence_rate=0.01,

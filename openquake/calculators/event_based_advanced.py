@@ -22,7 +22,6 @@ import numpy
 from openquake.calculators import base
 from openquake.baselib import parallel
 from openquake.baselib.general import AccumDict
-from openquake.baselib.general import WeightedSequence
 from openquake.calculators.event_based import EventBasedCalculator
 from openquake.calculators.event_based import by_grp, store_rlzs_by_grp
 
@@ -62,22 +61,8 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
                 par['gsims'] = gsims_by_trt[sg.trt]
                 # Check cases where we do not want to split the group into
                 # pieces
-                par['group'] = False
-                if sg.temporal_occurrence_model and (
-                        sg.src_interdep in 'mutex' or
-                        sg.rup_interdep in 'mutex' or
-                        sg.cluster):
-                    par['tom'] = sg.temporal_occurrence_model
-                    par['group'] = True
-                    par['cluster'] = sg.cluster
-                    par['src_interdep'] = sg.src_interdep
-                    par['rup_interdep'] = sg.rup_interdep
-                    # Here we create a WeightedSequence similarly to what is
-                    # done with traditional sources
-                    dat = [(s, 1.) for s in sg.sources]
-                    block = WeightedSequence(dat)
-                    smap.submit(block, self.src_filter, par)
-
+                if sg.atomic:
+                    smap.submit(sg, self.src_filter, par)
                 # This is the processing for traditional sources
                 else:
                     for block in self.block_splitter(
@@ -103,7 +88,7 @@ class EventBasedAdvancedCalculator(EventBasedCalculator):
         self.rupser.close()
 
         # logic tree reduction, must be called before storing the events
-        self.store_csm_info(eff_ruptures)
+        self.store_rlz_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         with self.monitor('store source_info', autoflush=True):
