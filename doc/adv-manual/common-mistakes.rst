@@ -151,4 +151,4 @@ you are doing.
 
 Now you may continue with the `tips for running large hazard calculations`_:
 
-.. _tips for running large hazard calculations: hazard.rst
+.. _tips for running large hazard calculations: hazard.html
