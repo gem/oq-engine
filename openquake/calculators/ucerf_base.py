@@ -426,6 +426,9 @@ class UCERFSource(BaseSeismicSource):
                 sources.append(ps)
         return sources
 
+    def get_one_rupture(self):
+        raise ValueError('Unsupported option')
+
 
 def build_idx_set(branch_id, start_date):
     """

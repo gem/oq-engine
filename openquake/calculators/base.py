@@ -64,7 +64,6 @@ class InvalidCalculationID(Exception):
     pre-calculation
     """
 
-
 def fix_ones(pmap):
     """
     Physically, an extremely small intensity measure level can have an
