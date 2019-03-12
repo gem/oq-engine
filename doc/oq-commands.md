@@ -170,20 +170,6 @@ the most time-consuming parts on the engine, mostly for the sheer number
 of them; the are more than fifty exporters and they are always increasing.
 If you need new exports, please [add an issue on GitHub](https://github.com/gem/oq-engine/issues).
 
-There is a command similar to `export`, called `extract`, which is able to
-export in HDF5 format. For instance if you want to extract the full bulk
-of hazard curves, hazard maps and uniform hazard spectra
-for all realizations the command to use is
-
-```
-$ oq extract hazard/rlzs <calc_id> local
-```
-
-Be warned that for large calculations the extraction will likely be slower
-than the entire calculation. In this case you should extract only the
-sites you are interested in, while this command extracts everything.
-The extract/export system will be extended in the near future.
-
 oq zip
 ------
 
