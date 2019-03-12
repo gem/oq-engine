@@ -21,10 +21,10 @@ import json
 import logging
 import os
 import sys
-import inspect
 import tempfile
 import subprocess
 import threading
+import traceback
 import signal
 import zlib
 import pickle
@@ -41,7 +41,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore
+from openquake.baselib import datastore, hdf5
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
@@ -653,17 +653,11 @@ def get_result(request, result_id):
     return response
 
 
-def _array(v):
-    if hasattr(v, '__toh5__'):
-        return v.__toh5__()[0]
-    return v
-
-
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
-    Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
+    Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true
     only calculations owned by the current user can be retrieved.
     """
     job = logs.dbcmd('get_job', int(calc_id))
@@ -672,30 +666,31 @@ def extract(request, calc_id, what):
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
 
-    # read the data and save them on a temporary .pik file
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        fd, fname = tempfile.mkstemp(
-            prefix=what.replace('/', '-'), suffix='.npz')
-        os.close(fd)
-        n = len(request.path_info)
-        query_string = unquote_plus(request.get_full_path()[n:])
-        obj = _extract(ds, what + query_string)
-        if inspect.isgenerator(obj):
-            array, attrs = 0, {k: _array(v) for k, v in obj}
-        elif hasattr(obj, '__toh5__'):
-            array, attrs = obj.__toh5__()
-        else:  # assume obj is an array
-            array, attrs = obj, {}
-        a = {}
-        for key, val in attrs.items():
-            if isinstance(key, bytes):
-                key = key.decode('utf-8')
-            if isinstance(val, str):
-                # without this oq extract would fail
-                a[key] = numpy.array(val.encode('utf-8'))
-            else:
-                a[key] = val
-        numpy.savez_compressed(fname, array=array, **a)
+    try:
+        # read the data and save them on a temporary .npz file
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            fd, fname = tempfile.mkstemp(
+                prefix=what.replace('/', '-'), suffix='.npz')
+            os.close(fd)
+            n = len(request.path_info)
+            query_string = unquote_plus(request.get_full_path()[n:])
+            aw = hdf5.ArrayWrapper.from_(_extract(ds, what + query_string))
+            a = {}
+            for key, val in vars(aw).items():
+                if isinstance(val, str):
+                    # without this oq extract would fail
+                    a[key] = numpy.array(val.encode('utf-8'))
+                elif isinstance(val, dict):
+                    # this is hack: we are losing the values
+                    a[key] = list(val)
+                else:
+                    a[key] = val
+            numpy.savez_compressed(fname, **a)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
+            content_type='text/plain', status=500)
 
     # stream the data back
     stream = FileWrapper(open(fname, 'rb'))

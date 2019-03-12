@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap
-from openquake.commands import engine
+from openquake.commonlib import util
 
 
 def make_figure(curves):
@@ -44,9 +44,10 @@ def plot_ac(calc_id):
     Aggregate loss curves plotter.
     """
     # read the hazard data
-    dstore = engine.read(calc_id)
+    dstore = util.read(calc_id)
     agg_curve = dstore['agg_curve-rlzs']
     plt = make_figure(agg_curve)
     plt.show()
+
 
 plot_ac.arg('calc_id', 'a computation id', type=int)

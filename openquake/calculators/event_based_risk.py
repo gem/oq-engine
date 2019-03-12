@@ -160,7 +160,7 @@ class EbrCalculator(base.RiskCalculator):
     is_stochastic = True
     precalc = 'event_based'
     accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard',
-                      'ebrisk']
+                      'ebrisk', 'event_based_advanced']
 
     def pre_execute(self):
         oq = self.oqparam
@@ -195,7 +195,7 @@ class EbrCalculator(base.RiskCalculator):
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
-        self.param['stats'] = oq.hazard_stats()
+        self.param['stats'] = list(oq.hazard_stats().items())
         self.param['conditional_loss_poes'] = oq.conditional_loss_poes
         self.taskno = 0
         self.start = 0
@@ -212,7 +212,7 @@ class EbrCalculator(base.RiskCalculator):
     def build_datasets(self, builder):
         oq = self.oqparam
         R = len(builder.weights)
-        stats = oq.hazard_stats()
+        stats = self.param['stats']
         A = self.A
         S = len(stats)
         P = len(builder.return_periods)
@@ -312,7 +312,7 @@ class EbrCalculator(base.RiskCalculator):
         dstore = self.datastore
         self.before_export()  # set 'realizations'
         oq = self.oqparam
-        stats = oq. hazard_stats()
+        stats = self.param['stats']
         # store avg_losses-stats
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')

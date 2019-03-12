@@ -218,6 +218,9 @@ producing too small PoEs.'''
         tl = oq.truncation_level
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm
+        for sg in csm.src_groups:
+            if sg.atomic:
+                raise NotImplemented('Atomic groups are not supported yet')
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
 
@@ -386,7 +389,7 @@ producing too small PoEs.'''
         hstats = self.oqparam.hazard_stats()
         if len(self.rlzs_assoc.realizations) > 1 and hstats:
             with self.monitor('computing and saving stats', measuremem=True):
-                res = self.build_stats(results, hstats)
+                res = self.build_stats(results, hstats.items())
                 self.save_disagg_result('disagg-stats', res)
 
         self.datastore.set_attrs(

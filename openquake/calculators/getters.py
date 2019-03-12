@@ -46,10 +46,11 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, rlzs_assoc=None, sids=None):
+    def __init__(self, dstore, rlzs_assoc=None, sids=None, poes=()):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        self.poes = poes
         self.num_rlzs = len(self.rlzs_assoc.realizations)
         self.eids = None
         self.nbytes = 0
@@ -77,7 +78,7 @@ class PmapGetter(object):
             self.sids = self.dstore['sitecol'].sids
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
-        self.poes = oq.poes
+        self.poes = self.poes or oq.poes
         self.data = {}
         try:
             hcurves = self.get_hcurves(self.imtls)  # shape (R, N)

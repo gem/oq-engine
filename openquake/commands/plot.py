@@ -15,84 +15,134 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import numpy
-from openquake.baselib import sap, general
-from openquake.commands import engine
+from openquake.baselib import sap
+from openquake.hazardlib.geo.utils import get_bounding_box
+from openquake.calculators.extract import Extractor, WebExtractor
 
 
-def make_figure(indices, n, imtls, spec_curves, other_curves=(), label=''):
-    """
-    :param indices: the indices of the sites under analysis
-    :param n: the total number of sites
-    :param imtls: ordered dictionary with the IMTs and levels
-    :param spec_curves: a dictionary of curves sid -> levels
-    :param other_curves: dictionaries sid -> levels
-    :param label: the label associated to `spec_curves`
-    """
+def basemap(projection, sitecol):
+    from mpl_toolkits.basemap import Basemap  # costly import
+    minlon, minlat, maxlon, maxlat = get_bounding_box(sitecol, maxdist=10)
+    bmap = Basemap(projection=projection,
+                   llcrnrlon=minlon, llcrnrlat=minlat,
+                   urcrnrlon=maxlon, urcrnrlat=maxlat,
+                   lat_0=sitecol['lat'].mean(), lon_0=sitecol['lon'].mean())
+    bmap.drawcoastlines()
+    return bmap
+
+
+def make_figure_hcurves(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
-
     fig = plt.figure()
-    n_imts = len(imtls)
-    n_sites = len(indices)
-    for i, site in enumerate(indices):
-        for j, imt in enumerate(imtls):
-            imls = imtls[imt]
-            imt_slice = imtls(imt)
-            ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
-            ax.grid(True)
-            ax.set_xlabel('site %d, %s' % (site, imt))
-            if j == 0:  # set Y label only on the leftmost graph
-                ax.set_ylabel('PoE')
-            if spec_curves is not None:
-                ax.loglog(imls, spec_curves[site][imt_slice], '--',
-                          label=label)
-            for r, curves in enumerate(other_curves):
-                ax.loglog(imls, curves[site][imt_slice], label=str(r))
-            ax.legend()
+    got = {}  # (calc_id, kind) -> curves
+    for i, ex in enumerate(extractors):
+        hcurves = ex.get(what)
+        for kind in hcurves.kind:
+            got[ex.calc_id, kind] = hcurves[kind]
+    oq = ex.oqparam
+    n_imts = len(hcurves.imt)
+    [site] = hcurves.site_id
+    for j, imt in enumerate(hcurves.imt):
+        imls = oq.imtls[imt]
+        imt_slice = oq.imtls(imt)
+        ax = fig.add_subplot(n_imts, 1, j + 1)
+        ax.set_xlabel('%s, site %s, inv_time=%dy' %
+                      (imt, site, oq.investigation_time))
+        ax.set_ylabel('PoE')
+        for ck, arr in got.items():
+            ax.loglog(imls, arr[0, imt_slice], '-', label='%s_%s' % ck)
+            ax.loglog(imls, arr[0, imt_slice], '.')
+        ax.grid(True)
+        ax.legend()
     return plt
 
 
-def get_hcurves(dstore):
-    hcurves = {name: dstore['hcurves/' + name] for name in dstore['hcurves']}
-    return hcurves.pop('mean'), hcurves.values()
+def make_figure_hmaps(extractors, what):
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ncalcs = len(extractors)
+    for i, ex in enumerate(extractors):
+        oq = ex.oqparam
+        n_poes = len(oq.poes)
+        sitecol = ex.get('sitecol')
+        hmaps = ex.get(what)
+        [imt] = hmaps.imt
+        [kind] = hmaps.kind
+        for j, poe in enumerate(oq.poes):
+            ax = fig.add_subplot(n_poes, ncalcs, j * ncalcs + i + 1)
+            ax.grid(True)
+            ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
+                          'inv_time=%dy' %
+                          (imt, kind, poe, ex.calc_id, oq.investigation_time))
+            bmap = basemap('cyl', sitecol)
+            bmap.scatter(sitecol['lon'], sitecol['lat'],
+                         c=hmaps[kind][:, 0, j], cmap='jet')
+    return plt
+
+
+def make_figure_uhs(extractors, what):
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    got = {}  # (calc_id, kind) -> curves
+    for i, ex in enumerate(extractors):
+        uhs = ex.get(what)
+        for kind in uhs.kind:
+            got[ex.calc_id, kind] = uhs[kind]
+    oq = ex.oqparam
+    n_poes = len(oq.poes)
+    periods = [imt.period for imt in oq.imt_periods()]
+    [site] = uhs.site_id
+    for j, poe in enumerate(oq.poes):
+        ax = fig.add_subplot(n_poes, 1, j + 1)
+        ax.set_xlabel('UHS on site %s, poe=%s, inv_time=%dy' %
+                      (site, poe, oq.investigation_time))
+        ax.set_ylabel('SA')
+        for ck, arr in got.items():
+            ax.plot(periods, arr[0, :, j], '-', label='%s_%s' % ck)
+            ax.plot(periods, arr[0, :, j], '.')
+        ax.grid(True)
+        ax.legend()
+    return plt
 
 
 @sap.Script
-def plot(calc_id, other_id=None, sites='0', imti='all'):
+def plot(what, calc_id=-1, other_id=None, webapi=False):
     """
-    Hazard curves plotter.
+    Hazard curves plotter. Here are a few examples of use::
+
+     $ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0'
+     $ oq plot 'hmaps?kind=mean&imt=PGA'
+     $ oq plot 'uhs?kind=mean&site_id=0'
     """
-    # read the hazard data
-    haz = engine.read(calc_id)
-    other = engine.read(other_id) if other_id else None
-    oq = haz['oqparam']
-    if imti == 'all':
-        imtls = oq.imtls
+    if '?' not in what:
+        raise SystemExit('Missing ? in %r' % what)
+    elif 'kind' not in what:
+        raise SystemExit('Missing kind= in %r' % what)
+    prefix, rest = what.split('?', 1)
+    assert prefix in 'hcurves hmaps uhs', prefix
+    if prefix in 'hcurves hmaps' and 'imt=' not in rest:
+        raise SystemExit('Missing imt= in %r' % what)
+    elif prefix == 'uhs' and 'imt=' in rest:
+        raise SystemExit('Invalid IMT in %r' % what)
+    elif prefix in 'hcurves uhs' and 'site_id=' not in rest:
+        what += '&site_id=0'
+    if webapi:
+        xs = [WebExtractor(calc_id)]
+        if other_id:
+            xs.append(WebExtractor(other_id))
     else:
-        imti = int(imti)
-        imt = list(oq.imtls)[imti]
-        imls = oq.imtls[imt]
-        imtls = general.DictArray({imt: imls})
-    indices = numpy.array(list(map(int, sites.split(','))))
-    n_sites = len(haz['sitecol'])
-    if not set(indices) <= set(range(n_sites)):
-        invalid = sorted(set(indices) - set(range(n_sites)))
-        print('The indices %s are invalid: no graph for them' % invalid)
-    valid = sorted(set(range(n_sites)) & set(indices))
-    print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    if other is None:
-        mean_curves, others = get_hcurves(haz)
-        plt = make_figure(valid, n_sites, imtls, mean_curves, others, 'mean')
-    else:
-        mean1, _ = get_hcurves(haz)
-        mean2, _ = get_hcurves(other)
-        plt = make_figure(valid, n_sites, imtls, mean1,
-                          [mean2], 'reference')
+        xs = [Extractor(calc_id)]
+        if other_id:
+            xs.append(Extractor(other_id))
+    make_figure = globals()['make_figure_' + prefix]
+    plt = make_figure(xs, what)
     plt.show()
 
 
-plot.arg('calc_id', 'a computation id', type=int)
-plot.arg('other_id', 'optional id of another computation', type=int)
-plot.opt('sites', 'comma-separated string with the site indices')
-plot.opt('imti', 'IMT index')
+plot.arg('what', 'what to extract')
+plot.arg('calc_id', 'computation ID', type=int)
+plot.arg('other_id', 'ID of another computation', type=int)
+plot.flg('webapi', 'if given, pass through the WebAPI')
