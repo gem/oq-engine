@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: syntax=spec
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,7 +69,7 @@ Provides: python-oq-hazardlib python-oq-engine
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2018 GEM Foundation
+Copyright (C) 2010-2019 GEM Foundation
 
 %package master
 Summary: OpenQuake Engine multi-node cluster support (master node)
@@ -84,7 +84,7 @@ OpenQuake Engine multi-node cluster support (master node)
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2018 GEM Foundation
+Copyright (C) 2010-2019 GEM Foundation
 
 %package worker
 Summary: OpenQuake Engine multi-node cluster support (worker node)
@@ -99,7 +99,7 @@ OpenQuake Engine multi-node cluster support (worker node)
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2018 GEM Foundation
+Copyright (C) 2010-2019 GEM Foundation
 
 %prep
 %setup -n %{oqformat}

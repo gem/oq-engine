@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1093,5 +1093,7 @@ def import_gmfs(dstore, fname, sids):
             dstore.extend('gmf_data/data', gmvs)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
-
+    sig_eps_dt = [('eid', U64), ('sig', (F32, n_imts)), ('eps', (F32, n_imts))]
+    dstore['gmf_data/sigma_epsilon'] = numpy.zeros(0, sig_eps_dt)
+    dstore['weights'] = numpy.ones(1, [(imt, F32) for imt in imts])
     return eids

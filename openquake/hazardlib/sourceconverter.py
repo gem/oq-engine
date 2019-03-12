@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -244,14 +244,17 @@ def get_set_num_ruptures(src):
         clsname = src.__class__.__name__
         if dt > 10:
             if 'Area' in clsname:
-                logging.warning('%s.count_ruptures took %d seconds, perhaps the '
-                             'area discretization is too small', src, dt)
+                logging.warning(
+                    '%s.count_ruptures took %d seconds, perhaps the '
+                    'area discretization is too small', src, dt)
             elif 'ComplexFault' in clsname:
-                logging.warning('%s.count_ruptures took %d seconds, perhaps the c'
-                             'omplex_fault_mesh_spacing is too small', src, dt)
+                logging.warning(
+                    '%s.count_ruptures took %d seconds, perhaps the '
+                    'complex_fault_mesh_spacing is too small', src, dt)
             elif 'SimpleFault' in clsname:
-                logging.warning('%s.count_ruptures took %d seconds, perhaps the '
-                             'rupture_mesh_spacing is too small', src, dt)
+                logging.warning(
+                    '%s.count_ruptures took %d seconds, perhaps the '
+                    'rupture_mesh_spacing is too small', src, dt)
             else:
                 # multiPointSource
                 logging.warning('count_ruptures %s took %d seconds', src, dt)

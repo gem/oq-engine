@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -485,6 +485,9 @@ class ArrayWrapper(object):
 
     def __fromh5__(self, array, attrs):
         self.__init__(array, attrs)
+
+    def __repr__(self):
+        return '<%s%s>' % (self.__class__.__name__, self.array.shape)
 
     @property
     def dtype(self):

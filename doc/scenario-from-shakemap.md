@@ -121,7 +121,7 @@ go away. The easiest way to reduce the number of sites is setting a
 engine will automatically put the assets on a grid. The larger the grid
 spacing, the smaller the number of points, until the calculation can be done.
 
-IF the ground motion values or the standard deviations are particularly
+If the ground motion values or the standard deviations are particularly
 large the user will get a warning about suspicious GMFs.
 
 Moreover, especially for old ShakeMaps, the USGS can provide them in a

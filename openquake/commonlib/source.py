@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import copy
 import math
 import logging
@@ -38,8 +38,13 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+
 rlz_dt = numpy.dtype([
-    ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
+    ('ordinal', U32),
+    ('branch_path', hdf5.vstr),
+    ('gsim', hdf5.vstr),
+    ('weight', F32)
+])
 
 source_model_dt = numpy.dtype([
     ('name', hdf5.vstr),
@@ -62,7 +67,7 @@ def gsim_names(rlz):
     """
     Names of the underlying GSIMs separated by spaces
     """
-    return ' '.join(str(v) for v in rlz.gsim_rlz.value)
+    return ' '.join(v.__class__.__name__ for v in rlz.gsim_rlz.value)
 
 
 def capitalize(words):
@@ -270,12 +275,11 @@ class CompositionInfo(object):
     @property
     def rlzs(self):
         """
-        :returns: an array of realizations
+        :returns: a list of realization tuples
         """
-        realizations = self.get_rlzs_assoc().realizations
-        return numpy.array(
-            [(r.uid, gsim_names(r), r.weight['weight'])
-             for r in realizations], rlz_dt)
+        tups = [(r.ordinal, r.uid, gsim_names(r), r.weight['weight'])
+                for r in self.get_rlzs_assoc().realizations]
+        return numpy.array(tups, rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
         """

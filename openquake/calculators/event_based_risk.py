@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -182,8 +182,9 @@ class EbrCalculator(base.RiskCalculator):
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
             if eff_time < 2:
-                logging.warning('eff_time=%s is too small to compute loss curves',
-                             eff_time)
+                logging.warning(
+                    'eff_time=%s is too small to compute loss curves',
+                    eff_time)
             else:
                 self.param['builder'] = get_loss_builder(
                     parent if parent else self.datastore,

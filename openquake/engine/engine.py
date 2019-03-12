@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -318,11 +318,15 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         logs.LOG.info('Calculation %d finished correctly in %d seconds',
                       job_id, duration)
         logs.dbcmd('finish', job_id, 'complete')
-    except BaseException:
+    except BaseException as exc:
+        if isinstance(exc, MasterKilled):
+            msg = 'aborted'
+        else:
+            msg = 'failed'
         tb = traceback.format_exc()
         try:
             logs.LOG.critical(tb)
-            logs.dbcmd('finish', job_id, 'failed')
+            logs.dbcmd('finish', job_id, msg)
         except BaseException:  # an OperationalError may always happen
             sys.stderr.write(tb)
         raise

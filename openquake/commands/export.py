@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ from openquake.calculators.export import export as export_
 
 
 # the export is tested in the demos
-@sap.Script
+@sap.script
 def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
     """
     Export an output from the datastore.
