@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,7 @@ def oq():
                 if mod.endswith('.py') and not mod.startswith('_')]
     for modname in modnames:
         importlib.import_module(modname)
-    parser = sap.compose(sap.Script.registry.values(),
+    parser = sap.compose(sap.registry.values(),
                          prog='oq', version=__version__)
     parser.callfunc()
 

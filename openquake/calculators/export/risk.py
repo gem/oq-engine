@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -64,8 +64,11 @@ def get_rup_data(ebruptures):
 # this is used by event_based_risk and ebrisk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
-    name = ekey[0].split('-')[0]
-    agg_curve, tags = _get(dstore, name)
+    oq = dstore['oqparam']
+    R = len(dstore['weights'])
+    agg_curve = dstore[ekey[0]]
+    tags = (['rlz-%03d' % r for r in range(R)] if ekey[0].endswith('-rlzs')
+            else ['mean'] + ['quantile-%s' % q for q in oq.quantiles])
     periods = agg_curve.attrs['return_periods']
     loss_types = tuple(agg_curve.attrs['loss_types'].split())
     if any(lt.endswith('_ins') for lt in loss_types):
@@ -94,7 +97,7 @@ def export_agg_curve_rlzs(ekey, dstore):
 def _get_data(dstore, dskey, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
-        weights = dstore['csm_info'].rlzs['weight']
+        weights = dstore['weights'][dstore['weights'].dtype.names[0]]
         tags, stats = zip(*stats)
         if dskey in set(dstore):  # precomputed
             value = dstore[dskey].value  # shape (A, S, LI)

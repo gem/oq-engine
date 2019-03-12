@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018 GEM Foundation
+# Copyright (C) 2018-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -53,7 +53,7 @@ class OpenQuake(object):
         # TODO: more utilities when be added when deemed useful
 
 
-@sap.Script
+@sap.script
 def shell(script=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or

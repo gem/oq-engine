@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -113,7 +113,7 @@ def upgrade_file(path, multipoint):
 # NB: this works only for migrations from NRML version 0.4 to 0.5
 # we will implement a more general solution when we will need to pass
 # to version 0.6
-@sap.Script
+@sap.script
 def upgrade_nrml(directory, dry_run, multipoint):
     """
     Upgrade all the NRML files contained in the given directory to the latest

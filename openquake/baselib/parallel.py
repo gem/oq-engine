@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,35 +21,27 @@ The Starmap API
 
 There are several good libraries to manage parallel programming, both
 in the standard library and in third party packages. Since we are not
-interested in reinventing the wheel, OpenQuake does not offer any new
+interested in reinventing the wheel, OpenQuake does not provide any new
 parallel library; however, it does offer some glue code so that you
 can use your library of choice. Currently threading, multiprocessing,
 zmq and celery are supported. Moreover,
 :mod:`openquake.baselib.parallel` offers some additional facilities
 that make it easier to parallelize scientific computations,
-i.e. embarrassing parallel problems.
+i.e. embarrassingly parallel problems.
 
-Typically one wants to apply a callable to a list of arguments in
-parallel rather then sequentially, and then combine together the
+Typically one wants to apply a callable to a list of arguments - in
+parallel rather then sequentially - and then combine together the
 results. This is known as a `MapReduce` problem. As a simple example,
 we will consider the problem of counting the letters in a text. Here is
 how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
->>> from functools import reduce  # reduce an iterable with a binary operator
->>> from operator import add  # addition function
->>> from openquake.baselib.performance import Monitor
->>> mon = Monitor('count')
 >>> arglist = [('hello',), ('world',)]  # list of arguments
->>> results = Starmap(count, arglist, mon)  # iterator over the results
->>> res = reduce(add, results, collections.Counter())  # aggregated counts
+>>> res = Starmap(count, arglist).reduce()  # aggregated counts
 >>> sorted(res.items())  # counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
 
-As you see there are some notational advantages with respect to use
-`itertools.starmap`. First of all, `Starmap` has a `reduce` method, so
-there is no need to import `functools.reduce`; secondly, the `reduce`
-method has sensible defaults:
+`Starmap` has a `reduce` method with sensible defaults:
 
 1. the default aggregation function is `add`, so there is no need to specify it
 2. the default accumulator is an empty accumulation dictionary (see
@@ -95,6 +87,27 @@ with
 no pool, but it is still better to call it: in the future, you may change
 idea and use another parallelization strategy requiring cleanup. In this
 way your code is future-proof.
+
+Monitoring
+=============================
+
+The major feature of the Starmap API is the ability to pass to it a
+Monitor instance, an object which is able to measure the time and
+memory occupation in each spawned task. The monitor can keep that
+information in memory or even store it into an .hdf5 file. If you
+do not pass a Monitor instance to the Starmap, internally a do-nothing
+monitor is instantiated. Here is an in-memory monitor:
+
+>>> from openquake.baselib.performance import Monitor
+>>> mon = Monitor('count')
+
+Here is a monitoring writing on an .hdf5 file:
+
+>>> from openquake.baselib import hdf5
+>>> mon = Monitor('count', hdf5.File.temporary())
+
+The engine provides a command `oq show performance` to print the performance
+information stored in the HDF5 datastore in a nice way.
 
 The Starmap.apply API
 ====================================
@@ -159,12 +172,11 @@ except ImportError:
         "Do nothing"
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.python3compat import encode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
 from openquake.baselib.general import (
-    split_in_blocks, block_splitter, AccumDict, humansize)
+    split_in_blocks, block_splitter, AccumDict, humansize, CallableDict)
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
@@ -181,6 +193,41 @@ task_info_dt = numpy.dtype(
     [('taskno', numpy.uint32), ('weight', numpy.float32),
      ('duration', numpy.float32), ('received', numpy.int64),
      ('mem_gb', numpy.float32)])
+
+submit = CallableDict()
+
+
+@submit.add('no')
+def no_submit(self, func, args, monitor):
+    return safely_call(func, args, self.task_no, monitor)
+
+
+@submit.add('processpool')
+def processpool_submit(self, func, args, monitor):
+    return self.pool.apply_async(
+        safely_call, (func, args, self.task_no, monitor))
+
+
+threadpool_submit = submit.add('threadpool')(processpool_submit)
+
+
+@submit.add('celery')
+def celery_submit(self, func, args, monitor):
+    return safetask.delay(func, args, self.task_no, monitor)
+
+
+@submit.add('zmq')
+def zmq_submit(self, func, args, monitor):
+    if not hasattr(self, 'sender'):
+        task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
+                                       config.zworkers.task_in_port)
+        self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
+    return self.sender.send((func, args, self.task_no, monitor))
+
+
+@submit.add('dask')
+def dask_submit(self, func, args, monitor):
+    return self.dask_client.submit(safely_call, func, args, self.task_no)
 
 
 def oq_distribute(task=None):
@@ -365,7 +412,8 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     mon.measuremem = True
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
-    args += (mon,)
+    if mon.inject:
+        args += (mon,)
     with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
         if msg:
@@ -620,6 +668,8 @@ class Starmap(object):
             self.argnames = inspect.getfullargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getfullargspec(task_func.__call__).args[1:]
+        self.monitor.inject = (self.argnames[-1].startswith('mon') or
+                               self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames) - 1)
@@ -669,7 +719,7 @@ class Starmap(object):
         if dist != 'no':
             args = pickle_sequence(args)
             self.sent += numpy.array([len(p) for p in args])
-        res = getattr(self, dist + '_submit')(func, args, monitor)
+        res = submit[dist](self, func, args, monitor)
         self.tasks.append(res)
 
     @property
@@ -702,28 +752,6 @@ class Starmap(object):
 
     def __iter__(self):
         return iter(self.submit_all())
-
-    def no_submit(self, func, args, monitor):
-        return safely_call(func, args, self.task_no, monitor)
-
-    def processpool_submit(self, func, args, monitor):
-        return self.pool.apply_async(
-            safely_call, (func, args, self.task_no, monitor))
-
-    threadpool_submit = processpool_submit
-
-    def celery_submit(self, func, args, monitor):
-        return safetask.delay(func, args, self.task_no, monitor)
-
-    def zmq_submit(self, func, args, monitor):
-        if not hasattr(self, 'sender'):
-            task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
-                                           config.zworkers.task_in_port)
-            self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
-        return self.sender.send((func, args, self.task_no, monitor))
-
-    def dask_submit(self, func, args, monitor):
-        return self.dask_client.submit(safely_call, func, args, self.task_no)
 
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made

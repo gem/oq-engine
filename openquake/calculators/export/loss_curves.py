@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,14 +28,15 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     :returns: a LossesByPeriodBuilder instance
     """
     oq = dstore['oqparam']
-    weights = dstore['csm_info'].rlzs['weight']
+    name = dstore['weights'].dtype.names[0]
+    weights = dstore['weights'][name]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
     num_events = countby(dstore['events'].value, 'rlz')
     periods = return_periods or oq.return_periods or scientific.return_periods(
         eff_time, max(num_events.values()))
     return scientific.LossesByPeriodBuilder(
         numpy.array(periods), loss_dt or oq.loss_dt(), weights, num_events,
-        eff_time, oq.investigation_time)
+        eff_time, oq.risk_investigation_time)
 
 
 class LossCurveExporter(object):

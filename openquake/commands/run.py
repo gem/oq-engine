@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -126,9 +126,9 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     return calc
 
 
-@sap.Script
-def run(job_ini, slowest, hc, param='', concurrent_tasks=None, exports='',
-        loglevel='info', pdb=None):
+@sap.script
+def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
+        exports='', loglevel='info', pdb=None):
     """
     Run a calculation bypassing the database layer
     """

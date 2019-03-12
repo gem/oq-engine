@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -48,7 +48,7 @@ class OqParam(valid.ParamSet):
         siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
-    asset_loss_table = valid.Param(valid.boolean, False)  # used in scenario
+    asset_loss_table = valid.Param(valid.boolean, False)
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -460,11 +460,11 @@ class OqParam(valid.ParamSet):
                 imts.append(imt)
         return imts
 
-    def imt_dt(self):
+    def imt_dt(self, dtype=F64):
         """
         :returns: a numpy dtype {imt: float}
         """
-        return numpy.dtype([(imt, float) for imt in self.imtls])
+        return numpy.dtype([(imt, dtype) for imt in self.imtls])
 
     @property
     def lti(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -49,7 +49,7 @@ def str_or_int(calc_id):
         return calc_id
 
 
-@sap.Script
+@sap.script
 def show(what='contents', calc_id=-1, extra=()):
     """
     Show the content of a datastore (by default the last one).

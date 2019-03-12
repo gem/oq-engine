@@ -18,3 +18,6 @@ Contents:
    risk
    event-based-with-large-logic-tree
    extract-api
+   parametric-gmpes
+   parallelization
+   equivalent_distance_approximation
