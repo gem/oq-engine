@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ from openquake.baselib import sap
 from openquake.commonlib import logs
 
 
-@sap.Script
+@sap.script
 def abort(job_id):
     """
     Abort the given job
@@ -41,10 +41,16 @@ def abort(job_id):
             try:
                 os.kill(p.pid, signal.SIGTERM)
                 logs.dbcmd('set_status', job.id, 'aborted')
+                print('Job %d aborted' % job.id)
             except Exception as exc:
                 print(exc)
             break
     else:  # no break
-        print('%d aborted' % job.id)
+        # set job as failed if it is set as 'executing' or 'running' in the db
+        # but the corresponding process is not running anymore
+        logs.dbcmd('set_status', job.id, 'failed')
+        print('Unable to find a process for job %d,'
+              ' setting it as failed' % job.id)
+
 
 abort.arg('job_id', 'job ID', type=int)

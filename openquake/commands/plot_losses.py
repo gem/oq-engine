@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -46,7 +46,7 @@ def make_figure(losses_by_rlzi, loss_types, nbins):
     return plt
 
 
-@sap.Script
+@sap.script
 def plot_losses(calc_id, bins=7):
     """
     losses_by_event plotter

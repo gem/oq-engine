@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -53,6 +53,20 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
+
+
+def unique(objects, key=None):
+    """
+    Raise a ValueError if there is a duplicated object, otherwise
+    returns the objects as they are.
+    """
+    dupl = []
+    for obj, group in itertools.groupby(sorted(objects), key):
+        if sum(1 for _ in group) > 1:
+            dupl.append(obj)
+    if dupl:
+        raise ValueError('Found duplicates %s' % dupl)
+    return objects
 
 
 class LtSourceModel(object):
@@ -470,7 +484,8 @@ class FakeSmlt(object):
         """
         :returns: the set of TRTs inside the source model file
         """
-        return set(TRT_REGEX.findall(open(self.filename).read()))
+        xml = open(self.filename, encoding='utf-8').read()
+        return set(TRT_REGEX.findall(xml))
 
     def __iter__(self):
         name = os.path.basename(self.filename)
@@ -488,11 +503,13 @@ Info = collections.namedtuple('Info', 'smpaths, applytosources')
 
 def collect_info(smlt):
     """
-    Given a path to a source model logic tree or a file-like, collect all of
-    the soft-linked path names to the source models it contains and return them
-    as a sorted uniquified list (no duplicates).
+    Given a path to a source model logic tree, collect all of the
+    path names to the source models it contains and build
+    1. a dictionary source model branch ID -> paths
+    2. a dictionary source model branch ID -> source IDs in applyToSources
 
     :param smlt: source model logic tree file
+    :returns: an Info namedtupled containing the two dictionaries
     """
     n = nrml.read(smlt)
     try:
@@ -500,17 +517,18 @@ def collect_info(smlt):
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
-    paths = set()
-    applytosources = set()
+    paths = collections.defaultdict(set)  # branchID -> paths
+    applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
-        with node.context(smlt, blevel):
-            for bset in blevel:
-                if 'applyToSources' in bset.attrib:
-                    applytosources.update(bset['applyToSources'].split())
-                for br in bset:
-                    fnames = br.uncertaintyModel.text.split()
-                    paths.update(get_paths(smlt, fnames))
-    return Info(sorted(paths), applytosources)
+        for bset in blevel:
+            if 'applyToSources' in bset.attrib:
+                applytosources[bset['branchSetID']].extend(
+                        bset['applyToSources'].split())
+            for br in bset:
+                with node.context(smlt, br):
+                    fnames = unique(br.uncertaintyModel.text.split())
+                    paths[br['branchID']].update(get_paths(smlt, fnames))
+    return Info({k: sorted(v) for k, v in paths.items()}, applytosources)
 
 
 def get_paths(smlt, fnames):
@@ -595,21 +613,15 @@ class SourceModelLogicTree(object):
     def get_source_ids(self):
         """
         :returns:
-            the complete set of source IDs found in all the source models
+            the complete dictionary source model ID -> source IDs
         """
-        fnames = self.info.smpaths
-        source_ids = set()
-        logging.info('Reading source IDs from %d model file(s)', len(fnames))
-        for fname in fnames:
-            if fname.endswith('.hdf5'):
-                with hdf5.File(fname, 'r') as f:
-                    for sg in f['/']:
-                        for src in sg:
-                            source_ids.add(src.source_id)
-            else:
+        source_ids = collections.defaultdict(list)
+        for sm, fnames in self.info.smpaths.items():
+            logging.info('Reading source IDs from source model %s', sm)
+            for fname in fnames:
                 for sg in read_source_groups(fname):
                     for src_node in sg:
-                        source_ids.add(src_node['id'])
+                        source_ids[sm].append(src_node['id'])
         return source_ids
 
     def get_trts(self):
@@ -617,13 +629,14 @@ class SourceModelLogicTree(object):
         :returns:
             the complete set of tectonic regions found in all the source models
         """
-        fnames = self.info.smpaths
         trts = set()
-        for fname in fnames:
-            if not fname.endswith('.hdf5'):
-                trts.update(TRT_REGEX.findall(open(fname).read()))
-        logging.info('Read %d TRTs from %d model file(s)',
-                     len(trts), len(fnames))
+        n = 0
+        for fnames in self.info.smpaths.values():
+            for fname in fnames:
+                xml = open(fname, encoding='utf-8').read()
+                trts.update(TRT_REGEX.findall(xml))
+                n += 1
+        logging.info('Read %d TRTs from %d model file(s)', len(trts), n)
         return trts
 
     def parse_tree(self, tree_node, validate):
@@ -635,7 +648,7 @@ class SourceModelLogicTree(object):
         if self.info.applytosources:
             self.source_ids = self.get_source_ids()
         else:
-            self.source_ids = set()
+            self.source_ids = collections.defaultdict(list)
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
 
@@ -674,7 +687,9 @@ class SourceModelLogicTree(object):
             for branch in branchset.branches:
                 new_open_ends.add(branch)
             self.num_paths *= len(branchset.branches)
-
+        if number > 0:
+            logging.warning('There is a branching level with multiple '
+                            'branchsets in %s', self.filename)
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
@@ -734,7 +749,8 @@ class SourceModelLogicTree(object):
             if value_node.text is not None:
                 values.append(value_node.text.strip())
             if validate:
-                self.validate_uncertainty_value(value_node, branchset)
+                self.validate_uncertainty_value(
+                    value_node, branchnode, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(branch_id, weight, value)
@@ -902,7 +918,7 @@ class SourceModelLogicTree(object):
         return geo.PlanarSurface.from_corner_points(
             top_left, top_right, bottom_right, bottom_left)
 
-    def validate_uncertainty_value(self, node, branchset):
+    def validate_uncertainty_value(self, node, branchnode, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -920,11 +936,12 @@ class SourceModelLogicTree(object):
         _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
 
         if branchset.uncertainty_type == 'sourceModel':
-            smfname = node.text.strip()
             try:
-                self.collect_source_model_data(smfname)
+                for fname in node.text.strip().split():
+                    self.collect_source_model_data(
+                        branchnode['branchID'], fname)
             except Exception as exc:
-                raise LogicTreeError(node, self.filename, str(exc))
+                raise LogicTreeError(node, self.filename, str(exc)) from exc
 
         elif branchset.uncertainty_type == 'abGRAbsolute':
             ab = (node.text.strip()).split()
@@ -936,17 +953,7 @@ class SourceModelLogicTree(object):
                 node, self.filename,
                 'expected a pair of floats separated by space')
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            min_mag, bin_width = (node.incrementalMFD["minMag"],
-                                  node.incrementalMFD["binWidth"])
-
-            rates = node.incrementalMFD.occurRates.text
-            with context(self.filename, node):
-                rates = valid.positivefloats(rates)
-            if _float_re.match(min_mag) and _float_re.match(bin_width):
-                return
-            raise LogicTreeError(
-                node, self.filename,
-                "expected valid 'incrementalMFD' node")
+            pass
         elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
             self._validate_simple_fault_geometry(node.simpleFaultGeometry,
                                                  _float_re)
@@ -967,10 +974,11 @@ class SourceModelLogicTree(object):
                         geom_node, self.filename,
                         "Surface geometry type not recognised")
         else:
-            if not _float_re.match(node.text.strip()):
+            try:
+                float(node.text)
+            except (TypeError, ValueError):
                 raise LogicTreeError(
-                    node, self.filename,
-                    'expected single float value')
+                    node, self.filename, 'expected single float value')
 
     def _validate_simple_fault_geometry(self, node, _float_re):
         """
@@ -1002,9 +1010,7 @@ class SourceModelLogicTree(object):
         valid_edges = []
         for edge_node in node.nodes:
             try:
-                coords = split_coords_3d(map(
-                    float,
-                    edge_node.LineString.posList.text.split()))
+                coords = split_coords_3d(edge_node.LineString.posList.text)
                 edge = geo.Line([geo.Point(*p) for p in coords])
             except ValueError:
                 # See use of validation error in simple geometry case
@@ -1014,7 +1020,7 @@ class SourceModelLogicTree(object):
                 valid_edges.append(True)
             else:
                 valid_edges.append(False)
-        if _float_re.match(node["spacing"]) and all(valid_edges):
+        if node["spacing"] and all(valid_edges):
             return
         raise LogicTreeError(
             node, self.filename,
@@ -1024,19 +1030,15 @@ class SourceModelLogicTree(object):
         """
         Validares a node representation of a planar fault geometry
         """
-        valid_spacing = _float_re.match(node["spacing"])
+        valid_spacing = node["spacing"]
         for key in ["topLeft", "topRight", "bottomLeft", "bottomRight"]:
-            is_valid = _float_re.match(getattr(node, key)["lon"]) and\
-                _float_re.match(getattr(node, key)["lat"]) and\
-                _float_re.match(getattr(node, key)["depth"])
-            if is_valid:
-                lon = float(getattr(node, key)["lon"])
-                lat = float(getattr(node, key)["lat"])
-                depth = float(getattr(node, key)["depth"])
-                valid_lon = (lon >= -180.0) and (lon <= 180.0)
-                valid_lat = (lat >= -90.0) and (lat <= 90.0)
-                valid_depth = (depth >= 0.0)
-                is_valid = valid_lon and valid_lat and valid_depth
+            lon = getattr(node, key)["lon"]
+            lat = getattr(node, key)["lat"]
+            depth = getattr(node, key)["depth"]
+            valid_lon = (lon >= -180.0) and (lon <= 180.0)
+            valid_lat = (lat >= -90.0) and (lat <= 90.0)
+            valid_depth = (depth >= 0.0)
+            is_valid = valid_lon and valid_lat and valid_depth
             if not is_valid or not valid_spacing:
                 raise LogicTreeError(
                     node, self.filename,
@@ -1115,11 +1117,12 @@ class SourceModelLogicTree(object):
 
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
-                if source_id not in self.source_ids:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        "source with id '%s' is not defined in source models"
-                        % source_id)
+                for source_ids in self.source_ids.values():
+                    if source_id not in source_ids:
+                        raise LogicTreeError(
+                            branchset_node, self.filename,
+                            "source with id '%s' is not defined in source "
+                            "models" % source_id)
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
@@ -1191,10 +1194,9 @@ class SourceModelLogicTree(object):
                 branch.child_branchset = branchset
 
     def _get_source_model(self, source_model_file):
-        return open(os.path.join(self.basepath, source_model_file))
+        return open(os.path.join(self.basepath, source_model_file), 'rb')
 
-    # this is somewhat duplicated with readinput.get_source_ids
-    def collect_source_model_data(self, source_model):
+    def collect_source_model_data(self, branch_id, source_model):
         """
         Parse source model file and collect information about source ids,
         source types and tectonic region types available in it. That
@@ -1203,14 +1205,19 @@ class SourceModelLogicTree(object):
         """
         smodel = nrml.read(self._get_source_model(source_model)).sourceModel
         n = len('Source')
-        for src_node in smodel:
-            with context(source_model, src_node):
-                trt = src_node['tectonicRegion']
-                source_id = src_node['id']
-                source_type = striptag(src_node.tag)[n:]
-                self.tectonic_region_types.add(trt)
-                self.source_ids.add(source_id)
-                self.source_types.add(source_type)
+        for sg in smodel:
+            trt = sg['tectonicRegion']
+            if sg.tag.endswith('sourceGroup'):  # nrml/0.5
+                src_nodes = sg
+            else:  # nrml/0.4
+                src_nodes = [sg]
+            for src_node in src_nodes:
+                with context(source_model, src_node):
+                    source_id = src_node['id']
+                    source_type = striptag(src_node.tag)[n:]
+                    self.tectonic_region_types.add(trt)
+                    self.source_ids[branch_id].append(source_id)
+                    self.source_types.add(source_type)
 
     def apply_uncertainties(self, branch_ids, source_group):
         """

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,7 @@ else:
     memoized = lru_cache(100)
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
-from openquake.baselib.general import group_array, deprecated
+from openquake.baselib.general import group_array, deprecated, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -45,6 +45,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
+CHUNKSIZE = 4*1024**2  # 4 MB
 
 
 def lit_eval(string):
@@ -542,7 +543,7 @@ def extract_aggregate_by(dstore, what):
     except ValueError:  # missing '/' at the end
         tagnames, name = what.split('/')
         loss_type = ''
-    assert name in ('avg_losses', 'curves'), name
+    assert name == 'avg_losses', name
     tagnames = tagnames.split(',')
     assetcol = dstore['assetcol']
     oq = dstore['oqparam']
@@ -557,11 +558,7 @@ def extract_aggregate_by(dstore, what):
             setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
         if not loss_type:
             aw.extra = ('loss_type',) + oq.loss_dt().names
-        if name == 'curves':
-            aw.return_period = dset.attrs['return_periods']
-            aw.tagnames = encode(tagnames + ['return_period'])
-        else:
-            aw.tagnames = encode(tagnames)
+        aw.tagnames = encode(tagnames)
         yield decode(stat), aw
 
 
@@ -850,6 +847,19 @@ def get_ruptures_within(dstore, bbox):
             (maxlon >= hypo[0]) * (maxlat >= hypo[1]))
     return dstore['ruptures'][mask]
 
+
+@extract.add('source_geom')
+def extract_source_geom(dstore, srcidxs):
+    """
+    Extract the geometry of a given sources
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
+    """
+    for i in srcidxs.split(','):
+        rec = dstore['source_info'][int(i)]
+        geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
+        yield rec['source_id'], geom
+
 # #####################  extraction from the WebAPI ###################### #
 
 
@@ -925,6 +935,8 @@ class WebExtractor(Extractor):
             raise WebAPIError('Not Found: %s' % url)
         elif resp.status_code != 200:
             raise WebAPIError(resp.text)
+        self.status = self.sess.get(
+            '%s/v1/calc/%d/status' % (self.server, calc_id)).json()
         self.oqparam = object.__new__(oqvalidation.OqParam)
         vars(self.oqparam).update(resp.json())
 
@@ -941,6 +953,21 @@ class WebExtractor(Extractor):
         npz = numpy.load(io.BytesIO(resp.content))
         attrs = {k: npz[k] for k in npz if k != 'array'}
         return ArrayWrapper(npz['array'], attrs)
+
+    def dump(self, fname):
+        """
+        Dump the remote datastore on a local path.
+        """
+        url = '%s/v1/calc/%d/datastore' % (self.server, self.calc_id)
+        resp = self.sess.get(url, stream=True)
+        down = 0
+        with open(fname, 'wb') as f:
+            logging.info('Saving %s', fname)
+            for chunk in resp.iter_content(CHUNKSIZE):
+                f.write(chunk)
+                down += len(chunk)
+                println('Downloaded {:,} bytes'.format(down))
+        print()
 
     def close(self):
         """

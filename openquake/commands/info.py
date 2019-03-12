@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import get_pickled_sizes
 from openquake.hazardlib import gsim, nrml, InvalidFile
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -98,8 +99,9 @@ def do_build_reports(directory):
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-@sap.Script
-def info(calculators, gsims, views, exports, extracts, report, input_file=''):
+@sap.script
+def info(calculators, gsims, views, exports, extracts, parameters,
+         report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
@@ -129,6 +131,14 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
             else:
                 fm = FunctionMaker(func)
             print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
+    if parameters:
+        params = []
+        for val in vars(OqParam).values():
+            if hasattr(val, 'name'):
+                params.append(val)
+        params.sort(key=lambda x: x.name)
+        for param in params:
+            print(param.name)
     if os.path.isdir(input_file) and report:
         with Monitor('info', measuremem=True) as mon:
             with mock.patch.object(logging.root, 'info'):  # reduce logging
@@ -166,5 +176,6 @@ info.flg('gsims', 'list available GSIMs')
 info.flg('views', 'list available views')
 info.flg('exports', 'list available exports')
 info.flg('extracts', 'list available extracts', '-x')
+info.flg('parameters', 'list all parameters in the job.ini')
 info.flg('report', 'build short report(s) in rst format')
 info.arg('input_file', 'job.ini file or zip archive')

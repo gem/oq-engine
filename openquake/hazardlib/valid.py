@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -91,7 +91,7 @@ def gsim(value):
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % gsim_name)
     gs = gsim_class(**kwargs)
-    gs._toml = value
+    gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     gs.minimum_distance = minimum_distance
     gs.init()
     return gs

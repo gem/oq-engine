@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -239,6 +239,9 @@ class EventBasedCalculator(base.HazardCalculator):
             idxs = base.get_idxs(data, self.eid2idx)  # this has to be fast
             data['eid'] = idxs  # replace eid with idx
             self.datastore.extend('gmf_data/data', data)
+            sig_eps = result.pop('sig_eps')
+            sig_eps['eid'] = base.get_idxs(sig_eps, self.eid2idx)
+            self.datastore.extend('gmf_data/sigma_epsilon', sig_eps)
             # it is important to save the number of bytes while the
             # computation is going, to see the progress
             update_nbytes(self.datastore, 'gmf_data/data', data)

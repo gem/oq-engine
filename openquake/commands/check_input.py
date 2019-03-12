@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018 GEM Foundation
+# Copyright (C) 2018-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ from openquake.commonlib import readinput
 from openquake.calculators import base
 
 
-@sap.Script
+@sap.script
 def check_input(job_ini_or_zip):    
     calc = base.calculators(readinput.get_oqparam(job_ini_or_zip))
     calc.read_inputs()

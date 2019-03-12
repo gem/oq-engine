@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2018 GEM Foundation
+# Copyright (C) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -171,19 +171,18 @@ def ensure_on():
                           '-l', 'INFO'])
 
         # wait for the dbserver to start
-        waiting_seconds = 10
+        waiting_seconds = 30
         while get_status() == 'not-running':
             if waiting_seconds == 0:
-                sys.exit('The DbServer cannot be started after 10 seconds. '
+                sys.exit('The DbServer cannot be started after 30 seconds. '
                          'Please check the configuration')
             time.sleep(1)
             waiting_seconds -= 1
 
 
-@sap.Script
+@sap.script
 def run_server(dbpath=os.path.expanduser(config.dbserver.file),
-               dbhostport=None, logfile=config.dbserver.log,
-               loglevel='WARN'):
+               dbhostport=None, loglevel='WARN'):
     """
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
@@ -210,13 +209,12 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
     actions.reset_is_running(db)
 
     # configure logging and start the server
-    logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
+    logging.basicConfig(level=getattr(logging, loglevel))
     DbServer(db, addr).start()  # expects to be killed with CTRL-C
 
 
 run_server.arg('dbpath', 'dbpath')
 run_server.arg('dbhostport', 'dbhost:port')
-run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':

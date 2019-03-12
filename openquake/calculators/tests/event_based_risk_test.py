@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -148,11 +148,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
-        # test curves_by_tag with a single realization
-        [fname] = export(
-            ('aggregate_by/taxonomy/curves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/curves_by_tag.csv', fname)
-
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
@@ -244,11 +239,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                         self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
 
-        # check curves_by_tag
-        fnames = export(('aggregate_by/occupancy/curves', 'csv'),
-                        self.calc.datastore)
-        self.assertEqualFiles('expected/curves_by_occupancy.csv', fnames[0])
-
         self.check_multi_tag(self.calc.datastore)
 
         # ------------------------- ebrisk calculator ---------------------- #
@@ -270,14 +260,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # multi-tag aggregations
         url = 'aggregate_by/taxonomy,occupancy/avg_losses/structural'
         arr = dict(extract(dstore, url))['quantile-0.5']
-        self.assertEqual(len(arr.to_table()), 3)
+        self.assertEqual(len(arr.to_table()), 1)
 
         # aggregate by all loss types
         fnames = export(('aggregate_by/taxonomy,occupancy/avg_losses', 'csv'),
-                        dstore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-        fnames = export(('aggregate_by/taxonomy,occupancy/curves', 'csv'),
                         dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
@@ -291,9 +277,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         minmag = self.calc.datastore['ruptures']['mag'].min()
         self.assertGreaterEqual(minmag, 5.2)
 
-        # [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        # self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
-        #                       fname, delta=1E-5)
+        # check asset_loss_table
+        tot = self.calc.datastore['asset_loss_table'].value.sum()
+        self.assertEqual(tot, 15743430.0)
+        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
+                              fname, delta=1E-5)
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
@@ -336,7 +325,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
                             exports='csv')
-        [fname, _sitefile] = out['gmf_data', 'csv']
+        [fname, _sigeps, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
     def test_case_4b(self):
