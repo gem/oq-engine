@@ -223,11 +223,6 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
         self.assertEqual(resp['calculation_mode'], 'classical')
 
-        # check the /extract endpoint
-        url = '/v1/calc/%s/extract/hazard/rlzs' % job_id
-        resp = self.c.get(url)
-        self.assertEqual(resp.status_code, 200)
-
         # check extract hcurves
         url = '/v1/calc/%s/extract/hcurves?kind=stats&imt=PGA' % job_id
         resp = self.c.get(url)
