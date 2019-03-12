@@ -52,4 +52,4 @@ an idea of how much a calculation can be reduced even before running it.
 Not it is a good time to read the section about `common mistakes`_.
 
 
-.. _common mistakes: common-mistakes
+.. _common mistakes: common-mistakes.rst
