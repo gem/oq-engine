@@ -64,7 +64,7 @@ RM       4,000
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages/structural?'
                       'taxonomy=RM&CRESTA=01.1')
-        self.assertEqual(len(dmg), 0)
+        self.assertEqual(dmg.shape, ())
 
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
