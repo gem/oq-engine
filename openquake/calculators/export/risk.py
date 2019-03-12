@@ -21,12 +21,13 @@ import logging
 import numpy
 
 from openquake.baselib.python3compat import encode
+from openquake.baselib import hdf5
 from openquake.baselib.general import group_array,  deprecated as depr
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_damage_array, _get)
+    extract, build_damage_dt, build_damage_array)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
@@ -577,10 +578,10 @@ def export_aggregate_by_csv(ekey, dstore):
     data = extract(dstore, token + '/' + what)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for stat, arr in data:
+    for stat, aw in data:
         tup = (ekey[0].replace('/', '-').replace('-stats', ''), stat, ekey[1])
         path = '%s-%s.%s' % tup
         fname = dstore.export_path(path)
-        writer.save(arr.to_table(), fname)
+        writer.save(aw.to_table(), fname)
         fnames.append(fname)
     return fnames

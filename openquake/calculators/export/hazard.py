@@ -25,8 +25,6 @@ import collections
 import numpy
 
 from openquake.baselib.general import humansize, group_array, deprecated
-from openquake.baselib.node import Node
-from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, filters
 from openquake.calculators.views import view
