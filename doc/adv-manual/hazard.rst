@@ -63,7 +63,7 @@ affect all of the sites. So the size of the GMFs should be less than
 25 TB. Moreover, if you want to use such GMFs for a damage analysis,
 you may want to discard very small shaking that will not cause any
 damage to your buildings. The engine has a parameter to discard all
-GMFs below a minimum threshould, the `minimum_intensity` parameter. The
+GMFs below a minimum threshould, the ``minimum_intensity`` parameter. The
 higher the threshold, the smaller the size of the GMFs. By playing
 with that parameter you can reduce the size of the output by orders of
 magnitudes. Terabytes could easily become gigabytes with a well chosen
