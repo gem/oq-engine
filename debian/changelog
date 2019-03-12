@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Improved the event based calculator to account for cluster-based models
+
   [Michele Simionato]
   * Removed the now redundant command `oq extract hazard/rlzs`
 
