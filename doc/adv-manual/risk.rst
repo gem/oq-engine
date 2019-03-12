@@ -237,3 +237,57 @@ loss curves, so you *must* use it if you are interested in such outputs.
 Aggregated losses instead are computed simply by summing values, the algorithm
 is linear and you can compute them both with the ``event_based_risk``
 calculator and the ``ebrisk`` calculator.
+
+In order to compute aggregate loss curves with the ``ebrisk`` you must
+set the ``aggregate_by`` parameter in the ``job.ini``. If you do not
+set it, you will still able to compute the total aggregate loss curve
+(and aggregate asset losses) which could be computed with the old
+calculator ``event_based_risk`` too. The interesting bit is when you
+want to compute aggregate loss curves by region. In order to do so
+your exposure must contain some tag specifying the region to which
+each asset belongs. We have an example for Nepal in our event based risk demo.
+The exposure there contains various tags and in particular a geographic
+tag called NAME1 with values "Mid-Western", "Far-Western", "West", "East",
+"Central", and the ``job_eb.ini`` file defines
+
+``aggregate_by = NAME_1``
+
+When running the calculation you will see something like this::
+
+   Calculation 23060 finished correctly in 11 seconds
+     id | name
+    182 | Aggregate Asset Losses
+    186 | Aggregate Event Losses
+    180 | Aggregate Loss Curves
+    181 | Aggregate Loss Curves Statistics
+    183 | Average Asset Losses
+    188 | Earthquake Ruptures
+    184 | Full Report
+    185 | Input Files
+    187 | Realizations
+    189 | Seismic Source Groups
+
+Exporting the *Aggregate Loss Curves Statistics* output will give
+you the mean and quantile loss curves in a format like the following one:
+
+ .. code-block:: csv
+
+    annual_frequency_of_exceedence,return_period,loss_type,loss_value,loss_ratio
+    5.00000E-01,2,nonstructural,0.00000E+00,0.00000E+00
+    5.00000E-01,2,structural,0.00000E+00,0.00000E+00
+    2.00000E-01,5,nonstructural,0.00000E+00,0.00000E+00
+    2.00000E-01,5,structural,0.00000E+00,0.00000E+00
+    1.00000E-01,10,nonstructural,0.00000E+00,0.00000E+00
+    1.00000E-01,10,structural,0.00000E+00,0.00000E+00
+    5.00000E-02,20,nonstructural,0.00000E+00,0.00000E+00
+    5.00000E-02,20,structural,0.00000E+00,0.00000E+00
+    2.00000E-02,50,nonstructural,0.00000E+00,0.00000E+00
+    2.00000E-02,50,structural,0.00000E+00,0.00000E+00
+    1.00000E-02,100,nonstructural,0.00000E+00,0.00000E+00
+    1.00000E-02,100,structural,0.00000E+00,0.00000E+00
+    5.00000E-03,200,nonstructural,1.35279E+05,1.26664E-06
+    5.00000E-03,200,structural,2.36901E+05,9.02027E-03
+    2.00000E-03,500,nonstructural,1.74918E+06,1.63779E-05
+    2.00000E-03,500,structural,2.99670E+06,1.14103E-01
+    1.00000E-03,1000,nonstructural,6.92401E+06,6.48308E-05
+    1.00000E-03,1000,structural,1.15148E+07,4.38439E-01
