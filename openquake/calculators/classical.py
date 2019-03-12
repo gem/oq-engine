@@ -178,23 +178,22 @@ class ClassicalCalculator(base.HazardCalculator):
         kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
         with self.monitor('saving statistics', autoflush=True):
-            for kind in pmap_by_kind:  # i.e. kind == ('hcurves', 'mean')
-                pmap = pmap_by_kind[kind]
-                if kind == 'rlz_by_sid':  # pmap is actually a rlz_by_sid
-                    for sid, rlz in pmap.items():
+            for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
+                pmaps = pmap_by_kind[kind]
+                if kind == 'rlz_by_sid':  # pmaps is actually a rlz_by_sid
+                    for sid, rlz in pmaps.items():
                         self.datastore['best_rlz'][sid] = rlz
-                elif kind[0] == 'hmaps':
-                    key = '%s/%s' % kind
-                    dset = self.datastore.getitem(key)
-                    for sid in pmap:
-                        arr = pmap[sid].array
-                        dset[sid] = arr
-                elif pmap:
-                    key = '%s/%s' % kind
-                    dset = self.datastore.getitem(key)
-                    for sid in pmap:
-                        arr = pmap[sid].array[:, 0]
-                        dset[sid] = arr
+                elif kind in ('hmaps-rlzs', 'hmaps-stats'):
+                    # pmaps is a list of R pmaps
+                    dset = self.datastore.getitem(kind)
+                    for r, pmap in enumerate(pmaps):
+                        for s in pmap:
+                            dset[s, r] = pmap[s].array  # shape (M, P)
+                elif kind in ('hcurves-rlzs', 'hcurves-stats'):
+                    dset = self.datastore.getitem(kind)
+                    for r, pmap in enumerate(pmaps):
+                        for s in pmap:
+                            dset[s, r] = pmap[s].array[:, 0]  # shape L
             self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
@@ -247,23 +246,23 @@ class ClassicalCalculator(base.HazardCalculator):
         P = len(oq.poes)
         M = len(oq.imtls)
         R = len(self.rlzs_assoc.realizations)
-        names = [name for name, _ in hstats]
+        S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
-            for r in range(R):
-                names.append('rlz-%03d' % r)
-        for name in names:
-            self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
-            self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
+            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
             if oq.poes:
-                self.datastore.create_dset('hmaps/' + name, F32, (N, M, P))
-                self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * M * 4)
-            if name == 'mean' and R > 1 and N <= FEWSITES:
-                self.datastore.create_dset('best_rlz', U32, (N,))
+                self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
+        if hstats:
+            self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+            if oq.poes:
+                self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
+        if 'mean' in dict(hstats) and R > 1 and N <= FEWSITES:
+            self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
-        iterargs = ((getters.PmapGetter(parent, self.rlzs_assoc, t.sids),
-                     N, hstats, oq.individual_curves)
-                    for t in self.sitecol.split_in_tiles(ct))
+        iterargs = (
+            (getters.PmapGetter(parent, self.rlzs_assoc, t.sids, oq.poes),
+             N, hstats, oq.individual_curves)
+            for t in self.sitecol.split_in_tiles(ct))
         parallel.Starmap(build_hazard_stats, iterargs, self.monitor()).reduce(
             self.save_hazard_stats)
 
@@ -310,25 +309,28 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     R = len(pmaps)
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     pmap_by_kind = {}
-    for statname, stat in hstats:
-        with monitor('compute ' + statname):
+    hmaps_stats = []
+    hcurves_stats = []
+    with monitor('compute stats'):
+        for statname, stat in hstats.items():
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
-            pmap_by_kind['hcurves', statname] = pmap
+            hcurves_stats.append(pmap)
             if pgetter.poes:
-                pmap_by_kind['hmaps', statname] = calc.make_hmap(
-                    pmap, pgetter.imtls, pgetter.poes)
-        if statname == 'mean' and R > 1 and N <= FEWSITES:
-            pmap_by_kind['rlz_by_sid'] = rlz = {}
-            for sid, pcurve in pmap.items():
-                rlz[sid] = util.closest_to_ref(
-                    [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
-
+                hmaps_stats.append(
+                    calc.make_hmap(pmap, pgetter.imtls, pgetter.poes))
+            if statname == 'mean' and R > 1 and N <= FEWSITES:
+                pmap_by_kind['rlz_by_sid'] = rlz = {}
+                for sid, pcurve in pmap.items():
+                    rlz[sid] = util.closest_to_ref(
+                        [pm[sid].array for pm in pmaps], pcurve.array)['rlz']
+    if hcurves_stats:
+        pmap_by_kind['hcurves-stats'] = hcurves_stats
+    if hmaps_stats:
+        pmap_by_kind['hmaps-stats'] = hmaps_stats
     if R > 1 and individual_curves or not hstats:
-        with monitor('build individual hmaps'):
-            for r, pmap in enumerate(pmaps):
-                key = 'rlz-%03d' % r
-                pmap_by_kind['hcurves', key] = pmap
-                if pgetter.poes:
-                    pmap_by_kind['hmaps', key] = calc.make_hmap(
-                        pmap, imtls, poes)
+        pmap_by_kind['hcurves-rlzs'] = pmaps
+        if pgetter.poes:
+            with monitor('build individual hmaps'):
+                pmap_by_kind['hmaps-rlzs'] = [
+                    calc.make_hmap(pmap, imtls, poes) for pmap in pmaps]
     return pmap_by_kind

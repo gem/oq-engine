@@ -15,19 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
-import re
-from nose.plugins.attrib import attr
-
-import numpy.testing
-
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based_advanced import case_01
 
 
 class EventBasedAdvancedTestCase(CalculatorTestCase):
 
-    @attr('qa', 'hazard', 'event_based_advanced')
     def test_case_1(self):
-
-        out = self.run_calc(case_01.__file__, 'job.ini', exports='csv,xml')
+        self.run_calc(case_01.__file__, 'job.ini', exports='csv,xml')
