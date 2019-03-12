@@ -442,12 +442,6 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
-def _array(v):
-    if hasattr(v, '__toh5__'):
-        return v.__toh5__()[0]
-    return v
-
-
 class ArrayWrapper(object):
     """
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
@@ -457,7 +451,7 @@ class ArrayWrapper(object):
         if isinstance(obj, cls):  # it is already an ArrayWrapper
             return obj
         elif inspect.isgenerator(obj):
-            array, attrs = (), {decode(k): _array(v) for k, v in obj}
+            array, attrs = (), dict(obj)
         elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
@@ -470,10 +464,16 @@ class ArrayWrapper(object):
             self.array = array
 
     def __iter__(self):
-        return iter(self.array)
+        if hasattr(self, 'array'):
+            return iter(self.array)
+        else:
+            return iter(vars(self).items())
 
     def __len__(self):
-        return len(self.array)
+        if hasattr(self, 'array'):
+            return len(self.array)
+        else:
+            return len(vars(self))
 
     def __getitem__(self, idx):
         if isinstance(idx, str) and idx in self.__dict__:
@@ -481,15 +481,15 @@ class ArrayWrapper(object):
         return self.array[idx]
 
     def __toh5__(self):
-        return (self.array, {k: v for k, v in vars(self).items()
-                             if k != 'array' and not k.startswith('_')})
+        arr = getattr(self, 'array', ())
+        return (arr, {k: v for k, v in vars(self).items()
+                      if k != 'array' and not k.startswith('_')})
 
     def __fromh5__(self, array, attrs):
         self.__init__(array, attrs)
 
     def __repr__(self):
-        shp = self.array.shape if hasattr(self, 'array') else ()
-        return '<%s%s>' % (self.__class__.__name__, shp)
+        return '<%s%s>' % (self.__class__.__name__, self.shape)
 
     @property
     def dtype(self):
@@ -499,7 +499,7 @@ class ArrayWrapper(object):
     @property
     def shape(self):
         """shape of the underlying array"""
-        return self.array.shape
+        return self.array.shape if hasattr(self, 'array') else ()
 
     def save(self, path, **extra):
         """
@@ -538,7 +538,7 @@ class ArrayWrapper(object):
          ['RC', 'IND', 5000.0],
          ['WOOD', 'RES', 500.0]]
         """
-        shape = self.array.shape
+        shape = self.shape
         # the tagnames are bytestrings so they must be decoded
         tagnames = decode_array(self.tagnames)
         if len(shape) == len(tagnames):
@@ -553,7 +553,7 @@ class ArrayWrapper(object):
 
     def _to_table(self, extra=()):
         tags = []  # tag_idx -> tag_values
-        shape = self.array.shape
+        shape = self.shape
         if extra:
             assert shape[-1] == len(extra), (shape[-1], len(extra))
         tagnames = decode_array(self.tagnames)
