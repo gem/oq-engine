@@ -591,8 +591,7 @@ class OqParam(valid.ParamSet):
         """
         The calculation mode is event_based, event_based_risk or ebrisk
         """
-        tmps = 'event_based_risk ebrisk event_based_advanced'
-        return self.calculation_mode in tmps 
+        return self.calculation_mode in 'event_based_risk ebrisk'
 
     def is_valid_shakemap(self):
         """
