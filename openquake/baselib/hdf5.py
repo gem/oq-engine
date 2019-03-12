@@ -453,7 +453,7 @@ class ArrayWrapper(object):
         elif inspect.isgenerator(obj):
             array, attrs = (), dict(obj)
         elif hasattr(obj, '__toh5__'):
-            array, attrs = obj.__toh5__()
+            return obj
         else:  # assume obj is an array
             array, attrs = obj, {}
         return cls(array, attrs)
