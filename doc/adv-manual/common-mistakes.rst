@@ -148,3 +148,7 @@ tasks. Again, it is best not to touch this parameter unless you know what
 you are doing.
 
 .. _equivalent distance approximation: equivalent_distance_approximation.rst
+
+Now you may continue with the `tips for running large hazard calculations`_:
+
+.. _tips for running large hazard calculations: hazard.rst
