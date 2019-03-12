@@ -268,9 +268,7 @@ When running the calculation you will see something like this::
     189 | Seismic Source Groups
 
 Exporting the *Aggregate Loss Curves Statistics* output will give
-you the mean and quantile loss curves in a format like the following one:
-
- .. code-block:: csv
+you the mean and quantile loss curves in a format like the following one::
 
     annual_frequency_of_exceedence,return_period,loss_type,loss_value,loss_ratio
     5.00000E-01,2,nonstructural,0.00000E+00,0.00000E+00
