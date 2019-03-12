@@ -41,7 +41,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore, hdf5
+from openquake.baselib import datastore
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
@@ -674,7 +674,7 @@ def extract(request, calc_id, what):
             os.close(fd)
             n = len(request.path_info)
             query_string = unquote_plus(request.get_full_path()[n:])
-            aw = hdf5.ArrayWrapper.from_(_extract(ds, what + query_string))
+            aw = _extract(ds, what + query_string)
             a = {}
             for key, val in vars(aw).items():
                 if isinstance(val, str):
