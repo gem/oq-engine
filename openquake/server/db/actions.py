@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2018 GEM Foundation
+# Copyright (C) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -258,6 +258,7 @@ DISPLAY_NAME = {
     'damages-rlzs': 'Asset Damage Distribution',
     'damages-stats': 'Asset Damage Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
+    'avg_losses': 'Average Asset Losses',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
     'loss_curves-rlzs': 'Asset Loss Curves',
@@ -267,6 +268,7 @@ DISPLAY_NAME = {
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
     'agg_loss_table': 'Aggregate Loss Table',
+    'agg_losses-rlzs': 'Aggregate Asset Losses',
     'agglosses': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',

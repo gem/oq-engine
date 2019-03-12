@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib import util
 
 
-@sap.Script
+@sap.script
 def checksum(thing):
     """
     Get the checksum of a calculation from the calculation ID (if already

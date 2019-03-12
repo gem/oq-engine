@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -390,21 +390,23 @@ class AssetCollection(object):
     # numbers to each tagvalue, which is possible
     D, I = len('deductible-'), len('insurance_limit-')
 
-    def __init__(self, asset_refs, assets_by_site, tagcol, cost_calculator,
-                 time_event, occupancy_periods):
-        self.tagcol = tagcol
-        self.cost_calculator = cost_calculator
+    def __init__(self, exposure, assets_by_site, time_event):
+        self.asset_refs = numpy.array([
+            exposure.asset_refs[asset.ordinal]
+            for assets in assets_by_site for asset in assets])
+        self.tagcol = exposure.tagcol
+        self.cost_calculator = exposure.cost_calculator
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
-            assets_by_site, tagcol.tagnames)
-        if self.occupancy_periods and not occupancy_periods:
+            assets_by_site, exposure.tagcol.tagnames)
+        periods = exposure.occupancy_periods
+        if self.occupancy_periods and not periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
-                         'in the exposure', self.occupancy_periods)
-        elif self.occupancy_periods.strip() != occupancy_periods.strip():
+                            'in the exposure', self.occupancy_periods)
+        elif self.occupancy_periods.strip() != periods.strip():
             raise ValueError('Expected %s, got %s' %
-                             (occupancy_periods, self.occupancy_periods))
-        self.asset_refs = asset_refs
+                             (periods, self.occupancy_periods))
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if any(field.startswith('occupants_') for field in fields):
@@ -618,7 +620,7 @@ def build_asset_array(assets_by_site, tagnames=()):
     limit_d = first_asset.insurance_limits or {}
     if deductible_d or limit_d:
         logging.warning('Exposures with insuranceLimit/deductible fields are '
-                     'deprecated and may be removed in the future')
+                        'deprecated and may be removed in the future')
     deductibles = ['deductible-%s' % name for name in deductible_d]
     limits = ['insurance_limit-%s' % name for name in limit_d]
     retro = ['retrofitted'] if first_asset._retrofitted else []
