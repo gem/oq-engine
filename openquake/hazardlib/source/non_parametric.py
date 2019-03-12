@@ -171,3 +171,19 @@ class NonParametricSeismicSource(BaseSeismicSource):
                                  for rup, pmf in self.data],
                                 axis=1)  # shape (3, N)
         return arr.T
+
+    def get_one_rupture(self, rupture_mutex=False):
+        """
+        Yields one random rupture from a source
+        """
+        num_ruptures = self.count_ruptures()
+        if rupture_mutex:
+            weights = numpy.array([rup.weight for rup in self.iter_ruptures()])
+        else:
+            weights = numpy.ones((num_ruptures))*1./num_ruptures
+        idx = numpy.random.choice(range(num_ruptures), p=weights)
+        for i, rup in enumerate(self.iter_ruptures()):
+            if i == idx:
+                rup.serial = self.serial + i
+                rup.idx = idx
+                return rup

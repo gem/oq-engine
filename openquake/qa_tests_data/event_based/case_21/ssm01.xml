@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+        name="SSM for testing advanced event-based analysis"
+        investigation_time="1.0"
+        >
+        
+        <sourceGroup
+            name="group 1"
+            src_interdep="indep"
+            rup_interdep="indep"
+            tectonicRegion="Active Shallow Crust"
+            cluster="true" 
+            tom="PoissonTOM" 
+            occurrence_rate="0.01"
+            >
+            
+            <nonParametricSeismicSource
+                id="1_1"
+                name="Non Parametric Source - Cluster"
+                rup_weights="0.2 0.8"
+                tectonicRegion="Active Shallow Crust"
+                >
+            
+                <simpleFaultRupture probs_occur="0.4 0.6">
+                    <magnitude> 7.0 </magnitude>
+                    <rake> 90.0 </rake>
+                    <hypocenter depth="5.0" lat="1.4" lon="0.0"/>
+                    <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            1.0 -0.2 1.4 0.0 1.7 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip> 30 </dip>
+                    <upperSeismoDepth> 5.0 </upperSeismoDepth>
+                    <lowerSeismoDepth> 15.0 </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+               </simpleFaultRupture>
+
+                <simpleFaultRupture probs_occur="0.4 0.6">
+                    <magnitude> 6.6 </magnitude>
+                    <rake> 90.0 </rake>
+                    <hypocenter depth="5.0" lat="1.4" lon="0.0"/>
+                    <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            1.0 0.0 1.7 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip> 30 </dip>
+                    <upperSeismoDepth> 5.0 </upperSeismoDepth>
+                    <lowerSeismoDepth> 15.0 </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </simpleFaultRupture>
+
+            </nonParametricSeismicSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
