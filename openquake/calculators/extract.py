@@ -701,7 +701,7 @@ def crm_attrs(dstore, what):
         min_iml and covs, needed by the risk exporters.
     """
     name = dstore['oqparam'].risk_model
-    return ArrayWrapper(0, dstore.get_attrs(name))
+    return ArrayWrapper((), dstore.get_attrs(name))
 
 
 def _get(dstore, name):
