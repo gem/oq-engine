@@ -73,23 +73,6 @@ knowing how many tasks to generate is an expensive operation. Before that
 operation was effectively serialized on the master node, while now it can
 be parallelized as well.
 
-We changed the algorithm used in all kinds of even _based calculations
-and now by default the sources are not split anymore. This makes the
-generation of ruptures a lot faster. Before this behavior was not the
-default, because we wanted to keep compatibility with the legacy
-algorithm. With the new algorithm the Montecarlo seeds are generated
-differently, so the sampled ruptures are different than before but
-statistically equivalent.
-
-We also improved the saving of the ruptures: now they are filtered
-before saving them, thus avoiding saving irrelevant ruptures.
-For speed, the filtering is done with a bounding box filter, which is
-not precise: most ruptures which are far away are removed, but not
-all of them. This is not a problem because during the ground motion
-filter calculator the precise filter is used and they are correctly
-discarded. The bounding box filter is enough to save disk space and
-storing time.
-
 General improvements on all calculators
 -------------------------------------------------
 
@@ -141,6 +124,23 @@ files with the tables, which was causing issues with engine 3.3.
 from the site model, not from the exposure - has been extended to all
 calculators.
 
+9. We changed the algorithm used in all kinds of event based calculations
+and now by default the sources are not split anymore. This makes the
+generation of ruptures a lot faster. Before this behavior was not the
+default, because we wanted to keep compatibility with the legacy
+algorithm. With the new algorithm the Montecarlo seeds are generated
+differently, so the sampled ruptures are different than before but
+statistically equivalent.
+
+10. We also improved the saving of the ruptures: now they are filtered
+before saving them, thus avoiding saving irrelevant ruptures.
+For speed, the filtering is done with a bounding box filter, which is
+not precise: most ruptures which are far away are removed, but not
+all of them. This is not a problem because during the ground motion
+filter calculator the precise filter is used and they are correctly
+discarded. The bounding box filter is enough to save disk space and
+storing time.
+
 Experimental new features
 -------------------------
 
@@ -149,7 +149,7 @@ sense of the famous New Madrid cluster, both for classical and event
 based calculations. This is a major new feature that required
 substantial changes to the internals of hazardlib. In particular now
 it is possible to define *non-poissonian temporal occurrence
-models*. Moreover, now we have a precise definition of atomic source
+models*. Moreover, now there is a a precise definition of atomic source
 groups, i.e. source groups  that cannot be split across tasks. A source
 group is considered atomic if at least one of the following three things
 is true:
@@ -206,7 +206,7 @@ Changlong Li contributed an update to the GMPE YU2013.
 Valerio Poggi contributed a GMPE for average SA calculations.
 
 Chris van Houtte contributed quite a few new GMPEs specific for New
-Zealand, in particular in Bradley_2013.py and Christchurch GMPEs.
+Zealand, in particular in Bradley_2013 and Christchurch GMPEs.
 
 WebAPI and plotting
 -------------------
@@ -239,39 +239,14 @@ Moreover the plotting facilities of the engine have been extended so
 that it is now possible to plot hazard curves, maps and uniform hazard
 spectra even of a remote calculation. The is documented in the
 extract-api.rst page above. `oq plot` is still unofficial and subject
-to changes: the official way to plot hazard results is still the [QGIS
-plugin](https://plugins.qgis.org/plugins/svir/)
+to changes: the official way to plot hazard results is the [QGIS
+plugin](https://plugins.qgis.org/plugins/svir/).
 
 We added a few new `extract` commands: as usual you can see the full
 list of them with the command
 ```
 $ oq info --extract
 ```
-
-Internals
---------------
-
-1. We have removed the dependency from nose. You can still run the tests
-with nose, but the engine does not import it anymore: it can be
-considered a completly external tool.
-
-2. We are considering using pytest as preferred testing tool for the
-engine, since it is more powerful and well maintained. It also has
-better discovery features that helped us to find hidden broken tests.
-
-3. We have added a dependency from toml, a small module use to
-serialize/deserialize literal Python objects to TOML format.
-
-4. We reduced drastically the number client sockets attached to the DbServer
-and we removed the DbServer log file, which was not used.
-
-5. There is now a `sap.script` decorator that should be used instead
-of the `sap.Script`` class.
-
-6. We added a command `oq info --parameters`.
-
-7. It is now possible to convert the Windows nightly builds into a development
-environment.
 
 More checks
 ---------------------
@@ -346,11 +321,37 @@ exposed value and loss ratios are exported too.
 
 9. The exporter for the loss curves now also exports the loss ratios.
 
-The hazard XML exporters have been officially deprecated: unofficially,
+10. The hazard XML exporters have been officially deprecated: unofficially,
 they have been deprecated for years, since the time we introduced the CSV
 exporters. You use the CSV for normal usage; if instead you want to do
 advanced postprocessing (typically involging the hazard curves for all
 realizations) you should use the Extractor API.
 
-10. The insured losses feature has been deprecated months ago and it is still
+11. The insured losses feature has been deprecated months ago and it is still
 deprecated: it may disappear or change in the next release.
+
+Packaging and internals
+------------------------
+
+1. We have removed the dependency from nose. You can still run the tests
+with nose, but the engine does not import it anymore: it can be
+considered a completly external tool.
+
+2. We are considering using pytest as preferred testing tool for the
+engine, since it is more powerful and well maintained. It also has
+better discovery features that helped us to find hidden broken tests.
+
+3. We have added a dependency from toml, a small module use to
+serialize/deserialize literal Python objects to TOML format.
+
+4. It is now possible to convert the Windows nightly builds into a development
+environment.
+
+5. We reduced drastically the number client sockets attached to the DbServer
+and we removed the DbServer log file, which was not used.
+
+6. There is now a `sap.script` decorator that should be used instead
+of the `sap.Script`` class.
+
+7. We added a command `oq info --parameters` tha displays the list of
+all the parameters recognized by job.ini files.
