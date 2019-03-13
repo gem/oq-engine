@@ -46,6 +46,7 @@ Kendra Johnson          April 2018
 Pablo Heresi            August 2018
 Chris Van Houtte        October 2018
 Stéphane Drouet         December 2018
+Changlong Li            February 2019
 
 Project management
 ------------------
