@@ -677,6 +677,7 @@ def extract(request, calc_id, what):
             aw = _extract(ds, what + query_string)
             a = {}
             for key, val in vars(aw).items():
+                key = str(key)  # can be a numpy.bytes_
                 if isinstance(val, str):
                     # without this oq extract would fail
                     a[key] = numpy.array(val.encode('utf-8'))
