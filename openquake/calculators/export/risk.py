@@ -155,7 +155,7 @@ def export_agg_losses(ekey, dstore):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
             l, *tagidxs = multi_idx
-            evalue = expvalue[tuple(tagidxs) + (l,)]
+            evalue = expvalue[tuple(t+1 for t in tagidxs) + (l,)]
             row = tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, evalue, loss / evalue)
             rows.append((dt.names[l],) + row)
@@ -323,7 +323,7 @@ def export_agg_losses_ebr(ekey, dstore):
         for lt, i in lti.items():
             rec[lt] = row['loss'][i]
     elt.sort(order=['year', 'event_id'])
-    dest = dstore.build_fname('agg_losses', 'all', 'csv')
+    dest = dstore.build_fname('elt', '', 'csv')
     writer.save(elt, dest)
     return writer.getsaved()
 
