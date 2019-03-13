@@ -120,9 +120,9 @@ GMPEs (like the ones used for Canada) are fully serialized in the datastore
 and the risk calculator does not need anymore access to the external HDF5
 files with the tables, which was causing issues with engine 3.3.
 
-8. The logic used in the event based risk calculator - read the hazard sites
-from the site model, not from the exposure - has been extended to all
-calculators.
+8. The logic used in the event based risk calculator - read the hazard
+sites in preference from the site model, not from the exposure - has
+been extended to all calculators.
 
 9. We changed the algorithm used in all kinds of event based calculations
 and now by default the sources are not split anymore. This makes the
@@ -199,9 +199,10 @@ decluster window of the HMKT. The syntax to use is as in this example:
                     "time_cutoff": 100}
 ```
 Rodolfo Puglia contributed spectral acceleration amplitudes at 2.5, 2.75 and
-4 seconds for the Bindi_2014 GMPE.
+4 seconds for the Bindi_2014 GMPE, relevant for the Italy model.
 
-Changlong Li contributed an update to the GMPE YU2013.
+Changlong Li contributed an update to the GMPE YU2013, relevant for the
+China model.
 
 Valerio Poggi contributed a GMPE for average SA calculations.
 
