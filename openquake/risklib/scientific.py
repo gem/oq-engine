@@ -1026,7 +1026,7 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
     :param float probability: the probability value used to
                               interpolate the loss curve
     """
-
+    assert len(loss_ratios) >= 3, loss_ratios
     rpoes = poes[::-1]
     if probability > poes[0]:  # max poes
         return 0.0
@@ -1429,7 +1429,7 @@ class LossesByPeriodBuilder(object):
         """
         array = numpy.zeros((len(clp), len(losses)), F32)
         for r, ls in enumerate(losses):
-            if len(ls) < 2:
+            if len(ls) <= 2:
                 continue
             for c, poe in enumerate(clp):
                 array[c, r] = conditional_loss_ratio(ls, self.poes, poe)
