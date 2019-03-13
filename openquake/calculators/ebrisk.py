@@ -216,8 +216,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eids = dic['alt_eids']
-                eidx = [self.eid2idx[eid] for eid in eids]
-                self.datastore['asset_loss_table'][:, eidx, :] = alt
+                eidx = numpy.array([self.eid2idx[eid] for eid in eids])
+                idx = numpy.argsort(eidx)
+                self.datastore['asset_loss_table'][:, eidx[idx]] = alt[:, idx]
         return acc + dic['times']
 
     def get_shape(self, *sizes):
