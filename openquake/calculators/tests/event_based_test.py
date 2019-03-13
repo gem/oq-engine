@@ -365,6 +365,9 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_21(self):
         self.run_calc(case_21.__file__, 'job.ini', exports='csv,xml')
+        self.run_calc(case_21.__file__, 'job.ini',
+                      ses_per_logic_tree_path='10',
+                      number_of_logic_tree_samples='0')
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
