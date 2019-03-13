@@ -160,7 +160,7 @@ def sample_cluster(sources, num_ses, param):
     # Set the parameters required to compute the number of occurrences
     # of the group of sources
     #  assert param['oqparam'].number_of_logic_tree_samples > 0
-    samples = getattr(sources[0], 'samples')
+    samples = getattr(sources[0], 'samples', 1)
     tom = getattr(sources, 'temporal_occurrence_model')
     rate = tom.occurrence_rate
     time_span = tom.time_span
