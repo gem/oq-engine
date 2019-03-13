@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Changed the weight-by-IMT syntax in order to support zero weights
+  * Removed the now redundant command `oq extract hazard/rlzs`
 
   [Daniele Viganò]
   * Fixed 'oq abort' to always mark killed jobs as 'aborted'

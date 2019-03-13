@@ -67,10 +67,9 @@ For instance a configuration like the following one::
                                         "SA(1.0)":  logscale(0.001,4.0, 100)}
 
 requires computing the PoEs on 300 levels. Is that really what the user wants?
-Since calculations are usually dominated by epistemic errors, it could very
-well be that within the systematic error using only 20 levels per each intensity
-measure type produces good enough results, while reducing the computation
-time by a factor of 5, at least in theory.
+It could very well be that using only 20 levels per each intensity
+measure type produces good enough results, while potentially
+reducing the computation time by a factor of 5.
 
 pointsource_distance
 ----------------------------
@@ -81,7 +80,7 @@ the same thing) have an hypocenter distribution and
 a nodal plane distribution, which are used to model the uncertainties on
 the hypocenter location and ont the orientation of the underlying ruptures.
 Since PointSources produce rectangular surfaces, thery are really
-not pointwise for the engine, and are actually complicated things.
+not pointwise for the engine.
 Is the effect of the hypocenter/nodal planes distributions relevant?
 It depends on the calculation, but if you are interested in points that
 are far from the rupture the effect is minimal. So if you have a nodal
@@ -91,18 +90,18 @@ times more calculations than needed, since at large distance the hazard
 will be more or less the same for each rupture.
 
 To avoid this performance problem it is a good practice to set the
-`pointsource_distance` parameter. For instance, setting
+``pointsource_distance`` parameter. For instance, setting
 
-`pointsource_distance = 50`
+``pointsource_distance = 50``
 
 means: for the points that are distant more than 50 km from the ruptures
 ignore the hypocenter and nodal plane distributions and consider only the
 first rupture in the distribution. This will give you a substantial speedup
 if your model is dominated by PointSources and there are several
-nodal planes/hypocenters in the distribution. In same situation it also
+nodal planes/hypocenters in the distribution. In some situations it also
 makes sense to set
 
-`pointsource_distance = 0`
+``pointsource_distance = 0``
 
 to completely remove the nodal plane/hypocenter distributions. For instance
 the Indonesia model has 20 nodal planes for each point sources; however such
@@ -110,18 +109,18 @@ model uses the so-called `equivalent distance approximation`_ which considers
 the point sources to be really pointwise. In this case the contribution to
 the hazard is totally independent from the nodal plane and by using
 
-`pointsource_distance = 0`
+``pointsource_distance = 0``
 
 one can get *exactly* the same numbers and run the model in 1 hour instead
 of 20. Actually, starting from engine 3.3 the engine is smart enough to
 recognize the cases where the equivalent distance approximation is used and
-automatically set `pointsource_distance = 0`.
+automatically set ``pointsource_distance = 0``.
 
-Even if you not using the equivalent distance approximation, the effect
-of the nodal plane/hypocenter distribution: I have seen case when setting
-setting `pointsource_distance = 0` changed the result only by 0.1% and
-gained an order of magnitude of speedup. You have to check on a case by case
-basis.
+Even if you not using the equivalent distance approximation, the
+effect of the nodal plane/hypocenter distribution can be negligible: I
+have seen case when setting setting ``pointsource_distance = 0``
+changed the result only by 0.1% and gained an order of magnitude of
+speedup. You have to check on a case by case basis.
 
 
 concurrent_tasks parameter
@@ -137,8 +136,19 @@ concurrent_tasks:
    in some cases, you may be forced to set it. Typically this happens in
    event based calculations, when computing the ground motion fields.
    If you run out of memory, increasing this parameter will help, since
-   you will produce smaller tasks. Another case when it may help is when
+   the engine will produce smaller tasks. Another case when it may help is when
    computing hazard statistics with lots of sites and realizations, since
    by increasing this parameter the tasks will contain less sites.
 
+Notice that if the number of ``concurrent_tasks`` is too big
+the performance will get worse and the data transfer will increase: at
+a certain point the calculation will fail because rabbitmq will run out
+of memory. I have seen this to happen when generating tens of thousands of
+tasks. Again, it is best not to touch this parameter unless you know what
+you are doing.
+
 .. _equivalent distance approximation: equivalent_distance_approximation.rst
+
+Now you may continue with the `tips for running large hazard calculations`_:
+
+.. _tips for running large hazard calculations: hazard.html

@@ -67,7 +67,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check extraction
         sitecol = extract(self.calc.datastore, 'sitecol')
-        self.assertEqual(repr(sitecol), '<SiteCollection with 1/1 sites>')
+        self.assertEqual(len(sitecol.array), 1)
 
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
@@ -135,7 +135,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_7.__file__)
 
         # exercising extract/mean_std_curves
-        dict(extract(self.calc.datastore, 'mean_std_curves'))
+        extract(self.calc.datastore, 'mean_std_curves')
 
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
@@ -191,25 +191,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
-        # test extract/hazard/rlzs
-        dic = dict(extract(self.calc.datastore, 'hazard/rlzs'))
-        hcurves = sorted(k for k in dic if k.startswith('hcurves'))
-        hmaps = sorted(k for k in dic if k.startswith('hmaps'))
-        self.assertEqual(hcurves, ['hcurves/PGA/rlz-000',
-                                   'hcurves/PGA/rlz-001',
-                                   'hcurves/PGA/rlz-002',
-                                   'hcurves/PGA/rlz-003',
-                                   'hcurves/SA(0.2)/rlz-000',
-                                   'hcurves/SA(0.2)/rlz-001',
-                                   'hcurves/SA(0.2)/rlz-002',
-                                   'hcurves/SA(0.2)/rlz-003'])
-        self.assertEqual(hmaps, ['hmaps/poe-0.1/rlz-000',
-                                 'hmaps/poe-0.1/rlz-001',
-                                 'hmaps/poe-0.1/rlz-002',
-                                 'hmaps/poe-0.1/rlz-003'])
-
-        # test extract/hcurves/rlz-0 also works, used by the npz exports
-        haz = dict(extract(self.calc.datastore, 'hcurves'))
+        # test extract/hcurves/rlz-0, used by the npz exports
+        haz = vars(extract(self.calc.datastore, 'hcurves'))
         self.assertEqual(sorted(haz), ['all', 'investigation_time'])
         self.assertEqual(
             haz['all'].dtype.names, ('lon', 'lat', 'depth', 'mean'))
@@ -346,7 +329,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
         # extracting hmaps
-        hmaps = dict(extract(self.calc.datastore, 'hmaps'))['all']['mean']
+        hmaps = extract(self.calc.datastore, 'hmaps')['all']['mean']
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     def test_case_19(self):

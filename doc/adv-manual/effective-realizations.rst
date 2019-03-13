@@ -28,10 +28,12 @@ First, it is best to give some terminology.
 5. a GMPE logic tree is *complex* if it has more than one tectonic region
    type with multiple GMPEs.
 
-Here is an example of trivial GMPE logic tree, in its XML input representation::
+Here is an example of trivial GMPE logic tree, in its XML input representation:
+
+.. code-block:: xml
   
-  <?xml version="1.0" encoding="UTF-8"?>
-  <nrml xmlns:gml="http://www.opengis.net/gml"
+   <?xml version="1.0" encoding="UTF-8"?>
+   <nrml xmlns:gml="http://www.opengis.net/gml"
         xmlns="http://openquake.org/xmlns/nrml/0.4">
       <logicTree logicTreeID='lt1'>
           <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -46,7 +48,7 @@ Here is an example of trivial GMPE logic tree, in its XML input representation::
               </logicTreeBranchSet>
           </logicTreeBranchingLevel>
       </logicTree>
-  </nrml>
+   </nrml>
 
 The logic tree is trivial since there is a single branch
 ("b1") and GMPE ("SadighEtAl1997") for each tectonic region

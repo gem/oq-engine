@@ -16,14 +16,15 @@ def count(text):
 
 def main(dirname):
     dname = pathlib.Path(dirname)
-    with hdf5new() as hdf5:
+    with hdf5new() as hdf5:  # create a new datastore
+        monitor = Monitor('count', hdf5)  # create a new monitor
         iterargs = ((open(dname/fname, encoding='utf-8').read(),)
                     for fname in os.listdir(dname)
-                    if fname.endswith('.rst'))
-        c = collections.Counter()
-        for counter in Starmap(count, iterargs, Monitor('count', hdf5)):
+                    if fname.endswith('.rst'))  # read the docs
+        c = collections.Counter()  # intially empty counter
+        for counter in Starmap(count, iterargs, monitor):
             c += counter
-        print(c)
+        print(c)  # total counts
         print('Performance info stored in', hdf5)
 
 
