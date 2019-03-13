@@ -86,7 +86,7 @@ def export_agg_curve_rlzs(ekey, dstore):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
             p, l, *tagidxs = multi_idx
-            evalue = expvalue[tuple(tagidxs) + (l % L,)]
+            evalue = expvalue[tuple(t+1 for t in tagidxs) + (l % L,)]
             row = tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
@@ -205,7 +205,7 @@ def export_losses_by_asset(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by scenario_risk
+# this is used by scenario_risk and ebrisk
 @export.add(('losses_by_event', 'csv'))
 def export_losses_by_event(ekey, dstore):
     """
