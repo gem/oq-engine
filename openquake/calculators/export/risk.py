@@ -323,7 +323,7 @@ def export_agg_losses_ebr(ekey, dstore):
         for lt, i in lti.items():
             rec[lt] = row['loss'][i]
     elt.sort(order=['year', 'event_id'])
-    dest = dstore.build_fname('agg_losses', 'all', 'csv')
+    dest = dstore.build_fname('elt', '', 'csv')
     writer.save(elt, dest)
     return writer.getsaved()
 
