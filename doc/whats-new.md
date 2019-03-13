@@ -158,7 +158,7 @@ is true:
 2. the sources are mutually exclusive (src_interdep == 'mutex')
 3. the ruptures are mutually exclusive (rup_interdep == 'mutex')
 
-These features not documented yet, since we are in an experimental
+These features are not documented yet, since we are in an experimental
 phase, but we have tests and examples in the engine code base; users
 wanting to play with these features should contact us and we will be
 keen to help.
@@ -173,7 +173,7 @@ GMPEs with arguments. Moreover, we have now a two step initialization
 protocol for all GMPEs: if you need to do some special initialization
 (say a slow initialization, or an initialization requiring access to
 the filesystem) do it in the ``init()`` method, not in
-`__init__``. The engine will call automatically the ``init()`` method
+``__init__``. The engine will call automatically the ``init()`` method
 at the right time, i.e. while reading the GMPE logic tree file.
 
 A couple of additional checks on GSIM classes where added:
