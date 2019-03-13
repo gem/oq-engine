@@ -925,7 +925,11 @@ class WebExtractor(Extractor):
             raise WebAPIError(resp.text)
         npz = numpy.load(io.BytesIO(resp.content))
         attrs = {k: npz[k] for k in npz if k != 'array'}
-        return ArrayWrapper(npz['array'], attrs)
+        try:
+            arr = npz['array']
+        except KeyError:
+            arr = ()
+        return ArrayWrapper(arr, attrs)
 
     def dump(self, fname):
         """
