@@ -163,7 +163,13 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
-    return dstore['csm_info'].rlzs[['ordinal', 'weight']]
+    rlzs = dstore['csm_info'].rlzs
+    dt = [('ordinal', U32), ('weight', F32), ('gsims', '<S64')]
+    arr = numpy.zeros(len(rlzs), dt)
+    arr['ordinal'] = rlzs['ordinal']
+    arr['weight'] = rlzs['weight']
+    arr['gsims'] = rlzs['gsim']
+    return arr
 
 
 @extract.add('asset_values', cache=True)
