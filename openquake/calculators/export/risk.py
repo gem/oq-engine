@@ -155,7 +155,7 @@ def export_agg_losses(ekey, dstore):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
             l, *tagidxs = multi_idx
-            evalue = expvalue[tuple(tagidxs) + (l,)]
+            evalue = expvalue[tuple(t+1 for t in tagidxs) + (l,)]
             row = tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, evalue, loss / evalue)
             rows.append((dt.names[l],) + row)
