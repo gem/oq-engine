@@ -126,10 +126,10 @@ parameters::
                        uncertaintyType="abGRAbsolute"
 		       applyToSources="1 2">
 
-This is now an additional check in the `uncertaintyModel` tag, to forbid
+6. This is an additional check in the `uncertaintyModel` tag, to forbid
 accidentally duplicated source model files.
 
-6. We worked on the GMPE logic tree: now it is possible to serialize
+7. We worked on the GMPE logic tree: now it is possible to serialize
 a `GsimLogicTree` object in TOML format, which is the format used inside
 the datastore. Previously the GMPE logic tree was stored as XML.
 This has some readibility advantage. Most importantly, now tabular
@@ -137,7 +137,7 @@ GMPEs (like the ones used for Canada) are fully serialized in the datastore
 and the risk calculator does not need anymore access to the external HDF5
 files with the tables, which was causing issues with engine 3.3.
 
-7. The logic used in the event based risk calculator - read the hazard sites
+8. The logic used in the event based risk calculator - read the hazard sites
 from the site model, not from the exposure - has been extended to all
 calculators.
 
