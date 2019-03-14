@@ -243,7 +243,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # ------------------------- ebrisk calculator ---------------------- #
         self.run_calc(case_master.__file__, 'job.ini',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id),
                       calculation_mode='ebrisk', exports='',
                       aggregate_by='taxonomy',
                       insured_losses='false')
@@ -347,4 +346,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv')
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
-        # TODO: check the loss maps
+        [fname] = out['agg_maps-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_maps.csv', fname, delta=1E-5)
+
+        # regenerate loss curves and maps
+        out = self.run_calc(
+            case_6c.__file__, 'job_eb.ini', exports='csv',
+            hazard_calculation_id=str(self.calc.datastore.calc_id))
+        [fname] = out['agg_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
+        [fname] = out['agg_maps-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_maps.csv', fname, delta=1E-5)
