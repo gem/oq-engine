@@ -288,6 +288,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 for ij, val in numpy.ndenumerate(arr):
                     self.datastore[name][ij + idx] = val
 
+        if oq.asset_loss_table:  # sanity check on the loss curves
+            arr = self.assetcol.aggregate_by(
+                oq.aggregate_by, self.datastore['asset_loss_table'].value)
+            
 
 def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
                              monitor):
