@@ -112,6 +112,29 @@ def _get_data(dstore, dskey, stats):
     return name, value, tags
 
 
+# used by ebrisk
+@export.add(('agg_maps-rlzs', 'csv'), ('agg_maps-stats', 'csv'))
+def export_agg_maps_csv(ekey, dstore):
+    name, kind = ekey[0].split('-')
+    oq = dstore['oqparam']
+    tagcol = dstore['assetcol/tagcol']
+    agg_maps = dstore[ekey[0]].value  # shape (C, R, L, T...)
+    R = agg_maps.shape[1]
+    kinds = (['rlz-%03d' % r for r in range(R)] if ekey[0].endswith('-rlzs')
+             else ['mean'] + ['quantile-%s' % q for q in oq.quantiles])
+    clp = [str(p) for p in oq.conditional_loss_poes]
+    dic = dict(tagnames=['clp', 'kind', 'loss_type'] + oq.aggregate_by,
+               clp=['?'] + clp, kind=['?'] + kinds,
+               loss_type=('?',) + oq.loss_dt().names)
+    for tagname in oq.aggregate_by:
+        dic[tagname] = getattr(tagcol, tagname)
+    aw = hdf5.ArrayWrapper(agg_maps, dic)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer.save(aw.to_table(), fname)
+    return [fname]
+
+
 # this is used by event_based_risk and classical_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
