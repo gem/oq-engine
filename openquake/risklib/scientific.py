@@ -1357,11 +1357,11 @@ class LossCurvesMapsBuilder(object):
             array_stats = None
         return array, array_stats
 
-    # used in postproc
+    # used in event_based_risk postproc
     def build(self, losses_by_event, stats=()):
         """
         :param losses_by_event:
-            the aggregate loss table as an array
+            the aggregate loss table with shape R -> (E, L)
         :param stats:
             list of pairs [(statname, statfunc), ...]
         :returns:
@@ -1370,10 +1370,9 @@ class LossCurvesMapsBuilder(object):
         P, R = len(self.return_periods), len(self.weights)
         L = len(self.loss_dt.names)
         array = numpy.zeros((P, R, L), F32)
-        dic = group_array(losses_by_event, 'rlzi')
-        for r in dic:
+        for r in losses_by_event:
             num_events = self.num_events[r]
-            losses = dic[r]['loss']
+            losses = losses_by_event[r]
             for l, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, l].flatten()  # flatten only in ucerf
                 # NB: do not use squeeze or the gmf_ebrisk tests will break
@@ -1439,10 +1438,12 @@ class LossCurvesMapsBuilder(object):
 
     # used in ebrisk
     def build_curves_maps(self, loss_arrays, rlzi):
+        if len(loss_arrays) == 0:
+            return (), ()
         shp = loss_arrays[0].shape  # (L, T...)
         P = len(self.return_periods)
-        C = len(self.conditional_loss_poes)
         curves = numpy.zeros((P,) + shp, F32)
+        C = len(self.conditional_loss_poes)
         maps = numpy.zeros((C,) + shp, F32)
         num_events = self.num_events[rlzi]
         acc = collections.defaultdict(list)
