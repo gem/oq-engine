@@ -1451,9 +1451,9 @@ class LossCurvesMapsBuilder(object):
             for idx, loss in numpy.ndenumerate(loss_array):
                 acc[idx].append(loss)
         for idx, losses in acc.items():
-            curves[(slice(None),) + idx] = losses_by_period(
+            curves[(slice(None),) + idx] = lbp = losses_by_period(
                 losses, self.return_periods, num_events, self.eff_time)
             for p, poe in enumerate(self.conditional_loss_poes):
                 maps[(p,) + idx] = conditional_loss_ratio(
-                    losses, self.poes, poe)
+                    lbp, self.poes, poe)
         return curves, maps
