@@ -272,8 +272,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         lbe0 = self.datastore['losses_by_event'][0]
         shp = self.get_shape(self.L)  # L, T...
         text = ' x '.join(
-            '%s=%d' % (t, n) for t, n in zip(oq.aggregate_by, shp[1:]))
-        logging.info('Producing L=%d x %s loss curves', self.L, text)
+            '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
+        logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         allargs = [(self.datastore.filename, multi_index,
                     oq.conditional_loss_poes, oq.individual_curves)
                    for multi_index, _ in numpy.ndenumerate(lbe0['loss'])]
