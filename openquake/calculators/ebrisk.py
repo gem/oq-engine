@@ -271,7 +271,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         if len(times):
             self.datastore.set_attrs('task_info/start_ebrisk', times=times)
-            oq = self.oqparam
+        oq = self.oqparam
         shp = self.get_shape(self.L)  # L, T...
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
@@ -313,9 +313,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
 # NB: this is not parallelized because
 # 1) parallelizing by events does not work, we need all the events
-# 2) parallelizing by multi_index causes every to slow down with warnings
+# 2) parallelizing by multi_index slows down everything with warnings
 # kernel:NMI watchdog: BUG: soft lockup - CPU#26 stuck for 21s!
-# this is due to excessive reading, and then we run out of memory
+# due to excessive reading, and then we run out of memory
 def compute_loss_curves_maps(filename, clp, individual_curves):
     """
     :param filename: path to the datastore
