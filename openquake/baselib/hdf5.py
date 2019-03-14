@@ -526,8 +526,8 @@ class ArrayWrapper(object):
 
         >>> from pprint import pprint
         >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
-        ...            taxonomy=['RC', 'WOOD'],
-        ...            occupancy=['RES', 'IND', 'COM'])
+        ...            taxonomy=['?', 'RC', 'WOOD'],
+        ...            occupancy=['?', 'RES', 'IND', 'COM'])
         >>> arr = numpy.zeros((2, 3))
         >>> arr[0, 0] = 2000
         >>> arr[0, 1] = 5000
