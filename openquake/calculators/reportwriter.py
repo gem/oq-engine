@@ -62,10 +62,13 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
-        num_rlzs = dstore['csm_info'].get_num_rlzs()
+        try:
+            num_rlzs = dstore['csm_info'].get_num_rlzs()
+        except KeyError:
+            num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table(versions)
-        self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %d' % (
+        self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
             len(dstore['sitecol']), len(oq.imtls.array), num_rlzs)
 
     def add(self, name, obj=None):
