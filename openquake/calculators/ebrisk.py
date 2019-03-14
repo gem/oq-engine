@@ -281,9 +281,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         allargs = [(dstore.filename, builder, rlzi) for rlzi in range(self.R)]
-        mon = performance.Monitor(
-            hdf5=hdf5.File(self.datastore.hdf5cache(), 'r+'))
+        mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
         acc = list(parallel.Starmap(compute_loss_curves_maps, allargs, mon))
+        # copy performance information from the cache to the datastore
+        pd = mon.hdf5['performance_data'].value
+        hdf5.extend3(self.datastore.filename, 'performance_data', pd)
+        self.datastore.open('r+')  # reopen
+        self.datastore['task_info/compute_loss_curves_and_maps'] = (
+            mon.hdf5['task_info/compute_loss_curves_maps'].value)
         self.datastore.open('r+')
         with self.monitor('saving loss_curves and maps', autoflush=True):
             for r, (curves, maps) in acc:
