@@ -1355,11 +1355,11 @@ class LossesByPeriodBuilder(object):
             array_stats = None
         return array, array_stats
 
-    # used in postproc
+    # used in event_based_risk postproc
     def build(self, losses_by_event, stats=()):
         """
         :param losses_by_event:
-            the aggregate loss table as an array
+            the aggregate loss table with shape R -> (E, L)
         :param stats:
             list of pairs [(statname, statfunc), ...]
         :returns:
@@ -1368,10 +1368,9 @@ class LossesByPeriodBuilder(object):
         P, R = len(self.return_periods), len(self.weights)
         L = len(self.loss_dt.names)
         array = numpy.zeros((P, R, L), F32)
-        dic = group_array(losses_by_event, 'rlzi')
-        for r in dic:
+        for r in losses_by_event:
             num_events = self.num_events[r]
-            losses = dic[r]['loss']
+            losses = losses_by_event[r]
             for l, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, l].flatten()  # flatten only in ucerf
                 # NB: do not use squeeze or the gmf_ebrisk tests will break

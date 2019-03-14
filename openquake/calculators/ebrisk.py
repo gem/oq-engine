@@ -288,9 +288,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 for ij, val in numpy.ndenumerate(arr):
                     self.datastore[name][ij + idx] = val
 
-        if oq.asset_loss_table:  # sanity check on the loss curves
+        if oq.asset_loss_table and len(oq.aggregate_by) == 1:
+            # sanity check on the loss curves for simple tag aggregation
+            stats = list(oq.hazard_stats().items())
             arr = self.assetcol.aggregate_by(
                 oq.aggregate_by, self.datastore['asset_loss_table'].value)
+            # shape (T, E, L)
+            for t in range(2):
+                curves_rlzs, curves_stats = builder.build(arr[t], stats)
+                import pdb; pdb.set_trace()
             
 
 def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
