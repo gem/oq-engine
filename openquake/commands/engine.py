@@ -22,13 +22,12 @@ import logging
 from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import util, logs, readinput
+from openquake.commonlib import logs, readinput
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
-from openquake.calculators.export import export
 from openquake.commands.abort import abort
 
 
@@ -138,7 +137,7 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
                 exports, hazard_calculation_id=hc_id)
 
 
-@sap.script
+@sap.Script  # do not use sap.script, other oq engine will break
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
            upgrade_db, db_version, what_if_I_upgrade, run,
            list_hazard_calculations, list_risk_calculations,
