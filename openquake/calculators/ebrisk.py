@@ -269,11 +269,20 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
-        acc = compute_loss_curves_maps(
-            self.datastore.filename, oq.conditional_loss_poes,
-            oq.individual_curves)
+        lbe0 = self.datastore['losses_by_event'][0]
+        iterargs = ((self.datastore.filename, multi_index,
+                     oq.conditional_loss_poes, oq.individual_curves)
+                    for multi_index, _ in numpy.ndenumerate(lbe0['loss']))
+        mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
+        smap = parallel.Starmap(compute_loss_curves_maps, iterargs, mon)
+        self.datastore.close()
+        results = smap.reduce(acc=[])
+        # copy performance information from the cache to the datastore
+        pd = mon.hdf5['performance_data'].value
+        hdf5.extend3(self.datastore.filename, 'performance_data', pd)
+        self.datastore.open('r+')
         with self.monitor('saving loss_curves and maps', autoflush=True):
-            for name, idx, arr in acc:
+            for name, idx, arr in results:
                 for ij, val in numpy.ndenumerate(arr):
                     self.datastore[name][ij + idx] = val
 
@@ -300,7 +309,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 curves, self.datastore['agg_curves-rlzs'].value)
 
 
-def compute_loss_curves_maps(filename, clp, individual_curves):
+def compute_loss_curves_maps(filename, multi_index, clp, individual_curves,
+                             monitor):
     """
     :param filename: path to the datastore
     :param clp: conditional loss poes used to computed the maps
@@ -314,21 +324,17 @@ def compute_loss_curves_maps(filename, clp, individual_curves):
         R = len(dstore['weights'])
         rlzi = dstore['losses_by_event']['rlzi']
         elt = dstore['losses_by_event']
-        losses = [elt[rlzi == r]['loss'] for r in range(R)]
-    results = []
-    for multi_index, _ in numpy.ndenumerate(elt[0]['loss']):
-        result = {}
-        thelosses = [[ls[multi_index] for ls in loss] for loss in losses]
-        result['agg_curves-rlzs'], result['agg_curves-stats'] = (
-            builder.build_pair(thelosses, stats))
+        mi = (slice(None), ) + multi_index
+        losses = [elt[rlzi == r]['loss'][mi] for r in range(R)]
+    result = {}
+    result['agg_curves-rlzs'], result['agg_curves-stats'] = (
+        builder.build_pair(losses, stats))
+    if R > 1 and individual_curves is False:
+        del result['agg_curves-rlzs']
+    if clp:
+        result['agg_maps-rlzs'], result['agg_maps-stats'] = (
+            builder.build_loss_maps(losses, clp, stats))
         if R > 1 and individual_curves is False:
-            del result['agg_curves-rlzs']
-        if clp:
-            result['agg_maps-rlzs'], result['agg_maps-stats'] = (
-                builder.build_loss_maps(thelosses, clp, stats))
-            if R > 1 and individual_curves is False:
-                del result['agg_maps-rlzs']
-        for name, arr in result.items():
-            if arr is not None:
-                results.append((name, multi_index, arr))
-    return results
+            del result['agg_maps-rlzs']
+    return [(name, multi_index, arr) for name, arr in result.items()
+            if arr is not None]
