@@ -86,7 +86,7 @@ def export_agg_curve_rlzs(ekey, dstore):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
             p, l, *tagidxs = multi_idx
-            evalue = expvalue[tuple(t+1 for t in tagidxs) + (l % L,)]
+            evalue = expvalue[tuple(tagidxs) + (l % L,)]
             row = tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
@@ -155,7 +155,7 @@ def export_agg_losses(ekey, dstore):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
             l, *tagidxs = multi_idx
-            evalue = expvalue[tuple(t+1 for t in tagidxs) + (l,)]
+            evalue = expvalue[tuple(tagidxs) + (l,)]
             row = tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, evalue, loss / evalue)
             rows.append((dt.names[l],) + row)
