@@ -25,7 +25,7 @@ from openquake.risklib import scientific
 def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     """
     :param dstore: datastore for an event based risk calculation
-    :returns: a LossesByPeriodBuilder instance
+    :returns: a LossCurvesMapsBuilder instance
     """
     oq = dstore['oqparam']
     name = dstore['weights'].dtype.names[0]
@@ -34,8 +34,9 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     num_events = countby(dstore['events'].value, 'rlz')
     periods = return_periods or oq.return_periods or scientific.return_periods(
         eff_time, max(num_events.values()))
-    return scientific.LossesByPeriodBuilder(
-        numpy.array(periods), loss_dt or oq.loss_dt(), weights, num_events,
+    return scientific.LossCurvesMapsBuilder(
+        oq.conditional_loss_poes, numpy.array(periods),
+        loss_dt or oq.loss_dt(), weights, num_events,
         eff_time, oq.risk_investigation_time)
 
 
