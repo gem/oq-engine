@@ -287,8 +287,8 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode == 'ebrisk':
             if self.insured_losses:
                 raise ValueError('ebrisk does not support insured losses')
-            elif self.number_of_logic_tree_samples == 0:
-                logging.warning('ebrisk is not meant for full enumeration')
+            # elif self.number_of_logic_tree_samples == 0:
+            #    logging.warning('ebrisk is not meant for full enumeration')
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
