@@ -168,7 +168,7 @@ def extract_realizations(dstore, dummy):
     arr = numpy.zeros(len(rlzs), dt)
     arr['ordinal'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
-    arr['gsims'] = rlzs['gsim']
+    arr['gsims'] = rlzs['gsims']
     return arr
 
 
