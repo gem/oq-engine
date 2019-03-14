@@ -243,7 +243,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # ------------------------- ebrisk calculator ---------------------- #
         self.run_calc(case_master.__file__, 'job.ini',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id),
                       calculation_mode='ebrisk', exports='',
                       aggregate_by='taxonomy',
                       insured_losses='false')
