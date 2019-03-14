@@ -475,10 +475,10 @@ class AssetCollection(object):
                              (len(self), A))
         if not tagnames:
             return array.sum(axis=0)
-        shape = [len(getattr(self.tagcol, tagname)) for tagname in tagnames]
+        shape = [len(getattr(self.tagcol, tagname))-1 for tagname in tagnames]
         acc = numpy.zeros(shape, (F32, shp) if shp else F32)
         for asset, row in zip(self.array, array):
-            acc[tuple(asset[tagnames])] += row
+            acc[tuple(idx - 1 for idx in asset[tagnames])] += row
         return acc
 
     def agg_value(self, *tagnames):

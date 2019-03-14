@@ -16,10 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import time
+import logging
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
+from openquake.risklib.scientific import losses_by_period
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -265,51 +267,54 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         self.datastore.set_attrs('task_info/start_ebrisk', times=times)
         oq = self.oqparam
-        elt_length = len(self.datastore['losses_by_event'])
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
-        mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
-        smap = parallel.Starmap(compute_loss_curves_maps, monitor=mon)
-        self.datastore.close()
-        acc = []
-        ct = oq.concurrent_tasks or 1
-        for elt_slice in general.split_in_slices(elt_length, ct):
-            smap.submit(self.datastore.filename, elt_slice,
-                        oq.conditional_loss_poes, oq.individual_curves)
-        acc = smap.reduce(acc=[])
-        # copy performance information from the cache to the datastore
-        pd = mon.hdf5['performance_data'].value
-        hdf5.extend3(self.datastore.filename, 'performance_data', pd)
-        self.datastore.open('r+')  # reopen
-        self.datastore['task_info/compute_loss_curves_and_maps'] = (
-            mon.hdf5['task_info/compute_loss_curves_maps'].value)
+        acc = compute_loss_curves_maps(
+            self.datastore.filename, oq.conditional_loss_poes,
+            oq.individual_curves)
         with self.monitor('saving loss_curves and maps', autoflush=True):
             for name, idx, arr in acc:
                 for ij, val in numpy.ndenumerate(arr):
                     self.datastore[name][ij + idx] = val
 
+        if oq.asset_loss_table and len(oq.aggregate_by) == 1:
+            logging.info('Checking the loss curves')
+            tags = getattr(self.assetcol.tagcol, oq.aggregate_by[0])[1:]
+            T = len(tags)
+            P = len(builder.return_periods)
+            # sanity check on the loss curves for simple tag aggregation
+            arr = self.assetcol.aggregate_by(
+                oq.aggregate_by, self.datastore['asset_loss_table'].value)
+            # shape (T, E, L)
+            rlzs = self.datastore['events']['rlz']
+            curves = numpy.zeros((P, self.R, self.L, T))
+            for t in range(T):
+                for r in range(self.R):
+                    for l in range(self.L):
+                        curves[:, r, l, t] = losses_by_period(
+                            arr[t, rlzs == r, l],
+                            builder.return_periods,
+                            builder.num_events[r],
+                            builder.eff_time)
+            numpy.testing.assert_allclose(
+                curves, self.datastore['agg_curves-rlzs'].value)
 
-def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
-                             monitor):
+
+def compute_loss_curves_maps(filename, clp, individual_curves):
     """
     :param filename: path to the datastore
-    :param elt_slice: slice of the event loss table
     :param clp: conditional loss poes used to computed the maps
     :param individual_curves: if True, build the individual curves and maps
-    :param monitor: a Monitor instance
-    :yields:
-        dictionaries with keys idx, agg_curves-rlzs, agg_curves-stats,
-        agg_maps-rlzs, agg_maps-stats
+    :returns: a list of triples [(name, multi_index, array), ...]
     """
     with datastore.read(filename) as dstore:
         oq = dstore['oqparam']
         stats = oq.hazard_stats().items()
         builder = get_loss_builder(dstore)
         R = len(dstore['weights'])
-        losses = [[] for _ in range(R)]
-        elt = dstore['losses_by_event'][elt_slice]
-        for rec in elt:
-            losses[rec['rlzi']].append(rec['loss'])
+        rlzi = dstore['losses_by_event']['rlzi']
+        elt = dstore['losses_by_event']
+        losses = [elt[rlzi == r]['loss'] for r in range(R)]
     results = []
     for multi_index, _ in numpy.ndenumerate(elt[0]['loss']):
         result = {}
