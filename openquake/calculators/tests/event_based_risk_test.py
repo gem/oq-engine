@@ -347,3 +347,4 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv')
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
+        # TODO: check the loss maps
