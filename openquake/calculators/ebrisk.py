@@ -240,12 +240,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
         loss_types = ' '.join(self.riskmodel.loss_types)
-        if oq.individual_curves or self.R == 1:
-            shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
-            self.datastore.create_dset('agg_curves-rlzs', F32, shp)
-            self.datastore.set_attrs(
-                'agg_curves-rlzs', return_periods=builder.return_periods,
-                loss_types=loss_types)
+        shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
+        self.datastore.create_dset('agg_curves-rlzs', F32, shp)
+        self.datastore.set_attrs(
+            'agg_curves-rlzs', return_periods=builder.return_periods,
+            loss_types=loss_types)
         if oq.conditional_loss_poes:
             shp = self.get_shape(C, self.R, self.L)  # shape C, R, L, T...
             self.datastore.create_dset('agg_maps-rlzs', F32, shp)
