@@ -3,11 +3,11 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     1,791,718,331      
-date           2019-02-18T08:38:23
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-14T01:47:28
+engine_version 3.4.0-gita06742ffe6
 ============== ===================
 
-num_sites = 1, num_levels = 78
+num_sites = 1, num_levels = 78, num_rlzs = 160
 
 Parameters
 ----------
@@ -139,7 +139,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 4.82665 NaN    4.82665 4.82665 1      
+read_source_models 5.03171 NaN    5.03171 5.03171 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -154,5 +154,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 4.82665  5.55859   1     
+total read_source_models 5.03171  3.49219   1     
 ======================== ======== ========= ======
