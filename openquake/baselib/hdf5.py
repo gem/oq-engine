@@ -558,7 +558,7 @@ class ArrayWrapper(object):
             assert shape[-1] == len(extra), (shape[-1], len(extra))
         tagnames = decode_array(self.tagnames)
         for i, tagname in enumerate(tagnames):
-            values = getattr(self, tagname)
+            values = getattr(self, tagname)[1:]
             assert len(values) == shape[i], (len(values), shape[i])
             tags.append(decode_array(values))
         if extra:
