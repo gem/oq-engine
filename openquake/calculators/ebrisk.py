@@ -270,11 +270,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
         lbe0 = self.datastore['losses_by_event'][0]
-        iterargs = ((self.datastore.filename, multi_index,
-                     oq.conditional_loss_poes, oq.individual_curves)
-                    for multi_index, _ in numpy.ndenumerate(lbe0['loss']))
+        shp = self.get_shape(self.L)  # L, T...
+        text = ' x '.join(
+            '%s=%d' % (t, n) for t, n in zip(oq.aggregate_by, shp[1:]))
+        logging.info('Producing L=%d x %s loss curves', self.L, text)
+        allargs = [(self.datastore.filename, multi_index,
+                    oq.conditional_loss_poes, oq.individual_curves)
+                   for multi_index, _ in numpy.ndenumerate(lbe0['loss'])]
         mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
-        smap = parallel.Starmap(compute_loss_curves_maps, iterargs, mon)
+        smap = parallel.Starmap(compute_loss_curves_maps, allargs, mon)
         self.datastore.close()
         results = smap.reduce(acc=[])
         # copy performance information from the cache to the datastore
