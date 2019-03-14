@@ -3,11 +3,11 @@ Event Based Risk QA Test 1
 
 ============== ===================
 checksum32     4,277,581,030      
-date           2019-02-18T08:37:04
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-14T01:46:16
+engine_version 3.4.0-gita06742ffe6
 ============== ===================
 
-num_sites = 3, num_levels = 25
+num_sites = 3, num_levels = 25, num_rlzs = 2
 
 Parameters
 ----------
@@ -102,9 +102,9 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         P    0     1     6            0.00232   0.0        1.00000   1         4.00000
-0      2         P    1     2     6            0.00203   0.0        1.00000   1         2.00000
-0      3         P    2     3     6            0.00191   0.0        1.00000   1         8.00000
+0      1         P    0     1     6            0.00221   0.0        1.00000   1         4.00000
+0      2         P    1     2     6            0.00196   0.0        1.00000   1         2.00000
+0      3         P    2     3     6            0.00189   0.0        1.00000   1         8.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -112,17 +112,17 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.00626   3     
+P    0.00606   3     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-read_source_models 0.00350   NaN       0.00350   0.00350   1      
-only_filter        0.00293   NaN       0.00293   0.00293   1      
-sample_ruptures    0.00897   NaN       0.00897   0.00897   1      
-get_eid_rlz        4.769E-04 4.477E-05 4.189E-04 5.291E-04 8      
+read_source_models 0.00187   NaN       0.00187   0.00187   1      
+only_filter        0.00274   NaN       0.00274   0.00274   1      
+sample_ruptures    0.00876   NaN       0.00876   0.00876   1      
+get_eid_rlz        4.609E-04 2.765E-05 4.356E-04 5.155E-04 8      
 ================== ========= ========= ========= ========= =======
 
 Data transfer
@@ -131,7 +131,7 @@ Data transfer
 task               sent                                          received
 read_source_models converter=313 B fnames=113 B                  2.27 KB 
 only_filter        srcs=1.91 KB srcfilter=253 B dummy=14 B       2.09 KB 
-sample_ruptures    param=4.05 KB sources=2.14 KB srcfilter=220 B 1.94 KB 
+sample_ruptures    param=4.04 KB sources=2.14 KB srcfilter=220 B 1.94 KB 
 get_eid_rlz        self=12.87 KB                                 2.34 KB 
 ================== ============================================= ========
 
@@ -140,13 +140,13 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    0.00897  1.51172   1     
-iter_ruptures            0.00606  0.0       3     
-total get_eid_rlz        0.00381  0.20312   8     
-total read_source_models 0.00350  0.27344   1     
-saving ruptures          0.00300  0.0       1     
-total only_filter        0.00293  1.32812   1     
-store source_info        0.00194  0.0       1     
-store source model       0.00142  0.0       1     
-reading exposure         0.00114  0.0       1     
+total sample_ruptures    0.00876  1.56641   1     
+iter_ruptures            0.00586  0.0       3     
+total get_eid_rlz        0.00369  0.12500   8     
+saving ruptures          0.00313  0.0       1     
+total only_filter        0.00274  1.48828   1     
+store source model       0.00224  0.0       1     
+store source_info        0.00204  0.0       1     
+total read_source_models 0.00187  0.06641   1     
+reading exposure         0.00127  0.0       1     
 ======================== ======== ========= ======

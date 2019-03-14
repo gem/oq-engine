@@ -19,7 +19,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.hazardlib.calc.stochastic import TWO32
@@ -333,7 +333,9 @@ class EbrCalculator(base.RiskCalculator):
                 dstore.set_attrs('rup_loss_table', ridx=ridx)
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
-            array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
+            lbr = group_array(dstore['losses_by_event'].value, 'rlzi')
+            dic = {r: arr['loss'] for r, arr in lbr.items()}
+            array, arr_stats = b.build(dic, stats)
         loss_types = ' '.join(self.oqparam.loss_dt().names)
         units = self.assetcol.cost_calculator.get_units(loss_types.split())
         if oq.individual_curves or self.R == 1:
