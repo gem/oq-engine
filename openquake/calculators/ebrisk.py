@@ -160,7 +160,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
         elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shp))]
-        self.datastore.create_dset('losses_by_event', elt_dt)
+        if 'losses_by_event' not in self.datastore:
+            self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
         shp = self.get_shape(self.L, self.R)  # shape L, R, T...
         self.datastore.create_dset('agg_losses-rlzs', F32, shp)
@@ -171,7 +172,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
             maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
         parent = self.datastore.parent
-        if parent:
+        if parent and 'losses_by_event' in parent:
+            # just regenerate the loss curves
+            return {}
+        elif parent:
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             nruptures = len(parent['ruptures'])
@@ -265,7 +269,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
-        self.datastore.set_attrs('task_info/start_ebrisk', times=times)
+        if len(times):
+            self.datastore.set_attrs('task_info/start_ebrisk', times=times)
         oq = self.oqparam
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
@@ -291,13 +296,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     self.datastore[name][ij + idx] = val
 
         if oq.asset_loss_table and len(oq.aggregate_by) == 1:
+            alt = self.datastore['asset_loss_table'].value
+            if alt.sum() == 0:  # nothing was saved
+                return
             logging.info('Checking the loss curves')
             tags = getattr(self.assetcol.tagcol, oq.aggregate_by[0])[1:]
             T = len(tags)
             P = len(builder.return_periods)
             # sanity check on the loss curves for simple tag aggregation
-            arr = self.assetcol.aggregate_by(
-                oq.aggregate_by, self.datastore['asset_loss_table'].value)
+            arr = self.assetcol.aggregate_by(oq.aggregate_by, alt)
             # shape (T, E, L)
             rlzs = self.datastore['events']['rlz']
             curves = numpy.zeros((P, self.R, self.L, T))
