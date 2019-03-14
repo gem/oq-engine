@@ -264,19 +264,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         self.datastore.set_attrs('task_info/start_ebrisk', times=times)
-        oq = self.oqparam
-        elt_length = len(self.datastore['losses_by_event'])
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
         mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
-        smap = parallel.Starmap(compute_loss_curves_maps, monitor=mon)
+        allargs = [(self.datastore.filename, builder, rlzi)
+                   for rlzi in range(self.R)]
+        smap = parallel.Starmap(compute_loss_curves_maps, allargs, mon)
         self.datastore.close()
-        acc = []
-        ct = oq.concurrent_tasks or 1
-        for elt_slice in general.split_in_slices(elt_length, ct):
-            smap.submit(self.datastore.filename, elt_slice,
-                        oq.conditional_loss_poes, oq.individual_curves)
-        acc = smap.reduce(acc=[])
+        acc = list(smap)
         # copy performance information from the cache to the datastore
         pd = mon.hdf5['performance_data'].value
         hdf5.extend3(self.datastore.filename, 'performance_data', pd)
@@ -284,46 +279,21 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore['task_info/compute_loss_curves_and_maps'] = (
             mon.hdf5['task_info/compute_loss_curves_maps'].value)
         with self.monitor('saving loss_curves and maps', autoflush=True):
-            for name, idx, arr in acc:
-                for ij, val in numpy.ndenumerate(arr):
-                    self.datastore[name][ij + idx] = val
+            for r, (curves, maps) in acc:
+                self.datastore['agg_curves-rlzs'][:, r] = curves
+                if len(maps):
+                    self.datastore['agg_maps-rlzs'][:, r] = maps
 
 
-def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
-                             monitor):
+def compute_loss_curves_maps(filename, builder, rlzi, monitor):
     """
     :param filename: path to the datastore
-    :param elt_slice: slice of the event loss table
-    :param clp: conditional loss poes used to computed the maps
-    :param individual_curves: if True, build the individual curves and maps
-    :param monitor: a Monitor instance
-    :yields:
-        dictionaries with keys idx, agg_curves-rlzs, agg_curves-stats,
-        agg_maps-rlzs, agg_maps-stats
+    :param builder: LossCurvesMapsBuilder instance
+    :param rlzi: realization index
+    :param monitor: Monitor instance
+    :returns: rlzi, (curves, maps)
     """
     with datastore.read(filename) as dstore:
-        oq = dstore['oqparam']
-        stats = oq.hazard_stats().items()
-        builder = get_loss_builder(dstore)
-        R = len(dstore['weights'])
-        losses = [[] for _ in range(R)]
-        elt = dstore['losses_by_event'][elt_slice]
-        for rec in elt:
-            losses[rec['rlzi']].append(rec['loss'])
-    results = []
-    for multi_index, _ in numpy.ndenumerate(elt[0]['loss']):
-        result = {}
-        thelosses = [[ls[multi_index] for ls in loss] for loss in losses]
-        result['agg_curves-rlzs'], result['agg_curves-stats'] = (
-            builder.build_pair(thelosses, stats))
-        if R > 1 and individual_curves is False:
-            del result['agg_curves-rlzs']
-        if clp:
-            result['agg_maps-rlzs'], result['agg_maps-stats'] = (
-                builder.build_loss_maps(thelosses, clp, stats))
-            if R > 1 and individual_curves is False:
-                del result['agg_maps-rlzs']
-        for name, arr in result.items():
-            if arr is not None:
-                results.append((name, multi_index, arr))
-    return results
+        rlzs = dstore['losses_by_event']['rlzi']
+        losses = dstore['losses_by_event'][rlzs == rlzi]['loss']
+    return rlzi, builder.build_curves_maps(losses, rlzi)
