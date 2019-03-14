@@ -312,10 +312,9 @@ def compute_loss_curves_maps(filename, clp, individual_curves):
         stats = oq.hazard_stats().items()
         builder = get_loss_builder(dstore)
         R = len(dstore['weights'])
-        losses = [[] for _ in range(R)]
-        elt = dstore['losses_by_event'].value
-        for rec in elt:
-            losses[rec['rlzi']].append(rec['loss'])
+        rlzi = dstore['losses_by_event']['rlzi']
+        elt = dstore['losses_by_event']
+        losses = [elt[rlzi == r]['loss'] for r in range(R)]
     results = []
     for multi_index, _ in numpy.ndenumerate(elt[0]['loss']):
         result = {}
