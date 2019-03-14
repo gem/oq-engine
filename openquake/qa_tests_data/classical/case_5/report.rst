@@ -3,11 +3,11 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2019-02-18T08:37:22
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-14T01:46:31
+engine_version 3.4.0-gita06742ffe6
 ============== ===================
 
-num_sites = 1, num_levels = 3
+num_sites = 1, num_levels = 3, num_rlzs = 1
 
 Parameters
 ----------
@@ -76,7 +76,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         C    0     6     49           0.0       1.359E-05  1.00000   1         196   
+0      1         C    0     6     49           0.0       1.121E-05  1.00000   1         196   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -91,23 +91,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.10028 NaN    0.10028 0.10028 1      
-split_filter       0.00380 NaN    0.00380 0.00380 1      
+read_source_models 0.08133 NaN    0.08133 0.08133 1      
+split_filter       0.00343 NaN    0.00343 0.00343 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=313 B fnames=106 B           1.56 KB 
-split_filter       srcs=1.14 KB srcfilter=253 B seed=14 B 1.23 KB 
-================== ====================================== ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=313 B fnames=106 B            1.56 KB 
+split_filter       srcs=1.14 KB srcfilter=253 B dummy=14 B 1.23 KB 
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.10028  1.08984   1     
-total split_filter       0.00380  1.58203   1     
+total read_source_models 0.08133  1.27734   1     
+total split_filter       0.00343  1.42578   1     
 ======================== ======== ========= ======

@@ -3,11 +3,11 @@ Scenario QA Test, Case 3
 
 ============== ===================
 checksum32     785,876,355        
-date           2019-02-18T08:35:34
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-14T01:45:07
+engine_version 3.4.0-gita06742ffe6
 ============== ===================
 
-num_sites = 3, num_levels = 2
+num_sites = 3, num_levels = 2, num_rlzs = 1
 
 Parameters
 ----------
