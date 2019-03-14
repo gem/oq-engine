@@ -2,12 +2,12 @@ event based risk
 ================
 
 ============== ===================
-checksum32     3,519,531,262      
-date           2019-02-18T08:36:53
-engine_version 3.4.0-git9883ae17a5
+checksum32     4,227,350,644      
+date           2019-03-14T01:46:12
+engine_version 3.4.0-gita06742ffe6
 ============== ===================
 
-num_sites = 7, num_levels = 46
+num_sites = 7, num_levels = 46, num_rlzs = 8
 
 Parameters
 ----------
@@ -52,8 +52,7 @@ Composite source model
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
 b1        0.25000 complex(2,0,2)  4               
-b2        0.25000 complex(2,0,2)  4               
-b3        0.50000 trivial(0,1,0)  1               
+b2        0.75000 complex(2,0,2)  4               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -65,7 +64,6 @@ grp_id gsims                                                          distances 
 1      '[AkkarBommer2010]\nminimum_distance = 10' '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 2      '[BooreAtkinson2008]' '[ChiouYoungs2008]'                      rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 3      '[AkkarBommer2010]\nminimum_distance = 10' '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-4      '[MontalvaEtAl2017SSlab]'                                      rhypo rrup  backarc vs30            hypo_depth mag   
 ====== ============================================================== =========== ======================= =================
 
 Realizations per (GRP, GSIM)
@@ -73,7 +71,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=9, rlzs=9)
+  <RlzsAssoc(size=8, rlzs=8)
   0,'[BooreAtkinson2008]': [0 1]
   0,'[ChiouYoungs2008]': [2 3]
   1,'[AkkarBommer2010]\nminimum_distance = 10': [0 2]
@@ -81,8 +79,7 @@ Realizations per (GRP, GSIM)
   2,'[BooreAtkinson2008]': [4 5]
   2,'[ChiouYoungs2008]': [6 7]
   3,'[AkkarBommer2010]\nminimum_distance = 10': [4 6]
-  3,'[ChiouYoungs2008]': [5 7]
-  4,'[MontalvaEtAl2017SSlab]': [8]>
+  3,'[ChiouYoungs2008]': [5 7]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -93,19 +90,18 @@ source_model_1.xml 0      Active Shallow Crust 482          482
 source_model_1.xml 1      Stable Shallow Crust 4            4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
 source_model_2.xml 3      Stable Shallow Crust 1            1           
-6.05.hdf5          4      Deep Seismicity      2            2           
 ================== ====== ==================== ============ ============
 
 ============= =====
-#TRT models   5    
-#eff_ruptures 971  
-#tot_ruptures 971  
-#tot_weight   2,569
+#TRT models   4    
+#eff_ruptures 969  
+#tot_ruptures 969  
+#tot_weight   2,564
 ============= =====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 9 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 30 tasks = 147.66 KB
+7 asset(s) x 8 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 30 tasks = 131.25 KB
 
 Exposure model
 --------------
@@ -129,11 +125,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          0.04031   0.0        7.00000   1         0.0    
-2      1         S    4     6     482          0.03880   0.0        7.00000   1         0.0    
-1      2         S    2     4     4            0.00188   0.0        7.00000   1         2.00000
-4      buc06pt05 N    402   426   2            2.985E-04 0.0        7.00000   1         2.00000
-3      2         X    6     402   1            2.429E-04 0.0        7.00000   1         0.0    
+0      1         S    0     2     482          0.03915   0.0        7.00000   1         0.0    
+2      1         S    4     6     482          0.03817   0.0        7.00000   1         0.0    
+1      2         S    2     4     4            0.00199   0.0        7.00000   1         2.00000
+3      2         X    6     402   1            2.363E-04 0.0        7.00000   1         0.0    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -141,9 +136,8 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    2.985E-04 1     
-S    0.08100   3     
-X    2.429E-04 1     
+S    0.07931   3     
+X    2.363E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -156,34 +150,34 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-read_source_models 0.00722   0.00288   0.00536   0.01054   3      
-only_filter        0.00404   0.00136   0.00264   0.00536   3      
-sample_ruptures    0.01759   0.02052   6.700E-04 0.04077   5      
-get_eid_rlz        5.121E-04 1.264E-04 3.574E-04 6.669E-04 4      
+read_source_models 0.00764   0.00381   0.00495   0.01034   2      
+only_filter        0.00494   9.331E-04 0.00428   0.00560   2      
+sample_ruptures    0.02093   0.02109   6.981E-04 0.03963   4      
+get_eid_rlz        4.979E-04 1.729E-05 4.787E-04 5.124E-04 3      
 ================== ========= ========= ========= ========= =======
 
 Data transfer
 -------------
-================== ================================================ ========
-task               sent                                             received
-read_source_models converter=939 B fnames=351 B                     16.47 KB
-only_filter        srcs=2.1 KB srcfilter=253 B dummy=14 B           15.27 KB
-sample_ruptures    param=27.7 KB sources=16.83 KB srcfilter=1.07 KB 3.44 KB 
-get_eid_rlz        self=6.46 KB                                     1.3 KB  
-================== ================================================ ========
+================== =============================================== ========
+task               sent                                            received
+read_source_models converter=626 B fnames=240 B                    13.94 KB
+only_filter        srcs=12.85 KB srcfilter=506 B dummy=28 B        13.12 KB
+sample_ruptures    param=21.98 KB sources=14.63 KB srcfilter=880 B 2.26 KB 
+get_eid_rlz        self=5 KB                                       1.04 KB 
+================== =============================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-total sample_ruptures    0.08794   1.40625   5     
-iter_ruptures            0.08046   0.0       5     
-total read_source_models 0.02167   1.16016   3     
-total only_filter        0.01212   1.54688   3     
-store source model       0.00708   0.0       3     
-saving ruptures          0.00630   0.0       2     
-total get_eid_rlz        0.00205   0.06250   4     
-store source_info        0.00193   0.0       1     
-reading exposure         7.920E-04 0.0       1     
-======================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total sample_ruptures    0.08371  1.66016   4     
+iter_ruptures            0.07865  0.0       4     
+total read_source_models 0.01529  0.19141   2     
+total only_filter        0.00987  1.44531   2     
+store source model       0.00571  0.0       2     
+saving ruptures          0.00287  0.0       1     
+store source_info        0.00192  0.0       1     
+total get_eid_rlz        0.00149  0.0       3     
+reading exposure         0.00116  0.0       1     
+======================== ======== ========= ======
