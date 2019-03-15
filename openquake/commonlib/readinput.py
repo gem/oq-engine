@@ -1293,9 +1293,11 @@ def _checksum(fname, checksum):
         zpath = os.path.splitext(fname)[0] + '.zip'
         if not os.path.exists(zpath):
             raise OSError('No such file: %s or %s' % (fname, zpath))
-        data = open(zpath, 'rb').read()
+        with open(zpath, 'rb') as f:
+            data = f.read()
     else:
-        data = open(fname, 'rb').read()
+        with open(fname, 'rb') as f:
+            data = f.read()
     return zlib.adler32(data, checksum) & 0xffffffff
 
 
