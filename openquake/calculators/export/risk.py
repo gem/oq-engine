@@ -571,8 +571,8 @@ def export_bcr_map(ekey, dstore):
     return writer.getsaved()
 
 
-@depr('This exporter will be removed soon')
 @export.add(('losses_by_tag', 'csv'), ('curves_by_tag', 'csv'))
+@depr('This exporter will be removed soon')
 def export_by_tag_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
