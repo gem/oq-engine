@@ -228,18 +228,34 @@ def export_losses_by_asset(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by scenario_risk and ebrisk
+# this is used by scenario_risk, event_based_risk and ebrisk
 @export.add(('losses_by_event', 'csv'))
 def export_losses_by_event(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    dtlist = [('eid', U64)] + dstore['oqparam'].loss_dt_list()
+    oq = dstore['oqparam']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
-    arr = dstore['losses_by_event'].value[['eid', 'loss']]
-    writer.save(arr.view(dtlist), dest)
+    if oq.calculation_mode.startswith('scenario'):
+        dtlist = [('eid', U64)] + oq.loss_dt_list()
+        arr = dstore['losses_by_event'].value[['eid', 'loss']]
+        writer.save(arr.view(dtlist), dest)
+    else:
+        dtlist = [('event_id', U64), ('rup_id', U32), ('year', U32)] + \
+                 oq.loss_dt_list()
+        eids = dstore['losses_by_event']['eid']
+        year_of = year_dict(dstore['events']['eid'],
+                            oq.investigation_time, oq.ses_seed)
+        arr = numpy.zeros(len(dstore['losses_by_event']), dtlist)
+        arr['event_id'] = eids
+        arr['rup_id'] = arr['event_id'] / TWO32
+        arr['year'] = [year_of[eid] for eid in eids]
+        loss = dstore['losses_by_event']['loss'].T  # shape (L, E)
+        for losses, loss_type in zip(loss, oq.loss_dt().names):
+            arr[loss_type] = losses
+        writer.save(arr, dest)
     return writer.getsaved()
 
 
