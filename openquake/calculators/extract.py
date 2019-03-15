@@ -718,8 +718,8 @@ def _get(dstore, name):
         return dstore[name + '-rlzs'], ['mean']
 
 
-@deprecated('This feature will be removed soon')
 @extract.add('losses_by_tag')
+@deprecated('This feature will be removed soon')
 def losses_by_tag(dstore, tag):
     """
     Statistical average losses by tag. For instance call
@@ -742,8 +742,8 @@ def losses_by_tag(dstore, tag):
         yield stat, out
 
 
-@deprecated('This feature will be removed soon')
 @extract.add('curves_by_tag')
+@deprecated('This feature will be removed soon')
 def curves_by_tag(dstore, tag):
     """
     Statistical loss curves by tag. For instance call
