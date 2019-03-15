@@ -1430,7 +1430,7 @@ class LossCurvesMapsBuilder(object):
         """
         array = numpy.zeros((len(clp), len(losses)), F32)
         for r, ls in enumerate(losses):
-            if len(ls) <= 2:
+            if len(ls) < 2:
                 continue
             for c, poe in enumerate(clp):
                 array[c, r] = conditional_loss_ratio(ls, self.poes, poe)
