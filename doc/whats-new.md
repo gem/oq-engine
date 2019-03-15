@@ -206,6 +206,9 @@ decluster window of the HMKT. The syntax to use is as in this example:
 Rodolfo Puglia contributed spectral acceleration amplitudes at 2.5, 2.75 and
 4 seconds for the Bindi_2014 GMPE, which is relevant for the Italy model.
 
+Giovanni Lanzano contributed the SkarlatoudisEtAlSSlab2013 GMPE,
+relevant for Greece.
+
 Changlong Li contributed an update to the YU2013 GMPE, which is
 relevant for the China model.
 
