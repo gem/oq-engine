@@ -79,7 +79,8 @@ operation was effectively serialized on the master node, while now it can
 be parallelized as well.
 
 If you want to try the `ebrisk` calculator, please check the demo in
-`demos/risk/EventBasedRisk/job_eb.ini.
+`demos/risk/EventBasedRisk/job_eb.ini and the documentation in
+https://github.com/gem/oq-engine/blob/engine-3.4/doc/adv-manual/risk.rst
 
 Improvements on the other calculators
 -------------------------------------------------
@@ -328,7 +329,7 @@ is now taken by the `asset_hazard_distance` parameter.
  
 6. We changed the syntax of the ``MultiGMPE`` feature which was
 experimental and undocumented. It is now stable and documented here:
-https://github.com/gem/oq-engine/blob/engine-3.3/doc/adv-manual/parametric-gmpes.rst.
+https://github.com/gem/oq-engine/blob/engine-3.4/doc/adv-manual/parametric-gmpes.rst.
 
 7. In the `job.ini` file you should replace the parameters
 `quantile_loss_curves` and `quantile_loss_maps` with `quantiles`, otherwise
