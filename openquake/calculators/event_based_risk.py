@@ -206,9 +206,13 @@ class EbrCalculator(base.RiskCalculator):
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         self.agglosses = numpy.zeros((self.E, self.L * self.I), F32)
         if 'builder' in self.param:
+            logging.warning(
+                'Building the loss curves and maps for each asset is '
+                'deprecated: consider building the aggregate curves and '
+                'maps with the ebrisk calculator instead')
             self.build_datasets(self.param['builder'])
         if parent:
-            parent.close()  # avoid fork issues
+            parent.close()  # avoid concurrent reading issues
 
     def build_datasets(self, builder):
         oq = self.oqparam
