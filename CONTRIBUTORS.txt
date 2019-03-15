@@ -47,6 +47,8 @@ Pablo Heresi            August 2018
 Chris Van Houtte        October 2018
 Stéphane Drouet         December 2018
 Changlong Li            February 2019
+Rodolfo Puglia          February 2019
+Giovanni Lanciano       March 2019
 
 Project management
 ------------------
