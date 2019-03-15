@@ -114,40 +114,27 @@ this is useful to see which are the most relevant source groups, and
 also to see if the are source groups giving zero contribution that
 could be discarded.
 
-6. We restored the source logic validation routines that were lost years ago.
-Now you will get errors if you try to define invalid logic
-trees, like using an `applyToSources` with multiple source IDs on absolute
-parameters:
-```xml
-   <!-- this is invalid -->
-   <logicTreeBranchSet branchSetID="bs31"
-                       uncertaintyType="abGRAbsolute"
-		       applyToSources="1 2">
-```
-7. This is an additional check in the `uncertaintyModel` tag, to forbid
-accidentally duplicated source model files.
-
-8. We worked on the GMPE logic tree: now it is possible to serialize
+6. We worked also on the GMPE logic tree: now it is possible to serialize
 a `GsimLogicTree` object in TOML format, which is the format used inside
-the datastore. Previously the GMPE logic tree was stored as XML.
+the datastore. Previously the GMPE logic tree was stored in XML format.
 This has some readibility advantage. Most importantly, now tabular
 GMPEs (like the ones used for Canada) are fully serialized in the datastore
-and the risk calculator does not need anymore access to the external HDF5
-files with the tables, which was causing issues with engine 3.3.
+and the risk calculator does not need access to the external HDF5
+files with the tables anymore, which was causing issues with engine 3.3.
 
-9. The logic used in the event based risk calculator - read the hazard
+7. The logic used in the event based risk calculator - read the hazard
 sites in preference from the site model, not from the exposure - has
 been extended to all calculators.
 
-10. We changed the algorithm used in all kinds of event based calculations
+8. We changed the algorithm used in all kinds of event based calculations
 and now by default the sources are not split anymore. This makes the
 generation of ruptures a lot faster. Before this behavior was not the
-default, because we wanted to keep compatibility with the legacy
-algorithm. With the new algorithm the Montecarlo seeds are generated
+default, because we wanted to keep compatibility with the past.
+With the new algorithm the Montecarlo seeds are generated
 differently, so the sampled ruptures are different than before but
 statistically equivalent.
 
-11. We also improved the saving of the ruptures: now they are filtered
+9. We also improved the saving of the ruptures: now they are filtered
 before saving them, thus avoiding saving irrelevant ruptures.
 For speed, the filtering is done with a bounding box filter, which is
 not precise: most ruptures which are far away are removed, but not
@@ -184,7 +171,7 @@ hazardlib/HMTK
 As usual there was a lot of work on hazardlib. At the infrastructural
 level the most relevant change is that now we have a serialization
 procedure from GMPE objects into TOML and viceversa, working also for
-GMPEs with arguments. Moreover, we have now a two step initialization
+GMPEs with arguments. Moreover, there is now a two step initialization
 protocol for all GMPEs: if you need to do some special initialization
 (say a slow initialization, or an initialization requiring access to
 the filesystem) do it in the ``init()`` method, not in
@@ -267,20 +254,33 @@ $ oq info --extract
 More checks
 ---------------------
 
-1. We now raise an error for missing occupants in the exposure
+1. We restored the source logic validation routines that were lost years ago.
+Now you will get errors if you try to define invalid logic
+trees, like using an `applyToSources` with multiple source IDs on
+parameters of kind "Absolute":
+```xml
+   <!-- this is invalid -->
+   <logicTreeBranchSet branchSetID="bs31"
+                       uncertaintyType="abGRAbsolute"
+		       applyToSources="1 2">
+```
+2. There is an additional check in the `uncertaintyModel` tag of the source
+model logic tree file, to forbid accidentally duplicated source model files.
+
+3. We now raise an error for missing occupants in the exposure
 before starting the calculation, not in the middle of it.
 
-2. Now we make sure the IMTs are sorted by period in the `job.ini` file,
+4. Now we make sure the IMTs are sorted by period in the `job.ini` file,
 to make it easier to compare different `job.ini` files.
 
-3. We added a check for missing retrofitted values in the benefit-cost-ratio
+5. We added a check for missing retrofitted values in the benefit-cost-ratio
 calculator.
 
-4. We added a check to forbid the users from setting setting
+6. We added a check to forbid the users from setting setting
 `ses_per_logic_tree_path = 0` (this happened to users confusing
 ses_per_logic_tree_path with number_of_logic_tree_samples).
 
-5. Now we raise an early error if somebody tries to disaggregate a model
+7. Now we raise an early error if somebody tries to disaggregate a model
 with atomic source groups, since this feature is not supported yet.
 
 Bug fixes
