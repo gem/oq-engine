@@ -79,7 +79,7 @@ operation was effectively serialized on the master node, while now it can
 be parallelized as well.
 
 If you want to try the `ebrisk` calculator, please check the demo in
-`demos/risk/EventBasedRisk/job_eb.ini and the documentation in
+`demos/risk/EventBasedRisk/job_eb.ini` and the documentation in
 https://github.com/gem/oq-engine/blob/engine-3.4/doc/adv-manual/risk.rst
 
 Improvements on the other calculators
