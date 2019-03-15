@@ -143,6 +143,9 @@ filter calculator the precise filter is used and they are correctly
 discarded. The bounding box filter is enough to save disk space and
 storing time.
 
+10. We reduced drastically the number of client sockets attached to the DbServer
+and we removed the DbServer log file, which was not used.
+
 Experimental new features
 -------------------------
 
@@ -338,13 +341,13 @@ you will get an annoying warning.
 8. We changed the exporter for the aggregate losses: now the
 exposed value and loss ratios are exported too.
 
-9. The exporter for the loss curves now also exports the loss ratios.
+9. The exporter for the loss curves now exports more fields.
 
 10. The hazard XML exporters have been officially deprecated: unofficially,
 they have been deprecated for years, since the time we introduced the CSV
-exporters. You use the CSV for normal usage; if instead you want to do
-advanced postprocessing (typically involging the hazard curves for all
-realizations) you should use the Extractor API.
+exporters. You use the CSV for regular usage; for advanced postprocessing
+0 typically involging the hazard curves for all realizations - you should use
+the Extractor API instead.
 
 11. The insured losses feature has been deprecated months ago and it is still
 deprecated: it may disappear or change in the next release.
@@ -354,12 +357,16 @@ deprecated: it may disappear or change in the next release.
 in the future, since the interesting things to compute are the aggregated
 loss curves and maps which are available in the `ebrisk` calculator.
 
+13. Windows 7 has been deprecated as a platform for running the engine since
+it is very old, it is going out of support from Microsoft, and we discovered
+that sometimes engine calculations hang with it.
+
 Packaging and internals
 ------------------------
 
 1. We have removed the dependency from nose. You can still run the tests
 with nose, but the engine does not import it anymore: it can be
-considered a completly external tool.
+considered a completely external tool.
 
 2. We are considering using pytest as preferred testing tool for the
 engine, since it is more powerful and well maintained. It also has
@@ -371,11 +378,8 @@ serialize/deserialize literal Python objects to TOML format.
 4. It is now possible to convert the Windows nightly builds into a development
 environment.
 
-5. We reduced drastically the number client sockets attached to the DbServer
-and we removed the DbServer log file, which was not used.
-
-6. There is now a `sap.script` decorator that should be used instead
+5. There is now a `sap.script` decorator that should be used instead
 of the `sap.Script`` class.
 
-7. We added a command `oq info --parameters` tha displays the list of
+6. We added a command `oq info --parameters` tha displays the list of
 all the parameters recognized by job.ini files.
