@@ -1,3 +1,6 @@
+  [Giovanni Lanciano]
+  * Contributed a GMPE SkarlatoudisEtAlSSlab2013
+
   [Michele Simionato]
   * Changed the event loss table exporter to export also rup_id and year
   * Extended the ebrisk calculator to compute loss curves and maps
