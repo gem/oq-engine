@@ -1205,7 +1205,8 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        smodel = nrml.read(self._get_source_model(source_model)).sourceModel
+        with self._get_source_model(source_model) as sm:
+            smodel = nrml.read(sm).sourceModel
         n = len('Source')
         for sg in smodel:
             trt = sg['tectonicRegion']
