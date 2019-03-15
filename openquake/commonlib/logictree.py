@@ -634,7 +634,7 @@ class SourceModelLogicTree(object):
         n = 0
         for fnames in self.info.smpaths.values():
             for fname in fnames:
-                with open(self.filename, encoding='utf-8') as f:
+                with open(fname, encoding='utf-8') as f:
                     xml = f.read()
                 trts.update(TRT_REGEX.findall(xml))
                 n += 1
