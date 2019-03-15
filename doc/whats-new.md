@@ -313,7 +313,8 @@ possible to export from engine 3.4 the results of a calculation
 executed with a previous release.
 
 2. We removed the realization index column from the event loss table export and
-from the GMF csv export,
+from the GMF csv export: they were redundant in event based calculations
+and confusing in scenario calculations where there is a single realization.
 
 3. We removed the `site_model.xml` exporter since it was not used.
 
@@ -327,10 +328,11 @@ is now taken by the `asset_hazard_distance` parameter.
  
 6. We changed the syntax of the ``MultiGMPE`` feature which was
 experimental and undocumented. It is now stable and documented here:
-https://github.com/gem/oq-engine/blob/doc/doc/adv-manual/parametric-gmpes.rst.
+https://github.com/gem/oq-engine/blob/engine-3.3/doc/adv-manual/parametric-gmpes.rst.
 
 7. In the `job.ini` file you should replace the parameters
-`quantile_loss_curves` and `quantile_hazard_maps` with `quantiles`.
+`quantile_loss_curves` and `quantile_loss_maps` with `quantiles`, otherwise
+you will get an annoying warning.
 
 8. We changed the exporter for the aggregate losses: now the
 exposed value and loss ratios are exported too.
@@ -345,6 +347,11 @@ realizations) you should use the Extractor API.
 
 11. The insured losses feature has been deprecated months ago and it is still
 deprecated: it may disappear or change in the next release.
+
+12. The ability to compute individual loss curves and maps in the
+`event_based_risk` calculator has been deprecated and will be removed
+in the future, since the interesting things to compute are the aggregated
+loss curves and maps which are available in the `ebrisk` calculator.
 
 Packaging and internals
 ------------------------
