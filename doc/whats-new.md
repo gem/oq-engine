@@ -10,20 +10,25 @@ The ebrisk calculator
 The experience with the Global Risk Model made the scalability limits
 of the event based calculators clear. The approach of computing the
 GMFs, storing them on an HDF5 file during the hazard calculation and
-read them again during the risk calculation, scales up to ~100 GB of data.
-Over that limit (and most global risk calculations are over that limit)
-it is more convenient to compute the GMFs directly in the risk phase, without
-ever storing them. This avoids large data transfer and slow reading times
-and it is the approach taken by the new `ebrisk`
-calculator. Moreover, since in all global risk calculation we ignored asset
-correlation - the vulnerability functions had all zeros coefficients of
-variations - the `ebrisk` calculator has been optimized for that case. As
-a result it is a lot faster and memory efficient than the previous
-`event_based_risk` calculator. You should use it in preference to the
-old calculator except in two situations:
+read them again during the risk calculation, scales up to ~100 GB of
+data.  Over that limit - and most global risk calculations are over
+that limit - it is more convenient to compute the GMFs directly in the
+risk phase, without ever storing them, because recomputing the GMFs
+can be faster and memory efficient than reading them.
+This is the approach taken by the new `ebrisk` calculator.
+
+Moreover, since in all global risk calculation we ignored asset
+correlation - the vulnerability functions had zeros for the coefficients of
+variation - the `ebrisk` calculator has been optimized for that case. As
+a result in large calculations it is a lot faster than the previous
+`event_based_risk` calculator, and it requires a lot less memory too.
+You should use it in preference to the old calculator except in two
+situations:
 
 1. if you are interested in asset correlation
-2. if you are interested in GMFs correlation: in this case computing the
+2. the calculation is of middle size and you need to reuse the GMFs
+
+For instance, if you are interested in GMFs correlation, computing the
 GMFs is so slow that it makes sense to store them in the hazard phase.
 However GMF correlation is viable only if you have few sites (say 1000)
 because of memory and computational resources constraints.
@@ -31,10 +36,10 @@ because of memory and computational resources constraints.
 The `ebrisk` calculator has two more features with respect to the
 `event_based_risk` calculator:
 
-1. it allows to compute aggregate loss curves
+1. it allows to compute aggregate loss curves and maps
 2. it allows to store the asset loss table
 
-In order to compute the aggregate loss curves you need to specify in
+In order to compute the aggregate loss curves and maps you need to specify in
 the job.ini file the `aggregate_by` parameter. For instance, if you
 want to aggregate by the tags taxonomy and occupancy you can specify
 
@@ -73,8 +78,11 @@ knowing how many tasks to generate is an expensive operation. Before that
 operation was effectively serialized on the master node, while now it can
 be parallelized as well.
 
-General improvements on all calculators
+Improvements on the other calculators
 -------------------------------------------------
+
+The `ebrisk` calculator is brand new, but also the old calculators were
+revamped and optimized.
 
 1. Saving the source information was so slow that it was causing an
 out of memory issue in the case of large models like Australia and
@@ -88,31 +96,38 @@ worker nodes, not in the controller node, and that saved a lot of
 memory. It is also more efficient because it makes use of all available
 cores in the worker nodes.
 
-3. We parallelised the reading of the exposures: that improved of a few
-times the reading speed, making a difference in continental scale
-calculations that can have dozens of exposures (one per country).
+3. We parallelized the reading of the exposures: that makes a
+difference in continental scale calculations that can have dozens of
+exposures (one per country).
 
-4. We save more information in the case of site specific calculations:
-in particular for classical calculations we store complete information about
-the ruptures. This will help in future optimizations of the disaggregation
-calculator. Moreover, we save information about the most relevant source
-groups and about the "best" realization, i.e. the realization closest to
-the mean hazard curve.
+4. We now save more information in the case of site specific
+calculations: in particular for classical calculations we store
+complete information about the ruptures. This will help in future
+optimizations of the disaggregation calculator. Moreover, we save
+information the "best" realization, i.e. the realization closest to the
+mean hazard curve.
 
-5. We restored the source logic validation routines that were lost years ago.
+5. When running a classical calculation we now save a dataset
+`disagg_by_grp` that contains the highest PoE for the highest
+intensity produced by each source group among all sites, IMTs and GMPEs:
+this is useful to see which are the most relevant source groups, and
+also to see if the are source groups giving zero contribution that
+could be discarded.
+
+6. We restored the source logic validation routines that were lost years ago.
 Now you will get errors if you try to define invalid logic
 trees, like using an `applyToSources` with multiple source IDs on absolute
-parameters::
-
+parameters:
+```xml
    <!-- this is invalid -->
    <logicTreeBranchSet branchSetID="bs31"
                        uncertaintyType="abGRAbsolute"
 		       applyToSources="1 2">
-
-6. This is an additional check in the `uncertaintyModel` tag, to forbid
+```
+7. This is an additional check in the `uncertaintyModel` tag, to forbid
 accidentally duplicated source model files.
 
-7. We worked on the GMPE logic tree: now it is possible to serialize
+8. We worked on the GMPE logic tree: now it is possible to serialize
 a `GsimLogicTree` object in TOML format, which is the format used inside
 the datastore. Previously the GMPE logic tree was stored as XML.
 This has some readibility advantage. Most importantly, now tabular
@@ -120,11 +135,11 @@ GMPEs (like the ones used for Canada) are fully serialized in the datastore
 and the risk calculator does not need anymore access to the external HDF5
 files with the tables, which was causing issues with engine 3.3.
 
-8. The logic used in the event based risk calculator - read the hazard
+9. The logic used in the event based risk calculator - read the hazard
 sites in preference from the site model, not from the exposure - has
 been extended to all calculators.
 
-9. We changed the algorithm used in all kinds of event based calculations
+10. We changed the algorithm used in all kinds of event based calculations
 and now by default the sources are not split anymore. This makes the
 generation of ruptures a lot faster. Before this behavior was not the
 default, because we wanted to keep compatibility with the legacy
@@ -132,7 +147,7 @@ algorithm. With the new algorithm the Montecarlo seeds are generated
 differently, so the sampled ruptures are different than before but
 statistically equivalent.
 
-10. We also improved the saving of the ruptures: now they are filtered
+11. We also improved the saving of the ruptures: now they are filtered
 before saving them, thus avoiding saving irrelevant ruptures.
 For speed, the filtering is done with a bounding box filter, which is
 not precise: most ruptures which are far away are removed, but not
