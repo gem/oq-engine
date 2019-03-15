@@ -241,7 +241,7 @@ def export_losses_by_event(ekey, dstore):
     if oq.calculation_mode.startswith('scenario'):
         dtlist = [('eid', U64)] + oq.loss_dt_list()
         arr = dstore['losses_by_event'].value[['eid', 'loss']]
-        writer.save(arr.view(dtlist), dest)
+        writer.save(arr.copy().view(dtlist), dest)
     else:
         dtlist = [('event_id', U64), ('rup_id', U32), ('year', U32)] + \
                  oq.loss_dt_list()
