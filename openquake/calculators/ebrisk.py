@@ -298,8 +298,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 if len(maps):  # conditional_loss_poes can be empty
                     self.datastore['agg_maps-rlzs'][:, r] = maps
         if self.R > 1:
+            logging.info('Computing aggregate loss curves statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
             if oq.conditional_loss_poes:
+                logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')
 
         # sanity check with the asset_loss_table
