@@ -278,7 +278,7 @@ to make it easier to compare different `job.ini` files.
 5. We added a check for missing retrofitted values in the benefit-cost-ratio
 calculator.
 
-6. We added a check to forbid the users from setting setting
+6. We added a check to forbid the users from setting
 `ses_per_logic_tree_path = 0` (this happened to users confusing
 `ses_per_logic_tree_path` with `number_of_logic_tree_samples`).
 
