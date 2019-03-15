@@ -309,7 +309,7 @@ content, corresponding to the highest period. This has been fixed.
 5. Sometimes the `oq abort` command was giving confusing information:
 now it prints a message only for jobs that were really aborted.
 
-Changes and deprecations
+Changes
 -----------------------------------------------
 
 1. We changed the way the hazard maps are stored, therefore it is not
@@ -343,21 +343,27 @@ exposed value and loss ratios are exported too.
 
 9. The exporter for the loss curves now exports more fields.
 
-10. The hazard XML exporters have been officially deprecated: unofficially,
+Deprecations
+--------------------
+
+1. The hazard XML exporters have been officially deprecated: unofficially,
 they have been deprecated for years, since the time we introduced the CSV
 exporters. You use the CSV for regular usage; for advanced postprocessing
 0 typically involging the hazard curves for all realizations - you should use
 the Extractor API instead.
 
-11. The insured losses feature has been deprecated months ago and it is still
+2. The scenario GMF XML exporter has been deprecated and will be removed in
+the future: you should use the CSV exported instead.
+
+3. The insured losses feature has been deprecated months ago and it is still
 deprecated: it may disappear or change in the next release.
 
-12. The ability to compute individual loss curves and maps in the
+4. The ability to compute individual loss curves and maps in the
 `event_based_risk` calculator has been deprecated and will be removed
 in the future, since the interesting things to compute are the aggregated
 loss curves and maps which are available in the `ebrisk` calculator.
 
-13. Windows 7 has been deprecated as a platform for running the engine since
+5. Windows 7 has been deprecated as a platform for running the engine since
 it is very old, it is going out of support from Microsoft next year,
 and we discovered that sometimes engine calculations hang with it.
 
