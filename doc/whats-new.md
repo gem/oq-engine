@@ -85,23 +85,22 @@ https://github.com/gem/oq-engine/blob/engine-3.4/doc/adv-manual/risk.rst
 Improvements on the other calculators
 -------------------------------------------------
 
-The `ebrisk` calculator is brand new, but also the old calculators were
-revamped and optimized.
+There was a lot of work on the old calculators too.
 
-1. Saving the source information was so slow that it was causing an
+1. We discovered that saving the source information was causing an
 out of memory issue in the case of large models like Australia and
 Italy. The solution was to call the procedure `store_source_info` only
 once - at the end of the calculation - and not once per task. The
 changed gained us orders of magnitude in saving speed, so that the
-tasks results did not have to queue up in memory.
+tasks results did not have time to queue up in memory.
 
 2. We changed the source filtering approach: now it is performed in the
-worker nodes, not in the controller node, and that saved a lot of
+worker nodes, not in the controller node. The new approach saved a lot of
 memory. It is also more efficient because it makes use of all available
 cores in the worker nodes.
 
 3. We parallelized the reading of the exposures: that makes a
-difference in continental scale calculations that can have dozens of
+difference in continental scale risk calculations that can have dozens of
 exposures (one per country).
 
 4. We now save more information in the case of site specific
@@ -143,8 +142,9 @@ filter calculator the precise filter is used and they are correctly
 discarded. The bounding box filter is enough to save disk space and
 storing time.
 
-10. We reduced drastically the number of client sockets attached to the DbServer
-and we removed the DbServer log file, which was not used.
+10. We reduced drastically the number of client sockets attached to
+the DbServer, which was a waste of resources, and we removed the
+DbServer log file, which was not used.
 
 Experimental new features
 -------------------------
@@ -358,8 +358,8 @@ in the future, since the interesting things to compute are the aggregated
 loss curves and maps which are available in the `ebrisk` calculator.
 
 13. Windows 7 has been deprecated as a platform for running the engine since
-it is very old, it is going out of support from Microsoft, and we discovered
-that sometimes engine calculations hang with it.
+it is very old, it is going out of support from Microsoft next year,
+and we discovered that sometimes engine calculations hang with it.
 
 Packaging and internals
 ------------------------
@@ -372,7 +372,7 @@ considered a completely external tool.
 engine, since it is more powerful and well maintained. It also has
 better discovery features that helped us to find hidden broken tests.
 
-3. We have added a dependency from toml, a small module use to
+3. We have added a dependency from toml, a small module used to
 serialize/deserialize literal Python objects to TOML format.
 
 4. It is now possible to convert the Windows nightly builds into a development
