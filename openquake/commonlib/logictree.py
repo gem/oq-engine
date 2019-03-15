@@ -634,7 +634,7 @@ class SourceModelLogicTree(object):
         n = 0
         for fnames in self.info.smpaths.values():
             for fname in fnames:
-                with open(self.filename, encoding='utf-8') as f:
+                with open(fname, encoding='utf-8') as f:
                     xml = f.read()
                 trts.update(TRT_REGEX.findall(xml))
                 n += 1
@@ -1205,7 +1205,8 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        smodel = nrml.read(self._get_source_model(source_model)).sourceModel
+        with self._get_source_model(source_model) as sm:
+            smodel = nrml.read(sm).sourceModel
         n = len('Source')
         for sg in smodel:
             trt = sg['tectonicRegion']
