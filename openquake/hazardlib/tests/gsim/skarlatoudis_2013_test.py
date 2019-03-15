@@ -17,16 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.skarlatoudis_2013 import (
-    SkarlatoudisetalSlab2013)
+    SkarlatoudisEtAlSSlab2013)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class SkarlatoudisetalSlab2013TestCase(BaseGSIMTestCase):
+class SkarlatoudisEtAlSSlab2013TestCase(BaseGSIMTestCase):
     """
     Tests the Skarlatoudis et al. (2013) model for subduction
     intraslab earthquakes
     """
-    GSIM_CLASS = SkarlatoudisetalSlab2013
+    GSIM_CLASS = SkarlatoudisEtAlSSlab2013
     MEAN_FILE = "SKARL13/SKARL13_SSLAB_CENTRAL_MEAN.csv"
     TOTAL_FILE = "SKARL13/SKARL13_SSLAB_CENTRAL_STDDEV_TOTAL.csv"
     INTER_FILE = "SKARL13/SKARL13_SSLAB_CENTRAL_STDDEV_INTER.csv"
