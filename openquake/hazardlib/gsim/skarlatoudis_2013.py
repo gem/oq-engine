@@ -27,12 +27,12 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-class SkarlatoudisetalSlab2013(GMPE):
+class SkarlatoudisEtAlSlab2013(GMPE):
     """
-    Implements GMPEs developed by A.A.Skarlatoudis, C.B.Papazachos, B.N.Margaris, C.Ventouzi,
-    I.Kalogeras and EGELADOS group published as "Ground-Motion
-    Prediction Equations of Intermediate-Depth Earthquakes in the Hellenic Arc,
-    Southern Aegean Subduction Area“,
+    Implements GMPEs developed by A.A.Skarlatoudis, C.B.Papazachos,
+    B.N.Margaris, C.Ventouzi, I.Kalogeras and EGELADOS group published as
+    "Ground-Motion Prediction Equations of Intermediate-Depth Earthquakes in
+    the Hellenic Arc, Southern Aegean Subduction Area“,
     Bull Seism Soc Am, DOI 10.1785/0120120265
     SA are given up to 4 s.
     The regressions are developed considering the RotD50 (Boore, 2010) of the
@@ -83,7 +83,6 @@ class SkarlatoudisetalSlab2013(GMPE):
         # intensity measure type.
 
         C = self.COEFFS[imt]
-        #test=np.zeros(len(rup.mag))
         imean = (self._compute_magnitude(rup, C) +
                  self._compute_distance(rup, dists, C) +
                  self._get_site_amplification(sites, C) +
@@ -133,19 +132,20 @@ class SkarlatoudisetalSlab2013(GMPE):
     def _compute_magnitude(self, rup, C):
         """
         equation 3 pag 1960:
-        
+
         c1 + c2(M-5.5)
         """
         m_h = 5.5
-        return C['c1'] + (C['c2'] * (rup.mag - m_h)) 
- 
+        return C['c1'] + (C['c2'] * (rup.mag - m_h))
+
     def _get_site_amplification(self, sites, C):
         """
         Compute the fourth term of the equation 3:
         The functional form Fs in Eq. (1) represents the site amplification and
         it is given by FS = c61*S + c62*SS , where c61 and c62 are the
         coefficients to be determined through the regression analysis,
-        while S and SS are dummy variables used to denote NEHRP site category C and D respectively
+        while S and SS are dummy variables used to denote NEHRP site category
+        C and D respectively
         Coefficents for categories A and B are set to zero
         """
         S, SS = self._get_site_type_dummy_variables(sites)
@@ -173,51 +173,51 @@ class SkarlatoudisetalSlab2013(GMPE):
         S[idx] = 1.0
 
         return S, SS
-    
+
     def _compute_forearc_backarc_term(self, C, sites, dists, rup):
-       """
-       Compute back-arc term of Equation 3
-       
-       """
-       # flag 1 (R < 335 & R >= 205)
-       flag1 = np.zeros(len(dists.rhypo))
-       ind1 = np.logical_and((dists.rhypo < 335), (dists.rhypo >= 205))
-       flag1[ind1] = 1.0
-       # flag 2 (R >= 335)
-       flag2 = np.zeros(len(dists.rhypo))
-       ind2 = (dists.rhypo >= 335)
-       flag2[ind2] = 1.0
-       # flag 3 (R < 240 & R >= 140)
-       flag3 = np.zeros(len(dists.rhypo))
-       ind3 = np.logical_and((dists.rhypo < 240), (dists.rhypo >= 140))
-       flag3[ind3] = 1.0       
-       # flag 4 (R >= 240)
-       flag4 = np.zeros(len(dists.rhypo))
-       ind4 = (dists.rhypo >= 240)
-       flag4[ind4] = 1.0
+        """
+        Compute back-arc term of Equation 3
 
-       A = flag1 * ((dists.rhypo - 205)/250) + flag2
-       B = flag3 * ((dists.rhypo - 140)/100) + flag4
-       if (rup.hypo_depth<80):      
-           FHR = A
-       else:
-           FHR = B
+        """
+        # flag 1 (R < 335 & R >= 205)
+        flag1 = np.zeros(len(dists.rhypo))
+        ind1 = np.logical_and((dists.rhypo < 335), (dists.rhypo >= 205))
+        flag1[ind1] = 1.0
+        # flag 2 (R >= 335)
+        flag2 = np.zeros(len(dists.rhypo))
+        ind2 = (dists.rhypo >= 335)
+        flag2[ind2] = 1.0
+        # flag 3 (R < 240 & R >= 140)
+        flag3 = np.zeros(len(dists.rhypo))
+        ind3 = np.logical_and((dists.rhypo < 240), (dists.rhypo >= 140))
+        flag3[ind3] = 1.0
+        # flag 4 (R >= 240)
+        flag4 = np.zeros(len(dists.rhypo))
+        ind4 = (dists.rhypo >= 240)
+        flag4[ind4] = 1.0
 
-       H0 = 100
-       # Heaviside function
-       if (rup.hypo_depth >= H0):      
-           H = 1
-       else:
-           H = 0
-       
-       # ARC = 0 for back-arc - ARC = 1 for forearc
-       ARC = np.zeros(len(sites.backarc))
-       idxarc = (sites.backarc == 0)
-       ARC[idxarc] = 1.0
+        A = flag1 * ((dists.rhypo - 205)/250) + flag2
+        B = flag3 * ((dists.rhypo - 140)/100) + flag4
+        if (rup.hypo_depth < 80):
+            FHR = A
+        else:
+            FHR = B
 
-       return  (C['c41'] * (1 - ARC) * H) + (C['c42'] * (1 - ARC) * H * FHR) + (C['c51'] * ARC * H) + (C['c52'] * ARC * H * FHR)
+        H0 = 100
+        # Heaviside function
+        if (rup.hypo_depth >= H0):
+            H = 1
+        else:
+            H = 0
 
-   
+        # ARC = 0 for back-arc - ARC = 1 for forearc
+        ARC = np.zeros(len(sites.backarc))
+        idxarc = (sites.backarc == 0)
+        ARC[idxarc] = 1.0
+
+        return ((C['c41'] * (1 - ARC) * H) + (C['c42'] * (1 - ARC) * H * FHR) +
+                (C['c51'] * ARC * H) + (C['c52'] * ARC * H * FHR))
+
     #: Coefficients from SA from Table 1
     #: Coefficients from PGA e PGV from Table 5
 
@@ -235,5 +235,3 @@ class SkarlatoudisetalSlab2013(GMPE):
     2.000    3.281    1.260    -0.00106    -0.136     0.055    0.196    0.352    0.408    0.578    0.277    0.203    0.343
     4.000    2.588    1.384    -0.00039    -0.179    -0.046    0.113    0.189    0.264    0.475    0.278    0.176    0.329
     """)
-
-
