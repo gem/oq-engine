@@ -756,6 +756,14 @@ silva_2002
     :undoc-members:
     :show-inheritance:
 
+skarlatoudis_2013
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.skarlatoudis_2013
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 somerville_2001
 -----------------------------------------------
 
