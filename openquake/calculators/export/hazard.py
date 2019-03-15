@@ -401,8 +401,8 @@ def get_metadata(realizations, kind):
     return metadata
 
 
-@deprecated('Use the CSV exporter instead')
 @export.add(('uhs', 'xml'))
+@deprecated('Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
@@ -438,8 +438,8 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@deprecated('Use the CSV exporter instead')
 @export.add(('hcurves', 'xml'))
+@deprecated('Use the CSV exporter instead')
 def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     len_ext = len(fmt) + 1
@@ -476,8 +476,8 @@ def export_hcurves_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@deprecated('Use the CSV exporter instead')
 @export.add(('hmaps', 'xml'))
+@deprecated('Use the CSV exporter instead')
 def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     oq = dstore['oqparam']
@@ -529,8 +529,8 @@ def export_hazard_npz(ekey, dstore):
     return [fname]
 
 
-@deprecated('Use the CSV exporter instead')
 @export.add(('gmf_data', 'xml'))
+@deprecated('Use the CSV exporter instead')
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
