@@ -196,8 +196,8 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
         ind4 = (dists.rhypo >= 240)
         flag4[ind4] = 1.0
 
-        A = flag1 * ((dists.rhypo - 205)/250) + flag2
-        B = flag3 * ((dists.rhypo - 140)/100) + flag4
+        A = flag1 * ((205 - dists.rhypo)/150) + flag2
+        B = flag3 * ((140 - dists.rhypo)/100) + flag4
         if (rup.hypo_depth < 80):
             FHR = A
         else:
@@ -212,7 +212,7 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
 
         # ARC = 0 for back-arc - ARC = 1 for forearc
         ARC = np.zeros(len(sites.backarc))
-        idxarc = (sites.backarc == 0)
+        idxarc = (sites.backarc == 1)
         ARC[idxarc] = 1.0
 
         return ((C['c41'] * (1 - ARC) * H) + (C['c42'] * (1 - ARC) * H * FHR) +
