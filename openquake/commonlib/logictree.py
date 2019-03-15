@@ -484,7 +484,8 @@ class FakeSmlt(object):
         """
         :returns: the set of TRTs inside the source model file
         """
-        xml = open(self.filename, encoding='utf-8').read()
+        with open(self.filename, encoding='utf-8') as f:
+            xml = f.read()
         return set(TRT_REGEX.findall(xml))
 
     def __iter__(self):
@@ -633,7 +634,8 @@ class SourceModelLogicTree(object):
         n = 0
         for fnames in self.info.smpaths.values():
             for fname in fnames:
-                xml = open(fname, encoding='utf-8').read()
+                with open(self.filename, encoding='utf-8') as f:
+                    xml = f.read()
                 trts.update(TRT_REGEX.findall(xml))
                 n += 1
         logging.info('Read %d TRTs from %d model file(s)', len(trts), n)
