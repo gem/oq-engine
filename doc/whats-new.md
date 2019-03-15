@@ -309,6 +309,10 @@ content, corresponding to the highest period. This has been fixed.
 5. Sometimes the `oq abort` command was giving confusing information:
 now it prints a message only for jobs that were really aborted.
 
+6. The documentation for the event loss table exporter in the manual
+was horribly outdated and has been fixed.
+
+
 Changes
 -----------------------------------------------
 
