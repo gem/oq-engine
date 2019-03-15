@@ -91,7 +91,7 @@ There was a lot of work on the old calculators too.
 out of memory issue in the case of large models like Australia and
 Italy. The solution was to call the procedure `store_source_info` only
 once - at the end of the calculation - and not once per task. The
-changed gained us orders of magnitude in saving speed, so that the
+change improved tremendously the saving speed, so that the
 tasks results did not have time to queue up in memory.
 
 2. We changed the source filtering approach: now it is performed in the
