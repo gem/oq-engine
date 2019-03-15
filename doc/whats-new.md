@@ -120,10 +120,6 @@ contribution to the highest hazard.
 6. We worked also on the GMPE logic tree: now it is possible to serialize
 a `GsimLogicTree` object in TOML format, which is the format used inside
 the datastore. Previously the GMPE logic tree was stored in XML format.
-This has some readibility advantage. Most importantly, now tabular
-GMPEs (like the ones used for Canada) are fully serialized in the datastore
-and the risk calculator does not need access to the external HDF5
-files with the tables anymore, which was causing issues with engine 3.3.
 
 7. The logic used in the event based risk calculator - read the hazard
 sites in preference from the site model, not from the exposure - has
@@ -280,9 +276,9 @@ calculator.
 
 6. We added a check to forbid the users from setting setting
 `ses_per_logic_tree_path = 0` (this happened to users confusing
-ses_per_logic_tree_path with number_of_logic_tree_samples).
+`ses_per_logic_tree_path` with `number_of_logic_tree_samples`).
 
-7. Now we raise an early error if somebody tries to disaggregate a model
+7. We raise an error early if somebody tries to disaggregate a model
 with atomic source groups, since this feature is not supported yet.
 
 Bug fixes
@@ -292,13 +288,15 @@ Bug fixes
 of the risk investigation time the hazard investigation time parameter was
 passed, thus producing wrong curves when the two parameters were different.
 
-2. The calculation of the loss maps was failing in situations where
-there where not enough losses. This has been fixed by ignoring the
-events producing less than 3 losses in the loss maps calculation.
+2. The event based risk calculator in engine 3.3 had an issue with
+tabular GMPEs stored in external HDF5 files: the directory path was
+set incorrectly and the files not found. Now the tables are fully
+serialized inside the datastore and the risk calculator can take
+advantage of that.
 
 3. We fixed a regression in `applyToSources` that made it impossible,
 in engine 3.3 to use it on more than 1 source, i.e. to write things
-like `applyToSources="1 2"`.
+like `applyToSources="1 2"` even when it would have been correct.
 
 4. Engine 3.3 introduced a bug in the XML exporter for the hazard curves:
 files with different spectral accelerations contained always the same
