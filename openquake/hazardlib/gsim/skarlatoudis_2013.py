@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`SkarlatoudisetalSlab2013`.
+Module exports :class:`SkarlatoudisEtAlSSlab2013`.
 """
 import numpy as np
 from scipy.constants import g
@@ -27,7 +27,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-class SkarlatoudisEtAlSlab2013(GMPE):
+class SkarlatoudisEtAlSSlab2013(GMPE):
     """
     Implements GMPEs developed by A.A.Skarlatoudis, C.B.Papazachos,
     B.N.Margaris, C.Ventouzi, I.Kalogeras and EGELADOS group published as
