@@ -78,6 +78,9 @@ knowing how many tasks to generate is an expensive operation. Before that
 operation was effectively serialized on the master node, while now it can
 be parallelized as well.
 
+If you want to try the `ebrisk` calculator, please check the demo in
+`demos/risk/EventBasedRisk/job_eb.ini.
+
 Improvements on the other calculators
 -------------------------------------------------
 
@@ -109,10 +112,10 @@ mean hazard curve.
 
 5. When running a classical calculation we now save a dataset
 `disagg_by_grp` that contains the highest PoE for the highest
-intensity produced by each source group among all sites, IMTs and GMPEs:
-this is useful to see which are the most relevant source groups, and
-also to see if the are source groups giving zero contribution that
-could be discarded.
+intensity produced by each source group among all sites, IMTs and
+GMPEs: this is useful to see which are the source groups producing the
+highest hazard, and also to see if the are source groups giving zero
+contribution to the highest hazard.
 
 6. We worked also on the GMPE logic tree: now it is possible to serialize
 a `GsimLogicTree` object in TOML format, which is the format used inside
@@ -191,7 +194,7 @@ We removed a depth check in `mesh.get_distance_matrix` and now it is
 possible to compute correlation matrices even if the points are not
 all at the same dephts: the depths are simply ignored. This is
 consistent with the usual definition of spatial correlation that
-consider only the lon and lat components and not the depths.
+consider only the longitude and latitude components and not the depths.
 
 We added the ability to specify a `time_cutoff` parameter (in days) in the
 decluster window of the HMKT. The syntax to use is as in this example:
@@ -201,10 +204,10 @@ decluster window of the HMKT. The syntax to use is as in this example:
                     "time_cutoff": 100}
 ```
 Rodolfo Puglia contributed spectral acceleration amplitudes at 2.5, 2.75 and
-4 seconds for the Bindi_2014 GMPE, relevant for the Italy model.
+4 seconds for the Bindi_2014 GMPE, which is relevant for the Italy model.
 
-Changlong Li contributed an update to the GMPE YU2013, relevant for the
-China model.
+Changlong Li contributed an update to the YU2013 GMPE, which is
+relevant for the China model.
 
 Valerio Poggi contributed a GMPE for average SA calculations.
 
@@ -215,8 +218,8 @@ WebAPI and plotting
 -------------------
 
 We extended the WebAPI to be able to extract specific hazard curves, maps
-and UHS (i.e. IMT-specific and site specific). There is now an Extractor
-class to extract data from a local calculation and a WebExtractor class to
+and UHS (i.e. IMT-specific and site specific). There is now an `Extractor`
+class to extract data from a local calculation and a `WebExtractor` class to
 extract data from a remote calculation. They are documented here:
 
 https://github.com/gem/oq-engine/blob/engine-3.4/doc/adv-manual/extract-api.rst
@@ -240,10 +243,9 @@ into a local database with the `oq importcalc` command:
 ```
 Moreover the plotting facilities of the engine have been extended so
 that it is now possible to plot hazard curves, maps and uniform hazard
-spectra even of a remote calculation. The is documented in the
-extract-api.rst page above. `oq plot` is still unofficial and subject
-to changes: the official way to plot hazard results is the [QGIS
-plugin](https://plugins.qgis.org/plugins/svir/).
+spectra even of a remote calculation. Notice that `oq plot` is still
+unofficial and subject to changes: the official way to plot hazard
+results is the [QGIS plugin](https://plugins.qgis.org/plugins/svir/).
 
 We added a few new `extract` commands: as usual you can see the full
 list of them with the command
@@ -251,8 +253,8 @@ list of them with the command
 $ oq info --extract
 ```
 
-More checks
----------------------
+New checks and validations
+---------------------------
 
 1. We restored the source logic validation routines that were lost years ago.
 Now you will get errors if you try to define invalid logic
