@@ -943,17 +943,17 @@ class DeprecationWarning(UserWarning):
 
 
 @decorator
-def deprecated(func, message='', *args, **kw):
+def deprecated(func, msg='', *args, **kw):
     """
     A family of decorators to mark deprecated functions.
 
-    :param message:
+    :param msg:
         the message to print the first time the
         deprecated function is used.
 
     Here is an example of usage:
 
-    >>> @deprecated('Use new_function instead')
+    >>> @deprecated(msg='Use new_function instead')
     ... def old_function():
     ...     'Do something'
 
@@ -961,7 +961,7 @@ def deprecated(func, message='', *args, **kw):
     warning will be displayed only the first time.
     """
     msg = '%s.%s has been deprecated. %s' % (
-        func.__module__, func.__name__, message)
+        func.__module__, func.__name__, msg)
     if not hasattr(func, 'called'):
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         func.called = 0
