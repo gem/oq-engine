@@ -1061,7 +1061,7 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
-@deprecated('Use the .csv format for the hazard curves instead')
+@deprecated(msg='Use the .csv format for the hazard curves instead')
 def get_pmap_from_nrml(oqparam, fname):
     """
     :param oqparam:
@@ -1109,7 +1109,7 @@ def _extract_eids_sitecounts(gmfset):
     return eids, counter
 
 
-@deprecated('Use the .csv format for the GMFs instead')
+@deprecated(msg='Use the .csv format for the GMFs instead')
 def get_scenario_from_nrml(oqparam, fname):
     """
     :param oqparam:
