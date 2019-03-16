@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib import hdf5
-from openquake.baselib.general import group_array,  deprecated as depr
+from openquake.baselib.general import group_array,  deprecated
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
@@ -42,9 +42,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
-
-
-deprecated = depr('Use the csv exporter instead')
 
 
 def add_quotes(values):
@@ -310,7 +307,7 @@ def year_dict(eids, investigation_time, ses_seed):
 
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
-@depr('This exporter will be removed soon')
+@deprecated(msg='This exporter will be removed soon')
 def export_agg_losses_ebr(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -588,7 +585,7 @@ def export_bcr_map(ekey, dstore):
 
 
 @export.add(('losses_by_tag', 'csv'), ('curves_by_tag', 'csv'))
-@depr('This exporter will be removed soon')
+@deprecated(msg='This exporter will be removed soon')
 def export_by_tag_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
