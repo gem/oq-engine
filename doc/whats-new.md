@@ -227,7 +227,7 @@ extract data from a remote calculation. They are documented here:
 
 https://github.com/gem/oq-engine/blob/engine-3.4/doc/adv-manual/extract-api.rst
 
-Thanks to the WebExtractor it is not easier to import a remote calculation
+Thanks to the WebExtractor it is now easier to import a remote calculation
 into a local database with the `oq importcalc` command:
 ```
   $ oq importcalc --help
