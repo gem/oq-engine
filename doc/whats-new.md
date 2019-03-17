@@ -107,7 +107,7 @@ exposures (one per country).
 calculations: in particular for classical calculations we store
 complete information about the ruptures. This will help in future
 optimizations of the disaggregation calculator. Moreover, we save
-information the "best" realization, i.e. the realization closest to the
+information the "best" realization, i.e. the realization closer to the
 mean hazard curve.
 
 5. When running a classical calculation we now save a dataset
