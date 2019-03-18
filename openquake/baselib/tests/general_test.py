@@ -170,7 +170,7 @@ class AssertCloseTestCase(unittest.TestCase):
 
 class DeprecatedTestCase(unittest.TestCase):
     def test(self):
-        @deprecated('Use dummy_new instead.')
+        @deprecated(msg='Use dummy_new instead.')
         def dummy():
             pass
 

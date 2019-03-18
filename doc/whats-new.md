@@ -107,7 +107,7 @@ exposures (one per country).
 calculations: in particular for classical calculations we store
 complete information about the ruptures. This will help in future
 optimizations of the disaggregation calculator. Moreover, we save
-information the "best" realization, i.e. the realization closest to the
+information the "best" realization, i.e. the realization closer to the
 mean hazard curve.
 
 5. When running a classical calculation we now save a dataset
@@ -227,7 +227,7 @@ extract data from a remote calculation. They are documented here:
 
 https://github.com/gem/oq-engine/blob/engine-3.4/doc/adv-manual/extract-api.rst
 
-Thanks to the WebExtractor it is not easier to import a remote calculation
+Thanks to the WebExtractor it is now easier to import a remote calculation
 into a local database with the `oq importcalc` command:
 ```
   $ oq importcalc --help
