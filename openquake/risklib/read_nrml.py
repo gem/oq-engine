@@ -167,7 +167,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     if nodamage == 0:
         # use a cutoff to avoid log(0) in GMPE.to_distribution_values
         logging.warning('Found a noDamageLimit=0 in %s, line %s, '
-                     'using %g instead', fname, ff.lineno, min_iml)
+                        'using %g instead', fname, ff.lineno, min_iml)
         nodamage = min_iml
     with context(fname, imls):
         attrs = dict(format=ff['format'],
@@ -184,7 +184,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
         if minIML == 0:
             # use a cutoff to avoid log(0) in GMPE.to_distribution_values
             logging.warning('Found minIML=0 in %s, line %s, using %g instead',
-                         fname, imls.lineno, min_iml)
+                            fname, imls.lineno, min_iml)
             minIML = min_iml
         attrs['minIML'] = minIML
         attrs['maxIML'] = float(imls['maxIML'])
@@ -425,7 +425,6 @@ def update_validators():
         'ffs.type': valid.ChoiceCI('lognormal'),
         'assetLifeExpectancy': valid.positivefloat,
         'interestRate': valid.positivefloat,
-        'lossCategory': valid.utf8,
         'lossType': valid_loss_types,
         'aalOrig': valid.positivefloat,
         'aalRetr': valid.positivefloat,
