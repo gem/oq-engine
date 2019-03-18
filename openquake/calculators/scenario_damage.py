@@ -168,4 +168,3 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['losses_by_event'] = numpy.fromiter(
                 ((eid, rlzi, F32(result['c_event'][eid, rlzi]))
                  for rlzi in range(R) for eid in range(E)), dtlist)
-
