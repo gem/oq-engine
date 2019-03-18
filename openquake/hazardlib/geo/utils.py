@@ -101,7 +101,7 @@ class _GeographicObjects(object):
         :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :returns: (filtered site collection, filtered objects)
+        :returns: filtered site collection, filtered objects, discarded
         """
         assert mode in 'strict warn filter', mode
         dic = {}
@@ -140,7 +140,7 @@ class _GeographicObjects(object):
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
         :param asset_ref: ID of the assets are a list of strings
-        :returns: (filtered site collection, filtered assets by site)
+        :returns: filtered site collection, filtered assets by site, discarded
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
