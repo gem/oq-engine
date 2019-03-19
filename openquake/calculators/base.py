@@ -18,6 +18,7 @@
 import os
 import sys
 import abc
+import csv
 import pdb
 import logging
 import operator
@@ -29,17 +30,17 @@ import numpy
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, geo
 from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import (
     readinput, logictree, source, calc, writers, util)
-from openquake.baselib.parallel import Starmap
-from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -486,6 +487,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+        if oq.hazard_fields:
+            self.read_hazard_fields()
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             csm = readinput.get_composite_source_model(
@@ -506,6 +509,43 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
 
+    def read_hazard_fields(self):
+        """
+        Read the hazard fields as csv files, associate them to the sites
+        and create the `hazard` dataset.
+        """
+        oq = self.oqparam
+        fnames = oq.inputs['hazard_fields']
+        dt = [(haz, float) for haz in oq.hazard_fields]
+        N = len(self.sitecol)
+        self.datastore['hazard'] = z = numpy.zeros(N, dt)
+        nonzero = []
+        for name, fname in zip(oq.hazard_fields, fnames):
+            data = []
+            with open(fname) as f:
+                for row in csv.DictReader(f):
+                    data.append((float(row['lon']), float(row['lat']),
+                                 int(row['Amenaza'])))
+            data = numpy.array(data, [('lon', float), ('lat', float),
+                                      ('number', float)])
+            logging.info('Read %s with %d rows' % (fname, len(data)))
+            if len(data) != len(numpy.unique(data[['lon', 'lat']])):
+                raise InvalidFile('There are duplicated points in %s' % fname)
+            sites, filtdata, _discarded = geo.utils.assoc(
+                data, self.sitecol, oq.asset_hazard_distance, 'filter')
+            z = numpy.zeros(N, float)
+            z[sites.sids] = filtdata['number']
+            self.datastore['hazard'][name] = z
+            nonzero.append((z != 0).sum())
+        self.datastore.set_attrs('hazard', nbytes=z.nbytes, nonzero=nonzero)
+
+        # convert ash into a GMF
+        if 'ash' in oq.hazard_fields:
+            E = 1
+            events = numpy.zeros(E, rupture.events_dt)
+            gmf = self.datastore['hazard']['ash'].reshape(N, E, 1)
+            save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
+
     def pre_execute(self):
         """
         Check if there is a previous calculation ID.
@@ -513,7 +553,8 @@ class HazardCalculator(BaseCalculator):
         if not, read the inputs directly.
         """
         oq = self.oqparam
-        if 'gmfs' in oq.inputs:  # read hazard from file
+        if 'gmfs' in oq.inputs or 'hazard_fields' in oq.inputs:
+            # read hazard from files
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
             self.read_inputs()
