@@ -29,7 +29,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import CallableDict, group_array
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import utils
 
