@@ -487,8 +487,6 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
-        if oq.hazard_fields:
-            self.read_hazard_fields()
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             csm = readinput.get_composite_source_model(
@@ -540,11 +538,14 @@ class HazardCalculator(BaseCalculator):
         self.datastore.set_attrs(
             'hazard_fields', nbytes=z.nbytes, nonzero=nonzero)
 
-        # convert ash into a GMF
-        if 'ash' in oq.hazard_fields:
-            E = 1
+        # convert ASH into a GMF
+        if 'ASH' in oq.hazard_fields:
+            # in the future, if the stddevs will become available, we will
+            # be able to generate a distribution of GMFs, as we do for the
+            # ShakeMaps; for the moment, we will consider a single event
+            oq.number_of_ground_motion_fields = E = 1
             events = numpy.zeros(E, rupture.events_dt)
-            gmf = self.datastore['hazard_fields']['ash'].reshape(N, E, 1)
+            gmf = self.datastore['hazard_fields']['ASH'].reshape(N, E, 1)
             save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
 
     def pre_execute(self):
@@ -559,7 +560,10 @@ class HazardCalculator(BaseCalculator):
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
             self.read_inputs()
-            save_gmfs(self)
+            if 'gmfs' in oq.inputs:
+                save_gmfs(self)
+            else:
+                self.read_hazard_fields()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
