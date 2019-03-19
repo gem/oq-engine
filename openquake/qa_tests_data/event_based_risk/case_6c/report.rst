@@ -2,12 +2,12 @@ event based hazard
 ==================
 
 ============== ===================
-checksum32     2,601,830,112      
-date           2019-02-18T08:37:06
-engine_version 3.4.0-git9883ae17a5
+checksum32     4,102,228,417      
+date           2019-03-19T10:04:44
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 7, num_levels = 1
+num_sites = 7, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -75,8 +75,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00766 NaN    0.00766 0.00766 1      
-only_filter        0.00396 NaN    0.00396 0.00396 1      
+read_source_models 0.00883 NaN    0.00883 0.00883 1      
+only_filter        0.00388 NaN    0.00388 0.00388 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -92,7 +92,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00766   0.37109   1     
-total only_filter        0.00396   1.35938   1     
-reading exposure         6.485E-04 0.0       1     
+total read_source_models 0.00883   0.32812   1     
+total only_filter        0.00388   1.40234   1     
+reading exposure         7.279E-04 0.0       1     
 ======================== ========= ========= ======

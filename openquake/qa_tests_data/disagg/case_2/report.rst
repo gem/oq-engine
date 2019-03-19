@@ -3,11 +3,11 @@ QA test for disaggregation case_2
 
 ============== ===================
 checksum32     3,620,311,746      
-date           2019-02-18T08:36:00
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:03:44
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 2, num_levels = 1
+num_sites = 2, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -44,10 +44,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-2      1         S    12    14    1,420        0.0       0.00216    0.0       15        0.0   
-1      3         A    8     12    1,815        0.0       2.03432    0.0       121       0.0   
-1      1         A    4     8     1,815        0.0       1.44627    0.0       121       0.0   
-0      2         A    0     4     1,815        0.0       1.38474    0.0       121       0.0   
+2      1         S    12    14    1,420        0.0       0.00255    0.0       15        0.0   
+1      3         A    8     12    1,815        0.0       2.04147    0.0       121       0.0   
+1      1         A    4     8     1,815        0.0       1.44820    0.0       121       0.0   
+0      2         A    0     4     1,815        0.0       1.54588    0.0       121       0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -63,23 +63,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.03342 0.02570 0.01525 0.05159 2      
-split_filter       0.04910 0.03370 0.02527 0.07294 2      
+read_source_models 0.03213 0.02543 0.01415 0.05011 2      
+split_filter       0.05001 0.03217 0.02726 0.07275 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=626 B fnames=210 B           5.41 KB 
-split_filter       srcs=3.35 KB srcfilter=253 B seed=14 B 86.17 KB
-================== ====================================== ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=626 B fnames=210 B            5.41 KB 
+split_filter       srcs=5.27 KB srcfilter=506 B dummy=28 B 86.17 KB
+================== ======================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.09820  2.28125   2     
-total read_source_models 0.06683  0.18750   2     
+total split_filter       0.10001  2.44922   2     
+total read_source_models 0.06426  0.18359   2     
 ======================== ======== ========= ======

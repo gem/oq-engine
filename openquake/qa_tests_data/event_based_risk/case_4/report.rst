@@ -3,11 +3,11 @@ Event Based Risk for Turkey reduced
 
 ============== ===================
 checksum32     39,734,555         
-date           2019-02-18T08:36:43
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:04:23
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 13, num_levels = 91
+num_sites = 13, num_levels = 91, num_rlzs = 8
 
 Parameters
 ----------
@@ -126,13 +126,13 @@ Slowest sources
 ====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id    code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      AS_TRAS334   A    0     23    760          0.19250   0.0        6.00000   1         2.00000
-0      AS_TRAS360   A    36    44    624          0.17041   0.0        3.00000   1         2.00000
-0      AS_TRAS346   A    23    36    527          0.14289   0.0        5.00000   1         2.00000
-0      AS_TRAS395   A    44    52    432          0.11865   0.0        3.00000   1         2.00000
-0      AS_TRAS458   A    61    67    399          0.11621   0.0        2.00000   1         2.00000
-0      AS_TRAS410   A    52    61    240          0.06599   0.0        2.00000   1         0.0    
-1      FSBG_TRBG989 A    67    74    108          0.03324   0.0        1.00000   1         2.00000
+0      AS_TRAS334   A    0     23    760          0.20356   0.0        6.00000   1         2.00000
+0      AS_TRAS360   A    36    44    624          0.16381   0.0        3.00000   1         2.00000
+0      AS_TRAS346   A    23    36    527          0.14259   0.0        5.00000   1         2.00000
+0      AS_TRAS395   A    44    52    432          0.11503   0.0        3.00000   1         2.00000
+0      AS_TRAS458   A    61    67    399          0.11313   0.0        2.00000   1         2.00000
+0      AS_TRAS410   A    52    61    240          0.06510   0.0        2.00000   1         0.0    
+1      FSBG_TRBG989 A    67    74    108          0.03674   0.0        1.00000   1         2.00000
 2      100041       P    74    75    9            0.0       0.0        0.0       0         0.0    
 ====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
 
@@ -141,7 +141,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.83989   7     
+A    0.83995   7     
 P    0.0       1     
 ==== ========= ======
 
@@ -149,10 +149,10 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-read_source_models 0.02152   0.03095   0.00128   0.05715   3      
-only_filter        0.00333   NaN       0.00333   0.00333   1      
-sample_ruptures    0.12227   0.05640   0.03568   0.19560   7      
-get_eid_rlz        4.112E-04 1.648E-04 2.911E-04 9.201E-04 29     
+read_source_models 0.01974   0.02799   0.00136   0.05196   3      
+only_filter        0.00338   NaN       0.00338   0.00338   1      
+sample_ruptures    0.12232   0.05733   0.03920   0.20669   7      
+get_eid_rlz        4.221E-04 1.599E-04 2.921E-04 8.135E-04 29     
 ================== ========= ========= ========= ========= =======
 
 Data transfer
@@ -170,13 +170,13 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    0.85591  3.25781   7     
-iter_ruptures            0.83547  0.0       7     
-total read_source_models 0.06455  0.64062   3     
-saving ruptures          0.02119  0.0       6     
-total get_eid_rlz        0.01193  0.05078   29    
-store source model       0.00659  0.0       3     
-total only_filter        0.00333  1.33203   1     
-store source_info        0.00227  0.0       1     
-reading exposure         0.00205  0.0       1     
+total sample_ruptures    0.85623  3.16016   7     
+iter_ruptures            0.83573  0.0       7     
+total read_source_models 0.05923  0.71484   3     
+saving ruptures          0.01754  0.0       6     
+total get_eid_rlz        0.01224  0.12109   29    
+store source model       0.00584  0.0       3     
+total only_filter        0.00338  1.46484   1     
+store source_info        0.00198  0.0       1     
+reading exposure         0.00161  0.0       1     
 ======================== ======== ========= ======

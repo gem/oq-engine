@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 12
 
 ============== ===================
 checksum32     662,604,775        
-date           2019-03-14T01:47:22
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:05:51
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = 1
@@ -86,8 +86,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      2         P    1     2     1            0.0       7.868E-06  1.00000   1         0.10000
-0      1         P    0     1     1            0.0       9.298E-06  1.00000   1         0.10000
+1      2         P    1     2     1            0.0       9.298E-06  1.00000   1         0.10000
+0      1         P    0     1     1            0.0       9.775E-06  1.00000   1         0.10000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -102,8 +102,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00146 NaN       0.00146 0.00146 1      
-split_filter       0.00247 1.130E-04 0.00239 0.00255 2      
+read_source_models 0.00149 NaN       0.00149 0.00149 1      
+split_filter       0.00254 3.827E-05 0.00252 0.00257 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -119,6 +119,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00494  1.45312   2     
-total read_source_models 0.00146  0.07422   1     
+total split_filter       0.00508  1.45312   2     
+total read_source_models 0.00149  0.00391   1     
 ======================== ======== ========= ======

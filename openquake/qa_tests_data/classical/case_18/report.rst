@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     3,805,160,323      
-date           2019-03-14T01:47:25
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:05:54
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 3, num_levels = 36, num_rlzs = 3
@@ -79,7 +79,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      VICM      A    0     8     2,430        0.0       0.21645    90        30        420   
+0      VICM      A    0     8     2,430        0.0       0.21413    90        30        420   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -94,8 +94,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00811 NaN    0.00811 0.00811 1      
-split_filter       0.01275 NaN    0.01275 0.01275 1      
+read_source_models 0.00857 NaN    0.00857 0.00857 1      
+split_filter       0.01256 NaN    0.01256 0.01256 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -111,6 +111,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01275  1.60547   1     
-total read_source_models 0.00811  0.53125   1     
+total split_filter       0.01256  1.71875   1     
+total read_source_models 0.00857  0.53125   1     
 ======================== ======== ========= ======

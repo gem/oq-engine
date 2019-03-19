@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2019-03-14T01:46:26
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:04:54
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 6, num_levels = 3, num_rlzs = 1
@@ -77,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     8     440          0.0       0.12433    120       20        107   
+0      1         A    0     8     440          0.0       0.12731    120       20        107   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -93,7 +93,7 @@ Information about the tasks
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
 read_source_models 0.00766 NaN    0.00766 0.00766 1      
-split_filter       0.01073 NaN    0.01073 0.01073 1      
+split_filter       0.01092 NaN    0.01092 0.01092 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -109,6 +109,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01073  1.59766   1     
-total read_source_models 0.00766  0.55078   1     
+total split_filter       0.01092  2.11328   1     
+total read_source_models 0.00766  0.37109   1     
 ======================== ======== ========= ======
