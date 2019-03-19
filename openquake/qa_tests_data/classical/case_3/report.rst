@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 3
 
 ============== ===================
 checksum32     4,051,148,706      
-date           2019-03-14T01:47:09
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:05:38
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = 1
@@ -76,7 +76,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     65    31,353       0.0       130,997    31,353    31,353    3,136 
+0      1         A    0     65    31,353       0.0       134,233    31,353    31,353    3,136 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -91,8 +91,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 3.97325 NaN    3.97325 3.97325 1      
-split_filter       6.30283 NaN    6.30283 6.30283 1      
+read_source_models 3.99265 NaN    3.99265 3.99265 1      
+split_filter       6.46681 NaN    6.46681 6.46681 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -108,6 +108,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       6.30283  24        1     
-total read_source_models 3.97325  1.11719   1     
+total split_filter       6.46681  24        1     
+total read_source_models 3.99265  0.98047   1     
 ======================== ======== ========= ======

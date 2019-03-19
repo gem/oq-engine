@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     3,403,305,238      
-date           2019-03-14T01:46:39
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:05:08
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 1, num_levels = 6, num_rlzs = 1
@@ -105,8 +105,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.20413 NaN    0.20413 0.20413 1      
-only_filter        0.00432 NaN    0.00432 0.00432 1      
+read_source_models 0.20920 NaN    0.20920 0.20920 1      
+only_filter        0.00414 NaN    0.00414 0.00414 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -122,6 +122,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.20413  6.99609   1     
-total only_filter        0.00432  1.78125   1     
+total read_source_models 0.20920  6.92969   1     
+total only_filter        0.00414  1.60156   1     
 ======================== ======== ========= ======

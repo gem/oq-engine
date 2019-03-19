@@ -3,8 +3,8 @@ Classical PSHA QA test with sites_csv
 
 ============== ===================
 checksum32     2,580,379,596      
-date           2019-03-14T01:46:51
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:05:20
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 10, num_levels = 13, num_rlzs = 2
@@ -79,7 +79,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      3         S    0     2     447          0.0       0.00262    150       15        1,414 
+0      3         S    0     2     447          0.0       0.00269    150       15        1,414 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -95,7 +95,7 @@ Information about the tasks
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
 read_source_models 0.00357 NaN    0.00357 0.00357 1      
-split_filter       0.02168 NaN    0.02168 0.02168 1      
+split_filter       0.02273 NaN    0.02273 0.02273 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -111,6 +111,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.02168  1.29297   1     
-total read_source_models 0.00357  0.08594   1     
+total split_filter       0.02273  2.19922   1     
+total read_source_models 0.00357  0.00391   1     
 ======================== ======== ========= ======

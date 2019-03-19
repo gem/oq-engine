@@ -3,8 +3,8 @@ Classical PSHA — Area Source
 
 ============== ===================
 checksum32     3,283,112,543      
-date           2019-03-14T01:46:22
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:04:50
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
@@ -91,8 +91,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.04137 NaN    0.04137 0.04137 1      
-split_filter       0.12658 NaN    0.12658 0.12658 1      
+read_source_models 0.04307 NaN    0.04307 0.04307 1      
+split_filter       0.12767 NaN    0.12767 0.12767 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -108,6 +108,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.12658  2.05078   1     
-total read_source_models 0.04137  0.24609   1     
+total split_filter       0.12767  2.08203   1     
+total read_source_models 0.04307  0.32031   1     
 ======================== ======== ========= ======

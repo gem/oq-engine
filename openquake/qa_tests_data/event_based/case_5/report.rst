@@ -3,11 +3,11 @@ Germany_SHARE Combined Model event_based
 
 ============== ===================
 checksum32     1,250,935,976      
-date           2019-02-18T08:36:07
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:03:50
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 100, num_levels = 1
+num_sites = 100, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -81,23 +81,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.03772 0.04931 0.00457 0.09438 3      
-only_filter        0.01185 0.00770 0.00641 0.01730 2      
+read_source_models 0.03724 0.04850 0.00427 0.09292 3      
+only_filter        0.01284 0.00809 0.00712 0.01856 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================== ========
-task               sent                                     received
-read_source_models converter=939 B fnames=383 B             47.02 KB
-only_filter        srcs=18.89 KB srcfilter=253 B dummy=14 B 42.5 KB 
-================== ======================================== ========
+================== ========================================= ========
+task               sent                                      received
+read_source_models converter=939 B fnames=383 B              47.02 KB
+only_filter        srcs=47.08 KB srcfilter=1012 B dummy=56 B 42.5 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.11317  0.73047   3     
-total only_filter        0.02371  1.60547   2     
+total read_source_models 0.11172  0.80859   3     
+total only_filter        0.02568  1.70703   2     
 ======================== ======== ========= ======

@@ -3,11 +3,11 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     4,228,792,571      
-date           2019-02-18T08:36:29
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:04:10
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 1, num_levels = 3
+num_sites = 1, num_levels = 3, num_rlzs = ?
 
 Parameters
 ----------
@@ -59,8 +59,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00114 NaN    0.00114 0.00114 1      
-only_filter        0.00265 NaN    0.00265 0.00265 1      
+read_source_models 0.00149 NaN    0.00149 0.00149 1      
+only_filter        0.00241 NaN    0.00241 0.00241 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -76,6 +76,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00265  1.35156   1     
-total read_source_models 0.00114  0.0       1     
+total only_filter        0.00241  1.37500   1     
+total read_source_models 0.00149  0.06641   1     
 ======================== ======== ========= ======

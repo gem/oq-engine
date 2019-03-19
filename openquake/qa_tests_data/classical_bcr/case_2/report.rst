@@ -3,8 +3,8 @@ Classical BCR test
 
 ============== ===================
 checksum32     1,551,058,886      
-date           2019-03-14T01:45:02
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:03:14
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 11, num_levels = 8, num_rlzs = 3
@@ -99,9 +99,9 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      231       A    4     8     414          0.61008   0.94736    697       69        131   
-0      229       A    0     4     264          0.29893   0.40260    203       38        50    
-0      232       A    8     12    150          0.21660   0.22556    270       30        44    
+0      231       A    4     8     414          0.59735   0.92880    697       69        131   
+0      229       A    0     4     264          0.28222   0.39561    203       38        50    
+0      232       A    8     12    150          0.21298   0.22696    270       30        44    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -109,17 +109,17 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    1.12561   3     
+A    1.09255   3     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.03293 NaN     0.03293 0.03293 1      
-split_filter       0.04805 NaN     0.04805 0.04805 1      
-classical          0.37903 0.20107 0.14847 0.51799 3      
-build_hazard_stats 0.00544 0.00158 0.00421 0.01001 11     
+read_source_models 0.04763 NaN     0.04763 0.04763 1      
+split_filter       0.04764 NaN     0.04764 0.04764 1      
+classical          0.36811 0.19302 0.14584 0.49344 3      
+build_hazard_stats 0.00553 0.00118 0.00463 0.00877 11     
 ================== ======= ======= ======= ======= =======
 
 Fastest task
@@ -159,20 +159,20 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          1.13709   1.80469   3     
-make_contexts            0.43477   0.0       792   
-get_poes                 0.37714   0.0       744   
-total build_hazard_stats 0.05980   1.45703   11    
-total split_filter       0.04805   1.64453   1     
-combine pmaps            0.04775   1.42578   11    
-total read_source_models 0.03293   0.0       1     
-building riskinputs      0.02148   0.0       1     
-saving statistics        0.01001   0.0       11    
-compute stats            0.00842   0.04688   11    
-managing sources         0.00493   0.0       1     
-store source_info        0.00322   0.0       1     
-store source model       0.00312   0.0       1     
-saving probability maps  0.00183   0.0       1     
-aggregate curves         0.00112   0.0       3     
-reading exposure         4.439E-04 0.0       1     
+total classical          1.10434   1.78125   3     
+make_contexts            0.42382   0.0       792   
+get_poes                 0.36655   0.0       744   
+total build_hazard_stats 0.06085   1.59375   11    
+combine pmaps            0.04908   1.56641   11    
+total split_filter       0.04764   1.98047   1     
+total read_source_models 0.04763   0.0       1     
+building riskinputs      0.02126   0.0       1     
+saving statistics        0.01024   0.0       11    
+compute stats            0.00824   0.02734   11    
+managing sources         0.00467   0.0       1     
+store source_info        0.00228   0.0       1     
+saving probability maps  0.00197   0.0       1     
+store source model       0.00170   0.0       1     
+aggregate curves         0.00153   0.0       3     
+reading exposure         4.537E-04 0.0       1     
 ======================== ========= ========= ======
