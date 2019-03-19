@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,152,338,418      
-date           2019-03-14T01:46:25
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:04:53
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 21, num_levels = 114, num_rlzs = 4
@@ -81,7 +81,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      2         M    2     14    1,104        0.0       0.00163    5.00000   4         40    
+1      2         M    2     14    1,104        0.0       0.00174    5.00000   4         40    
 0      1         M    0     2     160          0.0       0.0        0.0       0         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
@@ -97,8 +97,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00157 2.357E-04 0.00141 0.00174 2      
-split_filter       0.00464 NaN       0.00464 0.00464 1      
+read_source_models 0.00165 2.628E-04 0.00146 0.00183 2      
+split_filter       0.00481 NaN       0.00481 0.00481 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -114,6 +114,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.00464  1.34375   1     
-total read_source_models 0.00314  0.08203   2     
+total split_filter       0.00481  1.62891   1     
+total read_source_models 0.00329  0.00391   2     
 ======================== ======== ========= ======

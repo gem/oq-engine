@@ -3,11 +3,11 @@ Hazard South Africa
 
 ============== ===================
 checksum32     3,741,932,100      
-date           2019-02-18T08:36:24
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:04:06
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 18, num_levels = 1
+num_sites = 18, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -69,8 +69,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.04712 0.05442   0.00322 0.13859 10     
-only_filter        0.00266 1.324E-04 0.00254 0.00286 5      
+read_source_models 0.04612 0.05308   0.00318 0.13718 10     
+only_filter        0.00266 1.742E-04 0.00253 0.00294 5      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -86,6 +86,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.47122  0.60156   10    
-total only_filter        0.01332  1.51172   5     
+total read_source_models 0.46125  0.75000   10    
+total only_filter        0.01332  1.49609   5     
 ======================== ======== ========= ======

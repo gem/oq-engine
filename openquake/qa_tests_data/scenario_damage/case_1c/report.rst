@@ -3,8 +3,8 @@ Scenario Damage
 
 ============== ===================
 checksum32     711,595,636        
-date           2019-03-14T01:45:33
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:03:46
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 1, num_levels = 26, num_rlzs = 1
@@ -84,8 +84,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-saving gmfs         0.00215   0.0       1     
-computing gmfs      0.00188   0.0       1     
-building riskinputs 0.00184   0.0       1     
-reading exposure    5.732E-04 0.0       1     
+saving gmfs         0.00193   0.0       1     
+building riskinputs 0.00176   0.0       1     
+computing gmfs      0.00171   0.0       1     
+reading exposure    5.445E-04 0.0       1     
 =================== ========= ========= ======

@@ -3,11 +3,11 @@ event based two source models
 
 ============== ===================
 checksum32     1,852,256,743      
-date           2019-02-18T08:35:30
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:03:17
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 1, num_levels = 11
+num_sites = 1, num_levels = 11, num_rlzs = ?
 
 Parameters
 ----------
@@ -85,8 +85,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.01485 0.00339   0.01245 0.01724 2      
-only_filter        0.00473 6.625E-04 0.00426 0.00520 2      
+read_source_models 0.01390 0.00251   0.01212 0.01567 2      
+only_filter        0.00462 9.535E-04 0.00395 0.00530 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -94,7 +94,7 @@ Data transfer
 ================== ======================================== ========
 task               sent                                     received
 read_source_models converter=626 B fnames=218 B             13.91 KB
-only_filter        srcs=11.33 KB srcfilter=253 B dummy=14 B 13.03 KB
+only_filter        srcs=12.85 KB srcfilter=506 B dummy=28 B 13.03 KB
 ================== ======================================== ========
 
 Slowest operations
@@ -102,7 +102,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.02969   0.14453   2     
-total only_filter        0.00945   1.77734   2     
-reading exposure         6.790E-04 0.0       1     
+total read_source_models 0.02779   0.08203   2     
+total only_filter        0.00925   1.65234   2     
+reading exposure         6.869E-04 0.0       1     
 ======================== ========= ========= ======

@@ -3,8 +3,8 @@ disaggregation with a complex logic tree
 
 ============== ===================
 checksum32     1,766,748,636      
-date           2019-03-14T01:45:15
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:03:28
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 2, num_levels = 102, num_rlzs = 8
@@ -97,10 +97,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     543          2.04930   0.00318    30        15        767    
-2      1         S    4     6     543          2.03717   0.00197    30        15        767    
-3      2         X    6     402   1            0.02708   4.053E-06  2.00000   1         1.41421
-1      2         S    2     4     4            0.00992   1.836E-05  2.00000   1         5.65685
+0      1         S    0     2     543          2.12736   0.00282    30        15        767    
+2      1         S    4     6     543          1.96785   0.00188    30        15        767    
+3      2         X    6     402   1            0.02811   4.053E-06  2.00000   1         1.41421
+1      2         S    2     4     4            0.01028   2.003E-05  2.00000   1         5.65685
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -108,8 +108,8 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    4.09640   3     
-X    0.02708   1     
+S    4.10549   3     
+X    0.02811   1     
 ==== ========= ======
 
 Duplicated sources
@@ -120,13 +120,13 @@ Here is a fake duplicate: 2
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01384 0.00555 0.00992 0.01777 2      
-split_filter       0.02400 0.02834 0.00396 0.04404 2      
-classical          0.19849 0.06213 0.03880 0.33867 21     
-build_hazard_stats 0.01317 0.00557 0.00922 0.01711 2      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.01589 0.00512   0.01227 0.01951 2      
+split_filter       0.02276 0.02661   0.00394 0.04158 2      
+classical          0.19900 0.06617   0.04012 0.33777 21     
+build_hazard_stats 0.00954 3.161E-04 0.00932 0.00977 2      
+================== ======= ========= ======= ======= =======
 
 Fastest task
 ------------
@@ -165,18 +165,18 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total classical          4.16834  2.00391   21    
-make_contexts            1.80321  0.0       1,091 
-get_poes                 0.92900  0.0       1,091 
-total split_filter       0.04800  2.20703   2     
-aggregate curves         0.03525  0.0       21    
-total read_source_models 0.02769  0.14453   2     
-total build_hazard_stats 0.02633  0.48047   2     
-combine pmaps            0.01866  0.48047   2     
-saving probability maps  0.01215  0.0       1     
-managing sources         0.00976  0.0       1     
-compute stats            0.00710  0.0       2     
-store source model       0.00621  0.0       2     
-saving statistics        0.00377  0.0       2     
-store source_info        0.00233  0.0       1     
+total classical          4.17895  1.98828   21    
+make_contexts            1.84621  0.0       1,091 
+get_poes                 0.93944  0.0       1,091 
+total split_filter       0.04551  2.02344   2     
+aggregate curves         0.03596  0.0       21    
+total read_source_models 0.03178  0.12891   2     
+total build_hazard_stats 0.01909  0.79297   2     
+combine pmaps            0.01184  0.68359   2     
+saving probability maps  0.01179  0.0       1     
+managing sources         0.00991  0.0       1     
+compute stats            0.00677  0.10938   2     
+store source model       0.00570  0.0       2     
+saving statistics        0.00346  0.0       2     
+store source_info        0.00181  0.0       1     
 ======================== ======== ========= ======

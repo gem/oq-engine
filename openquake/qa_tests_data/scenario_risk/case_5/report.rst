@@ -3,8 +3,8 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     3,193,187,389      
-date           2019-03-14T01:45:07
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:03:20
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 8, num_levels = 106, num_rlzs = 1
@@ -89,8 +89,8 @@ Slowest operations
 =================== ======== ========= ======
 operation           time_sec memory_mb counts
 =================== ======== ========= ======
-building riskinputs 0.01081  0.0       1     
-saving gmfs         0.00435  0.0       1     
-computing gmfs      0.00392  0.26172   1     
-reading exposure    0.00221  0.0       1     
+building riskinputs 0.00997  0.0       1     
+saving gmfs         0.00387  0.0       1     
+computing gmfs      0.00353  0.27734   1     
+reading exposure    0.00217  0.0       1     
 =================== ======== ========= ======

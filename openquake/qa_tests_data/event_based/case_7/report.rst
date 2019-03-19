@@ -3,11 +3,11 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     186,455,639        
-date           2019-02-18T08:36:31
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:04:12
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 3, num_levels = 38
+num_sites = 3, num_levels = 38, num_rlzs = ?
 
 Parameters
 ----------
@@ -63,11 +63,11 @@ Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.04713 6.462E-04 0.04667 0.04759 2      
-only_filter        0.00267 NaN       0.00267 0.00267 1      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.04960 0.00221 0.04803 0.05116 2      
+only_filter        0.00269 NaN     0.00269 0.00269 1      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
@@ -82,6 +82,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.09426  0.17578   2     
-total only_filter        0.00267  1.41406   1     
+total read_source_models 0.09919  0.61719   2     
+total only_filter        0.00269  1.50391   1     
 ======================== ======== ========= ======

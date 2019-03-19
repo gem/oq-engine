@@ -3,11 +3,11 @@ Event-Based Hazard QA Test, Case 18
 
 ============== ===================
 checksum32     3,669,072,072      
-date           2019-02-18T08:36:39
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:04:20
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 1, num_levels = 4
+num_sites = 1, num_levels = 4, num_rlzs = ?
 
 Parameters
 ----------
@@ -59,8 +59,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00439 NaN    0.00439 0.00439 1      
-only_filter        0.00543 NaN    0.00543 0.00543 1      
+read_source_models 0.00415 NaN    0.00415 0.00415 1      
+only_filter        0.02216 NaN    0.02216 0.02216 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -76,6 +76,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00543  1.70703   1     
-total read_source_models 0.00439  0.50781   1     
+total only_filter        0.02216  1.69922   1     
+total read_source_models 0.00415  0.61328   1     
 ======================== ======== ========= ======
