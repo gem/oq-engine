@@ -247,3 +247,29 @@ class PGDfRupture(IMT):
     """
     Permanent ground deformation (m) from co-seismic rupture
     """
+
+
+# Volcanic IMTs
+
+class ASH(IMT):
+    """
+    Level of the ash fall in millimeters
+    """
+
+
+class LAVA(IMT):
+    """
+    Boolean value for the lava flow (1 if affected 0 otherwise)
+    """
+
+
+class LAHARS(IMT):
+    """
+    Boolean value for the lahars (1 if affected 0 otherwise)
+    """
+
+
+class PYRO(IMT):
+    """
+    Boolean value for the pyroclastic flow (1 if affected 0 otherwise)
+    """
