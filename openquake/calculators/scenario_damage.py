@@ -126,9 +126,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam, 'consequence')
         self.riskinputs = self.build_riskinputs('gmf', num_events=E)
         self.param['tags'] = list(self.assetcol.tagcol)
-        self.collapse_by_asset()
+        self.collapsed()
 
-    def collapse_by_asset(self):
+    def collapsed(self):
         """
         Store an array collaps_by_asset of shape (A, H), with H the number
         of boolean hazard inputs
@@ -136,12 +136,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         oq = self.oqparam
         hazard_fields = sorted(set(oq.hazard_fields) - {'ASH'})
         H = len(hazard_fields)
-        collapse_by_asset = numpy.zeros((self.N, H), numpy.bool)
+        collapsed = numpy.zeros((self.N, H), numpy.bool)
         hazard = self.datastore['hazard_fields']
         for aid, rec in enumerate(self.assetcol.array):
             for h, hfield in enumerate(hazard_fields):
-                collapse_by_asset[aid, h] = hazard[rec['site_id']][hfield]
-        self.datastore['collapse_by_asset'] = collapse_by_asset
+                collapsed[aid, h] = hazard[rec['site_id']][hfield]
+        self.datastore['collapsed'] = collapsed
 
     def post_execute(self, result):
         """
