@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Removed the deprecated feature aggregate_by/curves_by_tag
+
+
 python3-oq-engine (3.4.0-2~xenial01) xenial; urgency=low
 
   [Michele Simionato]
