@@ -6,6 +6,9 @@ You are in the wrong place. These are the FAQ for IT issues, concerning
 how to install the engine. If you have already installed it and have
 issues running calculations you should go [here for hazard calculations](
 faq-hazard.md) and [here for risk calculations](faq-risk.md).
+
+### Help! I have a multi-node cluster and I'm in trouble
+
 If you are running the OpenQuake Engine on a multi-node cluster you should also
 have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
