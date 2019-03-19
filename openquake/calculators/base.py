@@ -523,7 +523,7 @@ class HazardCalculator(BaseCalculator):
             with open(fname) as f:
                 for row in csv.DictReader(f):
                     data.append((float(row['lon']), float(row['lat']),
-                                 int(row['Amenaza'])))
+                                 int(row['intensity'])))
             data = numpy.array(data, [('lon', float), ('lat', float),
                                       ('number', float)])
             logging.info('Read %s with %d rows' % (fname, len(data)))
