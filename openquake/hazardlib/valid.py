@@ -93,7 +93,6 @@ def gsim(value):
     gs = gsim_class(**kwargs)
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     gs.minimum_distance = minimum_distance
-    gs.init()
     return gs
 
 
