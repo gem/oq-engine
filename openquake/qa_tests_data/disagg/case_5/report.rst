@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     1,136,041,000      
-date           2019-03-14T01:45:09
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:03:22
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
@@ -86,8 +86,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      buc16pt75 N    76    316   8            0.00493   1.335E-04  8.00000   8         8.00000
-0      buc06pt05 N    0     76    7            0.00445   1.903E-04  7.00000   7         7.00000
+1      buc16pt75 N    76    316   8            0.00464   7.591E-04  8.00000   8         8.00000
+0      buc06pt05 N    0     76    7            0.00436   2.086E-04  7.00000   7         7.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -95,17 +95,17 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    0.00937   2     
+N    0.00900   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00278 6.030E-04 0.00235 0.00320 2      
-split_filter       0.00410 NaN       0.00410 0.00410 1      
-classical          0.01191 NaN       0.01191 0.01191 1      
-build_hazard_stats 0.00512 NaN       0.00512 0.00512 1      
+read_source_models 0.00290 7.118E-04 0.00240 0.00340 2      
+split_filter       0.00431 NaN       0.00431 0.00431 1      
+classical          0.01155 NaN       0.01155 0.01155 1      
+build_hazard_stats 0.00500 NaN       0.00500 0.00500 1      
 ================== ======= ========= ======= ======= =======
 
 Fastest task
@@ -145,18 +145,18 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          0.01191   1.41406   1     
-aggregate curves         0.00563   0.0       1     
-total read_source_models 0.00555   0.07422   2     
-total build_hazard_stats 0.00512   1.32812   1     
-combine pmaps            0.00446   1.32812   1     
-saving probability maps  0.00436   0.0       1     
-total split_filter       0.00410   1.58594   1     
-managing sources         0.00384   0.0       1     
-store source model       0.00317   0.0       2     
-get_poes                 0.00310   0.0       15    
-make_contexts            0.00228   0.0       15    
-store source_info        0.00194   0.0       1     
-saving statistics        6.738E-04 0.0       1     
-compute stats            3.102E-04 0.0       1     
+total classical          0.01155   1.57812   1     
+aggregate curves         0.00603   0.0       1     
+total read_source_models 0.00580   0.06641   2     
+total build_hazard_stats 0.00500   1.31250   1     
+combine pmaps            0.00434   1.30859   1     
+saving probability maps  0.00434   0.0       1     
+total split_filter       0.00431   1.52734   1     
+store source model       0.00425   0.0       2     
+managing sources         0.00412   0.01172   1     
+get_poes                 0.00312   0.0       15    
+make_contexts            0.00224   0.0       15    
+store source_info        0.00198   0.0       1     
+saving statistics        9.201E-04 0.0       1     
+compute stats            3.150E-04 0.00391   1     
 ======================== ========= ========= ======

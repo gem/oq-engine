@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2019-03-14T01:46:57
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:05:25
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 1, num_levels = 197, num_rlzs = 1
@@ -76,7 +76,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     4     260          0.0       0.55282    52        52        26    
+0      1         A    0     4     260          0.0       0.55759    52        52        26    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -91,8 +91,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01175 NaN    0.01175 0.01175 1      
-split_filter       0.01749 NaN    0.01749 0.01749 1      
+read_source_models 0.01182 NaN    0.01182 0.01182 1      
+split_filter       0.01770 NaN    0.01770 0.01770 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -108,6 +108,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.01749  1.44141   1     
-total read_source_models 0.01175  0.61719   1     
+total split_filter       0.01770  1.48047   1     
+total read_source_models 0.01182  0.27344   1     
 ======================== ======== ========= ======

@@ -3,11 +3,11 @@ Event Based Bogota
 
 ============== ===================
 checksum32     2,254,739,311      
-date           2019-02-18T08:36:12
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:03:53
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 5, num_levels = 104
+num_sites = 5, num_levels = 104, num_rlzs = ?
 
 Parameters
 ----------
@@ -100,8 +100,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.21317 0.25273 0.03447 0.39188 2      
-only_filter        0.01337 NaN     0.01337 0.01337 1      
+read_source_models 0.20650 0.24212 0.03529 0.37770 2      
+only_filter        0.03247 NaN     0.03247 0.03247 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -109,7 +109,7 @@ Data transfer
 ================== ======================================== ========
 task               sent                                     received
 read_source_models converter=626 B fnames=241 B             70.47 KB
-only_filter        srcs=64.58 KB srcfilter=253 B dummy=14 B 72.02 KB
+only_filter        srcs=70.91 KB srcfilter=506 B dummy=28 B 72.02 KB
 ================== ======================================== ========
 
 Slowest operations
@@ -117,7 +117,7 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.42635   1.65234   2     
-total only_filter        0.01337   1.58984   1     
-reading exposure         5.260E-04 0.0       1     
+total read_source_models 0.41299   1.79297   2     
+total only_filter        0.03247   1.79688   1     
+reading exposure         5.429E-04 0.0       1     
 ======================== ========= ========= ======

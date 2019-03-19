@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     4,227,350,644      
-date           2019-03-14T01:46:12
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:04:32
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 7, num_levels = 46, num_rlzs = 8
@@ -125,10 +125,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          0.03915   0.0        7.00000   1         0.0    
-2      1         S    4     6     482          0.03817   0.0        7.00000   1         0.0    
+0      1         S    0     2     482          0.04396   0.0        7.00000   1         0.0    
+2      1         S    4     6     482          0.04334   0.0        7.00000   1         0.0    
 1      2         S    2     4     4            0.00199   0.0        7.00000   1         2.00000
-3      2         X    6     402   1            2.363E-04 0.0        7.00000   1         0.0    
+3      2         X    6     402   1            2.580E-04 0.0        7.00000   1         0.0    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -136,8 +136,8 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.07931   3     
-X    2.363E-04 1     
+S    0.08929   3     
+X    2.580E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -150,10 +150,10 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-read_source_models 0.00764   0.00381   0.00495   0.01034   2      
-only_filter        0.00494   9.331E-04 0.00428   0.00560   2      
-sample_ruptures    0.02093   0.02109   6.981E-04 0.03963   4      
-get_eid_rlz        4.979E-04 1.729E-05 4.787E-04 5.124E-04 3      
+read_source_models 0.00748   0.00339   0.00508   0.00987   2      
+only_filter        0.00485   0.00105   0.00411   0.00559   2      
+sample_ruptures    0.02346   0.02395   7.811E-04 0.04447   4      
+get_eid_rlz        5.020E-04 2.574E-05 4.818E-04 5.310E-04 3      
 ================== ========= ========= ========= ========= =======
 
 Data transfer
@@ -168,16 +168,16 @@ get_eid_rlz        self=5 KB                                       1.04 KB
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total sample_ruptures    0.08371  1.66016   4     
-iter_ruptures            0.07865  0.0       4     
-total read_source_models 0.01529  0.19141   2     
-total only_filter        0.00987  1.44531   2     
-store source model       0.00571  0.0       2     
-saving ruptures          0.00287  0.0       1     
-store source_info        0.00192  0.0       1     
-total get_eid_rlz        0.00149  0.0       3     
-reading exposure         0.00116  0.0       1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total sample_ruptures    0.09383   1.61328   4     
+iter_ruptures            0.08853   0.0       4     
+total read_source_models 0.01495   0.26953   2     
+total only_filter        0.00971   2.08594   2     
+store source model       0.00440   0.0       2     
+saving ruptures          0.00216   0.0       1     
+store source_info        0.00200   0.0       1     
+total get_eid_rlz        0.00151   0.0       3     
+reading exposure         7.997E-04 0.0       1     
+======================== ========= ========= ======

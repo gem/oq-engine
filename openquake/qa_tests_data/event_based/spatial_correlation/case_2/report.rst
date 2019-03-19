@@ -3,11 +3,11 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 
 ============== ===================
 checksum32     2,398,350,176      
-date           2019-02-18T08:36:18
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:04:00
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 2, num_levels = 1
+num_sites = 2, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -59,8 +59,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00116 NaN    0.00116 0.00116 1      
-only_filter        0.00252 NaN    0.00252 0.00252 1      
+read_source_models 0.00127 NaN    0.00127 0.00127 1      
+only_filter        0.00249 NaN    0.00249 0.00249 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -76,6 +76,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00252  1.41797   1     
-total read_source_models 0.00116  0.0       1     
+total only_filter        0.00249  1.35938   1     
+total read_source_models 0.00127  0.06641   1     
 ======================== ======== ========= ======

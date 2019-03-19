@@ -3,8 +3,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 
 ============== ===================
 checksum32     1,811,660,702      
-date           2019-03-14T01:45:17
-engine_version 3.4.0-gita06742ffe6
+date           2019-03-19T10:03:30
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
 num_sites = 2, num_levels = 38, num_rlzs = 1
@@ -92,10 +92,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      2         A    1     5     1,440        2.62153   1.20797    96        96        144    
-2      3         S    5     7     617          1.28188   0.00117    10        10        617    
-3      4         C    7     11    164          0.56362   2.02587    10        10        656    
-0      1         P    0     1     15           0.02999   1.764E-05  1.00000   1         1.50000
+1      2         A    1     5     1,440        2.50448   1.20211    96        96        144    
+2      3         S    5     7     617          1.23229   0.00120    10        10        617    
+3      4         C    7     11    164          0.56447   1.98406    10        10        656    
+0      1         P    0     1     15           0.02901   1.740E-05  1.00000   1         1.50000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -103,20 +103,20 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    2.62153   1     
-C    0.56362   1     
-P    0.02999   1     
-S    1.28188   1     
+A    2.50448   1     
+C    0.56447   1     
+P    0.02901   1     
+S    1.23229   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.03063 NaN       0.03063 0.03063 1      
-split_filter       0.24024 NaN       0.24024 0.24024 1      
-classical          0.90306 1.16419   0.22775 2.96671 5      
-build_hazard_stats 0.00590 8.289E-04 0.00531 0.00649 2      
+read_source_models 0.03926 NaN       0.03926 0.03926 1      
+split_filter       0.23601 NaN       0.23601 0.23601 1      
+classical          0.86966 1.10457   0.23571 2.82745 5      
+build_hazard_stats 0.00602 8.878E-04 0.00539 0.00665 2      
 ================== ======= ========= ======= ======= =======
 
 Fastest task
@@ -156,18 +156,18 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          4.51530   2.21875   5     
-make_contexts            1.63438   0.0       2,236 
-get_poes                 0.94051   0.0       2,236 
-total split_filter       0.24024   2.75000   1     
-total read_source_models 0.03063   0.65625   1     
-aggregate curves         0.02417   1.40625   5     
-saving probability maps  0.01816   0.0       1     
-total build_hazard_stats 0.01180   1.42578   2     
-combine pmaps            0.01065   1.42578   2     
-store source model       0.00692   0.0       1     
-managing sources         0.00664   0.0       1     
+total classical          4.34828   2.32422   5     
+make_contexts            1.57876   0.0       2,236 
+get_poes                 0.88870   0.0       2,236 
+total split_filter       0.23601   2.26562   1     
+total read_source_models 0.03926   0.47266   1     
+aggregate curves         0.02536   1.01953   5     
+saving probability maps  0.01857   0.0       1     
+total build_hazard_stats 0.01204   1.48438   2     
+combine pmaps            0.01087   1.48438   2     
+managing sources         0.00767   0.0       1     
+store source model       0.00427   0.0       1     
 store source_info        0.00230   0.0       1     
-saving statistics        0.00105   0.0       2     
-compute stats            4.864E-04 0.0       1     
+saving statistics        0.00103   0.0       2     
+compute stats            4.690E-04 0.02344   1     
 ======================== ========= ========= ======
