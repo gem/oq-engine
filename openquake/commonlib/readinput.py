@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import ast
 import csv
 import copy
 import zlib
@@ -123,7 +124,12 @@ def _update(params, items, base_path):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
-            if value:
+            if value.startswith('{'):
+                dic = ast.literal_eval(value)  # name -> relpath
+                input_type, fnames = normalize(key, dic.values(), base_path)
+                params['inputs'][input_type] = fnames
+                params[input_type] = ' '.join(dic)
+            elif value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
         elif isinstance(value, str) and value.endswith('.hdf5'):
