@@ -1,10 +1,6 @@
-# FAQ
+# FAQ related to cluster deployments
 
-## General FAQ
-
-See [FAQ](faq.md)
-
-## FAQ related to cluster deployments
+For general questions see [FAQ](faq.md)
 
 ### Recover after a Out Of Memory (OOM) condition
 
