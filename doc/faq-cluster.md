@@ -4,11 +4,11 @@ For general questions see [FAQ](faq.md)
 
 ### Recover after a Out Of Memory (OOM) condition
 
-When an _Out Of Memory (OOM)_ condition occours on the master node the `oq` process is terminated
-by the operating system _OOM killer_ via a `SIGKILL` signal.
+When an _Out Of Memory (OOM)_ condition occours on the master node the `oq` process is terminated by the operating system _OOM killer_ via a `SIGKILL` signal.
+
 Due to the forcefully termination of `oq`, _celery_ tasks are not revoked on the worker nodes and processes may be left running, using resources (both CPU and RAM), until the task execution reaches an end.
-To free up resources for a new run and to cleanup the cluster status it's strongly recommended to
-restart _celery_ on the worker nodes via `systemctl restart openquake-celery` before starting any new job execution; this will stop any other running computation which is anyway highly probable to be already broken due to the OOM condition on the master node.
+
+To free up resources for a new run and to cleanup the cluster status it's **strongly recommended to restart _celery_ on the worker nodes** via `systemctl restart openquake-celery` before starting any new job execution; this will stop any other running computation which is anyway highly probable to be already broken due to the OOM condition on the master node.
 
 ******
 
