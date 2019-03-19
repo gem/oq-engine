@@ -742,37 +742,6 @@ def losses_by_tag(dstore, tag):
         yield stat, out
 
 
-@extract.add('curves_by_tag')
-@deprecated(msg='This feature will be removed soon')
-def curves_by_tag(dstore, tag):
-    """
-    Statistical loss curves by tag. For instance call
-
-    $ oq extract curves_by_tag/occupancy
-    """
-    dt = ([(tag, vstr), ('return_period', U32)] +
-          dstore['oqparam'].loss_dt_list())
-    aids = dstore['assetcol/array'][tag]
-    dset, stats = _get(dstore, 'curves')
-    periods = dset.attrs['return_periods']
-    arr = dset.value
-    P = arr.shape[2]  # shape (A, S, P, LI)
-    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
-    for s, stat in enumerate(stats):
-        out = numpy.zeros(len(tagvalues) * P, dt)
-        for li, (lt, lt_dt) in enumerate(dt[2:]):
-            n = 0
-            for i, tagvalue in enumerate(tagvalues):
-                for p, period in enumerate(periods):
-                    out[n][tag] = tagvalue
-                    out[n]['return_period'] = period
-                    counts = arr[aids == i + 1, s, p, li].sum()
-                    if counts:
-                        out[n][lt] = counts
-                    n += 1
-        yield stat, out
-
-
 @extract.add('rupture')
 def extract_rupture(dstore, serial):
     """
