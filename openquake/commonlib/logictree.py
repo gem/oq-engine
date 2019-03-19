@@ -1566,6 +1566,7 @@ class GsimLogicTree(object):
                         raise ValueError(
                             "%s in file %s" % (exc, self.fname)) from exc
                     if 'GMPETable' in uncertainty:
+                        gsim.init()
                         self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
