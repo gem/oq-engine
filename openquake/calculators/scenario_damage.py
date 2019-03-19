@@ -139,8 +139,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         collapsed = numpy.zeros((self.N, H), numpy.bool)
         hazard = self.datastore['hazard_fields']
         for aid, rec in enumerate(self.assetcol.array):
+            haz = hazard[rec['site_id']]
             for h, hfield in enumerate(hazard_fields):
-                collapsed[aid, h] = hazard[rec['site_id']][hfield]
+                collapsed[aid, h] = haz[hfield]
         self.datastore['collapsed'] = collapsed
 
     def post_execute(self, result):
