@@ -505,11 +505,7 @@ def extract_agg_curves(dstore, what):
 @extract.add('aggregate_by')
 def extract_aggregate_by(dstore, what):
     """
-    /extract/aggregate_by/taxonomy,occupancy/curves/structural
-    yield pairs (<stat>, <array of shape (T, O, S, P)>)
-
-    /extract/aggregate_by/taxonomy,occupancy/avg_losses/structural
-    yield pairs (<stat>, <array of shape (T, O, S)>)
+    /extract/aggregate_by/taxonomy,occupancy/avg_losses?kind=mean&loss_type=structural
     """
     try:
         tagnames, name, loss_type = what.split('/')
