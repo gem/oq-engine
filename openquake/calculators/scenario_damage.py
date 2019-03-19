@@ -27,11 +27,12 @@ U16 = numpy.uint16
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+VOLCANIC_HAZARDS = {'ASH', 'LAVA', 'LAHARS', 'PYRO'}
 
 
 def dist_by_asset(data, multi_stat_dt, number):
     """
-    :param data: array of shape (N, R, L, 2, ...)
+    :param data: array of shape (N, R, L, 2, D)
     :param multi_stat_dt: numpy dtype for statistical outputs
     :param number: expected number of units per asset
     :returns: array of shape (N, R) with records of type multi_stat_dt
@@ -125,6 +126,23 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam, 'consequence')
         self.riskinputs = self.build_riskinputs('gmf', num_events=E)
         self.param['tags'] = list(self.assetcol.tagcol)
+        hazard_fields = sorted(set(self.oqparam.hazard_fields) - {'ASH'})
+        if hazard_fields:
+            self.collapsed(hazard_fields)
+
+    def collapsed(self, hazard_fields):
+        """
+        Store an array collaps_by_asset of shape (A, H), with H the number
+        of boolean hazard inputs
+        """
+        H = len(hazard_fields)
+        collapsed = numpy.zeros((self.N, H), numpy.bool)
+        hazard = self.datastore['hazard_fields']
+        for aid, rec in enumerate(self.assetcol.array):
+            haz = hazard[rec['site_id']]
+            for h, hfield in enumerate(hazard_fields):
+                collapsed[aid, h] = haz[hfield]
+        self.datastore['collapsed'] = collapsed
 
     def post_execute(self, result):
         """
@@ -141,9 +159,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage distributions
         dt_list = []
+        mean_std_dt = numpy.dtype([('mean', (F32, D)), ('stddev', (F32, D))])
         for ltype in ltypes:
-            dt_list.append((ltype, numpy.dtype([('mean', (F32, D)),
-                                                ('stddev', (F32, D))])))
+            dt_list.append((ltype, mean_std_dt))
         multi_stat_dt = numpy.dtype(dt_list)
         d_asset = numpy.zeros((N, R, L, 2, D), F32)
         for (l, r, a, stat) in result['d_asset']:

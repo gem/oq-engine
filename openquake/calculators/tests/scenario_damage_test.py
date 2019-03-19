@@ -23,7 +23,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8)
+    case_6, case_7, case_8, case_9)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -149,3 +149,12 @@ RM       4,000
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/dmg_by_event.csv', fname)
+
+    def test_case_9(self):
+        # case with volcanic multiperil
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/dmg_by_asset.csv', fname)
+
+        [fname] = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
