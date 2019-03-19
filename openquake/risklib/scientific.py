@@ -1144,7 +1144,7 @@ def mean_std(fractions):
     """
     if len(fractions.shape) == 2:
         n, m = fractions.shape
-        if n == 1:
+        if n == 1:  # avoid warnings when computing the stddev
             return fractions[0], numpy.array([numpy.nan] * m)
     return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)
 
