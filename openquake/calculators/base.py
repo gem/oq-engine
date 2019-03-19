@@ -507,7 +507,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
 
-    def read_hazard_fields(self):
+    def save_hazard_fields(self):
         """
         Read the hazard fields as csv files, associate them to the sites
         and create the `hazard` dataset.
@@ -563,7 +563,7 @@ class HazardCalculator(BaseCalculator):
             if 'gmfs' in oq.inputs:
                 save_gmfs(self)
             else:
-                self.read_hazard_fields()
+                self.save_hazard_fields()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
