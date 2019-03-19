@@ -45,6 +45,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual)
 
     def test_case_1(self):
+        # test with a single event
         self.assert_ok(case_1, 'job_risk.ini')
         got = view('num_units', self.calc.datastore)
         self.assertEqual('''\
@@ -60,7 +61,7 @@ RM       4,000
         [dmg] = extract(self.calc.datastore, 'agg_damages/structural?'
                         'taxonomy=RC&CRESTA=01.1')
         numpy.testing.assert_almost_equal(
-            [998.6327515, 720.0072021, 281.3600769], dmg)
+            [1498.0121, 472.96616, 29.021801], dmg, decimal=4)
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages/structural?'
                       'taxonomy=RM&CRESTA=01.1')

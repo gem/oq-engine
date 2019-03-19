@@ -1142,6 +1142,10 @@ def mean_std(fractions):
     Given an N x M matrix, returns mean and std computed on the rows,
     i.e. two M-dimensional vectors.
     """
+    if len(fractions.shape) == 2:
+        n, m = fractions.shape
+        if n == 1:
+            return fractions[0], numpy.array([numpy.nan] * m)
     return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)
 
 
