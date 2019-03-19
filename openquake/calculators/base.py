@@ -518,7 +518,7 @@ class HazardCalculator(BaseCalculator):
         fnames = oq.inputs['hazard_fields']
         dt = [(haz, float) for haz in oq.hazard_fields]
         N = len(self.sitecol)
-        self.datastore['hazard'] = z = numpy.zeros(N, dt)
+        self.datastore['hazard_fields'] = z = numpy.zeros(N, dt)
         nonzero = []
         for name, fname in zip(oq.hazard_fields, fnames):
             data = []
@@ -535,15 +535,16 @@ class HazardCalculator(BaseCalculator):
                 data, self.sitecol, oq.asset_hazard_distance, 'filter')
             z = numpy.zeros(N, float)
             z[sites.sids] = filtdata['number']
-            self.datastore['hazard'][name] = z
+            self.datastore['hazard_fields'][name] = z
             nonzero.append((z != 0).sum())
-        self.datastore.set_attrs('hazard', nbytes=z.nbytes, nonzero=nonzero)
+        self.datastore.set_attrs(
+            'hazard_fields', nbytes=z.nbytes, nonzero=nonzero)
 
         # convert ash into a GMF
         if 'ash' in oq.hazard_fields:
             E = 1
             events = numpy.zeros(E, rupture.events_dt)
-            gmf = self.datastore['hazard']['ash'].reshape(N, E, 1)
+            gmf = self.datastore['hazard_fields']['ash'].reshape(N, E, 1)
             save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
 
     def pre_execute(self):
