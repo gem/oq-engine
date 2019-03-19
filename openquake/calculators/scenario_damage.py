@@ -27,11 +27,12 @@ U16 = numpy.uint16
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+VOLCANIC_HAZARDS = {'ASH', 'LAVA', 'LAHARS', 'PYRO'}
 
 
 def dist_by_asset(data, multi_stat_dt, number):
     """
-    :param data: array of shape (N, R, L, 2, ...)
+    :param data: array of shape (N, R, L, 2, D)
     :param multi_stat_dt: numpy dtype for statistical outputs
     :param number: expected number of units per asset
     :returns: array of shape (N, R) with records of type multi_stat_dt
@@ -141,9 +142,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage distributions
         dt_list = []
+        mean_std_dt = numpy.dtype([('mean', (F32, D)), ('stddev', (F32, D))])
         for ltype in ltypes:
-            dt_list.append((ltype, numpy.dtype([('mean', (F32, D)),
-                                                ('stddev', (F32, D))])))
+            dt_list.append((ltype, mean_std_dt))
         multi_stat_dt = numpy.dtype(dt_list)
         d_asset = numpy.zeros((N, R, L, 2, D), F32)
         for (l, r, a, stat) in result['d_asset']:
