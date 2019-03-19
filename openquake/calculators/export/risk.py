@@ -584,7 +584,7 @@ def export_bcr_map(ekey, dstore):
     return writer.getsaved()
 
 
-@export.add(('losses_by_tag', 'csv'), ('curves_by_tag', 'csv'))
+@export.add(('losses_by_tag', 'csv'))
 @deprecated(msg='This exporter will be removed soon')
 def export_by_tag_csv(ekey, dstore):
     """
