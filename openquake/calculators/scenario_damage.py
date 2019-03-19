@@ -135,13 +135,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         hazard_fields = sorted(set(oq.hazard_fields) - {'ASH'})
-        H = len(hazard_fields)
-        collapsed = numpy.zeros((self.N, H), numpy.bool)
-        hazard = self.datastore['hazard_fields']
-        for aid, rec in enumerate(self.assetcol.array):
-            for h, hfield in enumerate(hazard_fields):
-                collapsed[aid, h] = hazard[rec['site_id']][hfield]
-        self.datastore['collapsed'] = collapsed
+        if hazard_fields:
+            H = len(hazard_fields)
+            collapsed = numpy.zeros((self.N, H), numpy.bool)
+            hazard = self.datastore['hazard_fields']
+            for aid, rec in enumerate(self.assetcol.array):
+                for h, hfield in enumerate(hazard_fields):
+                    collapsed[aid, h] = hazard[rec['site_id']][hfield]
+            self.datastore['collapsed'] = collapsed
 
     def post_execute(self, result):
         """
