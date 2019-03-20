@@ -511,11 +511,17 @@ def extract_aggregate(dstore, what):
     suffix = '-rlzs' if qdic['rlzs'] else '-stats'
     tagnames = qdic.get('tag', [])
     assetcol = dstore['assetcol']
-    array = dstore[name + suffix][:, qdic['kind'][0], qdic['loss_type'][0]]
+    ltypes = qdic.get('loss_type', [])
+    if ltypes:
+        array = dstore[name + suffix][:, qdic['kind'][0], ltypes[0]]
+    else:
+        array = dstore[name + suffix][:, qdic['kind'][0]]
     aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
     for tagname in tagnames:
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
     aw.tagnames = encode(tagnames)
+    if not ltypes:
+        aw.extra = ('loss_type',) + tuple(info['loss_types'])
     return aw
 
 

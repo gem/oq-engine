@@ -144,8 +144,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test losses_by_tag with a single realization
         [fname] = export(
-            ('aggregate_by/avg_losses?'
-             'tag=taxonomy&kind=rlz-0&loss_type=structural', 'csv'),
+            ('aggregate_by/avg_losses?tag=taxonomy&kind=rlz-0', 'csv'),
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
@@ -236,8 +235,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check losses_by_tag
-        fnames = export(('aggregate_by/occupancy/avg_losses', 'csv'),
-                        self.calc.datastore)
+        fnames = export(
+            ('aggregate_by/avg_losses?tag=occupancy&kind=rlz-0', 'csv'),
+            self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
 
         self.check_multi_tag(self.calc.datastore)
@@ -261,14 +261,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
-        url = ('aggregate/avg_losses?tag=taxonomy&tag=occupancy'
-               '&loss_type=structural')
-        arr = dict(extract(dstore, url))['quantile-0.5']
+        arr = extract(dstore, 'aggregate/avg_losses?'
+                      'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
         self.assertEqual(len(arr.to_table()), 1)
 
         # aggregate by all loss types
-        fnames = export(('aggregate_by/taxonomy,occupancy/avg_losses', 'csv'),
-                        dstore)
+        fnames = export(
+            ('aggregate_by/avg_losses?tag=taxonomy&tag=occupancy&kind=mean',
+             'csv'),
+            dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
