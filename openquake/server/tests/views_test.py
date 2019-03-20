@@ -176,16 +176,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(len(got['array']), 6)  # expected 6 aggregates
         self.assertEqual(resp.status_code, 200)
 
-        # check agg_curves with a single realization
-        # the case with multiple rlzs is tested in event_based_risk/case_master
-        resp = self.c.get(
-            extract_url + 'agg_curves/structural?taxonomy=*')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertEqual(list(got['stats']), [b'mean'])
-        self.assertEqual(list(got['return_periods']), [5, 10, 20, 50, 100])
-        self.assertEqual(list(got['units']), [b'EUR'])
-
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
         datadir, dskeys = actions.get_results(db, job_id)
