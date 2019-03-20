@@ -35,7 +35,7 @@ else:
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated, println
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
 
@@ -57,42 +57,59 @@ def lit_eval(string):
         return string
 
 
-def _normalize(kinds, stats, num_rlzs):
-    statindex = dict(zip(stats, range(len(stats))))
-    dic = {}
+def get_info(dstore):
+    """
+    :returns: {'stats': dic, 'loss_types': dic, 'num_rlzs': R}
+    """
+    oq = dstore['oqparam']
+    stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
+    loss_types = {lt: l for l, lt in enumerate(oq.loss_dt().names)}
+    imt = {imt: i for i, imt in enumerate(oq.imtls)}
+    num_rlzs = dstore['csm_info'].get_num_rlzs()
+    return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
+                imtls=oq.imtls, investigation_time=oq.investigation_time,
+                poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt())
+
+
+def _normalize(kinds, info):
+    out = []
+    stats = info['stats']
+    rlzs = False
     for kind in kinds:
-        if kind == 'stats':
-            for s, stat in enumerate(stats):
-                dic[stat] = s
-        elif kind == 'rlzs':
-            for r in range(num_rlzs):
-                dic['rlz-%03d' % r] = r
-        elif kind.startswith('rlz-'):
-            dic[kind] = int(kind[4:])
+        if kind.startswith('rlz-'):
+            rlzs = True
+            out.append(int(kind[4:]))
         elif kind in stats:
-            dic[kind] = statindex[kind]
-        else:
-            raise ValueError('Invalid kind %r' % kind)
-    return dic
+            out.append(stats[kind])
+        elif kind == 'stats':
+            out.extend(stats.values())
+        elif kind == 'rlzs':
+            rlzs = True
+            out.extend(range(info['num_rlzs']))
+    return out, rlzs
 
 
-def parse(query_string, stats, num_rlzs=0):
+def parse(query_string, info):
     """
     :returns: a normalized query_dict as in the following examples:
 
-    >>> parse('kind=stats', ['mean'])
-    {'kind': {'mean': 0}}
-    >>> parse('kind=rlzs', [], 3)
-    {'kind': {'rlz-000': 0, 'rlz-001': 1, 'rlz-002': 2}}
-    >>> parse('kind=mean', ['max', 'mean'])
-    {'kind': {'mean': 1}}
-    >>> parse('kind=rlz-3&imt=PGA&site_id=0', [])
-    {'kind': {'rlz-3': 3}, 'imt': ['PGA'], 'site_id': [0]}
+    >>> parse('kind=stats', {'stats': {'mean': 0, 'max': 1}})
+    {'kind': [0, 1], 'rlzs': False}
+    >>> parse('kind=rlzs', {'stats': {}, 'num_rlzs': 3})
+    {'kind': [0, 1, 2], 'rlzs': True}
+    >>> parse('kind=mean', {'stats': {'mean': 0, 'max': 1}})
+    {'kind': [0], 'rlzs': False}
+    >>> parse('kind=rlz-3&imt=PGA&site_id=0', {'stats': {}})
+    {'kind': [3], 'imt': ['PGA'], 'site_id': [0], 'rlzs': True}
     """
     qdic = parse_qs(query_string)
+    loss_types = info.get('loss_types', [])
     for key, val in qdic.items():  # for instance, convert site_id to an int
-        qdic[key] = [lit_eval(v) for v in val]
-    qdic['kind'] = _normalize(qdic['kind'], stats, num_rlzs)
+        if key == 'loss_type':
+            qdic[key] = [loss_types[k] for k in val]
+        else:
+            qdic[key] = [lit_eval(v) for v in val]
+    qdic['kind'], qdic['rlzs'] = _normalize(qdic['kind'], info)
     return qdic
 
 
@@ -274,28 +291,30 @@ def extract_hcurves(dstore, what):
     /extract/hcurves?kind=rlz-0, /extract/hcurves?kind=stats,
     /extract/hcurves?kind=rlzs etc
     """
-    oq = dstore['oqparam']
-    num_rlzs = len(dstore['weights'])
-    stats = oq.hazard_stats()
+    info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
         mesh = get_mesh(sitecol, complete=False)
-        dic = _get_dict(dstore, 'hcurves-stats', oq.imtls, stats)
+        dic = _get_dict(dstore, 'hcurves-stats', info['imtls'], info['stats'])
         yield from hazard_items(
-            dic, mesh, investigation_time=oq.investigation_time)
+            dic, mesh, investigation_time=info['investigation_time'])
         return
-    params = parse(what, stats, num_rlzs)
+    params = parse(what, info)
     if 'imt' in params:
         [imt] = params['imt']
-        slc = oq.imtls(imt)
+        slc = info['imtls'](imt)
     else:
         slc = ALL
     sids = params.get('site_id', ALL)
-    for k, i in params['kind'].items():
-        if k.startswith('rlz-'):
-            yield k, hdf5.extract(dstore['hcurves-rlzs'], sids, i, slc)[:, 0]
-        else:
-            yield k, hdf5.extract(dstore['hcurves-stats'], sids, i, slc)[:, 0]
+    if params['rlzs']:
+        dset = dstore['hcurves-rlzs']
+        for k in params['kind']:
+            yield 'rlz-%03d' % k, hdf5.extract(dset, sids, k, slc)[:, 0]
+    else:
+        dset = dstore['hcurves-stats']
+        stats = list(info['stats'])
+        for k in params['kind']:
+            yield stats[k], hdf5.extract(dset, sids, k, slc)[:, 0]
     yield from params.items()
 
 
@@ -304,29 +323,32 @@ def extract_hmaps(dstore, what):
     """
     Extracts hazard maps. Use it as /extract/hmaps?imt=PGA
     """
-    oq = dstore['oqparam']
-    stats = oq.hazard_stats()
-    num_rlzs = len(dstore['weights'])
+    info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
         mesh = get_mesh(sitecol, complete=False)
         dic = _get_dict(dstore, 'hmaps-stats',
-                        {imt: oq.poes for imt in oq.imtls}, stats)
+                        {imt: info['poes'] for imt in info['imtls']},
+                        info['stats'])
         yield from hazard_items(
-            dic, mesh, investigation_time=oq.investigation_time)
+            dic, mesh, investigation_time=info['investigation_time'])
         return
-    params = parse(what, stats, num_rlzs)
+    params = parse(what, info)
     if 'imt' in params:
         [imt] = params['imt']
-        m = list(oq.imtls).index(imt)
+        m = info['imt'][imt]
         s = slice(m, m + 1)
     else:
         s = ALL
-    for k, i in params['kind'].items():
-        if k.startswith('rlz-'):
-            yield k, hdf5.extract(dstore['hmaps-rlzs'], ALL, i, s, ALL)[:, 0]
-        else:
-            yield k, hdf5.extract(dstore['hmaps-stats'], ALL, i, s, ALL)[:, 0]
+    if params['rlzs']:
+        dset = dstore['hmaps-rlzs']
+        for k in params['kind']:
+            yield 'rlz-%03d' % k, hdf5.extract(dset, ALL, k, s, ALL)[:, 0]
+    else:
+        dset = dstore['hmaps-stats']
+        stats = list(info['stats'])
+        for k in params['kind']:
+            yield stats[k], hdf5.extract(dset, ALL, k, s, ALL)[:, 0]
     yield from params.items()
 
 
@@ -336,35 +358,36 @@ def extract_uhs(dstore, what):
     Extracts uniform hazard spectra. Use it as /extract/uhs?kind=mean or
     /extract/uhs?kind=rlz-0, etc
     """
-    oq = dstore['oqparam']
-    num_rlzs = len(dstore['weights'])
-    stats = oq.hazard_stats()
+    info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
         mesh = get_mesh(sitecol, complete=False)
         dic = {}
-        for s, stat in enumerate(stats):
+        for stat, s in info['stats'].items():
             hmap = dstore['hmaps-stats'][:, s]
-            dic[stat] = calc.make_uhs(hmap, oq)
+            dic[stat] = calc.make_uhs(hmap, info)
         yield from hazard_items(
-            dic, mesh, investigation_time=oq.investigation_time)
+            dic, mesh, investigation_time=info['investigation_time'])
         return
-    params = parse(what, stats, num_rlzs)
+    params = parse(what, info)
     periods = []
-    for m, imt in enumerate(oq.imtls):
+    for m, imt in enumerate(info['imtls']):
         if imt == 'PGA' or imt.startswith('SA'):
             periods.append(m)
     if 'site_id' in params:
         sids = params['site_id']
     else:
         sids = ALL
-    for k, i in params['kind'].items():
-        if k.startswith('rlz-'):
-            yield k, hdf5.extract(
-                dstore['hmaps-rlzs'], sids, i, periods, ALL)[:, 0]
-        else:
-            yield k, hdf5.extract(
-                dstore['hmaps-stats'], sids, i, periods, ALL)[:, 0]
+    if params['rlzs']:
+        dset = dstore['hmaps-rlzs']
+        for k in params['kind']:
+            yield ('rlz-%03d' % k,
+                   hdf5.extract(dset, sids, k, periods, ALL)[:, 0])
+    else:
+        dset = dstore['hmaps-stats']
+        stats = list(info['stats'])
+        for k in params['kind']:
+            yield stats[k], hdf5.extract(dset, sids, k, periods, ALL)[:, 0]
     yield from params.items()
 
 
@@ -468,33 +491,26 @@ def extract_agg_damages(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags)
 
 
-@extract.add('aggregate_by')
-def extract_aggregate_by(dstore, what):
+@extract.add('aggregate')
+def extract_aggregate(dstore, what):
     """
-    /extract/aggregate_by/taxonomy,occupancy/avg_losses?kind=mean&loss_type=structural
+    /extract/aggregate/avg_losses-stats?
+    kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
     """
-    try:
-        tagnames, name, loss_type = what.split('/')
-    except ValueError:  # missing '/' at the end
-        tagnames, name = what.split('/')
-        loss_type = ''
-    assert name == 'avg_losses', name
-    tagnames = tagnames.split(',')
+    name, qstring = what.split('?', 1)
+    info = get_info(dstore)
+    qdic = parse(qstring, info)
+    tagnames = qdic.get('tag', [])
     assetcol = dstore['assetcol']
-    oq = dstore['oqparam']
-    dset, stats = _get(dstore, name)
-    for s, stat in enumerate(stats):
-        if loss_type:
-            array = dset[:, s, oq.lti[loss_type]]
-        else:
-            array = dset[:, s]
-        aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
-        for tagname in tagnames:
-            setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
-        if not loss_type:
-            aw.extra = ('loss_type',) + oq.loss_dt().names
-        aw.tagnames = encode(tagnames)
-        yield decode(stat), aw
+    try:
+        array = dstore[name][:, qdic['kind'][0], qdic['loss_type'][0]]
+    except:
+        import pdb; pdb.set_trace()
+    aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
+    for tagname in tagnames:
+        setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
+    aw.tagnames = encode(tagnames)
+    return aw
 
 
 @extract.add('losses_by_asset')

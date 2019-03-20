@@ -28,7 +28,7 @@ from openquake.baselib.general import humansize, group_array, deprecated
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, filters
 from openquake.calculators.views import view
-from openquake.calculators.extract import extract, get_mesh
+from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import GmfGetter, gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util, source
@@ -338,6 +338,7 @@ def export_hcurves_csv(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    info = get_info(dstore)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     R = len(rlzs_assoc.realizations)
     sitecol = dstore['sitecol']
@@ -353,7 +354,7 @@ def export_hcurves_csv(ekey, dstore):
                 oq.hazard_maps):
             hmap = extract(dstore, 'hmaps?kind=' + kind)[kind]
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
-            uhs_curves = calc.make_uhs(hmap, oq)
+            uhs_curves = calc.make_uhs(hmap, info)
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment + ', checksum=%d' % checksum)
