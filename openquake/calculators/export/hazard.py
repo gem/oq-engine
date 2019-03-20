@@ -587,14 +587,17 @@ def export_gmf_data_csv(ekey, dstore):
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['eid', 'sid'])
         writers.write_csv(fname, _expand_gmv(gmfa, imts))
-        sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
-        dt = [('eid', U64)] + ([('sig_' + imt, F32) for imt in oq.imtls] +
-                               [('eps_' + imt, F32) for imt in oq.imtls])
-        sig_eps = dstore['gmf_data/sigma_epsilon'].value.view(dt)
-        sig_eps['eid'] = event_id[sig_eps['eid']]
-        sig_eps.sort(order='eid')
-        writers.write_csv(sig_eps_csv, sig_eps)
-        return [fname, sig_eps_csv, f]
+        if 'sigma_epsilon' in dstore['gmf_data']:
+            sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
+            dt = [('eid', U64)] + ([('sig_' + imt, F32) for imt in oq.imtls] +
+                                   [('eps_' + imt, F32) for imt in oq.imtls])
+            sig_eps = dstore['gmf_data/sigma_epsilon'].value.view(dt)
+            sig_eps['eid'] = event_id[sig_eps['eid']]
+            sig_eps.sort(order='eid')
+            writers.write_csv(sig_eps_csv, sig_eps)
+            return [fname, sig_eps_csv, f]
+        else:
+            return [fname, f]
     # old format for single eid
     gmfa = gmfa[gmfa['eid'] == eid]
     eid2rlz = dict(dstore['events'])
