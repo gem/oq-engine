@@ -143,8 +143,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
         # test losses_by_tag with a single realization
-        [fname] = export(('aggregate/avg_losses?tag=taxonomy', 'csv'),
-                         self.calc.datastore)
+        [fname] = export(
+            ('aggregate_by/avg_losses?'
+             'tag=taxonomy&kind=rlz-0&loss_type=structural', 'csv'),
+            self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
     def test_missing_taxonomy(self):
@@ -234,7 +236,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check losses_by_tag
-        fnames = export(('aggregate/avg_losses?tag=taxonomy', 'csv'),
+        fnames = export(('aggregate_by/occupancy/avg_losses', 'csv'),
                         self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
 
