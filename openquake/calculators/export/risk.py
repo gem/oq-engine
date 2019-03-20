@@ -434,7 +434,8 @@ def export_damages_csv(ekey, dstore):
 
 @export.add(('dmg_by_asset', 'csv'))
 def export_dmg_by_asset_csv(ekey, dstore):
-    damage_dt = build_damage_dt(dstore)
+    E = len(dstore['events'])
+    damage_dt = build_damage_dt(dstore, mean_std=E > 1)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
