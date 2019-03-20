@@ -37,7 +37,6 @@ from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
-from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util, oqvalidation
 
 U32 = numpy.uint32
@@ -456,50 +455,17 @@ def extract_agg_damages(dstore, what):
     /extract/agg_damages/structural?taxonomy=RC&zipcode=20126
 
     :returns:
-        array of shape (R, D), being R the number of realizations and D
-        the number of damage states or array of length 0 if there is no
-        data for the given tags
+        array of shape (R, D), being R the number of realizations and D the
+        number of damage states, or an array of length 0 if there is no data
+        for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
     if 'dmg_by_asset' in dstore:  # scenario_damage
-        losses = dstore['dmg_by_asset'][loss_type]['mean']
+        lti = dstore['oqparam'].lti[loss_type]
+        losses = dstore['dmg_by_asset'][:, :, lti, 0]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags)
-
-
-def _get_curves(curves, li):
-    shp = curves.shape + curves.dtype.shape
-    return curves.value.view(F32).reshape(shp)[:, :, :, li]
-
-
-@extract.add('agg_curves')
-def extract_agg_curves(dstore, what):
-    """
-    Aggregate loss curves of the given loss type and tags for
-    event based risk calculations. Use it as
-    /extract/agg_curves/structural?taxonomy=RC&zipcode=20126
-
-    :returns:
-        array of shape (S, P), being P the number of return periods
-        and S the number of statistics
-    """
-    oq = dstore['oqparam']
-    loss_type, tags = get_loss_type_tags(what)
-    if 'curves-stats' in dstore:  # event_based_risk
-        losses = _get_curves(dstore['curves-stats'], oq.lti[loss_type])
-        stats = dstore['curves-stats'].attrs['stats']
-    elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
-        losses = _get_curves(dstore['curves-rlzs'], oq.lti[loss_type])
-        assert losses.shape[1] == 1, 'There must be a single realization'
-        stats = [b'mean']  # suitable to be stored as hdf5 attribute
-    else:
-        raise KeyError('No curves found in %s' % dstore)
-    res = _filter_agg(dstore['assetcol'], losses, tags, stats)
-    cc = dstore['assetcol/cost_calculator']
-    res.units = cc.get_units(loss_types=[loss_type])
-    res.return_periods = get_loss_builder(dstore).return_periods
-    return res
 
 
 @extract.add('aggregate_by')
@@ -617,22 +583,18 @@ def build_damage_dt(dstore, mean_std=True):
 
 def build_damage_array(data, damage_dt):
     """
-    :param data: an array of length N with fields 'mean' and 'stddev'
+    :param data: an array of shape (A, L, 1, D) or (A, L, 2, D)
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    L = len(data) if data.shape else 1
-    dmg = numpy.zeros(L, damage_dt)
-    for lt in damage_dt.names:
-        for i, ms in numpy.ndenumerate(data[lt]):
-            if damage_dt[lt].names[0].endswith('_mean'):
-                lst = []
-                for m, s in zip(ms['mean'], ms['stddev']):
-                    lst.append(m)
-                    lst.append(s)
-                dmg[lt][i] = tuple(lst)
+    A, L, MS, D = data.shape
+    dmg = numpy.zeros(A, damage_dt)
+    for a in range(A):
+        for l, lt in enumerate(damage_dt.names):
+            if MS == 1:
+                dmg[lt][a] = tuple(data[a, l, 0])
             else:
-                dmg[lt][i] = ms['mean']
+                dmg[lt][a] = tuple(numpy.concatenate(data[a, l].T))
     return dmg
 
 
