@@ -591,9 +591,10 @@ def build_damage_array(data, damage_dt):
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
         for l, lt in enumerate(damage_dt.names):
-            if MS == 1:
+            if MS == 1:  # there is only the mean value
                 dmg[lt][a] = tuple(data[a, l, 0])
-            else:
+            else:  # there are both mean and stddev
+                # data[a, l].T has shape (D, 2)
                 dmg[lt][a] = tuple(numpy.concatenate(data[a, l].T))
     return dmg
 
