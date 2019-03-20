@@ -113,6 +113,14 @@ def parse(query_string, info):
     return qdic
 
 
+def sanitize(query_string):
+    """
+    Replace `/`, `?`, `&` characters with underscores and '=' with '-'
+    """
+    return query_string.replace(
+        '/', '_').replace('?', '_').replace('&', '_').replace('=', '-')
+
+
 def cast(loss_array, loss_dt):
     return loss_array.copy().view(loss_dt).squeeze()
 
@@ -494,18 +502,16 @@ def extract_agg_damages(dstore, what):
 @extract.add('aggregate')
 def extract_aggregate(dstore, what):
     """
-    /extract/aggregate/avg_losses-stats?
+    /extract/aggregate/avg_losses?
     kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
     """
     name, qstring = what.split('?', 1)
     info = get_info(dstore)
     qdic = parse(qstring, info)
+    suffix = '-rlzs' if qdic['rlzs'] else '-stats'
     tagnames = qdic.get('tag', [])
     assetcol = dstore['assetcol']
-    try:
-        array = dstore[name][:, qdic['kind'][0], qdic['loss_type'][0]]
-    except:
-        import pdb; pdb.set_trace()
+    array = dstore[name + suffix][:, qdic['kind'][0], qdic['loss_type'][0]]
     aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
     for tagname in tagnames:
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
