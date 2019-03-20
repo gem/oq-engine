@@ -34,7 +34,7 @@ import collections
 import operator
 from collections import namedtuple
 import numpy
-from openquake.baselib import hdf5, node
+from openquake.baselib import hdf5, node, python3compat
 from openquake.baselib.general import groupby, duplicated
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -1451,7 +1451,8 @@ class GsimLogicTree(object):
                         if hasattr(dset, 'value'):  # dataset, not group
                             d[group] = dset.value
                             if group == 'Distances':
-                                d['distance_type'] = dset.attrs['metric']
+                                d['distance_type'] = (
+                                    python3compat.decode(dset.attrs['metric']))
                         else:
                             d[group] = {k: ds.value for k, ds in dset.items()}
         return dic, {}
