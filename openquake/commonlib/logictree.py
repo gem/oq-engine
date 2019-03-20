@@ -1451,8 +1451,7 @@ class GsimLogicTree(object):
                         if hasattr(dset, 'value'):  # dataset, not group
                             d[group] = dset.value
                             if group == 'Distances':
-                                d['distance_type'] = (
-                                    dset.attrs['metric'].decode('utf8'))
+                                d['distance_type'] = dset.attrs['metric']
                         else:
                             d[group] = {k: ds.value for k, ds in dset.items()}
         return dic, {}
