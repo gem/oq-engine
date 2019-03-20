@@ -224,11 +224,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-        # extract curves by tag
-        tags = 'taxonomy=tax1&state=01&cresta=0.11'
-        a = extract(self.calc.datastore, 'agg_curves/structural?' + tags)
-        self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
-
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
