@@ -30,28 +30,6 @@ F64 = numpy.float64
 VOLCANIC_HAZARDS = {'ASH', 'LAVA', 'LAHARS', 'PYRO'}
 
 
-def dist_by_asset(data, multi_stat_dt, number):
-    """
-    :param data: array of shape (N, R, L, 2, D)
-    :param multi_stat_dt: numpy dtype for statistical outputs
-    :param number: expected number of units per asset
-    :returns: array of shape (N, R) with records of type multi_stat_dt
-    """
-    N, R, L = data.shape[:3]
-    out = numpy.zeros((N, R), multi_stat_dt)
-    for l, lt in enumerate(multi_stat_dt.names):
-        out_lt = out[lt]
-        for n, r in itertools.product(range(N), range(R)):
-            mean, stddev = data[n, r, l]
-            out_lt[n, r] = (mean, stddev)
-            # sanity check on the sum over all damage states
-            if abs(mean.sum() / number[n] - 1) > 1E-3:
-                logging.warning(
-                    'Asset #%d, rlz=%d, expected %s, got %s for %s damage',
-                    n, r, number[n], mean.sum(), lt)
-    return out
-
-
 def scenario_damage(riskinputs, riskmodel, param, monitor):
     """
     Core function for a damage computation.
@@ -162,12 +140,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         mean_std_dt = numpy.dtype([('mean', (F32, D)), ('stddev', (F32, D))])
         for ltype in ltypes:
             dt_list.append((ltype, mean_std_dt))
-        multi_stat_dt = numpy.dtype(dt_list)
         d_asset = numpy.zeros((N, R, L, 2, D), F32)
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, r, l] = stat
-        self.datastore['dmg_by_asset'] = dist_by_asset(
-            d_asset, multi_stat_dt, self.assetcol.array['number'])
+        self.datastore['dmg_by_asset'] = d_asset
         dmg_dt = [(ds, F32) for ds in self.riskmodel.damage_states]
         d_event = numpy.zeros((E, R, L), dmg_dt)
         for d, ds in enumerate(self.riskmodel.damage_states):
@@ -181,7 +157,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             c_asset = numpy.zeros((N, R, L), stat_dt)
             for (l, r, a, stat) in result['c_asset']:
                 c_asset[a, r, l] = stat
-            multi_stat_dt = self.oqparam.loss_dt(stat_dt)
             self.datastore['losses_by_asset'] = c_asset
             self.datastore['losses_by_event'] = numpy.fromiter(
                 ((eid, rlzi, F32(result['c_event'][eid, rlzi]))
