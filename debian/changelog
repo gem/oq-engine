@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Changed the aggregation WebAPI from
+    aggregate_by/taxonomy,occupancy/avg_losses?kind=mean&loss_type=structural to
+    aggregate/avg_losses?kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
   * Do not export the stddevs in scenario_damage in the case of 1 event
   * Fixed export bug for GMFs imported from a file
   * Fixed an encoding error when storing a GMPETable
