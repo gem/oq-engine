@@ -151,7 +151,7 @@ RM       4,000
         self.assertEqualFiles('expected/dmg_by_event.csv', fname)
 
     def test_case_9(self):
-        # case with volcanic multiperil
+        # case with volcanic multiperil ASH, LAVA, LAHARS, PYRO
         self.run_calc(case_9.__file__, 'job.ini')
         [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/dmg_by_asset.csv', fname)
@@ -161,9 +161,18 @@ RM       4,000
         [fname] = export(('losses_by_asset', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
-    def _test_case_9_bis(self):
+        w = 'collapsed?kind=rlz-2&tag=name_1&tag=name_2'
+        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/lahars_by_name_12.csv', fname)
+
+        w = 'collapsed?kind=rlz-3&tag=name_1&tag=name_2'
+        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/pyro_by_name_12.csv', fname)
+
+    def test_case_9_bis(self):
         # case with volcanic lava
         self.run_calc(case_9.__file__, 'job.ini',
-                      hazard_fields_csv="{'LAVA': 'lava_flow.csv'}")
-        [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/dmg_by_asset.csv', fname)
+                      multi_peril_csv="{'LAVA': 'lava_flow.csv'}")
+        w = 'collapsed?kind=rlz-0&tag=name_1&tag=name_2'
+        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/lava_by_name_12.csv', fname)
