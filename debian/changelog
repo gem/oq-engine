@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the GsimLogicTree parser to get the line number information, a
+    feature that was lost with the passage to Python 3.5
   * Added a check against mispellings in the loss type in the risk keys
   * Changed the aggregation WebAPI from
     aggregate_by/taxonomy,occupancy/avg_losses?kind=mean&loss_type=structural to
