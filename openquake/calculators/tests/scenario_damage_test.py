@@ -176,3 +176,8 @@ RM       4,000
         w = 'collapsed?kind=rlz-0&tag=name_1&tag=name_2'
         [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/lava_by_name_12.csv', fname)
+
+        # check invalid key structura_fragility_file
+        with self.assertRaises(ValueError):
+            self.run_calc(case_9.__file__, 'job.ini',
+                          structura_fragility_file='fragility_model.xml')
