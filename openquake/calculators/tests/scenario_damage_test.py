@@ -172,7 +172,7 @@ RM       4,000
     def test_case_9_bis(self):
         # case with volcanic lava
         self.run_calc(case_9.__file__, 'job.ini',
-                      hazard_fields_csv="{'LAVA': 'lava_flow.csv'}")
+                      multi_peril_csv="{'LAVA': 'lava_flow.csv'}")
         w = 'collapsed?kind=rlz-0&tag=name_1&tag=name_2'
         [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/lava_by_name_12.csv', fname)

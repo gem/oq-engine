@@ -95,15 +95,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        if 'ASH' in self.oqparam.hazard_fields:
-            E = self.oqparam.number_of_ground_motion_fields
-            self.param['number_of_ground_motion_fields'] = E
-            self.param['consequence_models'] = riskmodels.get_risk_models(
-                self.oqparam, 'consequence')
-            self.riskinputs = self.build_riskinputs('gmf', num_events=E)
-            self.param['tags'] = list(self.assetcol.tagcol)
-        else:
+        if self.oqparam.multi_peril and'ASH' not in self.oqparam.multi_peril:
             self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
+            return
+
+        E = self.oqparam.number_of_ground_motion_fields
+        self.param['number_of_ground_motion_fields'] = E
+        self.param['consequence_models'] = riskmodels.get_risk_models(
+            self.oqparam, 'consequence')
+        self.riskinputs = self.build_riskinputs('gmf', num_events=E)
+        self.param['tags'] = list(self.assetcol.tagcol)
 
     def collapsed(self):
         """
@@ -111,12 +112,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         of boolean hazard inputs
         """
         A = len(self.assetcol)
-        H = len(self.oqparam.hazard_fields)
+        H = len(self.oqparam.multi_peril)
         collapsed = numpy.zeros((A, H, 1), F32)
-        hazard = self.datastore['hazard_fields']
+        hazard = self.datastore['multi_peril']
         for aid, rec in enumerate(self.assetcol.array):
             haz = hazard[rec['site_id']]
-            for h, hfield in enumerate(self.oqparam.hazard_fields):
+            for h, hfield in enumerate(self.oqparam.multi_peril):
                 if hfield == 'ASH':
                     collapsed[aid, h, 0] = self.datastore[
                         'dmg_by_asset'][aid, 0, 0, 0, -1]
@@ -125,10 +126,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.datastore['collapsed-rlzs'] = collapsed
 
     def execute(self):
-        hazard_fields = sorted(set(self.oqparam.hazard_fields) - {'ASH'})
-        if hazard_fields:
-            if 'ASH' not in self.oqparam.hazard_fields:
-                return {}
+        multi_peril = sorted(set(self.oqparam.multi_peril) - {'ASH'})
+        if multi_peril and 'ASH' not in self.oqparam.multi_peril:
+            return {}
         return super().execute()
 
     def post_execute(self, result):
@@ -174,4 +174,5 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 ((eid, rlzi, F32(result['c_event'][eid, rlzi]))
                  for rlzi in range(R) for eid in range(E)), dtlist)
 
-        self.collapsed()
+        if self.oqparam.multi_peril:
+            self.collapsed()
