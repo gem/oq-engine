@@ -4,14 +4,7 @@ Res,contents,5.08567E+04
 Res,nonstructural,7.52845E+04
 Res,occupants,1.48672E-01
 Res,structural,8.37750E+03
-Res,business_interruption_ins,1.61000E+02
-Res,contents_ins,1.57500E+02
-Res,nonstructural_ins,1.61000E+02
-Res,structural_ins,4.90000E+01
 Com,business_interruption,2.08884E+02
 Com,contents,1.06320E+03
 Com,nonstructural,1.59481E+03
 Com,occupants,4.17769E-03
-Com,business_interruption_ins,7.00000E+00
-Com,contents_ins,7.00000E+00
-Com,nonstructural_ins,7.00000E+00

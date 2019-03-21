@@ -155,6 +155,15 @@ RM       4,000
         self.run_calc(case_9.__file__, 'job.ini')
         [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/dmg_by_asset.csv', fname)
+        fnames = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)  # gmfs and sites, no sigma_epsilon
 
         [fname] = export(('losses_by_asset', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+
+    def _test_case_9_bis(self):
+        # case with volcanic lava
+        self.run_calc(case_9.__file__, 'job.ini',
+                      hazard_fields_csv="{'LAVA': 'lava_flow.csv'}")
+        [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/dmg_by_asset.csv', fname)
