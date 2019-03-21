@@ -170,8 +170,7 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
             for block in general.block_splitter(
                     sources, RUPTURES_PER_BLOCK,
                     operator.attrgetter('num_ruptures')):
-                smap.submit(block, srcfilter, seed,
-                            func=split_filter if split else only_filter)
+                smap.submit(block, srcfilter, seed, func=only_filter)
     for splits, stime in smap:
         for src in splits:
             i = src.id
