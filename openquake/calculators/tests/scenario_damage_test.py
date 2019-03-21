@@ -185,4 +185,4 @@ RM       4,000
         # check invalid key structura_consequence_file
         with self.assertRaises(ValueError):
             self.run_calc(case_9.__file__, 'job.ini',
-                          structura_consequence_file='fragility_model.xml')
+                          structura_consequence_file='consequence_model.xml')
