@@ -34,7 +34,7 @@ from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib import InvalidFile, geo
+from openquake.hazardlib import InvalidFile, geo, valid
 from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -523,7 +523,7 @@ class HazardCalculator(BaseCalculator):
             with open(fname) as f:
                 for row in csv.DictReader(f):
                     data.append((float(row['lon']), float(row['lat']),
-                                 int(row['intensity'])))
+                                 valid.positivefloat(row['intensity'])))
             data = numpy.array(data, [('lon', float), ('lat', float),
                                       ('number', float)])
             logging.info('Read %s with %d rows' % (fname, len(data)))
