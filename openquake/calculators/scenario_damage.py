@@ -15,11 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import itertools
-import logging
 import numpy
-
+from openquake.hazardlib.source import rupture
 from openquake.risklib import scientific, riskmodels
 from openquake.calculators import base
 
@@ -98,36 +95,50 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        E = self.oqparam.number_of_ground_motion_fields
-        self.param['number_of_ground_motion_fields'] = E
-        self.param['consequence_models'] = riskmodels.get_risk_models(
-            self.oqparam, 'consequence')
-        self.riskinputs = self.build_riskinputs('gmf', num_events=E)
-        self.param['tags'] = list(self.assetcol.tagcol)
-        hazard_fields = sorted(set(self.oqparam.hazard_fields) - {'ASH'})
-        if hazard_fields:
-            self.collapsed(hazard_fields)
+        if 'ASH' in self.oqparam.hazard_fields:
+            E = self.oqparam.number_of_ground_motion_fields
+            self.param['number_of_ground_motion_fields'] = E
+            self.param['consequence_models'] = riskmodels.get_risk_models(
+                self.oqparam, 'consequence')
+            self.riskinputs = self.build_riskinputs('gmf', num_events=E)
+            self.param['tags'] = list(self.assetcol.tagcol)
+        else:
+            self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
 
-    def collapsed(self, hazard_fields):
+    def collapsed(self):
         """
         Store an array collaps_by_asset of shape (A, H), with H the number
         of boolean hazard inputs
         """
         A = len(self.assetcol)
-        H = len(hazard_fields)
-        collapsed = numpy.zeros((A, H), numpy.bool)
+        H = len(self.oqparam.hazard_fields)
+        collapsed = numpy.zeros((A, H, 1), F32)
         hazard = self.datastore['hazard_fields']
         for aid, rec in enumerate(self.assetcol.array):
             haz = hazard[rec['site_id']]
-            for h, hfield in enumerate(hazard_fields):
-                collapsed[aid, h] = haz[hfield]
+            for h, hfield in enumerate(self.oqparam.hazard_fields):
+                if hfield == 'ASH':
+                    collapsed[aid, h, 0] = self.datastore[
+                        'dmg_by_asset'][aid, 0, 0, 0, -1]
+                else:
+                    collapsed[aid, h, 0] = haz[hfield]
         self.datastore['collapsed-rlzs'] = collapsed
+
+    def execute(self):
+        hazard_fields = sorted(set(self.oqparam.hazard_fields) - {'ASH'})
+        if hazard_fields:
+            if 'ASH' not in self.oqparam.hazard_fields:
+                return {}
+        return super().execute()
 
     def post_execute(self, result):
         """
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
+        if not result:
+            self.collapsed()
+            return
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         L = len(ltypes)
@@ -162,3 +173,5 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['losses_by_event'] = numpy.fromiter(
                 ((eid, rlzi, F32(result['c_event'][eid, rlzi]))
                  for rlzi in range(R) for eid in range(E)), dtlist)
+
+        self.collapsed()
