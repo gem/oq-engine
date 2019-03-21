@@ -543,7 +543,7 @@ class ArrayWrapper(object):
         tagnames = decode_array(self.tagnames)
         if len(shape) == len(tagnames):
             return [tagnames + ['value']] + self._to_table()
-        elif len(shape) == len(tagnames) + 1:
+        elif len(shape) == len(tagnames) + 1:  # there is an extra field
             tbl = [tagnames + [self.extra[0], 'value']]
             return tbl + self._to_table(self.extra[1:])
         else:
