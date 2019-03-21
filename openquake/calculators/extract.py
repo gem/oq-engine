@@ -72,21 +72,26 @@ def get_info(dstore):
 
 
 def _normalize(kinds, info):
-    out = []
+    a = []
+    b = []
     stats = info['stats']
     rlzs = False
     for kind in kinds:
         if kind.startswith('rlz-'):
             rlzs = True
-            out.append(int(kind[4:]))
+            a.append(int(kind[4:]))
+            b.append(kind)
         elif kind in stats:
-            out.append(stats[kind])
+            a.append(stats[kind])
+            b.append(kind)
         elif kind == 'stats':
-            out.extend(stats.values())
+            a.extend(stats.values())
+            b.extend(stats)
         elif kind == 'rlzs':
             rlzs = True
-            out.extend(range(info['num_rlzs']))
-    return out, rlzs
+            a.extend(range(info['num_rlzs']))
+            b.extend(['rlz-%03d' % r for r in range(info['num_rlzs'])])
+    return a, b, rlzs
 
 
 def parse(query_string, info):
@@ -94,13 +99,13 @@ def parse(query_string, info):
     :returns: a normalized query_dict as in the following examples:
 
     >>> parse('kind=stats', {'stats': {'mean': 0, 'max': 1}})
-    {'kind': [0, 1], 'rlzs': False}
+    {'kind': ['mean', 'max'], 'k': [0, 1], 'rlzs': False}
     >>> parse('kind=rlzs', {'stats': {}, 'num_rlzs': 3})
-    {'kind': [0, 1, 2], 'rlzs': True}
+    {'kind': ['rlz-000', 'rlz-001', 'rlz-002'], 'k': [0, 1, 2], 'rlzs': True}
     >>> parse('kind=mean', {'stats': {'mean': 0, 'max': 1}})
-    {'kind': [0], 'rlzs': False}
+    {'kind': ['mean'], 'k': [0], 'rlzs': False}
     >>> parse('kind=rlz-3&imt=PGA&site_id=0', {'stats': {}})
-    {'kind': [3], 'imt': ['PGA'], 'site_id': [0], 'rlzs': True}
+    {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
     """
     qdic = parse_qs(query_string)
     loss_types = info.get('loss_types', [])
@@ -109,7 +114,7 @@ def parse(query_string, info):
             qdic[key] = [loss_types[k] for k in val]
         else:
             qdic[key] = [lit_eval(v) for v in val]
-    qdic['kind'], qdic['rlzs'] = _normalize(qdic['kind'], info)
+    qdic['k'], qdic['kind'], qdic['rlzs'] = _normalize(qdic['kind'], info)
     return qdic
 
 
@@ -316,12 +321,12 @@ def extract_hcurves(dstore, what):
     sids = params.get('site_id', ALL)
     if params['rlzs']:
         dset = dstore['hcurves-rlzs']
-        for k in params['kind']:
+        for k in params['k']:
             yield 'rlz-%03d' % k, hdf5.extract(dset, sids, k, slc)[:, 0]
     else:
         dset = dstore['hcurves-stats']
         stats = list(info['stats'])
-        for k in params['kind']:
+        for k in params['k']:
             yield stats[k], hdf5.extract(dset, sids, k, slc)[:, 0]
     yield from params.items()
 
@@ -350,12 +355,12 @@ def extract_hmaps(dstore, what):
         s = ALL
     if params['rlzs']:
         dset = dstore['hmaps-rlzs']
-        for k in params['kind']:
+        for k in params['k']:
             yield 'rlz-%03d' % k, hdf5.extract(dset, ALL, k, s, ALL)[:, 0]
     else:
         dset = dstore['hmaps-stats']
         stats = list(info['stats'])
-        for k in params['kind']:
+        for k in params['k']:
             yield stats[k], hdf5.extract(dset, ALL, k, s, ALL)[:, 0]
     yield from params.items()
 
@@ -388,13 +393,13 @@ def extract_uhs(dstore, what):
         sids = ALL
     if params['rlzs']:
         dset = dstore['hmaps-rlzs']
-        for k in params['kind']:
+        for k in params['k']:
             yield ('rlz-%03d' % k,
                    hdf5.extract(dset, sids, k, periods, ALL)[:, 0])
     else:
         dset = dstore['hmaps-stats']
         stats = list(info['stats'])
-        for k in params['kind']:
+        for k in params['k']:
             yield stats[k], hdf5.extract(dset, sids, k, periods, ALL)[:, 0]
     yield from params.items()
 
@@ -513,9 +518,9 @@ def extract_aggregate(dstore, what):
     assetcol = dstore['assetcol']
     ltypes = qdic.get('loss_type', [])
     if ltypes:
-        array = dstore[name + suffix][:, qdic['kind'][0], ltypes[0]]
+        array = dstore[name + suffix][:, qdic['k'][0], ltypes[0]]
     else:
-        array = dstore[name + suffix][:, qdic['kind'][0]]
+        array = dstore[name + suffix][:, qdic['k'][0]]
     aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
     for tagname in tagnames:
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
