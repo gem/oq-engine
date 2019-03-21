@@ -236,7 +236,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check losses_by_tag
         fnames = export(
-            ('aggregate_by/avg_losses?tag=occupancy&kind=rlz-0', 'csv'),
+            ('aggregate_by/avg_losses?tag=occupancy&kind=mean', 'csv'),
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
 
