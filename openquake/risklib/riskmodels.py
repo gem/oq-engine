@@ -58,7 +58,7 @@ def get_risk_files(inputs):
             if match and 'retrofitted' not in key and 'consequence' not in key:
                 rfs['%s/%s' % (match.group(2), match.group(1))] = inputs[key]
                 names.add(match.group(2))
-            elif 'retrofitted' not in key and 'consequence' not in key:
+            elif match is None:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
     if not names:
         return None, {}
