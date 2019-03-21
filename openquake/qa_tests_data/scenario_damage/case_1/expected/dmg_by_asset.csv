@@ -1,4 +1,4 @@
-asset_ref,CRESTA,region,taxonomy,lon,lat,structural~no_damage_mean,structural~no_damage_stdv,structural~LS1_mean,structural~LS1_stdv,structural~LS2_mean,structural~LS2_stdv
-a1,"?","?","RM",15.48000,38.09000,1.461540E+02,NAN,1.618463E+03,NAN,1.235383E+03,NAN
-a3,"?","?","RM",15.48000,38.25000,0.000000E+00,NAN,1.400000E+02,NAN,8.600000E+02,NAN
-a2,"01.1","Alhué","RC",15.56000,38.17000,1.498012E+03,NAN,4.729662E+02,NAN,2.902180E+01,NAN
+asset_ref,CRESTA,region,taxonomy,lon,lat,structural~no_damage,structural~LS1,structural~LS2
+a1,"?","?","RM",15.48000,38.09000,1.461540E+02,1.618463E+03,1.235383E+03
+a3,"?","?","RM",15.48000,38.25000,0.000000E+00,1.400000E+02,8.600000E+02
+a2,"01.1","Alhué","RC",15.56000,38.17000,1.498012E+03,4.729662E+02,2.902180E+01
