@@ -1970,8 +1970,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             Input(xmlbytes), tectonic_region_types)
 
     def test_not_xml(self):
-        self.parse_invalid('xxx', ET.ParseError)
-        self.parse_invalid('<?xml foo bar baz', ET.ParseError)
+        self.parse_invalid('xxx', ExpatError)
+        self.parse_invalid('<?xml foo bar baz', ExpatError)
 
     def test_invalid_schema(self):
         xml = _make_nrml("""\
