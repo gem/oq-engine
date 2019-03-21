@@ -521,6 +521,7 @@ class HazardCalculator(BaseCalculator):
         for name, fname in zip(oq.multi_peril, fnames):
             data = []
             with open(fname) as f:
+                next(f)  # skip the comment on the first line
                 for row in csv.DictReader(f):
                     data.append((float(row['lon']), float(row['lat']),
                                  valid.positivefloat(row['intensity'])))
