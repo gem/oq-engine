@@ -23,7 +23,7 @@ import collections
 
 def new(tuple_type, **kwargs):
     '''Instantiate a namedtuple class with missing fields defaulting to None
-    >>> Point = namedtuple('Point', 'x y z')
+    >>> Point = collections.namedtuple('Point', 'x y z')
     >>> new(Point, x=1, y=2)
     Point(x=1, y=2, z=None)
     '''
