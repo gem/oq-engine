@@ -113,14 +113,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Store an array collaps_by_asset of shape (A, H), with H the number
         of boolean hazard inputs
         """
+        A = len(self.assetcol)
         H = len(hazard_fields)
-        collapsed = numpy.zeros((self.N, H), numpy.bool)
+        collapsed = numpy.zeros((A, H), numpy.bool)
         hazard = self.datastore['hazard_fields']
         for aid, rec in enumerate(self.assetcol.array):
             haz = hazard[rec['site_id']]
             for h, hfield in enumerate(hazard_fields):
                 collapsed[aid, h] = haz[hfield]
-        self.datastore['collapsed'] = collapsed
+        self.datastore['collapsed-rlzs'] = collapsed
 
     def post_execute(self, result):
         """
