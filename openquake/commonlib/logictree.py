@@ -44,8 +44,7 @@ from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
-from openquake.baselib.node import (
-    node_from_xml, striptag, node_from_elem, Node as N, context)
+from openquake.baselib.node import striptag, node_from_elem, Node as N, context
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -1396,8 +1395,7 @@ class GsimLogicTree(object):
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
-        # NB: not using nrml.read, we need to keep the nodes as strings
-        self._ltnode = ltnode or node_from_xml(fname).logicTree
+        self._ltnode = ltnode or nrml.read(fname).logicTree
         self.gmpe_tables = set()  # populated right below
         self.branches = self._build_trts_branches(trts)
         if tectonic_region_types and not self.branches:
