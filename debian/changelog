@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check against mispellings in the loss type in the risk keys
   * Changed the aggregation WebAPI from
     aggregate_by/taxonomy,occupancy/avg_losses?kind=mean&loss_type=structural to
     aggregate/avg_losses?kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
