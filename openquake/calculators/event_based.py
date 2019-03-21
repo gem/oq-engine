@@ -156,15 +156,19 @@ class EventBasedCalculator(base.HazardCalculator):
                     continue
                 par = self.param.copy()
                 par['gsims'] = gsims_by_trt[sg.trt]
-                for block in self.block_splitter(
-                        sg.sources, weight_src, by_grp):
-                    if 'ucerf' in oq.calculation_mode:
-                        for i in range(oq.ses_per_logic_tree_path):
-                            par['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]
+                if sg.atomic:  # do not split the group
+                    smap.submit(sg, self.src_filter, par)
+                else:  # traditional groups
+                    for block in self.block_splitter(
+                            sg.sources, weight_src, by_grp):
+                        if 'ucerf' in oq.calculation_mode:
+                            for i in range(oq.ses_per_logic_tree_path):
+                                par['ses_seeds'] = [
+                                    (ses_idx, oq.ses_seed + i + 1)]
+                                smap.submit(block, self.src_filter, par)
+                                ses_idx += 1
+                        else:
                             smap.submit(block, self.src_filter, par)
-                            ses_idx += 1
-                    else:
-                        smap.submit(block, self.src_filter, par)
         mon = self.monitor('saving ruptures')
         for dic in smap:
             if dic['calc_times']:

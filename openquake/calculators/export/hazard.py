@@ -28,7 +28,7 @@ from openquake.baselib.general import humansize, group_array, deprecated
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, filters
 from openquake.calculators.views import view
-from openquake.calculators.extract import extract, get_mesh
+from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import GmfGetter, gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util, source
@@ -338,6 +338,7 @@ def export_hcurves_csv(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    info = get_info(dstore)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     R = len(rlzs_assoc.realizations)
     sitecol = dstore['sitecol']
@@ -353,7 +354,7 @@ def export_hcurves_csv(ekey, dstore):
                 oq.hazard_maps):
             hmap = extract(dstore, 'hmaps?kind=' + kind)[kind]
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
-            uhs_curves = calc.make_uhs(hmap, oq)
+            uhs_curves = calc.make_uhs(hmap, info)
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment + ', checksum=%d' % checksum)
@@ -401,8 +402,8 @@ def get_metadata(realizations, kind):
     return metadata
 
 
-@deprecated('Use the CSV exporter instead')
 @export.add(('uhs', 'xml'))
+@deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
@@ -438,8 +439,8 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@deprecated('Use the CSV exporter instead')
 @export.add(('hcurves', 'xml'))
+@deprecated(msg='Use the CSV exporter instead')
 def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     len_ext = len(fmt) + 1
@@ -476,8 +477,8 @@ def export_hcurves_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@deprecated('Use the CSV exporter instead')
 @export.add(('hmaps', 'xml'))
+@deprecated(msg='Use the CSV exporter instead')
 def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     oq = dstore['oqparam']
@@ -529,8 +530,8 @@ def export_hazard_npz(ekey, dstore):
     return [fname]
 
 
-@deprecated('Use the CSV exporter instead')
 @export.add(('gmf_data', 'xml'))
+@deprecated(msg='Use the CSV exporter instead')
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -587,14 +588,17 @@ def export_gmf_data_csv(ekey, dstore):
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['eid', 'sid'])
         writers.write_csv(fname, _expand_gmv(gmfa, imts))
-        sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
-        dt = [('eid', U64)] + ([('sig_' + imt, F32) for imt in oq.imtls] +
-                               [('eps_' + imt, F32) for imt in oq.imtls])
-        sig_eps = dstore['gmf_data/sigma_epsilon'].value.view(dt)
-        sig_eps['eid'] = event_id[sig_eps['eid']]
-        sig_eps.sort(order='eid')
-        writers.write_csv(sig_eps_csv, sig_eps)
-        return [fname, sig_eps_csv, f]
+        if 'sigma_epsilon' in dstore['gmf_data']:
+            sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
+            dt = [('eid', U64)] + ([('sig_' + imt, F32) for imt in oq.imtls] +
+                                   [('eps_' + imt, F32) for imt in oq.imtls])
+            sig_eps = dstore['gmf_data/sigma_epsilon'].value.view(dt)
+            sig_eps['eid'] = event_id[sig_eps['eid']]
+            sig_eps.sort(order='eid')
+            writers.write_csv(sig_eps_csv, sig_eps)
+            return [fname, sig_eps_csv, f]
+        else:
+            return [fname, f]
     # old format for single eid
     gmfa = gmfa[gmfa['eid'] == eid]
     eid2rlz = dict(dstore['events'])

@@ -13,7 +13,7 @@
       <costType name="business_interruption" type="per_asset" unit="USD/month" />
     </costTypes>
   </conversions>
-  
+  <tagNames>NAME_1</tagNames>
   <assets>
     <asset id="a1" number="1" area="100" taxonomy="tax1" >
       <location lon="-122.000" lat="38.113" />
@@ -28,6 +28,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags NAME_1="RegionA" />
     </asset>
     
     <asset id="a2" number="1" area="100" taxonomy="tax1" >
@@ -43,6 +44,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags NAME_1="RegionA" />
     </asset>
     
     <asset id="a3" number="1" area="100" taxonomy="tax1" >
@@ -58,6 +60,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags NAME_1="RegionB" />
     </asset>
     
     <asset id="a4" number="1" area="100" taxonomy="tax1" >
@@ -73,6 +76,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags NAME_1="RegionB" />
     </asset>
     
     <asset id="a5" number="1" area="100" taxonomy="tax1" >
@@ -88,6 +92,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags NAME_1="RegionB" />
     </asset>
     
     <asset id="a6" number="1" area="100" taxonomy="tax1" >
@@ -103,6 +108,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags NAME_1="RegionB" />
     </asset>
     
     <asset id="a7" number="1" area="100" taxonomy="tax1" >
@@ -118,6 +124,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags NAME_1="RegionB" />
     </asset>
     
   </assets>

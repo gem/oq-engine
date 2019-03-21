@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import ast
 import csv
 import copy
 import zlib
@@ -123,7 +124,15 @@ def _update(params, items, base_path):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
-            if value:
+            if value.startswith('{'):
+                dic = ast.literal_eval(value)  # name -> relpath
+                for name in dic:
+                    if name not in imt.registry:
+                        raise ValueError('%s is an unknown IMT' % name)
+                input_type, fnames = normalize(key, dic.values(), base_path)
+                params['inputs'][input_type] = fnames
+                params[input_type] = ' '.join(dic)
+            elif value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
         elif isinstance(value, str) and value.endswith('.hdf5'):
@@ -1061,7 +1070,7 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
-@deprecated('Use the .csv format for the hazard curves instead')
+@deprecated(msg='Use the .csv format for the hazard curves instead')
 def get_pmap_from_nrml(oqparam, fname):
     """
     :param oqparam:
@@ -1109,7 +1118,7 @@ def _extract_eids_sitecounts(gmfset):
     return eids, counter
 
 
-@deprecated('Use the .csv format for the GMFs instead')
+@deprecated(msg='Use the .csv format for the GMFs instead')
 def get_scenario_from_nrml(oqparam, fname):
     """
     :param oqparam:
@@ -1293,9 +1302,11 @@ def _checksum(fname, checksum):
         zpath = os.path.splitext(fname)[0] + '.zip'
         if not os.path.exists(zpath):
             raise OSError('No such file: %s or %s' % (fname, zpath))
-        data = open(zpath, 'rb').read()
+        with open(zpath, 'rb') as f:
+            data = f.read()
     else:
-        data = open(fname, 'rb').read()
+        with open(fname, 'rb') as f:
+            data = f.read()
     return zlib.adler32(data, checksum) & 0xffffffff
 
 

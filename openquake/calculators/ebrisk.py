@@ -16,10 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import time
+import logging
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
+from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.risklib.scientific import losses_by_period
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -158,7 +161,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
         elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shp))]
-        self.datastore.create_dset('losses_by_event', elt_dt)
+        if 'losses_by_event' not in self.datastore:
+            self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
         shp = self.get_shape(self.L, self.R)  # shape L, R, T...
         self.datastore.create_dset('agg_losses-rlzs', F32, shp)
@@ -169,7 +173,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
             maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
         parent = self.datastore.parent
-        if parent:
+        if parent and 'losses_by_event' in parent:
+            # just regenerate the loss curves
+            return {}
+        elif parent:
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             nruptures = len(parent['ruptures'])
@@ -216,8 +223,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eids = dic['alt_eids']
-                eidx = [self.eid2idx[eid] for eid in eids]
-                self.datastore['asset_loss_table'][:, eidx, :] = alt
+                eidx = numpy.array([self.eid2idx[eid] for eid in eids])
+                idx = numpy.argsort(eidx)
+                self.datastore['asset_loss_table'][:, eidx[idx]] = alt[:, idx]
         return acc + dic['times']
 
     def get_shape(self, *sizes):
@@ -233,12 +241,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
         loss_types = ' '.join(self.riskmodel.loss_types)
-        if oq.individual_curves or self.R == 1:
-            shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
-            self.datastore.create_dset('agg_curves-rlzs', F32, shp)
-            self.datastore.set_attrs(
-                'agg_curves-rlzs', return_periods=builder.return_periods,
-                loss_types=loss_types)
+        shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
+        self.datastore.create_dset('agg_curves-rlzs', F32, shp)
+        self.datastore.set_attrs(
+            'agg_curves-rlzs', return_periods=builder.return_periods,
+            loss_types=loss_types)
         if oq.conditional_loss_poes:
             shp = self.get_shape(C, self.R, self.L)  # shape C, R, L, T...
             self.datastore.create_dset('agg_maps-rlzs', F32, shp)
@@ -262,67 +269,82 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
-        self.datastore.set_attrs('task_info/start_ebrisk', times=times)
+        if len(times):
+            self.datastore.set_attrs('task_info/start_ebrisk', times=times)
         oq = self.oqparam
-        elt_length = len(self.datastore['losses_by_event'])
+        shp = self.get_shape(self.L)  # (L, T...)
+        text = ' x '.join(
+            '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
+        logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
-        mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
-        smap = parallel.Starmap(compute_loss_curves_maps, monitor=mon)
         self.datastore.close()
-        acc = []
-        ct = oq.concurrent_tasks or 1
-        for elt_slice in general.split_in_slices(elt_length, ct):
-            smap.submit(self.datastore.filename, elt_slice,
-                        oq.conditional_loss_poes, oq.individual_curves)
-        acc = smap.reduce(acc=[])
+        if 'losses_by_event' in self.datastore.parent:
+            dstore = self.datastore.parent
+        else:
+            dstore = self.datastore
+        allargs = [(dstore.filename, builder, rlzi) for rlzi in range(self.R)]
+        mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
+        acc = list(parallel.Starmap(compute_loss_curves_maps, allargs, mon))
         # copy performance information from the cache to the datastore
         pd = mon.hdf5['performance_data'].value
         hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
         self.datastore['task_info/compute_loss_curves_and_maps'] = (
             mon.hdf5['task_info/compute_loss_curves_maps'].value)
+        self.datastore.open('r+')
         with self.monitor('saving loss_curves and maps', autoflush=True):
-            for name, idx, arr in acc:
-                for ij, val in numpy.ndenumerate(arr):
-                    self.datastore[name][ij + idx] = val
+            for r, (curves, maps) in acc:
+                if len(curves):  # some realization can give zero contribution
+                    self.datastore['agg_curves-rlzs'][:, r] = curves
+                if len(maps):  # conditional_loss_poes can be empty
+                    self.datastore['agg_maps-rlzs'][:, r] = maps
+        if self.R > 1:
+            logging.info('Computing aggregate loss curves statistics')
+            set_rlzs_stats(self.datastore, 'agg_curves')
+            if oq.conditional_loss_poes:
+                logging.info('Computing aggregate loss maps statistics')
+                set_rlzs_stats(self.datastore, 'agg_maps')
+
+        # sanity check with the asset_loss_table
+        if oq.asset_loss_table and len(oq.aggregate_by) == 1:
+            alt = self.datastore['asset_loss_table'].value
+            if alt.sum() == 0:  # nothing was saved
+                return
+            logging.info('Checking the loss curves')
+            tags = getattr(self.assetcol.tagcol, oq.aggregate_by[0])[1:]
+            T = len(tags)
+            P = len(builder.return_periods)
+            # sanity check on the loss curves for simple tag aggregation
+            arr = self.assetcol.aggregate_by(oq.aggregate_by, alt)
+            # shape (T, E, L)
+            rlzs = self.datastore['events']['rlz']
+            curves = numpy.zeros((P, self.R, self.L, T))
+            for t in range(T):
+                for r in range(self.R):
+                    for l in range(self.L):
+                        curves[:, r, l, t] = losses_by_period(
+                            arr[t, rlzs == r, l],
+                            builder.return_periods,
+                            builder.num_events[r],
+                            builder.eff_time)
+            numpy.testing.assert_allclose(
+                curves, self.datastore['agg_curves-rlzs'].value)
 
 
-def compute_loss_curves_maps(filename, elt_slice, clp, individual_curves,
-                             monitor):
+# 1) parallelizing by events does not work, we need all the events
+# 2) parallelizing by multi_index slows down everything with warnings
+# kernel:NMI watchdog: BUG: soft lockup - CPU#26 stuck for 21s!
+# due to excessive reading, and then we run out of memory
+def compute_loss_curves_maps(filename, builder, rlzi, monitor):
     """
     :param filename: path to the datastore
-    :param elt_slice: slice of the event loss table
-    :param clp: conditional loss poes used to computed the maps
-    :param individual_curves: if True, build the individual curves and maps
-    :param monitor: a Monitor instance
-    :yields:
-        dictionaries with keys idx, agg_curves-rlzs, agg_curves-stats,
-        agg_maps-rlzs, agg_maps-stats
+    :param builder: LossCurvesMapsBuilder instance
+    :param rlzi: realization index
+    :param monitor: Monitor instance
+    :returns: rlzi, (curves, maps)
     """
     with datastore.read(filename) as dstore:
-        oq = dstore['oqparam']
-        stats = oq.hazard_stats().items()
-        builder = get_loss_builder(dstore)
-        R = len(dstore['weights'])
-        losses = [[] for _ in range(R)]
-        elt = dstore['losses_by_event'][elt_slice]
-        for rec in elt:
-            losses[rec['rlzi']].append(rec['loss'])
-    results = []
-    for multi_index, _ in numpy.ndenumerate(elt[0]['loss']):
-        result = {}
-        thelosses = [[ls[multi_index] for ls in loss] for loss in losses]
-        result['agg_curves-rlzs'], result['agg_curves-stats'] = (
-            builder.build_pair(thelosses, stats))
-        if R > 1 and individual_curves is False:
-            del result['agg_curves-rlzs']
-        if clp:
-            result['agg_maps-rlzs'], result['agg_maps-stats'] = (
-                builder.build_loss_maps(thelosses, clp, stats))
-            if R > 1 and individual_curves is False:
-                del result['agg_maps-rlzs']
-        for name, arr in result.items():
-            if arr is not None:
-                results.append((name, multi_index, arr))
-    return results
+        rlzs = dstore['losses_by_event']['rlzi']
+        losses = dstore['losses_by_event'][rlzs == rlzi]['loss']
+    return rlzi, builder.build_curves_maps(losses, rlzi)

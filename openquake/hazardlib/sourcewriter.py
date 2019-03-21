@@ -27,7 +27,7 @@ from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
 from openquake.hazardlib.source import NonParametricSeismicSource
-from openquake.hazardlib.tom import PoissonTOM, FatedTOM
+from openquake.hazardlib.tom import PoissonTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -608,7 +608,7 @@ def build_source_model(csm):
 # ##################### generic source model writer ####################### #
 
 def write_source_model(dest, sources_or_groups, name=None,
-        investigation_time=None):
+                       investigation_time=None):
     """
     Writes a source model to XML.
 

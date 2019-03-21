@@ -3,11 +3,11 @@ Classical Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     51,027,111         
-date           2019-02-18T08:37:37
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:05:14
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 1, num_levels = 3
+num_sites = 1, num_levels = 3, num_rlzs = 5
 
 Parameters
 ----------
@@ -103,7 +103,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00124 1.158E-04 0.00116 0.00132 2      
+read_source_models 0.00131 4.383E-06 0.00130 0.00131 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -118,5 +118,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00248  0.01953   2     
+total read_source_models 0.00261  0.00391   2     
 ======================== ======== ========= ======

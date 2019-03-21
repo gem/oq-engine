@@ -3,11 +3,11 @@ Classical PSHA for the southern Pacific Islands reduced
 
 ============== ===================
 checksum32     56,125,602         
-date           2019-02-18T08:37:37
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:05:14
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 5, num_levels = 20
+num_sites = 5, num_levels = 20, num_rlzs = 12
 
 Parameters
 ----------
@@ -133,7 +133,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.09344 0.12381 0.01335 0.23604 3      
+read_source_models 0.09443 0.12538 0.01322 0.23883 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -148,5 +148,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.28032  1.98047   3     
+total read_source_models 0.28330  1.96094   3     
 ======================== ======== ========= ======

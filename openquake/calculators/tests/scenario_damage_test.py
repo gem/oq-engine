@@ -23,7 +23,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8)
+    case_6, case_7, case_8, case_9)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -45,6 +45,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual)
 
     def test_case_1(self):
+        # test with a single event
         self.assert_ok(case_1, 'job_risk.ini')
         got = view('num_units', self.calc.datastore)
         self.assertEqual('''\
@@ -60,7 +61,7 @@ RM       4,000
         [dmg] = extract(self.calc.datastore, 'agg_damages/structural?'
                         'taxonomy=RC&CRESTA=01.1')
         numpy.testing.assert_almost_equal(
-            [998.6327515, 720.0072021, 281.3600769], dmg)
+            [1498.0121, 472.96616, 29.021801], dmg, decimal=4)
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages/structural?'
                       'taxonomy=RM&CRESTA=01.1')
@@ -148,3 +149,40 @@ RM       4,000
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/dmg_by_event.csv', fname)
+
+    def test_case_9(self):
+        # case with volcanic multiperil ASH, LAVA, LAHARS, PYRO
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/dmg_by_asset.csv', fname)
+        fnames = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)  # gmfs and sites, no sigma_epsilon
+
+        [fname] = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+
+        w = 'collapsed?kind=rlz-2&tag=name_1&tag=name_2'
+        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/lahars_by_name_12.csv', fname)
+
+        w = 'collapsed?kind=rlz-3&tag=name_1&tag=name_2'
+        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/pyro_by_name_12.csv', fname)
+
+    def test_case_9_bis(self):
+        # case with volcanic lava
+        self.run_calc(case_9.__file__, 'job.ini',
+                      multi_peril_csv="{'LAVA': 'lava_flow.csv'}")
+        w = 'collapsed?kind=rlz-0&tag=name_1&tag=name_2'
+        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/lava_by_name_12.csv', fname)
+
+        # check invalid key structura_fragility_file
+        with self.assertRaises(ValueError):
+            self.run_calc(case_9.__file__, 'job.ini',
+                          structura_fragility_file='fragility_model.xml')
+
+        # check invalid key structura_consequence_file
+        with self.assertRaises(ValueError):
+            self.run_calc(case_9.__file__, 'job.ini',
+                          structura_consequence_file='consequence_model.xml')

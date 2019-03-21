@@ -22,12 +22,12 @@ import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib import hdf5
-from openquake.baselib.general import group_array,  deprecated as depr
+from openquake.baselib.general import group_array,  deprecated
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_damage_array)
+    extract, build_damage_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
@@ -42,9 +42,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
-
-
-deprecated = depr('Use the csv exporter instead')
 
 
 def add_quotes(values):
@@ -110,6 +107,29 @@ def _get_data(dstore, dskey, stats):
         R = value.shape[1]
         tags = ['rlz-%03d' % r for r in range(R)]
     return name, value, tags
+
+
+# used by ebrisk
+@export.add(('agg_maps-rlzs', 'csv'), ('agg_maps-stats', 'csv'))
+def export_agg_maps_csv(ekey, dstore):
+    name, kind = ekey[0].split('-')
+    oq = dstore['oqparam']
+    tagcol = dstore['assetcol/tagcol']
+    agg_maps = dstore[ekey[0]].value  # shape (C, R, L, T...)
+    R = agg_maps.shape[1]
+    kinds = (['rlz-%03d' % r for r in range(R)] if ekey[0].endswith('-rlzs')
+             else ['mean'] + ['quantile-%s' % q for q in oq.quantiles])
+    clp = [str(p) for p in oq.conditional_loss_poes]
+    dic = dict(tagnames=['clp', 'kind', 'loss_type'] + oq.aggregate_by,
+               clp=['?'] + clp, kind=['?'] + kinds,
+               loss_type=('?',) + oq.loss_dt().names)
+    for tagname in oq.aggregate_by:
+        dic[tagname] = getattr(tagcol, tagname)
+    aw = hdf5.ArrayWrapper(agg_maps, dic)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer.save(aw.to_table(), fname)
+    return [fname]
 
 
 # this is used by event_based_risk and classical_risk
@@ -205,18 +225,34 @@ def export_losses_by_asset(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by scenario_risk
+# this is used by scenario_risk, event_based_risk and ebrisk
 @export.add(('losses_by_event', 'csv'))
 def export_losses_by_event(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    dtlist = [('eid', U64)] + dstore['oqparam'].loss_dt_list()
+    oq = dstore['oqparam']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
-    arr = dstore['losses_by_event'].value[['eid', 'loss']]
-    writer.save(arr.view(dtlist), dest)
+    if oq.calculation_mode.startswith('scenario'):
+        dtlist = [('eid', U64)] + oq.loss_dt_list()
+        arr = dstore['losses_by_event'].value[['eid', 'loss']]
+        writer.save(arr.copy().view(dtlist), dest)
+    else:
+        dtlist = [('event_id', U64), ('rup_id', U32), ('year', U32)] + \
+                 oq.loss_dt_list()
+        eids = dstore['losses_by_event']['eid']
+        year_of = year_dict(dstore['events']['eid'],
+                            oq.investigation_time, oq.ses_seed)
+        arr = numpy.zeros(len(dstore['losses_by_event']), dtlist)
+        arr['event_id'] = eids
+        arr['rup_id'] = arr['event_id'] / TWO32
+        arr['year'] = [year_of[eid] for eid in eids]
+        loss = dstore['losses_by_event']['loss'].T  # shape (L, E)
+        for losses, loss_type in zip(loss, oq.loss_dt().names):
+            arr[loss_type] = losses
+        writer.save(arr, dest)
     return writer.getsaved()
 
 
@@ -271,7 +307,7 @@ def year_dict(eids, investigation_time, ses_seed):
 
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
-@depr('This exporter will be removed soon')
+@deprecated(msg='This exporter will be removed soon')
 def export_agg_losses_ebr(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -323,7 +359,7 @@ def export_agg_losses_ebr(ekey, dstore):
         for lt, i in lti.items():
             rec[lt] = row['loss'][i]
     elt.sort(order=['year', 'event_id'])
-    dest = dstore.build_fname('agg_losses', 'all', 'csv')
+    dest = dstore.build_fname('elt', '', 'csv')
     writer.save(elt, dest)
     return writer.getsaved()
 
@@ -398,7 +434,8 @@ def export_damages_csv(ekey, dstore):
 
 @export.add(('dmg_by_asset', 'csv'))
 def export_dmg_by_asset_csv(ekey, dstore):
-    damage_dt = build_damage_dt(dstore)
+    E = len(dstore['events'])
+    damage_dt = build_damage_dt(dstore, mean_std=E > 1)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
@@ -548,8 +585,8 @@ def export_bcr_map(ekey, dstore):
     return writer.getsaved()
 
 
-@depr('This exporter will be removed soon')
-@export.add(('losses_by_tag', 'csv'), ('curves_by_tag', 'csv'))
+@export.add(('losses_by_tag', 'csv'))
+@deprecated(msg='This exporter will be removed soon')
 def export_by_tag_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -575,13 +612,11 @@ def export_aggregate_by_csv(ekey, dstore):
     :param dstore: datastore object
     """
     token, what = ekey[0].split('/', 1)
-    data = extract(dstore, token + '/' + what)
+    aw = extract(dstore, 'aggregate/' + what)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for stat, aw in data:
-        tup = (ekey[0].replace('/', '-').replace('-stats', ''), stat, ekey[1])
-        path = '%s-%s.%s' % tup
-        fname = dstore.export_path(path)
-        writer.save(aw.to_table(), fname)
-        fnames.append(fname)
+    path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
+    fname = dstore.export_path(path)
+    writer.save(aw.to_table(), fname)
+    fnames.append(fname)
     return fnames

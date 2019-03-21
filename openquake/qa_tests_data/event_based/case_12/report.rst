@@ -3,11 +3,11 @@ Event Based QA Test, Case 12
 
 ============== ===================
 checksum32     811,315,715        
-date           2019-02-18T08:36:36
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:04:17
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 1, num_levels = 3
+num_sites = 1, num_levels = 3, num_rlzs = ?
 
 Parameters
 ----------
@@ -60,23 +60,23 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00148 NaN       0.00148 0.00148 1      
-only_filter        0.00264 2.001E-04 0.00250 0.00278 2      
+read_source_models 0.00156 NaN       0.00156 0.00156 1      
+only_filter        0.00250 8.969E-05 0.00243 0.00256 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=313 B fnames=109 B            1.98 KB 
-only_filter        srcs=1.15 KB srcfilter=253 B dummy=14 B 2.48 KB 
-================== ======================================= ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=313 B fnames=109 B           1.98 KB 
+only_filter        srcs=2.3 KB srcfilter=506 B dummy=28 B 2.48 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00528  1.50391   2     
-total read_source_models 0.00148  0.0       1     
+total only_filter        0.00499  1.55078   2     
+total read_source_models 0.00156  0.06641   1     
 ======================== ======== ========= ======

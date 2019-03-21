@@ -32,8 +32,8 @@ class MutexRupturesTestCase(unittest.TestCase):
     def test(self):
         # mutually exclusive ruptures
         d = os.path.dirname(os.path.dirname(__file__))
-        source_model = os.path.join(
-            d, 'source_model/nonparametric-source-mutex-ruptures.xml')
+        tmps = 'nonparametric-source-mutex-ruptures.xml'
+        source_model = os.path.join(d, 'source_model', tmps)
         groups = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(143.5, 39.5), 800, z1pt0=100., z2pt5=1.)

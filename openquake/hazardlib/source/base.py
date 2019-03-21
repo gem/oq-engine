@@ -114,6 +114,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             ruptures = list(self.iter_ruptures())
         tom = getattr(self, 'temporal_occurrence_model', None)
         serials = numpy.arange(self.serial, self.serial + self.num_ruptures)
+
         if tom:  # time-independent source
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
             numpy.random.seed(self.serial)
@@ -133,6 +134,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 if num_occ:
                     rup.serial = serial  # used as seed
                     yield rup, num_occ
+
+    @abc.abstractmethod
+    def get_one_rupture(self, rupture_mutex=False):
+        """
+        Yields one random rupture from a source
+        """
 
     def __iter__(self):
         """
@@ -267,3 +274,24 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         and the source id.
         """
         return '<%s %s>' % (self.__class__.__name__, self.source_id)
+
+    def get_one_rupture(self, rupture_mutex=False):
+        """
+        Yields one random rupture from a source
+        """
+        # The Mutex case is admitted only for non-parametric ruptures
+        msg = 'Mutually exclusive ruptures are admitted only in case of'
+        msg += ' non-parametric sources'
+        assert (not rupture_mutex), msg
+        # Set random seed and get the number of ruptures
+        num_ruptures = self.count_ruptures()
+        numpy.random.seed(self.seed)
+        idx = numpy.random.choice(num_ruptures)
+        # NOTE Would be nice to have a method generating a rupture given two
+        # indexes, one for magnitude and one setting the position
+        for i, rup in enumerate(self.iter_ruptures()):
+            if i == idx:
+                if hasattr(self, 'serial'):
+                    rup.serial = self.serial
+                rup.idx = idx
+                return rup

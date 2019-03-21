@@ -3,11 +3,11 @@ classical risk
 
 ============== ===================
 checksum32     2,021,923,137      
-date           2019-02-18T08:35:20
-engine_version 3.4.0-git9883ae17a5
+date           2019-03-19T10:03:08
+engine_version 3.5.0-gitad6b69ea66
 ============== ===================
 
-num_sites = 7, num_levels = 40
+num_sites = 7, num_levels = 40, num_rlzs = 8
 
 Parameters
 ----------
@@ -121,10 +121,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          3.96014   0.00269    105       15        1,275  
-2      1         S    4     6     482          3.51837   0.00316    105       15        1,275  
-3      2         X    6     402   1            0.02781   4.292E-06  7.00000   1         2.64575
-1      2         S    2     4     4            0.01873   1.860E-05  7.00000   1         10     
+0      1         S    0     2     482          3.57940   0.00286    105       15        1,275  
+2      1         S    4     6     482          3.54574   0.00208    105       15        1,275  
+3      2         X    6     402   1            0.02757   4.053E-06  7.00000   1         2.64575
+1      2         S    2     4     4            0.01828   1.955E-05  7.00000   1         10     
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -132,8 +132,8 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    7.49723   3     
-X    0.02781   1     
+S    7.14342   3     
+X    0.02757   1     
 ==== ========= ======
 
 Duplicated sources
@@ -146,10 +146,10 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00785 0.00367 0.00525 0.01044 2      
-split_filter       0.02353 0.02686 0.00453 0.04252 2      
-classical          0.30312 0.08107 0.04817 0.46783 25     
-build_hazard_stats 0.01206 0.00195 0.01082 0.01579 7      
+read_source_models 0.00802 0.00388 0.00527 0.01076 2      
+split_filter       0.02310 0.02704 0.00398 0.04222 2      
+classical          0.28886 0.06635 0.04749 0.36490 25     
+build_hazard_stats 0.01099 0.00135 0.01032 0.01404 7      
 ================== ======= ======= ======= ======= =======
 
 Fastest task
@@ -165,23 +165,23 @@ weight   6.61438 5.61249 2.64575 10  2
 
 Slowest task
 ------------
-taskno=2, weight=132, duration=0 s, sources="1"
+taskno=10, weight=87, duration=0 s, sources="1"
 
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   7.00000 NaN    7   7   1
-weight   132     NaN    132 132 1
-======== ======= ====== === === =
+======== ======= ======= === === =
+variable mean    stddev  min max n
+======== ======= ======= === === =
+nsites   7.00000 0.0     7   7   2
+weight   43      5.61249 39  47  2
+======== ======= ======= === === =
 
 Data transfer
 -------------
 ================== ============================================================== =========
 task               sent                                                           received 
 read_source_models converter=626 B fnames=236 B                                   13.93 KB 
-split_filter       srcs=11.32 KB srcfilter=253 B seed=14 B                        19.47 KB 
+split_filter       srcs=12.82 KB srcfilter=506 B dummy=28 B                       19.47 KB 
 classical          group=42.13 KB param=23.85 KB gsims=6.63 KB src_filter=5.37 KB 641.92 KB
-build_hazard_stats pgetter=35.63 KB hstats=1.68 KB N=98 B individual_curves=91 B  16.88 KB 
+build_hazard_stats pgetter=35.83 KB hstats=1.63 KB N=98 B individual_curves=91 B  16.4 KB  
 ================== ============================================================== =========
 
 Slowest operations
@@ -189,23 +189,20 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total classical          7.57804  2.51953   25    
-make_contexts            3.09113  0.0       969   
-get_poes                 1.75821  0.0       969   
-total build_hazard_stats 0.08444  0.70312   7     
-combine pmaps            0.04818  0.70312   7     
-aggregate curves         0.04716  0.96094   25    
-total split_filter       0.04705  1.93359   2     
-building riskinputs      0.03052  0.03906   1     
-saving statistics        0.02227  0.0       7     
-total read_source_models 0.01570  0.17188   2     
-saving probability maps  0.01223  0.82812   1     
-compute quantile-0.85    0.00906  0.0       7     
-compute quantile-0.5     0.00890  0.0       7     
-store source model       0.00885  0.03125   2     
-compute quantile-0.15    0.00856  0.0       7     
-managing sources         0.00833  0.0       1     
-compute mean             0.00653  0.0       7     
-store source_info        0.00210  0.0       1     
-reading exposure         0.00158  0.01953   1     
+total classical          7.22160  2.64062   25    
+make_contexts            2.93076  0.0       969   
+get_poes                 1.65884  0.0       969   
+total build_hazard_stats 0.07695  0.63281   7     
+combine pmaps            0.04623  0.63281   7     
+total split_filter       0.04620  1.97656   2     
+aggregate curves         0.03849  0.90625   25    
+building riskinputs      0.03032  0.05469   1     
+compute stats            0.02897  0.0       7     
+saving statistics        0.01615  0.0       7     
+total read_source_models 0.01603  0.32812   2     
+saving probability maps  0.01255  0.96094   1     
+store source model       0.00779  0.02344   2     
+managing sources         0.00711  0.00781   1     
+store source_info        0.00193  0.0       1     
+reading exposure         0.00124  0.06250   1     
 ======================== ======== ========= ======

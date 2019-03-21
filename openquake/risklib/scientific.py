@@ -29,7 +29,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import CallableDict, group_array
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import utils
 
@@ -1026,7 +1026,7 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
     :param float probability: the probability value used to
                               interpolate the loss curve
     """
-
+    assert len(loss_ratios) >= 3, loss_ratios
     rpoes = poes[::-1]
     if probability > poes[0]:  # max poes
         return 0.0
@@ -1142,6 +1142,9 @@ def mean_std(fractions):
     Given an N x M matrix, returns mean and std computed on the rows,
     i.e. two M-dimensional vectors.
     """
+    n = fractions.shape[0]
+    if n == 1:  # avoid warnings when computing the stddev
+        return fractions[0], numpy.ones_like(fractions[0]) * numpy.nan
     return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)
 
 
@@ -1325,18 +1328,20 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     return curve
 
 
-class LossesByPeriodBuilder(object):
+class LossCurvesMapsBuilder(object):
     """
-    Build losses by period for all loss types at the same time.
+    Build losses curves and maps for all loss types at the same time.
 
+    :param conditional_loss_poes: a list of PoEs, possibly empty
     :param return_periods: ordered array of return periods
     :param loss_dt: composite dtype for the loss types
     :param weights: weights of the realizations
     :param num_events: number of events for each realization
     :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
-    def __init__(self, return_periods, loss_dt, weights, num_events, eff_time,
-                 risk_investigation_time):
+    def __init__(self, conditional_loss_poes, return_periods, loss_dt,
+                 weights, num_events, eff_time, risk_investigation_time):
+        self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
@@ -1355,11 +1360,11 @@ class LossesByPeriodBuilder(object):
             array_stats = None
         return array, array_stats
 
-    # used in postproc
+    # used in event_based_risk postproc
     def build(self, losses_by_event, stats=()):
         """
         :param losses_by_event:
-            the aggregate loss table as an array
+            the aggregate loss table with shape R -> (E, L)
         :param stats:
             list of pairs [(statname, statfunc), ...]
         :returns:
@@ -1368,10 +1373,9 @@ class LossesByPeriodBuilder(object):
         P, R = len(self.return_periods), len(self.weights)
         L = len(self.loss_dt.names)
         array = numpy.zeros((P, R, L), F32)
-        dic = group_array(losses_by_event, 'rlzi')
-        for r in dic:
+        for r in losses_by_event:
             num_events = self.num_events[r]
-            losses = dic[r]['loss']
+            losses = losses_by_event[r]
             for l, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, l].flatten()  # flatten only in ucerf
                 # NB: do not use squeeze or the gmf_ebrisk tests will break
@@ -1434,3 +1438,25 @@ class LossesByPeriodBuilder(object):
             for c, poe in enumerate(clp):
                 array[c, r] = conditional_loss_ratio(ls, self.poes, poe)
         return self.pair(array, stats)
+
+    # used in ebrisk
+    def build_curves_maps(self, loss_arrays, rlzi):
+        if len(loss_arrays) == 0:
+            return (), ()
+        shp = loss_arrays[0].shape  # (L, T...)
+        P = len(self.return_periods)
+        curves = numpy.zeros((P,) + shp, F32)
+        C = len(self.conditional_loss_poes)
+        maps = numpy.zeros((C,) + shp, F32)
+        num_events = self.num_events[rlzi]
+        acc = collections.defaultdict(list)
+        for loss_array in loss_arrays:
+            for idx, loss in numpy.ndenumerate(loss_array):
+                acc[idx].append(loss)
+        for idx, losses in acc.items():
+            curves[(slice(None),) + idx] = lbp = losses_by_period(
+                losses, self.return_periods, num_events, self.eff_time)
+            for p, poe in enumerate(self.conditional_loss_poes):
+                maps[(p,) + idx] = conditional_loss_ratio(
+                    lbp, self.poes, poe)
+        return curves, maps

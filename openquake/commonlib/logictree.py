@@ -34,7 +34,7 @@ import collections
 import operator
 from collections import namedtuple
 import numpy
-from openquake.baselib import hdf5, node
+from openquake.baselib import hdf5, node, python3compat
 from openquake.baselib.general import groupby, duplicated
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -484,7 +484,8 @@ class FakeSmlt(object):
         """
         :returns: the set of TRTs inside the source model file
         """
-        xml = open(self.filename, encoding='utf-8').read()
+        with open(self.filename, encoding='utf-8') as f:
+            xml = f.read()
         return set(TRT_REGEX.findall(xml))
 
     def __iter__(self):
@@ -633,7 +634,8 @@ class SourceModelLogicTree(object):
         n = 0
         for fnames in self.info.smpaths.values():
             for fname in fnames:
-                xml = open(fname, encoding='utf-8').read()
+                with open(fname, encoding='utf-8') as f:
+                    xml = f.read()
                 trts.update(TRT_REGEX.findall(xml))
                 n += 1
         logging.info('Read %d TRTs from %d model file(s)', len(trts), n)
@@ -1203,7 +1205,8 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        smodel = nrml.read(self._get_source_model(source_model)).sourceModel
+        with self._get_source_model(source_model) as sm:
+            smodel = nrml.read(sm).sourceModel
         n = len('Source')
         for sg in smodel:
             trt = sg['tectonicRegion']
@@ -1465,7 +1468,7 @@ class GsimLogicTree(object):
                             d[group] = dset.value
                             if group == 'Distances':
                                 d['distance_type'] = (
-                                    dset.attrs['metric'].decode('utf8'))
+                                    python3compat.decode(dset.attrs['metric']))
                         else:
                             d[group] = {k: ds.value for k, ds in dset.items()}
         return dic, {}
@@ -1579,6 +1582,7 @@ class GsimLogicTree(object):
                         raise ValueError(
                             "%s in file %s" % (exc, self.fname)) from exc
                     if 'GMPETable' in uncertainty:
+                        gsim.init()
                         self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %

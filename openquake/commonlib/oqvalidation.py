@@ -93,6 +93,7 @@ class OqParam(valid.ParamSet):
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
+    multi_peril = valid.Param(valid.namelist, [])
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -287,8 +288,8 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode == 'ebrisk':
             if self.insured_losses:
                 raise ValueError('ebrisk does not support insured losses')
-            elif self.number_of_logic_tree_samples == 0:
-                logging.warning('ebrisk is not meant for full enumeration')
+            # elif self.number_of_logic_tree_samples == 0:
+            #    logging.warning('ebrisk is not meant for full enumeration')
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and

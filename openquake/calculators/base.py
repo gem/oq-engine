@@ -18,6 +18,7 @@
 import os
 import sys
 import abc
+import csv
 import pdb
 import logging
 import operator
@@ -29,17 +30,17 @@ import numpy
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, geo, valid
 from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import (
     readinput, logictree, source, calc, writers, util)
-from openquake.baselib.parallel import Starmap
-from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -506,6 +507,47 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
 
+    def save_multi_peril(self):
+        """
+        Read the hazard fields as csv files, associate them to the sites
+        and create the `hazard` dataset.
+        """
+        oq = self.oqparam
+        fnames = oq.inputs['multi_peril']
+        dt = [(haz, float) for haz in oq.multi_peril]
+        N = len(self.sitecol)
+        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
+        nonzero = []
+        for name, fname in zip(oq.multi_peril, fnames):
+            data = []
+            with open(fname) as f:
+                for row in csv.DictReader(f):
+                    data.append((float(row['lon']), float(row['lat']),
+                                 valid.positivefloat(row['intensity'])))
+            data = numpy.array(data, [('lon', float), ('lat', float),
+                                      ('number', float)])
+            logging.info('Read %s with %d rows' % (fname, len(data)))
+            if len(data) != len(numpy.unique(data[['lon', 'lat']])):
+                raise InvalidFile('There are duplicated points in %s' % fname)
+            sites, filtdata, _discarded = geo.utils.assoc(
+                data, self.sitecol, oq.asset_hazard_distance, 'filter')
+            z = numpy.zeros(N, float)
+            z[sites.sids] = filtdata['number']
+            self.datastore['multi_peril'][name] = z
+            nonzero.append((z != 0).sum())
+        self.datastore.set_attrs(
+            'multi_peril', nbytes=z.nbytes, nonzero=nonzero)
+
+        # convert ASH into a GMF
+        if 'ASH' in oq.multi_peril:
+            # in the future, if the stddevs will become available, we will
+            # be able to generate a distribution of GMFs, as we do for the
+            # ShakeMaps; for the moment, we will consider a single event
+            oq.number_of_ground_motion_fields = E = 1
+            events = numpy.zeros(E, rupture.events_dt)
+            gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
+            save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
+
     def pre_execute(self):
         """
         Check if there is a previous calculation ID.
@@ -513,11 +555,15 @@ class HazardCalculator(BaseCalculator):
         if not, read the inputs directly.
         """
         oq = self.oqparam
-        if 'gmfs' in oq.inputs:  # read hazard from file
+        if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
+            # read hazard from files
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
             self.read_inputs()
-            save_gmfs(self)
+            if 'gmfs' in oq.inputs:
+                save_gmfs(self)
+            else:
+                self.save_multi_peril()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
