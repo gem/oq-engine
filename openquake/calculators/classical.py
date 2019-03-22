@@ -21,8 +21,9 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc, util
@@ -67,12 +68,33 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
+def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
+    """
+    Split the given sources, filter the subsources and the compute the
+    PoEs. Yield back subtasks if the split sources contain more than
+    maxweight ruptures.
+    """
+    sources = []
+    for src in srcs:
+        if src.num_ruptures >= params['maxweight']:
+            splits, stime = split_sources([src])
+            sources.extend(srcfilter.filter(splits))
+        elif list(srcfilter.filter([src])):
+            sources.append(src)
+    blocks = list(block_splitter(sources, params['maxweight'],
+                                 operator.attrgetter('num_ruptures')))
+    if blocks:
+        for block in blocks[1:]:
+            yield classical, block, srcfilter, gsims, params
+        yield classical(blocks[0], srcfilter, gsims, params, monitor)
+
+
 @base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = classical
+    core_task = classical_split_filter
     accept_precalc = ['psha']
 
     def agg_dicts(self, acc, dic):
@@ -125,7 +147,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.core_task.__func__, monitor=self.monitor())
             source_ids = []
             data = []
-            for i, sources in enumerate(self.send_sources(smap)):
+            for i, sources in enumerate(self._send_sources(smap)):
                 source_ids.append(get_src_ids(sources))
                 for src in sources:  # collect source data
                     data.append((i, src.nsites, src.num_ruptures, src.weight))
@@ -146,16 +168,18 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         return acc
 
-    def send_sources(self, smap):
-        """
-        Used in the case of large source model logic trees.
-        """
+    def _send_sources(self, smap):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
+        nrup = operator.attrgetter('num_ruptures')
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            pointsource_distance=oq.pointsource_distance)
+            pointsource_distance=oq.pointsource_distance,
+            maxweight=min(self.csm.get_maxweight(nrup, oq.concurrent_tasks),
+                          base.RUPTURES_PER_BLOCK))
+        logging.info('Max ruptures per task = %(maxweight)d', param)
+
         num_tasks = 0
         num_sources = 0
 
@@ -167,11 +191,12 @@ class ClassicalCalculator(base.HazardCalculator):
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
             if hasattr(sources, 'atomic') and sources.atomic:
-                smap.submit(sources, self.src_filter, gsims, param)
+                smap.submit(sources, self.src_filter, gsims, param,
+                            func=classical)
                 yield sources
                 num_tasks += 1
             else:  # regroup the sources in blocks
-                for block in self.block_splitter(sources):
+                for block in block_splitter(sources, param['maxweight'], nrup):
                     smap.submit(block, self.src_filter, gsims, param)
                     yield block
                     num_tasks += 1
