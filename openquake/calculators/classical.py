@@ -23,6 +23,7 @@ from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.contexts import FEWSITES
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc, util
@@ -65,6 +66,23 @@ def get_extreme_poe(array, imtls):
         the maximum PoE corresponding to the maximum level for IMTs and GSIMs
     """
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
+
+
+def classical_split_filter(srcs, srcfilter, seed, monitor):
+    """
+    Split the given source and filter the subsources by distance and by
+    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
+    Yields a pair (split_sources, split_time) if split_sources is non-empty.
+    """
+    splits, stime = split_sources(srcs)
+    if splits and seed:
+        # debugging tip to reduce the size of a calculation
+        splits = readinput.random_filtered_sources(splits, srcfilter, seed)
+        # NB: for performance, sample before splitting
+    if splits and srcfilter:
+        splits = list(srcfilter.filter(splits))
+    if splits:
+        yield splits, stime
 
 
 @base.calculators.add('classical')
