@@ -33,9 +33,9 @@ from openquake.baselib import (
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.baselib import parallel
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import InvalidFile, geo, valid
-from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
+from openquake.hazardlib.calc.filters import (
+    split_sources, RtreeFilter, SourceFilter)
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
@@ -118,7 +118,8 @@ def only_filter(srcs, srcfilter, seed, monitor):
     Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
     if there are filtered sources.
     """
-    if seed:
+    if seed:  # OQ_SAMPLE_SOURCES was set
+        splits, _stime = split_sources(srcs)
         srcs = readinput.random_filtered_sources(srcs, srcfilter, seed)
     srcs = list(srcfilter.filter(srcs))
     if srcs:
