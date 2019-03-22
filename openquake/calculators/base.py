@@ -610,7 +610,14 @@ class HazardCalculator(BaseCalculator):
             self.sitecol = calc.sitecol
             self.assetcol = calc.assetcol
             self.riskmodel = calc.riskmodel
-            self.rlzs_assoc = calc.rlzs_assoc
+            if hasattr(calc, 'rlzs_assoc'):
+                self.rlzs_assoc = calc.rlzs_assoc
+            else:
+                # this happens for instance for a scenario_damage without
+                # rupture, gmfs, multi_peril
+                raise InvalidFile(
+                    '%(job_ini)s: missing gmfs_csv, multi_peril_csv' %
+                    oq.inputs)
             if hasattr(calc, 'csm'):  # no scenario
                 self.csm = calc.csm
         else:
