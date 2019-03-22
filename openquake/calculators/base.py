@@ -126,7 +126,7 @@ def only_filter(srcs, srcfilter, seed, monitor):
         yield srcs, {src.id: 0 for src in srcs}
 
 
-def parallel_split_filter(csm, srcfilter, monitor):
+def parallel_filter(csm, srcfilter, monitor):
     """
     Apply :func:`only_filter` in parallel to the composite source model.
 
@@ -481,8 +481,7 @@ class HazardCalculator(BaseCalculator):
                 else:
                     # prefilter on the controller node with Rtree
                     srcfilter = self.rtree_filter
-                self.csm = parallel_split_filter(
-                    csm, srcfilter, self.monitor())
+                self.csm = parallel_filter(csm, srcfilter, self.monitor())
             else:
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
