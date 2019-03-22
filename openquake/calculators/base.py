@@ -33,9 +33,9 @@ from openquake.baselib import (
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.baselib import parallel
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import InvalidFile, geo, valid
-from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
+from openquake.hazardlib.calc.filters import (
+    split_sources, RtreeFilter, SourceFilter)
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
@@ -56,7 +56,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
-RUPTURES_PER_BLOCK = 10000  # used in split_filter
+RUPTURES_PER_BLOCK = 50000  # used in split_filter
 
 
 class InvalidCalculationID(Exception):
@@ -113,49 +113,31 @@ To avoid that, set a proper `region_grid_spacing` so that your exposure
 takes less sites.''' % MAXSITES
 
 
-def split_filter(srcs, srcfilter, seed, monitor):
-    """
-    Split the given source and filter the subsources by distance and by
-    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
-    Yields a pair (split_sources, split_time) if split_sources is non-empty.
-    """
-    splits, stime = split_sources(srcs)
-    if splits and seed:
-        # debugging tip to reduce the size of a calculation
-        splits = readinput.random_filtered_sources(splits, srcfilter, seed)
-        # NB: for performance, sample before splitting
-    if splits and srcfilter:
-        splits = list(srcfilter.filter(splits))
-    if splits:
-        yield splits, stime
-
-
-def only_filter(srcs, srcfilter, dummy, monitor):
+def only_filter(srcs, srcfilter, seed, monitor):
     """
     Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
     if there are filtered sources.
     """
+    if seed:  # OQ_SAMPLE_SOURCES was set
+        splits, _stime = split_sources(srcs)
+        srcs = readinput.random_filtered_sources(splits, srcfilter, seed)
     srcs = list(srcfilter.filter(srcs))
     if srcs:
         yield srcs, {src.id: 0 for src in srcs}
 
 
-def parallel_split_filter(csm, srcfilter, split, monitor):
+def parallel_filter(csm, srcfilter, monitor):
     """
-    Apply :func:`split_filter` in parallel to the composite source model.
+    Apply :func:`only_filter` in parallel to the composite source model.
 
     :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
     """
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    msg = 'Splitting/filtering' if split else 'Filtering'
-    logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
+    logging.info('Filtering sources with %s', srcfilter.__class__.__name__)
     trt_sources = csm.get_trt_sources(optimize_same_id=False)
     tot_sources = sum(len(sources) for trt, sources in trt_sources)
-    if split:
-        dist = None  # use the default distribution
-    else:  # use Rtree and the processpool
-        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-                else 'processpool')
+    # use Rtree and the processpool
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
@@ -170,8 +152,7 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
             for block in general.block_splitter(
                     sources, RUPTURES_PER_BLOCK,
                     operator.attrgetter('num_ruptures')):
-                smap.submit(block, srcfilter, seed,
-                            func=split_filter if split else only_filter)
+                smap.submit(block, srcfilter, seed, func=only_filter)
     for splits, stime in smap:
         for src in splits:
             i = src.id
@@ -493,7 +474,6 @@ class HazardCalculator(BaseCalculator):
                 oq, self.monitor(), srcfilter=self.src_filter)
             if (self.sitecol is not None and oq.prefilter_sources != 'no' and
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-                split = not oq.is_event_based()
                 dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
                 if dist == 'celery' or 'ucerf' in oq.calculation_mode:
                     # move the prefiltering on the workers
@@ -501,8 +481,7 @@ class HazardCalculator(BaseCalculator):
                 else:
                     # prefilter on the controller node with Rtree
                     srcfilter = self.rtree_filter
-                self.csm = parallel_split_filter(
-                    csm, srcfilter, split, self.monitor())
+                self.csm = parallel_filter(csm, srcfilter, self.monitor())
             else:
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
