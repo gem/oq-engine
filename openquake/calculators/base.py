@@ -120,7 +120,7 @@ def only_filter(srcs, srcfilter, seed, monitor):
     """
     if seed:  # OQ_SAMPLE_SOURCES was set
         splits, _stime = split_sources(srcs)
-        srcs = readinput.random_filtered_sources(srcs, srcfilter, seed)
+        srcs = readinput.random_filtered_sources(splits, srcfilter, seed)
     srcs = list(srcfilter.filter(srcs))
     if srcs:
         yield srcs, {src.id: 0 for src in srcs}
