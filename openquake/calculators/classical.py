@@ -76,12 +76,12 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     sources = []
     for src in srcs:
-        if src.num_ruptures >= base.RUPTURES_PER_BLOCK:
+        if src.num_ruptures >= params['maxweight']:
             splits, stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
         elif list(srcfilter.filter([src])):
             sources.append(src)
-    blocks = list(block_splitter(sources, base.RUPTURES_PER_BLOCK,
+    blocks = list(block_splitter(sources, params['maxweight'],
                                  operator.attrgetter('num_ruptures')))
     if blocks:
         for block in blocks[1:]:
@@ -171,10 +171,15 @@ class ClassicalCalculator(base.HazardCalculator):
     def _send_sources(self, smap):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
+        nrup = operator.attrgetter('num_ruptures')
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            pointsource_distance=oq.pointsource_distance)
+            pointsource_distance=oq.pointsource_distance,
+            maxweight=min(self.csm.get_maxweight(nrup, oq.concurrent_tasks),
+                          base.RUPTURES_PER_BLOCK))
+        logging.info('Max ruptures per task = %(maxweight)d', param)
+
         num_tasks = 0
         num_sources = 0
 
@@ -191,9 +196,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield sources
                 num_tasks += 1
             else:  # regroup the sources in blocks
-                for block in block_splitter(
-                        sources, base.RUPTURES_PER_BLOCK,
-                        operator.attrgetter('num_ruptures')):
+                for block in block_splitter(sources, param['maxweight'], nrup):
                     smap.submit(block, self.src_filter, gsims, param)
                     yield block
                     num_tasks += 1
