@@ -125,10 +125,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.core_task.__func__, monitor=self.monitor())
             source_ids = []
             data = []
-            for i, args in enumerate(self.gen_args()):
-                smap.submit(*args)
-                source_ids.append(get_src_ids(args[0]))
-                for src in args[0]:  # collect source data
+            for i, sources in enumerate(self.send_sources(smap)):
+                source_ids.append(get_src_ids(sources))
+                for src in sources:  # collect source data
                     data.append((i, src.nsites, src.num_ruptures, src.weight))
             self.datastore['task_sources'] = encode(source_ids)
             self.datastore.extend(
@@ -147,10 +146,9 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         return acc
 
-    def gen_args(self):
+    def send_sources(self, smap):
         """
         Used in the case of large source model logic trees.
-        :yields: (sources, sites, gsims) triples
         """
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
@@ -169,11 +167,13 @@ class ClassicalCalculator(base.HazardCalculator):
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
             if hasattr(sources, 'atomic') and sources.atomic:
-                yield sources, self.src_filter, gsims, param
+                smap.submit(sources, self.src_filter, gsims, param)
+                yield sources
                 num_tasks += 1
             else:  # regroup the sources in blocks
                 for block in self.block_splitter(sources):
-                    yield block, self.src_filter, gsims, param
+                    smap.submit(block, self.src_filter, gsims, param)
+                    yield block
                     num_tasks += 1
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
