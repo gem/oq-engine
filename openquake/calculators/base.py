@@ -56,7 +56,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
-RUPTURES_PER_BLOCK = 10000  # used in split_filter
+RUPTURES_PER_BLOCK = 50000  # used in split_filter
 
 
 class InvalidCalculationID(Exception):
@@ -140,22 +140,18 @@ def only_filter(srcs, srcfilter, dummy, monitor):
         yield srcs, {src.id: 0 for src in srcs}
 
 
-def parallel_split_filter(csm, srcfilter, split, monitor):
+def parallel_split_filter(csm, srcfilter, monitor):
     """
     Apply :func:`split_filter` in parallel to the composite source model.
 
     :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
     """
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    msg = 'Splitting/filtering' if split else 'Filtering'
-    logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
+    logging.info('Filtering sources with %s', srcfilter.__class__.__name__)
     trt_sources = csm.get_trt_sources(optimize_same_id=False)
     tot_sources = sum(len(sources) for trt, sources in trt_sources)
-    if split:
-        dist = None  # use the default distribution
-    else:  # use Rtree and the processpool
-        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-                else 'processpool')
+    # use Rtree and the processpool
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
@@ -492,7 +488,6 @@ class HazardCalculator(BaseCalculator):
                 oq, self.monitor(), srcfilter=self.src_filter)
             if (self.sitecol is not None and oq.prefilter_sources != 'no' and
                     oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-                split = not oq.is_event_based()
                 dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
                 if dist == 'celery' or 'ucerf' in oq.calculation_mode:
                     # move the prefiltering on the workers
@@ -501,7 +496,7 @@ class HazardCalculator(BaseCalculator):
                     # prefilter on the controller node with Rtree
                     srcfilter = self.rtree_filter
                 self.csm = parallel_split_filter(
-                    csm, srcfilter, split, self.monitor())
+                    csm, srcfilter, self.monitor())
             else:
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
