@@ -213,7 +213,7 @@ class ClassicalTestCase(CalculatorTestCase):
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-simple_fault.xml 0      Active Shallow Crust 447          447         
+simple_fault.xml 0      Active Shallow Crust 55           447         
 ================ ====== ==================== ============ ============""")
         # test classical
         self.assert_curves_ok([
