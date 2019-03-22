@@ -84,7 +84,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield classical(blocks[0], srcfilter, gsims, params, monitor)
     elif nb > 1:
         for block in blocks[1:]:
-            yield classical(block, srcfilter, gsims, params, monitor)
+            yield classical, block, srcfilter, gsims, params, monitor
 
 
 @base.calculators.add('classical')
