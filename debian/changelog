@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check for missing hazard in scenario_risk/scenario_damage
   * Improved the GsimLogicTree parser to get the line number information, a
     feature that was lost with the passage to Python 3.5
   * Added a check against mispellings in the loss type in the risk keys
