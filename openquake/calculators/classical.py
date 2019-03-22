@@ -34,7 +34,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-RUPTURES_PER_BLOCK = 10000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -77,7 +76,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     splits, stime = split_sources(srcs)
     splits = list(srcfilter.filter(splits))
-    blocks = list(block_splitter(splits, RUPTURES_PER_BLOCK / 10,
+    blocks = list(block_splitter(splits, base.RUPTURES_PER_BLOCK / 10,
                                  operator.attrgetter('num_ruptures')))
     if blocks:
         yield classical(blocks[0], srcfilter, gsims, params, monitor)
@@ -143,7 +142,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.core_task.__func__, monitor=self.monitor())
             source_ids = []
             data = []
-            for i, sources in enumerate(self.send_sources(smap)):
+            for i, sources in enumerate(self._send_sources(smap)):
                 source_ids.append(get_src_ids(sources))
                 for src in sources:  # collect source data
                     data.append((i, src.nsites, src.num_ruptures, src.weight))
@@ -164,10 +163,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         return acc
 
-    def send_sources(self, smap):
-        """
-        Used in the case of large source model logic trees.
-        """
+    def _send_sources(self, smap):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
         param = dict(
@@ -191,7 +187,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 num_tasks += 1
             else:  # regroup the sources in blocks
                 for block in block_splitter(
-                        sources, RUPTURES_PER_BLOCK,
+                        sources, base.RUPTURES_PER_BLOCK,
                         operator.attrgetter('num_ruptures')):
                     smap.submit(block, self.src_filter, gsims, param)
                     yield block
