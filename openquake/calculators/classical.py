@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
@@ -34,6 +34,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+RUPTURES_PER_BLOCK = 10000
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -68,21 +69,24 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical_split_filter(srcs, srcfilter, seed, monitor):
+def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     Split the given source and filter the subsources by distance and by
     magnitude. Perform sampling  if a nontrivial sample_factor is passed.
     Yields a pair (split_sources, split_time) if split_sources is non-empty.
     """
     splits, stime = split_sources(srcs)
-    if splits and seed:
-        # debugging tip to reduce the size of a calculation
-        splits = readinput.random_filtered_sources(splits, srcfilter, seed)
-        # NB: for performance, sample before splitting
-    if splits and srcfilter:
-        splits = list(srcfilter.filter(splits))
-    if splits:
-        yield splits, stime
+    splits = list(srcfilter.filter(splits))
+    blocks = list(block_splitter(splits, RUPTURES_PER_BLOCK / 10,
+                                 operator.attrgetter('num_ruptures')))
+    nb = len(blocks)
+    if nb == 0:
+        yield {}
+    elif nb == 1:
+        yield classical(blocks[0], srcfilter, gsims, params, monitor)
+    else:
+        for block in blocks[1:]:
+            yield classical(block, srcfilter, gsims, params, monitor)
 
 
 @base.calculators.add('classical')
@@ -90,7 +94,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = classical
+    core_task = classical_split_filter
     accept_precalc = ['psha']
 
     def agg_dicts(self, acc, dic):
@@ -189,7 +193,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield sources
                 num_tasks += 1
             else:  # regroup the sources in blocks
-                for block in self.block_splitter(sources):
+                for block in block_splitter(
+                        sources, RUPTURES_PER_BLOCK,
+                        operator.attrgetter('num_ruptures')):
                     smap.submit(block, self.src_filter, gsims, param)
                     yield block
                     num_tasks += 1
