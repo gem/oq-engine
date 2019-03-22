@@ -113,28 +113,13 @@ To avoid that, set a proper `region_grid_spacing` so that your exposure
 takes less sites.''' % MAXSITES
 
 
-def split_filter(srcs, srcfilter, seed, monitor):
-    """
-    Split the given source and filter the subsources by distance and by
-    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
-    Yields a pair (split_sources, split_time) if split_sources is non-empty.
-    """
-    splits, stime = split_sources(srcs)
-    if splits and seed:
-        # debugging tip to reduce the size of a calculation
-        splits = readinput.random_filtered_sources(splits, srcfilter, seed)
-        # NB: for performance, sample before splitting
-    if splits and srcfilter:
-        splits = list(srcfilter.filter(splits))
-    if splits:
-        yield splits, stime
-
-
-def only_filter(srcs, srcfilter, dummy, monitor):
+def only_filter(srcs, srcfilter, seed, monitor):
     """
     Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
     if there are filtered sources.
     """
+    if seed:
+        srcs = readinput.random_filtered_sources(srcs, srcfilter, seed)
     srcs = list(srcfilter.filter(srcs))
     if srcs:
         yield srcs, {src.id: 0 for src in srcs}
@@ -142,7 +127,7 @@ def only_filter(srcs, srcfilter, dummy, monitor):
 
 def parallel_split_filter(csm, srcfilter, monitor):
     """
-    Apply :func:`split_filter` in parallel to the composite source model.
+    Apply :func:`only_filter` in parallel to the composite source model.
 
     :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
     """
