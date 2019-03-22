@@ -74,9 +74,14 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     magnitude. Perform sampling  if a nontrivial sample_factor is passed.
     Yields a pair (split_sources, split_time) if split_sources is non-empty.
     """
-    splits, stime = split_sources(srcs)
-    splits = list(srcfilter.filter(splits))
-    blocks = list(block_splitter(splits, base.RUPTURES_PER_BLOCK,
+    sources = []
+    for src in srcs:
+        if src.num_ruptures >= base.RUPTURES_PER_BLOCK:
+            splits, stime = split_sources([src])
+            sources.extend(srcfilter.filter(splits))
+        elif list(srcfilter.filter([src])):
+            sources.append(src)
+    blocks = list(block_splitter(sources, base.RUPTURES_PER_BLOCK,
                                  operator.attrgetter('num_ruptures')))
     if blocks:
         for block in blocks[1:]:
