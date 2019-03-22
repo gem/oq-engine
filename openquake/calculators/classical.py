@@ -70,9 +70,9 @@ def get_extreme_poe(array, imtls):
 
 def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
-    Split the given source and filter the subsources by distance and by
-    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
-    Yields a pair (split_sources, split_time) if split_sources is non-empty.
+    Split the given sources, filter the subsources and the compute the
+    PoEs. Yield back subtasks if the split sources contain more than
+    maxweight ruptures.
     """
     sources = []
     for src in srcs:
