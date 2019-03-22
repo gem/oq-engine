@@ -79,10 +79,8 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     splits = list(srcfilter.filter(splits))
     blocks = list(block_splitter(splits, RUPTURES_PER_BLOCK / 10,
                                  operator.attrgetter('num_ruptures')))
-    nb = len(blocks)
-    if nb == 1:
+    if blocks:
         yield classical(blocks[0], srcfilter, gsims, params, monitor)
-    elif nb > 1:
         for block in blocks[1:]:
             yield classical, block, srcfilter, gsims, params
 
