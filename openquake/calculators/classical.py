@@ -185,7 +185,8 @@ class ClassicalCalculator(base.HazardCalculator):
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
             if hasattr(sources, 'atomic') and sources.atomic:
-                smap.submit(sources, self.src_filter, gsims, param)
+                smap.submit(sources, self.src_filter, gsims, param,
+                            func=classical)
                 yield sources
                 num_tasks += 1
             else:  # regroup the sources in blocks
