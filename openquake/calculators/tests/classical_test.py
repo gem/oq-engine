@@ -451,7 +451,8 @@ hazard_uhs-std.csv
     def test_case_31(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
-                               'hazard_curve-std-PGA.csv'], case_31.__file__)
+                               'hazard_curve-std-PGA.csv'], case_31.__file__,
+                              delta=1E-5)
 
     def test_case_32(self):
         # source specific logic tree
