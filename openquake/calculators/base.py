@@ -164,6 +164,7 @@ def parallel_filter(csm, srcfilter, monitor):
     elif monitor.hdf5:
         source_info[:, 'split_time'] = arr[:, 0]
         source_info[:, 'num_split'] = arr[:, 1]
+    parallel.Starmap.shutdown()
     return csm.new(srcs_by_grp)
 
 
