@@ -94,6 +94,7 @@ class OqParam(valid.ParamSet):
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
     multi_peril = valid.Param(valid.namelist, [])
+    humidity_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
