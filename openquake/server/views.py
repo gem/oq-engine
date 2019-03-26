@@ -278,7 +278,7 @@ def validate_nrml(request):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_info(request, calc_id):
+def calc(request, calc_id):
     """
     Get a JSON blob containing all of parameters for the given calculation
     (specified by ``calc_id``). Also includes the current job status (
@@ -408,7 +408,7 @@ def log_to_json(log):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def get_log_slice(request, calc_id, start, stop):
+def calc_log(request, calc_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows
     """
@@ -423,7 +423,7 @@ def get_log_slice(request, calc_id, start, stop):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def get_log_size(request, calc_id):
+def calc_log_size(request, calc_id):
     """
     Get the current number of lines in the log
     """
@@ -437,7 +437,7 @@ def get_log_size(request, calc_id):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def run_calc(request):
+def calc_run(request):
     """
     Run a calculation.
 
@@ -570,7 +570,7 @@ def calc_results(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def get_traceback(request, calc_id):
+def calc_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
     """
@@ -584,7 +584,7 @@ def get_traceback(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def get_result(request, result_id):
+def calc_result(request, result_id):
     """
     Download a specific result, by ``result_id``.
 
@@ -705,7 +705,7 @@ def extract(request, calc_id, what):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_datastore(request, job_id):
+def calc_datastore(request, job_id):
     """
     Download a full datastore file.
 
@@ -734,7 +734,7 @@ def get_datastore(request, job_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_oqparam(request, job_id):
+def calc_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """
