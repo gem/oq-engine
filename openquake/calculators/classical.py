@@ -75,14 +75,15 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     maxweight ruptures.
     """
     sources = []
-    for src in srcs:
-        if src.num_ruptures >= params['maxweight']:
-            splits, stime = split_sources([src])
-            sources.extend(srcfilter.filter(splits))
-        elif list(srcfilter.filter([src])):
-            sources.append(src)
-    blocks = list(block_splitter(sources, params['maxweight'],
-                                 operator.attrgetter('num_ruptures')))
+    with monitor('split_filter'):
+        for src in srcs:
+            if src.num_ruptures >= params['maxweight']:
+                splits, stime = split_sources([src])
+                sources.extend(srcfilter.filter(splits))
+            elif list(srcfilter.filter([src])):
+                sources.append(src)
+        blocks = list(block_splitter(sources, params['maxweight'],
+                                     operator.attrgetter('num_ruptures')))
     if blocks:
         for block in blocks[1:]:
             yield classical, block, srcfilter, gsims, params
