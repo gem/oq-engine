@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the column 'gsims' from the output 'realizations'
   * Better parallelized the source splitting in classical calculations
   * Added a check for missing hazard in scenario_risk/scenario_damage
   * Improved the GsimLogicTree parser to get the line number information, a
