@@ -197,7 +197,7 @@ def extract_realizations(dstore, dummy):
     arr = numpy.zeros(len(rlzs), dt)
     arr['ordinal'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
-    arr['gsims'] = rlzs['gsims']
+    arr['gsims'] = rlzs['branch_path']  # this is used in scenario by QGIS
     return arr
 
 
