@@ -165,7 +165,10 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
-    return numpy.array([a.value(loss_type, time_event) for a in assets])
+    if loss_type == 'occupants':
+        return assets['occupants_%s' % time_event]
+    else:
+        return assets['value-' + loss_type]
 
 
 class RiskModel(object):
@@ -348,7 +351,7 @@ class ProbabilisticEventBased(RiskModel):
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
-            epsilons = epsgetter(asset.ordinal, eids)
+            epsilons = epsgetter(asset['ordinal'], eids)
             loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
 
@@ -443,7 +446,7 @@ class Scenario(RiskModel):
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         gmvs, eids = gmvs_eids
-        epsilons = [epsgetter(asset.ordinal, eids) for asset in assets]
+        epsilons = [epsgetter(asset['ordinal'], eids) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -470,8 +473,8 @@ class Scenario(RiskModel):
         loss_matrix[:, :, 0] = (loss_ratio_matrix.T * values).T
 
         if self.insured_losses and loss_type != "occupants":
-            deductibles = [a.deductible(loss_type) for a in assets]
-            limits = [a.insurance_limit(loss_type) for a in assets]
+            deductibles = assets['deductible-' + loss_type]
+            limits = assets['insurance_limit-' + loss_type]
             insured_loss_ratio_matrix = utils.numpy_map(
                 scientific.insured_losses, loss_ratio_matrix,
                 deductibles, limits)
