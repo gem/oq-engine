@@ -658,12 +658,9 @@ def build_asset_array(assets_by_site, tagnames=()):
                 elif field in tagnames:
                     value = asset.tagidxs[tagi[field]]
                 else:
-                    try:
-                        name, lt = field.split('-')
-                    except ValueError:  # no - in field
-                        name, lt = 'value', field
-                    # the line below retrieve one of `deductibles` or
-                    # `insurance_limits` ("s" suffix)
+                    name, lt = field.split('-')
+                    # the line below retrieve `.values`, `.deductibles` or
+                    # `.insurance_limits` dictionaries
                     value = getattr(asset, name + 's')[lt]
                 record[field] = value
     return assetcol, ' '.join(occupancy_periods)
