@@ -425,7 +425,7 @@ class ClassicalBCR(RiskModel):
             scientific.bcr(
                 eal_original[i], eal_retrofitted[i],
                 self.interest_rate, self.asset_life_expectancy,
-                asset.value(loss_type), asset.retrofitted())
+                asset['value-' + loss_type], asset['retrofitted'])
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
@@ -545,7 +545,7 @@ class ClassicalDamage(Damage):
             ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
             risk_investigation_time=self.risk_investigation_time)
-        return [a.number * damage for a in assets]
+        return [a['number'] * damage for a in assets]
 
 
 # NB: the approach used here relies on the convention of having the
