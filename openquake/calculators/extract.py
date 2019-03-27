@@ -202,11 +202,23 @@ def extract_realizations(dstore, dummy):
     return arr
 
 
+@extract.add('tagcollection')
+def extract_tagcollection(dstore, what):
+    """
+    Extract the tag collection (/extract/tagcollection).
+    """
+    dic = {}
+    dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
+    dic.update(dic1)
+    dic.update(dic2)
+    return ArrayWrapper((), dic)
+
+
 @extract.add('assets')
 def extract_assets(dstore, what):
     """
-    Extract the full array of assets. Use it as /extract/assets?taxonomy=RC
-    to filter on the tagnames.
+    Extract an array of assets, optionally filtered by tag.
+    Use it as /extract/assets?taxonomy=RC&taxonomy=MSBC&occupancy=RES
     """
     qdict = parse(what)
     dic = {}
