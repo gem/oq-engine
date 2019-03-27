@@ -182,6 +182,16 @@ class Asset(object):
         self.calc = calc
         self._cost = {}  # cache for the costs
 
+    @property
+    def taxonomy(self):
+        return self.tagvalue('taxonomy')
+
+    def tagvalue(self, tagname):
+        """
+        :returns: the tagvalue associated to the given tagname
+        """
+        return self.tagidxs[self.calc.tagi[tagname]]
+
     def value(self, loss_type, time_event=None):
         """
         :returns: the total asset value for `loss_type`
@@ -195,17 +205,7 @@ class Asset(object):
             self._cost[loss_type] = val
         return val
 
-    @property
-    def taxonomy(self):
-        return self.tagvalue('taxonomy')
-
-    def tagvalue(self, tagname):
-        """
-        :returns: the tagvalue associated to the given tagname
-        """
-        return self.tagidxs[self.calc.tagi[tagname]]
-
-    def deductible(self, loss_type):
+    def deductible(self, loss_type, dummy=None):
         """
         :returns: the deductible fraction of the asset cost for `loss_type`
         """
@@ -216,7 +216,7 @@ class Asset(object):
         else:
             return val
 
-    def insurance_limit(self, loss_type):
+    def insurance_limit(self, loss_type, dummy=None):
         """
         :returns: the limit fraction of the asset cost for `loss_type`
         """
@@ -619,6 +619,9 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
             # discard occupants for different time periods
         else:
             loss_types.append('value-' + name)
+    # loss_types can be ['value-business_interruption', 'value-contents',
+    # 'value-nonstructural', 'occupants_None', 'occupants_day',
+    # 'occupants_night', 'occupants_transit']
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
     if deductible_d or limit_d:
@@ -664,12 +667,9 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                     value = asset.tagidxs[tagi[field]]
                 else:
                     name, lt = field.split('-')
-                    if name == 'insurance_limit':
-                        value = asset.insurance_limit(lt)
-                    elif name == 'deductible':
-                        value = asset.deductible(lt)
-                    else:
-                        value = asset.value(lt, time_event)
+                    # the line below retrieve `.values`, `.deductibles` or
+                    # `.insurance_limits` dictionaries
+                    value = asset.value(lt, time_event)
                 record[field] = value
     return assetcol, ' '.join(occupancy_periods)
 
