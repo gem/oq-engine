@@ -92,7 +92,7 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
-    insured_losses = valid.Param(valid.boolean, False)
+    # insured_losses = valid.Param(valid.boolean, False)
     multi_peril = valid.Param(valid.namelist, [])
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
@@ -286,8 +286,7 @@ class OqParam(valid.ParamSet):
 
         # checks for ebrisk
         if self.calculation_mode == 'ebrisk':
-            if self.insured_losses:
-                raise ValueError('ebrisk does not support insured losses')
+            pass
             # elif self.number_of_logic_tree_samples == 0:
             #    logging.warning('ebrisk is not meant for full enumeration')
 
@@ -486,9 +485,6 @@ class OqParam(valid.ParamSet):
         """
         loss_types = self.all_cost_types
         dts = [(str(lt), dtype) for lt in loss_types]
-        if self.insured_losses:
-            for lt in loss_types:
-                dts.append((str(lt) + '_ins', dtype))
         return dts
 
     def loss_maps_dt(self, dtype=F32):
