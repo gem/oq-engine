@@ -492,7 +492,10 @@ class AssetCollection(object):
         aval = numpy.zeros((len(self), len(self.loss_types)), F32)  # (A, L)
         for asset in self:
             for lti, lt in enumerate(self.loss_types):
-                aval[asset.ordinal, lti] = asset.value(lt)
+                if lt == 'occupants':
+                    aval[asset['ordinal'], lti] = asset[lt + '_None']
+                else:
+                    aval[asset['ordinal'], lti] = asset['value-' + lt]
         return self.aggregate_by(list(tagnames), aval)
 
     def reduce(self, sitecol):
@@ -535,7 +538,8 @@ class AssetCollection(object):
             yield self[i]
 
     def __getitem__(self, aid):
-        a = self.array[aid]
+        a = self.array[aid: aid + 1]
+        return a
         values = {lt: a['value-' + lt] for lt in self.loss_types
                   if lt != 'occupants'}
         for name in self.array.dtype.names:
@@ -628,7 +632,7 @@ def build_asset_array(assets_by_site, tagnames=()):
     int_fields = [(str(name), U16) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
-        [('lon', F32), ('lat', F32), ('site_id', U32),
+        [('ordinal', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
          ('number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
@@ -641,7 +645,9 @@ def build_asset_array(assets_by_site, tagnames=()):
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:
-                if field == 'number':
+                if field == 'ordinal':
+                    value = asset.ordinal
+                elif field == 'number':
                     value = asset.number
                 elif field == 'area':
                     value = asset.area
