@@ -530,8 +530,8 @@ def view_assets_by_site(token, dstore):
     data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
-        num_assets += {k: [len(v)] for k, v in groupby(
-            assets, operator.attrgetter('taxonomy')).items()}
+        num_assets += {k: [len(v)] for k, v in group_array(
+            assets, 'taxonomy').items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
         data.append(stats(taxonomies[taxo], val, val.sum()))
