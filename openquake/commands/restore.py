@@ -22,6 +22,7 @@ import time
 import os.path
 import zipfile
 import sqlite3
+import requests
 from openquake.baselib import sap
 from openquake.baselib.general import safeprint
 from openquake.server.dbapi import Db
@@ -32,13 +33,19 @@ def restore(archive, oqdata):
     """
     Build a new oqdata directory from the data contained in the zip archive
     """
+    if os.path.exists(oqdata):
+        sys.exit('%s exists already' % oqdata)
+    if '://' in archive:
+        # get the zip archive from an URL
+        resp = requests.get(archive)
+        _, archive = archive.rsplit('/', 1)
+        with open(archive, 'wb') as f:
+            f.write(resp.content)
     if not os.path.exists(archive):
         sys.exit('%s does not exist' % archive)
     t0 = time.time()
     oqdata = os.path.abspath(oqdata)
     assert archive.endswith('.zip'), archive
-    if os.path.exists(oqdata):
-        sys.exit('%s exists already' % oqdata)
     os.mkdir(oqdata)
     zipfile.ZipFile(archive).extractall(oqdata)
     dbpath = os.path.join(oqdata, 'db.sqlite3')
