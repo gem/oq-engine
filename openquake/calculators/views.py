@@ -613,8 +613,8 @@ def view_task_hazard(token, dstore):
     tasks = set(dstore['task_info'])
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    if 'classical' in tasks:
-        data = dstore['task_info/classical'].value
+    if 'classical_split_filter' in tasks:
+        data = dstore['task_info/classical_split_filter'].value
     else:
         data = dstore['task_info/compute_gmfs'].value
     data.sort(order='duration')
