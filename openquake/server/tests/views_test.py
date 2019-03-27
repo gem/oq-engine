@@ -159,6 +159,12 @@ class EngineServerTestCase(unittest.TestCase):
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['taxonomy']), 7)
 
+        # check assets
+        resp = self.c.get(extract_url + 'assets')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertEqual(len(got['array']), 95)
+
         # check avg_losses-rlzs
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
