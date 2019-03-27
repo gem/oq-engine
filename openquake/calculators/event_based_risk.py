@@ -23,7 +23,7 @@ from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.hazardlib.calc.stochastic import TWO32
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import riskinput, scientific, riskmodels
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -99,9 +99,10 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                     continue
                 loss_type = riskmodel.loss_types[l]
                 ins = param['insured_losses'] and loss_type != 'occupants'
+                avalues = riskmodels.get_values(loss_type, out.assets)
                 for a, asset in enumerate(out.assets):
-                    aval = asset.value(loss_type)
-                    aid = asset.ordinal
+                    aval = avalues[a]
+                    aid = asset['ordinal']
                     idx = aid2idx[aid]
                     ratios = loss_ratios[a]  # length E
 
@@ -114,8 +115,8 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
 
                     if ins:
                         iratios = scientific.insured_losses(
-                            ratios,  asset.deductible(loss_type),
-                            asset.insurance_limit(loss_type))
+                            ratios,  asset['deductible-' + loss_type],
+                            asset['insurance_limit-' + loss_type])
                         avg[idx, r, l + L] = (iratios.sum(axis=0) *
                                               param['ses_ratio'] * aval)
                         agglosses[:, l + L] += iratios * aval
