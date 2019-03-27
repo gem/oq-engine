@@ -42,7 +42,6 @@ F32 = numpy.float32
 rlz_dt = numpy.dtype([
     ('ordinal', U32),
     ('branch_path', hdf5.vstr),
-    ('gsims', hdf5.vstr),
     ('weight', F32)
 ])
 
@@ -61,13 +60,6 @@ src_group_dt = numpy.dtype(
      ('effrup', I32),
      ('totrup', I32),
      ('sm_id', U32)])
-
-
-def gsim_names(rlz):
-    """
-    Names of the underlying GSIMs separated by spaces
-    """
-    return ' '.join(v.__class__.__name__ for v in rlz.gsim_rlz.value)
 
 
 def capitalize(words):
@@ -275,9 +267,9 @@ class CompositionInfo(object):
     @property
     def rlzs(self):
         """
-        :returns: a list of realization tuples
+        :returns: an array of realizations
         """
-        tups = [(r.ordinal, r.uid, gsim_names(r), r.weight['weight'])
+        tups = [(r.ordinal, r.uid, r.weight['weight'])
                 for r in self.get_rlzs_assoc().realizations]
         return numpy.array(tups, rlz_dt)
 
