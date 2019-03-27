@@ -179,10 +179,9 @@ class RiskModel(object):
     compositemodel = None  # set by get_risk_model
     kind = None  # must be set in subclasses
 
-    def __init__(self, taxonomy, risk_functions, insured_losses):
+    def __init__(self, taxonomy, risk_functions):
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
-        self.insured_losses = insured_losses
 
     @property
     def loss_types(self):
@@ -247,8 +246,7 @@ class Classical(RiskModel):
 
     def __init__(self, taxonomy, vulnerability_functions,
                  hazard_imtls, lrem_steps_per_interval,
-                 conditional_loss_poes, poes_disagg,
-                 insured_losses=False):
+                 conditional_loss_poes, poes_disagg):
         """
         :param imt:
             Intensity Measure Type for this riskmodel
@@ -263,8 +261,6 @@ class Classical(RiskModel):
         :param poes_disagg:
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
-        :param bool insured_losses:
-            ignored since insured loss curves are not implemented
 
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
@@ -275,7 +271,6 @@ class Classical(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
-        self.insured_losses = insured_losses
         self.loss_ratios = {
             lt: vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval)
             for lt, vf in self.risk_functions.items()}
@@ -384,7 +379,6 @@ class ClassicalBCR(RiskModel):
                  interest_rate, asset_life_expectancy):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
-        self.insured_losses = False  # not implemented
         self.retro_functions = vulnerability_functions_retro
         self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
@@ -437,11 +431,9 @@ class Scenario(RiskModel):
     """
     kind = 'vulnerability'
 
-    def __init__(self, taxonomy, vulnerability_functions,
-                 insured_losses, time_event=None):
+    def __init__(self, taxonomy, vulnerability_functions, time_event=None):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
-        self.insured_losses = insured_losses
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
@@ -459,10 +451,9 @@ class Scenario(RiskModel):
             epsilons = epsilons[ok]
 
         E = len(epsilons[0])
-        I = self.insured_losses + 1
 
-        # a matrix of A x E x I elements
-        loss_matrix = numpy.empty((len(assets), E, I))
+        # a matrix of A x E elements
+        loss_matrix = numpy.empty((len(assets), E))
         loss_matrix.fill(numpy.nan)
 
         vf = self.risk_functions[loss_type]
@@ -470,16 +461,7 @@ class Scenario(RiskModel):
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         for i, eps in enumerate(epsilons):
             loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
-        loss_matrix[:, :, 0] = (loss_ratio_matrix.T * values).T
-
-        if self.insured_losses and loss_type != "occupants":
-            deductibles = assets['deductible-' + loss_type]
-            limits = assets['insurance_limit-' + loss_type]
-            insured_loss_ratio_matrix = utils.numpy_map(
-                scientific.insured_losses, loss_ratio_matrix,
-                deductibles, limits)
-            loss_matrix[:, :, 1] = (insured_loss_ratio_matrix.T * values).T
-
+        loss_matrix[:, :] = (loss_ratio_matrix.T * values).T
         return loss_matrix
 
 
@@ -493,7 +475,6 @@ class Damage(RiskModel):
     def __init__(self, taxonomy, fragility_functions):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
-        self.insured_losses = False  # not implemented
 
     def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
         """
@@ -524,7 +505,6 @@ class ClassicalDamage(Damage):
                  risk_investigation_time):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
-        self.insured_losses = False  # not implemented
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
