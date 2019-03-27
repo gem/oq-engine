@@ -667,8 +667,6 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                     value = asset.tagidxs[tagi[field]]
                 else:
                     name, lt = field.split('-')
-                    # the line below retrieve `.values`, `.deductibles` or
-                    # `.insurance_limits` dictionaries
                     value = asset.value(lt, time_event)
                 record[field] = value
     return assetcol, ' '.join(occupancy_periods)
