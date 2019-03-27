@@ -439,8 +439,8 @@ class AssetCollection(object):
         """
         aids_by_tag = general.AccumDict(accum=set())
         for aid, ass in enumerate(self):
-            for tagname, tagidx in zip(self.tagnames, ass.tagidxs):
-                tag = self.tagcol.get_tag(tagname, tagidx)
+            for tagname in self.tagnames:
+                tag = self.tagcol.get_tag(tagname, ass[tagname])
                 aids_by_tag[tag].add(aid)
         return aids_by_tag
 
@@ -538,8 +538,7 @@ class AssetCollection(object):
             yield self[i]
 
     def __getitem__(self, aid):
-        a = self.array[aid: aid + 1]
-        return a
+        return self.array[aid]
         values = {lt: a['value-' + lt] for lt in self.loss_types
                   if lt != 'occupants'}
         for name in self.array.dtype.names:
