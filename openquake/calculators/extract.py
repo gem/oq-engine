@@ -94,7 +94,7 @@ def _normalize(kinds, info):
     return a, b, rlzs
 
 
-def parse(query_string, info):
+def parse(query_string, info={}):
     """
     :returns: a normalized query_dict as in the following examples:
 
@@ -114,7 +114,8 @@ def parse(query_string, info):
             qdic[key] = [loss_types[k] for k in val]
         else:
             qdic[key] = [lit_eval(v) for v in val]
-    qdic['k'], qdic['kind'], qdic['rlzs'] = _normalize(qdic['kind'], info)
+    if info:
+        qdic['k'], qdic['kind'], qdic['rlzs'] = _normalize(qdic['kind'], info)
     return qdic
 
 
@@ -202,15 +203,24 @@ def extract_realizations(dstore, dummy):
 
 
 @extract.add('assets')
-def extract_assets(dstore, dummy):
+def extract_assets(dstore, what):
     """
-    Extract the full array of assets. Use it as /extract/assets
+    Extract the full array of assets. Use it as /extract/assets?taxonomy=RC
+    to filter on the tagnames.
     """
+    qdict = parse(what)
     dic = {}
     dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
     dic.update(dic1)
     dic.update(dic2)
-    return ArrayWrapper(dstore['assetcol/array'].value, dic)
+    arr = dstore['assetcol/array'].value
+    for tag, vals in qdict.items():
+        cond = numpy.zeros(len(arr), bool)
+        for val in vals:
+            tagidx, = numpy.where(dic[tag] == val)
+            cond |= arr[tag] == tagidx
+        arr = arr[cond]
+    return ArrayWrapper(arr, dic)
 
 
 @extract.add('asset_values', cache=True)
