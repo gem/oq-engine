@@ -972,7 +972,7 @@ class RiskCalculator(HazardCalculator):
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
                 # dictionary of epsilons for the reduced assets
-                reduced_eps = {ass.ordinal: eps[ass.ordinal]
+                reduced_eps = {ass['ordinal']: eps[ass['ordinal']]
                                for ass in block
                                if eps is not None and len(eps)}
                 yield riskinput.RiskInput(getter, [block], reduced_eps)
