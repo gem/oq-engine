@@ -182,6 +182,16 @@ class Asset(object):
         self.calc = calc
         self._cost = {}  # cache for the costs
 
+    @property
+    def taxonomy(self):
+        return self.tagvalue('taxonomy')
+
+    def tagvalue(self, tagname):
+        """
+        :returns: the tagvalue associated to the given tagname
+        """
+        return self.tagidxs[self.calc.tagi[tagname]]
+
     def value(self, loss_type, time_event=None):
         """
         :returns: the total asset value for `loss_type`
@@ -195,17 +205,7 @@ class Asset(object):
             self._cost[loss_type] = val
         return val
 
-    @property
-    def taxonomy(self):
-        return self.tagvalue('taxonomy')
-
-    def tagvalue(self, tagname):
-        """
-        :returns: the tagvalue associated to the given tagname
-        """
-        return self.tagidxs[self.calc.tagi[tagname]]
-
-    def deductible(self, loss_type):
+    def deductible(self, loss_type, dummy=None):
         """
         :returns: the deductible fraction of the asset cost for `loss_type`
         """
@@ -216,7 +216,7 @@ class Asset(object):
         else:
             return val
 
-    def insurance_limit(self, loss_type):
+    def insurance_limit(self, loss_type, dummy=None):
         """
         :returns: the limit fraction of the asset cost for `loss_type`
         """
@@ -399,7 +399,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
-            assets_by_site, exposure.tagcol.tagnames)
+            assets_by_site, exposure.tagcol.tagnames, time_event)
         periods = exposure.occupancy_periods
         if self.occupancy_periods and not periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
@@ -592,7 +592,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(assets_by_site, tagnames=()):
+def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     """
     :param assets_by_site: a list of lists of assets
     :param tagnames: a list of tag names
@@ -616,6 +616,9 @@ def build_asset_array(assets_by_site, tagnames=()):
             # discard occupants for different time periods
         else:
             loss_types.append('value-' + name)
+    # loss_types can be ['value-business_interruption', 'value-contents',
+    # 'value-nonstructural', 'occupants_None', 'occupants_day',
+    # 'occupants_night', 'occupants_transit']
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
     if deductible_d or limit_d:
