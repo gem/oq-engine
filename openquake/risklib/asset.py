@@ -399,7 +399,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
-            assets_by_site, exposure.tagcol.tagnames)
+            assets_by_site, exposure.tagcol.tagnames, time_event)
         periods = exposure.occupancy_periods
         if self.occupancy_periods and not periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
@@ -592,7 +592,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(assets_by_site, tagnames=()):
+def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     """
     :param assets_by_site: a list of lists of assets
     :param tagnames: a list of tag names
