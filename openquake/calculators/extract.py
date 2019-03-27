@@ -201,6 +201,18 @@ def extract_realizations(dstore, dummy):
     return arr
 
 
+@extract.add('assets')
+def extract_assets(dstore, dummy):
+    """
+    Extract the full array of assets. Use it as /extract/assets
+    """
+    dic = {}
+    dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
+    dic.update(dic1)
+    dic.update(dic2)
+    return ArrayWrapper(dstore['assetcol/array'].value, dic)
+
+
 @extract.add('asset_values', cache=True)
 def extract_asset_values(dstore, sid):
     """
