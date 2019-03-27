@@ -35,7 +35,6 @@ class ValidationError(Exception):
 
 U32 = numpy.uint32
 F32 = numpy.float32
-by_taxonomy = operator.itemgetter('taxonomy')
 
 
 def read_composite_risk_model(dstore):
@@ -271,7 +270,7 @@ class CompositeRiskModel(collections.Mapping):
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
         for sid, assets in zip(sids, riskinput.assets_by_site):
-            group = groupby(assets, by_taxonomy)
+            group = group_array(assets, 'taxonomy')
             for taxonomy in group:
                 dic[taxonomy].append(
                     (sid, group[taxonomy], riskinput.epsilon_getter))
@@ -370,8 +369,8 @@ class RiskInput(object):
         aids = []
         for assets in self.assets_by_site:
             for asset in assets:
-                taxonomies_set.add(asset.taxonomy)
-                aids.append(asset.ordinal)
+                taxonomies_set.add(asset['taxonomy'])
+                aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.by_site = hazard_getter.__class__.__name__ != 'GmfGetter'
@@ -486,25 +485,25 @@ def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
 
 
 # used in scenario_risk
-def make_eps(assetcol, num_samples, seed, correlation):
+def make_eps(asset_array, num_samples, seed, correlation):
     """
-    :param assetcol: an AssetCollection instance
+    :param asset_array: an array of assets
     :param int num_samples: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
     :returns: epsilons matrix of shape (num_assets, num_samples)
     """
-    assets_by_taxo = groupby(assetcol, by_taxonomy)
-    eps = numpy.zeros((len(assetcol), num_samples), numpy.float32)
+    assets_by_taxo = group_array(asset_array, 'taxonomy')
+    eps = numpy.zeros((len(asset_array), num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
-        assets.sort(key=operator.attrgetter('ordinal'))
+        #assets.sort(key=operator.itemgetter('ordinal'))
         shape = (len(assets), num_samples)
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)
         epsilons = scientific.make_epsilons(zeros, seed, correlation)
         for asset, epsrow in zip(assets, epsilons):
-            eps[asset.ordinal] = epsrow
+            eps[asset['ordinal']] = epsrow
     return eps
 
 
