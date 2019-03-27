@@ -35,7 +35,7 @@ class ValidationError(Exception):
 
 U32 = numpy.uint32
 F32 = numpy.float32
-by_taxonomy = operator.attrgetter('taxonomy')
+by_taxonomy = operator.itemgetter('taxonomy')
 
 
 def read_composite_risk_model(dstore):
