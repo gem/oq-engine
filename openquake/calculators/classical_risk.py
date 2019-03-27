@@ -95,9 +95,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         Associate the assets to the sites and build the riskinputs.
         """
         oq = self.oqparam
-        if oq.insured_losses:
-            raise ValueError(
-                'insured_losses are not supported for classical_risk')
         super().pre_execute()
         if 'poes' not in self.datastore:  # when building short report
             return
@@ -107,7 +104,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
-        self.I = oq.insured_losses + 1
         self.S = len(oq.hazard_stats())
 
     def post_execute(self, result):
@@ -120,13 +116,13 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                      for cp in self.riskmodel.curve_params
                      if cp.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
-            curve_res, self.oqparam.insured_losses)
+            curve_res, insured_losses=False)
         ltypes = self.riskmodel.loss_types
 
         # loss curves stats are generated always
         stats = encode(list(self.oqparam.hazard_stats()))
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
-        avg_losses = numpy.zeros((self.A, self.S, self.L * self.I), F32)
+        avg_losses = numpy.zeros((self.A, self.S, self.L), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:
             stat_curves_lt = stat_curves[ltypes[l]]
             for s in range(self.S):
@@ -140,7 +136,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         if self.R > 1:  # individual realizations saved only if many
             loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
-            avg_losses = numpy.zeros((self.A, self.R, self.L * self.I), F32)
+            avg_losses = numpy.zeros((self.A, self.R, self.L), F32)
             for l, r, a, (losses, poes, avg) in result['loss_curves']:
                 lc = loss_curves[a, r][ltypes[l]]
                 avg_losses[a, r, l] = avg
