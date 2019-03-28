@@ -529,6 +529,7 @@ class AssetCollection(object):
         vars(new).update(vars(self))
         new.tot_sites = len(sitecol)
         new.array = numpy.concatenate(array)
+        new.array['ordinal'] = numpy.arange(len(new.array))
         new.asset_refs = numpy.concatenate(asset_refs)
         sitecol.make_complete()
         return new
@@ -539,23 +540,6 @@ class AssetCollection(object):
 
     def __getitem__(self, aid):
         return self.array[aid]
-        values = {lt: a['value-' + lt] for lt in self.loss_types
-                  if lt != 'occupants'}
-        for name in self.array.dtype.names:
-            if name.startswith('occupants_'):
-                values[name] = a[name]
-        return Asset(
-            aid,
-            [a[decode(name)] for name in self.tagnames],
-            number=a['number'],
-            location=(valid.longitude(a['lon']),  # round coordinates
-                      valid.latitude(a['lat'])),
-            values=values,
-            area=a['area'],
-            deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
-            insurance_limits={lt[self.I:]: a[lt] for lt in self.i_lim},
-            retrofitted=a['retrofitted'] if self.retro else None,
-            calc=self.cost_calculator)
 
     def __len__(self):
         return len(self.array)
@@ -1027,7 +1011,7 @@ class Exposure(object):
                     # retrofitted is defined only for structural
                     retrofitted = cost.get('retrofitted')
                 if cost_type in param['relevant_cost_types']:
-                    values[cost_type] = cost['value']
+                    values[cost_type] = float(cost['value'])
                     try:
                         deductibles[cost_type] = cost['deductible']
                     except KeyError:
