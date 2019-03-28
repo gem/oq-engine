@@ -93,7 +93,7 @@ class OqParam(valid.ParamSet):
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
     # insured_losses = valid.Param(valid.boolean, False)
-    multi_peril = valid.Param(valid.namelist, [])
+    multi_risk = valid.Param(valid.namelist, [])
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
