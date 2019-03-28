@@ -249,6 +249,23 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
+    # used in multi_risk
+    def get_damage(self, assets_by_site, gmf):
+        """
+        :returns: an array of shape (A, L, 1, D)
+        """
+        A = sum(len(assets) for assets in assets_by_site)
+        L = len(self.loss_types)
+        D = len(self.damage_states)
+        out = numpy.zeros((A, L, 1, D), F32)
+        for assets, gmv in zip(assets_by_site, gmf):
+            group = group_array(assets, 'taxonomy')
+            for taxonomy, assets in group.items():
+                for l, loss_type in enumerate(self.loss_types):
+                    damages = self[taxonomy](loss_type, assets, ([gmv], None))
+                    out[assets['ordinal'], l] = damages  # shape (1, D)
+        return out
+
     def gen_outputs(self, riskinput, monitor, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
