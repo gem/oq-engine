@@ -612,10 +612,8 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     if deductible_d or limit_d:
         logging.warning('Exposures with insuranceLimit/deductible fields are '
                         'deprecated and may be removed in the future')
-    deductibles = ['deductible-%s' % name for name in deductible_d]
-    limits = ['insurance_limit-%s' % name for name in limit_d]
     retro = ['retrofitted'] if first_asset._retrofitted else []
-    float_fields = loss_types + deductibles + limits + retro
+    float_fields = loss_types + retro
     int_fields = [(str(name), U16) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
