@@ -646,7 +646,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                 elif field.startswith('occupants_'):
                     value = asset.values[field]
                 elif field == 'retrofitted':
-                    value = asset._retrofitted
+                    value = asset.retrofitted()
                 elif field in tagnames:
                     value = asset.tagidxs[tagi[field]]
                 else:
@@ -1009,7 +1009,7 @@ class Exposure(object):
                 cost_type = cost['type']
                 if cost_type == 'structural':
                     # retrofitted is defined only for structural
-                    retrofitted = cost.get('retrofitted')
+                    retrofitted = float(cost.get('retrofitted'))
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = float(cost['value'])
                     try:
