@@ -74,7 +74,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 19281.387, decimal=2)
+        aae(totloss, 15283.561, decimal=2)
 
     def test_case_4(self):
         # a simple test with 1 asset and two source models

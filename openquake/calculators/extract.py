@@ -258,9 +258,9 @@ def extract_asset_values(dstore, sid):
         vals = numpy.zeros(len(assets), dt)
         for a, asset in enumerate(assets):
             vals[a]['aref'] = asset_refs[a]
-            vals[a]['aid'] = asset.ordinal
+            vals[a]['aid'] = asset['ordinal']
             for lt in lts:
-                vals[a][lt] = asset.value(lt, time_event)
+                vals[a][lt] = asset['value-' + lt]
         data.append(vals)
     return data
 
