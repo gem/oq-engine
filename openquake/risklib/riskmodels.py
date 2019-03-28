@@ -165,7 +165,10 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
-    return numpy.array([a.value(loss_type, time_event) for a in assets])
+    if loss_type == 'occupants':
+        return assets['occupants_%s' % time_event]
+    else:
+        return assets['value-' + loss_type]
 
 
 class RiskModel(object):
@@ -343,7 +346,7 @@ class ProbabilisticEventBased(RiskModel):
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
-            epsilons = epsgetter(asset.ordinal, eids)
+            epsilons = epsgetter(asset['ordinal'], eids)
             loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
 
@@ -416,7 +419,7 @@ class ClassicalBCR(RiskModel):
             scientific.bcr(
                 eal_original[i], eal_retrofitted[i],
                 self.interest_rate, self.asset_life_expectancy,
-                asset.value(loss_type), asset.retrofitted())
+                asset['value-' + loss_type], asset['retrofitted'])
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
@@ -435,7 +438,7 @@ class Scenario(RiskModel):
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         gmvs, eids = gmvs_eids
-        epsilons = [epsgetter(asset.ordinal, eids) for asset in assets]
+        epsilons = [epsgetter(asset['ordinal'], eids) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -522,7 +525,7 @@ class ClassicalDamage(Damage):
             ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
             risk_investigation_time=self.risk_investigation_time)
-        return [a.number * damage for a in assets]
+        return [a['number'] * damage for a in assets]
 
 
 # NB: the approach used here relies on the convention of having the
