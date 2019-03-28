@@ -437,6 +437,9 @@ class Scenario(RiskModel):
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
+        """
+        :returns: an array of shape (A, E)
+        """
         gmvs, eids = gmvs_eids
         epsilons = [epsgetter(asset['ordinal'], eids) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
