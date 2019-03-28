@@ -48,7 +48,7 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
             for l, loss_curves in enumerate(outputs):
                 # loss_curves has shape (C, N, 2)
                 for i, asset in enumerate(outputs.assets):
-                    aid = asset.ordinal
+                    aid = asset['ordinal']
                     avg = scientific.average_loss(loss_curves[:, i].T)
                     outputs.average_losses[l].append(avg)
                     lcurve = (loss_curves[:, i, 0], loss_curves[:, i, 1], avg)
@@ -60,7 +60,7 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
         statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
         for outs in groupby(
-            all_outputs, lambda o: tuple(a.ordinal for a in o.assets)
+            all_outputs, lambda o: tuple(o.assets['ordinal'])
         ).values():
             weights = [w[out.rlzi]['default'] for out in outs]
             out = outs[0]
@@ -76,7 +76,7 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
                         numpy.array([out[l][:, i, 1] for out in outs]),
                         stats, weights)
                     result['stat_curves'].append(
-                        (l, asset.ordinal, losses, poes_stats, avg_stats))
+                        (l, asset['ordinal'], losses, poes_stats, avg_stats))
     if R == 1:  # the realization is the same as the mean
         del result['loss_curves']
     return result
