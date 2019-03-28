@@ -508,6 +508,7 @@ class AssetCollection(object):
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.array = self.array[ok_indices]
+        new.array['ordinal'] = numpy.arange(len(new.array))
         new.asset_refs = self.asset_refs[ok_indices]
         return new
 
@@ -1009,7 +1010,7 @@ class Exposure(object):
                 cost_type = cost['type']
                 if cost_type == 'structural':
                     # retrofitted is defined only for structural
-                    retrofitted = float(cost.get('retrofitted'))
+                    retrofitted = float(cost.get('retrofitted', 0))
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = float(cost['value'])
                     try:
