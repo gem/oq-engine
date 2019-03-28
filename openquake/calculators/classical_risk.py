@@ -59,12 +59,13 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
         w = param['weights']
         statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
-        for assets, outs in groupby(
-                all_outputs, lambda o: tuple(o.assets)).items():
+        for outs in groupby(
+            all_outputs, lambda o: tuple(a.ordinal for a in o.assets)
+        ).values():
             weights = [w[out.rlzi]['default'] for out in outs]
             out = outs[0]
             for l in l_idxs:
-                for i, asset in enumerate(assets):
+                for i, asset in enumerate(out.assets):
                     avgs = numpy.array([r.average_losses[l][i] for r in outs])
                     avg_stats = compute_stats(avgs, stats, weights)
                     # is a pair loss_curves, insured_loss_curves
