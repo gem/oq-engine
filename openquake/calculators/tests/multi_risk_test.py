@@ -33,8 +33,8 @@ class MultiRiskTestCase(CalculatorTestCase):
         fnames = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # gmfs and sites, no sigma_epsilon
 
-        [fname] = export(('losses_by_asset', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+        #[fname] = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        #self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
         w = 'collapsed?kind=rlz-2&tag=name_1&tag=name_2'
         [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
