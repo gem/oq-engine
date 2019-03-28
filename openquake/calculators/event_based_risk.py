@@ -23,7 +23,7 @@ from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.hazardlib.calc.stochastic import TWO32
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import riskinput, scientific, riskmodels
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -97,9 +97,10 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
                 loss_type = riskmodel.loss_types[l]
+                avalues = riskmodels.get_values(loss_type, out.assets)
                 for a, asset in enumerate(out.assets):
-                    aval = asset.value(loss_type)
-                    aid = asset.ordinal
+                    aval = avalues[a]
+                    aid = asset['ordinal']
                     idx = aid2idx[aid]
                     ratios = loss_ratios[a]  # length E
 

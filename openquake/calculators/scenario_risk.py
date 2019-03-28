@@ -74,11 +74,11 @@ def scenario_risk(riskinputs, riskmodel, param, monitor):
                 for a, asset in enumerate(assets):
                     stats['mean'][a] = losses[a].mean()
                     stats['stddev'][a] = losses[a].std(ddof=1)
-                    result['avg'].append((l, r, asset.ordinal, stats[a]))
+                    result['avg'].append((l, r, asset['ordinal'], stats[a]))
                 agglosses = losses.sum(axis=0)  # shape num_gmfs
                 result['agg'][slc, l] += agglosses * weight
                 if param['asset_loss_table']:
-                    aids = [asset.ordinal for asset in outputs.assets]
+                    aids = outputs.assets['ordinal']
                     result['all_losses'][l, r] += AccumDict(zip(aids, losses))
     return result
 
@@ -112,7 +112,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         else:
             logging.info('Building the epsilons')
             eps = riskinput.make_eps(
-                self.assetcol, E, oq.master_seed, oq.asset_correlation)
+                self.assetcol.array, E, oq.master_seed, oq.asset_correlation)
 
         self.riskinputs = self.build_riskinputs('gmf', eps, E)
         self.param['E'] = E
