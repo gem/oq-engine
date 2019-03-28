@@ -263,7 +263,7 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy, assets in group.items():
                 for l, loss_type in enumerate(self.loss_types):
                     damages = self[taxonomy](loss_type, assets, ([gmv], None))
-                    out[assets['ordinal'], l] = damages  # shape (1, D)
+                    out[assets['ordinal'], l] = damages
         return out
 
     def gen_outputs(self, riskinput, monitor, hazard=None):
