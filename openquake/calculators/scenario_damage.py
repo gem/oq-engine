@@ -65,21 +65,21 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
                 c_model = c_models.get(loss_type)
                 for a, fraction in enumerate(damages):
                     asset = outputs.assets[a]
-                    taxo = riskmodel.taxonomy[asset.taxonomy]
-                    damages = fraction * asset.number
+                    taxo = riskmodel.taxonomy[asset['taxonomy']]
+                    damages = fraction * asset['number']
                     result['d_event'][:, r, l] += damages  # shape (E, D)
                     if c_model:  # compute consequences
                         means = [par[0] for par in c_model[taxo].params]
                         # NB: we add a 0 in front for nodamage state
                         c_ratio = numpy.dot(fraction, [0] + means)
-                        consequences = c_ratio * asset.value(loss_type)
+                        consequences = c_ratio * asset['value-' + loss_type]
                         result['c_asset'].append(
-                            (l, r, asset.ordinal,
+                            (l, r, asset['ordinal'],
                              scientific.mean_std(consequences)))
                         result['c_event'][:, r, l] += consequences
                         # TODO: consequences for the occupants
                     result['d_asset'].append(
-                        (l, r, asset.ordinal, scientific.mean_std(damages)))
+                        (l, r, asset['ordinal'], scientific.mean_std(damages)))
     return result
 
 
