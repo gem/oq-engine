@@ -100,7 +100,7 @@ class LossCurveExporter(object):
                     arefs.append(self.asset_refs[aid])
         elif spec.startswith('ref-'):  # passed the asset name
             arefs = [spec[4:]]
-            aids = [self.str2asset[arefs[0]].ordinal]
+            aids = [self.str2asset[arefs[0]]['ordinal']]
         else:
             raise ValueError('Wrong specification in %s' % what)
         return aids, arefs, spec, key
