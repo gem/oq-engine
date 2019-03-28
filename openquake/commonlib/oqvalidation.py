@@ -753,7 +753,8 @@ class OqParam(valid.ParamSet):
             parent_datasets = set(util.read(self.hazard_calculation_id))
         else:
             parent_datasets = set()
-        if 'damage' in self.calculation_mode:
+        if (self.calculation_mode == 'multi_risk' or
+                'damage' in self.calculation_mode):
             return any(
                 key.endswith('_fragility') for key in self.inputs
             ) or 'fragility' in parent_datasets
@@ -814,7 +815,8 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-                self.calculation_mode.startswith('scenario')):
+            'multi_risk' in self.inputs or self.calculation_mode.startswith(
+                'scenario')):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 not self.hazard_calculation_id):
