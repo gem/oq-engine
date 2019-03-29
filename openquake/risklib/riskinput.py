@@ -158,6 +158,8 @@ class CompositeRiskModel(collections.Mapping):
         return assets_ratios
 
     def init(self, oqparam):
+        self.imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
+        self.imt_lt = {}  # taxonomy -> imts
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         self.curve_params = self.make_curve_params(oqparam)
@@ -300,65 +302,54 @@ class CompositeRiskModel(collections.Mapping):
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
+        if hasattr(hazard_getter, 'E'):
+            self.E = hazard_getter.E
         if hazard is None:
             with monitor('getting hazard'):
                 hazard_getter.init()
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
+        assert len(sids) == 1
+        yield from self._gen_outputs(
+            riskinput.assets, hazard[sids[0]], riskinput.epsilon_getter)
 
-        # group the assets by taxonomy
-        dic = collections.defaultdict(list)
-        for sid, assets in zip(sids, riskinput.assets_by_site):
-            group = group_array(assets, 'taxonomy')
-            for taxonomy in group:
-                dic[taxonomy].append(
-                    (sid, group[taxonomy], riskinput.epsilon_getter))
-        yield from self._gen_outputs(hazard_getter, hazard, dic)
-
-    def _gen_outputs(self, hazard_getter, hazard, dic):
-        imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
+    def _gen_outputs(self, assets, hazard, epsgetter):
         mon = self.monitor('computing risk', measuremem=False)
-        for taxonomy in sorted(dic):
+        assets_by_taxo = group_array(assets, 'taxonomy')
+        for taxonomy, assets in assets_by_taxo.items():
             riskmodel = self[taxonomy]
-            imts = [riskmodel.risk_functions[lt].imt
-                    for lt in self.loss_types]  # imt for each loss type
-            # discard IMTs without hazard
-            imt_lt = [imt for imt in imts if imt in imti]
-            if not imt_lt:  # a warning is printed in riskmodel.check_imts
-                continue
-            for sid, assets, epsgetter in dic[taxonomy]:
-                haz = hazard[sid]
-                if not isinstance(haz, dict):
-                    haz = group_array(haz, 'rlzi')
-                for rlzi, haz in sorted(haz.items()):
-                    with mon:
-                        if isinstance(haz, numpy.ndarray):
-                            # NB: in GMF-based calculations the order in which
-                            # the gmfs are stored is random since it depends on
-                            # which hazard task ends first; here we reorder
-                            # the gmfs by event ID; this is convenient in
-                            # general and mandatory for the case of
-                            # VulnerabilityFunctionWithPMF, otherwise the
-                            # sample method would receive the means in random
-                            # order and produce random results even if the
-                            # seed is set correctly; very tricky indeed! (MS)
-                            haz.sort(order='eid')
-                            eids = haz['eid']
-                            data = [(haz['gmv'][:, imti[imt]], eids)
-                                    for imt in imt_lt]
-                        elif not haz:  # no hazard for this site
-                            eids = []
-                            data = [(numpy.zeros(hazard_getter.E),
-                                     numpy.arange(hazard_getter.E))
-                                    for imt in imt_lt]
-                        else:  # classical
-                            eids = hazard_getter.eids
-                            data = [haz[imti[imt]] for imt in imt_lt]
-                        out = riskmodel.get_output(assets, data, epsgetter)
-                        out.sid = sid
-                        out.rlzi = rlzi
-                        out.eids = eids
-                    yield out
+            try:
+                imt_lt = self.imt_lt[taxonomy]
+            except KeyError:
+                imt_lt = self.imt_lt[taxonomy] = [  # imt for each loss type
+                    riskmodel.risk_functions[lt].imt for lt in self.loss_types]
+            for rlzi, haz in sorted(hazard.items()):
+                with mon:
+                    if isinstance(haz, numpy.ndarray):
+                        # NB: in GMF-based calculations the order in which
+                        # the gmfs are stored is random since it depends on
+                        # which hazard task ends first; here we reorder
+                        # the gmfs by event ID; this is convenient in
+                        # general and mandatory for the case of
+                        # VulnerabilityFunctionWithPMF, otherwise the
+                        # sample method would receive the means in random
+                        # order and produce random results even if the
+                        # seed is set correctly; very tricky indeed! (MS)
+                        haz.sort(order='eid')
+                        eids = haz['eid']
+                        data = [(haz['gmv'][:, self.imti[imt]], eids)
+                                for imt in imt_lt]
+                    elif not haz:  # no hazard for this site
+                        eids = []
+                        data = [(numpy.zeros(self.E), numpy.arange(self.E))
+                                for imt in imt_lt]
+                    else:  # classical
+                        eids = []
+                        data = [haz[self.imti[imt]] for imt in imt_lt]
+                    out = riskmodel.get_output(assets, data, epsgetter)
+                    out.rlzi = rlzi
+                    out.eids = eids
+                yield out
 
     def reduce(self, taxonomies):
         """
@@ -399,17 +390,16 @@ class RiskInput(object):
     :param eps_dict:
         dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets_by_site, eps_dict=None):
+    def __init__(self, hazard_getter, assets, eps_dict=None):
         self.hazard_getter = hazard_getter
-        self.assets_by_site = assets_by_site
+        self.assets = assets
         self.eps = eps_dict or {}
-        self.weight = sum(len(assets) for assets in assets_by_site)
+        self.weight = len(assets)
         taxonomies_set = set()
         aids = []
-        for assets in self.assets_by_site:
-            for asset in assets:
-                taxonomies_set.add(asset['taxonomy'])
-                aids.append(asset['ordinal'])
+        for asset in self.assets:
+            taxonomies_set.add(asset['taxonomy'])
+            aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.by_site = hazard_getter.__class__.__name__ != 'GmfGetter'
