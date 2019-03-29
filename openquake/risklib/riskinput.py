@@ -104,7 +104,8 @@ class CompositeRiskModel(collections.Mapping):
             self.damage_states = ['no_damage'] + list(fragdict.limit_states)
             for taxonomy, ffs_by_lt in fragdict.items():
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam, fragility_functions=ffs_by_lt)
+                    taxonomy, oqparam, fragility_functions=ffs_by_lt,
+                    vulnerability_functions=vulndict[taxonomy])
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
             for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
@@ -121,8 +122,9 @@ class CompositeRiskModel(collections.Mapping):
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
                     vf.seed = oqparam.random_seed
-                    self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                        taxonomy, oqparam, vulnerability_functions=vfs)
+                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
+                    taxonomy, oqparam, fragility_functions=vulndict[taxonomy],
+                    vulnerability_functions=vfs)
 
         self.init(oqparam)
 
@@ -209,7 +211,8 @@ class CompositeRiskModel(collections.Mapping):
                         ratios = rm.loss_ratios[loss_type]
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
-                            rm.risk_functions[loss_type], len(ratios)))
+                            rm.vulnerability_functions[loss_type], len(ratios))
+                        )
                 if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.debug(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))

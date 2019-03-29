@@ -679,8 +679,8 @@ def build_damage_dt(dstore, mean_std=True):
         else:
             dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
-    loss_types = dstore.get_attr(oq.risk_model, 'loss_types')
-    return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
+    loss_types = oq.loss_dt().names
+    return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
 def build_damage_array(data, damage_dt):
