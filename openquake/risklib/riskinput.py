@@ -59,7 +59,9 @@ def read_composite_risk_model(dstore):
             for lt in rm:
                 rf = dstore['%s/%s/%s' % (riskmodel, quotedtaxonomy, lt)]
                 if riskmodel == 'consequence':
-                    pass  # TODO: manage this case
+                    # TODO: manage this case by adding HDF5-serialization
+                    # to the consequence model
+                    pass
                 elif riskmodel == 'fragility':  # rf is a FragilityFunctionList
                     try:
                         rf = rf.build(
