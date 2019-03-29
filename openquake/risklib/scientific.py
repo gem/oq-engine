@@ -624,7 +624,7 @@ ConsequenceFunction = collections.namedtuple(
 
 class ConsequenceModel(dict):
     """
-    Container for a set of consequence functions. You can access each
+    Dictionary of consequence functions. You can access each
     function given its name with the square bracket notation.
 
     :param str id: ID of the model
@@ -632,7 +632,6 @@ class ConsequenceModel(dict):
     :param str lossCategory: loss type (i.e. structural, contents, ...)
     :param str description: description of the model
     :param limitStates: a list of limit state strings
-    :param consequence_functions: a dictionary name -> ConsequenceFunction
     """
 
     def __init__(self, id, assetCategory, lossCategory, description,

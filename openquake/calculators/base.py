@@ -791,14 +791,12 @@ class HazardCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
 
             # same check for the consequence models, if any
-            consequence_models = riskmodels.get_risk_models(
-                oq, 'consequence')
-            for lt, cm in consequence_models.items():
-                missing = taxonomies - set(cm)
-                if missing:
-                    raise ValueError(
-                        'Missing consequenceFunctions for %s' %
-                        ' '.join(missing))
+            if any(key.endswith('_consequence') for key in oq.inputs):
+                for taxonomy in taxonomies:
+                    cfs = self.riskmodel[taxonomy].consequence_functions
+                    if not cfs:
+                        raise ValueError(
+                            'Missing consequenceFunctions for %s' % taxonomy)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
