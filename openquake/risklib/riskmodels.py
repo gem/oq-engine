@@ -518,10 +518,12 @@ class ClassicalDamage(Damage):
     kind = 'fragility'
 
     def __init__(self, taxonomy, fragility_functions, vulnerability_functions,
-                 hazard_imtls, investigation_time, risk_investigation_time):
+                 consequence_functions, hazard_imtls, investigation_time,
+                 risk_investigation_time):
         self.taxonomy = taxonomy
         self.fragility_functions = fragility_functions
         self.vulnerability_functions = vulnerability_functions
+        self.consequence_functions = consequence_functions
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
