@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.berge_thierry_2003 import \
-    BergeThierryEtAl2003SIGMA, BergeThierryEtAl2003SIGMAMwW, 
+from openquake.hazardlib.gsim.berge_thierry_2003 import (
+    BergeThierryEtAl2003SIGMA, BergeThierryEtAl2003MwW, 
     BergeThierryEtAl2003MwL_MED, BergeThierryEtAl2003MwL_ITA, 
     BergeThierryEtAl2003MwL_GBL, BergeThierryEtAl2003Ms
+)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # test data generated from hazardlib implementation. Test data from
@@ -35,7 +36,7 @@ class BergeThierryEtAl2003SIGMATestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('B03/BergeThierryEtAl2003SIGMA_STD_TOTAL.csv',
+        self.check('B03/BergeThierryEtAl2003SIGMA_TOTAL_STDDEV.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -49,7 +50,7 @@ class BergeThierryEtAl2003MwWTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('B03/BergeThierryEtAl2003MwW_STD_TOTAL.csv',
+        self.check('B03/BergeThierryEtAl2003MwW_TOTAL_STDDEV.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -62,7 +63,7 @@ class BergeThierryEtAl2003MsTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('B03/BergeThierryEtAl2003Ms_STD_TOTAL.csv',
+        self.check('B03/BergeThierryEtAl2003Ms_TOTAL_STDDEV.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -73,10 +74,10 @@ class BergeThierryEtAl2003MwL_MEDTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('B03/BergeThierryEtAl2003MwL_MED_MEAN.csv',
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.3)
 
     def test_std_total(self):
-        self.check('B03/BergeThierryEtAl2003MwL_MED_STD_TOTAL.csv',
+        self.check('B03/BergeThierryEtAl2003MwL_MED_TOTAL_STDDEV.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -87,10 +88,10 @@ class BergeThierryEtAl2003MwL_ITATestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('B03/BergeThierryEtAl2003MwL_ITA_MEAN.csv',
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.3)
 
     def test_std_total(self):
-        self.check('B03/BergeThierryEtAl2003MwL_ITA_STD_TOTAL.csv',
+        self.check('B03/BergeThierryEtAl2003MwL_ITA_TOTAL_STDDEV.csv',
                    max_discrep_percentage=0.1)
 
 
@@ -101,8 +102,8 @@ class BergeThierryEtAl2003MwL_GBLTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('B03/BergeThierryEtAl2003MwL_GBL_MEAN.csv',
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.3)
 
     def test_std_total(self):
-        self.check('B03/BergeThierryEtAl2003MwL_GBL_STD_TOTAL.csv',
+        self.check('B03/BergeThierryEtAl2003MwL_GBL_TOTAL_STDDEV.csv',
                    max_discrep_percentage=0.1)
