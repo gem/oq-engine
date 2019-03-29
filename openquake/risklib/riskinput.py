@@ -328,8 +328,6 @@ class CompositeRiskModel(collections.Mapping):
                 continue
             for sid, assets, epsgetter in dic[taxonomy]:
                 haz = hazard[sid]
-                if not isinstance(haz, dict):
-                    haz = group_array(haz, 'rlzi')
                 for rlzi, haz in sorted(haz.items()):
                     with mon:
                         if isinstance(haz, numpy.ndarray):
