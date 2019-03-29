@@ -101,8 +101,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         with mon_agg:
             for assets, ratios in assets_ratios:
                 taxo = assets[0].taxonomy
-                ws_by_lti = [weights[vf.imt]
-                             for vf in riskmodel[taxo].risk_functions.values()]
+                vfs = riskmodel[taxo].vulnerability_functions.values()
+                ws_by_lti = [weights[vf.imt] for vf in vfs]
                 for lti, loss_ratios in enumerate(ratios):
                     ws = ws_by_lti[lti]
                     lt = riskmodel.loss_types[lti]
