@@ -38,7 +38,7 @@ from openquake.hazardlib.calc.filters import (
     split_sources, RtreeFilter, SourceFilter)
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
-from openquake.risklib import riskinput, riskmodels
+from openquake.risklib import riskinput
 from openquake.commonlib import (
     readinput, logictree, source, calc, writers, util)
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -973,7 +973,7 @@ class RiskCalculator(HazardCalculator):
                 reduced_eps = {ass['ordinal']: eps[int(ass['ordinal'])]
                                for ass in block
                                if eps is not None and len(eps)}
-                yield riskinput.RiskInput(getter, [block], reduced_eps)
+                yield riskinput.RiskInput(getter, block, reduced_eps)
             rinfo.append((sid, len(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
