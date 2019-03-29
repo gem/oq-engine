@@ -901,6 +901,7 @@ def get_risk_model(oqparam):
     """
     fragdict = get_risk_models(oqparam, 'fragility')
     vulndict = get_risk_models(oqparam, 'vulnerability')
+    consdict = get_risk_models(oqparam, 'consequence')
     dic = {}
     dic.update(fragdict)
     dic.update(vulndict)
@@ -909,7 +910,8 @@ def get_risk_model(oqparam):
         retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
     else:
         retro = {}
-    return riskinput.CompositeRiskModel(oqparam, fragdict, vulndict, retro)
+    return riskinput.CompositeRiskModel(
+        oqparam, fragdict, vulndict, consdict, retro)
 
 
 def get_exposure(oqparam):
