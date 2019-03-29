@@ -309,17 +309,14 @@ class CompositeRiskModel(collections.Mapping):
         sids = hazard_getter.sids
         assert len(sids) == 1
 
-        # group the assets by taxonomy
-        dic = collections.defaultdict(list)
-        group = group_array(riskinput.assets, 'taxonomy')
-        for taxonomy in group:
-            dic[taxonomy].append((group[taxonomy], riskinput.epsilon_getter))
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
-        yield from self._gen_outputs(imti, hazard[sids[0]], dic)
+        yield from self._gen_outputs(imti, riskinput.assets,
+                                     hazard[sids[0]], riskinput.epsilon_getter)
 
-    def _gen_outputs(self, imti, hazard, dic):
+    def _gen_outputs(self, imti, assets, hazard, epsgetter):
         mon = self.monitor('computing risk', measuremem=False)
-        for taxonomy in sorted(dic):
+        assets_by_taxo = group_array(assets, 'taxonomy')
+        for taxonomy, assets in assets_by_taxo.items():
             riskmodel = self[taxonomy]
             imts = [riskmodel.risk_functions[lt].imt
                     for lt in self.loss_types]  # imt for each loss type
@@ -327,34 +324,33 @@ class CompositeRiskModel(collections.Mapping):
             imt_lt = [imt for imt in imts if imt in imti]
             if not imt_lt:  # a warning is printed in riskmodel.check_imts
                 continue
-            for assets, epsgetter in dic[taxonomy]:
-                for rlzi, haz in sorted(hazard.items()):
-                    with mon:
-                        if isinstance(haz, numpy.ndarray):
-                            # NB: in GMF-based calculations the order in which
-                            # the gmfs are stored is random since it depends on
-                            # which hazard task ends first; here we reorder
-                            # the gmfs by event ID; this is convenient in
-                            # general and mandatory for the case of
-                            # VulnerabilityFunctionWithPMF, otherwise the
-                            # sample method would receive the means in random
-                            # order and produce random results even if the
-                            # seed is set correctly; very tricky indeed! (MS)
-                            haz.sort(order='eid')
-                            eids = haz['eid']
-                            data = [(haz['gmv'][:, imti[imt]], eids)
-                                    for imt in imt_lt]
-                        elif not haz:  # no hazard for this site
-                            eids = []
-                            data = [(numpy.zeros(self.E), numpy.arange(self.E))
-                                    for imt in imt_lt]
-                        else:  # classical
-                            eids = []
-                            data = [haz[imti[imt]] for imt in imt_lt]
-                        out = riskmodel.get_output(assets, data, epsgetter)
-                        out.rlzi = rlzi
-                        out.eids = eids
-                    yield out
+            for rlzi, haz in sorted(hazard.items()):
+                with mon:
+                    if isinstance(haz, numpy.ndarray):
+                        # NB: in GMF-based calculations the order in which
+                        # the gmfs are stored is random since it depends on
+                        # which hazard task ends first; here we reorder
+                        # the gmfs by event ID; this is convenient in
+                        # general and mandatory for the case of
+                        # VulnerabilityFunctionWithPMF, otherwise the
+                        # sample method would receive the means in random
+                        # order and produce random results even if the
+                        # seed is set correctly; very tricky indeed! (MS)
+                        haz.sort(order='eid')
+                        eids = haz['eid']
+                        data = [(haz['gmv'][:, imti[imt]], eids)
+                                for imt in imt_lt]
+                    elif not haz:  # no hazard for this site
+                        eids = []
+                        data = [(numpy.zeros(self.E), numpy.arange(self.E))
+                                for imt in imt_lt]
+                    else:  # classical
+                        eids = []
+                        data = [haz[imti[imt]] for imt in imt_lt]
+                    out = riskmodel.get_output(assets, data, epsgetter)
+                    out.rlzi = rlzi
+                    out.eids = eids
+                yield out
 
     def reduce(self, taxonomies):
         """
