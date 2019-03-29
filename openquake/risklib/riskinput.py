@@ -305,17 +305,18 @@ class CompositeRiskModel(collections.Mapping):
                 hazard_getter.init()
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
+        assert len(sids) == 1
 
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
-        for sid, assets in zip(sids, riskinput.assets_by_site):
-            group = group_array(assets, 'taxonomy')
-            for taxonomy in group:
-                dic[taxonomy].append(
-                    (sid, group[taxonomy], riskinput.epsilon_getter))
-        yield from self._gen_outputs(hazard_getter, hazard, dic)
+        [assets] = riskinput.assets_by_site
+        group = group_array(assets, 'taxonomy')
+        for taxonomy in group:
+            dic[taxonomy].append(
+                (group[taxonomy], riskinput.epsilon_getter))
+        yield from self._gen_outputs(hazard_getter, hazard[sids[0]], dic)
 
-    def _gen_outputs(self, hazard_getter, hazard, dic):
+    def _gen_outputs(self, hazard_getter, haza, dic):
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
         mon = self.monitor('computing risk', measuremem=False)
         for taxonomy in sorted(dic):
@@ -326,11 +327,8 @@ class CompositeRiskModel(collections.Mapping):
             imt_lt = [imt for imt in imts if imt in imti]
             if not imt_lt:  # a warning is printed in riskmodel.check_imts
                 continue
-            for sid, assets, epsgetter in dic[taxonomy]:
-                haz = hazard[sid]
-                if not isinstance(haz, dict):
-                    haz = group_array(haz, 'rlzi')
-                for rlzi, haz in sorted(haz.items()):
+            for assets, epsgetter in dic[taxonomy]:
+                for rlzi, haz in sorted(haza.items()):
                     with mon:
                         if isinstance(haz, numpy.ndarray):
                             # NB: in GMF-based calculations the order in which
@@ -355,7 +353,7 @@ class CompositeRiskModel(collections.Mapping):
                             eids = hazard_getter.eids
                             data = [haz[imti[imt]] for imt in imt_lt]
                         out = riskmodel.get_output(assets, data, epsgetter)
-                        out.sid = sid
+                        [out.sid] = hazard_getter.sids
                         out.rlzi = rlzi
                         out.eids = eids
                     yield out
