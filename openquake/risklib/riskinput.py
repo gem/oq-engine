@@ -158,6 +158,8 @@ class CompositeRiskModel(collections.Mapping):
         return assets_ratios
 
     def init(self, oqparam):
+        self.imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
+        self.imt_lt = {}  # taxonomy -> imts
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         self.curve_params = self.make_curve_params(oqparam)
@@ -308,22 +310,19 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
         assert len(sids) == 1
+        yield from self._gen_outputs(
+            riskinput.assets, hazard[sids[0]], riskinput.epsilon_getter)
 
-        imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
-        yield from self._gen_outputs(imti, riskinput.assets,
-                                     hazard[sids[0]], riskinput.epsilon_getter)
-
-    def _gen_outputs(self, imti, assets, hazard, epsgetter):
+    def _gen_outputs(self, assets, hazard, epsgetter):
         mon = self.monitor('computing risk', measuremem=False)
         assets_by_taxo = group_array(assets, 'taxonomy')
         for taxonomy, assets in assets_by_taxo.items():
             riskmodel = self[taxonomy]
-            imts = [riskmodel.risk_functions[lt].imt
-                    for lt in self.loss_types]  # imt for each loss type
-            # discard IMTs without hazard
-            imt_lt = [imt for imt in imts if imt in imti]
-            if not imt_lt:  # a warning is printed in riskmodel.check_imts
-                continue
+            try:
+                imt_lt = self.imt_lt[taxonomy]
+            except KeyError:
+                imt_lt = self.imt_lt[taxonomy] = [  # imt for each loss type
+                    riskmodel.risk_functions[lt].imt for lt in self.loss_types]
             for rlzi, haz in sorted(hazard.items()):
                 with mon:
                     if isinstance(haz, numpy.ndarray):
@@ -338,7 +337,7 @@ class CompositeRiskModel(collections.Mapping):
                         # seed is set correctly; very tricky indeed! (MS)
                         haz.sort(order='eid')
                         eids = haz['eid']
-                        data = [(haz['gmv'][:, imti[imt]], eids)
+                        data = [(haz['gmv'][:, self.imti[imt]], eids)
                                 for imt in imt_lt]
                     elif not haz:  # no hazard for this site
                         eids = []
@@ -346,7 +345,7 @@ class CompositeRiskModel(collections.Mapping):
                                 for imt in imt_lt]
                     else:  # classical
                         eids = []
-                        data = [haz[imti[imt]] for imt in imt_lt]
+                        data = [haz[self.imti[imt]] for imt in imt_lt]
                     out = riskmodel.get_output(assets, data, epsgetter)
                     out.rlzi = rlzi
                     out.eids = eids
