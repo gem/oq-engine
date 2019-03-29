@@ -899,13 +899,17 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    rmdict = get_risk_models(oqparam, oqparam.file_type)
-    oqparam.set_risk_imtls(rmdict)
+    fragdict = get_risk_models(oqparam, 'fragility')
+    vulndict = get_risk_models(oqparam, 'vulnerability')
+    dic = {}
+    dic.update(fragdict)
+    dic.update(vulndict)
+    oqparam.set_risk_imtls(dic)
     if oqparam.calculation_mode.endswith('_bcr'):
         retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
     else:
         retro = {}
-    return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
+    return riskinput.CompositeRiskModel(oqparam, fragdict, vulndict, retro)
 
 
 def get_exposure(oqparam):
@@ -1048,7 +1052,7 @@ def get_pmap_from_csv(oqparam, fnames):
         the site mesh and the hazard curves read by the .csv files
     """
     if not oqparam.imtls:
-        oqparam.set_risk_imtls(get_risk_models(oqparam))
+        oqparam.set_risk_imtls(get_risk_models(oqparam, oqparam.file_type))
     if not oqparam.imtls:
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
@@ -1129,7 +1133,7 @@ def get_scenario_from_nrml(oqparam, fname):
         a pair (eids, gmf array)
     """
     if not oqparam.imtls:
-        oqparam.set_risk_imtls(get_risk_models(oqparam))
+        oqparam.set_risk_imtls(get_risk_models(oqparam, oqparam.file_type))
     imts = sorted(oqparam.imtls)
     num_imts = len(imts)
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])

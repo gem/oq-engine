@@ -44,31 +44,35 @@ def read_composite_risk_model(dstore):
     """
     oqparam = dstore['oqparam']
     crm = dstore.getitem(oqparam.risk_model)
-    rmdict, retrodict = AccumDict(), AccumDict()
-    rmdict.limit_states = crm.attrs['limit_states']
-    for quotedtaxonomy, rm in crm.items():
-        taxo = unquote_plus(quotedtaxonomy)
-        rmdict[taxo] = {}
-        retrodict[taxo] = {}
-        for lt in rm:
-            rf = dstore['%s/%s/%s' % (oqparam.risk_model, quotedtaxonomy, lt)]
-            if len(rmdict.limit_states):
-                # rf is a FragilityFunctionList
-                try:
-                    rf = rf.build(rmdict.limit_states,
-                                  oqparam.continuous_fragility_discretization,
-                                  oqparam.steps_per_interval)
-                except ValueError as err:
-                    raise ValueError('%s: %s' % (taxo, err))
-            else:
-                # rf is a vulnerability function
-                rf.init()
-            if lt.endswith('_retrofitted'):
-                # strip _retrofitted, since len('_retrofitted') = 12
-                retrodict[taxo][lt[:-12]] = rf
-            else:
-                rmdict[taxo][lt] = rf
-    return CompositeRiskModel(oqparam, rmdict, retrodict)
+    fragdict, vulndict, retrodict = AccumDict(), AccumDict(), AccumDict()
+    fragdict.limit_states = crm.attrs['limit_states']
+    for riskmodel in ('fragility', 'vulnerability'):
+        if riskmodel not in dstore:
+            continue
+        for quotedtaxonomy, rm in crm.items():
+            taxo = unquote_plus(quotedtaxonomy)
+            fragdict[taxo] = {}
+            vulndict[taxo] = {}
+            retrodict[taxo] = {}
+            for lt in rm:
+                rf = dstore['%s/%s/%s' % (riskmodel, quotedtaxonomy, lt)]
+                if riskmodel == 'fragility':  # rf is a FragilityFunctionList
+                    try:
+                        rf = rf.build(
+                            fragdict.limit_states,
+                            oqparam.continuous_fragility_discretization,
+                            oqparam.steps_per_interval)
+                    except ValueError as err:
+                        raise ValueError('%s: %s' % (taxo, err))
+                    fragdict[taxo][lt] = rf
+                else:  # rf is a vulnerability function
+                    rf.init()
+                    if lt.endswith('_retrofitted'):
+                        # strip _retrofitted, since len('_retrofitted') = 12
+                        retrodict[taxo][lt[:-12]] = rf
+                    else:
+                        vulndict[taxo][lt] = rf
+    return CompositeRiskModel(oqparam, fragdict, vulndict, retrodict)
 
 
 class CompositeRiskModel(collections.Mapping):
@@ -77,14 +81,18 @@ class CompositeRiskModel(collections.Mapping):
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param rmdict:
-        a dictionary (imt, taxonomy) -> loss_type -> risk_function
+    :param fragdict:
+        a dictionary (imt, taxonomy) -> loss_type -> fragility function
+    :param vulndict:
+        a dictionary (imt, taxonomy) -> loss_type -> vulnerability function
+    :param retrodict:
+        a dictionary (imt, taxonomy) -> loss_type -> vulnerability function
     """
-    def __init__(self, oqparam, rmdict, retrodict):
+    def __init__(self, oqparam, fragdict, vulndict, retrodict):
         self.damage_states = []
         self._riskmodels = {}
 
-        if len(rmdict.limit_states):
+        if sum(len(v) for v in fragdict.values()):
             # classical_damage/scenario_damage calculator
             if oqparam.calculation_mode in ('classical', 'scenario'):
                 # case when the risk files are in the job_hazard.ini file
@@ -93,14 +101,14 @@ class CompositeRiskModel(collections.Mapping):
                     raise RuntimeError(
                         'There are risk files in %r but not '
                         'an exposure' % oqparam.inputs['job_ini'])
-            self.damage_states = ['no_damage'] + list(rmdict.limit_states)
-            for taxonomy, ffs_by_lt in rmdict.items():
+            self.damage_states = ['no_damage'] + list(fragdict.limit_states)
+            for taxonomy, ffs_by_lt in fragdict.items():
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam, fragility_functions=ffs_by_lt)
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
             for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
-                    zip(sorted(rmdict.items()), sorted(retrodict.items())):
+                    zip(sorted(vulndict.items()), sorted(retrodict.items())):
                 assert taxonomy == taxonomy_  # same taxonomies
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam,
@@ -108,7 +116,7 @@ class CompositeRiskModel(collections.Mapping):
                     vulnerability_functions_retro=vf_retro)
         else:
             # classical, event based and scenario calculators
-            for taxonomy, vfs in rmdict.items():
+            for taxonomy, vfs in vulndict.items():
                 for vf in vfs.values():
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
