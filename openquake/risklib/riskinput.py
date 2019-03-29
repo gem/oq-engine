@@ -44,19 +44,23 @@ def read_composite_risk_model(dstore):
     """
     oqparam = dstore['oqparam']
     crm = dstore.getitem(oqparam.risk_model)
-    fragdict, vulndict, retrodict = AccumDict(), AccumDict(), AccumDict()
+    fragdict, vulndict, consdict, retrodict = (
+        AccumDict(), AccumDict(), AccumDict(), AccumDict())
     fragdict.limit_states = crm.attrs['limit_states']
-    for riskmodel in ('fragility', 'vulnerability'):
+    for riskmodel in ('fragility', 'vulnerability', 'consequence'):
         if riskmodel not in dstore:
             continue
         for quotedtaxonomy, rm in crm.items():
             taxo = unquote_plus(quotedtaxonomy)
             fragdict[taxo] = {}
             vulndict[taxo] = {}
+            consdict[taxo] = {}
             retrodict[taxo] = {}
             for lt in rm:
                 rf = dstore['%s/%s/%s' % (riskmodel, quotedtaxonomy, lt)]
-                if riskmodel == 'fragility':  # rf is a FragilityFunctionList
+                if riskmodel == 'consequence':
+                    pass  # TODO: manage this case
+                elif riskmodel == 'fragility':  # rf is a FragilityFunctionList
                     try:
                         rf = rf.build(
                             fragdict.limit_states,
@@ -72,23 +76,25 @@ def read_composite_risk_model(dstore):
                         retrodict[taxo][lt[:-12]] = rf
                     else:
                         vulndict[taxo][lt] = rf
-    return CompositeRiskModel(oqparam, fragdict, vulndict, retrodict)
+    return CompositeRiskModel(oqparam, fragdict, vulndict, consdict, retrodict)
 
 
 class CompositeRiskModel(collections.Mapping):
     """
-    A container (imt, taxonomy) -> riskmodel
+    A container taxonomy -> riskmodel
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param fragdict:
-        a dictionary (imt, taxonomy) -> loss_type -> fragility function
+        a dictionary taxonomy -> loss_type -> fragility functions
     :param vulndict:
-        a dictionary (imt, taxonomy) -> loss_type -> vulnerability function
+        a dictionary taxonomy -> loss_type -> vulnerability function
+    :param consdict:
+        a dictionary taxonomy -> loss_type -> consequence functions
     :param retrodict:
-        a dictionary (imt, taxonomy) -> loss_type -> vulnerability function
+        a dictionary taxonomy -> loss_type -> vulnerability function
     """
-    def __init__(self, oqparam, fragdict, vulndict, retrodict):
+    def __init__(self, oqparam, fragdict, vulndict, consdict, retrodict):
         self.damage_states = []
         self._riskmodels = {}
 
@@ -105,7 +111,8 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy, ffs_by_lt in fragdict.items():
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam, fragility_functions=ffs_by_lt,
-                    vulnerability_functions=vulndict[taxonomy])
+                    vulnerability_functions=vulndict[taxonomy],
+                    consequence_functions=consdict[taxonomy])
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
             for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \

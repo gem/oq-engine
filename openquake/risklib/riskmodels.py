@@ -145,7 +145,9 @@ def get_risk_models(oqparam, kind):
                 ffl.steps_per_interval = oqparam.steps_per_interval
         rdict.limit_states = [str(ls) for ls in limit_states]
     elif kind == 'consequence':
-        rdict = rmodels
+        for loss_type, cm in rmodels.items():
+            for taxo, cf in cm.items():
+                rdict[taxo][loss_type] = cf
     else:  # vulnerability
         cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
         # only for classical_risk reduce the loss_ratios
@@ -484,10 +486,12 @@ class Damage(RiskModel):
     """
     kind = 'fragility'
 
-    def __init__(self, taxonomy, fragility_functions, vulnerability_functions):
+    def __init__(self, taxonomy, fragility_functions,
+                 vulnerability_functions, consequence_functions):
         self.taxonomy = taxonomy
         self.fragility_functions = fragility_functions
         self.vulnerability_functions = vulnerability_functions
+        self.consequence_functions = consequence_functions
 
     def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
         """
