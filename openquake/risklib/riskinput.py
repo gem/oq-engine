@@ -51,7 +51,6 @@ def read_composite_risk_model(dstore):
         rmdict[taxo] = {}
         retrodict[taxo] = {}
         for lt in rm:
-            lt = str(lt)  # ensure Python 2-3 compatibility
             rf = dstore['%s/%s/%s' % (oqparam.risk_model, quotedtaxonomy, lt)]
             if len(rmdict.limit_states):
                 # rf is a FragilityFunctionList
