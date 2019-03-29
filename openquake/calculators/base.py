@@ -487,18 +487,18 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm
         self.init()  # do this at the end of pre-execute
 
-    def save_multi_risk(self):
+    def save_multi_peril(self):
         """
         Read the hazard fields as csv files, associate them to the sites
         and create the `hazard` dataset.
         """
         oq = self.oqparam
-        fnames = oq.inputs['multi_risk']
-        dt = [(haz, float) for haz in oq.multi_risk]
+        fnames = oq.inputs['multi_peril']
+        dt = [(haz, float) for haz in oq.multi_peril]
         N = len(self.sitecol)
-        self.datastore['multi_risk'] = z = numpy.zeros(N, dt)
+        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
         nonzero = []
-        for name, fname in zip(oq.multi_risk, fnames):
+        for name, fname in zip(oq.multi_peril, fnames):
             data = []
             with open(fname) as f:
                 next(f)  # skip the comment on the first line
@@ -514,19 +514,19 @@ class HazardCalculator(BaseCalculator):
                 data, self.sitecol, oq.asset_hazard_distance, 'filter')
             z = numpy.zeros(N, float)
             z[sites.sids] = filtdata['number']
-            self.datastore['multi_risk'][name] = z
+            self.datastore['multi_peril'][name] = z
             nonzero.append((z != 0).sum())
         self.datastore.set_attrs(
-            'multi_risk', nbytes=z.nbytes, nonzero=nonzero)
+            'multi_peril', nbytes=z.nbytes, nonzero=nonzero)
 
         # convert ASH into a GMF
-        if 'ASH' in oq.multi_risk:
+        if 'ASH' in oq.multi_peril:
             # in the future, if the stddevs will become available, we will
             # be able to generate a distribution of GMFs, as we do for the
             # ShakeMaps; for the moment, we will consider a single event
             oq.number_of_ground_motion_fields = E = 1
             events = numpy.zeros(E, rupture.events_dt)
-            gmf = self.datastore['multi_risk']['ASH'].reshape(N, E, 1)
+            gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
             save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
 
     def pre_execute(self):
@@ -536,7 +536,7 @@ class HazardCalculator(BaseCalculator):
         if not, read the inputs directly.
         """
         oq = self.oqparam
-        if 'gmfs' in oq.inputs or 'multi_risk' in oq.inputs:
+        if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
             # read hazard from files
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
@@ -544,7 +544,7 @@ class HazardCalculator(BaseCalculator):
             if 'gmfs' in oq.inputs:
                 save_gmfs(self)
             else:
-                self.save_multi_risk()
+                self.save_multi_peril()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
@@ -594,9 +594,9 @@ class HazardCalculator(BaseCalculator):
                 self.rlzs_assoc = calc.rlzs_assoc
             else:
                 # this happens for instance for a scenario_damage without
-                # rupture, gmfs, multi_risk
+                # rupture, gmfs, multi_peril
                 raise InvalidFile(
-                    '%(job_ini)s: missing gmfs_csv, multi_risk_csv' %
+                    '%(job_ini)s: missing gmfs_csv, multi_peril_csv' %
                     oq.inputs)
             if hasattr(calc, 'csm'):  # no scenario
                 self.csm = calc.csm

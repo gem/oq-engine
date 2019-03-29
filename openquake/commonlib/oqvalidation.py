@@ -93,7 +93,7 @@ class OqParam(valid.ParamSet):
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
     # insured_losses = valid.Param(valid.boolean, False)
-    multi_risk = valid.Param(valid.namelist, [])
+    multi_peril = valid.Param(valid.namelist, [])
     humidity_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
@@ -816,7 +816,7 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-            'multi_risk' in self.inputs or self.calculation_mode.startswith(
+            'multi_peril' in self.inputs or self.calculation_mode.startswith(
                 'scenario')):
             return
         if ('source_model_logic_tree' not in self.inputs and
