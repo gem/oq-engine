@@ -88,17 +88,15 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(oqparam, kind=None):
+def get_risk_models(oqparam, kind):
     """
     :param oqparam:
         an OqParam instance
     :param kind:
-        vulnerability|vulnerability_retrofitted|fragility|consequence;
-        if None it is extracted from the oqparam.file_type attribute
+        vulnerability|vulnerability_retrofitted|fragility|consequence
     :returns:
         a dictionary taxonomy -> loss_type -> function
     """
-    kind = kind or oqparam.file_type
     rmodels = AccumDict()
     rmodels.limit_states = []
     for key in sorted(oqparam.inputs):
