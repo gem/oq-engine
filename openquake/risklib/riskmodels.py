@@ -477,7 +477,7 @@ class Scenario(RiskModel):
         return loss_matrix
 
 
-@registry.add('scenario_damage')
+@registry.add('scenario_damage', 'multi_risk')
 class Damage(RiskModel):
     """
     Implements the ScenarioDamage riskmodel. Computes the damages.
