@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.hazardlib.source import rupture
 from openquake.risklib import scientific, riskmodels
 from openquake.calculators import base
 

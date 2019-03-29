@@ -55,8 +55,8 @@ class MultiRiskCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        assert self.oqparam.multi_risk
-        if 'ASH' not in self.oqparam.multi_risk:
+        assert self.oqparam.multi_peril
+        if 'ASH' not in self.oqparam.multi_peril:
             self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
             return
 
@@ -70,24 +70,24 @@ class MultiRiskCalculator(base.RiskCalculator):
     def execute(self):
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
-        P = len(self.oqparam.multi_risk) + 1
+        P = len(self.oqparam.multi_peril) + 1
         L = len(ltypes)
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.humidity_amplification_factor
         dmg = numpy.zeros((A, P, L, 1, D), F32)
         perils = []
-        if 'ASH' in self.oqparam.multi_risk:
-            gmf = self.datastore['multi_risk']['ASH']
+        if 'ASH' in self.oqparam.multi_peril:
+            gmf = self.datastore['multi_peril']['ASH']
             dmg[:, 0] = self.riskmodel.get_damage(
                 self.assetcol.assets_by_site(), gmf)
             perils.append('ASH_DRY')
             dmg[:, 1] = self.riskmodel.get_damage(
                 self.assetcol.assets_by_site(), gmf * ampl)
             perils.append('ASH_WET')
-        hazard = self.datastore['multi_risk']
+        hazard = self.datastore['multi_peril']
         no_fragility_perils = []
-        for peril in self.oqparam.multi_risk:
+        for peril in self.oqparam.multi_peril:
             if peril != 'ASH':
                 no_fragility_perils.append(peril)
         for aid, rec in enumerate(self.assetcol.array):
