@@ -311,8 +311,7 @@ class CompositeRiskModel(collections.Mapping):
 
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
-        [assets] = riskinput.assets_by_site
-        group = group_array(assets, 'taxonomy')
+        group = group_array(riskinput.assets, 'taxonomy')
         for taxonomy in group:
             dic[taxonomy].append((group[taxonomy], riskinput.epsilon_getter))
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
@@ -396,17 +395,16 @@ class RiskInput(object):
     :param eps_dict:
         dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets_by_site, eps_dict=None):
+    def __init__(self, hazard_getter, assets, eps_dict=None):
         self.hazard_getter = hazard_getter
-        self.assets_by_site = assets_by_site
+        self.assets = assets
         self.eps = eps_dict or {}
-        self.weight = sum(len(assets) for assets in assets_by_site)
+        self.weight = len(assets)
         taxonomies_set = set()
         aids = []
-        for assets in self.assets_by_site:
-            for asset in assets:
-                taxonomies_set.add(asset['taxonomy'])
-                aids.append(asset['ordinal'])
+        for asset in self.assets:
+            taxonomies_set.add(asset['taxonomy'])
+            aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.by_site = hazard_getter.__class__.__name__ != 'GmfGetter'
