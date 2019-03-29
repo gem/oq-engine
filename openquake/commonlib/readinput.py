@@ -899,7 +899,7 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    rmdict = get_risk_models(oqparam)
+    rmdict = get_risk_models(oqparam, oqparam.file_type)
     oqparam.set_risk_imtls(rmdict)
     if oqparam.calculation_mode.endswith('_bcr'):
         retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
