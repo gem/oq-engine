@@ -304,16 +304,8 @@ class Classical(RiskModel):
         lrcurves = numpy.array(
             [scientific.classical(
                 vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
-
-        # if in the future we wanted to implement insured_losses the
-        # following lines could be useful
-        # deductibles = [a.deductible(loss_type) for a in assets]
-        # limits = [a.insurance_limit(loss_type) for a in assets]
-        # insured_curves = rescale(
-        # utils.numpy_map(scientific.insured_loss_curve,
-        # lrcurves, deductibles, limits), values)
         return rescale(lrcurves, values).transpose(2, 0, 1)
-        # transpose array from shape (N, 2, C) -> (C, N, 2)
+        # NB: we need to transpose from shape (N, 2, C) -> (C, N, 2)
         # otherwise .get_output would fail
 
 
