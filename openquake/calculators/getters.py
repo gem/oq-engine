@@ -80,16 +80,6 @@ class PmapGetter(object):
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
         self.data = {}
-        try:
-            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
-        except IndexError:  # no data
-            return
-        for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
-            self.data[sid] = datadict = {}
-            for rlzi, hcurve in enumerate(hcurve_by_rlz):
-                datadict[rlzi] = lst = [None for imt in self.imtls]
-                for imti, imt in enumerate(self.imtls):
-                    lst[imti] = hcurve[imt]  # imls
 
     @property
     def pmap_by_grp(self):
@@ -117,8 +107,18 @@ class PmapGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an dict rlzi -> datadict
+        :returns: an dict rlzi -> poes
         """
+        assert len(self.sids) == 1  # get_hazard can be called only for 1 site
+        try:
+            hcurves = self.get_hcurves(self.imtls)  # shape (R, 1)
+        except IndexError:  # no data
+            return {}
+        for rlzi, hcurve in enumerate(hcurves[:, 0]):
+            self.data[rlzi] = lst = [None for imt in self.imtls]
+            for imti, imt in enumerate(self.imtls):
+                lst[imti] = hcurve[imt]  # imls
+
         return self.data
 
     def get(self, rlzi, grp=None):
@@ -218,6 +218,7 @@ class GmfDataGetter(collections.Mapping):
     A dictionary-like object {sid: dictionary by realization index}
     """
     def __init__(self, dstore, sids, num_rlzs):
+        assert len(sids) == 1
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
@@ -230,11 +231,9 @@ class GmfDataGetter(collections.Mapping):
             self.imts = self.dstore['gmf_data/imts'].value.split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
-        self.data = {}
-        for sid in self.sids:
-            self.data[sid] = data = self[sid]
-            if not data:  # no GMVs, return 0, counted in no_damage
-                self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
+        self.data = self[self.sids[0]]
+        if not self.data:  # no GMVs, return 0, counted in no_damage
+            self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
@@ -243,8 +242,9 @@ class GmfDataGetter(collections.Mapping):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an dict rlzi -> datadict
+        :returns: an dict rlzi -> data
         """
+        assert len(self.sids) == 1  # can be called only with 1 site
         return self.data
 
     def __getitem__(self, sid):

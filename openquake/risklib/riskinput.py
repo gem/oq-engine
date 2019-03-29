@@ -289,6 +289,7 @@ class CompositeRiskModel(collections.Mapping):
                         d * n for d, n in zip(probs, assets['number'])]
         return out
 
+    # each riskinput is associated to a single site
     def gen_outputs(self, riskinput, monitor, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
@@ -304,15 +305,13 @@ class CompositeRiskModel(collections.Mapping):
             with monitor('getting hazard'):
                 hazard_getter.init()
                 hazard = hazard_getter.get_hazard()
-        sids = hazard_getter.sids
 
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
-        for sid, assets in zip(sids, riskinput.assets_by_site):
-            group = group_array(assets, 'taxonomy')
-            for taxonomy in group:
-                dic[taxonomy].append(
-                    (sid, group[taxonomy], riskinput.epsilon_getter))
+        group = group_array(riskinput.assets, 'taxonomy')
+        for taxonomy in group:
+            dic[taxonomy].append(
+                (group[taxonomy], riskinput.epsilon_getter))
         yield from self._gen_outputs(hazard_getter, hazard, dic)
 
     def _gen_outputs(self, hazard_getter, hazard, dic):
@@ -326,11 +325,10 @@ class CompositeRiskModel(collections.Mapping):
             imt_lt = [imt for imt in imts if imt in imti]
             if not imt_lt:  # a warning is printed in riskmodel.check_imts
                 continue
-            for sid, assets, epsgetter in dic[taxonomy]:
-                haz = hazard[sid]
-                if not isinstance(haz, dict):
-                    haz = group_array(haz, 'rlzi')
-                for rlzi, haz in sorted(haz.items()):
+            for assets, epsgetter in dic[taxonomy]:
+                if not isinstance(hazard, dict):
+                    hazard = group_array(hazard, 'rlzi')
+                for rlzi, haz in sorted(hazard.items()):
                     with mon:
                         if isinstance(haz, numpy.ndarray):
                             # NB: in GMF-based calculations the order in which
@@ -355,7 +353,7 @@ class CompositeRiskModel(collections.Mapping):
                             eids = hazard_getter.eids
                             data = [haz[imti[imt]] for imt in imt_lt]
                         out = riskmodel.get_output(assets, data, epsgetter)
-                        out.sid = sid
+                        out.sid, = hazard_getter.sids
                         out.rlzi = rlzi
                         out.eids = eids
                     yield out
@@ -399,17 +397,16 @@ class RiskInput(object):
     :param eps_dict:
         dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets_by_site, eps_dict=None):
+    def __init__(self, hazard_getter, assets, eps_dict=None):
         self.hazard_getter = hazard_getter
-        self.assets_by_site = assets_by_site
+        self.assets = assets
         self.eps = eps_dict or {}
-        self.weight = sum(len(assets) for assets in assets_by_site)
+        self.weight = len(assets)
         taxonomies_set = set()
         aids = []
-        for assets in self.assets_by_site:
-            for asset in assets:
-                taxonomies_set.add(asset['taxonomy'])
-                aids.append(asset['ordinal'])
+        for asset in assets:
+            taxonomies_set.add(asset['taxonomy'])
+            aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.by_site = hazard_getter.__class__.__name__ != 'GmfGetter'
