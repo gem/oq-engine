@@ -159,8 +159,7 @@ class CompositeRiskModel(collections.Mapping):
         return assets_ratios
 
     def init(self, oqparam):
-        self.imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
-        self.imt_lt = {}  # taxonomy -> imts
+        imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         self.curve_params = self.make_curve_params(oqparam)
@@ -180,6 +179,8 @@ class CompositeRiskModel(collections.Mapping):
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
+            riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt].imt]
+                              for lt in self.loss_types}
         self.taxonomies = sorted(taxonomies)
         iml = collections.defaultdict(list)
         for taxo, rm in self._riskmodels.items():
@@ -286,7 +287,7 @@ class CompositeRiskModel(collections.Mapping):
             group = group_array(assets, 'taxonomy')
             for taxonomy, assets in group.items():
                 for l, loss_type in enumerate(self.loss_types):
-                    fracs = self[taxonomy](loss_type, assets, ([gmv], None))
+                    fracs = self[taxonomy](loss_type, assets, [gmv])
                     dmg = assets['number'] * fracs[:, 0, :D]
                     csq = assets['value-' + loss_type] * fracs[:, 0, D]
                     out[assets['ordinal'], l, 0, :D] = dmg
@@ -304,8 +305,6 @@ class CompositeRiskModel(collections.Mapping):
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
-        if hasattr(hazard_getter, 'E'):
-            self.E = hazard_getter.E
         if hazard is None:
             with monitor('getting hazard'):
                 hazard_getter.init()
@@ -318,40 +317,42 @@ class CompositeRiskModel(collections.Mapping):
     def _gen_outputs(self, assets, hazard, epsgetter):
         mon = self.monitor('computing risk', measuremem=False)
         assets_by_taxo = group_array(assets, 'taxonomy')
-        for taxonomy, assets in assets_by_taxo.items():
-            riskmodel = self[taxonomy]
-            try:
-                imt_lt = self.imt_lt[taxonomy]
-            except KeyError:
-                imt_lt = self.imt_lt[taxonomy] = [  # imt for each loss type
-                    riskmodel.risk_functions[lt].imt for lt in self.loss_types]
-            for rlzi, haz in sorted(hazard.items()):
-                with mon:
-                    if isinstance(haz, numpy.ndarray):
-                        # NB: in GMF-based calculations the order in which
-                        # the gmfs are stored is random since it depends on
-                        # which hazard task ends first; here we reorder
-                        # the gmfs by event ID; this is convenient in
-                        # general and mandatory for the case of
-                        # VulnerabilityFunctionWithPMF, otherwise the
-                        # sample method would receive the means in random
-                        # order and produce random results even if the
-                        # seed is set correctly; very tricky indeed! (MS)
-                        haz.sort(order='eid')
-                        eids = haz['eid']
-                        data = [(haz['gmv'][:, self.imti[imt]], eids)
-                                for imt in imt_lt]
-                    elif not haz:  # no hazard for this site
-                        eids = []
-                        data = [(numpy.zeros(self.E), numpy.arange(self.E))
-                                for imt in imt_lt]
-                    else:  # classical
-                        eids = []
-                        data = [haz[self.imti[imt]] for imt in imt_lt]
-                    out = riskmodel.get_output(assets, data, epsgetter)
-                    out.rlzi = rlzi
-                    out.eids = eids
-                yield out
+        for rlzi, haz in sorted(hazard.items()):
+            with mon:
+                if isinstance(haz, numpy.ndarray):
+                    # NB: in GMF-based calculations the order in which
+                    # the gmfs are stored is random since it depends on
+                    # which hazard task ends first; here we reorder
+                    # the gmfs by event ID; this is convenient in
+                    # general and mandatory for the case of
+                    # VulnerabilityFunctionWithPMF, otherwise the
+                    # sample method would receive the means in random
+                    # order and produce random results even if the
+                    # seed is set correctly; very tricky indeed! (MS)
+                    haz.sort(order='eid')
+                    eids = haz['eid']
+                    data = haz['gmv']  # shape (E, M)
+                elif not haz:  # no hazard for this site
+                    eids = numpy.arange(1)
+                    data = []
+                else:  # classical
+                    eids = []
+                    data = haz  # shape M
+                for taxonomy, assets in assets_by_taxo.items():
+                    rm = self[taxonomy]
+                    lst = []
+                    for lt in self.loss_types:
+                        if len(data) == 0:
+                            dat = [0]
+                        elif len(eids):  # gmfs
+                            dat = data[:, rm.imti[lt]]
+                        else:  # hcurves
+                            dat = data[rm.imti[lt]]
+                        lst.append(rm(lt, assets, dat, eids, epsgetter))
+                    out = hdf5.ArrayWrapper(
+                        numpy.array(lst),
+                        dict(assets=assets, rlzi=rlzi, eids=eids))
+                    yield out
 
     def reduce(self, taxonomies):
         """
