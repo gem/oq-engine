@@ -50,7 +50,7 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
                 for i, asset in enumerate(outputs.assets):
                     lc = loss_curves[:, i]
                     aid = asset['ordinal']
-                    avg = scientific.average_loss(lc.T)
+                    avg = scientific.average_loss(lc)
                     outputs.average_losses[l].append(avg)
                     lcurve = (lc['loss'], lc['poe'], avg)
                     result['loss_curves'].append((l, r, aid, lcurve))
