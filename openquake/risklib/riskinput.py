@@ -305,8 +305,6 @@ class CompositeRiskModel(collections.Mapping):
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
-        if hasattr(hazard_getter, 'E'):
-            self.E = hazard_getter.E
         if hazard is None:
             with monitor('getting hazard'):
                 hazard_getter.init()
@@ -335,7 +333,7 @@ class CompositeRiskModel(collections.Mapping):
                     eids = haz['eid']
                     data = haz['gmv']  # shape (E, M)
                 elif not haz:  # no hazard for this site
-                    eids = numpy.arange(self.E)
+                    eids = numpy.arange(1)
                     data = []
                 else:  # classical
                     eids = []
@@ -345,7 +343,7 @@ class CompositeRiskModel(collections.Mapping):
                     lst = []
                     for lt in self.loss_types:
                         if len(data) == 0:
-                            dat = numpy.zeros(self.E)
+                            dat = [0]
                         elif len(eids):  # gmfs
                             dat = data[:, rm.imti[lt]]
                         else:  # hcurves
