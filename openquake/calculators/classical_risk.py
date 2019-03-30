@@ -46,9 +46,9 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
             r = outputs.rlzi
             outputs.average_losses = AccumDict(accum=[])  # l -> array
             for l, loss_curves in enumerate(outputs):
-                # loss_curves has shape (C, A)
+                # loss_curves has shape (A, C)
                 for i, asset in enumerate(outputs.assets):
-                    lc = loss_curves[:, i]
+                    lc = loss_curves[i]
                     aid = asset['ordinal']
                     avg = scientific.average_loss(lc)
                     outputs.average_losses[l].append(avg)
@@ -69,9 +69,9 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
                 for i, asset in enumerate(out.assets):
                     avgs = numpy.array([r.average_losses[l][i] for r in outs])
                     avg_stats = compute_stats(avgs, stats, weights)
-                    losses = out[l][:, i]['loss']
+                    losses = out[l][i]['loss']
                     poes_stats = compute_stats(
-                        numpy.array([out[l][:, i]['poe'] for out in outs]),
+                        numpy.array([out[l][i]['poe'] for out in outs]),
                         stats, weights)
                     result['stat_curves'].append(
                         (l, asset['ordinal'], losses, poes_stats, avg_stats))
