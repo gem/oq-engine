@@ -287,7 +287,7 @@ class CompositeRiskModel(collections.Mapping):
             group = group_array(assets, 'taxonomy')
             for taxonomy, assets in group.items():
                 for l, loss_type in enumerate(self.loss_types):
-                    fracs = self[taxonomy](loss_type, assets, ([gmv], None))
+                    fracs = self[taxonomy](loss_type, assets, [gmv])
                     dmg = assets['number'] * fracs[:, 0, :D]
                     csq = assets['value-' + loss_type] * fracs[:, 0, D]
                     out[assets['ordinal'], l, 0, :D] = dmg

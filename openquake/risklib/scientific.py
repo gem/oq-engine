@@ -893,6 +893,7 @@ def scenario_damage(fragility_functions, gmvs):
     :returns: an array of (D, E) damage fractions
     """
     lst = [numpy.ones_like(gmvs)]
+    # import pdb; pdb.set_trace()
     for f, ff in enumerate(fragility_functions):  # D - 1 functions
         lst.append(ff(gmvs))
     lst.append(numpy.zeros_like(gmvs))
