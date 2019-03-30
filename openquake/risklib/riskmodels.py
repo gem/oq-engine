@@ -218,16 +218,23 @@ class RiskModel(object):
         setattr(self, self.kind + '_functions', dic)
 
 
+loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
+
+
 def rescale(curves, values):
     """
     Multiply the losses in each curve of kind (losses, poes) by the
     corresponding value.
+
+    :param curves: an array of shape (A, 2, C)
+    :param values: an array of shape (A,)
     """
-    n = len(curves)
-    assert n == len(values), (n, len(values))
-    losses = [curves[i, 0] * values[i] for i in range(n)]
-    poes = curves[:, 1]
-    return numpy.array([[losses[i], poes[i]] for i in range(n)])
+    A, _, C = curves.shape
+    assert A == len(values), (A, len(values))
+    array = numpy.zeros((A, C), loss_poe_dt)
+    array['loss'] = [c * v for c, v in zip(curves[:, 0], values)]
+    array['poe'] = curves[:, 1]
+    return array
 
 
 @registry.add('classical_risk', 'classical', 'disaggregation')
@@ -276,14 +283,14 @@ class Classical(RiskModel):
         :param str loss_type:
             the loss type considered
         :param assets:
-            assets is an iterator over N
+            assets is an iterator over A
             :class:`openquake.risklib.scientific.Asset` instances
         :param hazard_curve:
             an array of poes
         :param _eps:
             ignored, here only for API compatibility with other calculators
         :returns:
-            an array of shape (C, N, 2)
+            a composite array (loss, poe) of shape (C, A)
         """
         n = len(assets)
         vf = self.vulnerability_functions[loss_type]
@@ -292,9 +299,8 @@ class Classical(RiskModel):
         lrcurves = numpy.array(
             [scientific.classical(
                 vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
-        return rescale(lrcurves, values).transpose(2, 0, 1)
-        # NB: we need to transpose from shape (N, 2, C) -> (C, N, 2)
-        # otherwise .get_output would fail
+        return rescale(lrcurves, values).T  # shape (C, A)
+        # this is required to avoid an error with case_master
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
