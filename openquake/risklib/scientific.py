@@ -1185,14 +1185,15 @@ def broadcast(func, composite_array, *args):
 def average_loss(lc):
     """
     Given a loss curve array with `poe` and `loss` fields,
-    computes the average loss on ta period of time.
+    computes the average loss on a period of time.
 
     :note: As the loss curve is supposed to be piecewise linear as it
            is a result of a linear interpolation, we compute an exact
            integral by using the trapeizodal rule with the width given by the
            loss bin width.
     """
-    return -pairwise_diff(lc['loss']) @ pairwise_mean(lc['poe'])
+    losses, poes = (lc['loss'], lc['poe']) if lc.dtype.names else lc
+    return -pairwise_diff(losses) @ pairwise_mean(poes)
 
 
 def normalize_curves_eb(curves):
