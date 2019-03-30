@@ -344,17 +344,16 @@ class ProbabilisticEventBased(RiskModel):
             loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
 
-    def get_loss_ratios(self, gmvs, imti):  # used in ebrisk
+    def get_loss_ratios(self, gmvs):  # used in ebrisk
         """
         :param gmvs: an array of shape (E, M)
-        :param imti: a dictionary imt -> imt index
         :returns: loss_ratios of shape (L, E)
         """
         out = []
         E = len(gmvs)
         for lt, vf in self.vulnerability_functions.items():
             loss_ratios = numpy.zeros(E, F32)
-            means, covs, idxs = vf.interpolate(gmvs[:, imti[vf.imt]])
+            means, covs, idxs = vf.interpolate(gmvs[:, self.imti[lt]])
             loss_ratios[idxs] = vf.sample(means, covs, idxs, None)
             out.append(loss_ratios)
         return numpy.array(out)

@@ -146,7 +146,6 @@ class CompositeRiskModel(collections.Mapping):
         :param imts: intensity measure types
         :returns: a list of (assets, loss_ratios) for each taxonomy on the site
         """
-        imti = {imt: i for i, imt in enumerate(imts)}
         assets_by_t = groupby(assets, operator.attrgetter('taxonomy'))
         assets_ratios = []
         for taxo, rm in self.items():
@@ -155,7 +154,7 @@ class CompositeRiskModel(collections.Mapping):
                 assets = assets_by_t[t]
             except KeyError:  # there are no assets of taxonomy taxo
                 continue
-            assets_ratios.append((assets, rm.get_loss_ratios(gmvs, imti)))
+            assets_ratios.append((assets, rm.get_loss_ratios(gmvs)))
         return assets_ratios
 
     def init(self, oqparam):
