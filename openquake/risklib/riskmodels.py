@@ -299,7 +299,7 @@ class Classical(RiskModel):
         lrcurves = numpy.array(
             [scientific.classical(
                 vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
-        return rescale(lrcurves, values).T  # shape (C, A)
+        return rescale(lrcurves, values)  # shape (C, A)
         # this is required to avoid an error with case_master
 
 
@@ -441,7 +441,7 @@ class Scenario(RiskModel):
         ok = ~numpy.isnan(values)
         if not ok.any():
             # there are no assets with a value
-            return
+            return numpy.zeros(0)
         # there may be assets without a value
         missing_value = not ok.all()
         if missing_value:

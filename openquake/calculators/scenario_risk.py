@@ -68,7 +68,7 @@ def scenario_risk(riskinputs, riskmodel, param, monitor):
             slc = param['event_slice'](r)
             assets = outputs.assets
             for l, losses in enumerate(outputs):
-                if losses is None:  # this may happen
+                if numpy.product(losses.shape) == 0:  # happens for all NaNs
                     continue
                 stats = numpy.zeros(len(assets), stat_dt)  # mean, stddev
                 for a, asset in enumerate(assets):
