@@ -897,7 +897,9 @@ def scenario_damage(fragility_functions, gmvs):
         lst.append(ff(gmvs))
     lst.append(numpy.zeros_like(gmvs))
     # convert a (D + 1, E) array into a (D, E) array
-    return pairwise_diff(numpy.array(lst))
+    arr = pairwise_diff(numpy.array(lst))
+    arr[arr < 1E-7] = 0  # sanity check
+    return arr
 
 #
 # Classical Damage
