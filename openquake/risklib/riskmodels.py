@@ -488,10 +488,10 @@ class Damage(RiskModel):
     def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
         """
         :param loss_type: the loss type
-        :param assets: a list of N assets of the same taxonomy
+        :param assets: a list of A assets of the same taxonomy
         :param gmvs_eids: pairs (gmvs, eids), each one with E elements
         :param _eps: dummy parameter, unused
-        :returns: N arrays of E x D elements
+        :returns: an array of shape (A, E, D + 1) elements
 
         where N is the number of points, E the number of events
         and D the number of damage states.
@@ -506,7 +506,7 @@ class Damage(RiskModel):
             means = [0] + [par[0] for par in c_model.params]
             # NB: we add a 0 in front for nodamage state
             dmg_csq[:, D] = damages @ means  # consequence ratio
-        return [dmg_csq] * len(assets)
+        return numpy.array([dmg_csq] * len(assets))
 
 
 @registry.add('classical_damage')
