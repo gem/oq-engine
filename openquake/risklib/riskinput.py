@@ -99,6 +99,7 @@ class CompositeRiskModel(collections.Mapping):
     def __init__(self, oqparam, fragdict, vulndict, consdict, retrodict):
         self.damage_states = []
         self._riskmodels = {}
+        self.consequences = sum(len(vals) for vals in consdict.values())
 
         if sum(len(v) for v in fragdict.values()):
             # classical_damage/scenario_damage calculator
