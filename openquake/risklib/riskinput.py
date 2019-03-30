@@ -159,8 +159,7 @@ class CompositeRiskModel(collections.Mapping):
         return assets_ratios
 
     def init(self, oqparam):
-        self.imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
-        self.imt_lt = {}  # taxonomy -> imts
+        imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         self.curve_params = self.make_curve_params(oqparam)
@@ -180,8 +179,8 @@ class CompositeRiskModel(collections.Mapping):
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
-            self.imt_lt[taxonomy] = [
-                riskmodel.risk_functions[lt].imt for lt in self.loss_types]
+            riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt].imt]
+                              for lt in self.loss_types}
         self.taxonomies = sorted(taxonomies)
         iml = collections.defaultdict(list)
         for taxo, rm in self._riskmodels.items():
@@ -334,18 +333,24 @@ class CompositeRiskModel(collections.Mapping):
                     # seed is set correctly; very tricky indeed! (MS)
                     haz.sort(order='eid')
                     eids = haz['eid']
-                    data = [(haz['gmv'][:, self.imti[imt]], eids)
-                            for imt in imt_lt]
+                    data = haz['gmv']  # shape (E, M)
                 elif not haz:  # no hazard for this site
-                    eids = []
-                    data = [(numpy.zeros(self.E), numpy.arange(self.E))
-                            for imt in imt_lt]
+                    eids = numpy.arange(self.E)
+                    data = []
                 else:  # classical
                     eids = []
-                    data = [haz[self.imti[imt]] for imt in imt_lt]
+                    data = haz  # shape M
                 for taxonomy, assets in assets_by_taxo.items():
-                    lst = [self[taxonomy](lt, assets, data, epsgetter)
-                           for lt, data in zip(self.loss_types, data)]
+                    rm = self[taxonomy]
+                    lst = []
+                    for lt in self.loss_types:
+                        if len(data) == 0:
+                            dat = numpy.zeros(self.E)
+                        elif len(eids):  # gmfs
+                            dat = data[:, rm.imti[lt]]
+                        else:  # hcurves
+                            dat = data[rm.imti[lt]]
+                        lst.append(rm(lt, assets, dat, eids, epsgetter))
                     out = hdf5.ArrayWrapper(
                         numpy.array(lst),
                         dict(assets=assets, rlzi=rlzi, eids=eids))
