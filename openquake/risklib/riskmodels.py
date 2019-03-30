@@ -22,7 +22,6 @@ import numpy
 
 from openquake.baselib.node import Node
 from openquake.baselib.general import CallableDict, AccumDict
-from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import utils, scientific
@@ -206,17 +205,6 @@ class RiskModel(object):
         """
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
-
-    def get_output(self, assets, data_by_lt, epsgetter):
-        """
-        :param assets: a list of assets with the same taxonomy
-        :param data_by_lt: hazards for each loss type
-        :param epsgetter: an epsilon getter function
-        :returns: an ArrayWrapper of shape (L, ...)
-        """
-        out = [self(lt, assets, data, epsgetter)
-               for lt, data in zip(self.loss_types, data_by_lt)]
-        return ArrayWrapper(numpy.array(out), dict(assets=assets))
 
     def __toh5__(self):
         dic = self.risk_functions.copy()
