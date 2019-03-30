@@ -349,6 +349,10 @@ class CompositeRiskModel(collections.Mapping):
                         else:  # hcurves
                             dat = data[rm.imti[lt]]
                         lst.append(rm(lt, assets, dat, eids, epsgetter))
+                    try:
+                        numpy.array(lst)
+                    except:
+                        import pdb; pdb.set_trace()
                     out = hdf5.ArrayWrapper(
                         numpy.array(lst),
                         dict(assets=assets, rlzi=rlzi, eids=eids))

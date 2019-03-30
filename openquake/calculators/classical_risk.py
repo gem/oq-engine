@@ -46,12 +46,13 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
             r = outputs.rlzi
             outputs.average_losses = AccumDict(accum=[])  # l -> array
             for l, loss_curves in enumerate(outputs):
-                # loss_curves has shape (C, N, 2)
+                # loss_curves has shape (C, A)
                 for i, asset in enumerate(outputs.assets):
+                    lc = loss_curves[:, i]
                     aid = asset['ordinal']
-                    avg = scientific.average_loss(loss_curves[:, i].T)
+                    avg = scientific.average_loss(lc.T)
                     outputs.average_losses[l].append(avg)
-                    lcurve = (loss_curves[:, i, 0], loss_curves[:, i, 1], avg)
+                    lcurve = (lc['loss'], lc['poe'], avg)
                     result['loss_curves'].append((l, r, aid, lcurve))
 
         # compute statistics
@@ -68,12 +69,9 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
                 for i, asset in enumerate(out.assets):
                     avgs = numpy.array([r.average_losses[l][i] for r in outs])
                     avg_stats = compute_stats(avgs, stats, weights)
-                    # is a pair loss_curves, insured_loss_curves
-                    # out[l][:, i, 0] are the i-th losses
-                    # out[l][:, i, 1] are the i-th poes
-                    losses = out[l][:, i, 0]
+                    losses = out[l][:, i]['loss']
                     poes_stats = compute_stats(
-                        numpy.array([out[l][:, i, 1] for out in outs]),
+                        numpy.array([out[l][:, i]['poe'] for out in outs]),
                         stats, weights)
                     result['stat_curves'].append(
                         (l, asset['ordinal'], losses, poes_stats, avg_stats))
