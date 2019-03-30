@@ -274,24 +274,25 @@ class CompositeRiskModel(collections.Mapping):
         return len(self._riskmodels)
 
     # used in multi_risk
-    def get_damage(self, assets_by_site, gmf):
+    def get_dmg_csq(self, assets_by_site, gmf):
         """
         :returns:
-            an array of shape (A, L, 1, D) with the number of buildings
+            an array of shape (A, L, 1, D + 1) with the number of buildings
             in each damage state for each asset and loss type
         """
         A = sum(len(assets) for assets in assets_by_site)
         L = len(self.loss_types)
         D = len(self.damage_states)
-        out = numpy.zeros((A, L, 1, D), F32)
+        out = numpy.zeros((A, L, 1, D + 1), F32)
         for assets, gmv in zip(assets_by_site, gmf):
             group = group_array(assets, 'taxonomy')
             for taxonomy, assets in group.items():
                 for l, loss_type in enumerate(self.loss_types):
-                    probs = self[taxonomy](loss_type, assets, ([gmv], None))
-                    # probs has shape (1, D)
-                    out[assets['ordinal'], l] = [
-                        d * n for d, n in zip(probs, assets['number'])]
+                    fracs = self[taxonomy](loss_type, assets, ([gmv], None))
+                    dmg = assets['number'] * fracs[:, 0, :D]
+                    csq = assets['value-' + loss_type] * fracs[:, 0, D]
+                    out[assets['ordinal'], l, 0, :D] = dmg
+                    out[assets['ordinal'], l, 0, D] = csq
         return out
 
     def gen_outputs(self, riskinput, monitor, hazard=None):
