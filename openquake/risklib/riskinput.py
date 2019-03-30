@@ -339,18 +339,19 @@ class CompositeRiskModel(collections.Mapping):
                         # seed is set correctly; very tricky indeed! (MS)
                         haz.sort(order='eid')
                         eids = haz['eid']
-                        data = [(haz['gmv'][:, self.imti[imt]], eids)
+                        data = [haz['gmv'][:, self.imti[imt]]
                                 for imt in imt_lt]
                     elif not haz:  # no hazard for this site
-                        eids = []
-                        data = [(numpy.zeros(self.E), numpy.arange(self.E))
-                                for imt in imt_lt]
+                        eids = numpy.arange(self.E)
+                        data = [numpy.zeros(self.E) for imt in imt_lt]
                     else:  # classical
                         eids = []
                         data = [haz[self.imti[imt]] for imt in imt_lt]
-                    out = riskmodel.get_output(assets, data, epsgetter)
-                    out.rlzi = rlzi
-                    out.eids = eids
+                    lst = [riskmodel(lt, assets, d, eids, epsgetter)
+                           for lt, d in zip(self.loss_types, data)]
+                    out = hdf5.ArrayWrapper(
+                        numpy.array(lst), dict(assets=assets, rlzi=rlzi,
+                                               eids=eids))
                 yield out
 
     def reduce(self, taxonomies):
