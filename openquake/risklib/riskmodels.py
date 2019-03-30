@@ -207,17 +207,6 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def get_output(self, assets, data_by_lt, epsgetter):
-        """
-        :param assets: a list of assets with the same taxonomy
-        :param data_by_lt: hazards for each loss type
-        :param epsgetter: an epsilon getter function
-        :returns: an ArrayWrapper of shape (L, ...)
-        """
-        out = [self(lt, assets, data, epsgetter)
-               for lt, data in zip(self.loss_types, data_by_lt)]
-        return ArrayWrapper(numpy.array(out), dict(assets=assets))
-
     def __toh5__(self):
         dic = self.risk_functions.copy()
         if hasattr(self, 'retro_functions'):
@@ -283,7 +272,7 @@ class Classical(RiskModel):
             lt: vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval)
             for lt, vf in self.fragility_functions.items()}
 
-    def __call__(self, loss_type, assets, hazard_curve, _eps=None):
+    def __call__(self, loss_type, assets, hazard_curve, eids=None, eps=None):
         """
         :param str loss_type:
             the loss type considered
@@ -325,7 +314,7 @@ class ProbabilisticEventBased(RiskModel):
         self.vulnerability_functions = vulnerability_functions
         self.conditional_loss_poes = conditional_loss_poes
 
-    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
+    def __call__(self, loss_type, assets, gmvs, eids, epsgetter):
         """
         :param str loss_type:
             the loss type considered
@@ -340,7 +329,6 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        gmvs, eids = gmvs_eids
         E = len(gmvs)
         A = len(assets)
         loss_ratios = numpy.zeros((A, E), F32)
@@ -387,7 +375,7 @@ class ClassicalBCR(RiskModel):
         self.hazard_imtls = hazard_imtls
         self.lrem_steps_per_interval = lrem_steps_per_interval
 
-    def __call__(self, loss_type, assets, hazard, _eps=None, _eids=None):
+    def __call__(self, loss_type, assets, hazard, eids=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -439,11 +427,10 @@ class Scenario(RiskModel):
         self.vulnerability_functions = vulnerability_functions
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
+    def __call__(self, loss_type, assets, gmvs, eids, epsgetter):
         """
         :returns: an array of shape (A, E)
         """
-        gmvs, eids = gmvs_eids
         epsilons = [epsgetter(asset['ordinal'], eids) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
@@ -485,7 +472,7 @@ class Damage(RiskModel):
         self.vulnerability_functions = vulnerability_functions
         self.consequence_functions = consequence_functions
 
-    def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
+    def __call__(self, loss_type, assets, gmvs, eids=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
@@ -497,7 +484,7 @@ class Damage(RiskModel):
         and D the number of damage states.
         """
         ffs = self.fragility_functions[loss_type]
-        damages = scientific.scenario_damage(ffs, gmvs_eids[0]).T
+        damages = scientific.scenario_damage(ffs, gmvs).T
         E, D = damages.shape
         dmg_csq = numpy.zeros((E, D + 1))
         dmg_csq[:, :D] = damages
@@ -528,7 +515,7 @@ class ClassicalDamage(Damage):
         self.risk_investigation_time = risk_investigation_time
         assert risk_investigation_time, risk_investigation_time
 
-    def __call__(self, loss_type, assets, hazard_curve, _eps=None):
+    def __call__(self, loss_type, assets, hazard_curve, eids=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
