@@ -297,8 +297,7 @@ class CompositeRiskModel(collections.Mapping):
     def gen_outputs(self, riskinput, monitor, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
-        underlying riskmodels. Yield the outputs generated as dictionaries
-        out_by_lr.
+        underlying riskmodels. Yield one output per realization.
 
         :param riskinput: a RiskInput instance
         :param monitor: a monitor object used to measure the performance
@@ -338,21 +337,24 @@ class CompositeRiskModel(collections.Mapping):
                 else:  # classical
                     eids = []
                     data = haz  # shape M
-                for taxonomy, assets in assets_by_taxo.items():
-                    rm = self[taxonomy]
-                    lst = []
-                    for lt in self.loss_types:
+
+                lst = []
+                for l, lt in enumerate(self.loss_types):
+                    ls = []
+                    for taxonomy, assets_ in assets_by_taxo.items():
+                        rm = self[taxonomy]
                         if len(data) == 0:
                             dat = [0]
                         elif len(eids):  # gmfs
                             dat = data[:, rm.imti[lt]]
                         else:  # hcurves
                             dat = data[rm.imti[lt]]
-                        lst.append(rm(lt, assets, dat, eids, epsgetter))
-                    out = hdf5.ArrayWrapper(
-                        numpy.array(lst),
-                        dict(assets=assets, rlzi=rlzi, eids=eids))
-                    yield out
+                        ls.append(rm(lt, assets_, dat, eids, epsgetter))
+                    lst.append(numpy.concatenate(ls))
+                ass = numpy.concatenate(list(assets_by_taxo.values()))
+                out = hdf5.ArrayWrapper(
+                    numpy.array(lst), dict(assets=ass, rlzi=rlzi, eids=eids))
+                yield out
 
     def reduce(self, taxonomies):
         """
