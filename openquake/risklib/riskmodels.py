@@ -497,9 +497,16 @@ class Damage(RiskModel):
         and D the number of damage states.
         """
         ffs = self.fragility_functions[loss_type]
-        damages = scientific.scenario_damage(ffs, gmvs_eids[0])  # shape (D, E)
-        damages[damages < 1E-7] = 0  # sanity check
-        return [damages.T] * len(assets)
+        damages = scientific.scenario_damage(ffs, gmvs_eids[0]).T
+        E, D = damages.shape
+        dmg_cons = numpy.zeros((E, D + 1))
+        dmg_cons[:, :D] = damages
+        c_model = self.consequence_functions.get(loss_type)
+        if c_model:  # compute consequences
+            means = [0] + [par[0] for par in c_model.params]
+            # NB: we add a 0 in front for nodamage state
+            dmg_cons[:, D] = damages @ means  # consequence ratio
+        return [dmg_cons] * len(assets)
 
 
 @registry.add('classical_damage')
