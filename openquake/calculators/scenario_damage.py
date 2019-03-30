@@ -57,26 +57,19 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
     for ri in riskinputs:
         for outputs in riskmodel.gen_outputs(ri, monitor):
             r = outputs.rlzi
-            taxo = riskmodel.taxonomy[outputs.assets[0]['taxonomy']]
-            for l, damages in enumerate(outputs):
+            assets = outputs.assets
+            for l, allfractions in enumerate(outputs):
                 loss_type = riskmodel.loss_types[l]
-                c_model = riskmodel[taxo].consequence_functions.get(loss_type)
-                for a, fraction in enumerate(damages):
-                    asset = outputs.assets[a]
-                    damages = fraction * asset['number']
-                    result['d_event'][:, r, l] += damages  # shape (E, D)
-                    if c_model:  # compute consequences
-                        means = [par[0] for par in c_model.params]
-                        # NB: we add a 0 in front for nodamage state
-                        c_ratio = numpy.dot(fraction, [0] + means)
-                        consequences = c_ratio * asset['value-' + loss_type]
-                        result['c_asset'].append(
-                            (l, r, asset['ordinal'],
-                             scientific.mean_std(consequences)))
-                        result['c_event'][:, r, l] += consequences
-                        # TODO: consequences for the occupants
+                for asset, fractions in zip(assets, allfractions):
+                    dmg = fractions[:, :D] * asset['number']  # shape (E, D)
+                    result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
-                        (l, r, asset['ordinal'], scientific.mean_std(damages)))
+                        (l, r, asset['ordinal'], scientific.mean_std(dmg)))
+                    if riskmodel.consequences:
+                        csq = fractions[:, D] * asset['value-' + loss_type]
+                        result['c_asset'].append(
+                            (l, r, asset['ordinal'], scientific.mean_std(csq)))
+                        result['c_event'][:, r, l] += csq
     return result
 
 
