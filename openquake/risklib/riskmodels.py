@@ -488,18 +488,25 @@ class Damage(RiskModel):
     def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
         """
         :param loss_type: the loss type
-        :param assets: a list of N assets of the same taxonomy
+        :param assets: a list of A assets of the same taxonomy
         :param gmvs_eids: pairs (gmvs, eids), each one with E elements
         :param _eps: dummy parameter, unused
-        :returns: N arrays of E x D elements
+        :returns: an array of shape (A, E, D + 1) elements
 
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
         ffs = self.fragility_functions[loss_type]
-        damages = scientific.scenario_damage(ffs, gmvs_eids[0])  # shape (D, E)
-        damages[damages < 1E-7] = 0  # sanity check
-        return [damages.T] * len(assets)
+        damages = scientific.scenario_damage(ffs, gmvs_eids[0]).T
+        E, D = damages.shape
+        dmg_csq = numpy.zeros((E, D + 1))
+        dmg_csq[:, :D] = damages
+        c_model = self.consequence_functions.get(loss_type)
+        if c_model:  # compute consequences
+            means = [0] + [par[0] for par in c_model.params]
+            # NB: we add a 0 in front for nodamage state
+            dmg_csq[:, D] = damages @ means  # consequence ratio
+        return numpy.array([dmg_csq] * len(assets))
 
 
 @registry.add('classical_damage')
