@@ -26,12 +26,12 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def build_asset_risk(assetcol, dmg, loss_types, damage_states, perils):
-    # dmg has shape (A, R, L, 1, D)
+def build_asset_risk(assetcol, dmg_csq, loss_types, damage_states, perils):
+    # dmg_csq has shape (A, R, L, 1, D + 1)
     dtlist = []
     field2tup = {}
     for l, loss_type in enumerate(loss_types):
-        for d, ds in enumerate(damage_states):
+        for d, ds in enumerate(damage_states + ['loss']):
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
@@ -41,7 +41,7 @@ def build_asset_risk(assetcol, dmg, loss_types, damage_states, perils):
     for field in assetcol.array.dtype.names:
         arr[field] = assetcol.array[field]
     for field, _ in dtlist:
-        arr[field] = dmg[(slice(None),) + field2tup[field]]
+        arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
     return arr
 
 
@@ -75,31 +75,28 @@ class MultiRiskCalculator(base.RiskCalculator):
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.humidity_amplification_factor
-        dmg = numpy.zeros((A, P, L, 1, D), F32)
+        dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
         perils = []
         if 'ASH' in self.oqparam.multi_peril:
             gmf = self.datastore['multi_peril']['ASH']
-            dmg[:, 0] = self.riskmodel.get_damage(
+            dmg_csq[:, 0] = self.riskmodel.get_dmg_csq(
                 self.assetcol.assets_by_site(), gmf)
             perils.append('ASH_DRY')
-            dmg[:, 1] = self.riskmodel.get_damage(
+            dmg_csq[:, 1] = self.riskmodel.get_dmg_csq(
                 self.assetcol.assets_by_site(), gmf * ampl)
             perils.append('ASH_WET')
         hazard = self.datastore['multi_peril']
-        no_fragility_perils = []
+        no_frag_perils = []
         for peril in self.oqparam.multi_peril:
             if peril != 'ASH':
-                no_fragility_perils.append(peril)
+                no_frag_perils.append(peril)
         for aid, rec in enumerate(self.assetcol.array):
             haz = hazard[rec['site_id']]
-            for h, hfield in enumerate(no_fragility_perils):
-                dmg[aid, h + 2, 0, 0, -1] = haz[hfield]
+            for h, hfield in enumerate(no_frag_perils):
+                dmg_csq[aid, h + 2, 0, 0, -2] = haz[hfield]  # -2 is collapse
 
         self.datastore['asset_risk'] = build_asset_risk(
-            self.assetcol, dmg, ltypes, dstates, perils + no_fragility_perils)
-
-        # consequence distributions
-        # self.datastore['losses_by_asset'] = c_asset
+            self.assetcol, dmg_csq, ltypes, dstates, perils + no_frag_perils)
 
     def post_execute(self, result):
         pass
