@@ -146,7 +146,6 @@ class CompositeRiskModel(collections.Mapping):
         :param imts: intensity measure types
         :returns: a list of (assets, loss_ratios) for each taxonomy on the site
         """
-        imti = {imt: i for i, imt in enumerate(imts)}
         assets_by_t = groupby(assets, operator.attrgetter('taxonomy'))
         assets_ratios = []
         for taxo, rm in self.items():
@@ -155,33 +154,44 @@ class CompositeRiskModel(collections.Mapping):
                 assets = assets_by_t[t]
             except KeyError:  # there are no assets of taxonomy taxo
                 continue
-            assets_ratios.append((assets, rm.get_loss_ratios(gmvs, imti)))
+            assets_ratios.append((assets, rm.get_loss_ratios(gmvs)))
         return assets_ratios
 
     def init(self, oqparam):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.curve_params = self.make_curve_params(oqparam)
-        self.loss_types = [cp.loss_type for cp in self.curve_params]
         self.taxonomy = []  # must be set by the engine
-        expected_loss_types = set(self.loss_types)
+
+        # build a sorted list with all the loss_types contained in the model
+        ltypes = set()
+        for rm in self.values():
+            ltypes.update(rm.loss_types)
+        self.loss_types = sorted(ltypes)
+
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
             taxonomies.add(taxonomy)
+            riskmodel.loss_ratios = {}
             riskmodel.compositemodel = self
-            # save the number of nonzero coefficients of variation
-            for vf in riskmodel.risk_functions.values():
+            for lt, vf in riskmodel.risk_functions.items():
+                # for classical risk
+                if hasattr(riskmodel, 'lrem_steps_per_interval'):
+                    riskmodel.loss_ratios[lt] = vf.mean_loss_ratios_with_steps(
+                        riskmodel.lrem_steps_per_interval)
+                # save the number of nonzero coefficients of variation
                 if hasattr(vf, 'covs') and vf.covs.any():
                     self.covs += 1
-            missing = expected_loss_types - set(riskmodel.risk_functions)
+            missing = set(self.loss_types) - set(riskmodel.risk_functions)
             if missing:
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
             riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt].imt]
                               for lt in self.loss_types}
+
         self.taxonomies = sorted(taxonomies)
+        self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
         for taxo, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
@@ -213,8 +223,7 @@ class CompositeRiskModel(collections.Mapping):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
         cps = []
-        loss_types = self._get_loss_types()
-        for l, loss_type in enumerate(loss_types):
+        for l, loss_type in enumerate(self.loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
                 lines = []
@@ -249,15 +258,6 @@ class CompositeRiskModel(collections.Mapping):
             loss_ratios['user_provided'] = cp.user_provided
             loss_ratios[cp.loss_type] = tuple(cp.ratios)
         return loss_ratios
-
-    def _get_loss_types(self):
-        """
-        :returns: a sorted list with all the loss_types contained in the model
-        """
-        ltypes = set()
-        for rm in self.values():
-            ltypes.update(rm.loss_types)
-        return sorted(ltypes)
 
     def __getitem__(self, taxonomy):
         try:
@@ -369,7 +369,7 @@ class CompositeRiskModel(collections.Mapping):
         return new
 
     def __toh5__(self):
-        loss_types = hdf5.array_of_vstr(self._get_loss_types())
+        loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
         return self._riskmodels, dict(
