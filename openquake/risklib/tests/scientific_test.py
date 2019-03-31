@@ -209,7 +209,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.0, 0.0, 0.3, 0.2, 0.1],   # CoVs
             'LN'
         )
-        loss_ratios, lrem = curve.loss_ratio_exceedance_matrix(5)
+        loss_ratios = tuple(curve.mean_loss_ratios_with_steps(5))
+        lrem = curve.loss_ratio_exceedance_matrix(loss_ratios)
         expected_lrem = numpy.array([
             [0.000, 1.000, 1.000, 1.000, 1.000],
             [0.000, 1.000, 1.000, 1.000, 1.000],
