@@ -162,7 +162,13 @@ class CompositeRiskModel(collections.Mapping):
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         self.taxonomy = []  # must be set by the engine
-        self.loss_types = self._get_loss_types()
+
+        # build a sorted list with all the loss_types contained in the model
+        ltypes = set()
+        for rm in self.values():
+            ltypes.update(rm.loss_types)
+        self.loss_types = sorted(ltypes)
+
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
             taxonomies.add(taxonomy)
@@ -217,8 +223,7 @@ class CompositeRiskModel(collections.Mapping):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
         cps = []
-        loss_types = self._get_loss_types()
-        for l, loss_type in enumerate(loss_types):
+        for l, loss_type in enumerate(self.loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
                 lines = []
@@ -253,15 +258,6 @@ class CompositeRiskModel(collections.Mapping):
             loss_ratios['user_provided'] = cp.user_provided
             loss_ratios[cp.loss_type] = tuple(cp.ratios)
         return loss_ratios
-
-    def _get_loss_types(self):
-        """
-        :returns: a sorted list with all the loss_types contained in the model
-        """
-        ltypes = set()
-        for rm in self.values():
-            ltypes.update(rm.loss_types)
-        return sorted(ltypes)
 
     def __getitem__(self, taxonomy):
         try:
@@ -373,7 +369,7 @@ class CompositeRiskModel(collections.Mapping):
         return new
 
     def __toh5__(self):
-        loss_types = hdf5.array_of_vstr(self._get_loss_types())
+        loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
         return self._riskmodels, dict(
