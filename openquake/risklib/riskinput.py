@@ -146,7 +146,6 @@ class CompositeRiskModel(collections.Mapping):
         :param imts: intensity measure types
         :returns: a list of (assets, loss_ratios) for each taxonomy on the site
         """
-        imti = {imt: i for i, imt in enumerate(imts)}
         assets_by_t = groupby(assets, operator.attrgetter('taxonomy'))
         assets_ratios = []
         for taxo, rm in self.items():
@@ -155,33 +154,39 @@ class CompositeRiskModel(collections.Mapping):
                 assets = assets_by_t[t]
             except KeyError:  # there are no assets of taxonomy taxo
                 continue
-            assets_ratios.append((assets, rm.get_loss_ratios(gmvs, imti)))
+            assets_ratios.append((assets, rm.get_loss_ratios(gmvs)))
         return assets_ratios
 
     def init(self, oqparam):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.curve_params = self.make_curve_params(oqparam)
-        self.loss_types = [cp.loss_type for cp in self.curve_params]
         self.taxonomy = []  # must be set by the engine
-        expected_loss_types = set(self.loss_types)
+
+        # build a sorted list with all the loss_types contained in the model
+        ltypes = set()
+        for rm in self.values():
+            ltypes.update(rm.loss_types)
+        self.loss_types = sorted(ltypes)
+
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
             taxonomies.add(taxonomy)
             riskmodel.compositemodel = self
-            # save the number of nonzero coefficients of variation
-            for vf in riskmodel.risk_functions.values():
+            for lt, vf in riskmodel.risk_functions.items():
+                # save the number of nonzero coefficients of variation
                 if hasattr(vf, 'covs') and vf.covs.any():
                     self.covs += 1
-            missing = expected_loss_types - set(riskmodel.risk_functions)
+            missing = set(self.loss_types) - set(riskmodel.risk_functions)
             if missing:
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
             riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt].imt]
                               for lt in self.loss_types}
+
         self.taxonomies = sorted(taxonomies)
+        self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
         for taxo, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
@@ -213,24 +218,30 @@ class CompositeRiskModel(collections.Mapping):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
         cps = []
-        loss_types = self._get_loss_types()
-        for l, loss_type in enumerate(loss_types):
+        for l, loss_type in enumerate(self.loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
                 lines = []
-                for key in sorted(self):
-                    rm = self[key]
+                allratios = []
+                for taxo in sorted(self):
+                    rm = self[taxo]
                     if loss_type in rm.loss_ratios:
                         ratios = rm.loss_ratios[loss_type]
+                        allratios.append(ratios)
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
                             rm.vulnerability_functions[loss_type], len(ratios))
                         )
-                if len(curve_resolutions) > 1:  # example in test_case_5
-                    logging.debug(
-                        'Different num_loss_ratios:\n%s', '\n'.join(lines))
+                if len(curve_resolutions) > 1:
+                    # number of loss ratios is not the same for all taxonomies:
+                    # then use the longest array; see classical_risk case_5
+                    allratios.sort(key=len)
+                    for rm in self.values():
+                        if rm.loss_ratios[loss_type] != allratios[-1]:
+                            rm.loss_ratios[loss_type] = allratios[-1]
+                            logging.info('Redefining loss ratios for %s', rm)
                 cp = scientific.CurveParams(
-                    l, loss_type, max(curve_resolutions), ratios, True)
+                    l, loss_type, max(curve_resolutions), allratios[-1], True)
             else:  # used only to store the association l -> loss_type
                 cp = scientific.CurveParams(l, loss_type, 0, [], False)
             cps.append(cp)
@@ -249,15 +260,6 @@ class CompositeRiskModel(collections.Mapping):
             loss_ratios['user_provided'] = cp.user_provided
             loss_ratios[cp.loss_type] = tuple(cp.ratios)
         return loss_ratios
-
-    def _get_loss_types(self):
-        """
-        :returns: a sorted list with all the loss_types contained in the model
-        """
-        ltypes = set()
-        for rm in self.values():
-            ltypes.update(rm.loss_types)
-        return sorted(ltypes)
 
     def __getitem__(self, taxonomy):
         try:
@@ -371,11 +373,16 @@ class CompositeRiskModel(collections.Mapping):
         return new
 
     def __toh5__(self):
-        loss_types = hdf5.array_of_vstr(self._get_loss_types())
+        loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
-        return self._riskmodels, dict(
+        dic = dict(
             covs=self.covs, loss_types=loss_types, limit_states=limit_states)
+        rf = next(iter(self.values()))
+        if hasattr(rf, 'loss_ratios'):
+            for lt in self.loss_types:
+                dic['loss_ratios_' + lt] = rf.loss_ratios[lt]
+        return self._riskmodels, dic
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
