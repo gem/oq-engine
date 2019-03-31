@@ -217,6 +217,9 @@ class RiskModel(object):
         vars(self).update(attrs)
         setattr(self, self.kind + '_functions', dic)
 
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.taxonomy)
+
 
 loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
 
