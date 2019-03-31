@@ -26,12 +26,7 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
-try:
-    from functools import lru_cache
-except ImportError:
-    from openquake.risklib.utils import memoized
-else:
-    memoized = lru_cache(100)
+from openquake.risklib.utils import memoized
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated, println
