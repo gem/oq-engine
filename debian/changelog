@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the classical_risk calculator to use the same loss ratios for all
+    taxonomies
   * Temporarily removed the `insured_losses` functionality
   * Extended `oq restore` to download from URLs
   * Removed the column 'gsims' from the output 'realizations'
