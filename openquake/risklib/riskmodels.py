@@ -274,6 +274,9 @@ class Classical(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
+        self.loss_ratios = {
+            lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
+            for lt, vf in vulnerability_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, eids=None, eps=None):
         """
@@ -284,18 +287,20 @@ class Classical(RiskModel):
             :class:`openquake.risklib.scientific.Asset` instances
         :param hazard_curve:
             an array of poes
-        :param _eps:
+        :param eids:
+            ignored, here only for API compatibility with other calculators
+        :param eps:
             ignored, here only for API compatibility with other calculators
         :returns:
             a composite array (loss, poe) of shape (C, A)
         """
         n = len(assets)
         vf = self.vulnerability_functions[loss_type]
+        lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
         lrcurves = numpy.array(
-            [scientific.classical(
-                vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
+            [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values).T  # shape (C, A)
         # this is required to avoid an error with case_master
 
@@ -375,6 +380,12 @@ class ClassicalBCR(RiskModel):
         self.asset_life_expectancy = asset_life_expectancy
         self.hazard_imtls = hazard_imtls
         self.lrem_steps_per_interval = lrem_steps_per_interval
+        self.loss_ratios_orig = {
+            lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
+            for lt, vf in vulnerability_functions_orig.items()}
+        self.loss_ratios_retro = {
+            lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
+            for lt, vf in vulnerability_functions_retro.items()}
 
     def __call__(self, loss_type, assets, hazard, eids=None, eps=None):
         """
@@ -392,14 +403,14 @@ class ClassicalBCR(RiskModel):
         vf = self.vulnerability_functions[loss_type]
         imls = self.hazard_imtls[vf.imt]
         vf_retro = self.retro_functions[loss_type]
-        curves_orig = functools.partial(scientific.classical, vf, imls,
-                                        steps=self.lrem_steps_per_interval)
-        curves_retro = functools.partial(scientific.classical, vf_retro, imls,
-                                         steps=self.lrem_steps_per_interval)
-        original_loss_curves = numpy.array(
-            [curves_orig(hazard) for _ in range(n)])
-        retrofitted_loss_curves = numpy.array(
-            [curves_retro(hazard) for _ in range(n)])
+        curves_orig = functools.partial(
+            scientific.classical, vf, imls,
+            loss_ratios=self.loss_ratios_orig[loss_type])
+        curves_retro = functools.partial(
+            scientific.classical, vf_retro, imls,
+            loss_ratios=self.loss_ratios_retro[loss_type])
+        original_loss_curves = numpy.array([curves_orig(hazard)] * n)
+        retrofitted_loss_curves = numpy.array([curves_retro(hazard)] * n)
 
         eal_original = numpy.array([scientific.average_loss(lc)
                                     for lc in original_loss_curves])
