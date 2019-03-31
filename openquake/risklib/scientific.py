@@ -286,7 +286,7 @@ class VulnerabilityFunction(object):
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
                     zip(self.mean_loss_ratios, self.stddevs)):
-                lrem[row][col] = self.distribution.survival(
+                lrem[row, col] = self.distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
 
