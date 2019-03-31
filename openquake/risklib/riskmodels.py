@@ -274,9 +274,6 @@ class Classical(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
-        self.loss_ratios = {
-            lt: vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval)
-            for lt, vf in self.vulnerability_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, eids=None, eps=None):
         """
