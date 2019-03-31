@@ -17,11 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import mock
 import pickle
 
 import numpy
-from openquake.risklib import utils, scientific
+from openquake.risklib import scientific
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -52,20 +51,6 @@ class BetaDistributionTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             [0.057241368], scientific.BetaDistribution().sample(
                 numpy.array([0.1]), None, numpy.array([0.1])))
-
-
-class TestMemoize(unittest.TestCase):
-    def test_cache(self):
-        counts = []
-
-        @utils.memoized
-        def func():
-            counts.append(None)
-            return 3
-        self.assertEqual(3, func())
-        self.assertEqual(3, func())
-        # check that func has been called only once, now two
-        self.assertEqual(1, len(counts))
 
 
 epsilons = scientific.make_epsilons(
@@ -340,7 +325,7 @@ class LogNormalDistributionTestCase(unittest.TestCase):
         self.dist = scientific.LogNormalDistribution(epsilons)
 
         tol = 0.1
-        for a1, a2 in utils.pairwise(range(assets_num)):
+        for a1, a2 in scientific.pairwise(range(assets_num)):
             coeffs = numpy.corrcoef(
                 self.dist.epsilons[a1, :], self.dist.epsilons[a2, :])
 

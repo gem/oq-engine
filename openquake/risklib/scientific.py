@@ -23,7 +23,9 @@ import abc
 import copy
 import bisect
 import warnings
+import itertools
 import collections
+from functools import lru_cache
 
 import numpy
 from numpy.testing import assert_equal
@@ -31,10 +33,17 @@ from scipy import interpolate, stats, random
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import utils
 
 F32 = numpy.float32
 U32 = numpy.uint32
+
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    # b ahead one step; if b is empty do not raise StopIteration
+    next(b, None)
+    return zip(a, b)  # if a is empty will return an empty iter
 
 
 def fine_graining(points, steps):
@@ -58,7 +67,7 @@ def fine_graining(points, steps):
     if steps < 2:
         return points
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
-                            for x, y in utils.pairwise(points)])
+                            for x, y in pairwise(points)])
     return numpy.concatenate([ls, [points[-1]]])
 
 #
@@ -266,7 +275,7 @@ class VulnerabilityFunction(object):
         assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
 
-    @utils.memoized
+    @lru_cache(100)
     def loss_ratio_exceedance_matrix(self, steps):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
@@ -289,7 +298,7 @@ class VulnerabilityFunction(object):
                     loss_ratio, mean_loss_ratio, stddev)
         return loss_ratios, lrem
 
-    @utils.memoized
+    @lru_cache(100)
     def mean_imls(self):
         """
         Compute the mean IMLs (Intensity Measure Level)
@@ -303,7 +312,7 @@ class VulnerabilityFunction(object):
         """
         return numpy.array(
             [max(0, self.imls[0] - (self.imls[1] - self.imls[0]) / 2.)] +
-            [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
+            [numpy.mean(pair) for pair in pairwise(self.imls)] +
             [self.imls[-1] + (self.imls[-1] - self.imls[-2]) / 2.])
 
     def __toh5__(self):
@@ -417,7 +426,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.set_distribution(epsilons)
         return self.distribution.sample(self.loss_ratios, probs)
 
-    @utils.memoized
+    @lru_cache(100)
     def loss_ratio_exceedance_matrix(self, steps):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
@@ -1131,12 +1140,12 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
 
 def pairwise_mean(values):
     "Averages between a value and the next value in a sequence"
-    return numpy.array([numpy.mean(pair) for pair in utils.pairwise(values)])
+    return numpy.array([numpy.mean(pair) for pair in pairwise(values)])
 
 
 def pairwise_diff(values):
     "Differences between a value and the next value in a sequence"
-    return numpy.array([x - y for x, y in utils.pairwise(values)])
+    return numpy.array([x - y for x, y in pairwise(values)])
 
 
 def mean_std(fractions):
