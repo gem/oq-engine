@@ -161,26 +161,31 @@ class CompositeRiskModel(collections.Mapping):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.curve_params = self.make_curve_params(oqparam)
-        self.loss_types = [cp.loss_type for cp in self.curve_params]
         self.taxonomy = []  # must be set by the engine
-        expected_loss_types = set(self.loss_types)
+        self.loss_types = self._get_loss_types()
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
             taxonomies.add(taxonomy)
+            riskmodel.loss_ratios = {}
             riskmodel.compositemodel = self
-            # save the number of nonzero coefficients of variation
-            for vf in riskmodel.risk_functions.values():
+            for lt, vf in riskmodel.risk_functions.items():
+                # for classical risk
+                if hasattr(riskmodel, 'lrem_steps_per_interval'):
+                    riskmodel.loss_ratios[lt] = vf.mean_loss_ratios_with_steps(
+                        riskmodel.lrem_steps_per_interval)
+                # save the number of nonzero coefficients of variation
                 if hasattr(vf, 'covs') and vf.covs.any():
                     self.covs += 1
-            missing = expected_loss_types - set(riskmodel.risk_functions)
+            missing = set(self.loss_types) - set(riskmodel.risk_functions)
             if missing:
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
             riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt].imt]
                               for lt in self.loss_types}
+
         self.taxonomies = sorted(taxonomies)
+        self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
         for taxo, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
