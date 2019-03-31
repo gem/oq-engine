@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
+from functools import lru_cache
 import collections
 import operator
 import logging
@@ -26,7 +27,6 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
-from openquake.risklib.utils import memoized
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated, println
@@ -147,6 +147,8 @@ def extract_(dstore, dspath):
         return ArrayWrapper(numpy.array(list(obj)), obj.attrs)
     else:
         return obj
+
+memoized = lru_cache(100)
 
 
 class Extract(dict):
