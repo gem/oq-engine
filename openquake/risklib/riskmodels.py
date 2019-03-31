@@ -24,7 +24,7 @@ from openquake.baselib.node import Node
 from openquake.baselib.general import CallableDict, AccumDict
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
-from openquake.risklib import utils, scientific
+from openquake.risklib import scientific
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -218,16 +218,23 @@ class RiskModel(object):
         setattr(self, self.kind + '_functions', dic)
 
 
+loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
+
+
 def rescale(curves, values):
     """
     Multiply the losses in each curve of kind (losses, poes) by the
     corresponding value.
+
+    :param curves: an array of shape (A, 2, C)
+    :param values: an array of shape (A,)
     """
-    n = len(curves)
-    assert n == len(values), (n, len(values))
-    losses = [curves[i, 0] * values[i] for i in range(n)]
-    poes = curves[:, 1]
-    return numpy.array([[losses[i], poes[i]] for i in range(n)])
+    A, _, C = curves.shape
+    assert A == len(values), (A, len(values))
+    array = numpy.zeros((A, C), loss_poe_dt)
+    array['loss'] = [c * v for c, v in zip(curves[:, 0], values)]
+    array['poe'] = curves[:, 1]
+    return array
 
 
 @registry.add('classical_risk', 'classical', 'disaggregation')
@@ -267,23 +274,20 @@ class Classical(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
-        self.loss_ratios = {
-            lt: vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval)
-            for lt, vf in self.fragility_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, eids=None, eps=None):
         """
         :param str loss_type:
             the loss type considered
         :param assets:
-            assets is an iterator over N
+            assets is an iterator over A
             :class:`openquake.risklib.scientific.Asset` instances
         :param hazard_curve:
             an array of poes
         :param _eps:
             ignored, here only for API compatibility with other calculators
         :returns:
-            an array of shape (C, N, 2)
+            a composite array (loss, poe) of shape (C, A)
         """
         n = len(assets)
         vf = self.vulnerability_functions[loss_type]
@@ -292,9 +296,8 @@ class Classical(RiskModel):
         lrcurves = numpy.array(
             [scientific.classical(
                 vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
-        return rescale(lrcurves, values).transpose(2, 0, 1)
-        # NB: we need to transpose from shape (N, 2, C) -> (C, N, 2)
-        # otherwise .get_output would fail
+        return rescale(lrcurves, values).T  # shape (C, A)
+        # this is required to avoid an error with case_master
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
@@ -338,17 +341,16 @@ class ProbabilisticEventBased(RiskModel):
             loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
 
-    def get_loss_ratios(self, gmvs, imti):  # used in ebrisk
+    def get_loss_ratios(self, gmvs):  # used in ebrisk
         """
         :param gmvs: an array of shape (E, M)
-        :param imti: a dictionary imt -> imt index
         :returns: loss_ratios of shape (L, E)
         """
         out = []
         E = len(gmvs)
         for lt, vf in self.vulnerability_functions.items():
             loss_ratios = numpy.zeros(E, F32)
-            means, covs, idxs = vf.interpolate(gmvs[:, imti[vf.imt]])
+            means, covs, idxs = vf.interpolate(gmvs[:, self.imti[lt]])
             loss_ratios[idxs] = vf.sample(means, covs, idxs, None)
             out.append(loss_ratios)
         return numpy.array(out)
@@ -394,14 +396,16 @@ class ClassicalBCR(RiskModel):
                                         steps=self.lrem_steps_per_interval)
         curves_retro = functools.partial(scientific.classical, vf_retro, imls,
                                          steps=self.lrem_steps_per_interval)
-        original_loss_curves = utils.numpy_map(curves_orig, [hazard] * n)
-        retrofitted_loss_curves = utils.numpy_map(curves_retro, [hazard] * n)
+        original_loss_curves = numpy.array(
+            [curves_orig(hazard) for _ in range(n)])
+        retrofitted_loss_curves = numpy.array(
+            [curves_retro(hazard) for _ in range(n)])
 
-        eal_original = utils.numpy_map(
-            scientific.average_loss, original_loss_curves)
+        eal_original = numpy.array([scientific.average_loss(lc)
+                                    for lc in original_loss_curves])
 
-        eal_retrofitted = utils.numpy_map(
-            scientific.average_loss, retrofitted_loss_curves)
+        eal_retrofitted = numpy.array([scientific.average_loss(lc)
+                                       for lc in retrofitted_loss_curves])
 
         bcr_results = [
             scientific.bcr(
