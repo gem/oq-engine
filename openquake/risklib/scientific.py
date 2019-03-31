@@ -23,7 +23,9 @@ import abc
 import copy
 import bisect
 import warnings
+import itertools
 import collections
+from functools import lru_cache
 
 import numpy
 from numpy.testing import assert_equal
@@ -31,10 +33,17 @@ from scipy import interpolate, stats, random
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import utils
 
 F32 = numpy.float32
 U32 = numpy.uint32
+
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    # b ahead one step; if b is empty do not raise StopIteration
+    next(b, None)
+    return zip(a, b)  # if a is empty will return an empty iter
 
 
 def fine_graining(points, steps):
@@ -58,7 +67,7 @@ def fine_graining(points, steps):
     if steps < 2:
         return points
     ls = numpy.concatenate([numpy.linspace(x, y, num=steps + 1)[:-1]
-                            for x, y in utils.pairwise(points)])
+                            for x, y in pairwise(points)])
     return numpy.concatenate([ls, [points[-1]]])
 
 #
@@ -266,30 +275,22 @@ class VulnerabilityFunction(object):
         assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
 
-    @utils.memoized
-    def loss_ratio_exceedance_matrix(self, steps):
+    @lru_cache(100)
+    def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
-
-        :param int steps:
-            Number of steps between loss ratios.
         """
-
-        # add steps between mean loss ratio values
-        loss_ratios = self.mean_loss_ratios_with_steps(steps)
-
         # LREM has number of rows equal to the number of loss ratios
         # and number of columns equal to the number of imls
-        lrem = numpy.empty((loss_ratios.size, self.imls.size), float)
-
+        lrem = numpy.empty((len(loss_ratios), len(self.imls)))
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
                     zip(self.mean_loss_ratios, self.stddevs)):
-                lrem[row][col] = self.distribution.survival(
+                lrem[row, col] = self.distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
-        return loss_ratios, lrem
+        return lrem
 
-    @utils.memoized
+    @lru_cache(100)
     def mean_imls(self):
         """
         Compute the mean IMLs (Intensity Measure Level)
@@ -303,7 +304,7 @@ class VulnerabilityFunction(object):
         """
         return numpy.array(
             [max(0, self.imls[0] - (self.imls[1] - self.imls[0]) / 2.)] +
-            [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
+            [numpy.mean(pair) for pair in pairwise(self.imls)] +
             [self.imls[-1] + (self.imls[-1] - self.imls[-2]) / 2.])
 
     def __toh5__(self):
@@ -417,8 +418,8 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.set_distribution(epsilons)
         return self.distribution.sample(self.loss_ratios, probs)
 
-    @utils.memoized
-    def loss_ratio_exceedance_matrix(self, steps):
+    @lru_cache(100)
+    def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
         Required for the Classical Risk and BCR Calculators.
@@ -968,7 +969,7 @@ def classical_damage(
 #
 
 
-def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
+def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
     """
     :param vulnerability_function:
         an instance of
@@ -978,14 +979,16 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
         the hazard intensity measure type and levels
     :type hazard_poes:
         the hazard curve
-    :param int steps:
-        Number of steps between loss ratios.
+    :param loss_ratios:
+        a tuple of C loss ratios
+    :returns:
+        an array of shape (2, C)
     """
     assert len(hazard_imls) == len(hazard_poes), (
         len(hazard_imls), len(hazard_poes))
     vf = vulnerability_function
     imls = vf.mean_imls()
-    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
+    lrem = vf.loss_ratio_exceedance_matrix(loss_ratios)
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
@@ -1131,12 +1134,12 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
 
 def pairwise_mean(values):
     "Averages between a value and the next value in a sequence"
-    return numpy.array([numpy.mean(pair) for pair in utils.pairwise(values)])
+    return numpy.array([numpy.mean(pair) for pair in pairwise(values)])
 
 
 def pairwise_diff(values):
     "Differences between a value and the next value in a sequence"
-    return numpy.array([x - y for x, y in utils.pairwise(values)])
+    return numpy.array([x - y for x, y in pairwise(values)])
 
 
 def mean_std(fractions):
@@ -1185,14 +1188,15 @@ def broadcast(func, composite_array, *args):
 def average_loss(lc):
     """
     Given a loss curve array with `poe` and `loss` fields,
-    computes the average loss on ta period of time.
+    computes the average loss on a period of time.
 
     :note: As the loss curve is supposed to be piecewise linear as it
            is a result of a linear interpolation, we compute an exact
            integral by using the trapeizodal rule with the width given by the
            loss bin width.
     """
-    return -pairwise_diff(lc['loss']) @ pairwise_mean(lc['poe'])
+    losses, poes = (lc['loss'], lc['poe']) if lc.dtype.names else lc
+    return -pairwise_diff(losses) @ pairwise_mean(poes)
 
 
 def normalize_curves_eb(curves):
