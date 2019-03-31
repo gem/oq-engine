@@ -24,7 +24,7 @@ from openquake.baselib.node import Node
 from openquake.baselib.general import CallableDict, AccumDict
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
-from openquake.risklib import utils, scientific
+from openquake.risklib import scientific
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -396,14 +396,16 @@ class ClassicalBCR(RiskModel):
                                         steps=self.lrem_steps_per_interval)
         curves_retro = functools.partial(scientific.classical, vf_retro, imls,
                                          steps=self.lrem_steps_per_interval)
-        original_loss_curves = utils.numpy_map(curves_orig, [hazard] * n)
-        retrofitted_loss_curves = utils.numpy_map(curves_retro, [hazard] * n)
+        original_loss_curves = numpy.array(
+            [curves_orig(hazard) for _ in range(n)])
+        retrofitted_loss_curves = numpy.array(
+            [curves_retro(hazard) for _ in range(n)])
 
-        eal_original = utils.numpy_map(
-            scientific.average_loss, original_loss_curves)
+        eal_original = numpy.array([scientific.average_loss(lc)
+                                    for lc in original_loss_curves])
 
-        eal_retrofitted = utils.numpy_map(
-            scientific.average_loss, retrofitted_loss_curves)
+        eal_retrofitted = numpy.array([scientific.average_loss(lc)
+                                       for lc in retrofitted_loss_curves])
 
         bcr_results = [
             scientific.bcr(
