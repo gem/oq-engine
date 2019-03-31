@@ -16,31 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import functools
 import itertools
-import numpy
-from decorator import decorate
 
-
-# copied from https://github.com/micheles/decorator/blob/master/docs/tests.documentation.rst
-def _memoize(func, *args, **kw):
-    if kw:  # frozenset is used to ensure hashability
-        key = args, frozenset(kw.items())
-    else:
-        key = args
-    cache = func.cache  # attribute added by memoize
-    if key not in cache:
-        cache[key] = func(*args, **kw)
-    return cache[key]
-
-
-def memoized(func):
-    """
-    A simple memoize implementation. It works by adding a .cache dictionary
-    to the decorated function. The cache will grow indefinitely, so it is
-    your responsibility to clear it, if needed.
-    """
-    func.cache = {}
-    return decorate(func, _memoize)
+memoized = functools.lru_cache(100)
 
 
 def pairwise(iterable):
@@ -49,7 +28,3 @@ def pairwise(iterable):
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
     return zip(a, b)  # if a is empty will return an empty iter
-
-
-def numpy_map(f, *args):
-    return numpy.array(list(map(f, *args)))
