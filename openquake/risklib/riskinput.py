@@ -232,13 +232,14 @@ class CompositeRiskModel(collections.Mapping):
                         lines.append('%s %d' % (
                             rm.vulnerability_functions[loss_type], len(ratios))
                         )
-                if len(curve_resolutions) > 1:  # example in test_case_5
-                    # redefine loss_ratios
-                    logging.debug(
-                        'Different num_loss_ratios:\n%s', '\n'.join(lines))
+                if len(curve_resolutions) > 1:
+                    # number of loss ratios is not the same for all taxonomies:
+                    # then use the longest array; see classical_risk case_5
                     allratios.sort(key=len)
                     for rm in self.values():
-                        rm.loss_ratios[loss_type] = allratios[-1]
+                        if rm.loss_ratios[loss_type] != allratios[-1]:
+                            rm.loss_ratios[loss_type] = allratios[-1]
+                            logging.info('Redefining loss ratios for %s', rm)
                 cp = scientific.CurveParams(
                     l, loss_type, max(curve_resolutions), allratios[-1], True)
             else:  # used only to store the association l -> loss_type
@@ -373,8 +374,13 @@ class CompositeRiskModel(collections.Mapping):
         loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
-        return self._riskmodels, dict(
+        dic = dict(
             covs=self.covs, loss_types=loss_types, limit_states=limit_states)
+        rf = next(iter(self.values()))
+        if hasattr(rf, 'loss_ratios'):
+            for lt in self.loss_types:
+                dic['loss_ratios_' + lt] = rf.loss_ratios[lt]
+        return self._riskmodels, dic
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
