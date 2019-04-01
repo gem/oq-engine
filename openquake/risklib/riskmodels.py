@@ -295,7 +295,7 @@ class Classical(RiskModel):
         :param eps:
             ignored, here only for API compatibility with other calculators
         :returns:
-            a composite array (loss, poe) of shape (C, A)
+            a composite array (loss, poe) of shape (A, C)
         """
         n = len(assets)
         vf = self.vulnerability_functions[loss_type]
@@ -304,8 +304,7 @@ class Classical(RiskModel):
         values = get_values(loss_type, assets)
         lrcurves = numpy.array(
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
-        return rescale(lrcurves, values).T  # shape (C, A)
-        # this is required to avoid an error with case_master
+        return rescale(lrcurves, values)
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
@@ -453,7 +452,7 @@ class Scenario(RiskModel):
         ok = ~numpy.isnan(values)
         if not ok.any():
             # there are no assets with a value
-            return
+            return numpy.zeros(0)
         # there may be assets without a value
         missing_value = not ok.all()
         if missing_value:

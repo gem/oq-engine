@@ -93,12 +93,12 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 continue
             r = out.rlzi
             agglosses = numpy.zeros((len(out.eids), L), F32)
-            for l, loss_ratios in enumerate(out):
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                loss_ratios = out[loss_type]
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
-                loss_type = riskmodel.loss_types[l]
-                avalues = riskmodels.get_values(loss_type, out.assets)
-                for a, asset in enumerate(out.assets):
+                avalues = riskmodels.get_values(loss_type, ri.assets)
+                for a, asset in enumerate(ri.assets):
                     aval = avalues[a]
                     aid = asset['ordinal']
                     idx = aid2idx[aid]
