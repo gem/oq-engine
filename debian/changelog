@@ -1,3 +1,7 @@
+  [Guillaume Daniel]
+  * Updating of Berge-Thierry (2003) GSIM and addition of several alternatives
+    for use with Mw
+
   [Michele Simionato]
   * Changed the classical_risk calculator to use the same loss ratios for all
     taxonomies
