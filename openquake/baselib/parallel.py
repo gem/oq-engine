@@ -506,8 +506,8 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            save_task_info(self, result, mem_gb)
             if not result.func_args:  # not subtask
+                save_task_info(self, result, mem_gb)
                 yield val
         if self.received:
             tot = sum(self.received)
