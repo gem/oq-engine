@@ -41,40 +41,40 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
     """
     result = dict(loss_curves=[], stat_curves=[])
     for ri in riskinputs:
-        all_outputs = list(riskmodel.gen_outputs(ri, monitor))
-        for outputs in all_outputs:
-            r = outputs.rlzi
-            outputs.average_losses = AccumDict(accum=[])  # l -> array
-            for l, loss_curves in enumerate(outputs):
+        R = ri.hazard_getter.num_rlzs
+        loss_curves = [{} for _ in range(R)]
+        for out in riskmodel.gen_outputs(ri, monitor):
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                loss_curves[out.rlzi][loss_type] = out[loss_type]
+                r = out.rlzi
+                out.average_losses = AccumDict(accum=[])  # l -> array
                 # loss_curves has shape (A, C)
-                for i, asset in enumerate(outputs.assets):
+                for i, asset in enumerate(out.assets):
                     lc = loss_curves[i]
                     aid = asset['ordinal']
                     avg = scientific.average_loss(lc)
-                    outputs.average_losses[l].append(avg)
+                    out.average_losses[l].append(avg)
                     lcurve = (lc['loss'], lc['poe'], avg)
                     result['loss_curves'].append((l, r, aid, lcurve))
 
-        # compute statistics
-        R = ri.hazard_getter.num_rlzs
-        w = param['weights']
-        statnames, stats = zip(*param['stats'])
-        l_idxs = range(len(riskmodel.lti))
-        for outs in groupby(
-            all_outputs, lambda o: tuple(o.assets['ordinal'])
-        ).values():
-            weights = [w[out.rlzi]['default'] for out in outs]
-            out = outs[0]
-            for l in l_idxs:
-                for i, asset in enumerate(out.assets):
-                    avgs = numpy.array([r.average_losses[l][i] for r in outs])
-                    avg_stats = compute_stats(avgs, stats, weights)
-                    losses = out[l][i]['loss']
-                    poes_stats = compute_stats(
-                        numpy.array([out[l][i]['poe'] for out in outs]),
-                        stats, weights)
-                    result['stat_curves'].append(
-                        (l, asset['ordinal'], losses, poes_stats, avg_stats))
+    # compute statistics
+    R = ri.hazard_getter.num_rlzs
+    w = param['weights']
+    statnames, stats = zip(*param['stats'])
+    for outs in groupby(
+        all_outputs, lambda o: tuple(o.assets['ordinal'])
+    ).values():
+        weights = [w[out.rlzi]['default'] for out in outs]
+        out = outs[0]
+        for i, asset in enumerate(out.assets):
+            avgs = numpy.array([r.average_losses[i] for r in outs])
+            avg_stats = compute_stats(avgs, stats, weights)
+            losses = out[i]['loss']
+            poes_stats = compute_stats(
+                numpy.array([out[i]['poe'] for out in outs]),
+                stats, weights)
+            result['stat_curves'].append(
+                (l, asset['ordinal'], losses, poes_stats, avg_stats))
     if R == 1:  # the realization is the same as the mean
         del result['loss_curves']
     return result
