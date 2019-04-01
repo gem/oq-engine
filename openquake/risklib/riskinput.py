@@ -318,8 +318,8 @@ class CompositeRiskModel(collections.Mapping):
     def _gen_outputs(self, assets, hazard, epsgetter):
         mon = self.monitor('computing risk', measuremem=False)
         assets_by_taxo = group_array(assets, 'taxonomy')
-        aids = numpy.concatenate(list(assets_by_taxo.values()))['ordinal']
-        aidx = numpy.argsort(aids)
+        argsort = numpy.argsort(numpy.concatenate([
+            a['ordinal'] for a in assets_by_taxo.values()]))
         for rlzi, haz in sorted(hazard.items()):
             with mon:
                 if isinstance(haz, numpy.ndarray):
@@ -354,9 +354,8 @@ class CompositeRiskModel(collections.Mapping):
                             dat = data[rm.imti[lt]]
                         ls.append(rm(lt, assets_, dat, eids, epsgetter))
                     arr = numpy.concatenate(ls)
-                    dic[lt] = arr[aidx] if len(arr) else arr
-                out = hdf5.ArrayWrapper((), dic)
-                yield out
+                    dic[lt] = arr[argsort] if len(arr) else arr
+                yield hdf5.ArrayWrapper((), dic)
 
     def reduce(self, taxonomies):
         """
