@@ -27,7 +27,7 @@ aae = numpy.testing.assert_almost_equal
 class MultiRiskTestCase(CalculatorTestCase):
 
     def test_case_1(self):
-        # case with volcanic multiperil ASH, LAVA, LAHARS, PYRO
+        # case with volcanic multiperil ASH, LAVA, LAHAR, PYRO
         self.run_calc(case_1.__file__, 'job.ini')
         raise unittest.SkipTest
         [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
