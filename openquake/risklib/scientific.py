@@ -276,27 +276,19 @@ class VulnerabilityFunction(object):
         assert distribution in ["LN", "BT"]
 
     @lru_cache(100)
-    def loss_ratio_exceedance_matrix(self, steps):
+    def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
-
-        :param int steps:
-            Number of steps between loss ratios.
         """
-
-        # add steps between mean loss ratio values
-        loss_ratios = self.mean_loss_ratios_with_steps(steps)
-
         # LREM has number of rows equal to the number of loss ratios
         # and number of columns equal to the number of imls
-        lrem = numpy.empty((loss_ratios.size, self.imls.size), float)
-
+        lrem = numpy.empty((len(loss_ratios), len(self.imls)))
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
                     zip(self.mean_loss_ratios, self.stddevs)):
-                lrem[row][col] = self.distribution.survival(
+                lrem[row, col] = self.distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
-        return loss_ratios, lrem
+        return lrem
 
     @lru_cache(100)
     def mean_imls(self):
@@ -427,7 +419,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         return self.distribution.sample(self.loss_ratios, probs)
 
     @lru_cache(100)
-    def loss_ratio_exceedance_matrix(self, steps):
+    def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
         Required for the Classical Risk and BCR Calculators.
@@ -977,7 +969,7 @@ def classical_damage(
 #
 
 
-def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
+def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
     """
     :param vulnerability_function:
         an instance of
@@ -987,14 +979,16 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
         the hazard intensity measure type and levels
     :type hazard_poes:
         the hazard curve
-    :param int steps:
-        Number of steps between loss ratios.
+    :param loss_ratios:
+        a tuple of C loss ratios
+    :returns:
+        an array of shape (2, C)
     """
     assert len(hazard_imls) == len(hazard_poes), (
         len(hazard_imls), len(hazard_poes))
     vf = vulnerability_function
     imls = vf.mean_imls()
-    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
+    lrem = vf.loss_ratio_exceedance_matrix(loss_ratios)
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]

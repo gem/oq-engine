@@ -172,13 +172,8 @@ class CompositeRiskModel(collections.Mapping):
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
             taxonomies.add(taxonomy)
-            riskmodel.loss_ratios = {}
             riskmodel.compositemodel = self
             for lt, vf in riskmodel.risk_functions.items():
-                # for classical risk
-                if hasattr(riskmodel, 'lrem_steps_per_interval'):
-                    riskmodel.loss_ratios[lt] = vf.mean_loss_ratios_with_steps(
-                        riskmodel.lrem_steps_per_interval)
                 # save the number of nonzero coefficients of variation
                 if hasattr(vf, 'covs') and vf.covs.any():
                     self.covs += 1
@@ -227,19 +222,26 @@ class CompositeRiskModel(collections.Mapping):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
                 lines = []
-                for key in sorted(self):
-                    rm = self[key]
+                allratios = []
+                for taxo in sorted(self):
+                    rm = self[taxo]
                     if loss_type in rm.loss_ratios:
                         ratios = rm.loss_ratios[loss_type]
+                        allratios.append(ratios)
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
                             rm.vulnerability_functions[loss_type], len(ratios))
                         )
-                if len(curve_resolutions) > 1:  # example in test_case_5
-                    logging.debug(
-                        'Different num_loss_ratios:\n%s', '\n'.join(lines))
+                if len(curve_resolutions) > 1:
+                    # number of loss ratios is not the same for all taxonomies:
+                    # then use the longest array; see classical_risk case_5
+                    allratios.sort(key=len)
+                    for rm in self.values():
+                        if rm.loss_ratios[loss_type] != allratios[-1]:
+                            rm.loss_ratios[loss_type] = allratios[-1]
+                            logging.info('Redefining loss ratios for %s', rm)
                 cp = scientific.CurveParams(
-                    l, loss_type, max(curve_resolutions), ratios, True)
+                    l, loss_type, max(curve_resolutions), allratios[-1], True)
             else:  # used only to store the association l -> loss_type
                 cp = scientific.CurveParams(l, loss_type, 0, [], False)
             cps.append(cp)
@@ -372,8 +374,13 @@ class CompositeRiskModel(collections.Mapping):
         loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
-        return self._riskmodels, dict(
+        dic = dict(
             covs=self.covs, loss_types=loss_types, limit_states=limit_states)
+        rf = next(iter(self.values()))
+        if hasattr(rf, 'loss_ratios'):
+            for lt in self.loss_types:
+                dic['loss_ratios_' + lt] = rf.loss_ratios[lt]
+        return self._riskmodels, dic
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
