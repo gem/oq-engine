@@ -973,7 +973,8 @@ class RiskCalculator(HazardCalculator):
                 reduced_eps = {ass['ordinal']: eps[int(ass['ordinal'])]
                                for ass in block
                                if eps is not None and len(eps)}
-                yield riskinput.RiskInput(getter, block, reduced_eps)
+                yield riskinput.RiskInput(
+                    getter, numpy.array(block), reduced_eps)
             rinfo.append((sid, len(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
