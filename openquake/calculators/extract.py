@@ -232,6 +232,27 @@ def extract_assets(dstore, what):
     return ArrayWrapper(arr, dic)
 
 
+@extract.add('asset_risk')
+def extract_asset_risk(dstore, what):
+    """
+    Extract an array of assets + risk fields, optionally filtered by tag.
+    Use it as /extract/asset_risk?taxonomy=RC&taxonomy=MSBC&occupancy=RES
+    """
+    qdict = parse(what)
+    dic = {}
+    dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
+    dic.update(dic1)
+    dic.update(dic2)
+    arr = dstore['asset_risk'].value
+    for tag, vals in qdict.items():
+        cond = numpy.zeros(len(arr), bool)
+        for val in vals:
+            tagidx, = numpy.where(dic[tag] == val)
+            cond |= arr[tag] == tagidx
+        arr = arr[cond]
+    return ArrayWrapper(arr, dic)
+
+
 @extract.add('asset_values', cache=True)
 def extract_asset_values(dstore, sid):
     """
