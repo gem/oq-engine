@@ -202,13 +202,16 @@ def extract_realizations(dstore, dummy):
 @extract.add('tagcollection')
 def extract_tagcollection(dstore, what):
     """
-    Extract the tag collection (/extract/tagcollection).
+    Extract the tag collection (/extract/tagcollection)
+    and the loss categories.
     """
     dic = {}
     dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
     dic.update(dic1)
     dic.update(dic2)
-    return ArrayWrapper((), dic)
+    array = [name for name in dstore['assetcol/array'].dtype.names
+             if name.startswith(('value-', 'number', 'occupants_'))]
+    return ArrayWrapper(array, dic)
 
 
 @extract.add('assets')
