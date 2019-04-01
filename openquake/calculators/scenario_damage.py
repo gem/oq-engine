@@ -55,12 +55,10 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
     result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
                   c_asset=[], c_event=numpy.zeros((E, R, L), F64))
     for ri in riskinputs:
-        for outputs in riskmodel.gen_outputs(ri, monitor):
-            r = outputs.rlzi
-            assets = outputs.assets
-            for l, allfractions in enumerate(outputs):
-                loss_type = riskmodel.loss_types[l]
-                for asset, fractions in zip(assets, allfractions):
+        for out in riskmodel.gen_outputs(ri, monitor):
+            r = out.rlzi
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                for asset, fractions in zip(ri.assets, out[loss_type]):
                     dmg = fractions[:, :D] * asset['number']  # shape (E, D)
                     result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
