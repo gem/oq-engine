@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import copy
-import operator
 import logging
 import collections
 from urllib.parse import unquote_plus
@@ -25,7 +24,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    groupby, AccumDict, group_array, cached_property)
+    AccumDict, group_array, cached_property)
 from openquake.risklib import scientific, riskmodels
 
 
@@ -139,11 +138,10 @@ class CompositeRiskModel(collections.Mapping):
         self.init(oqparam)
 
     # used in ebrisk
-    def get_assets_ratios(self, assets, gmvs, imts):
+    def get_assets_ratios(self, assets, gmvs):
         """
         :param assets: assets on the same site
         :params gmvs: hazard on the given site, shape (E, M)
-        :param imts: intensity measure types
         :returns: a list of (assets, loss_ratios) for each taxonomy on the site
         """
         assets_by_t = group_array(assets, 'taxonomy')
@@ -184,7 +182,6 @@ class CompositeRiskModel(collections.Mapping):
                     ' type %s' % (taxonomy, ', '.join(missing)))
             riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt].imt]
                               for lt in self.loss_types}
-
         self.taxonomies = sorted(taxonomies)
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
