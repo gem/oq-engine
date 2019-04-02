@@ -146,7 +146,7 @@ class CompositeRiskModel(collections.Mapping):
         :param imts: intensity measure types
         :returns: a list of (assets, loss_ratios) for each taxonomy on the site
         """
-        assets_by_t = groupby(assets, operator.attrgetter('taxonomy'))
+        assets_by_t = group_array(assets, 'taxonomy')
         assets_ratios = []
         for taxo, rm in self.items():
             t = self.taxonomy_dict[taxo]
