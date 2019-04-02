@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed two subtle bugs when reading site_model.csv files
   * Added /extract/exposure_metadata and /extract/asset_risk
 
   [Guillaume Daniel]
