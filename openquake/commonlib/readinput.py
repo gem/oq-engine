@@ -262,7 +262,8 @@ def read_csv(fname, sep=','):
     """
     with open(fname, encoding='utf-8-sig') as f:
         header = next(f).strip().split(sep)
-        dt = numpy.dtype([(h, float) for h in header])
+        dt = numpy.dtype([(h, numpy.bool if h == 'vs30measured' else float)
+                          for h in header])
         return numpy.loadtxt(f, dt, delimiter=sep)
 
 
@@ -354,7 +355,10 @@ def get_site_model(oqparam):
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
-            arrays.append(sm)
+            z = numpy.zeros(len(sm), sorted(sm.dtype.descr))
+            for name in z.dtype.names:  # reorder the fields
+                z[name] = sm[name]
+            arrays.append(z)
             continue
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
