@@ -109,7 +109,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                     lt = riskmodel.loss_types[lti]
                     for asset in assets:
                         aid = asset['ordinal']
-                        losses = loss_ratios * asset['value-' + lt]
+                        if lt == 'occupants':
+                            losses = loss_ratios * asset['occupants_None']
+                        else:
+                            losses = loss_ratios * asset['value-' + lt]
                         if param['asset_loss_table']:
                             alt[aid, eidx, lti] = losses
                         tagi = asset[tagnames] if tagnames else ()
