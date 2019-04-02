@@ -160,10 +160,11 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(len(got['taxonomy']), 7)
 
         # check tag collection
-        resp = self.c.get(extract_url + 'tagcollection')
+        resp = self.c.get(extract_url + 'exposure_metadata')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertEqual(got['tagnames'], ['taxonomy'])
+        self.assertEqual(list(got['tagnames']), ['taxonomy'])
+        self.assertEqual(list(got['array']), ['number', 'value-structural'])
 
         # check assets
         resp = self.c.get(
