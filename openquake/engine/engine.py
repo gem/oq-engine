@@ -272,7 +272,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     :param exports:
         A comma-separated string of export types.
     """
-    setproctitle('oq-job-%d' % job_id)
+    oq_cmd = sys.argv[0].rsplit('/', 1)[1]  # can be oq, oq1, oq2
+    setproctitle('%s-job-%d' % (oq_cmd, job_id))
     calc = base.calculators(oqparam, calc_id=job_id)
     logging.info('%s running %s [--hc=%s]',
                  getpass.getuser(),
