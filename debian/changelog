@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added /extract/exposure_metadata and /extract/asset_risk
+
   [Guillaume Daniel]
   * Updating of Berge-Thierry (2003) GSIM and addition of several alternatives
     for use with Mw
