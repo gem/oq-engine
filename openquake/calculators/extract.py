@@ -40,6 +40,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
+memoized = lru_cache(100)
 
 
 def lit_eval(string):
@@ -148,8 +149,6 @@ def extract_(dstore, dspath):
     else:
         return obj
 
-memoized = lru_cache(100)
-
 
 class Extract(dict):
     """
@@ -199,11 +198,11 @@ def extract_realizations(dstore, dummy):
     return arr
 
 
-@extract.add('tagcollection')
-def extract_tagcollection(dstore, what):
+@extract.add('exposure_metadata')
+def extract_exposure_metadata(dstore, what):
     """
-    Extract the tag collection (/extract/tagcollection)
-    and the loss categories.
+    Extract the loss categories and the tags of the exposure.
+    Use it as /extract/exposure_metadata
     """
     dic = {}
     dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
