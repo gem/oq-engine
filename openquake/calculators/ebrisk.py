@@ -74,7 +74,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
     mon_risk = monitor('computing losses', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    imts = getter.imts
     events = rupgetter.get_eid_rlz()
     eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
     E = len(eid2idx)
@@ -92,18 +91,17 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     for sid, haz in hazard.items():
         t0 = time.time()
         weights = getter.weights[haz['rlzi']]
+        ws_by_lti = [weights[riskmodel.imti[lt]]
+                     for lt in riskmodel.loss_types]
         assets_on_sid = assets_by_site[sid]
         eidx = [eid2idx[eid] for eid in haz['eid']]
         mon.duration += time.time() - t0
         mon.counts += 1
         with mon_risk:
             assets_ratios = riskmodel.get_assets_ratios(
-                assets_on_sid, haz['gmv'], imts)
+                assets_on_sid, haz['gmv'])
         with mon_agg:
             for assets, ratios in assets_ratios:
-                taxo = assets[0]['taxonomy']
-                vfs = riskmodel[taxo].vulnerability_functions.values()
-                ws_by_lti = [weights[vf.imt] for vf in vfs]
                 for lti, loss_ratios in enumerate(ratios):
                     ws = ws_by_lti[lti]
                     lt = riskmodel.loss_types[lti]
