@@ -620,3 +620,16 @@ def export_aggregate_by_csv(ekey, dstore):
     writer.save(aw.to_table(), fname)
     fnames.append(fname)
     return fnames
+
+
+@export.add(('asset_risk', 'csv'))
+def export_asset_risk_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
+    fname = dstore.export_path(path)
+    writer.save(extract(dstore, 'asset_risk'), fname)
+    return [fname]
