@@ -514,7 +514,7 @@ class IterResult(object):
             tot = sum(self.received)
             max_per_output = max(self.received)
             logging.info(
-                'Received %s from %d %r outputs in %d seconds, biggest '
+                'Received %s from %d %s outputs in %d seconds, biggest '
                 'output=%s', humansize(tot), len(self.received),
                 '|'.join(names), time.time() - t0, humansize(max_per_output))
             if nbytes:
