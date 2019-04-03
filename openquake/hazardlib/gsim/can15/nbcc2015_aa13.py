@@ -28,6 +28,7 @@ Module exports :class:`NBCC2015_AA13_Base`,
 
 import os
 import numpy as np
+from openquake.baselib import hdf5
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
@@ -72,12 +73,11 @@ class NBCC2015_AA13_Base(GMPETable):
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
     BA08 = BooreAtkinson2008()
 
-    def __init__(self):
+    def init(self):
         if not self.AA13_TABLE:
             raise NotImplementedError("AA13 GMPE requires input table")
-        #super(NBCC2015_AA13_Base, self).__init__(gmpe_table=self.AA13_TABLE)
-        super().__init__(fle=self.AA13_TABLE)
-        #import pdb; pdb.set_trace()
+        with hdf5.File(self.AA13_TABLE, 'r') as fle:
+            super().init(fle)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
