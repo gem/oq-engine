@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.kotha_2019 import KothaEtAl2019SERA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.tests.gsim.kotha_2019 import KothaEtAl2019SERA
 
 MAX_DISCREP = 0.01
 
@@ -96,49 +96,55 @@ class KothaEtAl2019SERATestCase(BaseGSIMTestCase):
                    max_discrep_percentage=MAX_DISCREP)
 
 
-#class KothaEtAl2019SERAHighStressTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = KothaEtAl2019SERA(stress_epsilon=1.0)
-#
-#    def test_mean(self):
-#        self.check("kotha19/KOTHA_2019_HIGH_STRESS_MEAN.csv",
-#                   max_discrep_percentage=MAX_DISCREP)
-#
-#
-#class KothaEtAl2019SERALowStressTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = KothaEtAl2019SERA(stress_epsilon=-1.0)
-#
-#    def test_mean(self):
-#        self.check("kotha19/KOTHA_2019_LOW_STRESS_MEAN.csv",
-#                   max_discrep_percentage=MAX_DISCREP)
-#
-#
-#class KothaEtAl2019SERASlowAttenTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = KothaEtAl2019SERA(c3=c3_slow)
-#
-#    def test_mean(self):
-#        self.check("kotha19/KOTHA_2019_LOW_ATTEN_MEAN.csv",
-#                   max_discrep_percentage=MAX_DISCREP)
-#
-#
-#class KothaEtAl2019SERAFastAttenTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = KothaEtAl2019SERA(c3=c3_fast)
-#
-#    def test_mean(self):
-#        self.check("kotha19/KOTHA_2019_FAST_ATTEN_MEAN.csv",
-#                   max_discrep_percentage=MAX_DISCREP)
-#
-#
-#class KothaEtAl2019SERAHighSigmaMuTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = KothaEtAl2019SERA(sigma_mu_epsilon=1.0)
-#
-#    def test_mean(self):
-#        self.check("kotha19/KOTHA_2019_HIGH_SIGMA_MU_MEAN.csv",
-#                   max_discrep_percentage=MAX_DISCREP)
-#
-#
-#class KothaEtAl2019SERALowSigmaMuTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = KothaEtAl2019SERA(sigma_mu_epsilon=-1.0)
-#
-#    def test_mean(self):
-#        self.check("kotha19/KOTHA_2019_LOW_SIGMA_MU_MEAN.csv",
-#                   max_discrep_percentage=MAX_DISCREP)
+class KothaEtAl2019SERAHighStressTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERA
+
+    def test_mean(self):
+        self.check("kotha19/KOTHA_2019_HIGH_STRESS_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   stress_epsilon=1.0)
+
+
+class KothaEtAl2019SERALowStressTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERA
+
+    def test_mean(self):
+        self.check("kotha19/KOTHA_2019_LOW_STRESS_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   stress_epsilon=-1.0)
+
+
+class KothaEtAl2019SERASlowAttenTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERA
+
+    def test_mean(self):
+        self.check("kotha19/KOTHA_2019_LOW_ATTEN_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   c3=c3_slow)
+
+
+class KothaEtAl2019SERAFastAttenTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERA
+
+    def test_mean(self):
+        self.check("kotha19/KOTHA_2019_FAST_ATTEN_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   c3=c3_fast)
+
+
+class KothaEtAl2019SERAHighSigmaMuTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERA
+
+    def test_mean(self):
+        self.check("kotha19/KOTHA_2019_HIGH_SIGMA_MU_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   sigma_mu_epsilon=1.0)
+
+
+class KothaEtAl2019SERALowSigmaMuTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERA
+
+    def test_mean(self):
+        self.check("kotha19/KOTHA_2019_LOW_SIGMA_MU_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   sigma_mu_epsilon=-1.0)

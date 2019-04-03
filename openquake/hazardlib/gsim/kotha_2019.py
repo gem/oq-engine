@@ -53,6 +53,8 @@ class KothaEtAl2019(GMPE):
     In the core form of the GMPE no site term is included. This will be
     added in the subclasses.
     """
+    experimental = True
+
     #: Supported tectonic region type is 'active shallow crust'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
