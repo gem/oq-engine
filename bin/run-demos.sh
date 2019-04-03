@@ -39,7 +39,7 @@ oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquak
 oq db set_status -1 executing
 
 # run multi_risk test
-oq engine --run openquake/qa_tests_data/multi_risk/case_1/job.ini
+oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job.ini
 
 # display the calculations
 oq db find %
