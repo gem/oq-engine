@@ -259,6 +259,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = export(('avg_losses', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avglosses.csv', fname, delta=1E-5)
 
+        fname = export(('losses_by_event', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/elt.csv', fname)
+
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
