@@ -245,7 +245,7 @@ def export_losses_by_event(ekey, dstore):
         dic = dict(tagnames=['event_id', 'loss_type'] + oq.aggregate_by)
         for tagname in oq.aggregate_by:
             dic[tagname] = getattr(tagcol, tagname)
-        dic['event_id'] = ['?'] + list(dstore['losses_by_event']['eid'])
+        dic['event_id'] = ['?'] + sorted(dstore['losses_by_event']['eid'])
         dic['loss_type'] = ('?',) + oq.loss_dt().names
         aw = hdf5.ArrayWrapper(loss, dic)
         writer.save(aw.to_table(), dest)
