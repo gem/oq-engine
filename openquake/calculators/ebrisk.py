@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib.scientific import losses_by_period, return_periods
+from openquake.risklib.scientific import losses_by_period
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
