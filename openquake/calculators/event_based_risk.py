@@ -23,7 +23,7 @@ from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.hazardlib.calc.stochastic import TWO32
-from openquake.risklib import riskinput, riskmodels
+from openquake.risklib import riskinput, scientific
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
 
