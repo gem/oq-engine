@@ -240,6 +240,16 @@ def export_losses_by_event(ekey, dstore):
         arr = dstore['losses_by_event'].value[['eid', 'loss']]
         writer.save(arr.copy().view(dtlist), dest)
     elif oq.calculation_mode == 'ebrisk':
+        tagcol = dstore['assetcol/tagcol']
+        loss = dstore['losses_by_event']['loss']  # shape (E, L, T...)
+        dic = dict(tagnames=['event_id', 'loss_type'] + oq.aggregate_by)
+        for tagname in oq.aggregate_by:
+            dic[tagname] = getattr(tagcol, tagname)
+        dic['event_id'] = ['?'] + list(dstore['losses_by_event']['eid'])
+        dic['loss_type'] = ('?',) + oq.loss_dt().names
+        aw = hdf5.ArrayWrapper(loss, dic)
+        writer.save(aw.to_table(), dest)
+    else:
         dtlist = [('event_id', U64), ('rup_id', U32), ('year', U32)] + \
                  oq.loss_dt_list()
         eids = dstore['losses_by_event']['eid']
@@ -253,16 +263,6 @@ def export_losses_by_event(ekey, dstore):
         for losses, loss_type in zip(loss, oq.loss_dt().names):
             arr[loss_type] = losses
         writer.save(arr, dest)
-    else:
-        tagcol = dstore['assetcol/tagcol']
-        loss = dstore['losses_by_event']['loss']  # shape (E, L, T...)
-        dic = dict(tagnames=['event_id', 'loss_type'] + oq.aggregate_by)
-        for tagname in oq.aggregate_by:
-            dic[tagname] = getattr(tagcol, tagname)
-        dic['event_id'] = ['?'] + list(dstore['losses_by_event']['eid'])
-        dic['loss_type'] = ('?',) + oq.loss_dt().names
-        aw = hdf5.ArrayWrapper(loss, dic)
-        writer.save(aw.to_table(), dest)
     return writer.getsaved()
 
 
