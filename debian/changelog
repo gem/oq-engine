@@ -1,4 +1,19 @@
   [Michele Simionato]
+  * Fixed two exporters for the ebrisk calculator (agg_curves-stats and
+    losses_b_event)
+  * Fixed two subtle bugs when reading site_model.csv files
+  * Added /extract/exposure_metadata and /extract/asset_risk
+
+  [Guillaume Daniel]
+  * Updating of Berge-Thierry (2003) GSIM and addition of several alternatives
+    for use with Mw
+
+  [Michele Simionato]
+  * Changed the classical_risk calculator to use the same loss ratios for all
+    taxonomies and then optimized all risk calculators
+  * Temporarily removed the `insured_losses` functionality
+  * Extended `oq restore` to download from URLs
+  * Removed the column 'gsims' from the output 'realizations'
   * Better parallelized the source splitting in classical calculations
   * Added a check for missing hazard in scenario_risk/scenario_damage
   * Improved the GsimLogicTree parser to get the line number information, a

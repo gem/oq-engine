@@ -182,6 +182,16 @@ class Asset(object):
         self.calc = calc
         self._cost = {}  # cache for the costs
 
+    @property
+    def taxonomy(self):
+        return self.tagvalue('taxonomy')
+
+    def tagvalue(self, tagname):
+        """
+        :returns: the tagvalue associated to the given tagname
+        """
+        return self.tagidxs[self.calc.tagi[tagname]]
+
     def value(self, loss_type, time_event=None):
         """
         :returns: the total asset value for `loss_type`
@@ -195,17 +205,7 @@ class Asset(object):
             self._cost[loss_type] = val
         return val
 
-    @property
-    def taxonomy(self):
-        return self.tagvalue('taxonomy')
-
-    def tagvalue(self, tagname):
-        """
-        :returns: the tagvalue associated to the given tagname
-        """
-        return self.tagidxs[self.calc.tagi[tagname]]
-
-    def deductible(self, loss_type):
+    def deductible(self, loss_type, dummy=None):
         """
         :returns: the deductible fraction of the asset cost for `loss_type`
         """
@@ -216,7 +216,7 @@ class Asset(object):
         else:
             return val
 
-    def insurance_limit(self, loss_type):
+    def insurance_limit(self, loss_type, dummy=None):
         """
         :returns: the limit fraction of the asset cost for `loss_type`
         """
@@ -399,7 +399,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
-            assets_by_site, exposure.tagcol.tagnames)
+            assets_by_site, exposure.tagcol.tagnames, time_event)
         periods = exposure.occupancy_periods
         if self.occupancy_periods and not periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
@@ -439,8 +439,8 @@ class AssetCollection(object):
         """
         aids_by_tag = general.AccumDict(accum=set())
         for aid, ass in enumerate(self):
-            for tagname, tagidx in zip(self.tagnames, ass.tagidxs):
-                tag = self.tagcol.get_tag(tagname, tagidx)
+            for tagname in self.tagnames:
+                tag = self.tagcol.get_tag(tagname, ass[tagname])
                 aids_by_tag[tag].add(aid)
         return aids_by_tag
 
@@ -492,7 +492,10 @@ class AssetCollection(object):
         aval = numpy.zeros((len(self), len(self.loss_types)), F32)  # (A, L)
         for asset in self:
             for lti, lt in enumerate(self.loss_types):
-                aval[asset.ordinal, lti] = asset.value(lt)
+                if lt == 'occupants':
+                    aval[asset['ordinal'], lti] = asset[lt + '_None']
+                else:
+                    aval[asset['ordinal'], lti] = asset['value-' + lt]
         return self.aggregate_by(list(tagnames), aval)
 
     def reduce(self, sitecol):
@@ -505,6 +508,7 @@ class AssetCollection(object):
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.array = self.array[ok_indices]
+        new.array['ordinal'] = numpy.arange(len(new.array))
         new.asset_refs = self.asset_refs[ok_indices]
         return new
 
@@ -526,6 +530,7 @@ class AssetCollection(object):
         vars(new).update(vars(self))
         new.tot_sites = len(sitecol)
         new.array = numpy.concatenate(array)
+        new.array['ordinal'] = numpy.arange(len(new.array))
         new.asset_refs = numpy.concatenate(asset_refs)
         sitecol.make_complete()
         return new
@@ -535,24 +540,7 @@ class AssetCollection(object):
             yield self[i]
 
     def __getitem__(self, aid):
-        a = self.array[aid]
-        values = {lt: a['value-' + lt] for lt in self.loss_types
-                  if lt != 'occupants'}
-        for name in self.array.dtype.names:
-            if name.startswith('occupants_'):
-                values[name] = a[name]
-        return Asset(
-            aid,
-            [a[decode(name)] for name in self.tagnames],
-            number=a['number'],
-            location=(valid.longitude(a['lon']),  # round coordinates
-                      valid.latitude(a['lat'])),
-            values=values,
-            area=a['area'],
-            deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
-            insurance_limits={lt[self.I:]: a[lt] for lt in self.i_lim},
-            retrofitted=a['retrofitted'] if self.retro else None,
-            calc=self.cost_calculator)
+        return self.array[aid]
 
     def __len__(self):
         return len(self.array)
@@ -592,7 +580,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(assets_by_site, tagnames=()):
+def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     """
     :param assets_by_site: a list of lists of assets
     :param tagnames: a list of tag names
@@ -616,19 +604,20 @@ def build_asset_array(assets_by_site, tagnames=()):
             # discard occupants for different time periods
         else:
             loss_types.append('value-' + name)
+    # loss_types can be ['value-business_interruption', 'value-contents',
+    # 'value-nonstructural', 'occupants_None', 'occupants_day',
+    # 'occupants_night', 'occupants_transit']
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
     if deductible_d or limit_d:
         logging.warning('Exposures with insuranceLimit/deductible fields are '
                         'deprecated and may be removed in the future')
-    deductibles = ['deductible-%s' % name for name in deductible_d]
-    limits = ['insurance_limit-%s' % name for name in limit_d]
     retro = ['retrofitted'] if first_asset._retrofitted else []
-    float_fields = loss_types + deductibles + limits + retro
+    float_fields = loss_types + retro
     int_fields = [(str(name), U16) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
-        [('lon', F32), ('lat', F32), ('site_id', U32),
+        [('ordinal', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
          ('number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
@@ -641,7 +630,9 @@ def build_asset_array(assets_by_site, tagnames=()):
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:
-                if field == 'number':
+                if field == 'ordinal':
+                    value = asset.ordinal
+                elif field == 'number':
                     value = asset.number
                 elif field == 'area':
                     value = asset.area
@@ -654,17 +645,12 @@ def build_asset_array(assets_by_site, tagnames=()):
                 elif field.startswith('occupants_'):
                     value = asset.values[field]
                 elif field == 'retrofitted':
-                    value = asset._retrofitted
+                    value = asset.retrofitted()
                 elif field in tagnames:
                     value = asset.tagidxs[tagi[field]]
                 else:
-                    try:
-                        name, lt = field.split('-')
-                    except ValueError:  # no - in field
-                        name, lt = 'value', field
-                    # the line below retrieve one of `deductibles` or
-                    # `insurance_limits` ("s" suffix)
-                    value = getattr(asset, name + 's')[lt]
+                    name, lt = field.split('-')
+                    value = asset.value(lt, time_event)
                 record[field] = value
     return assetcol, ' '.join(occupancy_periods)
 
@@ -1022,9 +1008,9 @@ class Exposure(object):
                 cost_type = cost['type']
                 if cost_type == 'structural':
                     # retrofitted is defined only for structural
-                    retrofitted = cost.get('retrofitted')
+                    retrofitted = float(cost.get('retrofitted', 0))
                 if cost_type in param['relevant_cost_types']:
-                    values[cost_type] = cost['value']
+                    values[cost_type] = float(cost['value'])
                     try:
                         deductibles[cost_type] = cost['deductible']
                     except KeyError:

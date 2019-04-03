@@ -401,7 +401,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     :param mon: a monitor
     """
     isgenfunc = inspect.isgeneratorfunction(func)
-    mon.operation = 'total ' + func.__name__
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
@@ -409,7 +408,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         assert not isgenfunc, func
         return Result.new(func, args, mon)
 
-    mon.measuremem = True
+    mon = mon.new(operation='total ' + func.__name__, measuremem=True)
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
     if mon.inject:
@@ -483,6 +482,7 @@ class IterResult(object):
         self.received = []
         first_time = True
         nbytes = AccumDict()
+        names = {self.name}
         for result in self.iresults:
             msg = check_mem_usage()  # log a warning if too much memory is used
             if msg and first_time:
@@ -493,6 +493,7 @@ class IterResult(object):
                 raise result
             elif isinstance(result, Result):
                 val = result.get()
+                names.add(result.mon.operation[6:])
                 self.received.append(len(result.pik))
                 if hasattr(result, 'nbytes'):
                     nbytes += result.nbytes
@@ -506,16 +507,16 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            save_task_info(self, result, mem_gb)
             if not result.func_args:  # not subtask
                 yield val
+            save_task_info(self, result, mem_gb)
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
             logging.info(
                 'Received %s from %d %s outputs in %d seconds, biggest '
                 'output=%s', humansize(tot), len(self.received),
-                self.name, time.time() - t0, humansize(max_per_output))
+                '|'.join(names), time.time() - t0, humansize(max_per_output))
             if nbytes:
                 logging.info('Received %s',
                              {k: humansize(v) for k, v in nbytes.items()})

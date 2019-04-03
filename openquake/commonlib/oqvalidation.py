@@ -92,8 +92,9 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
-    insured_losses = valid.Param(valid.boolean, False)
+    # insured_losses = valid.Param(valid.boolean, False)
     multi_peril = valid.Param(valid.namelist, [])
+    humidity_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -286,8 +287,7 @@ class OqParam(valid.ParamSet):
 
         # checks for ebrisk
         if self.calculation_mode == 'ebrisk':
-            if self.insured_losses:
-                raise ValueError('ebrisk does not support insured losses')
+            pass
             # elif self.number_of_logic_tree_samples == 0:
             #    logging.warning('ebrisk is not meant for full enumeration')
 
@@ -486,9 +486,6 @@ class OqParam(valid.ParamSet):
         """
         loss_types = self.all_cost_types
         dts = [(str(lt), dtype) for lt in loss_types]
-        if self.insured_losses:
-            for lt in loss_types:
-                dts.append((str(lt) + '_ins', dtype))
         return dts
 
     def loss_maps_dt(self, dtype=F32):
@@ -757,7 +754,8 @@ class OqParam(valid.ParamSet):
             parent_datasets = set(util.read(self.hazard_calculation_id))
         else:
             parent_datasets = set()
-        if 'damage' in self.calculation_mode:
+        if (self.calculation_mode == 'multi_risk' or
+                'damage' in self.calculation_mode):
             return any(
                 key.endswith('_fragility') for key in self.inputs
             ) or 'fragility' in parent_datasets
@@ -818,7 +816,8 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-                self.calculation_mode.startswith('scenario')):
+            'multi_peril' in self.inputs or self.calculation_mode.startswith(
+                'scenario')):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 not self.hazard_calculation_id):

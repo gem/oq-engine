@@ -75,7 +75,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     maxweight ruptures.
     """
     sources = []
-    with monitor('split_filter'):
+    with monitor("splitting/filtering sources"):
         for src in srcs:
             if src.num_ruptures >= params['maxweight']:
                 splits, stime = split_sources([src])

@@ -63,10 +63,11 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
-    mon = monitor('getting assets', measuremem=False)
-    with datastore.read(srcfilter.filename) as dstore:
-        assgetter = getters.AssetGetter(dstore)
-    A = assgetter.num_assets
+    with monitor('getting assets', measuremem=False):
+        with datastore.read(srcfilter.filename) as dstore:
+            assetcol = dstore['assetcol']
+        assets_by_site = assetcol.assets_by_site()
+    A = len(assetcol)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
@@ -78,7 +79,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
     E = len(eid2idx)
     tagnames = param['aggregate_by']
-    shape = assgetter.tagcol.agg_shape((len(events), L), tagnames)
+    shape = assetcol.tagcol.agg_shape((len(events), L), tagnames)
     elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     if param['asset_loss_table']:
         alt = numpy.zeros((A, E, L), F32)
@@ -91,27 +92,30 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     for sid, haz in hazard.items():
         t0 = time.time()
         weights = getter.weights[haz['rlzi']]
-        assets_on_sid, tagidxs = assgetter.get(sid, tagnames)
+        assets_on_sid = assets_by_site[sid]
         eidx = [eid2idx[eid] for eid in haz['eid']]
-        mon.duration += time.time() - t0
-        mon.counts += 1
         with mon_risk:
             assets_ratios = riskmodel.get_assets_ratios(
                 assets_on_sid, haz['gmv'], imts)
         with mon_agg:
             for assets, ratios in assets_ratios:
-                taxo = assets[0].taxonomy
-                ws_by_lti = [weights[vf.imt]
-                             for vf in riskmodel[taxo].risk_functions.values()]
+                taxo = assets[0]['taxonomy']
+                vfs = riskmodel[taxo].vulnerability_functions.values()
+                ws_by_lti = [weights[vf.imt] for vf in vfs]
                 for lti, loss_ratios in enumerate(ratios):
                     ws = ws_by_lti[lti]
                     lt = riskmodel.loss_types[lti]
                     for asset in assets:
-                        aid = asset.ordinal
-                        losses = loss_ratios * asset.value(lt)
+                        aid = asset['ordinal']
+                        if lt == 'occupants':
+                            losses = loss_ratios * asset['occupants_None']
+                        else:
+                            losses = loss_ratios * asset['value-' + lt]
                         if param['asset_loss_table']:
                             alt[aid, eidx, lti] = losses
-                        acc[(eidx, lti) + tagidxs[aid]] += losses
+                        tagi = asset[tagnames] if tagnames else ()
+                        tagidxs = tuple(idx - 1 for idx in tagi)
+                        acc[(eidx, lti) + tagidxs] += losses
                         if param['avg_losses']:
                             losses_by_A[aid, lti] += losses @ ws
             times[sid] = time.time() - t0
@@ -302,6 +306,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.R > 1:
             logging.info('Computing aggregate loss curves statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
+            self.datastore.set_attrs(
+                'agg_curves-stats', return_periods=builder.return_periods,
+                loss_types=' '.join(self.riskmodel.loss_types))
             if oq.conditional_loss_poes:
                 logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')

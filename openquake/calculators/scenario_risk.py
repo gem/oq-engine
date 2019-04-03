@@ -59,28 +59,26 @@ def scenario_risk(riskinputs, riskmodel, param, monitor):
     """
     E = param['E']
     L = len(riskmodel.loss_types)
-    I = param['insured_losses'] + 1
-    result = dict(agg=numpy.zeros((E, L * I), F32), avg=[],
+    result = dict(agg=numpy.zeros((E, L), F32), avg=[],
                   all_losses=AccumDict(accum={}))
     for ri in riskinputs:
-        for outputs in riskmodel.gen_outputs(ri, monitor):
-            r = outputs.rlzi
+        for out in riskmodel.gen_outputs(ri, monitor):
+            r = out.rlzi
             weight = param['weights'][r]
             slc = param['event_slice'](r)
-            assets = outputs.assets
-            for l, losses in enumerate(outputs):
-                if losses is None:  # this may happen
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                losses = out[loss_type]
+                if numpy.product(losses.shape) == 0:  # happens for all NaNs
                     continue
-                stats = numpy.zeros((len(assets), I), stat_dt)  # mean, stddev
-                for a, asset in enumerate(assets):
+                stats = numpy.zeros(len(ri.assets), stat_dt)  # mean, stddev
+                for a, asset in enumerate(ri.assets):
                     stats['mean'][a] = losses[a].mean()
                     stats['stddev'][a] = losses[a].std(ddof=1)
-                    result['avg'].append((l, r, asset.ordinal, stats[a]))
-                agglosses = losses.sum(axis=0)  # shape num_gmfs, I
-                for i in range(I):
-                    result['agg'][slc, l + L * i] += agglosses[:, i] * weight
+                    result['avg'].append((l, r, asset['ordinal'], stats[a]))
+                agglosses = losses.sum(axis=0)  # shape num_gmfs
+                result['agg'][slc, l] += agglosses * weight
                 if param['asset_loss_table']:
-                    aids = [asset.ordinal for asset in outputs.assets]
+                    aids = ri.assets['ordinal']
                     result['all_losses'][l, r] += AccumDict(zip(aids, losses))
     return result
 
@@ -114,7 +112,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         else:
             logging.info('Building the epsilons')
             eps = riskinput.make_eps(
-                self.assetcol, E, oq.master_seed, oq.asset_correlation)
+                self.assetcol.array, E, oq.master_seed, oq.asset_correlation)
 
         self.riskinputs = self.build_riskinputs('gmf', eps, E)
         self.param['E'] = E
@@ -124,7 +122,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         except KeyError:
             self.param['weights'] = [1 / R for _ in range(R)]
         self.param['event_slice'] = self.event_slice
-        self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
 
     def post_execute(self, result):
@@ -135,25 +132,22 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         loss_dt = self.oqparam.loss_dt()
         LI = len(loss_dt.names)
         dtlist = [('eid', U64), ('loss', (F32, LI))]
-        I = self.oqparam.insured_losses + 1
         R = self.R
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
 
             # agg losses
             res = result['agg']
-            E, LI = res.shape
-            L = LI // I
-            mean, std = scientific.mean_std(res)  # shape LI
-            agglosses = numpy.zeros(LI, stat_dt)
+            E, L = res.shape
+            mean, std = scientific.mean_std(res)  # shape L
+            agglosses = numpy.zeros(L, stat_dt)
             agglosses['mean'] = F32(mean)
             agglosses['stddev'] = F32(std)
 
             # losses by asset
-            losses_by_asset = numpy.zeros((A, R, LI), stat_dt)
+            losses_by_asset = numpy.zeros((A, R, L), stat_dt)
             for (l, r, aid, stat) in result['avg']:
-                for i in range(I):
-                    losses_by_asset[aid, r, l + L * i] = stat[i]
+                losses_by_asset[aid, r, l] = stat
             self.datastore['losses_by_asset'] = losses_by_asset
             self.datastore['agglosses'] = agglosses
 
@@ -169,10 +163,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 for (l, r), losses_by_aid in result['all_losses'].items():
                     slc = self.event_slice(r)
                     for aid in losses_by_aid:
-                        lba = losses_by_aid[aid]  # (E, I)
-                        for i in range(I):
-                            lt = loss_dt.names[l + L * i]
-                            array[lt][aid, slc] = lba[:, i]
+                        lba = losses_by_aid[aid]  # E
+                        lt = loss_dt.names[l]
+                        array[lt][aid, slc] = lba
                 self.datastore['asset_loss_table'] = array
                 tags = [encode(tag) for tag in self.assetcol.tagcol]
                 self.datastore.set_attrs('asset_loss_table', tags=tags)

@@ -333,11 +333,12 @@ hazard_uhs-std.csv
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     def test_case_19(self):
+        # this test is a lot faster without parallelism (from 89s to 25s)
         self.assert_curves_ok([
             'hazard_curve-mean_PGA.csv',
             'hazard_curve-mean_SA(0.1).csv',
             'hazard_curve-mean_SA(0.15).csv',
-        ], case_19.__file__, delta=1E-5)
+        ], case_19.__file__, delta=1E-5, concurrent_tasks='0')
 
     def test_case_20(self):  # Source geometry enumeration
         self.assert_curves_ok([

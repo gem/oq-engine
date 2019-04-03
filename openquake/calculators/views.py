@@ -334,12 +334,11 @@ def avglosses_data_transfer(token, dstore):
     N = len(dstore['assetcol'])
     R = dstore['csm_info'].get_num_rlzs()
     L = len(dstore.get_attr(oq.risk_model, 'loss_types'))
-    I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
-    size_bytes = N * R * L * I * 8 * ct  # 8 byte floats
+    size_bytes = N * R * L * 8 * ct  # 8 byte floats
     return (
-        '%d asset(s) x %d realization(s) x %d loss type(s) x %d losses x '
-        '8 bytes x %d tasks = %s' % (N, R, L, I, ct, humansize(size_bytes)))
+        '%d asset(s) x %d realization(s) x %d loss type(s) losses x '
+        '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
 @view.add('ebr_data_transfer')
@@ -515,7 +514,7 @@ def view_num_units(token, dstore):
     taxo = dstore['assetcol/tagcol/taxonomy'].value
     counts = collections.Counter()
     for asset in dstore['assetcol']:
-        counts[taxo[asset.taxonomy]] += asset.number
+        counts[taxo[asset['taxonomy']]] += asset['number']
     data = sorted(counts.items())
     data.append(('*ALL*', sum(d[1] for d in data)))
     return rst_table(data, header=['taxonomy', 'num_units'])
@@ -531,8 +530,8 @@ def view_assets_by_site(token, dstore):
     data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
-        num_assets += {k: [len(v)] for k, v in groupby(
-            assets, operator.attrgetter('taxonomy')).items()}
+        num_assets += {k: [len(v)] for k, v in group_array(
+            assets, 'taxonomy').items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
         data.append(stats(taxonomies[taxo], val, val.sum()))
@@ -613,8 +612,8 @@ def view_task_hazard(token, dstore):
     tasks = set(dstore['task_info'])
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    if 'classical' in tasks:
-        data = dstore['task_info/classical'].value
+    if 'classical_split_filter' in tasks:
+        data = dstore['task_info/classical_split_filter'].value
     else:
         data = dstore['task_info/compute_gmfs'].value
     data.sort(order='duration')

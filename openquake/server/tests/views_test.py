@@ -159,6 +159,20 @@ class EngineServerTestCase(unittest.TestCase):
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['taxonomy']), 7)
 
+        # check tag collection
+        resp = self.c.get(extract_url + 'exposure_metadata')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertEqual(list(got['tagnames']), ['taxonomy'])
+        self.assertEqual(list(got['array']), ['number', 'value-structural'])
+
+        # check assets
+        resp = self.c.get(
+            extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertEqual(len(got['array']), 25)
+
         # check avg_losses-rlzs
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')

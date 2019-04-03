@@ -239,6 +239,16 @@ def export_losses_by_event(ekey, dstore):
         dtlist = [('eid', U64)] + oq.loss_dt_list()
         arr = dstore['losses_by_event'].value[['eid', 'loss']]
         writer.save(arr.copy().view(dtlist), dest)
+    elif oq.calculation_mode == 'ebrisk':
+        tagcol = dstore['assetcol/tagcol']
+        loss = dstore['losses_by_event']['loss']  # shape (E, L, T...)
+        dic = dict(tagnames=['event_id', 'loss_type'] + oq.aggregate_by)
+        for tagname in oq.aggregate_by:
+            dic[tagname] = getattr(tagcol, tagname)
+        dic['event_id'] = ['?'] + sorted(dstore['losses_by_event']['eid'])
+        dic['loss_type'] = ('?',) + oq.loss_dt().names
+        aw = hdf5.ArrayWrapper(loss, dic)
+        writer.save(aw.to_table(), dest)
     else:
         dtlist = [('event_id', U64), ('rup_id', U32), ('year', U32)] + \
                  oq.loss_dt_list()
@@ -620,3 +630,16 @@ def export_aggregate_by_csv(ekey, dstore):
     writer.save(aw.to_table(), fname)
     fnames.append(fname)
     return fnames
+
+
+@export.add(('asset_risk', 'csv'))
+def export_asset_risk_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
+    fname = dstore.export_path(path)
+    writer.save(extract(dstore, 'asset_risk'), fname)
+    return [fname]

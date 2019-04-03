@@ -38,7 +38,7 @@ from openquake.hazardlib.calc.filters import (
     split_sources, RtreeFilter, SourceFilter)
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
-from openquake.risklib import riskinput, riskmodels
+from openquake.risklib import riskinput
 from openquake.commonlib import (
     readinput, logictree, source, calc, writers, util)
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -492,7 +492,6 @@ class HazardCalculator(BaseCalculator):
         for name, fname in zip(oq.multi_peril, fnames):
             data = []
             with open(fname) as f:
-                next(f)  # skip the comment on the first line
                 for row in csv.DictReader(f):
                     data.append((float(row['lon']), float(row['lat']),
                                  valid.positivefloat(row['intensity'])))
@@ -782,14 +781,12 @@ class HazardCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
 
             # same check for the consequence models, if any
-            consequence_models = riskmodels.get_risk_models(
-                oq, 'consequence')
-            for lt, cm in consequence_models.items():
-                missing = taxonomies - set(cm)
-                if missing:
-                    raise ValueError(
-                        'Missing consequenceFunctions for %s' %
-                        ' '.join(missing))
+            if any(key.endswith('_consequence') for key in oq.inputs):
+                for taxonomy in taxonomies:
+                    cfs = self.riskmodel[taxonomy].consequence_functions
+                    if not cfs:
+                        raise ValueError(
+                            'Missing consequenceFunctions for %s' % taxonomy)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
@@ -963,10 +960,11 @@ class RiskCalculator(HazardCalculator):
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
                 # dictionary of epsilons for the reduced assets
-                reduced_eps = {ass.ordinal: eps[ass.ordinal]
+                reduced_eps = {ass['ordinal']: eps[int(ass['ordinal'])]
                                for ass in block
                                if eps is not None and len(eps)}
-                yield riskinput.RiskInput(getter, [block], reduced_eps)
+                yield riskinput.RiskInput(
+                    getter, numpy.array(block), reduced_eps)
             rinfo.append((sid, len(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',

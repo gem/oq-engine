@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.hazardlib.source import rupture
 from openquake.risklib import scientific, riskmodels
 from openquake.calculators import base
 
@@ -24,7 +23,6 @@ U16 = numpy.uint16
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-VOLCANIC_HAZARDS = {'ASH', 'LAVA', 'LAHARS', 'PYRO'}
 
 
 def scenario_damage(riskinputs, riskmodel, param, monitor):
@@ -50,7 +48,6 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
     If there is no consequence model `c_asset` is an empty list and
     `c_tag` is a zero-valued array.
     """
-    c_models = param['consequence_models']
     L = len(riskmodel.loss_types)
     D = len(riskmodel.damage_states)
     E = param['number_of_ground_motion_fields']
@@ -58,28 +55,19 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
     result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
                   c_asset=[], c_event=numpy.zeros((E, R, L), F64))
     for ri in riskinputs:
-        for outputs in riskmodel.gen_outputs(ri, monitor):
-            r = outputs.rlzi
-            for l, damages in enumerate(outputs):
-                loss_type = riskmodel.loss_types[l]
-                c_model = c_models.get(loss_type)
-                for a, fraction in enumerate(damages):
-                    asset = outputs.assets[a]
-                    taxo = riskmodel.taxonomy[asset.taxonomy]
-                    damages = fraction * asset.number
-                    result['d_event'][:, r, l] += damages  # shape (E, D)
-                    if c_model:  # compute consequences
-                        means = [par[0] for par in c_model[taxo].params]
-                        # NB: we add a 0 in front for nodamage state
-                        c_ratio = numpy.dot(fraction, [0] + means)
-                        consequences = c_ratio * asset.value(loss_type)
-                        result['c_asset'].append(
-                            (l, r, asset.ordinal,
-                             scientific.mean_std(consequences)))
-                        result['c_event'][:, r, l] += consequences
-                        # TODO: consequences for the occupants
+        for out in riskmodel.gen_outputs(ri, monitor):
+            r = out.rlzi
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                for asset, fractions in zip(ri.assets, out[loss_type]):
+                    dmg = fractions[:, :D] * asset['number']  # shape (E, D)
+                    result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
-                        (l, r, asset.ordinal, scientific.mean_std(damages)))
+                        (l, r, asset['ordinal'], scientific.mean_std(dmg)))
+                    if riskmodel.consequences:
+                        csq = fractions[:, D] * asset['value-' + loss_type]
+                        result['c_asset'].append(
+                            (l, r, asset['ordinal'], scientific.mean_std(csq)))
+                        result['c_event'][:, r, l] += csq
     return result
 
 
@@ -95,41 +83,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        if self.oqparam.multi_peril and'ASH' not in self.oqparam.multi_peril:
-            self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
-            return
-
-        E = self.oqparam.number_of_ground_motion_fields
-        self.param['number_of_ground_motion_fields'] = E
-        self.param['consequence_models'] = riskmodels.get_risk_models(
-            self.oqparam, 'consequence')
-        self.riskinputs = self.build_riskinputs('gmf', num_events=E)
+        F = self.oqparam.number_of_ground_motion_fields
+        self.param['number_of_ground_motion_fields'] = F
+        self.riskinputs = self.build_riskinputs('gmf', num_events=F)
         self.param['tags'] = list(self.assetcol.tagcol)
-
-    def collapsed(self):
-        """
-        Store an array collaps_by_asset of shape (A, H), with H the number
-        of boolean hazard inputs
-        """
-        A = len(self.assetcol)
-        H = len(self.oqparam.multi_peril)
-        collapsed = numpy.zeros((A, H, 1), F32)
-        hazard = self.datastore['multi_peril']
-        for aid, rec in enumerate(self.assetcol.array):
-            haz = hazard[rec['site_id']]
-            for h, hfield in enumerate(self.oqparam.multi_peril):
-                if hfield == 'ASH':
-                    collapsed[aid, h, 0] = self.datastore[
-                        'dmg_by_asset'][aid, 0, 0, 0, -1]
-                else:
-                    collapsed[aid, h, 0] = haz[hfield]
-        self.datastore['collapsed-rlzs'] = collapsed
-
-    def execute(self):
-        multi_peril = sorted(set(self.oqparam.multi_peril) - {'ASH'})
-        if multi_peril and 'ASH' not in self.oqparam.multi_peril:
-            return {}
-        return super().execute()
 
     def post_execute(self, result):
         """
@@ -145,7 +102,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
         N = len(self.assetcol)
-        E = self.oqparam.number_of_ground_motion_fields
+        F = self.oqparam.number_of_ground_motion_fields
 
         # damage distributions
         dt_list = []
@@ -157,7 +114,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
         dmg_dt = [(ds, F32) for ds in self.riskmodel.damage_states]
-        d_event = numpy.zeros((E, R, L), dmg_dt)
+        d_event = numpy.zeros((F, R, L), dmg_dt)
         for d, ds in enumerate(self.riskmodel.damage_states):
             d_event[ds] = result['d_event'][:, :, :, d]
         self.datastore['dmg_by_event'] = d_event
@@ -172,7 +129,5 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['losses_by_asset'] = c_asset
             self.datastore['losses_by_event'] = numpy.fromiter(
                 ((eid, rlzi, F32(result['c_event'][eid, rlzi]))
-                 for rlzi in range(R) for eid in range(E)), dtlist)
+                 for rlzi in range(R) for eid in range(F)), dtlist)
 
-        if self.oqparam.multi_peril:
-            self.collapsed()
