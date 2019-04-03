@@ -302,6 +302,24 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
             del data  # save memory
 
+        logs.dbcmd('update_job', job_id, {'status': 'submitted'})
+
+        max_concurrent_jobs = int(config.memory.max_concurrent_jobs)
+        if max_concurrent_jobs > 0:
+            executing_jobs = logs.dbcmd('get_jobs_by_status', 'executing')
+            submitted_jobs = logs.dbcmd('get_jobs_by_status', 'submitted')
+            if len(executing_jobs) + len(submitted_jobs) > max_concurrent_jobs:
+                logs.LOG.warn('wait for other jobs in queue to finish')
+
+                while (len(executing_jobs) > max_concurrent_jobs - 1 or
+                       (min(submitted_jobs) < job_id
+                        if submitted_jobs else False)):
+                    time.sleep(5)
+                    executing_jobs = logs.dbcmd('get_jobs_by_status',
+                                                'executing')
+                    submitted_jobs = logs.dbcmd('get_jobs_by_status',
+                                                'submitted')
+
         logs.dbcmd('update_job', job_id, {'status': 'executing',
                                           'pid': _PID})
         t0 = time.time()
