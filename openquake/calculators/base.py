@@ -123,7 +123,7 @@ def only_filter(srcs, srcfilter, seed, monitor):
         srcs = readinput.random_filtered_sources(splits, srcfilter, seed)
     srcs = list(srcfilter.filter(srcs))
     if srcs:
-        yield srcs, {src.id: 0 for src in srcs}
+        yield srcs
 
 
 def parallel_filter(csm, srcfilter, monitor):
@@ -135,14 +135,12 @@ def parallel_filter(csm, srcfilter, monitor):
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     logging.info('Filtering sources with %s', srcfilter.__class__.__name__)
     trt_sources = csm.get_trt_sources(optimize_same_id=False)
-    tot_sources = sum(len(sources) for trt, sources in trt_sources)
     # use Rtree and the processpool
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
-    arr = numpy.zeros((tot_sources, 2), F32)
     smap = parallel.Starmap(
         only_filter, monitor=monitor, distribute=dist, progress=logging.debug)
     for trt, sources in trt_sources:
@@ -153,17 +151,11 @@ def parallel_filter(csm, srcfilter, monitor):
                     sources, RUPTURES_PER_BLOCK,
                     operator.attrgetter('num_ruptures')):
                 smap.submit(block, srcfilter, seed, func=only_filter)
-    for splits, stime in smap:
+    for splits in smap:
         for src in splits:
-            i = src.id
-            arr[i, 0] += stime[i]  # split_time
-            arr[i, 1] += 1         # num_split
             srcs_by_grp[src.src_group_id].append(src)
     if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
-    elif monitor.hdf5:
-        source_info[:, 'split_time'] = arr[:, 0]
-        source_info[:, 'num_split'] = arr[:, 1]
     parallel.Starmap.shutdown()
     return csm.new(srcs_by_grp)
 
