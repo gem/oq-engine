@@ -308,7 +308,6 @@ class GMPETable(GMPE):
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        import pdb; pdb.set_trace()
         if fle is None:
             fname = self.kwargs.get('gmpe_table', self.GMPE_TABLE)
             if fname is None:
@@ -332,7 +331,6 @@ class GMPETable(GMPE):
         # Load in distances
         self.distances = fle["Distances"][:]
         # Load intensity measure types and levels
-        import pdb; pdb.set_trace()
         self.imls = hdf_arrays_to_dict(fle["IMLs"])
         self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(self._supported_imts())
         if "SA" in self.imls and "T" not in self.imls:
