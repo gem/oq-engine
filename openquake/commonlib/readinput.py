@@ -623,7 +623,7 @@ def store_sm(smodel, filename, monitor):
                 geom = numpy.zeros(n, point3d)
                 geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
                 srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             src.num_ruptures, 0))
+                             src.num_ruptures, 0, 0, 0))
                 geoms.append(geom)
                 gid += n
             if geoms:
