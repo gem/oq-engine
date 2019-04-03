@@ -63,10 +63,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
-    mon = monitor('getting assets', measuremem=False)
-    with datastore.read(srcfilter.filename) as dstore:
-        assetcol = dstore['assetcol']
-    assets_by_site = assetcol.assets_by_site()
+    with monitor('getting assets', measuremem=False):
+        with datastore.read(srcfilter.filename) as dstore:
+            assetcol = dstore['assetcol']
+        assets_by_site = assetcol.assets_by_site()
     A = len(assetcol)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
@@ -94,8 +94,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         weights = getter.weights[haz['rlzi']]
         assets_on_sid = assets_by_site[sid]
         eidx = [eid2idx[eid] for eid in haz['eid']]
-        mon.duration += time.time() - t0
-        mon.counts += 1
         with mon_risk:
             assets_ratios = riskmodel.get_assets_ratios(
                 assets_on_sid, haz['gmv'], imts)
