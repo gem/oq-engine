@@ -123,7 +123,7 @@ def only_filter(srcs, srcfilter, seed, monitor):
         srcs = readinput.random_filtered_sources(splits, srcfilter, seed)
     srcs = list(srcfilter.filter(srcs))
     if srcs:
-        yield srcs, {src.id: 0 for src in srcs}
+        yield srcs
 
 
 def parallel_filter(csm, srcfilter, monitor):
@@ -151,7 +151,7 @@ def parallel_filter(csm, srcfilter, monitor):
                     sources, RUPTURES_PER_BLOCK,
                     operator.attrgetter('num_ruptures')):
                 smap.submit(block, srcfilter, seed, func=only_filter)
-    for splits, stime in smap:
+    for splits in smap:
         for src in splits:
             srcs_by_grp[src.src_group_id].append(src)
     if not srcs_by_grp:
