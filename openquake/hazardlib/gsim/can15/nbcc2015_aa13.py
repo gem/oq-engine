@@ -75,7 +75,9 @@ class NBCC2015_AA13_Base(GMPETable):
     def __init__(self):
         if not self.AA13_TABLE:
             raise NotImplementedError("AA13 GMPE requires input table")
-        super(NBCC2015_AA13_Base, self).__init__(gmpe_table=self.AA13_TABLE)
+        #super(NBCC2015_AA13_Base, self).__init__(gmpe_table=self.AA13_TABLE)
+        super().__init__(fle=self.AA13_TABLE)
+        #import pdb; pdb.set_trace()
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
