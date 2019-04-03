@@ -674,6 +674,29 @@ class List(list):
     _fields = ()
 
 
+def get_jobs_by_status(db, status):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :returns:
+        (id, pid, user_name, start_time) tuples
+    """
+    fields = 'id,pid'
+    job_id = []
+
+    query = ('''-- executing jobs
+SELECT %s FROM job WHERE status='%s' ORDER BY id desc''' % (fields, status))
+    rows = db(query)
+    for r in rows:
+        # if r.pid is 0 it means that such information
+        # is not available in the database
+        if status != 'executing':
+            job_id.append(int(r.id))
+        elif r.pid and psutil.pid_exists(r.pid):
+            job_id.append(int(r.id))
+    return job_id
+
+
 def get_executing_jobs(db):
     """
     :param db:
