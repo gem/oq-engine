@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib.scientific import losses_by_period
+from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -309,6 +309,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             if oq.conditional_loss_poes:
                 logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')
+
+        self.datastore.set_attrs(
+            'agg_curves-stats', return_periods=builder.return_periods,
+            loss_types=' '.join(self.riskmodel.loss_types))
 
         # sanity check with the asset_loss_table
         if oq.asset_loss_table and len(oq.aggregate_by) == 1:
