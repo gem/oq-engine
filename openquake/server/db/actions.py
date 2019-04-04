@@ -690,10 +690,11 @@ SELECT %s FROM job WHERE status='%s' ORDER BY id desc''' % (fields, status))
     for r in rows:
         # if r.pid is 0 it means that such information
         # is not available in the database
-        if status != 'executing':
+        if status != 'executing' and status != 'submitted':
             job_id.append(int(r.id))
         elif r.pid and psutil.pid_exists(r.pid):
             job_id.append(int(r.id))
+        print('%s, %s' % (status, job_id))
     return job_id
 
 
