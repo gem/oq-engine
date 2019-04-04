@@ -312,7 +312,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             if len(executing_jobs) + len(submitted_jobs) > max_concurrent_jobs:
                 logs.LOG.warn('Wait for other jobs in queue to finish ...')
 
-                while (len(executing_jobs) > max_concurrent_jobs - 1 or
+                while (len(executing_jobs) >= max_concurrent_jobs or
                        (min(submitted_jobs) < job_id
                         if submitted_jobs else False)):
                     time.sleep(15)
