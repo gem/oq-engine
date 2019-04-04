@@ -487,7 +487,6 @@ class HazardCalculator(BaseCalculator):
         dt = [(haz, float) for haz in oq.multi_peril]
         N = len(self.sitecol)
         self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
-        nonzero = []
         for name, fname in zip(oq.multi_peril, fnames):
             data = []
             with open(fname) as f:
@@ -506,9 +505,7 @@ class HazardCalculator(BaseCalculator):
             z = numpy.zeros(N, float)
             z[sites.sids] = filtdata['number']
             self.datastore['multi_peril'][name] = z
-            nonzero.append((z != 0).sum())
-        self.datastore.set_attrs(
-            'multi_peril', nbytes=z.nbytes, nonzero=nonzero)
+        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
         # convert ASH into a GMF
         # if 'ASH' in oq.multi_peril:
