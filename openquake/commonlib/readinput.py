@@ -595,10 +595,8 @@ source_info_dt = numpy.dtype([
     ('gidx2', numpy.uint32),           # 4
     ('num_ruptures', numpy.uint32),    # 5
     ('calc_time', numpy.float32),      # 6
-    ('split_time', numpy.float32),     # 7
-    ('num_sites', numpy.float32),      # 8
-    ('num_split',  numpy.uint32),      # 9
-    ('weight', numpy.float32),         # 10
+    ('num_sites', numpy.float32),      # 7
+    ('weight', numpy.float32),         # 8
 ])
 
 
@@ -625,7 +623,7 @@ def store_sm(smodel, filename, monitor):
                 geom = numpy.zeros(n, point3d)
                 geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
                 srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             src.num_ruptures, 0, 0, 0, 0, 0))
+                             src.num_ruptures, 0, 0, 0))
                 geoms.append(geom)
                 gid += n
             if geoms:
@@ -712,7 +710,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 idx += 1
                 grp_id += 1
                 data = [((sg.id, src.source_id, src.code, 0, 0,
-                         src.num_ruptures, 0, 0, 0, 0, 0))]
+                         src.num_ruptures, 0, 0, 0))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
                 newsm = make_sm(fname, dic[fname], apply_unc,
