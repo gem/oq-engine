@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed two exporters for the ebrisk calculator (agg_curves-stats and
+    losses_b_event)
   * Fixed two subtle bugs when reading site_model.csv files
   * Added /extract/exposure_metadata and /extract/asset_risk
 

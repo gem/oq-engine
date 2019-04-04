@@ -306,6 +306,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.R > 1:
             logging.info('Computing aggregate loss curves statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
+            self.datastore.set_attrs(
+                'agg_curves-stats', return_periods=builder.return_periods,
+                loss_types=' '.join(self.riskmodel.loss_types))
             if oq.conditional_loss_poes:
                 logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')
