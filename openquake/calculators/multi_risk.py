@@ -42,7 +42,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     arr = numpy.zeros(len(assetcol), dt)
     for field in assetcol.array.dtype.names:
         arr[field] = assetcol.array[field]
-    for field, _ in (set(dtlist) - set(no_frag_perils)):
+    for field, _ in dtlist:
         arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
     for peril in no_frag_perils:
         for rec in arr:
