@@ -642,5 +642,6 @@ def export_asset_risk_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    writer.save(extract(dstore, 'asset_risk'), fname)
+    arr = extract(dstore, 'asset_risk').array
+    writer.save(arr, fname, arr.dtype.names)
     return [fname]

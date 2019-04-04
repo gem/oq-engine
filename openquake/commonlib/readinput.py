@@ -894,6 +894,14 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
+def check_equal_sets(a, b):
+    a_set = set(a)
+    b_set = set(b)
+    diff = a_set.symmetric_difference(b_set)
+    if diff:
+        raise ValueError('Missing %s' % diff)
+
+
 def get_risk_model(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -904,6 +912,20 @@ def get_risk_model(oqparam):
     fragdict = get_risk_models(oqparam, 'fragility')
     vulndict = get_risk_models(oqparam, 'vulnerability')
     consdict = get_risk_models(oqparam, 'consequence')
+    if consdict:  # the consequences must be consistent with the fragilities
+        check_equal_sets(consdict, fragdict)
+        for taxo in consdict:
+            cdict, fdict = consdict[taxo], fragdict[taxo]
+            check_equal_sets(cdict, fdict)
+            for loss_type in cdict:
+                c = cdict[loss_type]
+                f = fdict[loss_type]
+                csq_dmg_states = len(c.params)
+                if csq_dmg_states != len(f):
+                    raise ValueError(
+                        'The damage states in %s are different from the '
+                        'damage states in the fragility functions, %s'
+                        % (c, fragdict.limit_states))
     dic = {}
     dic.update(fragdict)
     dic.update(vulndict)
