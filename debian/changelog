@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Added a 'max_concurrent_jobs' setting to the openquake.cfg
+    which limits the maximum number of jobs that can be run in parallel
+
   [Michele Simionato]
   * Fixed two exporters for the ebrisk calculator (agg_curves-stats and
     losses_b_event)
