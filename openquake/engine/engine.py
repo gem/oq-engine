@@ -146,6 +146,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
+    if len(dstore['csm_info/sg_data']) == 1:  # do not export a single group
+        dskeys.remove('sourcegroups')
     if 'all_loss_ratios' in dskeys:
         dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'ruptures' in dskeys and 'scenario' in calcmode:
