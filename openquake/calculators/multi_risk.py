@@ -29,20 +29,23 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     # dmg_csq has shape (A, R, L, 1, D + 1)
     dtlist = []
     field2tup = {}
+    for name, dt in assetcol.array.dtype.descr:
+        if name not in {'area', 'occupants_None', 'ordinal'}:
+            dtlist.append((name, dt))
+    dtlist.sort()
     for l, loss_type in enumerate(loss_types):
         for d, ds in enumerate(damage_states + ['loss']):
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
-    dt = sorted(assetcol.array.dtype.descr) + dtlist + [
-        (peril, float) for peril in no_frag_perils]
+    dt = dtlist + [(peril, float) for peril in no_frag_perils]
     arr = numpy.zeros(len(assetcol), dt)
-    for field in set(assetcol.array.dtype.names) - {
-            'area', 'occupants_None', 'ordinal'}:
-        arr[field] = assetcol.array[field]
     for field, _ in dtlist:
-        arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
+        if field in assetcol.array.dtype.fields:
+            arr[field] = assetcol.array[field]
+        else:
+            arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
     for peril in no_frag_perils:
         for rec in arr:
             rec[peril] = hazard[rec['site_id']][peril]
