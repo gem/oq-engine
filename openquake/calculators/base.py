@@ -135,14 +135,12 @@ def parallel_filter(csm, srcfilter, monitor):
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     logging.info('Filtering sources with %s', srcfilter.__class__.__name__)
     trt_sources = csm.get_trt_sources(optimize_same_id=False)
-    # use Rtree and the processpool
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     smap = parallel.Starmap(
-        only_filter, monitor=monitor, distribute=dist, progress=logging.debug)
+        only_filter, monitor=monitor, progress=logging.debug)
     for trt, sources in trt_sources:
         if hasattr(sources, 'atomic') and sources.atomic:
             smap.submit(sources, srcfilter, seed)
