@@ -36,7 +36,7 @@ def build_asset_risk(assetcol, dmg_csq, loss_types, damage_states, perils):
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
-    dt = assetcol.array.dtype.descr + dtlist
+    dt = sorted(assetcol.array.dtype.descr) + dtlist
     arr = numpy.zeros(len(assetcol), dt)
     for field in assetcol.array.dtype.names:
         arr[field] = assetcol.array[field]
