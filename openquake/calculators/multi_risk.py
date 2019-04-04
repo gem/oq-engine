@@ -26,7 +26,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def build_asset_risk(assetcol, dmg_csq, loss_types, damage_states, perils):
+def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
+                     perils, no_frag_perils):
     # dmg_csq has shape (A, R, L, 1, D + 1)
     dtlist = []
     field2tup = {}
@@ -36,12 +37,16 @@ def build_asset_risk(assetcol, dmg_csq, loss_types, damage_states, perils):
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
-    dt = sorted(assetcol.array.dtype.descr) + dtlist
+    dt = sorted(assetcol.array.dtype.descr) + dtlist + [
+        (peril, float) for peril in no_frag_perils]
     arr = numpy.zeros(len(assetcol), dt)
     for field in assetcol.array.dtype.names:
         arr[field] = assetcol.array[field]
-    for field, _ in dtlist:
+    for field, _ in (set(dtlist) - set(no_frag_perils)):
         arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
+    for peril in no_frag_perils:
+        for rec in arr:
+            rec[peril] = hazard[rec['site_id']][peril]
     return arr
 
 
@@ -90,13 +95,9 @@ class MultiRiskCalculator(base.RiskCalculator):
         for peril in self.oqparam.multi_peril:
             if peril != 'ASH':
                 no_frag_perils.append(peril)
-        for aid, rec in enumerate(self.assetcol.array):
-            haz = hazard[rec['site_id']]
-            for h, hfield in enumerate(no_frag_perils):
-                dmg_csq[aid, h + 2, 0, 0, -2] = haz[hfield]  # -2 is collapse
-
         self.datastore['asset_risk'] = build_asset_risk(
-            self.assetcol, dmg_csq, ltypes, dstates, perils + no_frag_perils)
+            self.assetcol, dmg_csq, hazard, ltypes, dstates,
+            perils, no_frag_perils)
 
     def post_execute(self, result):
         pass
