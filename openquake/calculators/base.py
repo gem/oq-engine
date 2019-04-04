@@ -511,14 +511,14 @@ class HazardCalculator(BaseCalculator):
             'multi_peril', nbytes=z.nbytes, nonzero=nonzero)
 
         # convert ASH into a GMF
-        if 'ASH' in oq.multi_peril:
-            # in the future, if the stddevs will become available, we will
-            # be able to generate a distribution of GMFs, as we do for the
-            # ShakeMaps; for the moment, we will consider a single event
-            oq.number_of_ground_motion_fields = E = 1
-            events = numpy.zeros(E, rupture.events_dt)
-            gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
-            save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
+        # if 'ASH' in oq.multi_peril:
+        # in the future, if the stddevs will become available, we will
+        # be able to generate a distribution of GMFs, as we do for the
+        # ShakeMaps; for the moment, we will consider a single event
+        #    oq.number_of_ground_motion_fields = E = 1
+        #  events = numpy.zeros(E, rupture.events_dt)
+        #    gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
+        #    save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
 
     def pre_execute(self):
         """
