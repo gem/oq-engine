@@ -674,14 +674,12 @@ class List(list):
     _fields = ()
 
 
-def get_jobs_by_status(db, status, filter_running=True):
+def get_jobs_by_status(db, status):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param status:
         status string
-    :param filter_running:
-        filter results only on jobs with an existing process
     :returns:
         list with id
     """
