@@ -55,7 +55,8 @@ def reset_is_running(db):
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    db('UPDATE job SET is_running=0 WHERE is_running=1')
+    db('UPDATE job SET is_running=0, status=?x WHERE is_running=1 '
+       'OR status=?x', 'failed', 'executing')
 
 
 def set_status(db, job_id, status):
