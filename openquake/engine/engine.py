@@ -275,7 +275,8 @@ def poll_queue(job_id, pid, poll_time):
             submitted_before = submitted and min(submitted) < job_id
             if len(executing) >= max_concurrent_jobs or submitted_before:
                 if first_time:
-                    logs.LOG.warn('Waiting for jobs %s', executing + submitted)
+                    logs.LOG.warn('Waiting for jobs %s',
+                                  sorted(executing + submitted))
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': pid})
                     first_time = False
