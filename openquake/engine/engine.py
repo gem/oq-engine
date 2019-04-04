@@ -310,12 +310,12 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             executing_jobs = logs.dbcmd('get_jobs_by_status', 'executing')
             submitted_jobs = logs.dbcmd('get_jobs_by_status', 'submitted')
             if len(executing_jobs) + len(submitted_jobs) > max_concurrent_jobs:
-                logs.LOG.warn('wait for other jobs in queue to finish')
+                logs.LOG.warn('Wait for other jobs in queue to finish ...')
 
                 while (len(executing_jobs) > max_concurrent_jobs - 1 or
                        (min(submitted_jobs) < job_id
                         if submitted_jobs else False)):
-                    time.sleep(5)
+                    time.sleep(15)
                     executing_jobs = logs.dbcmd('get_jobs_by_status',
                                                 'executing')
                     submitted_jobs = logs.dbcmd('get_jobs_by_status',
