@@ -19,7 +19,7 @@ import numpy
 from openquake.qa_tests_data.multi_risk import case_1
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.export import export
-from openquake.calculators.extract import extract
+# from openquake.calculators.extract import extract
 
 aae = numpy.testing.assert_almost_equal
 
@@ -35,7 +35,16 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         # TODO: check extract
 
-    def test_case_1_bis(self):
+    def test_case_2(self):
+        # case with two damage states
+        self.run_calc(case_1.__file__, 'job_2.ini')
+
+        [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/asset_risk_2.csv', fname)
+
+        # TODO: check extract
+
+    def test_case_3(self):
         # case with volcanic lava
         self.run_calc(case_1.__file__, 'job.ini',
                       multi_risk_csv="{'LAVA': 'lava_flow.csv'}")
@@ -51,12 +60,3 @@ class MultiRiskTestCase(CalculatorTestCase):
         with self.assertRaises(ValueError):
             self.run_calc(case_1.__file__, 'job.ini',
                           structura_consequence_file='consequence_model.xml')
-
-    def test_case_2(self):
-        # case with two damage states
-        self.run_calc(case_1.__file__, 'job_2.ini')
-
-        [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/asset_risk_2.csv', fname)
-
-        # TODO: check extract
