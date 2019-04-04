@@ -211,8 +211,8 @@ def extract_exposure_metadata(dstore, what):
     if 'multi_peril' in dstore:
         dic['multi_peril'] = numpy.array(
             list(dstore['multi_peril'].dtype.names), numpy.string_)
-    array = encode([name for name in dstore['assetcol/array'].dtype.names
-                    if name.startswith(('value-', 'number', 'occupants_'))])
+    array = [name for name in dstore['assetcol/array'].dtype.names
+             if name.startswith(('value-', 'number', 'occupants_'))]
     return ArrayWrapper(array, {k: encode(v) for k, v in dic.items()})
 
 
