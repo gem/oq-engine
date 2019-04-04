@@ -59,21 +59,8 @@ class MultiRiskCalculator(base.RiskCalculator):
     core_task = None  # no parallel
     is_stochastic = True
 
-    def pre_execute(self):
-        super().pre_execute()
-        assert self.oqparam.multi_peril
-        if 'ASH' not in self.oqparam.multi_peril:
-            self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
-            return
-
-        E = self.oqparam.number_of_ground_motion_fields
-        self.param['number_of_ground_motion_fields'] = E
-        self.param['consequence_models'] = riskmodels.get_risk_models(
-            self.oqparam, 'consequence')
-        self.param['tags'] = list(self.assetcol.tagcol)
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
-
     def execute(self):
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         P = len(self.oqparam.multi_peril) + 1
