@@ -26,7 +26,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def build_asset_risk(assetcol, dmg_csq, loss_types, damage_states, perils):
+def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
+                     perils, no_frag_perils):
     # dmg_csq has shape (A, R, L, 1, D + 1)
     dtlist = []
     field2tup = {}
@@ -36,12 +37,17 @@ def build_asset_risk(assetcol, dmg_csq, loss_types, damage_states, perils):
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
-    dt = sorted(assetcol.array.dtype.descr) + dtlist
+    dt = sorted(assetcol.array.dtype.descr) + dtlist + [
+        (peril, float) for peril in no_frag_perils]
     arr = numpy.zeros(len(assetcol), dt)
-    for field in assetcol.array.dtype.names:
+    for field in set(assetcol.array.dtype.names) - {
+            'area', 'occupants_None', 'ordinal'}:
         arr[field] = assetcol.array[field]
     for field, _ in dtlist:
         arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
+    for peril in no_frag_perils:
+        for rec in arr:
+            rec[peril] = hazard[rec['site_id']][peril]
     return arr
 
 
@@ -53,21 +59,8 @@ class MultiRiskCalculator(base.RiskCalculator):
     core_task = None  # no parallel
     is_stochastic = True
 
-    def pre_execute(self):
-        super().pre_execute()
-        assert self.oqparam.multi_peril
-        if 'ASH' not in self.oqparam.multi_peril:
-            self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
-            return
-
-        E = self.oqparam.number_of_ground_motion_fields
-        self.param['number_of_ground_motion_fields'] = E
-        self.param['consequence_models'] = riskmodels.get_risk_models(
-            self.oqparam, 'consequence')
-        self.param['tags'] = list(self.assetcol.tagcol)
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
-
     def execute(self):
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         P = len(self.oqparam.multi_peril) + 1
@@ -90,13 +83,9 @@ class MultiRiskCalculator(base.RiskCalculator):
         for peril in self.oqparam.multi_peril:
             if peril != 'ASH':
                 no_frag_perils.append(peril)
-        for aid, rec in enumerate(self.assetcol.array):
-            haz = hazard[rec['site_id']]
-            for h, hfield in enumerate(no_frag_perils):
-                dmg_csq[aid, h + 2, 0, 0, -2] = haz[hfield]  # -2 is collapse
-
         self.datastore['asset_risk'] = build_asset_risk(
-            self.assetcol, dmg_csq, ltypes, dstates, perils + no_frag_perils)
+            self.assetcol, dmg_csq, hazard, ltypes, dstates,
+            perils, no_frag_perils)
 
     def post_execute(self, result):
         pass
