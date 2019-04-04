@@ -302,7 +302,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
             del data  # save memory
 
-        logs.dbcmd('update_job', job_id, {'status': 'submitted'})
+        logs.dbcmd('update_job', job_id, {'status': 'submitted',
+                                          'pid': _PID})
 
         max_concurrent_jobs = int(config.memory.max_concurrent_jobs)
         if max_concurrent_jobs > 0:
