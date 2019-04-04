@@ -40,7 +40,8 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     dt = sorted(assetcol.array.dtype.descr) + dtlist + [
         (peril, float) for peril in no_frag_perils]
     arr = numpy.zeros(len(assetcol), dt)
-    for field in assetcol.array.dtype.names:
+    for field in set(assetcol.array.dtype.names) - {
+            'area', 'occupants_None', 'ordinal'}:
         arr[field] = assetcol.array[field]
     for field, _ in dtlist:
         arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
