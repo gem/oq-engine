@@ -213,7 +213,7 @@ class EngineServerTestCase(unittest.TestCase):
         # fullreport, input, hcurves, hmaps, realizations, sourcegroups
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
-        self.assertGreaterEqual(len(results), 6)
+        self.assertGreaterEqual(len(results), 5)
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
