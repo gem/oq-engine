@@ -68,7 +68,7 @@ def set_status(db, job_id, status):
     :param status: status string
     """
     assert status in (
-        'created', 'executing', 'complete', 'aborted', 'failed'
+        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
     ), status
     if status in ('created', 'complete', 'failed', 'aborted'):
         is_running = 0
@@ -672,6 +672,31 @@ def get_results(db, job_id):
 
 class List(list):
     _fields = ()
+
+
+def get_jobs_by_status(db, status):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param status:
+        status string
+    :returns:
+        list with id
+    """
+    fields = 'id,pid,is_running'
+    job_id = []
+
+    query = ('''-- executing jobs
+SELECT %s FROM job WHERE status='%s' ORDER BY id desc''' % (fields, status))
+    rows = db(query)
+    for r in rows:
+        if status != 'submitted' and status != 'executing':
+            job_id.append(int(r.id))
+        # if r.pid is 0 it means that such information
+        # is not available in the database
+        elif r.is_running and r.pid and psutil.pid_exists(r.pid):
+            job_id.append(int(r.id))
+    return job_id
 
 
 def get_executing_jobs(db):
