@@ -219,8 +219,10 @@ class SourceGroup(collections.Sequence):
             lst.append((src.id, src.num_ruptures,
                         numpy.frombuffer(buf, numpy.uint8)))
         attrs = dict(
+            id=self.id,
             trt=self.trt,
             name=self.name or '',
+            eff_ruptures=self.eff_ruptures,
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
             grp_probability=self.grp_probability or '')
@@ -230,7 +232,7 @@ class SourceGroup(collections.Sequence):
         vars(self).update(attrs)
         self.sources = []
         for row in array:
-            self.sources.append(pickle.loads(memoryview(row)))
+            self.sources.append(pickle.loads(memoryview(row['pik'])))
 
 
 def get_set_num_ruptures(src):
