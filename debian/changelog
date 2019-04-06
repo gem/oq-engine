@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Reduced substantially the memory occupation in classical calculations
+    by including the prefiltering phase in the calculation phase
+
   [Daniele Viganò]
   * Added a 'max_concurrent_jobs' setting to the openquake.cfg
     which limits the maximum number of jobs that can be run in parallel
