@@ -56,7 +56,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
-RUPTURES_PER_BLOCK = 50000  # used in split_filter
+RUPTURES_PER_BLOCK = 100000  # used in classical_split_filter
 
 
 class InvalidCalculationID(Exception):
