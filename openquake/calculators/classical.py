@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import operator
 import numpy
@@ -26,7 +27,7 @@ from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -74,13 +75,20 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
+    # first check if we are sampling the sources
+    ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    if ss:
+        splits, stime = split_sources(srcs)
+        srcs = readinput.random_filtered_sources(splits, srcfilter, ss)
+        yield classical(srcs, srcfilter, gsims, params, monitor)
+        return
     sources = []
-    with monitor("splitting/filtering sources"):
-        for src in srcs:
+    with monitor("filtering/splitting sources"):
+        for src, _sites in srcfilter(srcs):
             if src.num_ruptures >= params['maxweight']:
                 splits, stime = split_sources([src])
                 sources.extend(srcfilter.filter(splits))
-            elif list(srcfilter.filter([src])):
+            else:
                 sources.append(src)
         blocks = list(block_splitter(sources, params['maxweight'],
                                      operator.attrgetter('num_ruptures')))
@@ -152,7 +160,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 source_ids.append(get_src_ids(sources))
                 for src in sources:  # collect source data
                     data.append((i, src.nsites, src.num_ruptures, src.weight))
-            self.datastore['task_sources'] = encode(source_ids)
+            if source_ids:
+                self.datastore['task_sources'] = encode(source_ids)
             self.datastore.extend(
                 'source_data', numpy.array(data, source_data_dt))
         self.nsites = []
@@ -165,7 +174,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.store_source_info(self.calc_times)
             self.calc_times.clear()  # save a bit of memory
         if not self.nsites:
-            raise RuntimeError('All sources were filtered out!')
+            raise RuntimeError('All sources were filtered away!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         return acc
 
