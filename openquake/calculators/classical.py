@@ -76,11 +76,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     """
     sources = []
     with monitor("splitting/filtering sources"):
-        for src in srcs:
+        for src, _sites in srcfilter(srcs):
             if src.num_ruptures >= params['maxweight']:
                 splits, stime = split_sources([src])
                 sources.extend(srcfilter.filter(splits))
-            elif list(srcfilter.filter([src])):
+            else:
                 sources.append(src)
         blocks = list(block_splitter(sources, params['maxweight'],
                                      operator.attrgetter('num_ruptures')))
