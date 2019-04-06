@@ -461,20 +461,8 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            csm = readinput.get_composite_source_model(
+            self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
-            if (self.sitecol is not None and oq.prefilter_sources != 'no' and
-                    oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-                dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
-                if dist == 'celery' or 'ucerf' in oq.calculation_mode:
-                    # move the prefiltering on the workers
-                    srcfilter = self.src_filter
-                else:
-                    # prefilter on the controller node with Rtree
-                    srcfilter = self.rtree_filter
-                self.csm = parallel_filter(csm, srcfilter, self.monitor())
-            else:
-                self.csm = csm
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):

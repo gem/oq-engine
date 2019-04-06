@@ -152,7 +152,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 source_ids.append(get_src_ids(sources))
                 for src in sources:  # collect source data
                     data.append((i, src.nsites, src.num_ruptures, src.weight))
-            self.datastore['task_sources'] = encode(source_ids)
+            if source_ids:
+                self.datastore['task_sources'] = encode(source_ids)
             self.datastore.extend(
                 'source_data', numpy.array(data, source_data_dt))
         self.nsites = []
@@ -165,7 +166,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.store_source_info(self.calc_times)
             self.calc_times.clear()  # save a bit of memory
         if not self.nsites:
-            raise RuntimeError('All sources were filtered out!')
+            raise RuntimeError('All sources were filtered away!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         return acc
 
