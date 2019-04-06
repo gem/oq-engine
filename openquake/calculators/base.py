@@ -113,51 +113,6 @@ To avoid that, set a proper `region_grid_spacing` so that your exposure
 takes less sites.''' % MAXSITES
 
 
-def only_filter(srcs, srcfilter, seed, monitor):
-    """
-    Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
-    if there are filtered sources.
-    """
-    if seed:  # OQ_SAMPLE_SOURCES was set
-        splits, _stime = split_sources(srcs)
-        srcs = readinput.random_filtered_sources(splits, srcfilter, seed)
-    srcs = list(srcfilter.filter(srcs))
-    if srcs:
-        yield srcs
-
-
-def parallel_filter(csm, srcfilter, monitor):
-    """
-    Apply :func:`only_filter` in parallel to the composite source model.
-
-    :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
-    """
-    seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    logging.info('Filtering sources with %s', srcfilter.__class__.__name__)
-    trt_sources = csm.get_trt_sources(optimize_same_id=False)
-    if monitor.hdf5:
-        source_info = monitor.hdf5['source_info']
-        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
-    srcs_by_grp = collections.defaultdict(list)
-    smap = parallel.Starmap(
-        only_filter, monitor=monitor, progress=logging.debug)
-    for trt, sources in trt_sources:
-        if hasattr(sources, 'atomic') and sources.atomic:
-            smap.submit(sources, srcfilter, seed)
-        else:  # regular sources
-            for block in general.block_splitter(
-                    sources, RUPTURES_PER_BLOCK,
-                    operator.attrgetter('num_ruptures')):
-                smap.submit(block, srcfilter, seed, func=only_filter)
-    for splits in smap:
-        for src in splits:
-            srcs_by_grp[src.src_group_id].append(src)
-    if not srcs_by_grp:
-        raise RuntimeError('All sources were filtered away!')
-    parallel.Starmap.shutdown()
-    return csm.new(srcs_by_grp)
-
-
 class BaseCalculator(metaclass=abc.ABCMeta):
     """
     Abstract base class for all calculators.
