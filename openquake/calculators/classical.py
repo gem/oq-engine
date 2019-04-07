@@ -93,9 +93,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         blocks = list(block_splitter(sources, params['maxweight'],
                                      operator.attrgetter('num_ruptures')))
     if blocks:
-        for block in blocks[1:]:
+        # yield the first blocks (if any) and compute the last block in core
+        # NB: the last block is usually the smallest one
+        for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
-        yield classical(blocks[0], srcfilter, gsims, params, monitor)
+        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
 @base.calculators.add('classical')
