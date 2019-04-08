@@ -656,7 +656,7 @@ def export_asset_risk_csv(ekey, dstore):
         for name in arr.dtype.names:
             value = rec[name]
             try:
-                row.append(add_quotes(tostr[name][value]))
+                row.append(add_quotes([tostr[name][value]]))
             except KeyError:
                 row.append(value)
         rows.append(row)
