@@ -33,11 +33,12 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/asset_risk.csv', fname)
+        [fname] = export(('agg_risk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_risk.csv', fname)
 
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
-        ae(md.array, ['number', 'occupants_None',
-                      'occupants_night', 'value-structural'])
+        ae(md.array, ['number', 'occupants_night', 'value-structural'])
         ae(md.multi_risk, ['LAHAR', 'LAVA', 'PYRO',
                            'collapse-structural-ASH_DRY',
                            'collapse-structural-ASH_WET',
@@ -55,8 +56,7 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
-        ae(md.array, ['number', 'occupants_None',
-                      'occupants_night', 'value-structural'])
+        ae(md.array, ['number', 'occupants_night', 'value-structural'])
         ae(md.multi_risk, ['LAHAR', 'LAVA', 'PYRO',
                            'collapse-structural-ASH_DRY',
                            'collapse-structural-ASH_WET',
@@ -74,8 +74,7 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
-        ae(md.array, ['number', 'occupants_None',
-                      'occupants_night', 'value-structural'])
+        ae(md.array, ['number', 'occupants_night', 'value-structural'])
         ae(md.multi_risk, ['LAVA'])
 
         # check invalid key structural_fragility_file
