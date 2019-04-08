@@ -19,6 +19,7 @@ import os
 import io
 import unittest
 import numpy
+from openquake.baselib import hdf5
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import update_source_model, \
     SourceConverter
@@ -244,3 +245,16 @@ class SourceConverterTestCase(unittest.TestCase):
         sg = nrml.to_python(testfile, sc)
         msg = "Wrong cluster definition"
         self.assertEqual(sg[0].cluster, True, msg)
+
+
+class SourceGroupHDF5TestCase(unittest.TestCase):
+    def test_serialization(self):
+        testfile = os.path.join(
+            testdir, 'nonparametric-source-mutex-ruptures.xml')
+        [grp] = nrml.to_python(testfile)
+        for i, src in enumerate(grp, 1):
+            src.id = i
+        with hdf5.File.temporary() as f:
+            f['grp'] = grp
+        with hdf5.File(f.path, 'r') as f:
+            print(f['grp'])

@@ -261,6 +261,31 @@ def job_from_file(job_ini, job_id, username, **kw):
     return oq
 
 
+def poll_queue(job_id, pid, poll_time):
+    """
+    Check the queue of executing/submitted jobs and exit when there is
+    a free slot.
+    """
+    max_concurrent_jobs = int(config.distribution.max_concurrent_jobs)
+    if max_concurrent_jobs > 0:
+        first_time = True
+        while True:
+            executing = logs.dbcmd('get_jobs_by_status', 'executing')
+            submitted = logs.dbcmd('get_jobs_by_status', 'submitted')
+            submitted_before = submitted and min(submitted) < job_id
+            if len(executing) >= max_concurrent_jobs or submitted_before:
+                if first_time:
+                    logs.LOG.warn('Waiting for jobs %s',
+                                  sorted(executing + submitted))
+                    logs.dbcmd('update_job', job_id,
+                               {'status': 'submitted', 'pid': pid})
+                    first_time = False
+                time.sleep(poll_time)
+            else:
+                break
+    logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
+
+
 def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     Run a calculation.
@@ -302,8 +327,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
             del data  # save memory
 
-        logs.dbcmd('update_job', job_id, {'status': 'executing',
-                                          'pid': _PID})
+        poll_queue(job_id, _PID, poll_time=15)
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id,
