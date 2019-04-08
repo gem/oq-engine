@@ -692,11 +692,11 @@ SELECT %s FROM job WHERE status=?x ORDER BY id desc''' % fields)
     rows = db(query, status)
     for r in rows:
         if status != 'submitted' and status != 'executing':
-            job_id.append(int(r.id))
+            job_id.append(r.id)
         # if r.pid is 0 it means that such information
         # is not available in the database
         elif r.is_running and r.pid and psutil.pid_exists(r.pid):
-            job_id.append(int(r.id))
+            job_id.append(r.id)
     return job_id
 
 
