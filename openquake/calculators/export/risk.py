@@ -20,7 +20,6 @@ import collections
 import logging
 import numpy
 
-from openquake.baselib.python3compat import encode
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array,  deprecated
 from openquake.hazardlib import nrml
@@ -29,7 +28,7 @@ from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
-from openquake.calculators.export.hazard import savez, get_mesh
+from openquake.calculators.export.hazard import savez, get_mesh, add_quotes
 from openquake.calculators import getters
 from openquake.commonlib import writers, hazard_writers
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -42,11 +41,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
-
-
-def add_quotes(values):
-    # used to escape tags in CSV files
-    return numpy.array([encode('"%s"' % val) for val in values], (bytes, 100))
 
 
 def get_rup_data(ebruptures):
@@ -662,7 +656,7 @@ def export_asset_risk_csv(ekey, dstore):
         for name in arr.dtype.names:
             value = rec[name]
             try:
-                row.append(tostr[name][value])
+                row.append(add_quotes(tostr[name][value]))
             except KeyError:
                 row.append(value)
         rows.append(row)
