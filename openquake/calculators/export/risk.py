@@ -654,7 +654,7 @@ def export_asset_risk_csv(ekey, dstore):
     assert len(colnames) == len(arr.dtype.names) + 1
     for aref, rec in zip(arefs, arr):
         row = [aref]
-        for name in arr.dtype.names:
+        for name in colnames[1:]:
             value = rec[name]
             try:
                 row.append('"%s"' % tostr[name][value])
