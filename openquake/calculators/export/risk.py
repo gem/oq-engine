@@ -642,15 +642,16 @@ def export_asset_risk_csv(ekey, dstore):
         tostr[tagname] = getattr(md, tagname)
     arr = extract(dstore, 'asset_risk').array
     arefs = dstore['assetcol/asset_refs'].value
-    perils = dstore['multi_peril'].dtype.names
+    #perils = dstore['multi_peril'].dtype.names
     rows = []
     lossnames = [name for name in arr.dtype.names if 'loss' in name]
-    perilnames = [name for name in arr.dtype.names
-                  if any(peril in name for peril in perils)]
+    perilnames = [name for name in arr.dtype.names if name.upper() == name]
     expnames = [name for name in arr.dtype.names if name not in md.tagnames
                 and 'loss' not in name and name not in perilnames]
     colnames = (['asset_ref'] + expnames + list(md.tagnames) + perilnames +
                 lossnames)
+    # sanity check
+    assert len(colnames) == len(arr.dtype.names) + 1
     for aref, rec in zip(arefs, arr):
         row = [aref]
         for name in arr.dtype.names:
