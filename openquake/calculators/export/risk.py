@@ -647,9 +647,11 @@ def export_asset_risk_csv(ekey, dstore):
     for tagname in md.tagnames:
         tostr[tagname] = getattr(md, tagname)
     arr = extract(dstore, 'asset_risk').array
+    arefs = dstore['assetcol/asset_refs'].value
     rows = []
-    for rec in arr:
-        row = []
+    colnames = ['asset_ref'] + list(arr.dtype.names)
+    for aref, rec in zip(arefs, arr):
+        row = [aref]
         for name in arr.dtype.names:
             value = rec[name]
             try:
@@ -657,5 +659,5 @@ def export_asset_risk_csv(ekey, dstore):
             except KeyError:
                 row.append(value)
         rows.append(row)
-    writer.save(rows, fname, arr.dtype.names)
+    writer.save(rows, fname, colnames)
     return [fname]
