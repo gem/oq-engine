@@ -212,9 +212,9 @@ def extract_exposure_metadata(dstore, what):
         dic['multi_risk'] = sorted(
             set(dstore['asset_risk'].dtype.names) -
             set(dstore['assetcol/array'].dtype.names))
-    array = [name for name in dstore['assetcol/array'].dtype.names
+    names = [name for name in dstore['assetcol/array'].dtype.names
              if name.startswith(('value-', 'number', 'occupants_'))]
-    return ArrayWrapper(encode(array), dic)
+    return ArrayWrapper(numpy.array(names), dic)
 
 
 @extract.add('assets')
@@ -274,7 +274,6 @@ def extract_asset_values(dstore, sid):
     asset_refs = assetcol.asset_refs
     assets_by_site = assetcol.assets_by_site()
     lts = assetcol.loss_types
-    time_event = assetcol.time_event
     dt = numpy.dtype([('aref', asset_refs.dtype), ('aid', numpy.uint32)] +
                      [(str(lt), numpy.float32) for lt in lts])
     data = []
