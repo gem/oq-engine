@@ -208,11 +208,13 @@ def extract_exposure_metadata(dstore, what):
     dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
     dic.update(dic1)
     dic.update(dic2)
-    if 'multi_peril' in dstore:
-        dic['multi_peril'] = dstore['multi_peril'].dtype.names
+    if 'asset_risk' in dstore:
+        dic['multi_risk'] = sorted(
+            set(dstore['asset_risk'].dtype.names) -
+            set(dstore['assetcol/array'].dtype.names))
     array = [name for name in dstore['assetcol/array'].dtype.names
              if name.startswith(('value-', 'number', 'occupants_'))]
-    return ArrayWrapper(numpy.array(array), dic)
+    return ArrayWrapper(encode(array), dic)
 
 
 @extract.add('assets')
