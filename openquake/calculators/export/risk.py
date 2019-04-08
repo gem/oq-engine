@@ -643,7 +643,19 @@ def export_asset_risk_csv(ekey, dstore):
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
     md = extract(dstore, 'exposure_metadata')
+    tostr = {'taxonomy': md.taxonomy}
+    for tagname in md.tagnames:
+        tostr[tagname] = getattr(md, tagname)
     arr = extract(dstore, 'asset_risk').array
-    import pdb; pdb.set_trace()
-    writer.save(arr, fname, arr.dtype.names)
+    rows = []
+    for rec in arr:
+        row = []
+        for name in arr.dtype.names:
+            value = rec[name]
+            try:
+                row.append(tostr[name][value])
+            except KeyError:
+                row.append(value)
+        rows.append(row)
+    writer.save(rows, fname, arr.dtype.names)
     return [fname]
