@@ -19,8 +19,9 @@ import numpy
 from openquake.qa_tests_data.multi_risk import case_1
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.export import export
-# from openquake.calculators.extract import extract
+from openquake.calculators.extract import extract
 
+ae = numpy.testing.assert_equal
 aae = numpy.testing.assert_almost_equal
 
 
@@ -33,7 +34,17 @@ class MultiRiskTestCase(CalculatorTestCase):
         [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/asset_risk.csv', fname)
 
-        # TODO: check extract
+        # check extract
+        md = extract(self.calc.datastore, 'exposure_metadata')
+        ae(md.array, ['number', 'occupants_None',
+                      'occupants_night', 'value-structural'])
+        ae(md.multi_risk, ['LAHAR', 'LAVA', 'PYRO',
+                           'collapse-structural-ASH_DRY',
+                           'collapse-structural-ASH_WET',
+                           'loss-structural-ASH_DRY',
+                           'loss-structural-ASH_WET',
+                           'no_damage-structural-ASH_DRY',
+                           'no_damage-structural-ASH_WET'])
 
     def test_case_2(self):
         # case with two damage states
@@ -42,14 +53,30 @@ class MultiRiskTestCase(CalculatorTestCase):
         [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/asset_risk_2.csv', fname)
 
-        # TODO: check extract
+        # check extract
+        md = extract(self.calc.datastore, 'exposure_metadata')
+        ae(md.array, ['number', 'occupants_None',
+                      'occupants_night', 'value-structural'])
+        ae(md.multi_risk, ['LAHAR', 'LAVA', 'PYRO',
+                           'collapse-structural-ASH_DRY',
+                           'collapse-structural-ASH_WET',
+                           'loss-structural-ASH_DRY',
+                           'loss-structural-ASH_WET',
+                           'moderate-structural-ASH_DRY',
+                           'moderate-structural-ASH_WET',
+                           'no_damage-structural-ASH_DRY',
+                           'no_damage-structural-ASH_WET'])
 
     def test_case_3(self):
         # case with volcanic lava
         self.run_calc(case_1.__file__, 'job.ini',
-                      multi_risk_csv="{'LAVA': 'lava_flow.csv'}")
+                      multi_peril_csv="{'LAVA': 'lava_flow.csv'}")
 
-        # TODO: check extract
+        # check extract
+        md = extract(self.calc.datastore, 'exposure_metadata')
+        ae(md.array, ['number', 'occupants_None',
+                      'occupants_night', 'value-structural'])
+        ae(md.multi_risk, ['LAVA'])
 
         # check invalid key structural_fragility_file
         with self.assertRaises(ValueError):
