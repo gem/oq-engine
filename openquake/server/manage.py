@@ -54,7 +54,6 @@ if __name__ == "__main__":
         if err:
             sys.exit(err)
         logs.dbcmd('upgrade_db')  # make sure the DB exists
-        logs.dbcmd('reset_is_running')  # reset the flag is_running
 
     setproctitle('oq-webui')
     execute_from_command_line(sys.argv)
