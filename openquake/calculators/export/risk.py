@@ -28,7 +28,7 @@ from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
-from openquake.calculators.export.hazard import savez, get_mesh, add_quotes
+from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
 from openquake.commonlib import writers, hazard_writers
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -644,7 +644,7 @@ def export_asset_risk_csv(ekey, dstore):
     arefs = dstore['assetcol/asset_refs'].value
     perils = dstore['multi_peril'].dtype.names
     rows = []
-    lossnames = [name for name in arr.dtype.names if 'loss' not in name]
+    lossnames = [name for name in arr.dtype.names if 'loss' in name]
     perilnames = [name for name in arr.dtype.names
                   if any(peril in name for peril in perils)]
     expnames = [name for name in arr.dtype.names if name not in md.tagnames
@@ -656,7 +656,7 @@ def export_asset_risk_csv(ekey, dstore):
         for name in arr.dtype.names:
             value = rec[name]
             try:
-                row.append(add_quotes([tostr[name][value]]))
+                row.append('"%s"' % tostr[name][value])
             except KeyError:
                 row.append(value)
         rows.append(row)
