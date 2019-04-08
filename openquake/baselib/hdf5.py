@@ -30,7 +30,7 @@ from urllib.parse import quote_plus, unquote_plus
 import collections
 import numpy
 import h5py
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import encode, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
@@ -39,6 +39,15 @@ vuint16 = h5py.special_dtype(vlen=numpy.uint16)
 vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
+
+
+def maybe_encode(value):
+    """
+    If value is a sequence of strings, encode it
+    """
+    if isinstance(value, (list, tuple)) and isinstance(value[0], str):
+        return encode(value)
+    return value
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
@@ -61,7 +70,7 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
                                    compression=compression)
     if attrs:
         for k, v in attrs.items():
-            dset.attrs[k] = v
+            dset.attrs[k] = maybe_encode(v)
     return dset
 
 
@@ -311,7 +320,7 @@ class File(h5py.File):
             a = super().__getitem__(path).attrs
             for k, v in sorted(items):
                 try:
-                    a[k] = v
+                    a[k] = maybe_encode(v)
                 except Exception as exc:
                     raise TypeError(
                         'Could not store attribute %s=%s: %s' % (k, v, exc))
@@ -410,7 +419,7 @@ class File(h5py.File):
         if attrib:
             dset = getitem(path)
             for k, v in attrib.items():
-                dset.attrs[k] = v
+                dset.attrs[k] = maybe_encode(v)
 
 
 def _resolve_duplicates(dicts):
@@ -510,12 +519,12 @@ class ArrayWrapper(object):
             for key, val in vars(self).items():
                 assert val is not None, key  # sanity check
                 try:
-                    f[key] = val
+                    f[key] = maybe_encode(val)
                 except ValueError as err:
                     if 'Object header message is too large' in str(err):
                         logging.error(str(err))
             for k, v in extra.items():
-                f.attrs[k] = v
+                f.attrs[k] = maybe_encode(v)
 
     def to_table(self):
         """
