@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
+from openquake.baselib import hdf5
 from openquake.calculators import base
+from openquake.calculators.extract import extract
 
 U16 = numpy.uint16
 U64 = numpy.uint64
@@ -84,9 +86,20 @@ class MultiRiskCalculator(base.RiskCalculator):
         for peril in self.oqparam.multi_peril:
             if peril != 'ASH':
                 no_frag_perils.append(peril)
-        self.datastore['asset_risk'] = build_asset_risk(
+        self.datastore['asset_risk'] = arr = build_asset_risk(
             self.assetcol, dmg_csq, hazard, ltypes, dstates,
             perils, no_frag_perils)
+        return arr
 
-    def post_execute(self, result):
-        pass
+    def post_execute(self, arr):
+        """
+        Compute aggregated risk
+        """
+        md = extract(self.datastore, 'exposure_metadata')
+        multi_risk = list(md.array)
+        multi_risk += sorted(
+            set(arr.dtype.names) -
+            set(self.datastore['assetcol/array'].dtype.names))
+        tot = [(risk, arr[risk].sum()) for risk in multi_risk]
+        agg_risk = numpy.array(tot, [('name', hdf5.vstr), ('value', F32)])
+        self.datastore['agg_risk'] = agg_risk

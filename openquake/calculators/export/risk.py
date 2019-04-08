@@ -663,3 +663,16 @@ def export_asset_risk_csv(ekey, dstore):
         rows.append(row)
     writer.save(rows, fname, colnames)
     return [fname]
+
+
+@export.add(('agg_risk', 'csv'))
+def export_agg_risk_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
+    fname = dstore.export_path(path)
+    writer.save(dstore['agg_risk'].value, fname)
+    return [fname]
