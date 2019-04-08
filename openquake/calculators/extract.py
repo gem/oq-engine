@@ -212,7 +212,7 @@ def extract_exposure_metadata(dstore, what):
         dic['multi_peril'] = dstore['multi_peril'].dtype.names
     array = [name for name in dstore['assetcol/array'].dtype.names
              if name.startswith(('value-', 'number', 'occupants_'))]
-    return ArrayWrapper(array, {k: encode(v) for k, v in dic.items()})
+    return ArrayWrapper(array, dic)
 
 
 @extract.add('assets')

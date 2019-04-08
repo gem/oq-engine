@@ -642,6 +642,8 @@ def export_asset_risk_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
+    md = extract(dstore, 'exposure_metadata')
     arr = extract(dstore, 'asset_risk').array
+    import pdb; pdb.set_trace()
     writer.save(arr, fname, arr.dtype.names)
     return [fname]
