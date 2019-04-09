@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import copy
-import operator
 import logging
 import collections
 from urllib.parse import unquote_plus
@@ -25,7 +24,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    groupby, AccumDict, group_array, cached_property)
+    AccumDict, group_array, cached_property)
 from openquake.risklib import scientific, riskmodels
 
 
