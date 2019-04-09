@@ -39,7 +39,10 @@ class MultiRiskTestCase(CalculatorTestCase):
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
         ae(md.array, ['number', 'occupants_night', 'value-structural'])
-        ae(md.multi_risk, ['collapse-structural-ASH_DRY',
+        ae(md.multi_risk, ['building-LAHAR',
+                           'building-LAVA',
+                           'building-PYRO',
+                           'collapse-structural-ASH_DRY',
                            'collapse-structural-ASH_WET',
                            'loss-structural-ASH_DRY',
                            'loss-structural-ASH_WET',
@@ -62,7 +65,10 @@ class MultiRiskTestCase(CalculatorTestCase):
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
         ae(md.array, ['number', 'occupants_night', 'value-structural'])
-        ae(md.multi_risk, ['collapse-structural-ASH_DRY',
+        ae(md.multi_risk, ['building-LAHAR',
+                           'building-LAVA',
+                           'building-PYRO',
+                           'collapse-structural-ASH_DRY',
                            'collapse-structural-ASH_WET',
                            'loss-structural-ASH_DRY',
                            'loss-structural-ASH_WET',
@@ -85,7 +91,8 @@ class MultiRiskTestCase(CalculatorTestCase):
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
         ae(md.array, ['number', 'occupants_night', 'value-structural'])
-        ae(md.multi_risk, ['occupants_night-LAVA', 'structural-LAVA'])
+        ae(md.multi_risk, ['building-LAVA', 'occupants_night-LAVA',
+                           'structural-LAVA'])
 
         # check invalid key structural_fragility_file
         with self.assertRaises(ValueError):
