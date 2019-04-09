@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.risklib import scientific, riskmodels
+from openquake.risklib import scientific
 from openquake.calculators import base
 
 U16 = numpy.uint16
