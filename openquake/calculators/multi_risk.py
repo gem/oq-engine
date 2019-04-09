@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
+from openquake.baselib import hdf5
 from openquake.calculators import base
+from openquake.calculators.extract import extract
 
 U16 = numpy.uint16
 U64 = numpy.uint64
@@ -29,6 +31,9 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     # dmg_csq has shape (A, R, L, 1, D + 1)
     dtlist = []
     field2tup = {}
+    occupants = [name for name in assetcol.array.dtype.names
+                 if name.startswith('occupants') and
+                 not name.endswith('_None')]
     for name, dt in assetcol.array.dtype.descr:
         if name not in {'area', 'occupants_None', 'ordinal'}:
             dtlist.append((name, dt))
@@ -39,16 +44,31 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
-    dt = dtlist + [(peril, float) for peril in no_frag_perils]
-    arr = numpy.zeros(len(assetcol), dt)
+        for peril in no_frag_perils:
+            dtlist.append((loss_type + '-' + peril, F32))
+    for peril in no_frag_perils:
+        for occ in occupants:
+            dtlist.append((occ + '-' + peril, F32))
+        dtlist.append(('building-' + peril, F32))
+    arr = numpy.zeros(len(assetcol), dtlist)
     for field, _ in dtlist:
         if field in assetcol.array.dtype.fields:
             arr[field] = assetcol.array[field]
-        else:
+        elif field in field2tup:  # dmg_csq field
             arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
-    for peril in no_frag_perils:
-        for rec in arr:
-            rec[peril] = hazard[rec['site_id']][peril]
+    # computed losses and fatalities for no_frag_perils
+    for rec in arr:
+        haz = hazard[rec['site_id']]
+        for loss_type in loss_types:
+            value = rec['value-' + loss_type]
+            for peril in no_frag_perils:
+                rec[loss_type + '-' + peril] = haz[peril] * value
+        for occupant in occupants:
+            occ = rec[occupant]
+            for peril in no_frag_perils:
+                rec[occupant + '-' + peril] = haz[peril] * occ
+        for peril in no_frag_perils:
+            rec['building-' + peril] = haz[peril] * rec['number']
     return arr
 
 
@@ -84,9 +104,20 @@ class MultiRiskCalculator(base.RiskCalculator):
         for peril in self.oqparam.multi_peril:
             if peril != 'ASH':
                 no_frag_perils.append(peril)
-        self.datastore['asset_risk'] = build_asset_risk(
+        self.datastore['asset_risk'] = arr = build_asset_risk(
             self.assetcol, dmg_csq, hazard, ltypes, dstates,
             perils, no_frag_perils)
+        return arr
 
-    def post_execute(self, result):
-        pass
+    def post_execute(self, arr):
+        """
+        Compute aggregated risk
+        """
+        md = extract(self.datastore, 'exposure_metadata')
+        multi_risk = list(md.array)
+        multi_risk += sorted(
+            set(arr.dtype.names) -
+            set(self.datastore['assetcol/array'].dtype.names))
+        tot = [(risk, arr[risk].sum()) for risk in multi_risk]
+        agg_risk = numpy.array(tot, [('name', hdf5.vstr), ('value', F32)])
+        self.datastore['agg_risk'] = agg_risk
