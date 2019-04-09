@@ -2,6 +2,9 @@ name,value
 number,1.73000E+02
 occupants_night,6.85000E+02
 value-structural,2.44500E+06
+building-LAHAR,8.00000E+01
+building-LAVA,6.20000E+00
+building-PYRO,2.10000E+01
 collapse-structural-ASH_DRY,6.03236E+01
 collapse-structural-ASH_WET,7.64108E+01
 loss-structural-ASH_DRY,1.81436E+05

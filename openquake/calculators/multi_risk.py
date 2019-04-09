@@ -49,6 +49,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     for peril in no_frag_perils:
         for occ in occupants:
             dtlist.append((occ + '-' + peril, F32))
+        dtlist.append(('building-' + peril, F32))
     arr = numpy.zeros(len(assetcol), dtlist)
     for field, _ in dtlist:
         if field in assetcol.array.dtype.fields:
@@ -66,6 +67,8 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
             occ = rec[occupant]
             for peril in no_frag_perils:
                 rec[occupant + '-' + peril] = haz[peril] * occ
+        for peril in no_frag_perils:
+            rec['building-' + peril] = haz[peril] * rec['number']
     return arr
 
 
