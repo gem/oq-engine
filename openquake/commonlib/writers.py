@@ -106,6 +106,7 @@ htranslator = HeaderTranslator(
     '(taxonomy):object',
     r'(tag):\|S100',
     '(multiplicity):uint16',
+    '(name):object',
     '(numsites):uint32',
     '(lon):float64',
     '(lat):float64',
