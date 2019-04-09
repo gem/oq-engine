@@ -31,6 +31,9 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     # dmg_csq has shape (A, R, L, 1, D + 1)
     dtlist = []
     field2tup = {}
+    occupants = [name for name in assetcol.array.dtype.names
+                 if name.startswith('occupants') and
+                 not name.endswith('_None')]
     for name, dt in assetcol.array.dtype.descr:
         if name not in {'area', 'occupants_None', 'ordinal'}:
             dtlist.append((name, dt))
@@ -41,16 +44,28 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
-    dt = dtlist + [(peril, float) for peril in no_frag_perils]
-    arr = numpy.zeros(len(assetcol), dt)
+        for peril in no_frag_perils:
+            dtlist.append((loss_type + '-' + peril, F32))
+    for peril in no_frag_perils:
+        for occ in occupants:
+            dtlist.append((occ + '-' + peril, F32))
+    arr = numpy.zeros(len(assetcol), dtlist)
     for field, _ in dtlist:
         if field in assetcol.array.dtype.fields:
             arr[field] = assetcol.array[field]
-        else:
+        elif field in field2tup:  # dmg_csq field
             arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
-    for peril in no_frag_perils:
-        for rec in arr:
-            rec[peril] = hazard[rec['site_id']][peril]
+    # computed losses and fatalities for no_frag_perils
+    for rec in arr:
+        haz = hazard[rec['site_id']]
+        for loss_type in loss_types:
+            value = rec['value-' + loss_type]
+            for peril in no_frag_perils:
+                rec[loss_type + '-' + peril] = haz[peril] * value
+        for occupant in occupants:
+            occ = rec[occupant]
+            for peril in no_frag_perils:
+                rec[occupant + '-' + peril] = haz[peril] * occ
     return arr
 
 
