@@ -33,18 +33,27 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/asset_risk.csv', fname)
+        [fname] = export(('agg_risk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_risk.csv', fname)
 
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
-        ae(md.array, ['number', 'occupants_None',
-                      'occupants_night', 'value-structural'])
-        ae(md.multi_risk, ['LAHAR', 'LAVA', 'PYRO',
+        ae(md.array, ['number', 'occupants_night', 'value-structural'])
+        ae(md.multi_risk, ['building-LAHAR',
+                           'building-LAVA',
+                           'building-PYRO',
                            'collapse-structural-ASH_DRY',
                            'collapse-structural-ASH_WET',
                            'loss-structural-ASH_DRY',
                            'loss-structural-ASH_WET',
                            'no_damage-structural-ASH_DRY',
-                           'no_damage-structural-ASH_WET'])
+                           'no_damage-structural-ASH_WET',
+                           'occupants_night-LAHAR',
+                           'occupants_night-LAVA',
+                           'occupants_night-PYRO',
+                           'structural-LAHAR',
+                           'structural-LAVA',
+                           'structural-PYRO'])
 
     def test_case_2(self):
         # case with two damage states
@@ -55,9 +64,10 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
-        ae(md.array, ['number', 'occupants_None',
-                      'occupants_night', 'value-structural'])
-        ae(md.multi_risk, ['LAHAR', 'LAVA', 'PYRO',
+        ae(md.array, ['number', 'occupants_night', 'value-structural'])
+        ae(md.multi_risk, ['building-LAHAR',
+                           'building-LAVA',
+                           'building-PYRO',
                            'collapse-structural-ASH_DRY',
                            'collapse-structural-ASH_WET',
                            'loss-structural-ASH_DRY',
@@ -65,7 +75,13 @@ class MultiRiskTestCase(CalculatorTestCase):
                            'moderate-structural-ASH_DRY',
                            'moderate-structural-ASH_WET',
                            'no_damage-structural-ASH_DRY',
-                           'no_damage-structural-ASH_WET'])
+                           'no_damage-structural-ASH_WET',
+                           'occupants_night-LAHAR',
+                           'occupants_night-LAVA',
+                           'occupants_night-PYRO',
+                           'structural-LAHAR',
+                           'structural-LAVA',
+                           'structural-PYRO'])
 
     def test_case_3(self):
         # case with volcanic lava
@@ -74,9 +90,9 @@ class MultiRiskTestCase(CalculatorTestCase):
 
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
-        ae(md.array, ['number', 'occupants_None',
-                      'occupants_night', 'value-structural'])
-        ae(md.multi_risk, ['LAVA'])
+        ae(md.array, ['number', 'occupants_night', 'value-structural'])
+        ae(md.multi_risk, ['building-LAVA', 'occupants_night-LAVA',
+                           'structural-LAVA'])
 
         # check invalid key structural_fragility_file
         with self.assertRaises(ValueError):
