@@ -297,13 +297,17 @@ class CompositeRiskModel(collections.Mapping):
         argsort = numpy.argsort(numpy.concatenate([
             a['ordinal'] for a in assets_by_taxo.values()]))
         with monitor('computing risk', measuremem=False):
+            # this approach is slow for event_based_risk since a lot of
+            # small arrays are passed (one per realization) instead of
+            # a long array with all realizations; ebrisk does the right
+            # thing since it calls get_output directly
             for rlzi, haz in sorted(hazard[sids[0]].items()):
                 out = self.get_output(assets_by_taxo, argsort, haz,
-                                      riskinput.epsilon_getter)
-                out.rlzi = rlzi
+                                      riskinput.epsilon_getter, rlzi)
                 yield out
 
-    def get_output(self, assets_by_taxo, argsort, haz, epsgetter=None):
+    def get_output(
+            self, assets_by_taxo, argsort, haz, epsgetter=None, rlzi=None):
         if isinstance(haz, numpy.ndarray):
             # NB: in GMF-based calculations the order in which
             # the gmfs are stored is random since it depends on
@@ -324,6 +328,8 @@ class CompositeRiskModel(collections.Mapping):
             eids = []
             data = haz  # shape M
         dic = dict(eids=eids)
+        if rlzi is not None:
+            dic['rlzi'] = rlzi
         for l, lt in enumerate(self.loss_types):
             ls = []
             for taxonomy, assets_ in assets_by_taxo.items():
