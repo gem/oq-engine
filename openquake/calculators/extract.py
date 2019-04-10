@@ -727,6 +727,11 @@ def build_damage_array(data, damage_dt):
 
 
 def most_likely_damage(data, loss_types):
+    """
+    :param data: an array of shape (A, L, 1|2, D)
+    :param loss_types: a list of loss_types
+    :returns: an array of length A and dtype loss_type->uint8
+    """
     A, L, MS, D = data.shape
     mld = numpy.zeros(A, [(lt, numpy.uint8) for lt in loss_types])
     for a in range(A):
@@ -748,7 +753,7 @@ def extract_dmg_by_asset_npz(dstore, what):
 
 
 @extract.add('mld_by_asset')
-def extract_mld_by_asset_npz(dstore, what):
+def extract_mld_by_asset(dstore, what):
     loss_types = dstore['oqparam'].loss_dt().names
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore['dmg_by_asset']
