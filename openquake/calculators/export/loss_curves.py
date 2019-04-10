@@ -28,8 +28,7 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     :returns: a LossCurvesMapsBuilder instance
     """
     oq = dstore['oqparam']
-    name = dstore['weights'].dtype.names[0]
-    weights = dstore['weights'][name]
+    weights = dstore['weights'][:, 0]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
     num_events = countby(dstore['events'].value, 'rlz')
     periods = return_periods or oq.return_periods or scientific.return_periods(

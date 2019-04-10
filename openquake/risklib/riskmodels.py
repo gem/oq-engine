@@ -344,7 +344,7 @@ class ProbabilisticEventBased(RiskModel):
         means, covs, idxs = vf.interpolate(gmvs)
         if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
             pass
-        elif self.ignore_covs or covs.sum() == 0:
+        elif self.ignore_covs or covs.sum() == 0 or epsgetter is None:
             # the ratios are equal for all assets
             ratios = vf.sample(means, covs, idxs, None)  # right shape
             for a in range(A):
@@ -355,20 +355,6 @@ class ProbabilisticEventBased(RiskModel):
                 epsilons = epsgetter(asset['ordinal'], eids)
                 loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
-
-    def get_loss_ratios(self, gmvs):  # used in ebrisk
-        """
-        :param gmvs: an array of shape (E, M)
-        :returns: loss_ratios of shape (L, E)
-        """
-        out = []
-        E = len(gmvs)
-        for lt, vf in self.vulnerability_functions.items():
-            loss_ratios = numpy.zeros(E, F32)
-            means, covs, idxs = vf.interpolate(gmvs[:, self.imti[lt]])
-            loss_ratios[idxs] = vf.sample(means, covs, idxs, None)
-            out.append(loss_ratios)
-        return numpy.array(out)
 
 
 @registry.add('classical_bcr')
