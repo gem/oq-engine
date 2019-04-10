@@ -72,9 +72,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
-    mon_risk = monitor('computing losses', measuremem=False)
+    mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    imts = getter.imts
     events = rupgetter.get_eid_rlz()
     eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
     E = len(eid2idx)
@@ -88,36 +87,34 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         losses_by_A = numpy.zeros((A, L), F32)
     else:
         losses_by_A = 0
+    # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
     for sid, haz in hazard.items():
         t0 = time.time()
-        weights = getter.weights[haz['rlzi']]
+        weights = getter.weights[haz['rlzi'], 0]
         assets_on_sid = assets_by_site[sid]
+        assets_by_taxo = general.group_array(assets_on_sid, 'taxonomy')
+        argsort = numpy.argsort(numpy.concatenate([
+            a['ordinal'] for a in assets_by_taxo.values()]))
         eidx = [eid2idx[eid] for eid in haz['eid']]
         with mon_risk:
-            assets_ratios = riskmodel.get_assets_ratios(
-                assets_on_sid, haz['gmv'], imts)
+            out = riskmodel.get_output(assets_by_taxo, argsort, haz)
         with mon_agg:
-            for assets, ratios in assets_ratios:
-                taxo = assets[0]['taxonomy']
-                vfs = riskmodel[taxo].vulnerability_functions.values()
-                ws_by_lti = [weights[vf.imt] for vf in vfs]
-                for lti, loss_ratios in enumerate(ratios):
-                    ws = ws_by_lti[lti]
-                    lt = riskmodel.loss_types[lti]
-                    for asset in assets:
-                        aid = asset['ordinal']
-                        if lt == 'occupants':
-                            losses = loss_ratios * asset['occupants_None']
-                        else:
-                            losses = loss_ratios * asset['value-' + lt]
-                        if param['asset_loss_table']:
-                            alt[aid, eidx, lti] = losses
-                        tagi = asset[tagnames] if tagnames else ()
-                        tagidxs = tuple(idx - 1 for idx in tagi)
-                        acc[(eidx, lti) + tagidxs] += losses
-                        if param['avg_losses']:
-                            losses_by_A[aid, lti] += losses @ ws
+            for a, asset in enumerate(assets_on_sid):
+                aid = asset['ordinal']
+                tagi = asset[tagnames] if tagnames else ()
+                tagidxs = tuple(idx - 1 for idx in tagi)
+                for lti, lt in enumerate(riskmodel.loss_types):
+                    lratios = out[lt][a]
+                    if lt == 'occupants':
+                        losses = lratios * asset['occupants_None']
+                    else:
+                        losses = lratios * asset['value-' + lt]
+                    if param['asset_loss_table']:
+                        alt[aid, eidx, lti] = losses
+                    acc[(eidx, lti) + tagidxs] += losses
+                    if param['avg_losses']:
+                        losses_by_A[aid, lti] += losses @ weights
             times[sid] = time.time() - t0
     with monitor('building event loss table'):
         elt = numpy.fromiter(
