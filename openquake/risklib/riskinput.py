@@ -495,7 +495,7 @@ class EpsilonMatrix1(object):
         return self.num_assets
 
 
-class make_epsilon_getter:
+class EpsilonGetter:
     """
     A callable object (start, stop) -> matrix of shape (n_assets, n_events)
     """
