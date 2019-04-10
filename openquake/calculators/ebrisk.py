@@ -23,7 +23,7 @@ from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib.scientific import losses_by_period
-from openquake.risklib.riskinput import make_epsilon_getter
+from openquake.risklib.riskinput import EpsilonGetter
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -61,12 +61,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :returns:
         an ArrayWrapper with shape (E, L, T, ...)
     """
-    if param['ignore_covs']:
-        epsgetter = None
-    else:
-        epsgetter = param['make_epsgetter'](
-            rupgetter.first_event,
-            rupgetter.first_event + rupgetter.num_events)
+    epsgetter = param['epsgetter'](
+        rupgetter.first_event, rupgetter.first_event + rupgetter.num_events)
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
@@ -179,11 +175,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         oq = self.oqparam
         self.set_param(
-            make_epsgetter=make_epsilon_getter(
+            epsgetter=EpsilonGetter(
                 len(self.assetcol), self.E,
-                self.oqparam.asset_correlation,
-                self.oqparam.master_seed,
-                self.oqparam.ignore_covs or not self.riskmodel.covs),
+                oq.asset_correlation, oq.master_seed,
+                oq.ignore_covs or not self.riskmodel.covs),
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
             maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
         parent = self.datastore.parent
