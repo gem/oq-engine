@@ -56,7 +56,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
-RUPTURES_PER_BLOCK = 50000  # used in split_filter
+RUPTURES_PER_BLOCK = 100000  # used in classical_split_filter
 
 
 class InvalidCalculationID(Exception):
@@ -111,61 +111,6 @@ CORRELATION_MATRIX_TOO_LARGE = '''\
 You have a correlation matrix which is too large: %%d sites > %d.
 To avoid that, set a proper `region_grid_spacing` so that your exposure
 takes less sites.''' % MAXSITES
-
-
-def only_filter(srcs, srcfilter, seed, monitor):
-    """
-    Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
-    if there are filtered sources.
-    """
-    if seed:  # OQ_SAMPLE_SOURCES was set
-        splits, _stime = split_sources(srcs)
-        srcs = readinput.random_filtered_sources(splits, srcfilter, seed)
-    srcs = list(srcfilter.filter(srcs))
-    if srcs:
-        yield srcs, {src.id: 0 for src in srcs}
-
-
-def parallel_filter(csm, srcfilter, monitor):
-    """
-    Apply :func:`only_filter` in parallel to the composite source model.
-
-    :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
-    """
-    seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    logging.info('Filtering sources with %s', srcfilter.__class__.__name__)
-    trt_sources = csm.get_trt_sources(optimize_same_id=False)
-    tot_sources = sum(len(sources) for trt, sources in trt_sources)
-    # use Rtree and the processpool
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
-    if monitor.hdf5:
-        source_info = monitor.hdf5['source_info']
-        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
-    srcs_by_grp = collections.defaultdict(list)
-    arr = numpy.zeros((tot_sources, 2), F32)
-    smap = parallel.Starmap(
-        only_filter, monitor=monitor, distribute=dist, progress=logging.debug)
-    for trt, sources in trt_sources:
-        if hasattr(sources, 'atomic') and sources.atomic:
-            smap.submit(sources, srcfilter, seed)
-        else:  # regular sources
-            for block in general.block_splitter(
-                    sources, RUPTURES_PER_BLOCK,
-                    operator.attrgetter('num_ruptures')):
-                smap.submit(block, srcfilter, seed, func=only_filter)
-    for splits, stime in smap:
-        for src in splits:
-            i = src.id
-            arr[i, 0] += stime[i]  # split_time
-            arr[i, 1] += 1         # num_split
-            srcs_by_grp[src.src_group_id].append(src)
-    if not srcs_by_grp:
-        raise RuntimeError('All sources were filtered away!')
-    elif monitor.hdf5:
-        source_info[:, 'split_time'] = arr[:, 0]
-        source_info[:, 'num_split'] = arr[:, 1]
-    parallel.Starmap.shutdown()
-    return csm.new(srcs_by_grp)
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -471,20 +416,8 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            csm = readinput.get_composite_source_model(
+            self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
-            if (self.sitecol is not None and oq.prefilter_sources != 'no' and
-                    oq.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-                dist = os.environ.get('OQ_DISTRIBUTE', 'processpool')
-                if dist == 'celery' or 'ucerf' in oq.calculation_mode:
-                    # move the prefiltering on the workers
-                    srcfilter = self.src_filter
-                else:
-                    # prefilter on the controller node with Rtree
-                    srcfilter = self.rtree_filter
-                self.csm = parallel_filter(csm, srcfilter, self.monitor())
-            else:
-                self.csm = csm
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
@@ -497,13 +430,14 @@ class HazardCalculator(BaseCalculator):
         dt = [(haz, float) for haz in oq.multi_peril]
         N = len(self.sitecol)
         self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
-        nonzero = []
         for name, fname in zip(oq.multi_peril, fnames):
             data = []
             with open(fname) as f:
                 for row in csv.DictReader(f):
-                    data.append((float(row['lon']), float(row['lat']),
-                                 valid.positivefloat(row['intensity'])))
+                    intensity = valid.positivefloat(row['intensity'])
+                    if intensity > 0:
+                        data.append((float(row['lon']), float(row['lat']),
+                                     intensity))
             data = numpy.array(data, [('lon', float), ('lat', float),
                                       ('number', float)])
             logging.info('Read %s with %d rows' % (fname, len(data)))
@@ -514,19 +448,17 @@ class HazardCalculator(BaseCalculator):
             z = numpy.zeros(N, float)
             z[sites.sids] = filtdata['number']
             self.datastore['multi_peril'][name] = z
-            nonzero.append((z != 0).sum())
-        self.datastore.set_attrs(
-            'multi_peril', nbytes=z.nbytes, nonzero=nonzero)
+        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
         # convert ASH into a GMF
-        if 'ASH' in oq.multi_peril:
-            # in the future, if the stddevs will become available, we will
-            # be able to generate a distribution of GMFs, as we do for the
-            # ShakeMaps; for the moment, we will consider a single event
-            oq.number_of_ground_motion_fields = E = 1
-            events = numpy.zeros(E, rupture.events_dt)
-            gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
-            save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
+        # if 'ASH' in oq.multi_peril:
+        # in the future, if the stddevs will become available, we will
+        # be able to generate a distribution of GMFs, as we do for the
+        # ShakeMaps; for the moment, we will consider a single event
+        #    oq.number_of_ground_motion_fields = E = 1
+        #  events = numpy.zeros(E, rupture.events_dt)
+        #    gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
+        #    save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
 
     def pre_execute(self):
         """
