@@ -486,16 +486,17 @@ class RuptureGetter(object):
         a list of rupture indices of the same group
     """
     def __init__(self, filename, rup_indices, grp_id, trt, samples,
-                 rlzs_by_gsim):
+                 rlzs_by_gsim, first_event=0):
         self.filename = filename
         self.rup_indices = rup_indices
         if not isinstance(rup_indices, list):  # is a rup_array
             self.__dict__['rup_array'] = rup_indices
-            self.__dict__['num_events'] = rup_indices['n_occ'].sum()
+            self.__dict__['num_events'] = int(rup_indices['n_occ'].sum())
         self.grp_id = grp_id
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
+        self.first_event = first_event
         self.rlz2idx = {}
         nr = 0
         rlzi = []
@@ -523,7 +524,7 @@ class RuptureGetter(object):
 
     @general.cached_property
     def num_events(self):
-        return self.rup_array['n_occ'].sum()
+        return int(self.rup_array['n_occ'].sum())
 
     @property
     def num_ruptures(self):
@@ -557,7 +558,8 @@ class RuptureGetter(object):
                 # some indices may have weight 0 and are discarded
                 rgetter = self.__class__(
                     self.filename, list(rup_indices), self.grp_id,
-                    self.trt, self.samples, self.rlzs_by_gsim)
+                    self.trt, self.samples, self.rlzs_by_gsim,
+                    self.first_event)
                 rgetter.weight = sum([self.weights[idx[ri]]
                                       for ri in rup_indices])
                 yield rgetter

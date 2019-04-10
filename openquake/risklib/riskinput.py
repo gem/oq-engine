@@ -307,7 +307,7 @@ class CompositeRiskModel(collections.Mapping):
                 yield out
 
     def get_output(
-            self, assets_by_taxo, argsort, haz, epsgetter=None, rlzi=None):
+            self, assets_by_taxo, argsort, haz, epsgetter, rlzi=None):
         if isinstance(haz, numpy.ndarray):
             # NB: in GMF-based calculations the order in which
             # the gmfs are stored is random since it depends on
@@ -455,6 +455,9 @@ class EpsilonMatrix0(object):
             self.eps = self.make_eps()
         return self.eps[aid]
 
+    def __call__(self, aid, eids):
+        return self[aid][eids]
+
     def __len__(self):
         return self.num_assets
 
@@ -485,31 +488,41 @@ class EpsilonMatrix1(object):
         else:
             raise TypeError('Invalid item %r' % item)
 
+    def __call__(self, aid, eids):
+        return self.eps[eids]
+
     def __len__(self):
         return self.num_assets
 
 
-def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
+class make_epsilon_getter:
     """
-    :returns: a function (start, stop) -> matrix of shape (n_assets, n_events)
+    A callable object (start, stop) -> matrix of shape (n_assets, n_events)
     """
-    assert n_assets > 0, n_assets
-    assert n_events > 0, n_events
-    assert correlation in (0, 1), correlation
-    assert master_seed >= 0, master_seed
-    assert no_eps in (True, False), no_eps
-    seeds = master_seed + numpy.arange(n_events)
+    def __init__(self, n_assets, n_events, correlation, master_seed, no_eps):
+        assert n_assets > 0, n_assets
+        assert n_events > 0, n_events
+        assert correlation in (0, 1), correlation
+        assert master_seed >= 0, master_seed
+        assert no_eps in (True, False), no_eps
+        self.n_assets = n_assets
+        self.n_events = n_events
+        self.correlation = correlation
+        self.master_seed = master_seed
+        self.no_eps = no_eps
+        self.seeds = master_seed + numpy.arange(n_events)
 
-    def get_eps(start=0, stop=n_events):
-        if no_eps:
+    def __call__(self, start=0, stop=None):
+        if stop is None:
+            stop = self.n_events
+        if self.no_eps:
             eps = None
-        elif correlation:
-            eps = EpsilonMatrix1(n_assets, stop - start, master_seed)
+        elif self.correlation:
+            eps = EpsilonMatrix1(self.n_assets, self.stop - self.start,
+                                 self.master_seed)
         else:
-            eps = EpsilonMatrix0(n_assets, seeds[start:stop])
+            eps = EpsilonMatrix0(self.n_assets, self.seeds[start:stop])
         return eps
-
-    return get_eps
 
 
 # used in scenario_risk
