@@ -63,10 +63,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
-    mon = monitor('getting assets', measuremem=False)
-    with datastore.read(srcfilter.filename) as dstore:
-        assetcol = dstore['assetcol']
-    assets_by_site = assetcol.assets_by_site()
+    with monitor('getting assets', measuremem=False):
+        with datastore.read(srcfilter.filename) as dstore:
+            assetcol = dstore['assetcol']
+        assets_by_site = assetcol.assets_by_site()
     A = len(assetcol)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
@@ -92,8 +92,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         t0 = time.time()
         assets_on_sid = assets_by_site[sid]
         eidx = [eid2idx[eid] for eid in haz['eid']]
-        mon.duration += time.time() - t0
-        mon.counts += 1
         haz_by_rlzi = general.group_array(haz, 'rlzi')
         for out in riskmodel. _gen_outputs(
                 assets_on_sid, haz_by_rlzi, None, mon_risk):
@@ -303,6 +301,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.R > 1:
             logging.info('Computing aggregate loss curves statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
+            self.datastore.set_attrs(
+                'agg_curves-stats', return_periods=builder.return_periods,
+                loss_types=' '.join(self.riskmodel.loss_types))
             if oq.conditional_loss_poes:
                 logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')

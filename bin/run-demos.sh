@@ -38,6 +38,12 @@ MPLBACKEND=Agg oq plot_memory
 oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
 oq db set_status -1 executing
 
+# run multi_risk test
+oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job.ini
+
+# run ebrisk
+oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
+
 # display the calculations
 oq db find %
 

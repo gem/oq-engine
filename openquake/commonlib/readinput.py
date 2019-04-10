@@ -262,7 +262,8 @@ def read_csv(fname, sep=','):
     """
     with open(fname, encoding='utf-8-sig') as f:
         header = next(f).strip().split(sep)
-        dt = numpy.dtype([(h, float) for h in header])
+        dt = numpy.dtype([(h, numpy.bool if h == 'vs30measured' else float)
+                          for h in header])
         return numpy.loadtxt(f, dt, delimiter=sep)
 
 
@@ -354,7 +355,10 @@ def get_site_model(oqparam):
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
-            arrays.append(sm)
+            z = numpy.zeros(len(sm), sorted(sm.dtype.descr))
+            for name in z.dtype.names:  # reorder the fields
+                z[name] = sm[name]
+            arrays.append(z)
             continue
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
@@ -591,10 +595,8 @@ source_info_dt = numpy.dtype([
     ('gidx2', numpy.uint32),           # 4
     ('num_ruptures', numpy.uint32),    # 5
     ('calc_time', numpy.float32),      # 6
-    ('split_time', numpy.float32),     # 7
-    ('num_sites', numpy.float32),      # 8
-    ('num_split',  numpy.uint32),      # 9
-    ('weight', numpy.float32),         # 10
+    ('num_sites', numpy.float32),      # 7
+    ('weight', numpy.float32),         # 8
 ])
 
 
@@ -621,7 +623,7 @@ def store_sm(smodel, filename, monitor):
                 geom = numpy.zeros(n, point3d)
                 geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
                 srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             src.num_ruptures, 0, 0, 0, 0, 0))
+                             src.num_ruptures, 0, 0, 0))
                 geoms.append(geom)
                 gid += n
             if geoms:
@@ -708,7 +710,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 idx += 1
                 grp_id += 1
                 data = [((sg.id, src.source_id, src.code, 0, 0,
-                         src.num_ruptures, 0, 0, 0, 0, 0))]
+                         src.num_ruptures, 0, 0, 0))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
                 newsm = make_sm(fname, dic[fname], apply_unc,
@@ -892,6 +894,14 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
+def check_equal_sets(a, b):
+    a_set = set(a)
+    b_set = set(b)
+    diff = a_set.symmetric_difference(b_set)
+    if diff:
+        raise ValueError('Missing %s' % diff)
+
+
 def get_risk_model(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -902,6 +912,20 @@ def get_risk_model(oqparam):
     fragdict = get_risk_models(oqparam, 'fragility')
     vulndict = get_risk_models(oqparam, 'vulnerability')
     consdict = get_risk_models(oqparam, 'consequence')
+    if consdict:  # the consequences must be consistent with the fragilities
+        check_equal_sets(consdict, fragdict)
+        for taxo in consdict:
+            cdict, fdict = consdict[taxo], fragdict[taxo]
+            check_equal_sets(cdict, fdict)
+            for loss_type in cdict:
+                c = cdict[loss_type]
+                f = fdict[loss_type]
+                csq_dmg_states = len(c.params)
+                if csq_dmg_states != len(f):
+                    raise ValueError(
+                        'The damage states in %s are different from the '
+                        'damage states in the fragility functions, %s'
+                        % (c, fragdict.limit_states))
     dic = {}
     dic.update(fragdict)
     dic.update(vulndict)

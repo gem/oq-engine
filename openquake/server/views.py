@@ -347,7 +347,7 @@ def calc_abort(request, calc_id):
         message = {'error': 'Unknown job %s' % calc_id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    if job.status not in ('executing', 'running'):
+    if job.status not in ('submitted', 'executing'):
         message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
