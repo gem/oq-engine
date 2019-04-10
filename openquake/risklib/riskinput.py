@@ -293,50 +293,51 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
         assert len(sids) == 1
-        mon = monitor('computing risk', measuremem=False)
-        yield from self._gen_outputs(
-            riskinput.assets, hazard[sids[0]], riskinput.epsilon_getter, mon)
-
-    def _gen_outputs(self, assets, hazard, epsgetter, mon):
-        assets_by_taxo = group_array(assets, 'taxonomy')
+        assets_by_taxo = group_array(riskinput.assets, 'taxonomy')
         argsort = numpy.argsort(numpy.concatenate([
             a['ordinal'] for a in assets_by_taxo.values()]))
-        for rlzi, haz in sorted(hazard.items()):
-            with mon:
-                if isinstance(haz, numpy.ndarray):
-                    # NB: in GMF-based calculations the order in which
-                    # the gmfs are stored is random since it depends on
-                    # which hazard task ends first; here we reorder
-                    # the gmfs by event ID; this is convenient in
-                    # general and mandatory for the case of
-                    # VulnerabilityFunctionWithPMF, otherwise the
-                    # sample method would receive the means in random
-                    # order and produce random results even if the
-                    # seed is set correctly; very tricky indeed! (MS)
-                    haz.sort(order='eid')
-                    eids = haz['eid']
-                    data = haz['gmv']  # shape (E, M)
-                elif not haz:  # no hazard for this site
-                    eids = numpy.arange(1)
-                    data = []
-                else:  # classical
-                    eids = []
-                    data = haz  # shape M
-                dic = dict(rlzi=rlzi, eids=eids)
-                for l, lt in enumerate(self.loss_types):
-                    ls = []
-                    for taxonomy, assets_ in assets_by_taxo.items():
-                        rm = self[taxonomy]
-                        if len(data) == 0:
-                            dat = [0]
-                        elif len(eids):  # gmfs
-                            dat = data[:, rm.imti[lt]]
-                        else:  # hcurves
-                            dat = data[rm.imti[lt]]
-                        ls.append(rm(lt, assets_, dat, eids, epsgetter))
-                    arr = numpy.concatenate(ls)
-                    dic[lt] = arr[argsort] if len(arr) else arr
-                yield hdf5.ArrayWrapper((), dic)
+        with monitor('computing risk', measuremem=False):
+            for rlzi, haz in sorted(hazard[sids[0]].items()):
+                out = self.get_output(assets_by_taxo, argsort, haz,
+                                      riskinput.epsilon_getter)
+                out.rlzi = rlzi
+                yield out
+
+    def get_output(self, assets_by_taxo, argsort, haz, epsgetter=None):
+        if isinstance(haz, numpy.ndarray):
+            # NB: in GMF-based calculations the order in which
+            # the gmfs are stored is random since it depends on
+            # which hazard task ends first; here we reorder
+            # the gmfs by event ID; this is convenient in
+            # general and mandatory for the case of
+            # VulnerabilityFunctionWithPMF, otherwise the
+            # sample method would receive the means in random
+            # order and produce random results even if the
+            # seed is set correctly; very tricky indeed! (MS)
+            haz.sort(order='eid')
+            eids = haz['eid']
+            data = haz['gmv']  # shape (E, M)
+        elif not haz:  # no hazard for this site
+            eids = numpy.arange(1)
+            data = []
+        else:  # classical
+            eids = []
+            data = haz  # shape M
+        dic = dict(eids=eids)
+        for l, lt in enumerate(self.loss_types):
+            ls = []
+            for taxonomy, assets_ in assets_by_taxo.items():
+                rm = self[taxonomy]
+                if len(data) == 0:
+                    dat = [0]
+                elif len(eids):  # gmfs
+                    dat = data[:, rm.imti[lt]]
+                else:  # hcurves
+                    dat = data[rm.imti[lt]]
+                ls.append(rm(lt, assets_, dat, eids, epsgetter))
+            arr = numpy.concatenate(ls)
+            dic[lt] = arr[argsort] if len(arr) else arr
+        return hdf5.ArrayWrapper((), dic)
 
     def reduce(self, taxonomies):
         """
