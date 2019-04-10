@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import copy
-import operator
 import logging
 import collections
 from urllib.parse import unquote_plus
@@ -25,7 +24,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    groupby, AccumDict, group_array, cached_property)
+    AccumDict, group_array, cached_property)
 from openquake.risklib import scientific, riskmodels
 
 
@@ -137,25 +136,6 @@ class CompositeRiskModel(collections.Mapping):
                     vulnerability_functions=vfs)
 
         self.init(oqparam)
-
-    # used in ebrisk
-    def get_assets_ratios(self, assets, gmvs, imts):
-        """
-        :param assets: assets on the same site
-        :params gmvs: hazard on the given site, shape (E, M)
-        :param imts: intensity measure types
-        :returns: a list of (assets, loss_ratios) for each taxonomy on the site
-        """
-        assets_by_t = group_array(assets, 'taxonomy')
-        assets_ratios = []
-        for taxo, rm in self.items():
-            t = self.taxonomy_dict[taxo]
-            try:
-                assets = assets_by_t[t]
-            except KeyError:  # there are no assets of taxonomy taxo
-                continue
-            assets_ratios.append((assets, rm.get_loss_ratios(gmvs)))
-        return assets_ratios
 
     def init(self, oqparam):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
@@ -312,11 +292,11 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
         assert len(sids) == 1
+        mon = monitor('computing risk', measuremem=False)
         yield from self._gen_outputs(
-            riskinput.assets, hazard[sids[0]], riskinput.epsilon_getter)
+            riskinput.assets, hazard[sids[0]], riskinput.epsilon_getter, mon)
 
-    def _gen_outputs(self, assets, hazard, epsgetter):
-        mon = self.monitor('computing risk', measuremem=False)
+    def _gen_outputs(self, assets, hazard, epsgetter, mon):
         assets_by_taxo = group_array(assets, 'taxonomy')
         argsort = numpy.argsort(numpy.concatenate([
             a['ordinal'] for a in assets_by_taxo.values()]))
