@@ -518,8 +518,7 @@ class EpsilonGetter:
         if self.no_eps:
             eps = None
         elif self.correlation:
-            eps = EpsilonMatrix1(self.n_assets, self.stop - self.start,
-                                 self.master_seed)
+            eps = EpsilonMatrix1(self.n_assets, stop - start, self.master_seed)
         else:
             eps = EpsilonMatrix0(self.n_assets, self.seeds[start:stop])
         return eps
