@@ -23,6 +23,7 @@ from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib.scientific import losses_by_period
+from openquake.risklib.riskinput import make_epsilon_getter
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -60,6 +61,12 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :returns:
         an ArrayWrapper with shape (E, L, T, ...)
     """
+    if param['ignore_covs']:
+        epsgetter = None
+    else:
+        epsgetter = param['make_epsgetter'](
+            rupgetter.first_event,
+            rupgetter.first_event + rupgetter.num_events)
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
@@ -97,8 +104,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         argsort = numpy.argsort(numpy.concatenate([
             a['ordinal'] for a in assets_by_taxo.values()]))
         eidx = [eid2idx[eid] for eid in haz['eid']]
+        haz['eid'] = eidx
         with mon_risk:
-            out = riskmodel.get_output(assets_by_taxo, argsort, haz)
+            out = riskmodel.get_output(assets_by_taxo, argsort, haz, epsgetter)
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
@@ -171,6 +179,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         oq = self.oqparam
         self.set_param(
+            make_epsgetter=make_epsilon_getter(
+                len(self.assetcol), self.E,
+                self.oqparam.asset_correlation,
+                self.oqparam.master_seed,
+                self.oqparam.ignore_covs or not self.riskmodel.covs),
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
             maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
         parent = self.datastore.parent
@@ -196,13 +209,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
+        first_event = 0
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             for indices in general.block_splitter(
                     range(start, stop), ruptures_per_block):
                 rgetter = getters.RuptureGetter(
                     hdf5path, list(indices), grp_id,
-                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
+                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
+                    first_event)
+                first_event += rgetter.num_events
                 smap.submit(rgetter, self.src_filter, self.param)
         return smap.reduce(self.agg_dicts, numpy.zeros(self.N))
 
