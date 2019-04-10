@@ -524,7 +524,9 @@ class RuptureGetter(object):
 
     @general.cached_property
     def num_events(self):
-        return int(self.rup_array['n_occ'].sum())
+        n_occ = self.rup_array['n_occ'].sum()
+        ne = n_occ if self.samples > 1 else n_occ * len(self.rlzs)
+        return int(ne)
 
     @property
     def num_ruptures(self):

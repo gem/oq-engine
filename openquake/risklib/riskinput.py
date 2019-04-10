@@ -514,7 +514,7 @@ class EpsilonGetter:
 
     def __call__(self, start=0, stop=None):
         if stop is None:
-            stop = self.n_events
+            stop = start + self.n_events
         if self.no_eps:
             eps = None
         elif self.correlation:
