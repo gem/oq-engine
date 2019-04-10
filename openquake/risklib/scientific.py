@@ -158,7 +158,7 @@ class VulnerabilityFunction(object):
         gmvs_curve = gmvs_curve[idxs]
         return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
 
-    def sample(self, means, covs, idxs, epsilons):
+    def sample(self, means, covs, idxs, epsilons=None):
         """
         Sample the epsilons and apply the corrections to the means.
         This method is called only if there are nonzero covs.
@@ -170,7 +170,7 @@ class VulnerabilityFunction(object):
         :param idxs:
            array of E booleans with E >= E'
         :param epsilons:
-           array of E floats
+           array of E floats (or None)
         :returns:
            array of E' loss ratios
         """
@@ -386,19 +386,21 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         assert probs.shape[0] == len(loss_ratios)
         assert probs.shape[1] == len(imls)
 
+    # MN: in the test gmvs_curve is of shape (5,), self.probs of shape (7, 8)
+    # self.imls of shape (8,) and the returned means have shape (7, 5)
     def interpolate(self, gmvs):
         """
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated probabilities, None, indices > min)
+           (interpolated probabilities, zeros, indices > min)
         """
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         idxs = gmvs_curve >= self.imls[0]  # indices over the minimum
         gmvs_curve = gmvs_curve[idxs]
-        return self._probs_i1d(gmvs_curve), None, idxs
+        return self._probs_i1d(gmvs_curve), numpy.zeros_like(gmvs_curve), idxs
 
     def sample(self, probs, _covs, idxs, epsilons):
         """
