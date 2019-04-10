@@ -137,25 +137,6 @@ class CompositeRiskModel(collections.Mapping):
 
         self.init(oqparam)
 
-    # used in ebrisk
-    def get_assets_ratios(self, assets, gmvs, imts):
-        """
-        :param assets: assets on the same site
-        :params gmvs: hazard on the given site, shape (E, M)
-        :param imts: intensity measure types
-        :returns: a list of (assets, loss_ratios) for each taxonomy on the site
-        """
-        assets_by_t = group_array(assets, 'taxonomy')
-        assets_ratios = []
-        for taxo, rm in self.items():
-            t = self.taxonomy_dict[taxo]
-            try:
-                assets = assets_by_t[t]
-            except KeyError:  # there are no assets of taxonomy taxo
-                continue
-            assets_ratios.append((assets, rm.get_loss_ratios(gmvs)))
-        return assets_ratios
-
     def init(self, oqparam):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
@@ -312,50 +293,57 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
         assert len(sids) == 1
-        yield from self._gen_outputs(
-            riskinput.assets, hazard[sids[0]], riskinput.epsilon_getter)
-
-    def _gen_outputs(self, assets, hazard, epsgetter):
-        mon = self.monitor('computing risk', measuremem=False)
-        assets_by_taxo = group_array(assets, 'taxonomy')
+        assets_by_taxo = group_array(riskinput.assets, 'taxonomy')
         argsort = numpy.argsort(numpy.concatenate([
             a['ordinal'] for a in assets_by_taxo.values()]))
-        for rlzi, haz in sorted(hazard.items()):
-            with mon:
-                if isinstance(haz, numpy.ndarray):
-                    # NB: in GMF-based calculations the order in which
-                    # the gmfs are stored is random since it depends on
-                    # which hazard task ends first; here we reorder
-                    # the gmfs by event ID; this is convenient in
-                    # general and mandatory for the case of
-                    # VulnerabilityFunctionWithPMF, otherwise the
-                    # sample method would receive the means in random
-                    # order and produce random results even if the
-                    # seed is set correctly; very tricky indeed! (MS)
-                    haz.sort(order='eid')
-                    eids = haz['eid']
-                    data = haz['gmv']  # shape (E, M)
-                elif not haz:  # no hazard for this site
-                    eids = numpy.arange(1)
-                    data = []
-                else:  # classical
-                    eids = []
-                    data = haz  # shape M
-                dic = dict(rlzi=rlzi, eids=eids)
-                for l, lt in enumerate(self.loss_types):
-                    ls = []
-                    for taxonomy, assets_ in assets_by_taxo.items():
-                        rm = self[taxonomy]
-                        if len(data) == 0:
-                            dat = [0]
-                        elif len(eids):  # gmfs
-                            dat = data[:, rm.imti[lt]]
-                        else:  # hcurves
-                            dat = data[rm.imti[lt]]
-                        ls.append(rm(lt, assets_, dat, eids, epsgetter))
-                    arr = numpy.concatenate(ls)
-                    dic[lt] = arr[argsort] if len(arr) else arr
-                yield hdf5.ArrayWrapper((), dic)
+        with monitor('computing risk', measuremem=False):
+            # this approach is slow for event_based_risk since a lot of
+            # small arrays are passed (one per realization) instead of
+            # a long array with all realizations; ebrisk does the right
+            # thing since it calls get_output directly
+            for rlzi, haz in sorted(hazard[sids[0]].items()):
+                out = self.get_output(assets_by_taxo, argsort, haz,
+                                      riskinput.epsilon_getter, rlzi)
+                yield out
+
+    def get_output(
+            self, assets_by_taxo, argsort, haz, epsgetter=None, rlzi=None):
+        if isinstance(haz, numpy.ndarray):
+            # NB: in GMF-based calculations the order in which
+            # the gmfs are stored is random since it depends on
+            # which hazard task ends first; here we reorder
+            # the gmfs by event ID; this is convenient in
+            # general and mandatory for the case of
+            # VulnerabilityFunctionWithPMF, otherwise the
+            # sample method would receive the means in random
+            # order and produce random results even if the
+            # seed is set correctly; very tricky indeed! (MS)
+            haz.sort(order='eid')
+            eids = haz['eid']
+            data = haz['gmv']  # shape (E, M)
+        elif not haz:  # no hazard for this site
+            eids = numpy.arange(1)
+            data = []
+        else:  # classical
+            eids = []
+            data = haz  # shape M
+        dic = dict(eids=eids)
+        if rlzi is not None:
+            dic['rlzi'] = rlzi
+        for l, lt in enumerate(self.loss_types):
+            ls = []
+            for taxonomy, assets_ in assets_by_taxo.items():
+                rm = self[taxonomy]
+                if len(data) == 0:
+                    dat = [0]
+                elif len(eids):  # gmfs
+                    dat = data[:, rm.imti[lt]]
+                else:  # hcurves
+                    dat = data[rm.imti[lt]]
+                ls.append(rm(lt, assets_, dat, eids, epsgetter))
+            arr = numpy.concatenate(ls)
+            dic[lt] = arr[argsort] if len(arr) else arr
+        return hdf5.ArrayWrapper((), dic)
 
     def reduce(self, taxonomies):
         """
