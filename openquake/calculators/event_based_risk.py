@@ -233,7 +233,7 @@ class EbrCalculator(base.RiskCalculator):
         """
         :returns: a callable (start, stop) producing a slice of epsilons
         """
-        return riskinput.make_epsilon_getter(
+        return riskinput.EpsilonGetter(
             len(self.assetcol), self.E,
             self.oqparam.asset_correlation,
             self.oqparam.master_seed,
