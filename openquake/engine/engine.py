@@ -30,6 +30,7 @@ import getpass
 import logging
 import traceback
 import platform
+import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -52,6 +53,9 @@ OQ_DISTRIBUTE = parallel.oq_distribute()
 MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
+
+GET_JOBS_BY_STATUS = '''--- running jobs with a PID
+SELECT * FROM job WHERE status=?x AND is_running=1 AND pid > 0 ORDER BY id'''
 
 if OQ_DISTRIBUTE == 'zmq':
 
@@ -270,8 +274,10 @@ def poll_queue(job_id, pid, poll_time):
     if max_concurrent_jobs > 0:
         first_time = True
         while True:
-            executing = logs.dbcmd('get_jobs_by_status', 'executing')
-            submitted = logs.dbcmd('get_jobs_by_status', 'submitted')
+            jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'executing')
+            executing = [j.id for j in jobs if psutil.pid_exists(j.pid)]
+            jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'submitted')
+            submitted = [j.id for j in jobs if psutil.pid_exists(j.pid)]
             submitted_before = submitted and min(submitted) < job_id
             if len(executing) >= max_concurrent_jobs or submitted_before:
                 if first_time:
