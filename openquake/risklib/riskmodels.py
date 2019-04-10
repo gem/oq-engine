@@ -317,11 +317,12 @@ class ProbabilisticEventBased(RiskModel):
     kind = 'vulnerability'
 
     def __init__(self, taxonomy, fragility_functions, vulnerability_functions,
-                 conditional_loss_poes):
+                 conditional_loss_poes, ignore_covs):
         self.taxonomy = taxonomy
         self.fragility_functions = fragility_functions
         self.vulnerability_functions = vulnerability_functions
         self.conditional_loss_poes = conditional_loss_poes
+        self.ignore_covs = ignore_covs
 
     def __call__(self, loss_type, assets, gmvs, eids, epsgetter):
         """
@@ -334,18 +335,25 @@ class ProbabilisticEventBased(RiskModel):
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
-            a :class:
-            `openquake.risklib.scientific.ProbabilisticEventBased.Output`
-            instance.
+            an array of loss ratios of shape (A, E)
         """
         E = len(gmvs)
         A = len(assets)
         loss_ratios = numpy.zeros((A, E), F32)
         vf = self.vulnerability_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs)
-        for i, asset in enumerate(assets):
-            epsilons = epsgetter(asset['ordinal'], eids)
-            loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
+        if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
+            pass
+        elif self.ignore_covs or covs.sum() == 0:
+            # the ratios are equal for all assets
+            ratios = vf.sample(means, covs, idxs, None)  # right shape
+            for a in range(A):
+                loss_ratios[a, idxs] = ratios
+        else:
+            # take into account the epsilons
+            for i, asset in enumerate(assets):
+                epsilons = epsgetter(asset['ordinal'], eids)
+                loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
         return loss_ratios
 
     def get_loss_ratios(self, gmvs):  # used in ebrisk
