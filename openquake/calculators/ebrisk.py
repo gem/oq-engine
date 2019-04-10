@@ -87,17 +87,19 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         losses_by_A = numpy.zeros((A, L), F32)
     else:
         losses_by_A = 0
+    # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
     for sid, haz in hazard.items():
         t0 = time.time()
+        weights = getter.weights[haz['rlzi'], 0]
         assets_on_sid = assets_by_site[sid]
+        assets_by_taxo = general.group_array(assets_on_sid, 'taxonomy')
+        argsort = numpy.argsort(numpy.concatenate([
+            a['ordinal'] for a in assets_by_taxo.values()]))
         eidx = [eid2idx[eid] for eid in haz['eid']]
-        haz_by_rlzi = general.group_array(haz, 'rlzi')
-        for out in riskmodel. _gen_outputs(
-                assets_on_sid, haz_by_rlzi, None, mon_risk):
-            # NB: IMT-dependent weights are not supported in ebrisk
-            weight = getter.weights[out.rlzi, 0]
-            eidx = [eid2idx[eid] for eid in out.eids]
+        with mon_risk:
+            out = riskmodel.get_output(assets_by_taxo, argsort, haz)
+        with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
                 tagi = asset[tagnames] if tagnames else ()
@@ -112,7 +114,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                         alt[aid, eidx, lti] = losses
                     acc[(eidx, lti) + tagidxs] += losses
                     if param['avg_losses']:
-                        losses_by_A[aid, lti] += losses.sum() * weight
+                        losses_by_A[aid, lti] += losses @ weights
             times[sid] = time.time() - t0
     with monitor('building event loss table'):
         elt = numpy.fromiter(
