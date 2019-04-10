@@ -12,7 +12,6 @@ $ python -m openquake.server.db.upgrade_manager ~/oqdata/db.sqlite3
 
 ### Database commands
 
-- `oq db get_executing_jobs`
 - `oq db get_longest_jobs`
 - `oq db find <description>`
 
