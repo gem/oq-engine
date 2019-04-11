@@ -138,7 +138,6 @@ class CompositeRiskModel(collections.Mapping):
         self.damage_states = []
         self._riskmodels = {}
         self.consequences = sum(len(vals) for vals in consdict.values())
-
         if sum(len(v) for v in fragdict.values()):
             # classical_damage/scenario_damage calculator
             if oqparam.calculation_mode in ('classical', 'scenario'):

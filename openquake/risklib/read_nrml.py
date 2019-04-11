@@ -172,6 +172,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     with context(fname, imls):
         attrs = dict(format=ff['format'],
                      imt=imls['imt'],
+                     id=ff['id'],
                      nodamage=nodamage)
 
     LS = len(limit_states)
@@ -239,6 +240,7 @@ def get_fragility_model(node, fname):
     for ff in ffs:
         imt_taxo = ff.imls['imt'], ff['id']
         array, attrs = ffconvert(fname, limit_states, ff)
+        attrs['id'] = ff['id']
         ffl = scientific.FragilityFunctionList(array, **attrs)
         fmodel[imt_taxo] = ffl
     return fmodel
