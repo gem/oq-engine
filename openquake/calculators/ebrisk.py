@@ -96,11 +96,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         weights = getter.weights[haz['rlzi'], 0]
         assets_on_sid = assets_by_site[sid]
         assets_by_taxo = general.group_array(assets_on_sid, 'taxonomy')
-        argsort = numpy.argsort(numpy.concatenate([
-            a['ordinal'] for a in assets_by_taxo.values()]))
         eidx = [eid2idx[eid] for eid in haz['eid']]
         with mon_risk:
-            out = riskmodel.get_output(assets_by_taxo, argsort, haz)
+            out = riskmodel.get_output(assets_by_taxo, haz)
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
