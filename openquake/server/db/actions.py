@@ -675,6 +675,28 @@ class List(list):
     _fields = ()
 
 
+def get_executing_jobs(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :returns:
+        (id, pid, user_name, start_time) tuples
+    """
+    fields = 'id,pid,user_name,start_time'
+    running = List()
+    running._fields = fields.split(',')
+
+    query = ('''-- executing jobs
+SELECT %s FROM job WHERE status='executing' ORDER BY id desc''' % fields)
+    rows = db(query)
+    for r in rows:
+        # if r.pid is 0 it means that such information
+        # is not available in the database
+        if r.pid and psutil.pid_exists(r.pid):
+            running.append(r)
+    return running
+
+
 def get_longest_jobs(db):
     """
     :param db:
