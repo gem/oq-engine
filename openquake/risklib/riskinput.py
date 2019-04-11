@@ -93,7 +93,7 @@ def read_composite_risk_model(dstore):
         if riskmodel not in dstore:
             continue
         for quoted_id, rm in crm.items():
-            riskid = unquote_plus(quoted_id)
+            riskid, kind = unquote_plus(quoted_id).rsplit('-', 1)
             fragdict[riskid] = {}
             vulndict[riskid] = {}
             consdict[riskid] = {}
