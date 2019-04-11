@@ -631,6 +631,7 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.datastore[oq.risk_model] = rm = self.riskmodel
+        self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
         attrs = self.datastore.getitem(oq.risk_model).attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes(oq.risk_model)

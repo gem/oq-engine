@@ -50,11 +50,11 @@ class TaxonomyMapping(dict):
         for taxonomy, dic in self.items():
             row = (taxonomy,
                    ' '.join(dic['fragility']['ids']),
-                   dic['fragility']['weights'],
+                   numpy.array(dic['fragility']['weights']),
                    ' '.join(dic['consequence']['ids']),
-                   dic['consequence']['weights'],
+                   numpy.array(dic['consequence']['weights']),
                    ' '.join(dic['vulnerability']['ids']),
-                   dic['vulnerability']['weights'])
+                   numpy.array(dic['vulnerability']['weights']))
             data.append(row)
         return numpy.array(data, self.dt), {}
 
@@ -149,9 +149,9 @@ class CompositeRiskModel(collections.Mapping):
                         'an exposure' % oqparam.inputs['job_ini'])
             self.damage_states = ['no_damage'] + list(fragdict.limit_states)
             for taxonomy, ffs_by_lt in fragdict.items():
-                if tmap:
-                    fmap = tmap[taxonomy]['fragility']
-                    cmap = tmap[taxonomy]['consequence']
+                #if tmap:
+                #    fmap = tmap[taxonomy]['fragility']
+                #    cmap = tmap[taxonomy]['consequence']
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam, fragility_functions=ffs_by_lt,
                     vulnerability_functions=vulndict[taxonomy],
@@ -161,8 +161,8 @@ class CompositeRiskModel(collections.Mapping):
             for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
                     zip(sorted(vulndict.items()), sorted(retrodict.items())):
                 assert taxonomy == taxonomy_  # same taxonomies
-                if tmap:
-                    vmap = tmap[taxonomy]['vulnerability']
+                #if tmap:
+                #    vmap = tmap[taxonomy]['vulnerability']
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam,
                     vulnerability_functions_orig=vf_orig,
@@ -170,8 +170,8 @@ class CompositeRiskModel(collections.Mapping):
         else:
             # classical, event based and scenario calculators
             for taxonomy, vfs in vulndict.items():
-                if tmap:
-                    vmap = tmap[taxonomy]['vulnerability']
+                #if tmap:
+                #    vmap = tmap[taxonomy]['vulnerability']
                 for vf in vfs.values():
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
@@ -410,8 +410,6 @@ class CompositeRiskModel(collections.Mapping):
                                           if self.damage_states else [])
         dic = dict(covs=self.covs, loss_types=loss_types,
                    limit_states=limit_states)
-        if self.tmap:
-            dic['tmap'] = self.tmap
         rf = next(iter(self.values()))
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
