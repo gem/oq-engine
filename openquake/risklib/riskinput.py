@@ -36,27 +36,69 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
+class TaxonomyMapping(dict):
+    """
+    A dictionary taxonomy -> kind -> {ids, weights}
+    serializable to HDF5 as an array with fields
+    taxonomy, fragility_ids, fragility_weights, consequence_ids,
+    consequence_weights, vulnerability_ids, vulnerability_weights.
+    """
+    dt = numpy.dtype([('taxonomy', hdf5.vstr),
+                      ('fragility_ids', hdf5.vstr),
+                      ('fragility_weights', hdf5.vfloat64),
+                      ('consequence_ids', hdf5.vstr),
+                      ('consequence_weights', hdf5.vfloat64),
+                      ('vulnerability_ids', hdf5.vstr),
+                      ('vulnerability_weights', hdf5.vfloat64)])
+
+    def __toh5__(self):
+        data = []
+        for taxonomy, dic in self.items():
+            row = (taxonomy,
+                   ' '.join(dic['fragility']['ids']),
+                   numpy.array(dic['fragility']['weights']),
+                   ' '.join(dic['consequence']['ids']),
+                   numpy.array(dic['consequence']['weights']),
+                   ' '.join(dic['vulnerability']['ids']),
+                   numpy.array(dic['vulnerability']['weights']))
+            data.append(row)
+        return numpy.array(data, self.dt), {}
+
+    def __fromh5__(self, array, dic):
+        for rec in array:
+            f = dict(ids=rec['fragility_ids'].split(),
+                     weights=rec['fragility_weights'])
+            c = dict(ids=rec['consequence_ids'].split(),
+                     weights=rec['consequence_weights'])
+            v = dict(ids=rec['vulnerability_ids'].split(),
+                     weights=rec['vulnerability_weights'])
+            self[rec['taxonomy']] = dict(
+                fragility=f, consequence=c, vulnerability=v)
+
+
 def read_composite_risk_model(dstore):
     """
     :param dstore: a DataStore instance
     :returns: a :class:`CompositeRiskModel` instance
     """
     oqparam = dstore['oqparam']
+    tmap = dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore else {}
     crm = dstore.getitem(oqparam.risk_model)
+    # building dictionaries riskid -> loss_type -> risk_func
     fragdict, vulndict, consdict, retrodict = (
         AccumDict(), AccumDict(), AccumDict(), AccumDict())
     fragdict.limit_states = crm.attrs['limit_states']
     for riskmodel in ('fragility', 'vulnerability', 'consequence'):
         if riskmodel not in dstore:
             continue
-        for quotedtaxonomy, rm in crm.items():
-            taxo = unquote_plus(quotedtaxonomy)
-            fragdict[taxo] = {}
-            vulndict[taxo] = {}
-            consdict[taxo] = {}
-            retrodict[taxo] = {}
+        for quoted_id, rm in crm.items():
+            riskid = unquote_plus(quoted_id)
+            fragdict[riskid] = {}
+            vulndict[riskid] = {}
+            consdict[riskid] = {}
+            retrodict[riskid] = {}
             for lt in rm:
-                rf = dstore['%s/%s/%s' % (riskmodel, quotedtaxonomy, lt)]
+                rf = dstore['%s/%s/%s' % (riskmodel, quoted_id, lt)]
                 if riskmodel == 'consequence':
                     # TODO: manage this case by adding HDF5-serialization
                     # to the consequence model
@@ -68,16 +110,17 @@ def read_composite_risk_model(dstore):
                             oqparam.continuous_fragility_discretization,
                             oqparam.steps_per_interval)
                     except ValueError as err:
-                        raise ValueError('%s: %s' % (taxo, err))
-                    fragdict[taxo][lt] = rf
+                        raise ValueError('%s: %s' % (riskid, err))
+                    fragdict[riskid][lt] = rf
                 else:  # rf is a vulnerability function
                     rf.init()
                     if lt.endswith('_retrofitted'):
                         # strip _retrofitted, since len('_retrofitted') = 12
-                        retrodict[taxo][lt[:-12]] = rf
+                        retrodict[riskid][lt[:-12]] = rf
                     else:
-                        vulndict[taxo][lt] = rf
-    return CompositeRiskModel(oqparam, fragdict, vulndict, consdict, retrodict)
+                        vulndict[riskid][lt] = rf
+    return CompositeRiskModel(
+        oqparam, tmap, fragdict, vulndict, consdict, retrodict)
 
 
 class CompositeRiskModel(collections.Mapping):
@@ -86,6 +129,8 @@ class CompositeRiskModel(collections.Mapping):
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param tmap:
+        a taxonomy mapping
     :param fragdict:
         a dictionary taxonomy -> loss_type -> fragility functions
     :param vulndict:
@@ -95,11 +140,11 @@ class CompositeRiskModel(collections.Mapping):
     :param retrodict:
         a dictionary taxonomy -> loss_type -> vulnerability function
     """
-    def __init__(self, oqparam, fragdict, vulndict, consdict, retrodict):
+    def __init__(self, oqparam, tmap, fragdict, vulndict, consdict, retrodict):
+        self.tmap = tmap
         self.damage_states = []
         self._riskmodels = {}
         self.consequences = sum(len(vals) for vals in consdict.values())
-
         if sum(len(v) for v in fragdict.values()):
             # classical_damage/scenario_damage calculator
             if oqparam.calculation_mode in ('classical', 'scenario'):
@@ -111,6 +156,9 @@ class CompositeRiskModel(collections.Mapping):
                         'an exposure' % oqparam.inputs['job_ini'])
             self.damage_states = ['no_damage'] + list(fragdict.limit_states)
             for taxonomy, ffs_by_lt in fragdict.items():
+                #if tmap:
+                #    fmap = tmap[taxonomy]['fragility']
+                #    cmap = tmap[taxonomy]['consequence']
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam, fragility_functions=ffs_by_lt,
                     vulnerability_functions=vulndict[taxonomy],
@@ -120,6 +168,8 @@ class CompositeRiskModel(collections.Mapping):
             for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
                     zip(sorted(vulndict.items()), sorted(retrodict.items())):
                 assert taxonomy == taxonomy_  # same taxonomies
+                #if tmap:
+                #    vmap = tmap[taxonomy]['vulnerability']
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam,
                     vulnerability_functions_orig=vf_orig,
@@ -127,6 +177,8 @@ class CompositeRiskModel(collections.Mapping):
         else:
             # classical, event based and scenario calculators
             for taxonomy, vfs in vulndict.items():
+                #if tmap:
+                #    vmap = tmap[taxonomy]['vulnerability']
                 for vf in vfs.values():
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
@@ -363,8 +415,8 @@ class CompositeRiskModel(collections.Mapping):
         loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
-        dic = dict(
-            covs=self.covs, loss_types=loss_types, limit_states=limit_states)
+        dic = dict(covs=self.covs, loss_types=loss_types,
+                   limit_states=limit_states)
         rf = next(iter(self.values()))
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
