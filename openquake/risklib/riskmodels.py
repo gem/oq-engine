@@ -94,7 +94,7 @@ def get_risk_models(oqparam, kind):
     :param kind:
         vulnerability|vulnerability_retrofitted|fragility|consequence
     :returns:
-        a dictionary taxonomy -> loss_type -> function
+        a dictionary riskid -> loss_type -> function
     """
     rmodels = AccumDict()
     rmodels.limit_states = []
@@ -131,29 +131,29 @@ def get_risk_models(oqparam, kind):
             # build a copy of the FragilityModel with different IM levels
             newfm = fm.build(oqparam.continuous_fragility_discretization,
                              oqparam.steps_per_interval)
-            for (imt, taxo), ffl in newfm.items():
+            for (imt, riskid), ffl in newfm.items():
                 if not limit_states:
                     limit_states.extend(fm.limitStates)
                 # we are rejecting the case of loss types with different
                 # limit states; this may change in the future
                 assert limit_states == fm.limitStates, (
                     limit_states, fm.limitStates)
-                rdict[taxo][loss_type] = ffl
+                rdict[riskid][loss_type] = ffl
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
         rdict.limit_states = [str(ls) for ls in limit_states]
     elif kind == 'consequence':
         for loss_type, cm in rmodels.items():
-            for taxo, cf in cm.items():
-                rdict[taxo][loss_type] = cf
+            for riskid, cf in cm.items():
+                rdict[riskid][loss_type] = cf
     else:  # vulnerability
         cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
         # only for classical_risk reduce the loss_ratios
         # to make sure they are strictly increasing
         for loss_type, rm in rmodels.items():
-            for (imt, taxo), rf in rm.items():
-                rdict[taxo][loss_type] = (
+            for (imt, riskid), rf in rm.items():
+                rdict[riskid][loss_type] = (
                     rf.strictly_increasing() if cl_risk else rf)
     return rdict
 
