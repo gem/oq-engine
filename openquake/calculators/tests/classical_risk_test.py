@@ -30,7 +30,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
 
         # check loss ratios
-        lrs = self.calc.datastore['vulnerability/VF/structural']
+        lrs = self.calc.datastore['vulnerability/VF-vulnerability/structural']
         got = scientificformat(lrs.mean_loss_ratios, '%.2f')
         self.assertEqual(got, '0.05 0.10 0.20 0.40 0.80')
 
