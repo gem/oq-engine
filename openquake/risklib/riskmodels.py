@@ -94,7 +94,7 @@ def get_risk_models(oqparam, kind):
     :param kind:
         vulnerability|vulnerability_retrofitted|fragility|consequence
     :returns:
-        a dictionary taxonomy -> loss_type -> function
+        a dictionary riskid -> loss_type -> function
     """
     rmodels = AccumDict()
     rmodels.limit_states = []
