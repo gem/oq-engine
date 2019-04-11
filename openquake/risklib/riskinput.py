@@ -125,25 +125,25 @@ def read_composite_risk_model(dstore):
 
 class CompositeRiskModel(collections.Mapping):
     """
-    A container taxonomy -> riskmodel
+    A container (riskid, kind) -> riskmodel
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param tmap:
         a taxonomy mapping
     :param fragdict:
-        a dictionary taxonomy -> loss_type -> fragility functions
+        a dictionary riskid -> loss_type -> fragility functions
     :param vulndict:
-        a dictionary taxonomy -> loss_type -> vulnerability function
+        a dictionary riskid -> loss_type -> vulnerability function
     :param consdict:
-        a dictionary taxonomy -> loss_type -> consequence functions
+        a dictionary riskid -> loss_type -> consequence functions
     :param retrodict:
-        a dictionary taxonomy -> loss_type -> vulnerability function
+        a dictionary riskid -> loss_type -> vulnerability function
     """
     def __init__(self, oqparam, tmap, fragdict, vulndict, consdict, retrodict):
         self.tmap = tmap
         self.damage_states = []
-        self._riskmodels = {}
+        self._riskmodels = {}  # (riskid, kind) -> riskmodel
         self.consequences = sum(len(vals) for vals in consdict.values())
         if sum(len(v) for v in fragdict.values()):
             # classical_damage/scenario_damage calculator
@@ -155,28 +155,31 @@ class CompositeRiskModel(collections.Mapping):
                         'There are risk files in %r but not '
                         'an exposure' % oqparam.inputs['job_ini'])
             self.damage_states = ['no_damage'] + list(fragdict.limit_states)
-            for taxonomy, ffs_by_lt in fragdict.items():
+            for riskid, ffs_by_lt in fragdict.items():
+                taxonomy = riskid
                 #if tmap:
                 #    fmap = tmap[taxonomy]['fragility']
                 #    cmap = tmap[taxonomy]['consequence']
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam, fragility_functions=ffs_by_lt,
-                    vulnerability_functions=vulndict[taxonomy],
-                    consequence_functions=consdict[taxonomy])
+                    riskid, oqparam, fragility_functions=ffs_by_lt,
+                    vulnerability_functions=vulndict[riskid],
+                    consequence_functions=consdict[riskid])
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
-            for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
+            for (riskid, vf_orig), (riskid_, vf_retro) in \
                     zip(sorted(vulndict.items()), sorted(retrodict.items())):
-                assert taxonomy == taxonomy_  # same taxonomies
+                assert riskid == riskid_  # same taxonomies
+                taxonomy = riskid
                 #if tmap:
                 #    vmap = tmap[taxonomy]['vulnerability']
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam,
+                    riskid, oqparam,
                     vulnerability_functions_orig=vf_orig,
                     vulnerability_functions_retro=vf_retro)
         else:
             # classical, event based and scenario calculators
-            for taxonomy, vfs in vulndict.items():
+            for riskid, vfs in vulndict.items():
+                taxonomy = riskid
                 #if tmap:
                 #    vmap = tmap[taxonomy]['vulnerability']
                 for vf in vfs.values():
@@ -184,7 +187,7 @@ class CompositeRiskModel(collections.Mapping):
                     # VulnerabilityFunctionWithPMF
                     vf.seed = oqparam.random_seed
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam, fragility_functions=vulndict[taxonomy],
+                    riskid, oqparam, fragility_functions=vulndict[riskid],
                     vulnerability_functions=vfs)
 
         self.init(oqparam)
