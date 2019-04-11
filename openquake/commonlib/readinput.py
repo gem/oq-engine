@@ -914,13 +914,15 @@ def get_risk_model(oqparam):
     fragdict = get_risk_models(oqparam, 'fragility')
     vulndict = get_risk_models(oqparam, 'vulnerability')
     consdict = get_risk_models(oqparam, 'consequence')
-    if consdict:  # the consequences must be consistent with the fragilities
-        if not tmap:
+    if not tmap:  # the risk ids are the taxonomies already
+        d = dict(ids=['?'], weights=[1.0])
+        for taxo in set(fragdict) | set(vulndict) | set(consdict):
+            tmap[taxo] = dict(fragility=d, consequence=d, vulnerability=d)
+        if consdict:  # the consequences must be consistent
             check_equal_sets(consdict, fragdict)
         for taxo in consdict:
             cdict, fdict = consdict[taxo], fragdict[taxo]
-            if not tmap:
-                check_equal_sets(cdict, fdict)
+            check_equal_sets(cdict, fdict)
             for loss_type in cdict:
                 c = cdict[loss_type]
                 f = fdict[loss_type]
