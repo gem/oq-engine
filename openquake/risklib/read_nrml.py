@@ -225,7 +225,7 @@ def get_fragility_model(node, fname):
     :param fname:
         path to the vulnerability file
     :returns:
-        a dictionary imt, vf_id -> fragility function list
+        a dictionary imt, ff_id -> fragility function list
     """
     with context(fname, node):
         fid = node['id']
@@ -237,11 +237,10 @@ def get_fragility_model(node, fname):
     fmodel = scientific.FragilityModel(
         fid, asset_category, loss_type, description, limit_states)
     for ff in ffs:
-        imt_id = ff.imls['imt'], ff['id']
         array, attrs = ffconvert(fname, limit_states, ff)
         attrs['id'] = ff['id']
         ffl = scientific.FragilityFunctionList(array, **attrs)
-        fmodel[imt_id] = ffl
+        fmodel[ff.imls['imt'], ff['id']] = ffl
     return fmodel
 
 

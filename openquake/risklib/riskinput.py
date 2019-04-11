@@ -37,6 +37,12 @@ F32 = numpy.float32
 
 
 class TaxonomyMapping(dict):
+    """
+    A dictionary taxonomy -> kind -> {ids, weights}
+    serializable to HDF5 as an array with fields
+    taxonomy, fragility_ids, fragility_weights, consequence_ids,
+    consequence_weights, vulnerability_ids, vulnerability_weights.
+    """
     dt = numpy.dtype([('taxonomy', hdf5.vstr),
                       ('fragility_ids', hdf5.vstr),
                       ('fragility_weights', hdf5.vfloat64),
@@ -78,20 +84,21 @@ def read_composite_risk_model(dstore):
     oqparam = dstore['oqparam']
     tmap = dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore else {}
     crm = dstore.getitem(oqparam.risk_model)
+    # building dictionaries riskid -> loss_type -> risk_func
     fragdict, vulndict, consdict, retrodict = (
         AccumDict(), AccumDict(), AccumDict(), AccumDict())
     fragdict.limit_states = crm.attrs['limit_states']
     for riskmodel in ('fragility', 'vulnerability', 'consequence'):
         if riskmodel not in dstore:
             continue
-        for quotedtaxonomy, rm in crm.items():
-            taxo = unquote_plus(quotedtaxonomy)
-            fragdict[taxo] = {}
-            vulndict[taxo] = {}
-            consdict[taxo] = {}
-            retrodict[taxo] = {}
+        for quoted_id, rm in crm.items():
+            riskid = unquote_plus(quoted_id)
+            fragdict[riskid] = {}
+            vulndict[riskid] = {}
+            consdict[riskid] = {}
+            retrodict[riskid] = {}
             for lt in rm:
-                rf = dstore['%s/%s/%s' % (riskmodel, quotedtaxonomy, lt)]
+                rf = dstore['%s/%s/%s' % (riskmodel, quoted_id, lt)]
                 if riskmodel == 'consequence':
                     # TODO: manage this case by adding HDF5-serialization
                     # to the consequence model
@@ -103,15 +110,15 @@ def read_composite_risk_model(dstore):
                             oqparam.continuous_fragility_discretization,
                             oqparam.steps_per_interval)
                     except ValueError as err:
-                        raise ValueError('%s: %s' % (taxo, err))
-                    fragdict[taxo][lt] = rf
+                        raise ValueError('%s: %s' % (riskid, err))
+                    fragdict[riskid][lt] = rf
                 else:  # rf is a vulnerability function
                     rf.init()
                     if lt.endswith('_retrofitted'):
                         # strip _retrofitted, since len('_retrofitted') = 12
-                        retrodict[taxo][lt[:-12]] = rf
+                        retrodict[riskid][lt[:-12]] = rf
                     else:
-                        vulndict[taxo][lt] = rf
+                        vulndict[riskid][lt] = rf
     return CompositeRiskModel(
         oqparam, tmap, fragdict, vulndict, consdict, retrodict)
 
