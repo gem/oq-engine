@@ -196,8 +196,6 @@ class CompositeRiskModel(collections.Mapping):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.taxonomy = []  # must be set by the engine
-
         # build a sorted list with all the loss_types contained in the model
         ltypes = set()
         for rm in self.values():
@@ -233,6 +231,7 @@ class CompositeRiskModel(collections.Mapping):
         """
         :returns: a dict taxonomy string -> taxonomy index
         """
+        # .taxonomy must be set by the engine
         tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         return tdict
 
