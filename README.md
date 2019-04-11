@@ -84,7 +84,7 @@ Current stable version is the **OpenQuake Engine 3.4** 'Omori'. The documentatio
 
 * [Download OVA appliance](https://downloads.openquake.org/ova/stable/)
 
-#### Docker
+#### Cloud
 
 * [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
 
