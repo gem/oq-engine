@@ -467,10 +467,7 @@ class RiskInput(object):
         """
         if len(self.eps) == 0:
             return
-        try:  # from ruptures
-            return self.eps[aid, eids]
-        except TypeError:  # from GMFs
-            return self.eps[aid][eids]
+        return self.eps[aid][eids]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
