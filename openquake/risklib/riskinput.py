@@ -356,6 +356,12 @@ class CompositeRiskModel(collections.Mapping):
                 yield out
 
     def get_output(self, assets_by_taxo, haz, eps, rlzi=None):
+        """
+        :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
+        :param haz: an array or a dictionary of hazard on that site
+        :param eps: a dictionary aid -> epsilons (possibly empty)
+        :param rlzi: if given, a realization index
+        """
         idxs = numpy.argsort(numpy.concatenate([
             a['ordinal'] for a in assets_by_taxo.values()]))
         if isinstance(haz, numpy.ndarray):
@@ -385,7 +391,7 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy, assets_ in assets_by_taxo.items():
                 if len(eps):
                     epsilons = [eps[aid][eids] for aid in assets_['ordinal']]
-                else:
+                else:  # no CoVs
                     epsilons = ()
                 rm = self[taxonomy]
                 if len(data) == 0:
