@@ -101,7 +101,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         eidx = [eid2idx[eid] for eid in haz['eid']]
         haz['eid'] = eidx
         with mon_risk:
-            out = riskmodel.get_output(assets_by_taxo, haz, eps=())
+            out = riskmodel.get_output(assets_by_taxo, haz, rupgetter.eps)
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
@@ -219,8 +219,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     first_event)
                 if len(eps):
-                    rgetter.eps = eps[first_event:first_event +
-                                      rgetter.num_events]
+                    rgetter.eps = eps[
+                        :, first_event:first_event + rgetter.num_events]
                 else:
                     rgetter.eps = ()
                 first_event += rgetter.num_events
