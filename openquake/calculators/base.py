@@ -542,8 +542,6 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
-            elif not oq.imtls:
-                raise ValueError('Missing intensity_measure_types!')
         if 'precalc' in vars(self):
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
