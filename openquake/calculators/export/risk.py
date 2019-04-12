@@ -441,10 +441,11 @@ def modal_damage_array(data, damage_dt):
     # determine the damage state with the highest probability
     A, L, MS, D = data.shape
     dmgstate = damage_dt['structural'].names
-    arr = numpy.zeros(A, [('ds-' + lt, hdf5.vstr) for lt in damage_dt.names])
+    arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
+                          for lt in damage_dt.names])
     for l, loss_type in enumerate(damage_dt.names):
-        arr['ds-' + loss_type] = [dmgstate[data[a, l, 0].argmax()]
-                                  for a in range(A)]
+        arr['modal-ds-' + loss_type] = [dmgstate[data[a, l, 0].argmax()]
+                                        for a in range(A)]
     return arr
 
 
