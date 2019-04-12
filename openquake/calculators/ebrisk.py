@@ -61,7 +61,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :returns:
         an ArrayWrapper with shape (E, L, T, ...)
     """
-    epsgetter = param['epsgetter'](
+    eps = param['epsgetter'](
         rupgetter.first_event, rupgetter.first_event + rupgetter.num_events)
     riskmodel = param['riskmodel']
     L = len(riskmodel.lti)
@@ -102,7 +102,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         eidx = [eid2idx[eid] for eid in haz['eid']]
         haz['eid'] = eidx
         with mon_risk:
-            out = riskmodel.get_output(assets_by_taxo, haz, ())
+            out = riskmodel.get_output(assets_by_taxo, haz, eps=())
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
