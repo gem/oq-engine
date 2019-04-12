@@ -519,10 +519,12 @@ class EpsilonMatrix1(object):
         self.num_assets = num_assets
         self.num_events = num_events
         self.seed = seed
-        numpy.random.seed(seed)
-        self.eps = numpy.random.normal(size=num_events)
+        self.eps = None
 
     def __getitem__(self, item):
+        if self.eps is None:
+            numpy.random.seed(self.seed)
+            self.eps = numpy.random.normal(size=self.num_events)
         if isinstance(item, tuple):
             # item[0] is the asset index, item[1] the event index
             # the epsilons are equal for all assets since asset_correlation=1
@@ -534,35 +536,6 @@ class EpsilonMatrix1(object):
 
     def __len__(self):
         return self.num_assets
-
-
-class EpsilonGetter:
-    """
-    A callable object (start, stop) -> matrix of shape (n_assets, n_events)
-    """
-    def __init__(self, n_assets, n_events, correlation, master_seed, no_eps):
-        assert n_assets > 0, n_assets
-        assert n_events > 0, n_events
-        assert correlation in (0, 1), correlation
-        assert master_seed >= 0, master_seed
-        assert no_eps in (True, False), no_eps
-        self.n_assets = n_assets
-        self.n_events = n_events
-        self.correlation = correlation
-        self.master_seed = master_seed
-        self.no_eps = no_eps
-        self.seeds = master_seed + numpy.arange(n_events)
-
-    def __call__(self, start=0, stop=None):
-        if stop is None:
-            stop = start + self.n_events
-        if self.no_eps:
-            eps = None
-        elif self.correlation:
-            eps = EpsilonMatrix1(self.n_assets, stop - start, self.master_seed)
-        else:
-            eps = EpsilonMatrix0(self.n_assets, self.seeds[start:stop])
-        return eps
 
 
 # used in scenario_risk

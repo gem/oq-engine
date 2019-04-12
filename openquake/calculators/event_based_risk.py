@@ -177,9 +177,14 @@ class EbrCalculator(base.RiskCalculator):
                     oq.return_periods, oq.loss_dt())
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
-        eps = riskinput.EpsilonGetter(
-            len(self.assetcol), self.E, oq.asset_correlation, oq.master_seed,
-            oq.ignore_covs or not self.riskmodel.covs)()
+
+        if oq.ignore_covs or not self.riskmodel.covs:
+            eps = ()
+        elif oq.asset_correlation:
+            eps = riskinput.EpsilonMatrix1(self.A, self.E, oq.master_seed)
+        else:
+            eps = riskinput.EpsilonMatrix0(
+                self.A, oq.master_seed + numpy.arange(self.E))
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
