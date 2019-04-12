@@ -324,7 +324,7 @@ class ProbabilisticEventBased(RiskModel):
         self.conditional_loss_poes = conditional_loss_poes
         self.ignore_covs = ignore_covs
 
-    def __call__(self, loss_type, assets, gmvs, eids, epsgetter):
+    def __call__(self, loss_type, assets, gmvs, eids, epsilons):
         """
         :param str loss_type:
             the loss type considered
@@ -332,7 +332,7 @@ class ProbabilisticEventBased(RiskModel):
            a list of assets on the same site and with the same taxonomy
         :param gmvs_eids:
            a pair (gmvs, eids) with E values each
-        :param epsgetter:
+        :param epsilons:
            a callable returning the correct epsilons for the given gmvs
         :returns:
             an array of loss ratios of shape (A, E)
@@ -344,7 +344,7 @@ class ProbabilisticEventBased(RiskModel):
         means, covs, idxs = vf.interpolate(gmvs)
         if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
             pass
-        elif self.ignore_covs or covs.sum() == 0 or epsgetter is None:
+        elif self.ignore_covs or covs.sum() == 0 or len(epsilons) == 0:
             # the ratios are equal for all assets
             ratios = vf.sample(means, covs, idxs, None)  # right shape
             for a in range(A):
@@ -352,8 +352,8 @@ class ProbabilisticEventBased(RiskModel):
         else:
             # take into account the epsilons
             for i, asset in enumerate(assets):
-                epsilons = epsgetter(asset['ordinal'], eids)
-                loss_ratios[i, idxs] = vf.sample(means, covs, idxs, epsilons)
+                loss_ratios[i, idxs] = vf.sample(
+                    means, covs, idxs, epsilons[i])
         return loss_ratios
 
 
@@ -437,11 +437,10 @@ class Scenario(RiskModel):
         self.vulnerability_functions = vulnerability_functions
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, gmvs, eids, epsgetter):
+    def __call__(self, loss_type, assets, gmvs, eids, epsilons):
         """
         :returns: an array of shape (A, E)
         """
-        epsilons = [epsgetter(asset['ordinal'], eids) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
