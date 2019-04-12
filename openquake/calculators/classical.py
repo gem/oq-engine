@@ -306,11 +306,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
-        iterargs = (
+        allargs = [  # this list is very fast to generate
             (getters.PmapGetter(parent, self.rlzs_assoc, t.sids, oq.poes),
              N, hstats, oq.individual_curves)
-            for t in self.sitecol.split_in_tiles(ct))
-        parallel.Starmap(build_hazard_stats, iterargs, self.monitor()).reduce(
+            for t in self.sitecol.split_in_tiles(ct)]
+        parallel.Starmap(build_hazard_stats, allargs, self.monitor()).reduce(
             self.save_hazard_stats)
 
 
