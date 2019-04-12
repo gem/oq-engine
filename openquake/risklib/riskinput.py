@@ -352,11 +352,10 @@ class CompositeRiskModel(collections.Mapping):
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
             for rlzi, haz in sorted(hazard[sids[0]].items()):
-                out = self.get_output(assets_by_taxo, haz,
-                                      riskinput.epsilon_getter, rlzi)
+                out = self.get_output(assets_by_taxo, haz, riskinput.eps, rlzi)
                 yield out
 
-    def get_output(self, assets_by_taxo, haz, epsgetter=None, rlzi=None):
+    def get_output(self, assets_by_taxo, haz, eps, rlzi=None):
         idxs = numpy.argsort(numpy.concatenate([
             a['ordinal'] for a in assets_by_taxo.values()]))
         if isinstance(haz, numpy.ndarray):
@@ -384,6 +383,10 @@ class CompositeRiskModel(collections.Mapping):
         for l, lt in enumerate(self.loss_types):
             ls = []
             for taxonomy, assets_ in assets_by_taxo.items():
+                if len(eps):
+                    epsilons = [eps[aid][eids] for aid in assets_['ordinal']]
+                else:
+                    epsilons = ()
                 rm = self[taxonomy]
                 if len(data) == 0:
                     dat = [0]
@@ -391,7 +394,7 @@ class CompositeRiskModel(collections.Mapping):
                     dat = data[:, rm.imti[lt]]
                 else:  # hcurves
                     dat = data[rm.imti[lt]]
-                ls.append(rm(lt, assets_, dat, eids, epsgetter))
+                ls.append(rm(lt, assets_, dat, eids, epsilons))
             arr = numpy.concatenate(ls)
             dic[lt] = arr[idxs] if len(arr) else arr
         return hdf5.ArrayWrapper((), dic)
@@ -458,16 +461,6 @@ class RiskInput(object):
     def imt_taxonomies(self):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
-
-    def epsilon_getter(self, aid, eids):
-        """
-        :param aid: asset ordinal
-        :param eids: an array of event indices
-        :returns: an array of E epsilons
-        """
-        if len(self.eps) == 0:
-            return
-        return self.eps[aid][eids]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
