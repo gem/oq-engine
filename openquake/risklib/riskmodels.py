@@ -333,7 +333,7 @@ class ProbabilisticEventBased(RiskModel):
         :param gmvs_eids:
            a pair (gmvs, eids) with E values each
         :param epsilons:
-           a callable returning the correct epsilons for the given gmvs
+           a matrix of epsilons of shape (A, E) (or an empty tuple)
         :returns:
             an array of loss ratios of shape (A, E)
         """
@@ -351,9 +351,9 @@ class ProbabilisticEventBased(RiskModel):
                 loss_ratios[a, idxs] = ratios
         else:
             # take into account the epsilons
-            for i, asset in enumerate(assets):
-                loss_ratios[i, idxs] = vf.sample(
-                    means, covs, idxs, epsilons[i])
+            for a, asset in enumerate(assets):
+                loss_ratios[a, idxs] = vf.sample(
+                    means, covs, idxs, epsilons[a])
         return loss_ratios
 
 
@@ -452,7 +452,7 @@ class Scenario(RiskModel):
             assets = assets[ok]
             epsilons = epsilons[ok]
 
-        E = len(epsilons[0])
+        E = len(eids)
 
         # a matrix of A x E elements
         loss_matrix = numpy.empty((len(assets), E))
