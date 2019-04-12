@@ -502,9 +502,6 @@ class EpsilonMatrix0(object):
             self.eps = self.make_eps()
         return self.eps[aid]
 
-    def __call__(self, aid, eids):
-        return self[aid][eids]
-
     def __len__(self):
         return self.num_assets
 
@@ -534,9 +531,6 @@ class EpsilonMatrix1(object):
             return self.eps
         else:
             raise TypeError('Invalid item %r' % item)
-
-    def __call__(self, aid, eids):
-        return self.eps[eids]
 
     def __len__(self):
         return self.num_assets
