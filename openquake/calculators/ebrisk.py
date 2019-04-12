@@ -70,14 +70,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             assetcol = dstore['assetcol']
         assets_by_site = assetcol.assets_by_site()
     A = len(assetcol)
-    if param['ignore_covs'] or not riskmodel.covs:
-        eps = ()
-    elif param['asset_correlation']:
-        eps = EpsilonMatrix1(A, E, param['master_seed'])
-    else:
-        e1, e2 = rupgetter.first_event, rupgetter.first_event + E
-        eps = EpsilonMatrix0(
-            A, param['master_seed'] + numpy.arange(e1, e2))
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
@@ -185,8 +177,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         oq = self.oqparam
         self.set_param(
-            asset_correlation=oq.asset_correlation,
-            ignore_covs=oq.ignore_covs, master_seed=oq.master_seed,
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
             maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
         parent = self.datastore.parent
@@ -212,7 +202,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
+        A = len(self.assetcol)
         first_event = 0
+        if oq.ignore_covs or not self.riskmodel.covs:
+            eps = ()
+        elif oq.asset_correlation:
+            eps = EpsilonMatrix1(A, self.E, oq.master_seed)
+        else:
+            eps = EpsilonMatrix0(A, oq.master_seed + numpy.arange(self.E))
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             for indices in general.block_splitter(
@@ -221,6 +218,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     first_event)
+                if len(eps):
+                    rgetter.eps = eps[first_event:first_event +
+                                      rgetter.num_events]
+                else:
+                    rgetter.eps = ()
                 first_event += rgetter.num_events
                 smap.submit(rgetter, self.src_filter, self.param)
         self.events_per_sid = []

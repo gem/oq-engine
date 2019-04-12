@@ -476,30 +476,21 @@ class RiskInput(object):
 
 class EpsilonMatrix0(object):
     """
-    Mock-up for a matrix of epsilons of size N x E,
+    Mock-up for a matrix of epsilons of size A x E,
     used when asset_correlation=0.
 
-    :param num_assets: N assets
+    :param num_assets: A assets
     :param seeds: E seeds, set before calling numpy.random.normal
     """
     def __init__(self, num_assets, seeds):
         self.num_assets = num_assets
         self.seeds = seeds
-        self.eps = None
-
-    def make_eps(self):
-        """
-        Builds a matrix of A x E epsilons
-        """
-        eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
+        self.eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
         for i, seed in enumerate(self.seeds):
             numpy.random.seed(seed)
-            eps[:, i] = numpy.random.normal(size=self.num_assets)
-        return eps
+            self.eps[:, i] = numpy.random.normal(size=self.num_assets)
 
     def __getitem__(self, aid):
-        if self.eps is None:
-            self.eps = self.make_eps()
         return self.eps[aid]
 
     def __len__(self):
@@ -519,13 +510,11 @@ class EpsilonMatrix1(object):
         self.num_assets = num_assets
         self.num_events = num_events
         self.seed = seed
-        self.eps = None
+        numpy.random.seed(seed)
+        self.eps = numpy.random.normal(size=self.num_events)
 
     def __getitem__(self, aid):
         # return the same epsilons for all assets
-        if self.eps is None:
-            numpy.random.seed(self.seed)
-            self.eps = numpy.random.normal(size=self.num_events)
         return self.eps
 
     def __len__(self):
