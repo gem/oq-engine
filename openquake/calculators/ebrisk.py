@@ -23,7 +23,7 @@ from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib.scientific import losses_by_period
-from openquake.risklib.riskinput import EpsilonGetter
+from openquake.risklib.riskinput import EpsilonMatrix0, EpsilonMatrix1
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -61,9 +61,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :returns:
         an ArrayWrapper with shape (E, L, T, ...)
     """
-    eps = param['epsgetter'](
-        rupgetter.first_event, rupgetter.first_event + rupgetter.num_events)
     riskmodel = param['riskmodel']
+    E = rupgetter.num_events
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
     with monitor('getting assets', measuremem=False):
@@ -71,6 +70,14 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             assetcol = dstore['assetcol']
         assets_by_site = assetcol.assets_by_site()
     A = len(assetcol)
+    if param['ignore_covs'] or not riskmodel.covs:
+        eps = ()
+    elif param['asset_correlation']:
+        eps = EpsilonMatrix1(A, E, param['master_seed'])
+    else:
+        e1, e2 = rupgetter.first_event, rupgetter.first_event + E
+        eps = EpsilonMatrix0(
+            A, param['master_seed'] + numpy.arange(e1, e2))
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
@@ -178,10 +185,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         oq = self.oqparam
         self.set_param(
-            epsgetter=EpsilonGetter(
-                len(self.assetcol), self.E,
-                oq.asset_correlation, oq.master_seed,
-                oq.ignore_covs or not self.riskmodel.covs),
+            asset_correlation=oq.asset_correlation,
+            ignore_covs=oq.ignore_covs, master_seed=oq.master_seed,
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
             maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
         parent = self.datastore.parent
