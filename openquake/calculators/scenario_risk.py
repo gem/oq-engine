@@ -106,7 +106,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.event_slice = functools.partial(
             _event_slice, oq.number_of_ground_motion_fields)
         E = oq.number_of_ground_motion_fields * self.R
-        if oq.ignore_covs:
+        if oq.ignore_covs or not self.riskmodel.covs:
             # all zeros; the data transfer is not so big in scenario
             eps = numpy.zeros((A, E), numpy.float32)
         else:
