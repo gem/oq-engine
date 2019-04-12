@@ -437,16 +437,32 @@ def export_damages_csv(ekey, dstore):
     return writer.getsaved()
 
 
+def modal_damage_array(data, damage_dt):
+    # determine the damage state with the highest probability
+    A, L, MS, D = data.shape
+    dmgstate = damage_dt['structural'].names
+    arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
+                          for lt in damage_dt.names])
+    for l, loss_type in enumerate(damage_dt.names):
+        arr['modal-ds-' + loss_type] = [dmgstate[data[a, l, 0].argmax()]
+                                        for a in range(A)]
+    return arr
+
+
 @export.add(('dmg_by_asset', 'csv'))
 def export_dmg_by_asset_csv(ekey, dstore):
     E = len(dstore['events'])
+    oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore, mean_std=E > 1)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     for rlz in rlzs:
-        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        if oq.modal_damage_state:
+            dmg_by_asset = modal_damage_array(data[:, rlz.ordinal], damage_dt)
+        else:
+            dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
     return writer.getsaved()
