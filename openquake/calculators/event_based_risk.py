@@ -177,7 +177,9 @@ class EbrCalculator(base.RiskCalculator):
                     oq.return_periods, oq.loss_dt())
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
-        eps = self.epsilon_getter()()
+        eps = riskinput.EpsilonGetter(
+            len(self.assetcol), self.E, oq.asset_correlation, oq.master_seed,
+            oq.ignore_covs or not self.riskmodel.covs)()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
@@ -185,7 +187,7 @@ class EbrCalculator(base.RiskCalculator):
         self.param['conditional_loss_poes'] = oq.conditional_loss_poes
         self.taskno = 0
         self.start = 0
-        avg_losses = self.oqparam.avg_losses
+        avg_losses = oq.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L))
@@ -228,16 +230,6 @@ class EbrCalculator(base.RiskCalculator):
                 self.datastore.set_attrs(
                     'loss_maps-stats',
                     stats=[encode(name) for (name, func) in stats])
-
-    def epsilon_getter(self):
-        """
-        :returns: a callable (start, stop) producing a slice of epsilons
-        """
-        return riskinput.EpsilonGetter(
-            len(self.assetcol), self.E,
-            self.oqparam.asset_correlation,
-            self.oqparam.master_seed,
-            self.oqparam.ignore_covs or not self.riskmodel.covs)
 
     def save_losses(self, dic):
         """
