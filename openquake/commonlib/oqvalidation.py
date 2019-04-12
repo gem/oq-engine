@@ -754,12 +754,12 @@ class OqParam(valid.ParamSet):
             parent_datasets = set(util.read(self.hazard_calculation_id))
         else:
             parent_datasets = set()
-        if (self.calculation_mode == 'multi_risk' or
-                'damage' in self.calculation_mode):
+        if 'damage' in self.calculation_mode:
             return any(
                 key.endswith('_fragility') for key in self.inputs
             ) or 'fragility' in parent_datasets
-        elif 'risk' in self.calculation_mode:
+        elif ('risk' in self.calculation_mode and
+              self.calculation_mode != 'multi_risk'):
             return any(
                 key.endswith('_vulnerability') for key in self.inputs
             ) or 'vulnerability' in parent_datasets
