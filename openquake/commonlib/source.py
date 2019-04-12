@@ -141,14 +141,8 @@ class CompositionInfo(object):
 
     @property
     def gsim_rlzs(self):
-        """
-        Build and cache the gsim logic tree realizations
-        """
-        try:
-            return self._gsim_rlzs
-        except AttributeError:
-            self._gsim_rlzs = list(self.gsim_lt)
-            return self._gsim_rlzs
+        # cannot be cached, otherwise the data transfer will kill you
+        return list(self.gsim_lt)
 
     def get_info(self, sm_id):
         """
