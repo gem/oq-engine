@@ -92,17 +92,17 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         losses_by_A = 0
     # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
+    num_events_per_sid = 0
     for sid, haz in hazard.items():
         t0 = time.time()
+        num_events_per_sid += len(haz)
         weights = getter.weights[haz['rlzi'], 0]
         assets_on_sid = assets_by_site[sid]
         assets_by_taxo = general.group_array(assets_on_sid, 'taxonomy')
-        argsort = numpy.argsort(numpy.concatenate([
-            a['ordinal'] for a in assets_by_taxo.values()]))
         eidx = [eid2idx[eid] for eid in haz['eid']]
         haz['eid'] = eidx
         with mon_risk:
-            out = riskmodel.get_output(assets_by_taxo, argsort, haz, epsgetter)
+            out = riskmodel.get_output(assets_by_taxo, haz)
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
@@ -120,6 +120,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                     if param['avg_losses']:
                         losses_by_A[aid, lti] += losses @ weights
             times[sid] = time.time() - t0
+    if hazard:
+        num_events_per_sid /= len(hazard)
     with monitor('building event loss table'):
         elt = numpy.fromiter(
             ((event['eid'], event['rlz'], losses)
@@ -127,7 +129,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
             agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
-    res = {'elt': elt, 'agg_losses': agg, 'times': times}
+    res = {'elt': elt, 'agg_losses': agg, 'times': times,
+           'events_per_sid': num_events_per_sid}
     if param['avg_losses']:
         res['losses_by_A'] = losses_by_A * param['ses_ratio']
     if param['asset_loss_table']:
@@ -215,6 +218,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     first_event)
                 first_event += rgetter.num_events
                 smap.submit(rgetter, self.src_filter, self.param)
+        self.events_per_sid = []
         return smap.reduce(self.agg_dicts, numpy.zeros(self.N))
 
     def agg_dicts(self, acc, dic):
@@ -238,6 +242,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 eidx = numpy.array([self.eid2idx[eid] for eid in eids])
                 idx = numpy.argsort(eidx)
                 self.datastore['asset_loss_table'][:, eidx[idx]] = alt[:, idx]
+        self.events_per_sid.append(dic['events_per_sid'])
         return acc + dic['times']
 
     def get_shape(self, *sizes):
@@ -282,7 +287,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         if len(times):
-            self.datastore.set_attrs('task_info/start_ebrisk', times=times)
+            self.datastore.set_attrs(
+                'task_info/start_ebrisk', times=times,
+                events_per_sid=numpy.mean(self.events_per_sid))
         oq = self.oqparam
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
