@@ -521,18 +521,12 @@ class EpsilonMatrix1(object):
         self.seed = seed
         self.eps = None
 
-    def __getitem__(self, item):
+    def __getitem__(self, aid):
+        # return the same epsilons for all assets
         if self.eps is None:
             numpy.random.seed(self.seed)
             self.eps = numpy.random.normal(size=self.num_events)
-        if isinstance(item, tuple):
-            # item[0] is the asset index, item[1] the event index
-            # the epsilons are equal for all assets since asset_correlation=1
-            return self.eps[item[1]]
-        elif isinstance(item, int):  # item is an asset index
-            return self.eps
-        else:
-            raise TypeError('Invalid item %r' % item)
+        return self.eps
 
     def __len__(self):
         return self.num_assets
