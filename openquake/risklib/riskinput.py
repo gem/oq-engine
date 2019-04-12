@@ -390,7 +390,7 @@ class CompositeRiskModel(collections.Mapping):
             ls = []
             for taxonomy, assets_ in assets_by_taxo.items():
                 if len(eps):
-                    epsilons = [eps[aid] for aid in assets_['ordinal']]
+                    epsilons = [eps[aid][eids] for aid in assets_['ordinal']]
                 else:  # no CoVs
                     epsilons = ()
                 rm = self[taxonomy]
