@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Implemented a flag `modal_damage_state` to display only the most likely
+    damage state in the output `dmg_by_asset` of scenario damage calculations
   * Reduced substantially the memory occupation in classical calculations
     by including the prefiltering phase in the calculation phase
 
