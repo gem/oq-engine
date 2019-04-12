@@ -102,7 +102,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         eidx = [eid2idx[eid] for eid in haz['eid']]
         haz['eid'] = eidx
         with mon_risk:
-            out = riskmodel.get_output(assets_by_taxo, haz)
+            out = riskmodel.get_output(assets_by_taxo, haz, ())
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
