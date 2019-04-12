@@ -726,20 +726,6 @@ def build_damage_array(data, damage_dt):
     return dmg
 
 
-def most_likely_damage(data, loss_types):
-    """
-    :param data: an array of shape (A, L, 1|2, D)
-    :param loss_types: a list of loss_types
-    :returns: an array of length A and dtype loss_type->uint8
-    """
-    A, L, MS, D = data.shape
-    mld = numpy.zeros(A, [(lt, numpy.uint8) for lt in loss_types])
-    for a in range(A):
-        for l, loss_type in enumerate(loss_types):
-            mld[a][loss_type] = data[a, l, 0].argmax()
-    return mld
-
-
 @extract.add('dmg_by_asset')
 def extract_dmg_by_asset_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
@@ -750,18 +736,6 @@ def extract_dmg_by_asset_npz(dstore, what):
         dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
             assets, dmg_by_asset)
-
-
-@extract.add('mld_by_asset')
-def extract_mld_by_asset(dstore, what):
-    loss_types = dstore['oqparam'].loss_dt().names
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    data = dstore['dmg_by_asset']
-    assets = util.get_assets(dstore)
-    for rlz in rlzs:
-        mld_by_asset = most_likely_damage(data[:, rlz.ordinal], loss_types)
-        yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, mld_by_asset)
 
 
 @extract.add('event_based_mfd')
