@@ -20,7 +20,6 @@ import collections
 import logging
 import numpy
 
-from openquake.baselib.python3compat import encode
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array,  deprecated
 from openquake.hazardlib import nrml
@@ -42,11 +41,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
-
-
-def add_quotes(values):
-    # used to escape tags in CSV files
-    return numpy.array([encode('"%s"' % val) for val in values], (bytes, 100))
 
 
 def get_rup_data(ebruptures):
@@ -95,7 +89,7 @@ def export_agg_curve_rlzs(ekey, dstore):
 def _get_data(dstore, dskey, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
-        weights = dstore['weights'][dstore['weights'].dtype.names[0]]
+        weights = dstore['weights'][:, 0]
         tags, stats = zip(*stats)
         if dskey in set(dstore):  # precomputed
             value = dstore[dskey].value  # shape (A, S, LI)
@@ -239,6 +233,17 @@ def export_losses_by_event(ekey, dstore):
         dtlist = [('eid', U64)] + oq.loss_dt_list()
         arr = dstore['losses_by_event'].value[['eid', 'loss']]
         writer.save(arr.copy().view(dtlist), dest)
+    elif oq.calculation_mode == 'ebrisk':
+        tagcol = dstore['assetcol/tagcol']
+        lbe = dstore['losses_by_event'].value
+        lbe.sort(order='eid')
+        dic = dict(tagnames=['event_id', 'loss_type'] + oq.aggregate_by)
+        for tagname in oq.aggregate_by:
+            dic[tagname] = getattr(tagcol, tagname)
+        dic['event_id'] = ['?'] + list(lbe['eid'])
+        dic['loss_type'] = ('?',) + oq.loss_dt().names
+        aw = hdf5.ArrayWrapper(lbe['loss'], dic)  # shape (E, L, T...)
+        writer.save(aw.to_table(), dest)
     else:
         dtlist = [('event_id', U64), ('rup_id', U32), ('year', U32)] + \
                  oq.loss_dt_list()
@@ -432,16 +437,32 @@ def export_damages_csv(ekey, dstore):
     return writer.getsaved()
 
 
+def modal_damage_array(data, damage_dt):
+    # determine the damage state with the highest probability
+    A, L, MS, D = data.shape
+    dmgstate = damage_dt['structural'].names
+    arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
+                          for lt in damage_dt.names])
+    for l, loss_type in enumerate(damage_dt.names):
+        arr['modal-ds-' + loss_type] = [dmgstate[data[a, l, 0].argmax()]
+                                        for a in range(A)]
+    return arr
+
+
 @export.add(('dmg_by_asset', 'csv'))
 def export_dmg_by_asset_csv(ekey, dstore):
     E = len(dstore['events'])
+    oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore, mean_std=E > 1)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     for rlz in rlzs:
-        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        if oq.modal_damage_state:
+            dmg_by_asset = modal_damage_array(data[:, rlz.ordinal], damage_dt)
+        else:
+            dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
     return writer.getsaved()
@@ -631,5 +652,43 @@ def export_asset_risk_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    writer.save(extract(dstore, 'asset_risk'), fname)
+    md = extract(dstore, 'exposure_metadata')
+    tostr = {'taxonomy': md.taxonomy}
+    for tagname in md.tagnames:
+        tostr[tagname] = getattr(md, tagname)
+    arr = extract(dstore, 'asset_risk').array
+    arefs = dstore['assetcol/asset_refs'].value
+    rows = []
+    lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
+    perilnames = sorted(name for name in arr.dtype.names
+                        if name.upper() == name)
+    expnames = [name for name in arr.dtype.names if name not in md.tagnames
+                and 'loss' not in name and name not in perilnames]
+    colnames = (['asset_ref'] + expnames + sorted(md.tagnames) + perilnames +
+                lossnames)
+    # sanity check
+    assert len(colnames) == len(arr.dtype.names) + 1
+    for aref, rec in zip(arefs, arr):
+        row = [aref]
+        for name in colnames[1:]:
+            value = rec[name]
+            try:
+                row.append('"%s"' % tostr[name][value])
+            except KeyError:
+                row.append(value)
+        rows.append(row)
+    writer.save(rows, fname, colnames)
+    return [fname]
+
+
+@export.add(('agg_risk', 'csv'))
+def export_agg_risk_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
+    fname = dstore.export_path(path)
+    writer.save(dstore['agg_risk'].value, fname)
     return [fname]

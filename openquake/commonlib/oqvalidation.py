@@ -111,6 +111,7 @@ class OqParam(valid.ParamSet):
     std_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
+    modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -754,12 +755,12 @@ class OqParam(valid.ParamSet):
             parent_datasets = set(util.read(self.hazard_calculation_id))
         else:
             parent_datasets = set()
-        if (self.calculation_mode == 'multi_risk' or
-                'damage' in self.calculation_mode):
+        if 'damage' in self.calculation_mode:
             return any(
                 key.endswith('_fragility') for key in self.inputs
             ) or 'fragility' in parent_datasets
-        elif 'risk' in self.calculation_mode:
+        elif ('risk' in self.calculation_mode and
+              self.calculation_mode != 'multi_risk'):
             return any(
                 key.endswith('_vulnerability') for key in self.inputs
             ) or 'vulnerability' in parent_datasets

@@ -4,8 +4,24 @@
   * Adds kwargs to check_gsim function
   
   [Michele Simionato]
+  * Avoided to transfer the epsilons by storing them in the cache file
+  * Reduced the data transfer in the computation of the hazard curves, causing
+    in some time huge speedups (over 100x)
+  * Implemented a flag `modal_damage_state` to display only the most likely
+    damage state in the output `dmg_by_asset` of scenario damage calculations
+  * Reduced substantially the memory occupation in classical calculations
+    by including the prefiltering phase in the calculation phase
+
+  [Daniele Viganò]
+  * Added a 'max_concurrent_jobs' setting to the openquake.cfg
+    which limits the maximum number of jobs that can be run in parallel
+
+  [Michele Simionato]
+  * Fixed two exporters for the ebrisk calculator (agg_curves-stats and
+    losses_by_event)
   * Fixed two subtle bugs when reading site_model.csv files
   * Added /extract/exposure_metadata and /extract/asset_risk
+  * Introduced an experimental multi_risk calculator for volcanic risk
 
   [Guillaume Daniel]
   * Updating of Berge-Thierry (2003) GSIM and addition of several alternatives
