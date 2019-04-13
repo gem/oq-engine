@@ -179,7 +179,7 @@ class EbrCalculator(base.RiskCalculator):
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.riskinputs = self.build_riskinputs('gmf')
-        self.param['epspath'] = riskinput.store_epsilons(
+        self.param['epspath'] = riskinput.cache_epsilons(
             self.datastore, oq, self.assetcol, self.riskmodel, self.E)
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio

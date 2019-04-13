@@ -104,7 +104,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             _event_slice, oq.number_of_ground_motion_fields)
         E = oq.number_of_ground_motion_fields * self.R
         self.riskinputs = self.build_riskinputs('gmf')
-        self.param['epspath'] = riskinput.store_epsilons(
+        self.param['epspath'] = riskinput.cache_epsilons(
             self.datastore, oq, self.assetcol, self.riskmodel, E)
         self.param['E'] = E
         # assuming the weights are the same for all IMTs
