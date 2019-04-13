@@ -117,6 +117,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)
 
+    def test_case_12(self):
+        # 1 assets, 2 samples
+        self.run_calc(case_master.__file__, 'job12.ini', exports='csv')
+        # alt = extract(self.calc.datastore, 'asset_loss_table')
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_loss_12.csv', fname)
+
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
