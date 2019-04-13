@@ -85,7 +85,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super().pre_execute()
         F = self.oqparam.number_of_ground_motion_fields
         self.param['number_of_ground_motion_fields'] = F
-        self.riskinputs = self.build_riskinputs('gmf', num_events=F)
+        self.riskinputs = self.build_riskinputs('gmf')
         self.param['tags'] = list(self.assetcol.tagcol)
 
     def post_execute(self, result):

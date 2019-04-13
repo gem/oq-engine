@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import functools
 import numpy
 
@@ -62,7 +61,7 @@ def scenario_risk(riskinputs, riskmodel, param, monitor):
     result = dict(agg=numpy.zeros((E, L), F32), avg=[],
                   all_losses=AccumDict(accum={}))
     for ri in riskinputs:
-        for out in riskmodel.gen_outputs(ri, monitor):
+        for out in riskmodel.gen_outputs(ri, monitor, param['epspath']):
             r = out.rlzi
             weight = param['weights'][r]
             slc = param['event_slice'](r)
@@ -101,26 +100,18 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         super().pre_execute()
         self.assetcol = self.datastore['assetcol']
-        A = len(self.assetcol)
-        R = self.R
         self.event_slice = functools.partial(
             _event_slice, oq.number_of_ground_motion_fields)
         E = oq.number_of_ground_motion_fields * self.R
-        if oq.ignore_covs or not self.riskmodel.covs:
-            # all zeros; the data transfer is not so big in scenario
-            eps = numpy.zeros((A, E), numpy.float32)
-        else:
-            logging.info('Building the epsilons')
-            eps = riskinput.make_eps(
-                self.assetcol.array, E, oq.master_seed, oq.asset_correlation)
-
-        self.riskinputs = self.build_riskinputs('gmf', eps, E)
+        self.riskinputs = self.build_riskinputs('gmf')
+        self.param['epspath'] = riskinput.cache_epsilons(
+            self.datastore, oq, self.assetcol, self.riskmodel, E)
         self.param['E'] = E
         # assuming the weights are the same for all IMTs
         try:
             self.param['weights'] = self.datastore['weights'][:, 0]
         except KeyError:
-            self.param['weights'] = [1 / R for _ in range(R)]
+            self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.param['event_slice'] = self.event_slice
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
 
