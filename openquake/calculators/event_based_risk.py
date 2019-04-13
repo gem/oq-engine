@@ -185,6 +185,8 @@ class EbrCalculator(base.RiskCalculator):
         else:
             eps = riskinput.EpsilonMatrix0(
                 self.A, oq.master_seed + numpy.arange(self.E))
+        if len(eps):
+            self.datastore['epsilon_matrix'] = eps
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
