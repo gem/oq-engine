@@ -489,53 +489,6 @@ class RiskInput(object):
             ' '.join(map(str, self.taxonomies)), len(self.aids))
 
 
-class EpsilonMatrix0(object):
-    """
-    Mock-up for a matrix of epsilons of size A x E,
-    used when asset_correlation=0.
-
-    :param num_assets: A assets
-    :param seeds: E seeds, set before calling numpy.random.normal
-    """
-    def __init__(self, num_assets, seeds):
-        self.num_assets = num_assets
-        self.seeds = seeds
-        self.eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
-        for i, seed in enumerate(self.seeds):
-            numpy.random.seed(seed)
-            self.eps[:, i] = numpy.random.normal(size=self.num_assets)
-
-    def __getitem__(self, aid):
-        return self.eps[aid]
-
-    def __len__(self):
-        return self.num_assets
-
-
-class EpsilonMatrix1(object):
-    """
-    Mock-up for a matrix of epsilons of size A x E,
-    used when asset_correlation=1.
-
-    :param num_assets: number of assets
-    :param num_events: number of events
-    :param seed: seed used to generate E epsilons
-    """
-    def __init__(self, num_assets, num_events, seed):
-        self.num_assets = num_assets
-        self.num_events = num_events
-        self.seed = seed
-        numpy.random.seed(seed)
-        self.eps = numpy.random.normal(size=self.num_events)
-
-    def __getitem__(self, aid):
-        # return the same epsilons for all assets
-        return self.eps
-
-    def __len__(self):
-        return self.num_assets
-
-
 # used in scenario_risk
 def make_eps(asset_array, num_samples, seed, correlation):
     """
@@ -570,9 +523,14 @@ def store_epsilons(dstore, oq, assetcol, riskmodel, E):
         eps = make_eps(assetcol.array, E, oq.master_seed, oq.asset_correlation)
     else:  # event based
         if oq.asset_correlation:
-            eps = EpsilonMatrix1(A, E, oq.master_seed)
+            numpy.random.seed(oq.master_seed)
+            eps = numpy.array([numpy.random.normal(size=E)] * A)
         else:
-            eps = EpsilonMatrix0(A, oq.master_seed + numpy.arange(E))
+            seeds = oq.master_seed + numpy.arange(E)
+            eps = numpy.zeros((A, E), F32)
+            for i, seed in enumerate(seeds):
+                numpy.random.seed(seed)
+                eps[:, i] = numpy.random.normal(size=A)
     with hdf5.File(hdf5path) as cache:
         cache['epsilon_matrix'] = eps
     return hdf5path
