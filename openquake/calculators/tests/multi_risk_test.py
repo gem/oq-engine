@@ -15,12 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import unittest
 import numpy
 from openquake.qa_tests_data.multi_risk import case_1
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 
+ae = numpy.testing.assert_equal
 aae = numpy.testing.assert_almost_equal
 
 
@@ -29,38 +30,50 @@ class MultiRiskTestCase(CalculatorTestCase):
     def test_case_1(self):
         # case with volcanic multiperil ASH, LAVA, LAHAR, PYRO
         self.run_calc(case_1.__file__, 'job.ini')
-        raise unittest.SkipTest
-        [fname] = export(('dmg_by_asset', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/dmg_by_asset.csv', fname)
-        fnames = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)  # gmfs and sites, no sigma_epsilon
 
-        [fname] = export(('losses_by_asset', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+        [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/asset_risk.csv', fname)
+        [fname] = export(('agg_risk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_risk.csv', fname)
 
-        w = 'asset_risk?tag=name_1&tag=name_2'
-        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/lahars_by_name_12.csv', fname)
+        # check extract
+        md = extract(self.calc.datastore, 'exposure_metadata')
+        ae(md.array, ['number', 'occupants_night', 'value-structural'])
+        ae(md.multi_risk, ['building-LAHAR',
+                           'building-LAVA',
+                           'building-PYRO',
+                           'collapse-structural-ASH_DRY',
+                           'collapse-structural-ASH_WET',
+                           'loss-structural-ASH_DRY',
+                           'loss-structural-ASH_WET',
+                           'no_damage-structural-ASH_DRY',
+                           'no_damage-structural-ASH_WET',
+                           'occupants_night-LAHAR',
+                           'occupants_night-LAVA',
+                           'occupants_night-PYRO',
+                           'structural-LAHAR',
+                           'structural-LAVA',
+                           'structural-PYRO'])
 
-        w = 'asset_risk?kind=rlz-3&tag=name_1&tag=name_2'
-        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/pyro_by_name_12.csv', fname)
+    def test_case_2(self):
+        # case with two damage states
+        self.run_calc(case_1.__file__, 'job_2.ini')
 
-    def test_case_1_bis(self):
-        # case with volcanic lava
-        self.run_calc(case_1.__file__, 'job.ini',
-                      multi_risk_csv="{'LAVA': 'lava_flow.csv'}")
-        raise unittest.SkipTest
-        w = 'asset_risk?tag=name_1&tag=name_2'
-        [fname] = export(('aggregate_by/' + w, 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/lava_by_name_12.csv', fname)
+        [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/asset_risk_2.csv', fname)
 
-        # check invalid key structura_fragility_file
+        # check extract
+        md = extract(self.calc.datastore, 'exposure_metadata')
+        ae(md.array, ['number', 'occupants_night', 'value-structural'])
+        ae(md.multi_risk, ['building-LAHAR', 'occupants_night-LAHAR',
+                           'structural-LAHAR'])
+
+        # check invalid key structural_fragility_file
         with self.assertRaises(ValueError):
             self.run_calc(case_1.__file__, 'job.ini',
                           structura_fragility_file='fragility_model.xml')
 
-        # check invalid key structura_consequence_file
+        # check invalid key structural_consequence_file
         with self.assertRaises(ValueError):
             self.run_calc(case_1.__file__, 'job.ini',
                           structura_consequence_file='consequence_model.xml')

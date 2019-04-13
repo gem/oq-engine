@@ -50,12 +50,13 @@ def check_outdated(db):
 def reset_is_running(db):
     """
     Reset the flag job.is_running to False. This is called when the
-    Web UI is re-started: the idea is that it is restarted only when
+    DbServer is restarted: the idea is that it is restarted only when
     all computations are completed.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    db('UPDATE job SET is_running=0 WHERE is_running=1')
+    db("UPDATE job SET is_running=0, status='failed'"
+       "WHERE is_running=1 OR status='executing'")
 
 
 def set_status(db, job_id, status):
@@ -68,7 +69,7 @@ def set_status(db, job_id, status):
     :param status: status string
     """
     assert status in (
-        'created', 'executing', 'complete', 'aborted', 'failed'
+        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
     ), status
     if status in ('created', 'complete', 'failed', 'aborted'):
         is_running = 0

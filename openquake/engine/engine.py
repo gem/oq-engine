@@ -30,6 +30,7 @@ import getpass
 import logging
 import traceback
 import platform
+import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -52,6 +53,9 @@ OQ_DISTRIBUTE = parallel.oq_distribute()
 MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
+
+GET_JOBS_BY_STATUS = '''--- running jobs with a PID
+SELECT * FROM job WHERE status=?x AND is_running=1 AND pid > 0 ORDER BY id'''
 
 if OQ_DISTRIBUTE == 'zmq':
 
@@ -126,7 +130,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     rlzs = dstore['csm_info'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
-    if 'scenario' not in calcmode:  # export sourcegroups.csv
+    if len(dstore['csm_info/sg_data']) > 1:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
@@ -261,6 +265,33 @@ def job_from_file(job_ini, job_id, username, **kw):
     return oq
 
 
+def poll_queue(job_id, pid, poll_time):
+    """
+    Check the queue of executing/submitted jobs and exit when there is
+    a free slot.
+    """
+    max_concurrent_jobs = int(config.distribution.max_concurrent_jobs)
+    if max_concurrent_jobs > 0:
+        first_time = True
+        while True:
+            jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'executing')
+            executing = [j.id for j in jobs if psutil.pid_exists(j.pid)]
+            jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'submitted')
+            submitted = [j.id for j in jobs if psutil.pid_exists(j.pid)]
+            submitted_before = submitted and min(submitted) < job_id
+            if len(executing) >= max_concurrent_jobs or submitted_before:
+                if first_time:
+                    logs.LOG.warn('Waiting for jobs %s',
+                                  sorted(executing + submitted))
+                    logs.dbcmd('update_job', job_id,
+                               {'status': 'submitted', 'pid': pid})
+                    first_time = False
+                time.sleep(poll_time)
+            else:
+                break
+    logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
+
+
 def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     Run a calculation.
@@ -302,8 +333,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
             del data  # save memory
 
-        logs.dbcmd('update_job', job_id, {'status': 'executing',
-                                          'pid': _PID})
+        poll_queue(job_id, _PID, poll_time=15)
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id,
