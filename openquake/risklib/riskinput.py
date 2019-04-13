@@ -123,6 +123,27 @@ def read_composite_risk_model(dstore):
         oqparam, tmap, fragdict, vulndict, consdict, retrodict)
 
 
+def get_assets_by_taxo(assets, epspath=None):
+    """
+    :param assets: an array of assets
+    :param epspath: hdf5 file where the epsilons are (or None)
+    :returns: assets_by_taxo with attributes eps and idxs
+    """
+    assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
+    assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
+        a['ordinal'] for a in assets_by_taxo.values()]))
+    assets_by_taxo.eps = {}
+    if epspath is None:  # no epsilons
+        return assets_by_taxo
+    # otherwise read the epsilons and group them by taxonomy
+    with hdf5.File(epspath, 'r') as h5:
+        dset = h5['epsilon_matrix']
+        for taxo, assets in assets_by_taxo.items():
+            lst = [dset[aid] for aid in assets['ordinal']]
+            assets_by_taxo.eps[taxo] = numpy.array(lst)
+    return assets_by_taxo
+
+
 class CompositeRiskModel(collections.Mapping):
     """
     A container taxonomy -> riskmodel
@@ -329,7 +350,7 @@ class CompositeRiskModel(collections.Mapping):
                         out[asset['ordinal'], l, 0, D] = csq
         return out
 
-    def gen_outputs(self, riskinput, monitor, hazard=None):
+    def gen_outputs(self, riskinput, monitor, epspath=None, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
@@ -345,25 +366,22 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
         assert len(sids) == 1
-        assets_by_taxo = group_array(riskinput.assets, 'taxonomy')
         with monitor('computing risk', measuremem=False):
             # this approach is slow for event_based_risk since a lot of
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
+            assets_by_taxo = get_assets_by_taxo(riskinput.assets, epspath)
             for rlzi, haz in sorted(hazard[sids[0]].items()):
-                out = self.get_output(assets_by_taxo, haz, riskinput.eps, rlzi)
+                out = self.get_output(assets_by_taxo, haz, rlzi)
                 yield out
 
-    def get_output(self, assets_by_taxo, haz, eps, rlzi=None):
+    def get_output(self, assets_by_taxo, haz, rlzi=None):
         """
         :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
         :param haz: an array or a dictionary of hazard on that site
-        :param eps: a dictionary aid -> epsilons (possibly empty)
         :param rlzi: if given, a realization index
         """
-        idxs = numpy.argsort(numpy.concatenate([
-            a['ordinal'] for a in assets_by_taxo.values()]))
         if isinstance(haz, numpy.ndarray):
             # NB: in GMF-based calculations the order in which
             # the gmfs are stored is random since it depends on
@@ -389,8 +407,8 @@ class CompositeRiskModel(collections.Mapping):
         for l, lt in enumerate(self.loss_types):
             ls = []
             for taxonomy, assets_ in assets_by_taxo.items():
-                if len(eps):
-                    epsilons = [eps[aid][eids] for aid in assets_['ordinal']]
+                if len(assets_by_taxo.eps):
+                    epsilons = assets_by_taxo.eps[taxonomy][:, eids]
                 else:  # no CoVs
                     epsilons = ()
                 rm = self[taxonomy]
@@ -402,7 +420,7 @@ class CompositeRiskModel(collections.Mapping):
                     dat = data[rm.imti[lt]]
                 ls.append(rm(lt, assets_, dat, eids, epsilons))
             arr = numpy.concatenate(ls)
-            dic[lt] = arr[idxs] if len(arr) else arr
+            dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
         return hdf5.ArrayWrapper((), dic)
 
     def reduce(self, taxonomies):
@@ -446,13 +464,10 @@ class RiskInput(object):
         a callable returning the hazard data for a given realization
     :param assets_by_site:
         array of assets, one per site
-    :param eps_dict:
-        dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets, eps_dict=None):
+    def __init__(self, hazard_getter, assets):
         self.hazard_getter = hazard_getter
         self.assets = assets
-        self.eps = eps_dict or {}
         self.weight = len(assets)
         taxonomies_set = set()
         aids = []
@@ -540,6 +555,27 @@ def make_eps(asset_array, num_samples, seed, correlation):
         for asset, epsrow in zip(assets, epsilons):
             eps[asset['ordinal']] = epsrow
     return eps
+
+
+def store_epsilons(dstore, oq, assetcol, riskmodel, E):
+    """
+    :returns: the epspath or None if no epsilons were stored
+    """
+    if oq.ignore_covs or not riskmodel.covs:
+        return
+    A = len(assetcol)
+    hdf5path = dstore.hdf5cache()
+    logging.info('Storing the epsilon matrix in %s', hdf5path)
+    if oq.calculation_mode == 'scenario_risk':
+        eps = make_eps(assetcol.array, E, oq.master_seed, oq.asset_correlation)
+    else:  # event based
+        if oq.asset_correlation:
+            eps = EpsilonMatrix1(A, E, oq.master_seed)
+        else:
+            eps = EpsilonMatrix0(A, oq.master_seed + numpy.arange(E))
+    with hdf5.File(hdf5path) as cache:
+        cache['epsilon_matrix'] = eps
+    return hdf5path
 
 
 def str2rsi(key):
