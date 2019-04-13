@@ -76,8 +76,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
+    e1 = rupgetter.first_event
+    e2 = e1 + rupgetter.num_events
     events = rupgetter.get_eid_rlz()
-    eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
+    eid2idx = {eid: idx for idx, eid in zip(range(e1, e2), events['eid'])}
     E = len(eid2idx)
     tagnames = param['aggregate_by']
     shape = assetcol.tagcol.agg_shape((len(events), L), tagnames)
@@ -92,15 +94,15 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
     num_events_per_sid = 0
-    epspath = None  # param['epspath']
+    epspath = param['epspath']
     for sid, haz in hazard.items():
         t0 = time.time()
         num_events_per_sid += len(haz)
         weights = getter.weights[haz['rlzi'], 0]
         assets_on_sid = assets_by_site[sid]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
-        eidx = [eid2idx[eid] for eid in haz['eid']]
-        haz['eid'] = eidx
+        eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
+        haz['eid'] = eidx + e1
         with mon_risk:
             out = riskmodel.get_output(assets_by_taxo, haz)
         with mon_agg:
