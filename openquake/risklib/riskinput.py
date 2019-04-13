@@ -512,7 +512,9 @@ def make_eps(asset_array, num_samples, seed, correlation):
 
 def cache_epsilons(dstore, oq, assetcol, riskmodel, E):
     """
-    :returns: the epspath or None if no epsilons were stored
+    Do nothing if there are no coefficients of variation of ignore_covs is
+    set. Otherwise, generate an epsilon matrix of shape (A, E) and save it
+    in the cache file, by returning the path to it.
     """
     if oq.ignore_covs or not riskmodel.covs:
         return
