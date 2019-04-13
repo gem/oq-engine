@@ -139,11 +139,6 @@ class CompositionInfo(object):
                     self.seed_samples_by_grp[grp.id] = seed, sm.samples
                 seed += sm.samples
 
-    @property
-    def gsim_rlzs(self):
-        # cannot be cached, otherwise the data transfer will kill you
-        return list(self.gsim_lt)
-
     def get_info(self, sm_id):
         """
         Extract a CompositionInfo instance containing the single
