@@ -23,7 +23,7 @@ from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib.scientific import losses_by_period
-from openquake.risklib.riskinput import EpsilonMatrix0, EpsilonMatrix1
+from openquake.risklib.riskinput import get_assets_by_taxo, store_epsilons
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -65,9 +65,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     E = rupgetter.num_events
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
+    dstore = datastore.read(srcfilter.filename)
     with monitor('getting assets', measuremem=False):
-        with datastore.read(srcfilter.filename) as dstore:
-            assetcol = dstore['assetcol']
+        assetcol = dstore['assetcol']
         assets_by_site = assetcol.assets_by_site()
     A = len(assetcol)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
@@ -92,16 +92,17 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
     num_events_per_sid = 0
+    epspath = None  # param['epspath']
     for sid, haz in hazard.items():
         t0 = time.time()
         num_events_per_sid += len(haz)
         weights = getter.weights[haz['rlzi'], 0]
         assets_on_sid = assets_by_site[sid]
-        assets_by_taxo = general.group_array(assets_on_sid, 'taxonomy')
+        assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = [eid2idx[eid] for eid in haz['eid']]
         haz['eid'] = eidx
         with mon_risk:
-            out = riskmodel.get_output(assets_by_taxo, haz, eps=())
+            out = riskmodel.get_output(assets_by_taxo, haz)
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
@@ -178,7 +179,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         self.set_param(
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
+            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
+            epspath=store_epsilons(
+                self.datastore, oq, self.assetcol, self.riskmodel, self.E))
         parent = self.datastore.parent
         if parent and 'losses_by_event' in parent:
             # just regenerate the loss curves
@@ -202,16 +205,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
-        A = len(self.assetcol)
         first_event = 0
-        if oq.ignore_covs or not self.riskmodel.covs:
-            eps = ()
-        elif oq.asset_correlation:
-            eps = EpsilonMatrix1(A, self.E, oq.master_seed)
-        else:
-            eps = EpsilonMatrix0(A, oq.master_seed + numpy.arange(self.E))
-        if len(eps):
-            self.datastore['epsilon_matrix'] = eps
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             for indices in general.block_splitter(
@@ -220,11 +214,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     first_event)
-                if len(eps):
-                    rgetter.eps = eps[
-                        :, first_event:first_event + rgetter.num_events]
-                else:
-                    rgetter.eps = ()
                 first_event += rgetter.num_events
                 smap.submit(rgetter, self.src_filter, self.param)
         self.events_per_sid = []

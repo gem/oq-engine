@@ -461,8 +461,13 @@ class Scenario(RiskModel):
         vf = self.vulnerability_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
-        for i, eps in enumerate(epsilons):
-            loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
+        if len(epsilons):
+            for a, eps in enumerate(epsilons):
+                loss_ratio_matrix[a, idxs] = vf.sample(means, covs, idxs, eps)
+        else:
+            ratios = vf.sample(means, covs, idxs, numpy.zeros(len(means), F32))
+            for a in range(len(assets)):
+                loss_ratio_matrix[a, idxs] = ratios
         loss_matrix[:, :] = (loss_ratio_matrix.T * values).T
         return loss_matrix
 
