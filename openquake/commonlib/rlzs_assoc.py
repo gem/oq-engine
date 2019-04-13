@@ -280,7 +280,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
             gsim_rlzs = list(gsim_lt)
             all_trts = list(gsim_lt.values)
         else:
-            gsim_rlzs = cinfo.gsim_rlzs
+            gsim_rlzs = list(cinfo.gsim_lt)
             all_trts = list(cinfo.gsim_lt.values)
 
         rlzs = cinfo._get_rlzs(smodel, gsim_rlzs, cinfo.seed + offset)
