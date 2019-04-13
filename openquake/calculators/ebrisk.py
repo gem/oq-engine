@@ -65,9 +65,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     E = rupgetter.num_events
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
-    dstore = datastore.read(srcfilter.filename)
     with monitor('getting assets', measuremem=False):
-        assetcol = dstore['assetcol']
+        with datastore.read(srcfilter.filename) as dstore:
+            assetcol = dstore['assetcol']
         assets_by_site = assetcol.assets_by_site()
     A = len(assetcol)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
