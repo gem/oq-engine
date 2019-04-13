@@ -139,17 +139,6 @@ class CompositionInfo(object):
                     self.seed_samples_by_grp[grp.id] = seed, sm.samples
                 seed += sm.samples
 
-    @property
-    def gsim_rlzs(self):
-        """
-        Build and cache the gsim logic tree realizations
-        """
-        try:
-            return self._gsim_rlzs
-        except AttributeError:
-            self._gsim_rlzs = list(self.gsim_lt)
-            return self._gsim_rlzs
-
     def get_info(self, sm_id):
         """
         Extract a CompositionInfo instance containing the single
