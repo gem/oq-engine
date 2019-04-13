@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Avoided to transfer the epsilons by storing them in the cache file
   * Reduced the data transfer in the computation of the hazard curves, causing
     in some time huge speedups (over 100x)
   * Implemented a flag `modal_damage_state` to display only the most likely
