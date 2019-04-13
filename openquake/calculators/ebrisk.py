@@ -210,6 +210,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             eps = EpsilonMatrix1(A, self.E, oq.master_seed)
         else:
             eps = EpsilonMatrix0(A, oq.master_seed + numpy.arange(self.E))
+        if len(eps):
+            self.datastore['epsilon_matrix'] = eps
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             for indices in general.block_splitter(
