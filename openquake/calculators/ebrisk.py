@@ -23,7 +23,7 @@ from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib.scientific import losses_by_period
-from openquake.risklib.riskinput import get_assets_by_taxo, store_epsilons
+from openquake.risklib.riskinput import get_assets_by_taxo, cache_epsilons
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -180,7 +180,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.set_param(
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
             maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
-            epspath=store_epsilons(
+            epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.riskmodel, self.E))
         parent = self.datastore.parent
         if parent and 'losses_by_event' in parent:
