@@ -510,7 +510,7 @@ def make_eps(asset_array, num_samples, seed, correlation):
     return eps
 
 
-def store_epsilons(dstore, oq, assetcol, riskmodel, E):
+def cache_epsilons(dstore, oq, assetcol, riskmodel, E):
     """
     :returns: the epspath or None if no epsilons were stored
     """
