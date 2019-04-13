@@ -159,7 +159,7 @@ class EngineServerTestCase(unittest.TestCase):
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['taxonomy']), 7)
 
-        # check tag collection
+        # check exposure_metadata
         resp = self.c.get(extract_url + 'exposure_metadata')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
@@ -213,7 +213,7 @@ class EngineServerTestCase(unittest.TestCase):
         # fullreport, input, hcurves, hmaps, realizations, sourcegroups
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
-        self.assertGreaterEqual(len(results), 6)
+        self.assertGreaterEqual(len(results), 5)
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
