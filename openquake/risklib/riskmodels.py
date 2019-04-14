@@ -354,6 +354,7 @@ class ProbabilisticEventBased(RiskModel):
             for a, asset in enumerate(assets):
                 loss_ratios[a, idxs] = vf.sample(
                     means, covs, idxs, epsilons[a])
+                #debug('%s %s %s', loss_ratios[a, idxs], eids, epsilons[a])
         return loss_ratios
 
 
