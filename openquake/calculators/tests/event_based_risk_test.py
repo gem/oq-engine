@@ -297,7 +297,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check asset_loss_table
         tot = self.calc.datastore['asset_loss_table'].value.sum()
-        self.assertEqual(tot, 15743430.0)
+        self.assertEqual(tot, 16047610.0)
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname, delta=1E-5)
