@@ -291,14 +291,10 @@ class EventBasedCalculator(base.HazardCalculator):
             for er in eid_rlz:
                 events[i] = er
                 i += 1
-        events.sort(order=['rlz', 'eid'])  # fast too
+        events.sort(order='eid')  # fast too
         n_unique_events = len(numpy.unique(events['eid']))
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
-        indices = numpy.zeros((self.R, 2), U32)
-        for r, [startstop] in get_indices(events['rlz']).items():
-            indices[r] = startstop
-        self.datastore.set_attrs('events', indices=indices)
 
     def check_overflow(self):
         """
