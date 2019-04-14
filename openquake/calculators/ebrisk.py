@@ -65,6 +65,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     E = rupgetter.num_events
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
+    e1 = rupgetter.first_event
     with monitor('getting assets', measuremem=False):
         with datastore.read(srcfilter.filename) as dstore:
             assetcol = dstore['assetcol']
@@ -76,13 +77,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    e1 = rupgetter.first_event
-    e2 = e1 + rupgetter.num_events
-    events = rupgetter.get_eid_rlz()
-    eid2idx = {eid: idx for idx, eid in zip(range(e1, e2), events['eid'])}
-    E = len(eid2idx)
+    eid2idx = dict(zip(rupgetter.events['eid'], range(e1, e1 + E)))
     tagnames = param['aggregate_by']
-    shape = assetcol.tagcol.agg_shape((len(events), L), tagnames)
+    shape = assetcol.tagcol.agg_shape((E, L), tagnames)
     elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     if param['asset_loss_table']:
         alt = numpy.zeros((A, E, L), F32)
@@ -127,7 +124,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     with monitor('building event loss table'):
         elt = numpy.fromiter(
             ((event['eid'], event['rlz'], losses)
-             for event, losses in zip(events, acc) if losses.sum()), elt_dt)
+             for event, losses in zip(rupgetter.events, acc)
+             if losses.sum()), elt_dt)
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
             agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
@@ -136,7 +134,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     if param['avg_losses']:
         res['losses_by_A'] = losses_by_A * param['ses_ratio']
     if param['asset_loss_table']:
-        res['alt_eids'] = alt, events['eid']
+        res['alt_eids'] = alt, rupgetter.events['eid']
     return res
 
 
@@ -216,6 +214,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     first_event)
+                rgetter.events = self.datastore['events'][
+                    first_event:first_event + rgetter.num_events]
                 first_event += rgetter.num_events
                 smap.submit(rgetter, self.src_filter, self.param)
         self.events_per_sid = []
