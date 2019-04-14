@@ -252,8 +252,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # ------------------------- ebrisk calculator ---------------------- #
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
-                      aggregate_by='taxonomy',
-                      insured_losses='false')
+                      aggregate_by='taxonomy')
 
         # agg_losses-rlzs has shape (L=5, R=9)
         # agg_losses-stats has shape (L=5, S=4)
@@ -267,7 +266,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggmaps.csv', fname)
 
         fname = export(('avg_losses', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/avg_losses-mean.csv',
+                              fname, delta=1E-5)
 
         fname = export(('losses_by_event', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/elt.csv', fname)
