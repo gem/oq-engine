@@ -452,6 +452,7 @@ hazard_uhs-std.csv
             numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
 
     def test_case_30_sampling(self):
+        # IMT-dependent weights with sampling are not implemented
         with self.assertRaises(NotImplementedError):
             self.assert_curves_ok(
                 ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
