@@ -1355,6 +1355,10 @@ def get_input_files(oqparam, hazard=False):
         elif isinstance(fname, dict):
             fnames.extend(fname.values())
         elif isinstance(fname, list):
+            for f in fname:
+                if f == oqparam.input_dir:
+                    raise InvalidFile('%s there is an empty path in %s' %
+                                      (oqparam.inputs['job_ini'], key))
             fnames.extend(fname)
         elif key == 'source_model_logic_tree':
             for smpaths in logictree.collect_info(fname).smpaths.values():
