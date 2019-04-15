@@ -124,6 +124,27 @@ def read_composite_risk_model(dstore):
         oqparam, tmap, fragdict, vulndict, consdict, retrodict)
 
 
+def get_assets_by_taxo(assets, epspath=None):
+    """
+    :param assets: an array of assets
+    :param epspath: hdf5 file where the epsilons are (or None)
+    :returns: assets_by_taxo with attributes eps and idxs
+    """
+    assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
+    assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
+        a['ordinal'] for a in assets_by_taxo.values()]))
+    assets_by_taxo.eps = {}
+    if epspath is None:  # no epsilons
+        return assets_by_taxo
+    # otherwise read the epsilons and group them by taxonomy
+    with hdf5.File(epspath, 'r') as h5:
+        dset = h5['epsilon_matrix']
+        for taxo, assets in assets_by_taxo.items():
+            lst = [dset[aid] for aid in assets['ordinal']]
+            assets_by_taxo.eps[taxo] = numpy.array(lst)
+    return assets_by_taxo
+
+
 class CompositeRiskModel(collections.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -328,7 +349,7 @@ class CompositeRiskModel(collections.Mapping):
                         out[asset['ordinal'], l, 0, D] = csq
         return out
 
-    def gen_outputs(self, riskinput, monitor, hazard=None):
+    def gen_outputs(self, riskinput, monitor, epspath=None, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
@@ -344,20 +365,22 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
         assert len(sids) == 1
-        assets_by_taxo = group_array(riskinput.assets, 'taxonomy')
         with monitor('computing risk', measuremem=False):
             # this approach is slow for event_based_risk since a lot of
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
+            assets_by_taxo = get_assets_by_taxo(riskinput.assets, epspath)
             for rlzi, haz in sorted(hazard[sids[0]].items()):
-                out = self.get_output(assets_by_taxo, haz,
-                                      riskinput.epsilon_getter, rlzi)
+                out = self.get_output(assets_by_taxo, haz, rlzi)
                 yield out
 
-    def get_output(self, assets_by_taxo, haz, epsgetter=None, rlzi=None):
-        idxs = numpy.argsort(numpy.concatenate([
-            a['ordinal'] for a in assets_by_taxo.values()]))
+    def get_output(self, assets_by_taxo, haz, rlzi=None):
+        """
+        :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
+        :param haz: an array or a dictionary of hazard on that site
+        :param rlzi: if given, a realization index
+        """
         if isinstance(haz, numpy.ndarray):
             # NB: in GMF-based calculations the order in which
             # the gmfs are stored is random since it depends on
@@ -383,6 +406,10 @@ class CompositeRiskModel(collections.Mapping):
         for l, lt in enumerate(self.loss_types):
             ls = []
             for taxonomy, assets_ in assets_by_taxo.items():
+                if len(assets_by_taxo.eps):
+                    epsilons = assets_by_taxo.eps[taxonomy][:, eids]
+                else:  # no CoVs
+                    epsilons = ()
                 rm = self[taxonomy]
                 if len(data) == 0:
                     dat = [0]
@@ -390,9 +417,9 @@ class CompositeRiskModel(collections.Mapping):
                     dat = data[:, rm.imti[lt]]
                 else:  # hcurves
                     dat = data[rm.imti[lt]]
-                ls.append(rm(lt, assets_, dat, eids, epsgetter))
+                ls.append(rm(lt, assets_, dat, eids, epsilons))
             arr = numpy.concatenate(ls)
-            dic[lt] = arr[idxs] if len(arr) else arr
+            dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
         return hdf5.ArrayWrapper((), dic)
 
     def reduce(self, taxonomies):
@@ -436,13 +463,10 @@ class RiskInput(object):
         a callable returning the hazard data for a given realization
     :param assets_by_site:
         array of assets, one per site
-    :param eps_dict:
-        dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets, eps_dict=None):
+    def __init__(self, hazard_getter, assets):
         self.hazard_getter = hazard_getter
         self.assets = assets
-        self.eps = eps_dict or {}
         self.weight = len(assets)
         taxonomies_set = set()
         aids = []
@@ -458,108 +482,10 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def epsilon_getter(self, aid, eids):
-        """
-        :param aid: asset ordinal
-        :param eids: an array of event indices
-        :returns: an array of E epsilons
-        """
-        if len(self.eps) == 0:
-            return
-        try:  # from ruptures
-            return self.eps[aid, eids]
-        except TypeError:  # from GMFs
-            return self.eps[aid][eids]
-
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__,
             ' '.join(map(str, self.taxonomies)), len(self.aids))
-
-
-class EpsilonMatrix0(object):
-    """
-    Mock-up for a matrix of epsilons of size N x E,
-    used when asset_correlation=0.
-
-    :param num_assets: N assets
-    :param seeds: E seeds, set before calling numpy.random.normal
-    """
-    def __init__(self, num_assets, seeds):
-        self.num_assets = num_assets
-        self.seeds = seeds
-        self.eps = None
-
-    def make_eps(self):
-        """
-        Builds a matrix of A x E epsilons
-        """
-        eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
-        for i, seed in enumerate(self.seeds):
-            numpy.random.seed(seed)
-            eps[:, i] = numpy.random.normal(size=self.num_assets)
-        return eps
-
-    def __getitem__(self, aid):
-        if self.eps is None:
-            self.eps = self.make_eps()
-        return self.eps[aid]
-
-    def __len__(self):
-        return self.num_assets
-
-
-class EpsilonMatrix1(object):
-    """
-    Mock-up for a matrix of epsilons of size A x E,
-    used when asset_correlation=1.
-
-    :param num_assets: number of assets
-    :param num_events: number of events
-    :param seed: seed used to generate E epsilons
-    """
-    def __init__(self, num_assets, num_events, seed):
-        self.num_assets = num_assets
-        self.num_events = num_events
-        self.seed = seed
-        numpy.random.seed(seed)
-        self.eps = numpy.random.normal(size=num_events)
-
-    def __getitem__(self, item):
-        if isinstance(item, tuple):
-            # item[0] is the asset index, item[1] the event index
-            # the epsilons are equal for all assets since asset_correlation=1
-            return self.eps[item[1]]
-        elif isinstance(item, int):  # item is an asset index
-            return self.eps
-        else:
-            raise TypeError('Invalid item %r' % item)
-
-    def __len__(self):
-        return self.num_assets
-
-
-def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
-    """
-    :returns: a function (start, stop) -> matrix of shape (n_assets, n_events)
-    """
-    assert n_assets > 0, n_assets
-    assert n_events > 0, n_events
-    assert correlation in (0, 1), correlation
-    assert master_seed >= 0, master_seed
-    assert no_eps in (True, False), no_eps
-    seeds = master_seed + numpy.arange(n_events)
-
-    def get_eps(start=0, stop=n_events):
-        if no_eps:
-            eps = None
-        elif correlation:
-            eps = EpsilonMatrix1(n_assets, stop - start, master_seed)
-        else:
-            eps = EpsilonMatrix0(n_assets, seeds[start:stop])
-        return eps
-
-    return get_eps
 
 
 # used in scenario_risk
@@ -581,6 +507,34 @@ def make_eps(asset_array, num_samples, seed, correlation):
         for asset, epsrow in zip(assets, epsilons):
             eps[asset['ordinal']] = epsrow
     return eps
+
+
+def cache_epsilons(dstore, oq, assetcol, riskmodel, E):
+    """
+    Do nothing if there are no coefficients of variation of ignore_covs is
+    set. Otherwise, generate an epsilon matrix of shape (A, E) and save it
+    in the cache file, by returning the path to it.
+    """
+    if oq.ignore_covs or not riskmodel.covs:
+        return
+    A = len(assetcol)
+    hdf5path = dstore.hdf5cache()
+    logging.info('Storing the epsilon matrix in %s', hdf5path)
+    if oq.calculation_mode == 'scenario_risk':
+        eps = make_eps(assetcol.array, E, oq.master_seed, oq.asset_correlation)
+    else:  # event based
+        if oq.asset_correlation:
+            numpy.random.seed(oq.master_seed)
+            eps = numpy.array([numpy.random.normal(size=E)] * A)
+        else:
+            seeds = oq.master_seed + numpy.arange(E)
+            eps = numpy.zeros((A, E), F32)
+            for i, seed in enumerate(seeds):
+                numpy.random.seed(seed)
+                eps[:, i] = numpy.random.normal(size=A)
+    with hdf5.File(hdf5path) as cache:
+        cache['epsilon_matrix'] = eps
+    return hdf5path
 
 
 def str2rsi(key):
