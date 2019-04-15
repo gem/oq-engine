@@ -81,7 +81,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, groupby, deprecated
+from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile

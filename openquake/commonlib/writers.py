@@ -114,6 +114,7 @@ htranslator = HeaderTranslator(
     '(ordinal):uint32',
     '(gsims):object',
     '(branch_path):object',
+    '(modal-ds-structural):object',
     '(vs30):float64',
     '(vs30measured):bool',
     '(z1pt0):float64',

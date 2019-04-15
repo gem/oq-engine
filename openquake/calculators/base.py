@@ -542,8 +542,6 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
-            elif not oq.imtls:
-                raise ValueError('Missing intensity_measure_types!')
         if 'precalc' in vars(self):
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
@@ -839,14 +837,10 @@ class RiskCalculator(HazardCalculator):
             save_gmf_data(self.datastore, sitecol, gmfs, imts)
         return sitecol, assetcol
 
-    def build_riskinputs(self, kind, eps=None, num_events=0):
+    def build_riskinputs(self, kind):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
-        :param eps:
-            a matrix of epsilons (or None)
-        :param num_events:
-            how many events there are
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -859,7 +853,7 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         with self.monitor('building riskinputs', autoflush=True):
-            riskinputs = list(self._gen_riskinputs(kind, eps, num_events))
+            riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
         return riskinputs
@@ -888,7 +882,7 @@ class RiskCalculator(HazardCalculator):
             getter.init()
         return getter
 
-    def _gen_riskinputs(self, kind, eps, num_events):
+    def _gen_riskinputs(self, kind):
         rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
         rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
@@ -898,12 +892,7 @@ class RiskCalculator(HazardCalculator):
             getter = self.get_getter(kind, sid)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                # dictionary of epsilons for the reduced assets
-                reduced_eps = {ass['ordinal']: eps[int(ass['ordinal'])]
-                               for ass in block
-                               if eps is not None and len(eps)}
-                yield riskinput.RiskInput(
-                    getter, numpy.array(block), reduced_eps)
+                yield riskinput.RiskInput(getter, numpy.array(block))
             rinfo.append((sid, len(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',

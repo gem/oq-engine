@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Avoided to transfer the epsilons by storing them in the cache file
+    and changed the event to epsilons associations
+  * Reduced the data transfer in the computation of the hazard curves, causing
+    in some time huge speedups (over 100x)
+  * Implemented a flag `modal_damage_state` to display only the most likely
+    damage state in the output `dmg_by_asset` of scenario damage calculations
   * Reduced substantially the memory occupation in classical calculations
     by including the prefiltering phase in the calculation phase
 
