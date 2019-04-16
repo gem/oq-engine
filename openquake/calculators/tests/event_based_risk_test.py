@@ -121,7 +121,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_2.__file__, 'job.ini')
 
         # test the composite_risk_model keys (i.e. slash escaping)
-        crm = sorted(self.calc.datastore.getitem(self.calc.oqparam.risk_model))
+        crm = sorted(self.calc.datastore.getitem('risk_model'))
         self.assertEqual(crm, ['RC%2B-vulnerability', 'RM-vulnerability',
                                'W%2F1-vulnerability'])
 
