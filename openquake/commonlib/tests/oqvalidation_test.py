@@ -97,6 +97,7 @@ class OqParamTestCase(unittest.TestCase):
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance='10',
                 inputs=fakeinputs,
+                region_grid_spacing='5',
                 region='-78.182 15.615, -78.152 15.615, -78.152 15.565, '
                 '-78.182 15.565', sites='0.1 0.2',
             ).validate()
@@ -130,15 +131,8 @@ class OqParamTestCase(unittest.TestCase):
     def test_missing_maximum_distance(self):
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical_risk', inputs=fakeinputs,
-                hazard_calculation_id=None, hazard_output_id=None,
+                calculation_mode='classical', inputs=fakeinputs,
                 sites='0.1 0.2').validate()
-
-        with self.assertRaises(ValueError):
-            OqParam(
-                calculation_mode='classical_risk', inputs=fakeinputs,
-                hazard_calculation_id=None, hazard_output_id=None,
-                sites='0.1 0.2', maximum_distance='0').validate()
 
         oq = OqParam(
             calculation_mode='event_based', inputs=GST,
