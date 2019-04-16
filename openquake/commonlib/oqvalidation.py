@@ -755,7 +755,7 @@ class OqParam(valid.ParamSet):
             return False
         elif 'sites' in self.inputs and self.sites:
             return False
-        elif self.sites and self.region:
+        elif self.sites and self.region and self.region_grid_spacing:
             return False
         else:
             return True
