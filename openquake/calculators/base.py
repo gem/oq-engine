@@ -615,7 +615,7 @@ class HazardCalculator(BaseCalculator):
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
-            if 'fragility' in parent or 'vulnerability' in parent:
+            if 'risk_model' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
@@ -627,12 +627,11 @@ class HazardCalculator(BaseCalculator):
         """
         Save the risk models in the datastore
         """
-        oq = self.oqparam
-        self.datastore[oq.risk_model] = rm = self.riskmodel
+        self.datastore['risk_model'] = rm = self.riskmodel
         self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
-        attrs = self.datastore.getitem(oq.risk_model).attrs
+        attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
-        self.datastore.set_nbytes(oq.risk_model)
+        self.datastore.set_nbytes('risk_model')
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the

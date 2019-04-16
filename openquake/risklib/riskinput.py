@@ -84,42 +84,39 @@ def read_composite_risk_model(dstore):
     """
     oqparam = dstore['oqparam']
     tmap = dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore else {}
-    crm = dstore.getitem(oqparam.risk_model)
+    crm = dstore.getitem('risk_model')
     # building dictionaries riskid -> loss_type -> risk_func
     fragdict, vulndict, consdict, retrodict = (
         AccumDict(), AccumDict(), AccumDict(), AccumDict())
     fragdict.limit_states = crm.attrs['limit_states']
-    for riskmodel in ('fragility', 'vulnerability', 'consequence'):
-        if riskmodel not in dstore:
-            continue
-        for quoted_id, rm in crm.items():
-            riskid, kind = unquote_plus(quoted_id).rsplit('-', 1)
-            fragdict[riskid] = {}
-            vulndict[riskid] = {}
-            consdict[riskid] = {}
-            retrodict[riskid] = {}
-            for lt in rm:
-                rf = dstore['%s/%s/%s' % (riskmodel, quoted_id, lt)]
-                if riskmodel == 'consequence':
-                    # TODO: manage this case by adding HDF5-serialization
-                    # to the consequence model
-                    pass
-                elif riskmodel == 'fragility':  # rf is a FragilityFunctionList
-                    try:
-                        rf = rf.build(
-                            fragdict.limit_states,
-                            oqparam.continuous_fragility_discretization,
-                            oqparam.steps_per_interval)
-                    except ValueError as err:
-                        raise ValueError('%s: %s' % (riskid, err))
-                    fragdict[riskid][lt] = rf
-                else:  # rf is a vulnerability function
-                    rf.init()
-                    if lt.endswith('_retrofitted'):
-                        # strip _retrofitted, since len('_retrofitted') = 12
-                        retrodict[riskid][lt[:-12]] = rf
-                    else:
-                        vulndict[riskid][lt] = rf
+    for quoted_id, rm in crm.items():
+        riskid, kind = unquote_plus(quoted_id).rsplit('-', 1)
+        fragdict[riskid] = {}
+        vulndict[riskid] = {}
+        consdict[riskid] = {}
+        retrodict[riskid] = {}
+        for lt in rm:
+            rf = dstore['risk_model/%s/%s' % (quoted_id, lt)]
+            if kind == 'consequence':
+                # TODO: manage this case by adding HDF5-serialization
+                # to the consequence model
+                pass
+            elif kind == 'fragility':  # rf is a FragilityFunctionList
+                try:
+                    rf = rf.build(
+                        fragdict.limit_states,
+                        oqparam.continuous_fragility_discretization,
+                        oqparam.steps_per_interval)
+                except ValueError as err:
+                    raise ValueError('%s: %s' % (riskid, err))
+                fragdict[riskid][lt] = rf
+            else:  # rf is a vulnerability function
+                rf.init()
+                if lt.endswith('_retrofitted'):
+                    # strip _retrofitted, since len('_retrofitted') = 12
+                    retrodict[riskid][lt[:-12]] = rf
+                else:
+                    vulndict[riskid][lt] = rf
     return CompositeRiskModel(
         oqparam, tmap, fragdict, vulndict, consdict, retrodict)
 
