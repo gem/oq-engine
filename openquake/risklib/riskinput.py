@@ -32,6 +32,7 @@ class ValidationError(Exception):
     pass
 
 
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 
@@ -83,42 +84,39 @@ def read_composite_risk_model(dstore):
     """
     oqparam = dstore['oqparam']
     tmap = dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore else {}
-    crm = dstore.getitem(oqparam.risk_model)
+    crm = dstore.getitem('risk_model')
     # building dictionaries riskid -> loss_type -> risk_func
     fragdict, vulndict, consdict, retrodict = (
         AccumDict(), AccumDict(), AccumDict(), AccumDict())
     fragdict.limit_states = crm.attrs['limit_states']
-    for riskmodel in ('fragility', 'vulnerability', 'consequence'):
-        if riskmodel not in dstore:
-            continue
-        for quoted_id, rm in crm.items():
-            riskid = unquote_plus(quoted_id)
-            fragdict[riskid] = {}
-            vulndict[riskid] = {}
-            consdict[riskid] = {}
-            retrodict[riskid] = {}
-            for lt in rm:
-                rf = dstore['%s/%s/%s' % (riskmodel, quoted_id, lt)]
-                if riskmodel == 'consequence':
-                    # TODO: manage this case by adding HDF5-serialization
-                    # to the consequence model
-                    pass
-                elif riskmodel == 'fragility':  # rf is a FragilityFunctionList
-                    try:
-                        rf = rf.build(
-                            fragdict.limit_states,
-                            oqparam.continuous_fragility_discretization,
-                            oqparam.steps_per_interval)
-                    except ValueError as err:
-                        raise ValueError('%s: %s' % (riskid, err))
-                    fragdict[riskid][lt] = rf
-                else:  # rf is a vulnerability function
-                    rf.init()
-                    if lt.endswith('_retrofitted'):
-                        # strip _retrofitted, since len('_retrofitted') = 12
-                        retrodict[riskid][lt[:-12]] = rf
-                    else:
-                        vulndict[riskid][lt] = rf
+    for quoted_id, rm in crm.items():
+        riskid, kind = unquote_plus(quoted_id).rsplit('-', 1)
+        fragdict[riskid] = {}
+        vulndict[riskid] = {}
+        consdict[riskid] = {}
+        retrodict[riskid] = {}
+        for lt in rm:
+            rf = dstore['risk_model/%s/%s' % (quoted_id, lt)]
+            if kind == 'consequence':
+                # TODO: manage this case by adding HDF5-serialization
+                # to the consequence model
+                pass
+            elif kind == 'fragility':  # rf is a FragilityFunctionList
+                try:
+                    rf = rf.build(
+                        fragdict.limit_states,
+                        oqparam.continuous_fragility_discretization,
+                        oqparam.steps_per_interval)
+                except ValueError as err:
+                    raise ValueError('%s: %s' % (riskid, err))
+                fragdict[riskid][lt] = rf
+            else:  # rf is a vulnerability function
+                rf.init()
+                if lt.endswith('_retrofitted'):
+                    # strip _retrofitted, since len('_retrofitted') = 12
+                    retrodict[riskid][lt[:-12]] = rf
+                else:
+                    vulndict[riskid][lt] = rf
     return CompositeRiskModel(
         oqparam, tmap, fragdict, vulndict, consdict, retrodict)
 
@@ -146,25 +144,25 @@ def get_assets_by_taxo(assets, epspath=None):
 
 class CompositeRiskModel(collections.Mapping):
     """
-    A container taxonomy -> riskmodel
+    A container (riskid, kind) -> riskmodel
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param tmap:
         a taxonomy mapping
     :param fragdict:
-        a dictionary taxonomy -> loss_type -> fragility functions
+        a dictionary riskid -> loss_type -> fragility functions
     :param vulndict:
-        a dictionary taxonomy -> loss_type -> vulnerability function
+        a dictionary riskid -> loss_type -> vulnerability function
     :param consdict:
-        a dictionary taxonomy -> loss_type -> consequence functions
+        a dictionary riskid -> loss_type -> consequence functions
     :param retrodict:
-        a dictionary taxonomy -> loss_type -> vulnerability function
+        a dictionary riskid -> loss_type -> vulnerability function
     """
     def __init__(self, oqparam, tmap, fragdict, vulndict, consdict, retrodict):
         self.tmap = tmap
         self.damage_states = []
-        self._riskmodels = {}
+        self._riskmodels = {}  # (riskid, kind) -> riskmodel
         self.consequences = sum(len(vals) for vals in consdict.values())
         if sum(len(v) for v in fragdict.values()):
             # classical_damage/scenario_damage calculator
@@ -176,37 +174,36 @@ class CompositeRiskModel(collections.Mapping):
                         'There are risk files in %r but not '
                         'an exposure' % oqparam.inputs['job_ini'])
             self.damage_states = ['no_damage'] + list(fragdict.limit_states)
-            for taxonomy, ffs_by_lt in fragdict.items():
-                #if tmap:
-                #    fmap = tmap[taxonomy]['fragility']
-                #    cmap = tmap[taxonomy]['consequence']
-                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam, fragility_functions=ffs_by_lt,
-                    vulnerability_functions=vulndict[taxonomy],
-                    consequence_functions=consdict[taxonomy])
+            for riskid, ffs_by_lt in fragdict.items():
+                self._riskmodels[riskid, 'fragility'] = (
+                    riskmodels.get_riskmodel(
+                        riskid, oqparam, fragility_functions=ffs_by_lt,
+                        vulnerability_functions=vulndict[riskid],
+                        consequence_functions=consdict[riskid]))
+            self.kind = 'fragility'
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
-            for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
+            for (riskid, vf_orig), (riskid_, vf_retro) in \
                     zip(sorted(vulndict.items()), sorted(retrodict.items())):
-                assert taxonomy == taxonomy_  # same taxonomies
-                #if tmap:
-                #    vmap = tmap[taxonomy]['vulnerability']
-                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam,
-                    vulnerability_functions_orig=vf_orig,
-                    vulnerability_functions_retro=vf_retro)
+                assert riskid == riskid_  # same IDs
+                self._riskmodels[riskid, 'vulnerability'] = (
+                    riskmodels.get_riskmodel(
+                        riskid, oqparam,
+                        vulnerability_functions_orig=vf_orig,
+                        vulnerability_functions_retro=vf_retro))
+            self.kind = 'vulnerability'
         else:
             # classical, event based and scenario calculators
-            for taxonomy, vfs in vulndict.items():
-                #if tmap:
-                #    vmap = tmap[taxonomy]['vulnerability']
+            for riskid, vfs in vulndict.items():
                 for vf in vfs.values():
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
                     vf.seed = oqparam.random_seed
-                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam, fragility_functions=vulndict[taxonomy],
-                    vulnerability_functions=vfs)
+                self._riskmodels[riskid, 'vulnerability'] = (
+                    riskmodels.get_riskmodel(
+                        riskid, oqparam, fragility_functions=vulndict[riskid],
+                        vulnerability_functions=vfs))
+            self.kind = 'vulnerability'
 
         self.init(oqparam)
 
@@ -214,8 +211,6 @@ class CompositeRiskModel(collections.Mapping):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.taxonomy = []  # must be set by the engine
-
         # build a sorted list with all the loss_types contained in the model
         ltypes = set()
         for rm in self.values():
@@ -223,8 +218,8 @@ class CompositeRiskModel(collections.Mapping):
         self.loss_types = sorted(ltypes)
 
         taxonomies = set()
-        for taxonomy, riskmodel in self._riskmodels.items():
-            taxonomies.add(taxonomy)
+        for (riskid, kind), riskmodel in self._riskmodels.items():
+            taxonomies.add(riskid)
             riskmodel.compositemodel = self
             for lt, vf in riskmodel.risk_functions.items():
                 # save the number of nonzero coefficients of variation
@@ -234,14 +229,14 @@ class CompositeRiskModel(collections.Mapping):
             if missing:
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
-                    ' type %s' % (taxonomy, ', '.join(missing)))
+                    ' type %s' % (riskid, ', '.join(missing)))
             riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt].imt]
                               for lt in self.loss_types}
 
         self.taxonomies = sorted(taxonomies)
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
-        for taxo, rm in self._riskmodels.items():
+        for (riskid, kind), rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
                 iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
@@ -251,6 +246,7 @@ class CompositeRiskModel(collections.Mapping):
         """
         :returns: a dict taxonomy string -> taxonomy index
         """
+        # .taxonomy must be set by the engine
         tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         return tdict
 
@@ -314,12 +310,12 @@ class CompositeRiskModel(collections.Mapping):
             loss_ratios[cp.loss_type] = tuple(cp.ratios)
         return loss_ratios
 
-    def __getitem__(self, taxonomy):
-        try:
-            return self._riskmodels[taxonomy]
-        except KeyError:  # taxonomy was an index
-            taxo = self.taxonomy[taxonomy]
-            return self._riskmodels[taxo]
+    def __getitem__(self, key):
+        if isinstance(key, (int, U16)):  # a taxonomy index
+            key = self.taxonomy[key], self.kind
+        elif isinstance(key, str):
+            key = (key, self.kind)
+        return self._riskmodels[key]
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
@@ -431,9 +427,9 @@ class CompositeRiskModel(collections.Mapping):
         new = copy.copy(self)
         new.taxonomies = sorted(taxonomies)
         new._riskmodels = {}
-        for taxo, rm in self._riskmodels.items():
-            if taxo in taxonomies:
-                new._riskmodels[taxo] = rm
+        for (riskid, kind), rm in self._riskmodels.items():
+            if riskid in taxonomies:
+                new._riskmodels[riskid, kind] = rm
                 rm.compositemodel = new
         return new
 
