@@ -792,8 +792,7 @@ def crm_attrs(dstore, what):
         the attributes of the risk model, i.e. limit_states, loss_types,
         min_iml and covs, needed by the risk exporters.
     """
-    name = dstore['oqparam'].risk_model
-    return ArrayWrapper((), dstore.get_attrs(name))
+    return ArrayWrapper((), dstore.get_attrs('risk_model'))
 
 
 def _get(dstore, name):
