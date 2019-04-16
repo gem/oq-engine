@@ -837,6 +837,8 @@ def maximum_distance(value):
         if isinstance(magdists, list):  # could be a scalar otherwise
             magdists.sort()  # make sure the list is sorted by magnitude
             for mag, dist in magdists:  # validate the magnitudes
+                if dist < 0:
+                    raise ValueError('Negative distance: %s' % dist)
                 magnitude(mag)
     return IntegrationDistance(dic)
 
