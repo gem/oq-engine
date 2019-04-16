@@ -575,17 +575,6 @@ class OqParam(valid.ParamSet):
                           'damage' in self.calculation_mode or
                           'bcr' in self.calculation_mode) else 'hazard'
 
-    @property
-    def risk_model(self):
-        """
-        :returns: 'fragility', 'vulnerability' or the empty string
-        """
-        if self.job_type == 'hazard':
-            return ('fragility' if self.file_type == 'fragility'
-                    else 'vulnerability')
-        return ('fragility' if 'damage' in self.calculation_mode
-                else 'vulnerability')
-
     def is_event_based(self):
         """
         The calculation mode is event_based, event_based_risk or ebrisk
