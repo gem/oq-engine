@@ -380,7 +380,7 @@ class OqParamTestCase(unittest.TestCase):
     def test_optimize_same_id_sources(self):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
-                calculation_mode='event_based_risk', inputs=fakeinputs,
+                calculation_mode='event_based', inputs=fakeinputs,
                 sites='0.1 0.2',
                 maximum_distance='400',
                 intensity_measure_types='PGA',
