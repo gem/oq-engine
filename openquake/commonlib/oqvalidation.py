@@ -575,17 +575,6 @@ class OqParam(valid.ParamSet):
                           'damage' in self.calculation_mode or
                           'bcr' in self.calculation_mode) else 'hazard'
 
-    @property
-    def risk_model(self):
-        """
-        :returns: 'fragility', 'vulnerability' or the empty string
-        """
-        if self.job_type == 'hazard':
-            return ('fragility' if self.file_type == 'fragility'
-                    else 'vulnerability')
-        return ('fragility' if 'damage' in self.calculation_mode
-                else 'vulnerability')
-
     def is_event_based(self):
         """
         The calculation mode is event_based, event_based_risk or ebrisk
@@ -650,8 +639,7 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if (not self.inputs.get('source_model_logic_tree') or not
-                self.inputs.get('gsim_logic_tree')):
+        if 'gsim_logic_tree' not in self.inputs:
             return True  # don't apply validation
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
@@ -746,35 +734,17 @@ class OqParam(valid.ParamSet):
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
-    def is_valid_risk_functions(self):
-        """
-        Invalid calculation_mode="{calculation_mode}" or missing
-        fragility_file/vulnerability_file in the .ini file.
-        """
-        if self.hazard_calculation_id:
-            parent_datasets = set(util.read(self.hazard_calculation_id))
-        else:
-            parent_datasets = set()
-        if 'damage' in self.calculation_mode:
-            return any(
-                key.endswith('_fragility') for key in self.inputs
-            ) or 'fragility' in parent_datasets
-        elif ('risk' in self.calculation_mode and
-              self.calculation_mode != 'multi_risk'):
-            return any(
-                key.endswith('_vulnerability') for key in self.inputs
-            ) or 'vulnerability' in parent_datasets
-        return True
-
     def is_valid_sites(self):
         """
-        You cannot set at the same time both sites and site_model, choose one
+        The sites are overdetermined
         """
         if 'site_model' in self.inputs and 'sites' in self.inputs:
             return False
         elif 'site_model' in self.inputs and self.sites:
             return False
         elif 'sites' in self.inputs and self.sites:
+            return False
+        elif self.sites and self.region and self.region_grid_spacing:
             return False
         else:
             return True
