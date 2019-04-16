@@ -334,6 +334,8 @@ class File(h5py.File):
             pyclass = ''
         if isinstance(obj, (dict, Group)) and obj:
             for k, v in sorted(obj.items()):
+                if isinstance(k, tuple):  # multikey
+                    k = '-'.join(k)
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
             if isinstance(obj, Group):
