@@ -97,6 +97,7 @@ class OqParamTestCase(unittest.TestCase):
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance='10',
                 inputs=fakeinputs,
+                region_grid_spacing='5',
                 region='-78.182 15.615, -78.152 15.615, -78.152 15.565, '
                 '-78.182 15.565', sites='0.1 0.2',
             ).validate()
