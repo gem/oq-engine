@@ -83,7 +83,7 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
     rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
     oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq, rcalc_id)
-    rcalc.run(pdb=pdb, exports=exports, hazard_calculation_id=hc_id, **params)
+    rcalc.run(pdb=pdb, exports=exports, **params)
     return rcalc
 
 
