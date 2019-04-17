@@ -273,6 +273,7 @@ DISPLAY_NAME = {
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
     'agg_loss_table': 'Aggregate Loss Table',
     'agg_losses-rlzs': 'Aggregate Asset Losses',
+    'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
