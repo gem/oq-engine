@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Went back to the old logic in sampling: the weights are used for the
+    sampling and the statistics are computed with identical weights
   * Avoided to transfer the epsilons by storing them in the cache file
     and changed the event to epsilons associations
   * Reduced the data transfer in the computation of the hazard curves, causing
