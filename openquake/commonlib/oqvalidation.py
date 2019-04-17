@@ -213,6 +213,7 @@ class OqParam(valid.ParamSet):
             logging.warning('Ignoring intensity_measure_types since '
                             'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
+            self.iml_disagg.pop('default')
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(
