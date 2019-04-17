@@ -441,8 +441,8 @@ class EventBasedCalculator(base.HazardCalculator):
             self.cl.run(close=False)
             cl_mean_curves = get_mean_curves(self.cl.datastore)
             eb_mean_curves = get_mean_curves(self.datastore)
-            rdiff, index = util.max_rel_diff_index(
+            self.rdiff, index = util.max_rel_diff_index(
                 cl_mean_curves, eb_mean_curves)
             logging.warning('Relative difference with the classical '
                             'mean curves: %d%% at site index %d',
-                            rdiff * 100, index)
+                            self.rdiff * 100, index)
