@@ -440,8 +440,12 @@ class HazardCalculator(BaseCalculator):
             logging.info('Read %s with %d rows' % (fname, len(data)))
             if len(data) != len(numpy.unique(data[['lon', 'lat']])):
                 raise InvalidFile('There are duplicated points in %s' % fname)
+            try:
+                asset_hazard_distance = oq.asset_hazard_distance[name]
+            except KeyError:
+                asset_hazard_distance = oq.asset_hazard_distance['default']
             sites, filtdata, _discarded = geo.utils.assoc(
-                data, self.sitecol, oq.asset_hazard_distance, 'filter')
+                data, self.sitecol, asset_hazard_distance, 'filter')
             z = numpy.zeros(N, float)
             z[sites.sids] = filtdata['number']
             self.datastore['multi_peril'][name] = z
@@ -821,7 +825,8 @@ class RiskCalculator(HazardCalculator):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
             sitecol, shakemap, discarded = get_sitecol_shakemap(
-                smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance,
+                smap, oq.imtls, haz_sitecol,
+                oq.asset_hazard_distance['default'],
                 oq.discard_assets)
             if len(discarded):
                 self.datastore['discarded'] = discarded
