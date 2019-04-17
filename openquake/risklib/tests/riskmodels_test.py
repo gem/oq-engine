@@ -300,7 +300,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         [0.3458312, 0.34684792, 0.3478676, 0.3488903, 0.34991604],
         [0.3449187, 0.34501997, 0.34512126, 0.3452226, 0.34532395]])
 
-    def test_1(self):
+    def test_splittable_events(self):
+        # split the events in two blocks and check that the ratios are
+        # same: there is no randomness in VulnerabilityFunction.sample
         vuln_model = gettemp("""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
@@ -326,11 +328,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmvs = numpy.array([.1, .2, .3, .4, .5])
         epsilons = numpy.array(
             [[.01, .02, .03, .04, .05], [.001, .002, .003, .004, .005]])
+
+        # compute the ratios by considering all the events
         ratios = rm('structural', assets, gmvs, eids, epsilons)
         numpy.testing.assert_allclose(ratios, self.expected_ratios)
 
-        # now split the events in two blocks and check that the ratios are
-        # same: there is no randomness in VulnerabilityFunction.sample
+        # split the events in two blocks
         eids1 = numpy.array([1, 2])
         eids2 = numpy.array([3, 4, 5])
         gmvs1 = numpy.array([.1, .2])
