@@ -609,8 +609,13 @@ class SourceModelLogicTree(object):
         """
         self.info = collect_info(self.filename)
         self.source_ids = collections.defaultdict(list)
+        t0 = time.time()
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
+        dt = time.time() - t0
+        if validate:
+            bname = os.path.basename(self.filename)
+            logging.info('Validated %s in %.2f seconds', bname, dt)
 
     def parse_branchinglevel(self, branchinglevel_node, depth, validate):
         """
@@ -896,15 +901,12 @@ class SourceModelLogicTree(object):
         _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
 
         if branchset.uncertainty_type == 'sourceModel':
-            t0 = time.time()
             try:
                 for fname in node.text.strip().split():
                     self.collect_source_model_data(
                         branchnode['branchID'], fname)
             except Exception as exc:
                 raise LogicTreeError(node, self.filename, str(exc)) from exc
-            dt = time.time() - t0
-            logging.info('Read %s in %.1f seconds', branchnode['branchID'], dt)
 
         elif branchset.uncertainty_type == 'abGRAbsolute':
             ab = (node.text.strip()).split()
@@ -1166,7 +1168,6 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        logging.info('Reading %s', source_model)
         # using regular expressions is a lot faster than using the
         with self._get_source_model(source_model) as sm:
             xml = sm.read()
