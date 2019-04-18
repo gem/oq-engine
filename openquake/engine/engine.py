@@ -279,8 +279,7 @@ def poll_queue(job_id, pid, poll_time):
             executing = [j.id for j in jobs if psutil.pid_exists(j.pid)]
             jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'submitted')
             submitted = [j.id for j in jobs if psutil.pid_exists(j.pid)]
-            submitted_before = submitted and min(submitted) < job_id
-            if len(executing) or submitted_before:
+            if executing or any(j < job_id for j in submitted):
                 if first_time:
                     logs.LOG.warn('Waiting for jobs %s',
                                   sorted(executing + submitted))
