@@ -45,7 +45,7 @@ from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
-from openquake.baselib.node import striptag, node_from_elem, Node as N, context
+from openquake.baselib.node import node_from_elem, Node as N, context
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -54,7 +54,7 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'id="([^"]+?)"')
-SOURCE_TYPE_REGEX = re.compile(r'\w+Source')
+SOURCE_TYPE_REGEX = re.compile(r'<(\w+Source)\b')
 
 
 def unique(objects, key=None):
@@ -580,9 +580,6 @@ class SourceModelLogicTree(object):
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
                'applyToSourceType')
-
-    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
-                    'characteristicFault')
 
     def __init__(self, filename, validate=True, seed=0, num_samples=0):
         self.filename = filename
