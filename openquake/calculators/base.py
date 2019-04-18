@@ -23,7 +23,6 @@ import pdb
 import logging
 import operator
 import traceback
-import collections
 from datetime import datetime
 from shapely import wkt
 import numpy
@@ -32,10 +31,8 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.baselib import parallel
 from openquake.hazardlib import InvalidFile, geo, valid
-from openquake.hazardlib.calc.filters import (
-    split_sources, RtreeFilter, SourceFilter)
+from openquake.hazardlib.calc.filters import RtreeFilter, SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput
@@ -85,11 +82,11 @@ def fix_ones(pmap):
 
 def build_weights(realizations, imt_dt):
     """
-    :returns: an array with the realization weights of dtype imt_dt
+    :returns: an array with the realization weights of shape (R, M)
     """
-    arr = numpy.zeros(len(realizations), imt_dt)
-    for imt in imt_dt.names:
-        arr[imt] = [rlz.weight[imt] for rlz in realizations]
+    arr = numpy.zeros((len(realizations), len(imt_dt.names)))
+    for m, imt in enumerate(imt_dt.names):
+        arr[:, m] = [rlz.weight[imt] for rlz in realizations]
     return arr
 
 
@@ -443,8 +440,12 @@ class HazardCalculator(BaseCalculator):
             logging.info('Read %s with %d rows' % (fname, len(data)))
             if len(data) != len(numpy.unique(data[['lon', 'lat']])):
                 raise InvalidFile('There are duplicated points in %s' % fname)
+            try:
+                asset_hazard_distance = oq.asset_hazard_distance[name]
+            except KeyError:
+                asset_hazard_distance = oq.asset_hazard_distance['default']
             sites, filtdata, _discarded = geo.utils.assoc(
-                data, self.sitecol, oq.asset_hazard_distance, 'filter')
+                data, self.sitecol, asset_hazard_distance, 'filter')
             z = numpy.zeros(N, float)
             z[sites.sids] = filtdata['number']
             self.datastore['multi_peril'][name] = z
@@ -545,8 +546,6 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
-            elif not oq.imtls:
-                raise ValueError('Missing intensity_measure_types!')
         if 'precalc' in vars(self):
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
@@ -620,7 +619,7 @@ class HazardCalculator(BaseCalculator):
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
-            if 'fragility' in parent or 'vulnerability' in parent:
+            if 'risk_model' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
@@ -632,11 +631,11 @@ class HazardCalculator(BaseCalculator):
         """
         Save the risk models in the datastore
         """
-        oq = self.oqparam
-        self.datastore[oq.risk_model] = rm = self.riskmodel
-        attrs = self.datastore.getitem(oq.risk_model).attrs
+        self.datastore['risk_model'] = rm = self.riskmodel
+        self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
+        attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
-        self.datastore.set_nbytes(oq.risk_model)
+        self.datastore.set_nbytes('risk_model')
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
@@ -826,7 +825,8 @@ class RiskCalculator(HazardCalculator):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
             sitecol, shakemap, discarded = get_sitecol_shakemap(
-                smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance,
+                smap, oq.imtls, haz_sitecol,
+                oq.asset_hazard_distance['default'],
                 oq.discard_assets)
             if len(discarded):
                 self.datastore['discarded'] = discarded
@@ -841,14 +841,10 @@ class RiskCalculator(HazardCalculator):
             save_gmf_data(self.datastore, sitecol, gmfs, imts)
         return sitecol, assetcol
 
-    def build_riskinputs(self, kind, eps=None, num_events=0):
+    def build_riskinputs(self, kind):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
-        :param eps:
-            a matrix of epsilons (or None)
-        :param num_events:
-            how many events there are
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -861,7 +857,7 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         with self.monitor('building riskinputs', autoflush=True):
-            riskinputs = list(self._gen_riskinputs(kind, eps, num_events))
+            riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
         return riskinputs
@@ -890,7 +886,7 @@ class RiskCalculator(HazardCalculator):
             getter.init()
         return getter
 
-    def _gen_riskinputs(self, kind, eps, num_events):
+    def _gen_riskinputs(self, kind):
         rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
         rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
@@ -900,12 +896,7 @@ class RiskCalculator(HazardCalculator):
             getter = self.get_getter(kind, sid)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                # dictionary of epsilons for the reduced assets
-                reduced_eps = {ass['ordinal']: eps[int(ass['ordinal'])]
-                               for ass in block
-                               if eps is not None and len(eps)}
-                yield riskinput.RiskInput(
-                    getter, numpy.array(block), reduced_eps)
+                yield riskinput.RiskInput(getter, numpy.array(block))
             rinfo.append((sid, len(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
@@ -1060,5 +1051,5 @@ def import_gmfs(dstore, fname, sids):
     dstore['gmf_data/imts'] = ' '.join(imts)
     sig_eps_dt = [('eid', U64), ('sig', (F32, n_imts)), ('eps', (F32, n_imts))]
     dstore['gmf_data/sigma_epsilon'] = numpy.zeros(0, sig_eps_dt)
-    dstore['weights'] = numpy.ones(1, [(imt, F32) for imt in imts])
+    dstore['weights'] = numpy.ones((1, n_imts))
     return eids
