@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a MemoryError when counting the number of bytes stored in large
+    HDF5 datasets
   * Extended `asset_hazard_distance` to a dictionary for usage with multi_risk
   * Extended oq prepare_site_model to work with sites.csv files
   * Optimized the validation of the source model logic tree: now checking
