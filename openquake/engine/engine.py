@@ -41,7 +41,6 @@ from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, __version__, zeromq as z)
-from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, oqzip
 from openquake.calculators import base, views, export
@@ -55,10 +54,9 @@ MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
-GET_JOBS_BY_STATUS = '''--- running jobs with a PID
-SELECT * FROM job
-WHERE status IN (?x) AND is_running=1 AND pid > 0
-ORDER BY id'''
+GET_JOBS = '''--- executing or submitted
+SELECT * FROM job WHERE status IN ('executing', 'submitted')
+AND is_running=1 AND pid > 0 ORDER BY id'''
 
 if OQ_DISTRIBUTE == 'zmq':
 
@@ -276,7 +274,7 @@ def poll_queue(job_id, pid, poll_time):
     if config.distribution.serialize_jobs:
         first_time = True
         while True:
-            jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'executing', 'submitted')
+            jobs = logs.dbcmd(GET_JOBS)
             failed = [job.id for job in jobs if not psutil.pid_exists(job.pid)]
             if failed:
                 logs.dbcmd("UPDATE job SET status='failed', is_running=0 "
