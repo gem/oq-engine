@@ -41,6 +41,7 @@ from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, __version__, zeromq as z)
+from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, oqzip
 from openquake.calculators import base, views, export
@@ -270,8 +271,8 @@ def poll_queue(job_id, pid, poll_time):
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
-    max_concurrent_jobs = int(config.distribution.max_concurrent_jobs)
-    if max_concurrent_jobs > 0:
+    serialize_jobs = valid.boolean(config.distribution.serialize_jobs)
+    if serialize_jobs:
         first_time = True
         while True:
             jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'executing')
@@ -279,7 +280,7 @@ def poll_queue(job_id, pid, poll_time):
             jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'submitted')
             submitted = [j.id for j in jobs if psutil.pid_exists(j.pid)]
             submitted_before = submitted and min(submitted) < job_id
-            if len(executing) >= max_concurrent_jobs or submitted_before:
+            if len(executing) or submitted_before:
                 if first_time:
                     logs.LOG.warn('Waiting for jobs %s',
                                   sorted(executing + submitted))
