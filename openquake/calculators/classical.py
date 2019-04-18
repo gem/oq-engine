@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import operator
 import numpy
@@ -26,7 +27,7 @@ from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -74,19 +75,29 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
+    # first check if we are sampling the sources
+    ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    if ss:
+        splits, stime = split_sources(srcs)
+        srcs = readinput.random_filtered_sources(splits, srcfilter, ss)
+        yield classical(srcs, srcfilter, gsims, params, monitor)
+        return
     sources = []
-    for src in srcs:
-        if src.num_ruptures >= params['maxweight']:
-            splits, stime = split_sources([src])
-            sources.extend(srcfilter.filter(splits))
-        elif list(srcfilter.filter([src])):
-            sources.append(src)
-    blocks = list(block_splitter(sources, params['maxweight'],
-                                 operator.attrgetter('num_ruptures')))
+    with monitor("filtering/splitting sources"):
+        for src, _sites in srcfilter(srcs):
+            if src.num_ruptures >= params['maxweight']:
+                splits, stime = split_sources([src])
+                sources.extend(srcfilter.filter(splits))
+            else:
+                sources.append(src)
+        blocks = list(block_splitter(sources, params['maxweight'],
+                                     operator.attrgetter('num_ruptures')))
     if blocks:
-        for block in blocks[1:]:
+        # yield the first blocks (if any) and compute the last block in core
+        # NB: the last block is usually the smallest one
+        for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
-        yield classical(blocks[0], srcfilter, gsims, params, monitor)
+        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
 @base.calculators.add('classical')
@@ -151,7 +162,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 source_ids.append(get_src_ids(sources))
                 for src in sources:  # collect source data
                     data.append((i, src.nsites, src.num_ruptures, src.weight))
-            self.datastore['task_sources'] = encode(source_ids)
+            if source_ids:
+                self.datastore['task_sources'] = encode(source_ids)
             self.datastore.extend(
                 'source_data', numpy.array(data, source_data_dt))
         self.nsites = []
@@ -164,7 +176,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.store_source_info(self.calc_times)
             self.calc_times.clear()  # save a bit of memory
         if not self.nsites:
-            raise RuntimeError('All sources were filtered out!')
+            raise RuntimeError('All sources were filtered away!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         return acc
 
@@ -294,11 +306,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
-        iterargs = (
+        allargs = [  # this list is very fast to generate
             (getters.PmapGetter(parent, self.rlzs_assoc, t.sids, oq.poes),
              N, hstats, oq.individual_curves)
-            for t in self.sitecol.split_in_tiles(ct))
-        parallel.Starmap(build_hazard_stats, iterargs, self.monitor()).reduce(
+            for t in self.sitecol.split_in_tiles(ct)]
+        parallel.Starmap(build_hazard_stats, allargs, self.monitor()).reduce(
             self.save_hazard_stats)
 
 

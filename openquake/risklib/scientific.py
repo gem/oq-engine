@@ -158,7 +158,7 @@ class VulnerabilityFunction(object):
         gmvs_curve = gmvs_curve[idxs]
         return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
 
-    def sample(self, means, covs, idxs, epsilons):
+    def sample(self, means, covs, idxs, epsilons=None):
         """
         Sample the epsilons and apply the corrections to the means.
         This method is called only if there are nonzero covs.
@@ -170,14 +170,15 @@ class VulnerabilityFunction(object):
         :param idxs:
            array of E booleans with E >= E'
         :param epsilons:
-           array of E floats
+           array of E floats (or None)
         :returns:
            array of E' loss ratios
         """
         if epsilons is None:
             return means
         self.set_distribution(epsilons)
-        return self.distribution.sample(means, covs, means * covs, idxs)
+        res = self.distribution.sample(means, covs, means * covs, idxs)
+        return res
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
@@ -276,27 +277,19 @@ class VulnerabilityFunction(object):
         assert distribution in ["LN", "BT"]
 
     @lru_cache(100)
-    def loss_ratio_exceedance_matrix(self, steps):
+    def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
-
-        :param int steps:
-            Number of steps between loss ratios.
         """
-
-        # add steps between mean loss ratio values
-        loss_ratios = self.mean_loss_ratios_with_steps(steps)
-
         # LREM has number of rows equal to the number of loss ratios
         # and number of columns equal to the number of imls
-        lrem = numpy.empty((loss_ratios.size, self.imls.size), float)
-
+        lrem = numpy.empty((len(loss_ratios), len(self.imls)))
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
                     zip(self.mean_loss_ratios, self.stddevs)):
-                lrem[row][col] = self.distribution.survival(
+                lrem[row, col] = self.distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
-        return loss_ratios, lrem
+        return lrem
 
     @lru_cache(100)
     def mean_imls(self):
@@ -394,19 +387,21 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         assert probs.shape[0] == len(loss_ratios)
         assert probs.shape[1] == len(imls)
 
+    # MN: in the test gmvs_curve is of shape (5,), self.probs of shape (7, 8)
+    # self.imls of shape (8,) and the returned means have shape (7, 5)
     def interpolate(self, gmvs):
         """
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated probabilities, None, indices > min)
+           (interpolated probabilities, zeros, indices > min)
         """
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         idxs = gmvs_curve >= self.imls[0]  # indices over the minimum
         gmvs_curve = gmvs_curve[idxs]
-        return self._probs_i1d(gmvs_curve), None, idxs
+        return self._probs_i1d(gmvs_curve), numpy.zeros_like(gmvs_curve), idxs
 
     def sample(self, probs, _covs, idxs, epsilons):
         """
@@ -427,7 +422,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         return self.distribution.sample(self.loss_ratios, probs)
 
     @lru_cache(100)
-    def loss_ratio_exceedance_matrix(self, steps):
+    def loss_ratio_exceedance_matrix(self, loss_ratios):
         """
         Compute the LREM (Loss Ratio Exceedance Matrix).
         Required for the Classical Risk and BCR Calculators.
@@ -902,7 +897,6 @@ def scenario_damage(fragility_functions, gmvs):
     :returns: an array of (D, E) damage fractions
     """
     lst = [numpy.ones_like(gmvs)]
-    # import pdb; pdb.set_trace()
     for f, ff in enumerate(fragility_functions):  # D - 1 functions
         lst.append(ff(gmvs))
     lst.append(numpy.zeros_like(gmvs))
@@ -977,7 +971,7 @@ def classical_damage(
 #
 
 
-def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
+def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
     """
     :param vulnerability_function:
         an instance of
@@ -987,14 +981,16 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
         the hazard intensity measure type and levels
     :type hazard_poes:
         the hazard curve
-    :param int steps:
-        Number of steps between loss ratios.
+    :param loss_ratios:
+        a tuple of C loss ratios
+    :returns:
+        an array of shape (2, C)
     """
     assert len(hazard_imls) == len(hazard_poes), (
         len(hazard_imls), len(hazard_poes))
     vf = vulnerability_function
     imls = vf.mean_imls()
-    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
+    lrem = vf.loss_ratio_exceedance_matrix(loss_ratios)
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
