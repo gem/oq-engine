@@ -271,8 +271,7 @@ def poll_queue(job_id, pid, poll_time):
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
-    serialize_jobs = valid.boolean(config.distribution.serialize_jobs)
-    if serialize_jobs:
+    if config.distribution.serialize_jobs:
         first_time = True
         while True:
             jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'executing')
