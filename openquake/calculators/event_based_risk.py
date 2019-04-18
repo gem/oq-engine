@@ -23,7 +23,7 @@ from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.hazardlib.calc.stochastic import TWO32
-from openquake.risklib import riskinput, scientific, riskmodels
+from openquake.risklib import riskinput, riskmodels
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -68,6 +68,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         a dictionary of numpy arrays of shape (L, R)
     """
     L = len(riskmodel.lti)
+    epspath = param['epspath']
     for ri in riskinputs:
         with monitor('getting hazard'):
             ri.hazard_getter.init()
@@ -88,17 +89,17 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
         # update the result dictionary and the agg array with each output
-        for out in riskmodel.gen_outputs(ri, monitor, hazard):
+        for out in riskmodel.gen_outputs(ri, monitor, epspath, hazard):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
             agglosses = numpy.zeros((len(out.eids), L), F32)
-            for l, loss_ratios in enumerate(out):
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                loss_ratios = out[loss_type]
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
-                loss_type = riskmodel.loss_types[l]
-                avalues = riskmodels.get_values(loss_type, out.assets)
-                for a, asset in enumerate(out.assets):
+                avalues = riskmodels.get_values(loss_type, ri.assets)
+                for a, asset in enumerate(ri.assets):
                     aval = avalues[a]
                     aid = asset['ordinal']
                     idx = aid2idx[aid]
@@ -177,15 +178,16 @@ class EbrCalculator(base.RiskCalculator):
                     oq.return_periods, oq.loss_dt())
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
-        eps = self.epsilon_getter()()
-        self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
+        self.riskinputs = self.build_riskinputs('gmf')
+        self.param['epspath'] = riskinput.cache_epsilons(
+            self.datastore, oq, self.assetcol, self.riskmodel, self.E)
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['stats'] = list(oq.hazard_stats().items())
         self.param['conditional_loss_poes'] = oq.conditional_loss_poes
         self.taskno = 0
         self.start = 0
-        avg_losses = self.oqparam.avg_losses
+        avg_losses = oq.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L))
@@ -228,16 +230,6 @@ class EbrCalculator(base.RiskCalculator):
                 self.datastore.set_attrs(
                     'loss_maps-stats',
                     stats=[encode(name) for (name, func) in stats])
-
-    def epsilon_getter(self):
-        """
-        :returns: a callable (start, stop) producing a slice of epsilons
-        """
-        return riskinput.make_epsilon_getter(
-            len(self.assetcol), self.E,
-            self.oqparam.asset_correlation,
-            self.oqparam.master_seed,
-            self.oqparam.ignore_covs or not self.riskmodel.covs)
 
     def save_losses(self, dic):
         """

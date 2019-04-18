@@ -149,9 +149,9 @@ class RlzsAssoc(object):
         if self.num_samples:
             assert len(self.realizations) == self.num_samples, (
                 len(self.realizations), self.num_samples)
-            tot_weight = sum(rlz.weight for rlz in self.realizations)
             for rlz in self.realizations:
-                rlz.weight /= tot_weight
+                for k in rlz.weight.dic:
+                    rlz.weight.dic[k] = 1. / self.num_samples
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if not tot_weight.is_one():
@@ -280,7 +280,7 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
             gsim_rlzs = list(gsim_lt)
             all_trts = list(gsim_lt.values)
         else:
-            gsim_rlzs = cinfo.gsim_rlzs
+            gsim_rlzs = list(cinfo.gsim_lt)
             all_trts = list(cinfo.gsim_lt.values)
 
         rlzs = cinfo._get_rlzs(smodel, gsim_rlzs, cinfo.seed + offset)

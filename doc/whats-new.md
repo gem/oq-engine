@@ -332,7 +332,7 @@ and confusing in scenario calculations where there is a single realization.
 4. We removed the command `oq extract hazard/rlzs`: if you want to export
 all the hazard curves, set the flag `individual_curves=true` in the
 job.ini, as explained in
-https://github.com/gem/oq-engine/blob/engine-3.3/doc/faq-hazard.md
+https://github.com/gem/oq-engine/blob/engine-3.4/doc/faq-hazard.md
 
 5. We removed the parameter `max_site_model_distance`, since its role
 is now taken by the `asset_hazard_distance` parameter.

@@ -18,6 +18,7 @@
 
 import os
 import mock
+import time
 import shutil
 import pathlib
 import unittest
@@ -43,6 +44,8 @@ def gfunc(text, monitor):
 
 def supertask(text, monitor):
     # a supertask spawning subtasks of kind get_length
+    with monitor('waiting'):
+        time.sleep(.1)
     for block in general.block_splitter(text, max_weight=10):
         items = [(k, len(list(grp))) for k, grp in itertools.groupby(block)]
         if len(items) == 1:
@@ -115,14 +118,14 @@ class StarmapTestCase(unittest.TestCase):
                    ('aaaaeeeeiiiiiooooooo',)]
         numchars = sum(len(arg) for arg, in allargs)  # 61
         tmp = pathlib.Path(tempfile.mkdtemp(), 'calc_1.hdf5')
-        h5 = hdf5.File(tmp)
-        monitor = performance.Monitor(hdf5=h5)
-        res = parallel.Starmap(supertask, allargs, monitor).reduce()
+        with hdf5.File(tmp) as h5:
+            monitor = performance.Monitor(hdf5=h5)
+            res = parallel.Starmap(supertask, allargs, monitor).reduce()
         self.assertEqual(res, {'n': numchars})
-        h5.close()
         # check that the correct information is stored in the hdf5 file
         with hdf5.File(tmp) as h5:
             num = general.countby(h5['performance_data'].value, 'operation')
+            self.assertEqual(num[b'waiting'], 4)
             self.assertEqual(num[b'total supertask'], 18)  # outputs
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
             self.assertGreater(len(h5['task_info/supertask']), 0)
