@@ -19,6 +19,7 @@
 import re
 import sys
 import time
+import getpass
 import os.path
 import zipfile
 import sqlite3
@@ -57,7 +58,8 @@ def restore(archive, oqdata):
         if mo:
             job_id = int(mo.group(1))
             fullname = os.path.join(oqdata, fname)[:-5]  # strip .hdf5
-            db("UPDATE job SET ds_calc_dir=?x WHERE id=?x", fullname, job_id)
+            db("UPDATE job SET user_name=?x, ds_calc_dir=?x WHERE id=?x",
+               getpass.getuser(), fullname, job_id)
             safeprint('Restoring ' + fname)
             n += 1
     dt = time.time() - t0
