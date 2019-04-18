@@ -23,6 +23,7 @@ from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib.scientific import losses_by_period
+from openquake.risklib.riskinput import get_assets_by_taxo, cache_epsilons
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -61,24 +62,26 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         an ArrayWrapper with shape (E, L, T, ...)
     """
     riskmodel = param['riskmodel']
+    E = rupgetter.num_events
     L = len(riskmodel.lti)
     N = len(srcfilter.sitecol.complete)
-    mon = monitor('getting assets', measuremem=False)
-    with datastore.read(srcfilter.filename) as dstore:
-        assgetter = getters.AssetGetter(dstore)
-    A = assgetter.num_assets
+    e1 = rupgetter.first_event
+    with monitor('getting assets', measuremem=False):
+        with datastore.read(srcfilter.filename) as dstore:
+            assetcol = dstore['assetcol']
+        assets_by_site = assetcol.assets_by_site()
+    A = len(assetcol)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
         hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
-    mon_risk = monitor('computing losses', measuremem=False)
+    mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    imts = getter.imts
     events = rupgetter.get_eid_rlz()
-    eid2idx = {eid: idx for idx, eid in enumerate(events['eid'])}
-    E = len(eid2idx)
+    # numpy.testing.assert_equal(events['eid'], sorted(events['eid']))
+    eid2idx = dict(zip(events['eid'], range(e1, e1 + E)))
     tagnames = param['aggregate_by']
-    shape = assgetter.tagcol.agg_shape((len(events), L), tagnames)
+    shape = assetcol.tagcol.agg_shape((E, L), tagnames)
     elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     if param['asset_loss_table']:
         alt = numpy.zeros((A, E, L), F32)
@@ -87,34 +90,41 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         losses_by_A = numpy.zeros((A, L), F32)
     else:
         losses_by_A = 0
+    # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
+    num_events_per_sid = 0
+    epspath = param['epspath']
     for sid, haz in hazard.items():
         t0 = time.time()
-        weights = getter.weights[haz['rlzi']]
-        assets_on_sid, tagidxs = assgetter.get(sid, tagnames)
-        eidx = [eid2idx[eid] for eid in haz['eid']]
-        mon.duration += time.time() - t0
-        mon.counts += 1
+        assets_on_sid = assets_by_site[sid]
+        if len(assets_on_sid) == 0:
+            continue
+        num_events_per_sid += len(haz)
+        weights = getter.weights[haz['rlzi'], 0]
+        assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
+        eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
+        haz['eid'] = eidx + e1
         with mon_risk:
-            assets_ratios = riskmodel.get_assets_ratios(
-                assets_on_sid, haz['gmv'], imts)
+            out = riskmodel.get_output(assets_by_taxo, haz)
         with mon_agg:
-            for assets, ratios in assets_ratios:
-                taxo = assets[0].taxonomy
-                vfs = riskmodel[taxo].vulnerability_functions.values()
-                ws_by_lti = [weights[vf.imt] for vf in vfs]
-                for lti, loss_ratios in enumerate(ratios):
-                    ws = ws_by_lti[lti]
-                    lt = riskmodel.loss_types[lti]
-                    for asset in assets:
-                        aid = asset.ordinal
-                        losses = loss_ratios * asset.value(lt)
-                        if param['asset_loss_table']:
-                            alt[aid, eidx, lti] = losses
-                        acc[(eidx, lti) + tagidxs[aid]] += losses
-                        if param['avg_losses']:
-                            losses_by_A[aid, lti] += losses @ ws
+            for a, asset in enumerate(assets_on_sid):
+                aid = asset['ordinal']
+                tagi = asset[tagnames] if tagnames else ()
+                tagidxs = tuple(idx - 1 for idx in tagi)
+                for lti, lt in enumerate(riskmodel.loss_types):
+                    lratios = out[lt][a]
+                    if lt == 'occupants':
+                        losses = lratios * asset['occupants_None']
+                    else:
+                        losses = lratios * asset['value-' + lt]
+                    if param['asset_loss_table']:
+                        alt[aid, eidx, lti] = losses
+                    acc[(eidx, lti) + tagidxs] += losses
+                    if param['avg_losses']:
+                        losses_by_A[aid, lti] += losses @ weights
             times[sid] = time.time() - t0
+    if hazard:
+        num_events_per_sid /= len(hazard)
     with monitor('building event loss table'):
         elt = numpy.fromiter(
             ((event['eid'], event['rlz'], losses)
@@ -122,7 +132,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
             agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
-    res = {'elt': elt, 'agg_losses': agg, 'times': times}
+    res = {'elt': elt, 'agg_losses': agg, 'times': times,
+           'events_per_sid': num_events_per_sid}
     if param['avg_losses']:
         res['losses_by_A'] = losses_by_A * param['ses_ratio']
     if param['asset_loss_table']:
@@ -171,7 +182,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         self.set_param(
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1))
+            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
+            epspath=cache_epsilons(
+                self.datastore, oq, self.assetcol, self.riskmodel, self.E))
         parent = self.datastore.parent
         if parent and 'losses_by_event' in parent:
             # just regenerate the loss curves
@@ -195,14 +208,18 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
+        first_event = 0
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             for indices in general.block_splitter(
                     range(start, stop), ruptures_per_block):
                 rgetter = getters.RuptureGetter(
                     hdf5path, list(indices), grp_id,
-                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim)
+                    trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
+                    first_event)
+                first_event += rgetter.num_events
                 smap.submit(rgetter, self.src_filter, self.param)
+        self.events_per_sid = []
         return smap.reduce(self.agg_dicts, numpy.zeros(self.N))
 
     def agg_dicts(self, acc, dic):
@@ -226,6 +243,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 eidx = numpy.array([self.eid2idx[eid] for eid in eids])
                 idx = numpy.argsort(eidx)
                 self.datastore['asset_loss_table'][:, eidx[idx]] = alt[:, idx]
+        self.events_per_sid.append(dic['events_per_sid'])
         return acc + dic['times']
 
     def get_shape(self, *sizes):
@@ -270,7 +288,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         if len(times):
-            self.datastore.set_attrs('task_info/start_ebrisk', times=times)
+            self.datastore.set_attrs(
+                'task_info/start_ebrisk', times=times,
+                events_per_sid=numpy.mean(self.events_per_sid))
         oq = self.oqparam
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
@@ -302,6 +322,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.R > 1:
             logging.info('Computing aggregate loss curves statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
+            self.datastore.set_attrs(
+                'agg_curves-stats', return_periods=builder.return_periods,
+                loss_types=' '.join(self.riskmodel.loss_types))
             if oq.conditional_loss_poes:
                 logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')

@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import copy
-import operator
 import logging
 import collections
 from urllib.parse import unquote_plus
@@ -25,7 +24,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    groupby, AccumDict, group_array, cached_property)
+    AccumDict, group_array, cached_property)
 from openquake.risklib import scientific, riskmodels
 
 
@@ -33,8 +32,49 @@ class ValidationError(Exception):
     pass
 
 
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+
+
+class TaxonomyMapping(dict):
+    """
+    A dictionary taxonomy -> kind -> {ids, weights}
+    serializable to HDF5 as an array with fields
+    taxonomy, fragility_ids, fragility_weights, consequence_ids,
+    consequence_weights, vulnerability_ids, vulnerability_weights.
+    """
+    dt = numpy.dtype([('taxonomy', hdf5.vstr),
+                      ('fragility_ids', hdf5.vstr),
+                      ('fragility_weights', hdf5.vfloat64),
+                      ('consequence_ids', hdf5.vstr),
+                      ('consequence_weights', hdf5.vfloat64),
+                      ('vulnerability_ids', hdf5.vstr),
+                      ('vulnerability_weights', hdf5.vfloat64)])
+
+    def __toh5__(self):
+        data = []
+        for taxonomy, dic in self.items():
+            row = (taxonomy,
+                   ' '.join(dic['fragility']['ids']),
+                   numpy.array(dic['fragility']['weights']),
+                   ' '.join(dic['consequence']['ids']),
+                   numpy.array(dic['consequence']['weights']),
+                   ' '.join(dic['vulnerability']['ids']),
+                   numpy.array(dic['vulnerability']['weights']))
+            data.append(row)
+        return numpy.array(data, self.dt), {}
+
+    def __fromh5__(self, array, dic):
+        for rec in array:
+            f = dict(ids=rec['fragility_ids'].split(),
+                     weights=rec['fragility_weights'])
+            c = dict(ids=rec['consequence_ids'].split(),
+                     weights=rec['consequence_weights'])
+            v = dict(ids=rec['vulnerability_ids'].split(),
+                     weights=rec['vulnerability_weights'])
+            self[rec['taxonomy']] = dict(
+                fragility=f, consequence=c, vulnerability=v)
 
 
 def read_composite_risk_model(dstore):
@@ -43,64 +83,87 @@ def read_composite_risk_model(dstore):
     :returns: a :class:`CompositeRiskModel` instance
     """
     oqparam = dstore['oqparam']
-    crm = dstore.getitem(oqparam.risk_model)
+    tmap = dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore else {}
+    crm = dstore.getitem('risk_model')
+    # building dictionaries riskid -> loss_type -> risk_func
     fragdict, vulndict, consdict, retrodict = (
         AccumDict(), AccumDict(), AccumDict(), AccumDict())
     fragdict.limit_states = crm.attrs['limit_states']
-    for riskmodel in ('fragility', 'vulnerability', 'consequence'):
-        if riskmodel not in dstore:
-            continue
-        for quotedtaxonomy, rm in crm.items():
-            taxo = unquote_plus(quotedtaxonomy)
-            fragdict[taxo] = {}
-            vulndict[taxo] = {}
-            consdict[taxo] = {}
-            retrodict[taxo] = {}
-            for lt in rm:
-                rf = dstore['%s/%s/%s' % (riskmodel, quotedtaxonomy, lt)]
-                if riskmodel == 'consequence':
-                    # TODO: manage this case by adding HDF5-serialization
-                    # to the consequence model
-                    pass
-                elif riskmodel == 'fragility':  # rf is a FragilityFunctionList
-                    try:
-                        rf = rf.build(
-                            fragdict.limit_states,
-                            oqparam.continuous_fragility_discretization,
-                            oqparam.steps_per_interval)
-                    except ValueError as err:
-                        raise ValueError('%s: %s' % (taxo, err))
-                    fragdict[taxo][lt] = rf
-                else:  # rf is a vulnerability function
-                    rf.init()
-                    if lt.endswith('_retrofitted'):
-                        # strip _retrofitted, since len('_retrofitted') = 12
-                        retrodict[taxo][lt[:-12]] = rf
-                    else:
-                        vulndict[taxo][lt] = rf
-    return CompositeRiskModel(oqparam, fragdict, vulndict, consdict, retrodict)
+    for quoted_id, rm in crm.items():
+        riskid, kind = unquote_plus(quoted_id).rsplit('-', 1)
+        fragdict[riskid] = {}
+        vulndict[riskid] = {}
+        consdict[riskid] = {}
+        retrodict[riskid] = {}
+        for lt in rm:
+            rf = dstore['risk_model/%s/%s' % (quoted_id, lt)]
+            if kind == 'consequence':
+                # TODO: manage this case by adding HDF5-serialization
+                # to the consequence model
+                pass
+            elif kind == 'fragility':  # rf is a FragilityFunctionList
+                try:
+                    rf = rf.build(
+                        fragdict.limit_states,
+                        oqparam.continuous_fragility_discretization,
+                        oqparam.steps_per_interval)
+                except ValueError as err:
+                    raise ValueError('%s: %s' % (riskid, err))
+                fragdict[riskid][lt] = rf
+            else:  # rf is a vulnerability function
+                rf.init()
+                if lt.endswith('_retrofitted'):
+                    # strip _retrofitted, since len('_retrofitted') = 12
+                    retrodict[riskid][lt[:-12]] = rf
+                else:
+                    vulndict[riskid][lt] = rf
+    return CompositeRiskModel(
+        oqparam, tmap, fragdict, vulndict, consdict, retrodict)
+
+
+def get_assets_by_taxo(assets, epspath=None):
+    """
+    :param assets: an array of assets
+    :param epspath: hdf5 file where the epsilons are (or None)
+    :returns: assets_by_taxo with attributes eps and idxs
+    """
+    assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
+    assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
+        a['ordinal'] for a in assets_by_taxo.values()]))
+    assets_by_taxo.eps = {}
+    if epspath is None:  # no epsilons
+        return assets_by_taxo
+    # otherwise read the epsilons and group them by taxonomy
+    with hdf5.File(epspath, 'r') as h5:
+        dset = h5['epsilon_matrix']
+        for taxo, assets in assets_by_taxo.items():
+            lst = [dset[aid] for aid in assets['ordinal']]
+            assets_by_taxo.eps[taxo] = numpy.array(lst)
+    return assets_by_taxo
 
 
 class CompositeRiskModel(collections.Mapping):
     """
-    A container taxonomy -> riskmodel
+    A container (riskid, kind) -> riskmodel
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param tmap:
+        a taxonomy mapping
     :param fragdict:
-        a dictionary taxonomy -> loss_type -> fragility functions
+        a dictionary riskid -> loss_type -> fragility functions
     :param vulndict:
-        a dictionary taxonomy -> loss_type -> vulnerability function
+        a dictionary riskid -> loss_type -> vulnerability function
     :param consdict:
-        a dictionary taxonomy -> loss_type -> consequence functions
+        a dictionary riskid -> loss_type -> consequence functions
     :param retrodict:
-        a dictionary taxonomy -> loss_type -> vulnerability function
+        a dictionary riskid -> loss_type -> vulnerability function
     """
-    def __init__(self, oqparam, fragdict, vulndict, consdict, retrodict):
+    def __init__(self, oqparam, tmap, fragdict, vulndict, consdict, retrodict):
+        self.tmap = tmap
         self.damage_states = []
-        self._riskmodels = {}
+        self._riskmodels = {}  # (riskid, kind) -> riskmodel
         self.consequences = sum(len(vals) for vals in consdict.values())
-
         if sum(len(v) for v in fragdict.values()):
             # classical_damage/scenario_damage calculator
             if oqparam.calculation_mode in ('classical', 'scenario'):
@@ -111,58 +174,43 @@ class CompositeRiskModel(collections.Mapping):
                         'There are risk files in %r but not '
                         'an exposure' % oqparam.inputs['job_ini'])
             self.damage_states = ['no_damage'] + list(fragdict.limit_states)
-            for taxonomy, ffs_by_lt in fragdict.items():
-                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam, fragility_functions=ffs_by_lt,
-                    vulnerability_functions=vulndict[taxonomy],
-                    consequence_functions=consdict[taxonomy])
+            for riskid, ffs_by_lt in fragdict.items():
+                self._riskmodels[riskid, 'fragility'] = (
+                    riskmodels.get_riskmodel(
+                        riskid, oqparam, fragility_functions=ffs_by_lt,
+                        vulnerability_functions=vulndict[riskid],
+                        consequence_functions=consdict[riskid]))
+            self.kind = 'fragility'
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
-            for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
+            for (riskid, vf_orig), (riskid_, vf_retro) in \
                     zip(sorted(vulndict.items()), sorted(retrodict.items())):
-                assert taxonomy == taxonomy_  # same taxonomies
-                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam,
-                    vulnerability_functions_orig=vf_orig,
-                    vulnerability_functions_retro=vf_retro)
+                assert riskid == riskid_  # same IDs
+                self._riskmodels[riskid, 'vulnerability'] = (
+                    riskmodels.get_riskmodel(
+                        riskid, oqparam,
+                        vulnerability_functions_orig=vf_orig,
+                        vulnerability_functions_retro=vf_retro))
+            self.kind = 'vulnerability'
         else:
             # classical, event based and scenario calculators
-            for taxonomy, vfs in vulndict.items():
+            for riskid, vfs in vulndict.items():
                 for vf in vfs.values():
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
                     vf.seed = oqparam.random_seed
-                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
-                    taxonomy, oqparam, fragility_functions=vulndict[taxonomy],
-                    vulnerability_functions=vfs)
+                self._riskmodels[riskid, 'vulnerability'] = (
+                    riskmodels.get_riskmodel(
+                        riskid, oqparam, fragility_functions=vulndict[riskid],
+                        vulnerability_functions=vfs))
+            self.kind = 'vulnerability'
 
         self.init(oqparam)
-
-    # used in ebrisk
-    def get_assets_ratios(self, assets, gmvs, imts):
-        """
-        :param assets: assets on the same site
-        :params gmvs: hazard on the given site, shape (E, M)
-        :param imts: intensity measure types
-        :returns: a list of (assets, loss_ratios) for each taxonomy on the site
-        """
-        assets_by_t = groupby(assets, operator.attrgetter('taxonomy'))
-        assets_ratios = []
-        for taxo, rm in self.items():
-            t = self.taxonomy_dict[taxo]
-            try:
-                assets = assets_by_t[t]
-            except KeyError:  # there are no assets of taxonomy taxo
-                continue
-            assets_ratios.append((assets, rm.get_loss_ratios(gmvs)))
-        return assets_ratios
 
     def init(self, oqparam):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.taxonomy = []  # must be set by the engine
-
         # build a sorted list with all the loss_types contained in the model
         ltypes = set()
         for rm in self.values():
@@ -170,15 +218,10 @@ class CompositeRiskModel(collections.Mapping):
         self.loss_types = sorted(ltypes)
 
         taxonomies = set()
-        for taxonomy, riskmodel in self._riskmodels.items():
-            taxonomies.add(taxonomy)
-            riskmodel.loss_ratios = {}
+        for (riskid, kind), riskmodel in self._riskmodels.items():
+            taxonomies.add(riskid)
             riskmodel.compositemodel = self
             for lt, vf in riskmodel.risk_functions.items():
-                # for classical risk
-                if hasattr(riskmodel, 'lrem_steps_per_interval'):
-                    riskmodel.loss_ratios[lt] = vf.mean_loss_ratios_with_steps(
-                        riskmodel.lrem_steps_per_interval)
                 # save the number of nonzero coefficients of variation
                 if hasattr(vf, 'covs') and vf.covs.any():
                     self.covs += 1
@@ -186,14 +229,14 @@ class CompositeRiskModel(collections.Mapping):
             if missing:
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
-                    ' type %s' % (taxonomy, ', '.join(missing)))
+                    ' type %s' % (riskid, ', '.join(missing)))
             riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt].imt]
                               for lt in self.loss_types}
 
         self.taxonomies = sorted(taxonomies)
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
-        for taxo, rm in self._riskmodels.items():
+        for (riskid, kind), rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
                 iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
@@ -203,6 +246,7 @@ class CompositeRiskModel(collections.Mapping):
         """
         :returns: a dict taxonomy string -> taxonomy index
         """
+        # .taxonomy must be set by the engine
         tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         return tdict
 
@@ -227,19 +271,26 @@ class CompositeRiskModel(collections.Mapping):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
                 lines = []
-                for key in sorted(self):
-                    rm = self[key]
+                allratios = []
+                for taxo in sorted(self):
+                    rm = self[taxo]
                     if loss_type in rm.loss_ratios:
                         ratios = rm.loss_ratios[loss_type]
+                        allratios.append(ratios)
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
                             rm.vulnerability_functions[loss_type], len(ratios))
                         )
-                if len(curve_resolutions) > 1:  # example in test_case_5
-                    logging.debug(
-                        'Different num_loss_ratios:\n%s', '\n'.join(lines))
+                if len(curve_resolutions) > 1:
+                    # number of loss ratios is not the same for all taxonomies:
+                    # then use the longest array; see classical_risk case_5
+                    allratios.sort(key=len)
+                    for rm in self.values():
+                        if rm.loss_ratios[loss_type] != allratios[-1]:
+                            rm.loss_ratios[loss_type] = allratios[-1]
+                            logging.debug('Redefining loss ratios for %s', rm)
                 cp = scientific.CurveParams(
-                    l, loss_type, max(curve_resolutions), ratios, True)
+                    l, loss_type, max(curve_resolutions), allratios[-1], True)
             else:  # used only to store the association l -> loss_type
                 cp = scientific.CurveParams(l, loss_type, 0, [], False)
             cps.append(cp)
@@ -259,12 +310,12 @@ class CompositeRiskModel(collections.Mapping):
             loss_ratios[cp.loss_type] = tuple(cp.ratios)
         return loss_ratios
 
-    def __getitem__(self, taxonomy):
-        try:
-            return self._riskmodels[taxonomy]
-        except KeyError:  # taxonomy was an index
-            taxo = self.taxonomy[taxonomy]
-            return self._riskmodels[taxo]
+    def __getitem__(self, key):
+        if isinstance(key, (int, U16)):  # a taxonomy index
+            key = self.taxonomy[key], self.kind
+        elif isinstance(key, str):
+            key = (key, self.kind)
+        return self._riskmodels[key]
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
@@ -288,17 +339,17 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy, assets in group.items():
                 for l, loss_type in enumerate(self.loss_types):
                     fracs = self[taxonomy](loss_type, assets, [gmv])
-                    dmg = assets['number'] * fracs[:, 0, :D]
-                    csq = assets['value-' + loss_type] * fracs[:, 0, D]
-                    out[assets['ordinal'], l, 0, :D] = dmg
-                    out[assets['ordinal'], l, 0, D] = csq
+                    for asset, frac in zip(assets, fracs):
+                        dmg = asset['number'] * frac[0, :D]
+                        csq = asset['value-' + loss_type] * frac[0, D]
+                        out[asset['ordinal'], l, 0, :D] = dmg
+                        out[asset['ordinal'], l, 0, D] = csq
         return out
 
-    def gen_outputs(self, riskinput, monitor, hazard=None):
+    def gen_outputs(self, riskinput, monitor, epspath=None, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
-        underlying riskmodels. Yield the outputs generated as dictionaries
-        out_by_lr.
+        underlying riskmodels. Yield one output per realization.
 
         :param riskinput: a RiskInput instance
         :param monitor: a monitor object used to measure the performance
@@ -311,48 +362,62 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
         assert len(sids) == 1
-        yield from self._gen_outputs(
-            riskinput.assets, hazard[sids[0]], riskinput.epsilon_getter)
+        with monitor('computing risk', measuremem=False):
+            # this approach is slow for event_based_risk since a lot of
+            # small arrays are passed (one per realization) instead of
+            # a long array with all realizations; ebrisk does the right
+            # thing since it calls get_output directly
+            assets_by_taxo = get_assets_by_taxo(riskinput.assets, epspath)
+            for rlzi, haz in sorted(hazard[sids[0]].items()):
+                out = self.get_output(assets_by_taxo, haz, rlzi)
+                yield out
 
-    def _gen_outputs(self, assets, hazard, epsgetter):
-        mon = self.monitor('computing risk', measuremem=False)
-        assets_by_taxo = group_array(assets, 'taxonomy')
-        for rlzi, haz in sorted(hazard.items()):
-            with mon:
-                if isinstance(haz, numpy.ndarray):
-                    # NB: in GMF-based calculations the order in which
-                    # the gmfs are stored is random since it depends on
-                    # which hazard task ends first; here we reorder
-                    # the gmfs by event ID; this is convenient in
-                    # general and mandatory for the case of
-                    # VulnerabilityFunctionWithPMF, otherwise the
-                    # sample method would receive the means in random
-                    # order and produce random results even if the
-                    # seed is set correctly; very tricky indeed! (MS)
-                    haz.sort(order='eid')
-                    eids = haz['eid']
-                    data = haz['gmv']  # shape (E, M)
-                elif not haz:  # no hazard for this site
-                    eids = numpy.arange(1)
-                    data = []
-                else:  # classical
-                    eids = []
-                    data = haz  # shape M
-                for taxonomy, assets in assets_by_taxo.items():
-                    rm = self[taxonomy]
-                    lst = []
-                    for lt in self.loss_types:
-                        if len(data) == 0:
-                            dat = [0]
-                        elif len(eids):  # gmfs
-                            dat = data[:, rm.imti[lt]]
-                        else:  # hcurves
-                            dat = data[rm.imti[lt]]
-                        lst.append(rm(lt, assets, dat, eids, epsgetter))
-                    out = hdf5.ArrayWrapper(
-                        numpy.array(lst),
-                        dict(assets=assets, rlzi=rlzi, eids=eids))
-                    yield out
+    def get_output(self, assets_by_taxo, haz, rlzi=None):
+        """
+        :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
+        :param haz: an array or a dictionary of hazard on that site
+        :param rlzi: if given, a realization index
+        """
+        if isinstance(haz, numpy.ndarray):
+            # NB: in GMF-based calculations the order in which
+            # the gmfs are stored is random since it depends on
+            # which hazard task ends first; here we reorder
+            # the gmfs by event ID; this is convenient in
+            # general and mandatory for the case of
+            # VulnerabilityFunctionWithPMF, otherwise the
+            # sample method would receive the means in random
+            # order and produce random results even if the
+            # seed is set correctly; very tricky indeed! (MS)
+            haz.sort(order='eid')
+            eids = haz['eid']
+            data = haz['gmv']  # shape (E, M)
+        elif not haz:  # no hazard for this site
+            eids = numpy.arange(1)
+            data = []
+        else:  # classical
+            eids = []
+            data = haz  # shape M
+        dic = dict(eids=eids)
+        if rlzi is not None:
+            dic['rlzi'] = rlzi
+        for l, lt in enumerate(self.loss_types):
+            ls = []
+            for taxonomy, assets_ in assets_by_taxo.items():
+                if len(assets_by_taxo.eps):
+                    epsilons = assets_by_taxo.eps[taxonomy][:, eids]
+                else:  # no CoVs
+                    epsilons = ()
+                rm = self[taxonomy]
+                if len(data) == 0:
+                    dat = [0]
+                elif len(eids):  # gmfs
+                    dat = data[:, rm.imti[lt]]
+                else:  # hcurves
+                    dat = data[rm.imti[lt]]
+                ls.append(rm(lt, assets_, dat, eids, epsilons))
+            arr = numpy.concatenate(ls)
+            dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
+        return hdf5.ArrayWrapper((), dic)
 
     def reduce(self, taxonomies):
         """
@@ -362,9 +427,9 @@ class CompositeRiskModel(collections.Mapping):
         new = copy.copy(self)
         new.taxonomies = sorted(taxonomies)
         new._riskmodels = {}
-        for taxo, rm in self._riskmodels.items():
-            if taxo in taxonomies:
-                new._riskmodels[taxo] = rm
+        for (riskid, kind), rm in self._riskmodels.items():
+            if riskid in taxonomies:
+                new._riskmodels[riskid, kind] = rm
                 rm.compositemodel = new
         return new
 
@@ -372,8 +437,13 @@ class CompositeRiskModel(collections.Mapping):
         loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
-        return self._riskmodels, dict(
-            covs=self.covs, loss_types=loss_types, limit_states=limit_states)
+        dic = dict(covs=self.covs, loss_types=loss_types,
+                   limit_states=limit_states)
+        rf = next(iter(self.values()))
+        if hasattr(rf, 'loss_ratios'):
+            for lt in self.loss_types:
+                dic['loss_ratios_' + lt] = rf.loss_ratios[lt]
+        return self._riskmodels, dic
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -390,13 +460,10 @@ class RiskInput(object):
         a callable returning the hazard data for a given realization
     :param assets_by_site:
         array of assets, one per site
-    :param eps_dict:
-        dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets, eps_dict=None):
+    def __init__(self, hazard_getter, assets):
         self.hazard_getter = hazard_getter
         self.assets = assets
-        self.eps = eps_dict or {}
         self.weight = len(assets)
         taxonomies_set = set()
         aids = []
@@ -412,108 +479,10 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def epsilon_getter(self, aid, eids):
-        """
-        :param aid: asset ordinal
-        :param eids: an array of event indices
-        :returns: an array of E epsilons
-        """
-        if len(self.eps) == 0:
-            return
-        try:  # from ruptures
-            return self.eps[aid, eids]
-        except TypeError:  # from GMFs
-            return self.eps[aid][eids]
-
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__,
             ' '.join(map(str, self.taxonomies)), len(self.aids))
-
-
-class EpsilonMatrix0(object):
-    """
-    Mock-up for a matrix of epsilons of size N x E,
-    used when asset_correlation=0.
-
-    :param num_assets: N assets
-    :param seeds: E seeds, set before calling numpy.random.normal
-    """
-    def __init__(self, num_assets, seeds):
-        self.num_assets = num_assets
-        self.seeds = seeds
-        self.eps = None
-
-    def make_eps(self):
-        """
-        Builds a matrix of A x E epsilons
-        """
-        eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
-        for i, seed in enumerate(self.seeds):
-            numpy.random.seed(seed)
-            eps[:, i] = numpy.random.normal(size=self.num_assets)
-        return eps
-
-    def __getitem__(self, aid):
-        if self.eps is None:
-            self.eps = self.make_eps()
-        return self.eps[aid]
-
-    def __len__(self):
-        return self.num_assets
-
-
-class EpsilonMatrix1(object):
-    """
-    Mock-up for a matrix of epsilons of size A x E,
-    used when asset_correlation=1.
-
-    :param num_assets: number of assets
-    :param num_events: number of events
-    :param seed: seed used to generate E epsilons
-    """
-    def __init__(self, num_assets, num_events, seed):
-        self.num_assets = num_assets
-        self.num_events = num_events
-        self.seed = seed
-        numpy.random.seed(seed)
-        self.eps = numpy.random.normal(size=num_events)
-
-    def __getitem__(self, item):
-        if isinstance(item, tuple):
-            # item[0] is the asset index, item[1] the event index
-            # the epsilons are equal for all assets since asset_correlation=1
-            return self.eps[item[1]]
-        elif isinstance(item, int):  # item is an asset index
-            return self.eps
-        else:
-            raise TypeError('Invalid item %r' % item)
-
-    def __len__(self):
-        return self.num_assets
-
-
-def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
-    """
-    :returns: a function (start, stop) -> matrix of shape (n_assets, n_events)
-    """
-    assert n_assets > 0, n_assets
-    assert n_events > 0, n_events
-    assert correlation in (0, 1), correlation
-    assert master_seed >= 0, master_seed
-    assert no_eps in (True, False), no_eps
-    seeds = master_seed + numpy.arange(n_events)
-
-    def get_eps(start=0, stop=n_events):
-        if no_eps:
-            eps = None
-        elif correlation:
-            eps = EpsilonMatrix1(n_assets, stop - start, master_seed)
-        else:
-            eps = EpsilonMatrix0(n_assets, seeds[start:stop])
-        return eps
-
-    return get_eps
 
 
 # used in scenario_risk
@@ -535,6 +504,34 @@ def make_eps(asset_array, num_samples, seed, correlation):
         for asset, epsrow in zip(assets, epsilons):
             eps[asset['ordinal']] = epsrow
     return eps
+
+
+def cache_epsilons(dstore, oq, assetcol, riskmodel, E):
+    """
+    Do nothing if there are no coefficients of variation of ignore_covs is
+    set. Otherwise, generate an epsilon matrix of shape (A, E) and save it
+    in the cache file, by returning the path to it.
+    """
+    if oq.ignore_covs or not riskmodel.covs:
+        return
+    A = len(assetcol)
+    hdf5path = dstore.hdf5cache()
+    logging.info('Storing the epsilon matrix in %s', hdf5path)
+    if oq.calculation_mode == 'scenario_risk':
+        eps = make_eps(assetcol.array, E, oq.master_seed, oq.asset_correlation)
+    else:  # event based
+        if oq.asset_correlation:
+            numpy.random.seed(oq.master_seed)
+            eps = numpy.array([numpy.random.normal(size=E)] * A)
+        else:
+            seeds = oq.master_seed + numpy.arange(E)
+            eps = numpy.zeros((A, E), F32)
+            for i, seed in enumerate(seeds):
+                numpy.random.seed(seed)
+                eps[:, i] = numpy.random.normal(size=A)
+    with hdf5.File(hdf5path) as cache:
+        cache['epsilon_matrix'] = eps
+    return hdf5path
 
 
 def str2rsi(key):

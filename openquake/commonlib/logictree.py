@@ -28,6 +28,7 @@ import os
 import re
 import ast
 import copy
+import time
 import logging
 import itertools
 import collections
@@ -44,7 +45,7 @@ from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
-from openquake.baselib.node import striptag, node_from_elem, Node as N, context
+from openquake.baselib.node import node_from_elem, Node as N, context
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -52,6 +53,8 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
+ID_REGEX = re.compile(r'id="([^"]+?)"')
+SOURCE_TYPE_REGEX = re.compile(r'<(\w+Source)\b')
 
 
 def unique(objects, key=None):
@@ -460,6 +463,9 @@ class FakeSmlt(object):
         self.num_samples = num_samples
         self.on_each_source = False
         self.num_paths = 1
+        with open(self.filename, encoding='utf-8') as f:
+            xml = f.read()
+        self.tectonic_region_type = set(TRT_REGEX.findall(xml))
 
     def gen_source_models(self, gsim_lt):
         """
@@ -475,14 +481,6 @@ class FakeSmlt(object):
         :returns: the sourcegroup unchanged
         """
         return sourcegroup
-
-    def get_trts(self):
-        """
-        :returns: the set of TRTs inside the source model file
-        """
-        with open(self.filename, encoding='utf-8') as f:
-            xml = f.read()
-        return set(TRT_REGEX.findall(xml))
 
     def __iter__(self):
         name = os.path.basename(self.filename)
@@ -578,9 +576,6 @@ class SourceModelLogicTree(object):
                'applyToSources',
                'applyToSourceType')
 
-    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
-                    'characteristicFault')
-
     def __init__(self, filename, validate=True, seed=0, num_samples=0):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
@@ -607,48 +602,20 @@ class SourceModelLogicTree(object):
         return (self.info.applytosources and
                 self.info.applytosources == self.source_ids)
 
-    def get_source_ids(self):
-        """
-        :returns:
-            the complete dictionary source model ID -> source IDs
-        """
-        source_ids = collections.defaultdict(list)
-        for sm, fnames in self.info.smpaths.items():
-            logging.info('Reading source IDs from source model %s', sm)
-            for fname in fnames:
-                for sg in read_source_groups(fname):
-                    for src_node in sg:
-                        source_ids[sm].append(src_node['id'])
-        return source_ids
-
-    def get_trts(self):
-        """
-        :returns:
-            the complete set of tectonic regions found in all the source models
-        """
-        trts = set()
-        n = 0
-        for fnames in self.info.smpaths.values():
-            for fname in fnames:
-                with open(fname, encoding='utf-8') as f:
-                    xml = f.read()
-                trts.update(TRT_REGEX.findall(xml))
-                n += 1
-        logging.info('Read %d TRTs from %d model file(s)', len(trts), n)
-        return trts
-
     def parse_tree(self, tree_node, validate):
         """
         Parse the whole tree and point ``root_branchset`` attribute
         to the tree's root.
         """
         self.info = collect_info(self.filename)
-        if self.info.applytosources:
-            self.source_ids = self.get_source_ids()
-        else:
-            self.source_ids = collections.defaultdict(list)
+        self.source_ids = collections.defaultdict(list)
+        t0 = time.time()
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
+        dt = time.time() - t0
+        if validate:
+            bname = os.path.basename(self.filename)
+            logging.info('Validated %s in %.2f seconds', bname, dt)
 
     def parse_branchinglevel(self, branchinglevel_node, depth, validate):
         """
@@ -1192,7 +1159,7 @@ class SourceModelLogicTree(object):
                 branch.child_branchset = branchset
 
     def _get_source_model(self, source_model_file):
-        return open(os.path.join(self.basepath, source_model_file), 'rb')
+        return open(os.path.join(self.basepath, source_model_file))
 
     def collect_source_model_data(self, branch_id, source_model):
         """
@@ -1201,22 +1168,12 @@ class SourceModelLogicTree(object):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
+        # using regular expressions is a lot faster than using the
         with self._get_source_model(source_model) as sm:
-            smodel = nrml.read(sm).sourceModel
-        n = len('Source')
-        for sg in smodel:
-            trt = sg['tectonicRegion']
-            if sg.tag.endswith('sourceGroup'):  # nrml/0.5
-                src_nodes = sg
-            else:  # nrml/0.4
-                src_nodes = [sg]
-            for src_node in src_nodes:
-                with context(source_model, src_node):
-                    source_id = src_node['id']
-                    source_type = striptag(src_node.tag)[n:]
-                    self.tectonic_region_types.add(trt)
-                    self.source_ids[branch_id].append(source_id)
-                    self.source_types.add(source_type)
+            xml = sm.read()
+        self.tectonic_region_types.update(TRT_REGEX.findall(xml))
+        self.source_ids[branch_id].extend(ID_REGEX.findall(xml))
+        self.source_types.update(SOURCE_TYPE_REGEX.findall(xml))
 
     def apply_uncertainties(self, branch_ids, source_group):
         """

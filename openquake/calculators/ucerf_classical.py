@@ -22,7 +22,8 @@ import numpy as np
 from openquake.baselib import parallel, general
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.calculators import base
-from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.classical import (
+    ClassicalCalculator, classical_split_filter)
 
 
 @base.calculators.add('ucerf_classical')
@@ -51,14 +52,15 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         acc = self.acc0()
         self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
-                     filter_distance=oq.filter_distance)
+                     filter_distance=oq.filter_distance, maxweight=1E10)
         self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
         rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             gsims = list(rlzs_by_gsim[grp.id])
             acc = parallel.Starmap.apply(
-                classical, (grp, self.src_filter, gsims, param, monitor),
+                classical_split_filter,
+                (grp, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)

@@ -23,11 +23,10 @@ import mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, geo, probability_map, stats, valid
+from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import EBRupture, classes
 from openquake.risklib.riskinput import rsi2str
-from openquake.risklib.asset import Asset
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
 U16 = numpy.uint16
@@ -266,52 +265,6 @@ class GmfDataGetter(collections.Mapping):
         return len(self.sids)
 
 
-# used only in ebrisk; does not support insured losses
-class AssetGetter(object):
-    """
-    An object which is able to read the assets on a given site.
-    """
-    def __init__(self, dstore):
-        self.dstore = dstore
-        self.tagcol = dstore['assetcol/tagcol']
-        self.sids = dstore['assetcol/array']['site_id']
-        self.cost_calculator = dstore['assetcol/cost_calculator']
-        self.cost_calculator.tagi = {
-            tagname: i for i, tagname in enumerate(self.tagcol.tagnames)}
-        self.num_assets = len(dstore['assetcol/array'])
-        self.loss_types = dstore.get_attr('assetcol', 'loss_types').split()
-
-    def get(self, site_id, tagnames):
-        """
-        :param site_id: the site of interest
-        :returns: assets, ass_by_aid
-        """
-        bools = site_id == self.sids
-        aids, = numpy.where(bools)
-        array = self.dstore['assetcol/array'][bools]
-        tagidxs = {}  # aid -> tagidxs
-        assets = []
-        for aid, a in zip(aids, array):
-            tagi = a[tagnames] if tagnames else ()
-            tagidxs[aid] = tuple(idx - 1 for idx in tagi)
-            values = {lt: a['value-' + lt] for lt in self.loss_types
-                      if lt != 'occupants'}
-            for name in array.dtype.names:
-                if name.startswith('occupants_'):
-                    values[name] = a[name]
-            asset = Asset(
-                aid,
-                [a[name] for name in self.tagcol.tagnames],
-                number=a['number'],
-                location=(valid.longitude(a['lon']),  # round coordinates
-                          valid.latitude(a['lat'])),
-                values=values,
-                area=a['area'],
-                calc=self.cost_calculator)
-            assets.append(asset)
-        return assets, tagidxs
-
-
 class GmfGetter(object):
     """
     An hazard getter with methods .get_gmfdata and .get_hazard returning
@@ -533,16 +486,17 @@ class RuptureGetter(object):
         a list of rupture indices of the same group
     """
     def __init__(self, filename, rup_indices, grp_id, trt, samples,
-                 rlzs_by_gsim):
+                 rlzs_by_gsim, first_event=0):
         self.filename = filename
         self.rup_indices = rup_indices
         if not isinstance(rup_indices, list):  # is a rup_array
             self.__dict__['rup_array'] = rup_indices
-            self.__dict__['num_events'] = rup_indices['n_occ'].sum()
+            self.__dict__['num_events'] = int(rup_indices['n_occ'].sum())
         self.grp_id = grp_id
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
+        self.first_event = first_event
         self.rlz2idx = {}
         nr = 0
         rlzi = []
@@ -570,7 +524,9 @@ class RuptureGetter(object):
 
     @general.cached_property
     def num_events(self):
-        return self.rup_array['n_occ'].sum()
+        n_occ = self.rup_array['n_occ'].sum()
+        ne = n_occ if self.samples > 1 else n_occ * len(self.rlzs)
+        return int(ne)
 
     @property
     def num_ruptures(self):
@@ -604,7 +560,8 @@ class RuptureGetter(object):
                 # some indices may have weight 0 and are discarded
                 rgetter = self.__class__(
                     self.filename, list(rup_indices), self.grp_id,
-                    self.trt, self.samples, self.rlzs_by_gsim)
+                    self.trt, self.samples, self.rlzs_by_gsim,
+                    self.first_event)
                 rgetter.weight = sum([self.weights[idx[ri]]
                                       for ri in rup_indices])
                 yield rgetter
