@@ -20,9 +20,8 @@ multi_node = true
 oq_distribute = celery
 # make sure workers are terminated when tasks are revoked
 terminate_workers_on_revoke = true
-# max concurrent jobs to execute
-# use 0 or -1 to disable this feature
-max_concurrent_jobs = 0
+# enable the queue
+serialize_jobs = false
 # change this on a cluster if using oq_distribute = dask
 dask_scheduler = 127.0.0.1:1921
 

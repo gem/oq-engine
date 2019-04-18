@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.risklib import scientific, riskmodels
+from openquake.risklib import scientific
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -85,7 +85,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         super().pre_execute()
         F = self.oqparam.number_of_ground_motion_fields
         self.param['number_of_ground_motion_fields'] = F
-        self.riskinputs = self.build_riskinputs('gmf', num_events=F)
+        self.riskinputs = self.build_riskinputs('gmf')
         self.param['tags'] = list(self.assetcol.tagcol)
 
     def post_execute(self, result):
