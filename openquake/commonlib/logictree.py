@@ -463,6 +463,9 @@ class FakeSmlt(object):
         self.num_samples = num_samples
         self.on_each_source = False
         self.num_paths = 1
+        with open(self.filename, encoding='utf-8') as f:
+            xml = f.read()
+        self.tectonic_region_type = set(TRT_REGEX.findall(xml))
 
     def gen_source_models(self, gsim_lt):
         """
@@ -478,14 +481,6 @@ class FakeSmlt(object):
         :returns: the sourcegroup unchanged
         """
         return sourcegroup
-
-    def get_trts(self):
-        """
-        :returns: the set of TRTs inside the source model file
-        """
-        with open(self.filename, encoding='utf-8') as f:
-            xml = f.read()
-        return set(TRT_REGEX.findall(xml))
 
     def __iter__(self):
         name = os.path.basename(self.filename)
@@ -606,20 +601,6 @@ class SourceModelLogicTree(object):
         """
         return (self.info.applytosources and
                 self.info.applytosources == self.source_ids)
-
-    def get_source_ids(self):
-        """
-        :returns:
-            the complete dictionary source model ID -> source IDs
-        """
-        return self.source_ids
-
-    def get_trts(self):
-        """
-        :returns:
-            the complete set of tectonic regions found in all the source models
-        """
-        return self.tectonic_region_types
 
     def parse_tree(self, tree_node, validate):
         """
