@@ -261,15 +261,16 @@ and with vs30 values extracted from the vs30 file with a nearest neighbour
 algorithm.
 
 ```bash
-$ oq help prepare_site_model
-usage: oq prepare_site_model [-h] [-e EXPOSURE_XML [EXPOSURE_XML ...]] [-1]
-                             [-2] [-3] [-g 0] [-s 5] [-o site_model.csv]
+$ oq prepare_site_model -h
+usage: oq prepare_site_model [-h] [-e [EXPOSURE_XML [EXPOSURE_XML ...]]]
+                             [-s [SITES_CSV [SITES_CSV ...]]] [-1] [-2] [-3]
+                             [-g 0] [-a 5] [-o site_model.csv]
                              vs30_csv [vs30_csv ...]
 
-Prepare a site_model.csv file from an exposure xml file, a vs30 csv file and a
-grid spacing which can be 0 (meaning no grid). For each asset site or grid site
-the closest vs30 parameter is used. The command can also generate (on demand)
-the additional fields z1pt0, z2pt5 and vs30measured which may be needed by your
+Prepare a site_model.csv file from exposure xml files/site csv files, vs30 csv
+files and a grid spacing which can be 0 (meaning no grid). For each site the
+closest vs30 parameter is used. The command can also generate (on demand) the
+additional fields z1pt0, z2pt5 and vs30measured which may be needed by your
 hazard model, depending on the required GSIMs.
 
 positional arguments:
@@ -277,19 +278,20 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -e EXPOSURE_XML [EXPOSURE_XML ...], --exposure-xml EXPOSURE_XML [EXPOSURE_XML ...]
+  -e [EXPOSURE_XML [EXPOSURE_XML ...]], --exposure-xml [EXPOSURE_XML [EXPOSURE_XML ...]]
                         exposure(s) in XML format
+  -s [SITES_CSV [SITES_CSV ...]], --sites-csv [SITES_CSV [SITES_CSV ...]]
+                        sites in CSV format
   -1, --z1pt0           build the z1pt0
   -2, --z2pt5           build the z2pt5
   -3, --vs30measured    build the vs30measured
   -g 0, --grid-spacing 0
                         grid spacing in km (the default 0 means no grid)
-  -s 5, --site-param-distance 5
+  -a 5, --assoc-distance 5
                         sites over this distance are discarded
   -o site_model.csv, --output site_model.csv
                         output file
 ```
-
 The command work in two modes: with non-gridded exposures (the
 default) and with gridded exposures. In the first case the assets are
 aggregated in unique locations and for each location the vs30 coming
