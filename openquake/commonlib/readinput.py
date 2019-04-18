@@ -829,7 +829,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     """
     ucerf = oqparam.calculation_mode.startswith('ucerf')
     source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
-    trts = source_model_lt.get_trts()
+    trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
     for trt in reqv:  # these are lowercase because they come from the job.ini
