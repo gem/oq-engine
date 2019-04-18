@@ -28,6 +28,7 @@ import os
 import re
 import ast
 import copy
+import time
 import logging
 import itertools
 import collections
@@ -480,9 +481,13 @@ class FakeSmlt(object):
         """
         :returns: the set of TRTs inside the source model file
         """
+        t0 = time.time()
         with open(self.filename, encoding='utf-8') as f:
             xml = f.read()
-        return set(TRT_REGEX.findall(xml))
+        res = set(TRT_REGEX.findall(xml))
+        dt = time.time() - t0
+        logging.info('Found TRTs in %s in %d seconds', self.filename, dt)
+        return res
 
     def __iter__(self):
         name = os.path.basename(self.filename)
