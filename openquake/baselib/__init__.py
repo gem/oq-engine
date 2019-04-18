@@ -100,7 +100,7 @@ def boolean(flag):
 
 
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
-            multi_user=boolean, multi_node=boolean)
+            multi_user=boolean, multi_node=boolean, serialize_jobs=boolean)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp

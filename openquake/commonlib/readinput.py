@@ -28,6 +28,7 @@ import tempfile
 import functools
 import configparser
 import collections
+import toml
 import numpy
 
 from openquake.baselib import performance, hdf5, parallel
@@ -463,6 +464,10 @@ def get_gsim_lt(oqparam, trts=['*']):
     trts = set(oqparam.minimum_magnitude) - {'default'}
     expected_trts = set(gsim_lt.values)
     assert trts <= expected_trts, (trts, expected_trts)
+    imt_dep_w = any(len(branch.weight.dic) > 1 for branch in gsim_lt.branches)
+    if oqparam.number_of_logic_tree_samples and imt_dep_w:
+        raise NotImplementedError('IMT-dependent weights in the logic tree '
+                                  'do not work with sampling!')
     return gsim_lt
 
 
@@ -824,7 +829,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     """
     ucerf = oqparam.calculation_mode.startswith('ucerf')
     source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
-    trts = source_model_lt.get_trts()
+    trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
     for trt in reqv:  # these are lowercase because they come from the job.ini
@@ -909,11 +914,16 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    tmap = _get_taxonomy_mapping(oqparam.inputs)
     fragdict = get_risk_models(oqparam, 'fragility')
     vulndict = get_risk_models(oqparam, 'vulnerability')
     consdict = get_risk_models(oqparam, 'consequence')
-    if consdict:  # the consequences must be consistent with the fragilities
-        check_equal_sets(consdict, fragdict)
+    if not tmap:  # the risk ids are the taxonomies already
+        d = dict(ids=['?'], weights=[1.0])
+        for taxo in set(fragdict) | set(vulndict) | set(consdict):
+            tmap[taxo] = dict(fragility=d, consequence=d, vulnerability=d)
+        if consdict:  # the consequences must be consistent
+            check_equal_sets(consdict, fragdict)
         for taxo in consdict:
             cdict, fdict = consdict[taxo], fragdict[taxo]
             check_equal_sets(cdict, fdict)
@@ -935,7 +945,7 @@ def get_risk_model(oqparam):
     else:
         retro = {}
     return riskinput.CompositeRiskModel(
-        oqparam, fragdict, vulndict, consdict, retro)
+        oqparam, tmap, fragdict, vulndict, consdict, retro)
 
 
 def get_exposure(oqparam):
@@ -964,6 +974,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :returns: (site collection, asset collection, discarded)
     """
     global exposure
+    asset_hazard_distance = oqparam.asset_hazard_distance['default']
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
@@ -971,11 +982,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         haz_sitecol = get_site_collection(oqparam)
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
-        if haz_distance != oqparam.asset_hazard_distance:
+        if haz_distance != asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
-                         haz_distance, oqparam.asset_hazard_distance)
+                         haz_distance, asset_hazard_distance)
     else:
-        haz_distance = oqparam.asset_hazard_distance
+        haz_distance = asset_hazard_distance
 
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
@@ -1283,6 +1294,38 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
+def _get_taxonomy_mapping(inputs):
+    # returns a TaxonomyMapping taxonomy -> risk_key -> {ids, weights}
+    fname = inputs.get('taxonomy_mapping')
+    if fname is None:
+        return riskinput.TaxonomyMapping()
+    with open(fname, 'r', encoding='utf-8-sig') as f:
+        dic = toml.load(f)
+    expected = {'fragility', 'consequence', 'vulnerability'}
+    for taxonomy, subdic in dic.items():
+        not_expected = set(subdic) - expected
+        if not_expected:
+            raise InvalidFile('%s: unknown key %s' % fname, not_expected)
+        for key, val in subdic.items():
+            if isinstance(val, str):
+                subdic[key] = {'ids': val, 'weights': [1.0]}
+            elif isinstance(val, dict):
+                for k in ('ids', 'weights'):
+                    if k not in val:
+                        raise InvalidFile('%s:%s missing %s' %
+                                          (fname, taxonomy, k))
+                    elif k == 'ids':
+                        valid.namelist(val[k])
+                    elif k == 'weights':
+                        valid.weights(val[k])
+            else:
+                raise InvalidFile('%s:%s unespected %s' %
+                                  (fname, taxonomy, val))
+    tmap = riskinput.TaxonomyMapping()
+    tmap.update(dic)
+    return tmap
+
+
 # used in oq zip and oq checksum
 def get_input_files(oqparam, hazard=False):
     """
@@ -1317,6 +1360,10 @@ def get_input_files(oqparam, hazard=False):
         elif isinstance(fname, dict):
             fnames.extend(fname.values())
         elif isinstance(fname, list):
+            for f in fname:
+                if f == oqparam.input_dir:
+                    raise InvalidFile('%s there is an empty path in %s' %
+                                      (oqparam.inputs['job_ini'], key))
             fnames.extend(fname)
         elif key == 'source_model_logic_tree':
             for smpaths in logictree.collect_info(fname).smpaths.values():

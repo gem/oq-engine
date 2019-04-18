@@ -433,7 +433,9 @@ hazard_uhs-std.csv
         # NonParametricProbabilisticRupture.get_probability_no_exceedance
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
 
-    def test_case_30(self):  # point on the international data line
+    def test_case_30(self):
+        # point on the international data line
+        # this is also a test with IMT-dependent weights
         if NOT_DARWIN:  # broken on macOS
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
@@ -448,6 +450,13 @@ hazard_uhs-std.csv
             # check best_rlz on 5 sites
             best_rlz = self.calc.datastore['best_rlz'].value
             numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
+
+    def test_case_30_sampling(self):
+        # IMT-dependent weights with sampling are not implemented
+        with self.assertRaises(NotImplementedError):
+            self.assert_curves_ok(
+                ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
+                case_30.__file__, number_of_logic_tree_samples='10')
 
     def test_case_31(self):
         # source specific logic tree
