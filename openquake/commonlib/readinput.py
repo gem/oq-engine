@@ -984,7 +984,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
-                         haz_distance, oqparam.asset_hazard_distance)
+                         haz_distance, asset_hazard_distance)
     else:
         haz_distance = asset_hazard_distance
 
