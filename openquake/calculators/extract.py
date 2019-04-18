@@ -40,6 +40,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
+memoized = lru_cache(100)
 
 
 def lit_eval(string):
@@ -148,8 +149,6 @@ def extract_(dstore, dspath):
     else:
         return obj
 
-memoized = lru_cache(100)
-
 
 class Extract(dict):
     """
@@ -199,16 +198,24 @@ def extract_realizations(dstore, dummy):
     return arr
 
 
-@extract.add('tagcollection')
-def extract_tagcollection(dstore, what):
+@extract.add('exposure_metadata')
+def extract_exposure_metadata(dstore, what):
     """
-    Extract the tag collection (/extract/tagcollection).
+    Extract the loss categories and the tags of the exposure.
+    Use it as /extract/exposure_metadata
     """
     dic = {}
     dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
     dic.update(dic1)
     dic.update(dic2)
-    return ArrayWrapper((), dic)
+    if 'asset_risk' in dstore:
+        dic['multi_risk'] = sorted(
+            set(dstore['asset_risk'].dtype.names) -
+            set(dstore['assetcol/array'].dtype.names))
+    names = [name for name in dstore['assetcol/array'].dtype.names
+             if name.startswith(('value-', 'number', 'occupants_'))
+             and not name.endswith('_None')]
+    return ArrayWrapper(numpy.array(names), dic)
 
 
 @extract.add('assets')
@@ -223,6 +230,27 @@ def extract_assets(dstore, what):
     dic.update(dic1)
     dic.update(dic2)
     arr = dstore['assetcol/array'].value
+    for tag, vals in qdict.items():
+        cond = numpy.zeros(len(arr), bool)
+        for val in vals:
+            tagidx, = numpy.where(dic[tag] == val)
+            cond |= arr[tag] == tagidx
+        arr = arr[cond]
+    return ArrayWrapper(arr, dic)
+
+
+@extract.add('asset_risk')
+def extract_asset_risk(dstore, what):
+    """
+    Extract an array of assets + risk fields, optionally filtered by tag.
+    Use it as /extract/asset_risk?taxonomy=RC&taxonomy=MSBC&occupancy=RES
+    """
+    qdict = parse(what)
+    dic = {}
+    dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
+    dic.update(dic1)
+    dic.update(dic2)
+    arr = dstore['asset_risk'].value
     for tag, vals in qdict.items():
         cond = numpy.zeros(len(arr), bool)
         for val in vals:
@@ -247,7 +275,6 @@ def extract_asset_values(dstore, sid):
     asset_refs = assetcol.asset_refs
     assets_by_site = assetcol.assets_by_site()
     lts = assetcol.loss_types
-    time_event = assetcol.time_event
     dt = numpy.dtype([('aref', asset_refs.dtype), ('aid', numpy.uint32)] +
                      [(str(lt), numpy.float32) for lt in lts])
     data = []
@@ -666,7 +693,7 @@ def build_damage_dt(dstore, mean_std=True):
     """
     oq = dstore['oqparam']
     damage_states = ['no_damage'] + list(
-        dstore.get_attr(oq.risk_model, 'limit_states'))
+        dstore.get_attr('risk_model', 'limit_states'))
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
@@ -765,8 +792,7 @@ def crm_attrs(dstore, what):
         the attributes of the risk model, i.e. limit_states, loss_types,
         min_iml and covs, needed by the risk exporters.
     """
-    name = dstore['oqparam'].risk_model
-    return ArrayWrapper((), dstore.get_attrs(name))
+    return ArrayWrapper((), dstore.get_attrs('risk_model'))
 
 
 def _get(dstore, name):

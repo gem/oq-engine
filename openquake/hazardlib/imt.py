@@ -263,7 +263,7 @@ class LAVA(IMT):
     """
 
 
-class LAHARS(IMT):
+class LAHAR(IMT):
     """
     Boolean value for the lahars (1 if affected 0 otherwise)
     """
