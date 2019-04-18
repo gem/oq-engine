@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Extended oq prepare_site_model to work with sites.csv files
+  * Optimized the validation of the source model logic tree: now checking
+    the sources IDs is 5x faster
   * Went back to the old logic in sampling: the weights are used for the
     sampling and the statistics are computed with identical weights
   * Avoided to transfer the epsilons by storing them in the cache file
