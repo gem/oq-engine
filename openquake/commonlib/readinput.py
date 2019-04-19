@@ -923,14 +923,11 @@ def get_risk_model(oqparam):
         for risk_id in set(fragdict) | set(vulndict) | set(consdict):
             tmap[risk_id] = dict(
                 fragility=d, consequence=d, vulnerability=d)
-        if consdict:  # the consequences must be consistent
-            check_equal_sets(consdict, fragdict)
         for risk_id in consdict:
             cdict, fdict = consdict[risk_id], fragdict[risk_id]
-            check_equal_sets(cdict, fdict)
-            for loss_type, kind in cdict:
-                c = cdict[loss_type, kind]
-                f = fdict[loss_type, kind]
+            for loss_type, _ in cdict:
+                c = cdict[loss_type, 'consequence']
+                f = fdict[loss_type, 'fragility']
                 csq_dmg_states = len(c.params)
                 if csq_dmg_states != len(f):
                     raise ValueError(
