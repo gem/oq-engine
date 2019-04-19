@@ -95,12 +95,12 @@ def get_risk_models(oqparam, kind='vulnerability vulnerability_retrofitted '
         for key in sorted(oqparam.inputs):
             mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
             if mo:
-                key_type = mo.group(1)  # the cost_type in the key
+                loss_type = mo.group(1)  # the cost_type in the key
                 # can be occupants, structural, nonstructural, ...
                 rmodel = nrml.to_python(oqparam.inputs[key])
                 if len(rmodel) == 0:
                     raise InvalidFile('%s is empty!' % oqparam.inputs[key])
-                rmodels[key_type] = rmodel
+                rmodels[loss_type, kind] = rmodel
                 if rmodel.lossCategory is None:  # NRML 0.4
                     continue
                 cost_type = str(rmodel.lossCategory)
@@ -112,46 +112,41 @@ def get_risk_models(oqparam, kind='vulnerability vulnerability_retrofitted '
                         'of kind %s, expected %s' % (
                             key, oqparam.inputs[key], rmodel_kind,
                             kind.capitalize() + 'Model'))
-                if cost_type != key_type:
+                if cost_type != loss_type:
                     raise ValueError(
                         'Error in the file "%s_file=%s": lossCategory is of '
                         'type "%s", expected "%s"' %
                         (key, oqparam.inputs[key],
-                         rmodel.lossCategory, key_type))
+                         rmodel.lossCategory, loss_type))
     rdict = AccumDict(accum={})
     rdict.limit_states = []
-    for kind in kinds:
+    for (loss_type, kind), rm in sorted(rmodels.items()):
         if kind == 'fragility':
-            limit_states = []
-            for loss_type, fm in sorted(rmodels.items()):
-                # build a copy of the FragilityModel with different IM levels
-                newfm = fm.build(oqparam.continuous_fragility_discretization,
-                                 oqparam.steps_per_interval)
-                for (imt, riskid), ffl in newfm.items():
-                    if not limit_states:
-                        limit_states.extend(fm.limitStates)
-                    # we are rejecting the case of loss types with different
-                    # limit states; this may change in the future
-                    assert limit_states == fm.limitStates, (
-                        limit_states, fm.limitStates)
-                    rdict[riskid][loss_type] = ffl
-                    # TODO: see if it is possible to remove the attribute
-                    # below, used in classical_damage
-                    ffl.steps_per_interval = oqparam.steps_per_interval
-            rdict.limit_states = [str(ls) for ls in limit_states]
+            # build a copy of the FragilityModel with different IM levels
+            newfm = rm.build(oqparam.continuous_fragility_discretization,
+                             oqparam.steps_per_interval)
+            for (imt, riskid), ffl in newfm.items():
+                if not rdict.limit_states:
+                    rdict.limit_states.extend(rm.limitStates)
+                # we are rejecting the case of loss types with different
+                # limit states; this may change in the future
+                assert rdict.limit_states == rm.limitStates, (
+                    rdict.limit_states, rm.limitStates)
+                rdict[riskid][loss_type] = ffl
+                # TODO: see if it is possible to remove the attribute
+                # below, used in classical_damage
+                ffl.steps_per_interval = oqparam.steps_per_interval
         elif kind == 'consequence':
-            for loss_type, cm in rmodels.items():
-                for riskid, cf in cm.items():
-                    rdict[riskid][loss_type] = cf
+            for riskid, cf in rm.items():
+                rdict[riskid][loss_type] = cf
         else:  # vulnerability
             cl_risk = oqparam.calculation_mode in (
                 'classical', 'classical_risk')
             # only for classical_risk reduce the loss_ratios
             # to make sure they are strictly increasing
-            for loss_type, rm in rmodels.items():
-                for (imt, riskid), rf in rm.items():
-                    rdict[riskid][loss_type] = (
-                        rf.strictly_increasing() if cl_risk else rf)
+            for (imt, riskid), rf in rm.items():
+                rdict[riskid][loss_type] = (
+                    rf.strictly_increasing() if cl_risk else rf)
     return rdict
 
 
