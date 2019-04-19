@@ -280,8 +280,8 @@ class CompositeRiskModel(collections.Mapping):
                         allratios.append(ratios)
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
-                            rm.vulnerability_functions[loss_type], len(ratios))
-                        )
+                            rm.vulnerability_functions[
+                                loss_type, 'vulnerability'], len(ratios)))
                 if len(curve_resolutions) > 1:
                     # number of loss ratios is not the same for all taxonomies:
                     # then use the longest array; see classical_risk case_5
