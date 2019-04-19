@@ -202,6 +202,8 @@ class RiskModel(object):
         dic = self.risk_functions.copy()
         if hasattr(self, 'retro_functions'):
             dic.update(self.retro_functions)
+        if hasattr(self, 'consequence_functions'):
+            dic.update(self.consequence_functions)
         return dic, {'taxonomy': self.taxonomy}
 
     def __fromh5__(self, dic, attrs):
