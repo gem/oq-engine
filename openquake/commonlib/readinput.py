@@ -1089,7 +1089,7 @@ def get_pmap_from_csv(oqparam, fnames):
         the site mesh and the hazard curves read by the .csv files
     """
     if not oqparam.imtls:
-        oqparam.set_risk_imtls(get_risk_models(oqparam, oqparam.file_type))
+        oqparam.set_risk_imtls(get_risk_models(oqparam))
     if not oqparam.imtls:
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
@@ -1170,7 +1170,7 @@ def get_scenario_from_nrml(oqparam, fname):
         a pair (eids, gmf array)
     """
     if not oqparam.imtls:
-        oqparam.set_risk_imtls(get_risk_models(oqparam, oqparam.file_type))
+        oqparam.set_risk_imtls(get_risk_models(oqparam))
     imts = sorted(oqparam.imtls)
     num_imts = len(imts)
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])
