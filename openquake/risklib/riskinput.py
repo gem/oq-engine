@@ -99,9 +99,7 @@ def read_composite_risk_model(dstore):
             lt, kind = lt_kind.rsplit('-', 1)
             rf = dstore['risk_model/%s/%s' % (quoted_id, lt_kind)]
             if kind == 'consequence':
-                # TODO: manage this case by adding HDF5-serialization
-                # to the consequence model
-                pass
+                consdict[riskid][lt, kind] = rf
             elif kind == 'fragility':  # rf is a FragilityFunctionList
                 try:
                     rf = rf.build(
@@ -163,7 +161,7 @@ class CompositeRiskModel(collections.Mapping):
     def __init__(self, oqparam, tmap, fragdict, vulndict, consdict, retrodict):
         self.tmap = tmap
         self.damage_states = []
-        self._riskmodels = {}  # (riskid, kind) -> riskmodel
+        self._riskmodels = {}  # riskid -> riskmodel
         self.consequences = sum(len(vals) for vals in consdict.values())
         if sum(len(v) for v in fragdict.values()):
             # classical_damage/scenario_damage calculator
