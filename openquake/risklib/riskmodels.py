@@ -42,7 +42,6 @@ def get_risk_files(inputs):
     :returns: a pair (file_type, {risk_type: path})
     """
     rfs = {}
-    names = set()
     job_ini = inputs['job_ini']
     for key in inputs:
         if key == 'fragility':
@@ -50,21 +49,14 @@ def get_risk_files(inputs):
             # instead of structural_fragility_file
             rfs['fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
-            names.add('fragility')
             del inputs['fragility']
         elif key.endswith(('_fragility', '_vulnerability', '_consequence')):
             match = RISK_TYPE_REGEX.match(key)
             if match and 'retrofitted' not in key and 'consequence' not in key:
                 rfs['%s/%s' % (match.group(2), match.group(1))] = inputs[key]
-                names.add(match.group(2))
             elif match is None:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
-    if not names:
-        return None, {}
-    elif len(names) > 1:
-        raise ValueError('Found inconsistent keys %s in the .ini file'
-                         % ', '.join(names))
-    return names.pop(), rfs
+    return rfs
 
 
 # ########################### vulnerability ############################## #
@@ -87,71 +79,71 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(oqparam, kind):
+def get_risk_models(oqparam, kind='vulnerability vulnerability_retrofitted '
+                    'fragility consequence'):
     """
     :param oqparam:
         an OqParam instance
     :param kind:
-        vulnerability|vulnerability_retrofitted|fragility|consequence
+        a space-separated string with the kinds of risk models to read
     :returns:
         a dictionary riskid -> loss_type -> function
     """
+    kinds = kind.split()
     rmodels = AccumDict()
-    rmodels.limit_states = []
-    for key in sorted(oqparam.inputs):
-        mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
-        if mo:
-            key_type = mo.group(1)  # the cost_type in the key
-            # can be occupants, structural, nonstructural, ...
-            rmodel = nrml.to_python(oqparam.inputs[key])
-            if len(rmodel) == 0:
-                raise InvalidFile('%s is empty!' % oqparam.inputs[key])
-            rmodels[key_type] = rmodel
-            if rmodel.lossCategory is None:  # NRML 0.4
-                continue
-            cost_type = str(rmodel.lossCategory)
-            rmodel_kind = rmodel.__class__.__name__
-            kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
-            if not rmodel_kind.lower().startswith(kind_):
-                raise ValueError(
-                    'Error in the file "%s_file=%s": is '
-                    'of kind %s, expected %s' % (
-                        key, oqparam.inputs[key], rmodel_kind,
-                        kind.capitalize() + 'Model'))
-            if cost_type != key_type:
-                raise ValueError(
-                    'Error in the file "%s_file=%s": lossCategory is of type '
-                    '"%s", expected "%s"' % (key, oqparam.inputs[key],
-                                             rmodel.lossCategory, key_type))
+    for kind in kinds:
+        for key in sorted(oqparam.inputs):
+            mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
+            if mo:
+                loss_type = mo.group(1)  # the cost_type in the key
+                # can be occupants, structural, nonstructural, ...
+                rmodel = nrml.to_python(oqparam.inputs[key])
+                if len(rmodel) == 0:
+                    raise InvalidFile('%s is empty!' % oqparam.inputs[key])
+                rmodels[loss_type, kind] = rmodel
+                if rmodel.lossCategory is None:  # NRML 0.4
+                    continue
+                cost_type = str(rmodel.lossCategory)
+                rmodel_kind = rmodel.__class__.__name__
+                kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
+                if not rmodel_kind.lower().startswith(kind_):
+                    raise ValueError(
+                        'Error in the file "%s_file=%s": is '
+                        'of kind %s, expected %s' % (
+                            key, oqparam.inputs[key], rmodel_kind,
+                            kind.capitalize() + 'Model'))
+                if cost_type != loss_type:
+                    raise ValueError(
+                        'Error in the file "%s_file=%s": lossCategory is of '
+                        'type "%s", expected "%s"' %
+                        (key, oqparam.inputs[key],
+                         rmodel.lossCategory, loss_type))
     rdict = AccumDict(accum={})
     rdict.limit_states = []
-    if kind == 'fragility':
-        limit_states = []
-        for loss_type, fm in sorted(rmodels.items()):
+    for (loss_type, kind), rm in sorted(rmodels.items()):
+        if kind == 'fragility':
             # build a copy of the FragilityModel with different IM levels
-            newfm = fm.build(oqparam.continuous_fragility_discretization,
+            newfm = rm.build(oqparam.continuous_fragility_discretization,
                              oqparam.steps_per_interval)
             for (imt, riskid), ffl in newfm.items():
-                if not limit_states:
-                    limit_states.extend(fm.limitStates)
+                if not rdict.limit_states:
+                    rdict.limit_states.extend(rm.limitStates)
                 # we are rejecting the case of loss types with different
                 # limit states; this may change in the future
-                assert limit_states == fm.limitStates, (
-                    limit_states, fm.limitStates)
+                assert rdict.limit_states == rm.limitStates, (
+                    rdict.limit_states, rm.limitStates)
                 rdict[riskid][loss_type] = ffl
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
-        rdict.limit_states = [str(ls) for ls in limit_states]
-    elif kind == 'consequence':
-        for loss_type, cm in rmodels.items():
-            for riskid, cf in cm.items():
+        elif kind == 'consequence':
+            for riskid, cf in rm.items():
                 rdict[riskid][loss_type] = cf
-    else:  # vulnerability
-        cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
-        # only for classical_risk reduce the loss_ratios
-        # to make sure they are strictly increasing
-        for loss_type, rm in rmodels.items():
+        else:  # vulnerability
+            cl_risk = oqparam.calculation_mode in (
+                'classical', 'classical_risk')
+            # only for classical_risk reduce the loss_ratios
+            # to make sure they are strictly increasing
             for (imt, riskid), rf in rm.items():
                 rdict[riskid][loss_type] = (
                     rf.strictly_increasing() if cl_risk else rf)
