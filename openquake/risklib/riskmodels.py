@@ -201,8 +201,7 @@ class RiskModel(object):
     def __toh5__(self):
         dic = self.risk_functions.copy()
         if hasattr(self, 'retro_functions'):
-            for lt, func in self.retro_functions.items():
-                dic[lt + '_retrofitted'] = func
+            dic.update(self.retro_functions)
         return dic, {'taxonomy': self.taxonomy}
 
     def __fromh5__(self, dic, attrs):
@@ -290,7 +289,7 @@ class Classical(RiskModel):
             a composite array (loss, poe) of shape (A, C)
         """
         n = len(assets)
-        vf = self.vulnerability_functions[loss_type]
+        vf = self.vulnerability_functions[loss_type, self.kind]
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
@@ -370,10 +369,10 @@ class ClassicalBCR(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.loss_ratios_orig = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for lt, vf in vulnerability_functions_orig.items()}
+            for (lt, kind), vf in vulnerability_functions_orig.items()}
         self.loss_ratios_retro = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for lt, vf in vulnerability_functions_retro.items()}
+            for (lt, kind), vf in vulnerability_functions_retro.items()}
 
     def __call__(self, loss_type, assets, hazard, eids=None, eps=None):
         """
@@ -388,9 +387,9 @@ class ClassicalBCR(RiskModel):
             raise NotImplemented('retrofitted is not defined for ' + loss_type)
         n = len(assets)
         self.assets = assets
-        vf = self.vulnerability_functions[loss_type]
+        vf = self.vulnerability_functions[loss_type, self.kind]
         imls = self.hazard_imtls[vf.imt]
-        vf_retro = self.retro_functions[loss_type]
+        vf_retro = self.retro_functions[loss_type, self.kind + '_retrofitted']
         curves_orig = functools.partial(
             scientific.classical, vf, imls,
             loss_ratios=self.loss_ratios_orig[loss_type])
@@ -494,7 +493,7 @@ class Damage(RiskModel):
         E, D = damages.shape
         dmg_csq = numpy.zeros((E, D + 1))
         dmg_csq[:, :D] = damages
-        c_model = self.consequence_functions.get(loss_type)
+        c_model = self.consequence_functions.get((loss_type, 'consequence'))
         if c_model:  # compute consequences
             means = [0] + [par[0] for par in c_model.params]
             # NB: we add a 0 in front for nodamage state
@@ -530,7 +529,7 @@ class ClassicalDamage(Damage):
 
         where N is the number of points and D the number of damage states.
         """
-        ffl = self.fragility_functions[loss_type]
+        ffl = self.fragility_functions[loss_type, self.kind]
         hazard_imls = self.hazard_imtls[ffl.imt]
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,
