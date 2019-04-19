@@ -87,7 +87,7 @@ def get_risk_models(oqparam, kind='vulnerability vulnerability_retrofitted '
     :param kind:
         a space-separated string with the kinds of risk models to read
     :returns:
-        a dictionary riskid -> loss_type -> function
+        a dictionary riskid -> loss_type, kind -> function
     """
     kinds = kind.split()
     rmodels = AccumDict()
@@ -132,20 +132,20 @@ def get_risk_models(oqparam, kind='vulnerability vulnerability_retrofitted '
                 # limit states; this may change in the future
                 assert rdict.limit_states == rm.limitStates, (
                     rdict.limit_states, rm.limitStates)
-                rdict[riskid][loss_type] = ffl
+                rdict[riskid][loss_type, kind] = ffl
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
         elif kind == 'consequence':
             for riskid, cf in rm.items():
-                rdict[riskid][loss_type] = cf
+                rdict[riskid][loss_type, kind] = cf
         else:  # vulnerability
             cl_risk = oqparam.calculation_mode in (
                 'classical', 'classical_risk')
             # only for classical_risk reduce the loss_ratios
             # to make sure they are strictly increasing
             for (imt, riskid), rf in rm.items():
-                rdict[riskid][loss_type] = (
+                rdict[riskid][loss_type, kind] = (
                     rf.strictly_increasing() if cl_risk else rf)
     return rdict
 
@@ -188,7 +188,7 @@ class RiskModel(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.risk_functions)
+        return sorted(lt for (lt, kind) in self.risk_functions)
 
     def get_loss_types(self, imt):
         """
@@ -332,7 +332,7 @@ class ProbabilisticEventBased(RiskModel):
         E = len(gmvs)
         A = len(assets)
         loss_ratios = numpy.zeros((A, E), F32)
-        vf = self.vulnerability_functions[loss_type]
+        vf = self.vulnerability_functions[loss_type, self.kind]
         means, covs, idxs = vf.interpolate(gmvs)
         if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
             pass
@@ -450,7 +450,7 @@ class Scenario(RiskModel):
         loss_matrix = numpy.empty((len(assets), E))
         loss_matrix.fill(numpy.nan)
 
-        vf = self.vulnerability_functions[loss_type]
+        vf = self.vulnerability_functions[loss_type, self.kind]
         means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         if len(epsilons):
@@ -489,7 +489,7 @@ class Damage(RiskModel):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        ffs = self.fragility_functions[loss_type]
+        ffs = self.fragility_functions[loss_type, self.kind]
         damages = scientific.scenario_damage(ffs, gmvs).T
         E, D = damages.shape
         dmg_csq = numpy.zeros((E, D + 1))
