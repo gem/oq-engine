@@ -611,6 +611,9 @@ class SourceModelLogicTree(object):
         self.source_ids = collections.defaultdict(list)
         t0 = time.time()
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
+
+            print('parse branchinglevel')
+
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
         dt = time.time() - t0
         if validate:
@@ -649,8 +652,10 @@ class SourceModelLogicTree(object):
                 self.root_branchset = branchset
             else:
                 self.apply_branchset(branchset_node, branchset)
+
             for branch in branchset.branches:
                 new_open_ends.add(branch)
+
             self.num_paths *= len(branchset.branches)
         if number > 0:
             logging.warning('There is a branching level with multiple '
@@ -1081,13 +1086,16 @@ class SourceModelLogicTree(object):
                     filters['applyToSourceType'])
 
         if 'applyToSources' in filters:
+            cnt = 0
             for source_id in filters['applyToSources'].split():
                 for source_ids in self.source_ids.values():
-                    if source_id not in source_ids:
-                        raise LogicTreeError(
-                            branchset_node, self.filename,
-                            "source with id '%s' is not defined in source "
-                            "models" % source_id)
+                    if source_id in source_ids:
+                        cnt += 1
+            if cnt == 0:
+                raise LogicTreeError(
+                    branchset_node, self.filename,
+                    "source with id '%s' is not defined in source "
+                    "models" % source_id)
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
@@ -1154,6 +1162,14 @@ class SourceModelLogicTree(object):
                         'applyToBranches must reference only branches '
                         'from previous branching level')
                 branch.child_branchset = branchset
+        elif 'applyToSources' in branchset_node.attrib:
+            source_id = branchset_node.attrib.get('applyToSources')
+            for branch_id in self.source_ids.keys():
+                source_ids = self.source_ids[branch_id]
+                if source_id in source_ids:
+                    branch = self.branches[branch_id]
+                    branch.child_branchset = branchset
+                    print('Adding', branchset, branch.child_branchset)
         else:
             for branch in self.open_ends:
                 branch.child_branchset = branchset
