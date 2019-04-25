@@ -1159,6 +1159,7 @@ class SourceModelLogicTree(object):
                         'applyToBranches must reference only branches '
                         'from previous branching level')
                 branch.child_branchset = branchset
+
         elif 'applyToSources' in branchset_node.attrib:
             source_id = branchset_node.attrib.get('applyToSources')
             for branch_id in self.source_ids.keys():
@@ -1166,10 +1167,13 @@ class SourceModelLogicTree(object):
                 if source_id in source_ids:
                     branch = self.branches[branch_id]
                     branch.child_branchset = branchset
-                    print('Adding', branchset, branch.child_branchset)
+                    print('Adding', branchset, 'to', branch.child_branchset)
+            print('--------',list(self.open_ends)[0].__dict__)
         else:
             for branch in self.open_ends:
                 branch.child_branchset = branchset
+
+        import pdb; pdb.set_trace()
 
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file))
