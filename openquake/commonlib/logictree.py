@@ -611,9 +611,6 @@ class SourceModelLogicTree(object):
         self.source_ids = collections.defaultdict(list)
         t0 = time.time()
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
-
-            print('parse branchinglevel')
-
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
         dt = time.time() - t0
         if validate:
