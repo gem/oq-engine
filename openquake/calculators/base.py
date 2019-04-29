@@ -18,7 +18,6 @@
 import os
 import sys
 import abc
-import csv
 import pdb
 import logging
 import operator
@@ -31,7 +30,7 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib import InvalidFile, geo, valid
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import RtreeFilter, SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -418,48 +417,7 @@ class HazardCalculator(BaseCalculator):
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
-        """
-        Read the hazard fields as csv files, associate them to the sites
-        and create the `hazard` dataset.
-        """
-        oq = self.oqparam
-        fnames = oq.inputs['multi_peril']
-        dt = [(haz, float) for haz in oq.multi_peril]
-        N = len(self.sitecol)
-        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
-        for name, fname in zip(oq.multi_peril, fnames):
-            data = []
-            with open(fname) as f:
-                for row in csv.DictReader(f):
-                    intensity = valid.positivefloat(row['intensity'])
-                    if intensity > 0:
-                        data.append((float(row['lon']), float(row['lat']),
-                                     intensity))
-            data = numpy.array(data, [('lon', float), ('lat', float),
-                                      ('number', float)])
-            logging.info('Read %s with %d rows' % (fname, len(data)))
-            if len(data) != len(numpy.unique(data[['lon', 'lat']])):
-                raise InvalidFile('There are duplicated points in %s' % fname)
-            try:
-                asset_hazard_distance = oq.asset_hazard_distance[name]
-            except KeyError:
-                asset_hazard_distance = oq.asset_hazard_distance['default']
-            sites, filtdata, _discarded = geo.utils.assoc(
-                data, self.sitecol, asset_hazard_distance, 'filter')
-            z = numpy.zeros(N, float)
-            z[sites.sids] = filtdata['number']
-            self.datastore['multi_peril'][name] = z
-        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
-
-        # convert ASH into a GMF
-        # if 'ASH' in oq.multi_peril:
-        # in the future, if the stddevs will become available, we will
-        # be able to generate a distribution of GMFs, as we do for the
-        # ShakeMaps; for the moment, we will consider a single event
-        #    oq.number_of_ground_motion_fields = E = 1
-        #  events = numpy.zeros(E, rupture.events_dt)
-        #    gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
-        #    save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
+        """Defined in MultiRiskCalculator"""
 
     def pre_execute(self):
         """
