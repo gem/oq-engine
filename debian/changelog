@@ -1,3 +1,8 @@
+  [Graeme Weatherill]
+  * Adds Kotha et al (2019) shallow crustal GMPE for SERA
+  * Adds 'ExperimentalWarning' to possible GMPE warnings
+  * Adds kwargs to check_gsim function
+  
   [Michele Simionato]
   * Exposed the outputs of the classical calculation in event based
     calculations with `compare_with_classical=true`
