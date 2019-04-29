@@ -96,24 +96,6 @@ class KothaEtAl2019SERATestCase(BaseGSIMTestCase):
                    max_discrep_percentage=MAX_DISCREP)
 
 
-#class KothaEtAl2019SERAHighStressTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = KothaEtAl2019SERA
-#
-#    def test_mean(self):
-#        self.check("kotha19/KOTHA_2019_HIGH_STRESS_MEAN.csv",
-#                   max_discrep_percentage=MAX_DISCREP,
-#                   stress_epsilon=1.0)
-#
-#
-#class KothaEtAl2019SERALowStressTestCase(BaseGSIMTestCase):
-#    GSIM_CLASS = KothaEtAl2019SERA
-#
-#    def test_mean(self):
-#        self.check("kotha19/KOTHA_2019_LOW_STRESS_MEAN.csv",
-#                   max_discrep_percentage=MAX_DISCREP,
-#                   stress_epsilon=-1.0)
-#
-
 class KothaEtAl2019SERASlowAttenTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2019SERA
 
