@@ -578,7 +578,7 @@ class HazardCalculator(BaseCalculator):
         if not self.riskmodel:
             parent = self.datastore.parent
             if 'risk_model' in parent:
-                self.riskmodel = riskinput.read_composite_risk_model(parent)
+                self.riskmodel = riskinput.CompositeRiskModel.read(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
             raise InvalidFile('No intensity_measure_types specified in %s' %

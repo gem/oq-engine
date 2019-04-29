@@ -77,49 +77,6 @@ class TaxonomyMapping(dict):
                 fragility=f, consequence=c, vulnerability=v)
 
 
-def read_composite_risk_model(dstore):
-    """
-    :param dstore: a DataStore instance
-    :returns: a :class:`CompositeRiskModel` instance
-    """
-    oqparam = dstore['oqparam']
-    tmap = dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore else {}
-    crm = dstore.getitem('risk_model')
-    # building dictionaries riskid -> loss_type -> risk_func
-    fragdict, vulndict, consdict, retrodict = (
-        AccumDict(), AccumDict(), AccumDict(), AccumDict())
-    fragdict.limit_states = crm.attrs['limit_states']
-    for quoted_id, rm in crm.items():
-        riskid = unquote_plus(quoted_id)
-        fragdict[riskid] = {}
-        vulndict[riskid] = {}
-        consdict[riskid] = {}
-        retrodict[riskid] = {}
-        for lt_kind in rm:
-            lt, kind = lt_kind.rsplit('-', 1)
-            rf = dstore['risk_model/%s/%s' % (quoted_id, lt_kind)]
-            if kind == 'consequence':
-                consdict[riskid][lt, kind] = rf
-            elif kind == 'fragility':  # rf is a FragilityFunctionList
-                try:
-                    rf = rf.build(
-                        fragdict.limit_states,
-                        oqparam.continuous_fragility_discretization,
-                        oqparam.steps_per_interval)
-                except ValueError as err:
-                    raise ValueError('%s: %s' % (riskid, err))
-                fragdict[riskid][lt, kind] = rf
-            else:  # rf is a vulnerability function
-                rf.init()
-                if lt.endswith('_retrofitted'):
-                    # strip _retrofitted, since len('_retrofitted') = 12
-                    retrodict[riskid][lt[:-12], kind] = rf
-                else:
-                    vulndict[riskid][lt, kind] = rf
-    return CompositeRiskModel(
-        oqparam, tmap, fragdict, vulndict, consdict, retrodict)
-
-
 def get_assets_by_taxo(assets, epspath=None):
     """
     :param assets: an array of assets
@@ -158,6 +115,50 @@ class CompositeRiskModel(collections.Mapping):
     :param retrodict:
         a dictionary riskid -> loss_type -> vulnerability function
     """
+    @classmethod
+    def read(cls, dstore):
+        """
+        :param dstore: a DataStore instance
+        :returns: a :class:`CompositeRiskModel` instance
+        """
+        oqparam = dstore['oqparam']
+        tmap = (dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore
+                else {})
+        crm = dstore.getitem('risk_model')
+        # building dictionaries riskid -> loss_type -> risk_func
+        fragdict, vulndict, consdict, retrodict = (
+            AccumDict(), AccumDict(), AccumDict(), AccumDict())
+        fragdict.limit_states = crm.attrs['limit_states']
+        for quoted_id, rm in crm.items():
+            riskid = unquote_plus(quoted_id)
+            fragdict[riskid] = {}
+            vulndict[riskid] = {}
+            consdict[riskid] = {}
+            retrodict[riskid] = {}
+            for lt_kind in rm:
+                lt, kind = lt_kind.rsplit('-', 1)
+                rf = dstore['risk_model/%s/%s' % (quoted_id, lt_kind)]
+                if kind == 'consequence':
+                    consdict[riskid][lt, kind] = rf
+                elif kind == 'fragility':  # rf is a FragilityFunctionList
+                    try:
+                        rf = rf.build(
+                            fragdict.limit_states,
+                            oqparam.continuous_fragility_discretization,
+                            oqparam.steps_per_interval)
+                    except ValueError as err:
+                        raise ValueError('%s: %s' % (riskid, err))
+                    fragdict[riskid][lt, kind] = rf
+                else:  # rf is a vulnerability function
+                    rf.init()
+                    if lt.endswith('_retrofitted'):
+                        # strip _retrofitted, since len('_retrofitted') = 12
+                        retrodict[riskid][lt[:-12], kind] = rf
+                    else:
+                        vulndict[riskid][lt, kind] = rf
+        return CompositeRiskModel(
+            oqparam, tmap, fragdict, vulndict, consdict, retrodict)
+
     def __init__(self, oqparam, tmap, fragdict, vulndict, consdict, retrodict):
         self.tmap = tmap
         self.damage_states = []
