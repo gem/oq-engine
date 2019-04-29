@@ -162,9 +162,9 @@ class EbrCalculator(base.RiskCalculator):
         self.A = len(self.assetcol)
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.events = parent['events'].value[['eid', 'rlz']]
+            self.events = parent['events'].value[['id', 'rlz']]
         else:
-            self.events = self.datastore['events'].value[['eid', 'rlz']]
+            self.events = self.datastore['events'].value[['id', 'rlz']]
         if oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
