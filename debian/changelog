@@ -4,7 +4,20 @@
   * Adds kwargs to check_gsim function
   
   [Michele Simionato]
+  * Exposed the outputs of the classical calculation in event based
+    calculations with `compare_with_classical=true`
+  * Made it possible to serialize together all kind of risk functions,
+    including consequence functions that before were not HDF5-serializable
+  * Fixed a MemoryError when counting the number of bytes stored in large
+    HDF5 datasets
+  * Extended `asset_hazard_distance` to a dictionary for usage with multi_risk
+  * Extended oq prepare_site_model to work with sites.csv files
+  * Optimized the validation of the source model logic tree: now checking
+    the sources IDs is 5x faster
+  * Went back to the old logic in sampling: the weights are used for the
+    sampling and the statistics are computed with identical weights
   * Avoided to transfer the epsilons by storing them in the cache file
+    and changed the event to epsilons associations
   * Reduced the data transfer in the computation of the hazard curves, causing
     in some time huge speedups (over 100x)
   * Implemented a flag `modal_damage_state` to display only the most likely
@@ -13,7 +26,7 @@
     by including the prefiltering phase in the calculation phase
 
   [Daniele Viganò]
-  * Added a 'max_concurrent_jobs' setting to the openquake.cfg
+  * Added a 'serialize_jobs' setting to the openquake.cfg
     which limits the maximum number of jobs that can be run in parallel
 
   [Michele Simionato]

@@ -177,7 +177,8 @@ class VulnerabilityFunction(object):
         if epsilons is None:
             return means
         self.set_distribution(epsilons)
-        return self.distribution.sample(means, covs, means * covs, idxs)
+        res = self.distribution.sample(means, covs, means * covs, idxs)
+        return res
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
@@ -621,8 +622,18 @@ class FragilityFunctionList(list):
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 
-ConsequenceFunction = collections.namedtuple(
-    'ConsequenceFunction', 'id dist params')
+class ConsequenceFunction(object):
+    def __init__(self, id, dist, params):
+        self.id = id
+        self.dist = dist
+        self.params = numpy.array(params)
+
+    def __toh5__(self):
+        return self.params, dict(id=self.id, dist=self.dist)
+
+    def __fromh5__(self, params, attrs):
+        self.params = params
+        vars(self).update(attrs)
 
 
 class ConsequenceModel(dict):
