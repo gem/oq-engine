@@ -18,7 +18,6 @@
 import os
 import sys
 import abc
-import csv
 import pdb
 import logging
 import operator
@@ -31,7 +30,7 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib import InvalidFile, geo, valid
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import RtreeFilter, SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
