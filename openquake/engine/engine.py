@@ -54,8 +54,9 @@ MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
-GET_JOBS_BY_STATUS = '''--- running jobs with a PID
-SELECT * FROM job WHERE status=?x AND is_running=1 AND pid > 0 ORDER BY id'''
+GET_JOBS = '''--- executing or submitted
+SELECT * FROM job WHERE status IN ('executing', 'submitted')
+AND is_running=1 AND pid > 0 ORDER BY id'''
 
 if OQ_DISTRIBUTE == 'zmq':
 
@@ -270,19 +271,17 @@ def poll_queue(job_id, pid, poll_time):
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
-    max_concurrent_jobs = int(config.distribution.max_concurrent_jobs)
-    if max_concurrent_jobs > 0:
+    if config.distribution.serialize_jobs:
         first_time = True
         while True:
-            jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'executing')
-            executing = [j.id for j in jobs if psutil.pid_exists(j.pid)]
-            jobs = logs.dbcmd(GET_JOBS_BY_STATUS, 'submitted')
-            submitted = [j.id for j in jobs if psutil.pid_exists(j.pid)]
-            submitted_before = submitted and min(submitted) < job_id
-            if len(executing) >= max_concurrent_jobs or submitted_before:
+            jobs = logs.dbcmd(GET_JOBS)
+            failed = [job.id for job in jobs if not psutil.pid_exists(job.pid)]
+            if failed:
+                logs.dbcmd("UPDATE job SET status='failed', is_running=0 "
+                           "WHERE id in (?X)", failed)
+            elif any(job.id < job_id for job in jobs):
                 if first_time:
-                    logs.LOG.warn('Waiting for jobs %s',
-                                  sorted(executing + submitted))
+                    logs.LOG.warn('Waiting for jobs %s', [j.id for j in jobs])
                     logs.dbcmd('update_job', job_id,
                                {'status': 'submitted', 'pid': pid})
                     first_time = False

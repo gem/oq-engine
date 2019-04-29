@@ -18,7 +18,6 @@
 import os
 import sys
 import abc
-import csv
 import pdb
 import logging
 import operator
@@ -31,7 +30,7 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib import InvalidFile, geo, valid
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import RtreeFilter, SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -418,44 +417,7 @@ class HazardCalculator(BaseCalculator):
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
-        """
-        Read the hazard fields as csv files, associate them to the sites
-        and create the `hazard` dataset.
-        """
-        oq = self.oqparam
-        fnames = oq.inputs['multi_peril']
-        dt = [(haz, float) for haz in oq.multi_peril]
-        N = len(self.sitecol)
-        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
-        for name, fname in zip(oq.multi_peril, fnames):
-            data = []
-            with open(fname) as f:
-                for row in csv.DictReader(f):
-                    intensity = valid.positivefloat(row['intensity'])
-                    if intensity > 0:
-                        data.append((float(row['lon']), float(row['lat']),
-                                     intensity))
-            data = numpy.array(data, [('lon', float), ('lat', float),
-                                      ('number', float)])
-            logging.info('Read %s with %d rows' % (fname, len(data)))
-            if len(data) != len(numpy.unique(data[['lon', 'lat']])):
-                raise InvalidFile('There are duplicated points in %s' % fname)
-            sites, filtdata, _discarded = geo.utils.assoc(
-                data, self.sitecol, oq.asset_hazard_distance, 'filter')
-            z = numpy.zeros(N, float)
-            z[sites.sids] = filtdata['number']
-            self.datastore['multi_peril'][name] = z
-        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
-
-        # convert ASH into a GMF
-        # if 'ASH' in oq.multi_peril:
-        # in the future, if the stddevs will become available, we will
-        # be able to generate a distribution of GMFs, as we do for the
-        # ShakeMaps; for the moment, we will consider a single event
-        #    oq.number_of_ground_motion_fields = E = 1
-        #  events = numpy.zeros(E, rupture.events_dt)
-        #    gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
-        #    save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
+        """Defined in MultiRiskCalculator"""
 
     def pre_execute(self):
         """
@@ -615,7 +577,7 @@ class HazardCalculator(BaseCalculator):
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
-            if 'fragility' in parent or 'vulnerability' in parent:
+            if 'risk_model' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
@@ -627,12 +589,11 @@ class HazardCalculator(BaseCalculator):
         """
         Save the risk models in the datastore
         """
-        oq = self.oqparam
-        self.datastore[oq.risk_model] = rm = self.riskmodel
+        self.datastore['risk_model'] = rm = self.riskmodel
         self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
-        attrs = self.datastore.getitem(oq.risk_model).attrs
+        attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
-        self.datastore.set_nbytes(oq.risk_model)
+        self.datastore.set_nbytes('risk_model')
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
@@ -822,7 +783,8 @@ class RiskCalculator(HazardCalculator):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
             sitecol, shakemap, discarded = get_sitecol_shakemap(
-                smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance,
+                smap, oq.imtls, haz_sitecol,
+                oq.asset_hazard_distance['default'],
                 oq.discard_assets)
             if len(discarded):
                 self.datastore['discarded'] = discarded
