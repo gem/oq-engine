@@ -211,7 +211,7 @@ def get_nbytes(dset):
     if 'nbytes' in dset.attrs:
         # look if the dataset has an attribute nbytes
         return dset.attrs['nbytes']
-    elif hasattr(dset, 'value'):
+    elif hasattr(dset, 'dtype'):
         # else extract nbytes from the underlying array
         return dset.size * numpy.zeros(1, dset.dtype).nbytes
 
@@ -334,6 +334,8 @@ class File(h5py.File):
             pyclass = ''
         if isinstance(obj, (dict, Group)) and obj:
             for k, v in sorted(obj.items()):
+                if isinstance(k, tuple):  # multikey
+                    k = '-'.join(k)
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
             if isinstance(obj, Group):

@@ -26,6 +26,7 @@ from openquake.baselib import performance, general, sap, datastore
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base, views
+from openquake.server import dbserver
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -83,7 +84,7 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
     rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
     oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq, rcalc_id)
-    rcalc.run(pdb=pdb, exports=exports, hazard_calculation_id=hc_id, **params)
+    rcalc.run(pdb=pdb, exports=exports, **params)
     return rcalc
 
 
@@ -132,6 +133,7 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
     """
     Run a calculation bypassing the database layer
     """
+    dbserver.ensure_on()
     if param:
         params = oqvalidation.OqParam.check(
             dict(p.split('=', 1) for p in param.split(',')))

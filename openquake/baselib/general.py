@@ -28,6 +28,7 @@ import socket
 import random
 import atexit
 import zipfile
+import builtins
 import operator
 import warnings
 import tempfile
@@ -1122,6 +1123,9 @@ def debug(templ, *args):
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
         f.write(msg + '\n')
+
+
+builtins.debug = debug
 
 
 def warn(msg, *args):

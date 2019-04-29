@@ -15,8 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import csv
+import logging
 import numpy
 from openquake.baselib import hdf5
+from openquake.hazardlib import valid, geo, InvalidFile
 from openquake.calculators import base
 from openquake.calculators.extract import extract
 
@@ -47,11 +50,11 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
         for peril in no_frag_perils:
-            dtlist.append((loss_type + '-' + peril, F32))
+            dtlist.append(('loss-' + loss_type + '-' + peril, F32))
     for peril in no_frag_perils:
         for occ in occupants:
             dtlist.append((occ + '-' + peril, F32))
-        dtlist.append(('building-' + peril, F32))
+        dtlist.append(('number-' + peril, F32))
     arr = numpy.zeros(len(assetcol), dtlist)
     for field, _ in dtlist:
         if field in assetcol.array.dtype.fields:
@@ -64,13 +67,13 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
         for loss_type in loss_types:
             value = rec['value-' + loss_type]
             for peril in no_frag_perils:
-                rec[loss_type + '-' + peril] = haz[peril] * value
+                rec['loss-%s-%s' % (loss_type, peril)] = haz[peril] * value
         for occupant in occupants:
             occ = rec[occupant]
             for peril in no_frag_perils:
                 rec[occupant + '-' + peril] = haz[peril] * occ
         for peril in no_frag_perils:
-            rec['building-' + peril] = haz[peril] * rec['number']
+            rec['number-' + peril] = haz[peril] * rec['number']
     return arr
 
 
@@ -81,6 +84,45 @@ class MultiRiskCalculator(base.RiskCalculator):
     """
     core_task = None  # no parallel
     is_stochastic = True
+
+    def save_multi_peril(self):
+        """
+        Read the hazard fields as csv files, associate them to the sites
+        and create the `hazard` dataset.
+        """
+        oq = self.oqparam
+        fnames = oq.inputs['multi_peril']
+        dt = [(haz, float) for haz in oq.multi_peril]
+        N = len(self.sitecol)
+        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
+        for name, fname in zip(oq.multi_peril, fnames):
+            if name in 'LAVA LAHAR PYRO':
+                tofloat = valid.probability
+            else:
+                tofloat = valid.positivefloat
+            data = []
+            with open(fname) as f:
+                for row in csv.DictReader(f):
+                    intensity = tofloat(row['intensity'])
+                    if intensity > 0:
+                        data.append((valid.longitude(row['lon']),
+                                     valid.latitude(row['lat']),
+                                     intensity))
+            data = numpy.array(data, [('lon', float), ('lat', float),
+                                      ('number', float)])
+            logging.info('Read %s with %d rows' % (fname, len(data)))
+            if len(data) != len(numpy.unique(data[['lon', 'lat']])):
+                raise InvalidFile('There are duplicated points in %s' % fname)
+            try:
+                asset_hazard_distance = oq.asset_hazard_distance[name]
+            except KeyError:
+                asset_hazard_distance = oq.asset_hazard_distance['default']
+            sites, filtdata, _discarded = geo.utils.assoc(
+                data, self.sitecol, asset_hazard_distance, 'filter')
+            z = numpy.zeros(N, float)
+            z[sites.sids] = filtdata['number']
+            self.datastore['multi_peril'][name] = z
+        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
     def execute(self):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy

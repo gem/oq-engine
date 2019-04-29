@@ -822,7 +822,9 @@ def floatdict(value):
     value = ast.literal_eval(value)
     if isinstance(value, (int, float, list)):
         return {'default': value}
-    return value
+    dic = {'default': value[next(iter(value))]}
+    dic.update(value)
+    return dic
 
 
 def maximum_distance(value):
