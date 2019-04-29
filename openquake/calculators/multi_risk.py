@@ -50,7 +50,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
         for peril in no_frag_perils:
-            dtlist.append((loss_type + '-' + peril, F32))
+            dtlist.append(('loss-' + loss_type + '-' + peril, F32))
     for peril in no_frag_perils:
         for occ in occupants:
             dtlist.append((occ + '-' + peril, F32))
@@ -67,7 +67,7 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
         for loss_type in loss_types:
             value = rec['value-' + loss_type]
             for peril in no_frag_perils:
-                rec[loss_type + '-' + peril] = haz[peril] * value
+                rec['loss-%s-%s' % (loss_type, peril)] = haz[peril] * value
         for occupant in occupants:
             occ = rec[occupant]
             for peril in no_frag_perils:
