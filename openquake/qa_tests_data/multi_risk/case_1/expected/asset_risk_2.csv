@@ -1,4 +1,4 @@
-asset_ref,lat,lon,number,occupants_night,site_id,value-structural,structural-LAHAR,occupants_night-LAHAR,building-LAHAR,id_1,id_2,name_1,name_2,taxonomy
+asset_ref,lat,lon,number,occupants_night,site_id,value-structural,structural-LAHAR,occupants_night-LAHAR,number-LAHAR,id_1,id_2,name_1,name_2,taxonomy
 a_5547,4.64271E+00,-7.59918E+01,1.00000E+00,5.00000E+00,0,2.00000E+04,0.00000E+00,0.00000E+00,0.00000E+00,"AREA # 76","AREA # 76497","Valle del Cauca","Obando","Slab_roof"
 a_4385,4.59711E+00,-7.59906E+01,1.00000E+00,2.00000E+00,1,2.00000E+04,0.00000E+00,0.00000E+00,0.00000E+00,"AREA # 76","AREA # 76497","Valle del Cauca","Obando","Slab_roof"
 a_11688,4.99315E+00,-7.59782E+01,1.00000E+00,7.00000E+00,2,2.00000E+04,0.00000E+00,0.00000E+00,0.00000E+00,"AREA # 66","AREA # 66383","Risaralda","La Celia","Slab_roof"
