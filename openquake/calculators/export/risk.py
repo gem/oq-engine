@@ -663,9 +663,10 @@ def export_asset_risk_csv(ekey, dstore):
     perilnames = sorted(name for name in arr.dtype.names
                         if name.upper() == name)
     expnames = [name for name in arr.dtype.names if name not in md.tagnames
-                and 'loss' not in name and name not in perilnames]
-    colnames = (['asset_ref'] + expnames + sorted(md.tagnames) + perilnames +
-                lossnames)
+                and 'loss' not in name and name not in perilnames
+                and name not in 'lon lat']
+    colnames = (['asset_ref'] + sorted(md.tagnames) + ['lon', 'lat'] +
+                expnames + perilnames + lossnames)
     # sanity check
     assert len(colnames) == len(arr.dtype.names) + 1
     for aref, rec in zip(arefs, arr):
