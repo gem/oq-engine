@@ -28,10 +28,7 @@ import collections
 
 import numpy
 from xml.parsers.expat import ExpatError
-from xml.etree import ElementTree as ET
 from copy import deepcopy
-
-from io import BytesIO
 from mock import Mock
 
 import openquake.hazardlib
@@ -46,11 +43,6 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
-class Input(BytesIO):
-    def __repr__(self):
-        return '<Input>'
-
-
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
     def __init__(self, filename, files, basepath):
         self.files = files
@@ -58,7 +50,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
         super().__init__(f, validate=True)
 
     def _get_source_model(self, filename):
-        return Input(self.files[filename].encode('utf-8'))
+        return open(gettemp(self.files[filename]))
 
 
 def _make_nrml(content):
@@ -1960,14 +1952,13 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         if hasattr(xml, 'encode'):
             xml = xml.encode('utf8')
         with self.assertRaises(errorclass) as exc:
-            logictree.GsimLogicTree(Input(xml), ['Shield'])
+            logictree.GsimLogicTree(gettemp(xml), ['Shield'])
         if errormessage is not None:
             self.assertIn(errormessage, str(exc.exception))
 
     def parse_valid(self, xml, tectonic_region_types=('Shield',)):
-        xmlbytes = xml.encode('utf-8') if hasattr(xml, 'encode') else xml
-        return logictree.GsimLogicTree(
-            Input(xmlbytes), tectonic_region_types)
+        xml = xml.decode('utf-8') if hasattr(xml, 'decode') else xml
+        return logictree.GsimLogicTree(gettemp(xml), tectonic_region_types)
 
     def test_not_xml(self):
         self.parse_invalid('xxx', ExpatError)
@@ -2015,7 +2006,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>""")
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            '<Input>: only uncertainties of type "gmpeModel" are allowed '
+            'only uncertainties of type "gmpeModel" are allowed '
             'in gmpe logic tree')
 
     def test_two_branchsets_in_one_level(self):
@@ -2047,7 +2038,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            '<Input>: Branching level bl1 has multiple branchsets')
+            'Branching level bl1 has multiple branchsets')
 
     def test_branchset_id_not_unique(self):
         xml = _make_nrml("""\
@@ -2084,7 +2075,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "<Input>: Duplicated branchSetID bs1")
+            "Duplicated branchSetID bs1")
 
     def test_branch_id_not_unique(self):
         xml = _make_nrml("""
@@ -2115,7 +2106,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "There where duplicated branchIDs in <Input>")
+            "There where duplicated branchIDs in")
 
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
@@ -2135,7 +2126,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, "Unknown GSIM: SAdighEtAl1997 in file <Input>")
+            xml, ValueError, "Unknown GSIM: SAdighEtAl1997 in file")
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
@@ -2168,7 +2159,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "<Input>: Found duplicated applyToTectonicRegionType="
+            "Found duplicated applyToTectonicRegionType="
             "['Subduction Interface', 'Subduction Interface']")
 
     def test_SHARE(self):

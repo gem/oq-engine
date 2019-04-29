@@ -42,7 +42,6 @@ def get_risk_files(inputs):
     :returns: a pair (file_type, {risk_type: path})
     """
     rfs = {}
-    names = set()
     job_ini = inputs['job_ini']
     for key in inputs:
         if key == 'fragility':
@@ -50,21 +49,14 @@ def get_risk_files(inputs):
             # instead of structural_fragility_file
             rfs['fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
-            names.add('fragility')
             del inputs['fragility']
         elif key.endswith(('_fragility', '_vulnerability', '_consequence')):
             match = RISK_TYPE_REGEX.match(key)
             if match and 'retrofitted' not in key and 'consequence' not in key:
                 rfs['%s/%s' % (match.group(2), match.group(1))] = inputs[key]
-                names.add(match.group(2))
             elif match is None:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
-    if not names:
-        return None, {}
-    elif len(names) > 1:
-        raise ValueError('Found inconsistent keys %s in the .ini file'
-                         % ', '.join(names))
-    return names.pop(), rfs
+    return rfs
 
 
 # ########################### vulnerability ############################## #
@@ -87,73 +79,73 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(oqparam, kind):
+def get_risk_models(oqparam, kind='vulnerability vulnerability_retrofitted '
+                    'fragility consequence'):
     """
     :param oqparam:
         an OqParam instance
     :param kind:
-        vulnerability|vulnerability_retrofitted|fragility|consequence
+        a space-separated string with the kinds of risk models to read
     :returns:
-        a dictionary riskid -> loss_type -> function
+        a dictionary riskid -> loss_type, kind -> function
     """
+    kinds = kind.split()
     rmodels = AccumDict()
-    rmodels.limit_states = []
-    for key in sorted(oqparam.inputs):
-        mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
-        if mo:
-            key_type = mo.group(1)  # the cost_type in the key
-            # can be occupants, structural, nonstructural, ...
-            rmodel = nrml.to_python(oqparam.inputs[key])
-            if len(rmodel) == 0:
-                raise InvalidFile('%s is empty!' % oqparam.inputs[key])
-            rmodels[key_type] = rmodel
-            if rmodel.lossCategory is None:  # NRML 0.4
-                continue
-            cost_type = str(rmodel.lossCategory)
-            rmodel_kind = rmodel.__class__.__name__
-            kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
-            if not rmodel_kind.lower().startswith(kind_):
-                raise ValueError(
-                    'Error in the file "%s_file=%s": is '
-                    'of kind %s, expected %s' % (
-                        key, oqparam.inputs[key], rmodel_kind,
-                        kind.capitalize() + 'Model'))
-            if cost_type != key_type:
-                raise ValueError(
-                    'Error in the file "%s_file=%s": lossCategory is of type '
-                    '"%s", expected "%s"' % (key, oqparam.inputs[key],
-                                             rmodel.lossCategory, key_type))
+    for kind in kinds:
+        for key in sorted(oqparam.inputs):
+            mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
+            if mo:
+                loss_type = mo.group(1)  # the cost_type in the key
+                # can be occupants, structural, nonstructural, ...
+                rmodel = nrml.to_python(oqparam.inputs[key])
+                if len(rmodel) == 0:
+                    raise InvalidFile('%s is empty!' % oqparam.inputs[key])
+                rmodels[loss_type, kind] = rmodel
+                if rmodel.lossCategory is None:  # NRML 0.4
+                    continue
+                cost_type = str(rmodel.lossCategory)
+                rmodel_kind = rmodel.__class__.__name__
+                kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
+                if not rmodel_kind.lower().startswith(kind_):
+                    raise ValueError(
+                        'Error in the file "%s_file=%s": is '
+                        'of kind %s, expected %s' % (
+                            key, oqparam.inputs[key], rmodel_kind,
+                            kind.capitalize() + 'Model'))
+                if cost_type != loss_type:
+                    raise ValueError(
+                        'Error in the file "%s_file=%s": lossCategory is of '
+                        'type "%s", expected "%s"' %
+                        (key, oqparam.inputs[key],
+                         rmodel.lossCategory, loss_type))
     rdict = AccumDict(accum={})
     rdict.limit_states = []
-    if kind == 'fragility':
-        limit_states = []
-        for loss_type, fm in sorted(rmodels.items()):
+    for (loss_type, kind), rm in sorted(rmodels.items()):
+        if kind == 'fragility':
             # build a copy of the FragilityModel with different IM levels
-            newfm = fm.build(oqparam.continuous_fragility_discretization,
+            newfm = rm.build(oqparam.continuous_fragility_discretization,
                              oqparam.steps_per_interval)
             for (imt, riskid), ffl in newfm.items():
-                if not limit_states:
-                    limit_states.extend(fm.limitStates)
+                if not rdict.limit_states:
+                    rdict.limit_states.extend(rm.limitStates)
                 # we are rejecting the case of loss types with different
                 # limit states; this may change in the future
-                assert limit_states == fm.limitStates, (
-                    limit_states, fm.limitStates)
-                rdict[riskid][loss_type] = ffl
+                assert rdict.limit_states == rm.limitStates, (
+                    rdict.limit_states, rm.limitStates)
+                rdict[riskid][loss_type, kind] = ffl
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
-        rdict.limit_states = [str(ls) for ls in limit_states]
-    elif kind == 'consequence':
-        for loss_type, cm in rmodels.items():
-            for riskid, cf in cm.items():
-                rdict[riskid][loss_type] = cf
-    else:  # vulnerability
-        cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
-        # only for classical_risk reduce the loss_ratios
-        # to make sure they are strictly increasing
-        for loss_type, rm in rmodels.items():
+        elif kind == 'consequence':
+            for riskid, cf in rm.items():
+                rdict[riskid][loss_type, kind] = cf
+        else:  # vulnerability
+            cl_risk = oqparam.calculation_mode in (
+                'classical', 'classical_risk')
+            # only for classical_risk reduce the loss_ratios
+            # to make sure they are strictly increasing
             for (imt, riskid), rf in rm.items():
-                rdict[riskid][loss_type] = (
+                rdict[riskid][loss_type, kind] = (
                     rf.strictly_increasing() if cl_risk else rf)
     return rdict
 
@@ -196,7 +188,7 @@ class RiskModel(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.risk_functions)
+        return sorted(lt for (lt, kind) in self.risk_functions)
 
     def get_loss_types(self, imt):
         """
@@ -209,8 +201,9 @@ class RiskModel(object):
     def __toh5__(self):
         dic = self.risk_functions.copy()
         if hasattr(self, 'retro_functions'):
-            for lt, func in self.retro_functions.items():
-                dic[lt + '_retrofitted'] = func
+            dic.update(self.retro_functions)
+        if hasattr(self, 'consequence_functions'):
+            dic.update(self.consequence_functions)
         return dic, {'taxonomy': self.taxonomy}
 
     def __fromh5__(self, dic, attrs):
@@ -279,7 +272,7 @@ class Classical(RiskModel):
         self.poes_disagg = poes_disagg
         self.loss_ratios = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for lt, vf in vulnerability_functions.items()}
+            for (lt, kind), vf in vulnerability_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, eids=None, eps=None):
         """
@@ -298,7 +291,7 @@ class Classical(RiskModel):
             a composite array (loss, poe) of shape (A, C)
         """
         n = len(assets)
-        vf = self.vulnerability_functions[loss_type]
+        vf = self.vulnerability_functions[loss_type, self.kind]
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
@@ -340,7 +333,7 @@ class ProbabilisticEventBased(RiskModel):
         E = len(gmvs)
         A = len(assets)
         loss_ratios = numpy.zeros((A, E), F32)
-        vf = self.vulnerability_functions[loss_type]
+        vf = self.vulnerability_functions[loss_type, self.kind]
         means, covs, idxs = vf.interpolate(gmvs)
         if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
             pass
@@ -378,10 +371,10 @@ class ClassicalBCR(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.loss_ratios_orig = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for lt, vf in vulnerability_functions_orig.items()}
+            for (lt, kind), vf in vulnerability_functions_orig.items()}
         self.loss_ratios_retro = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for lt, vf in vulnerability_functions_retro.items()}
+            for (lt, kind), vf in vulnerability_functions_retro.items()}
 
     def __call__(self, loss_type, assets, hazard, eids=None, eps=None):
         """
@@ -396,9 +389,9 @@ class ClassicalBCR(RiskModel):
             raise NotImplemented('retrofitted is not defined for ' + loss_type)
         n = len(assets)
         self.assets = assets
-        vf = self.vulnerability_functions[loss_type]
+        vf = self.vulnerability_functions[loss_type, self.kind]
         imls = self.hazard_imtls[vf.imt]
-        vf_retro = self.retro_functions[loss_type]
+        vf_retro = self.retro_functions[loss_type, self.kind + '_retrofitted']
         curves_orig = functools.partial(
             scientific.classical, vf, imls,
             loss_ratios=self.loss_ratios_orig[loss_type])
@@ -458,7 +451,7 @@ class Scenario(RiskModel):
         loss_matrix = numpy.empty((len(assets), E))
         loss_matrix.fill(numpy.nan)
 
-        vf = self.vulnerability_functions[loss_type]
+        vf = self.vulnerability_functions[loss_type, self.kind]
         means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         if len(epsilons):
@@ -497,12 +490,12 @@ class Damage(RiskModel):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        ffs = self.fragility_functions[loss_type]
+        ffs = self.fragility_functions[loss_type, self.kind]
         damages = scientific.scenario_damage(ffs, gmvs).T
         E, D = damages.shape
         dmg_csq = numpy.zeros((E, D + 1))
         dmg_csq[:, :D] = damages
-        c_model = self.consequence_functions.get(loss_type)
+        c_model = self.consequence_functions.get((loss_type, 'consequence'))
         if c_model:  # compute consequences
             means = [0] + [par[0] for par in c_model.params]
             # NB: we add a 0 in front for nodamage state
@@ -538,7 +531,7 @@ class ClassicalDamage(Damage):
 
         where N is the number of points and D the number of damage states.
         """
-        ffl = self.fragility_functions[loss_type]
+        ffl = self.fragility_functions[loss_type, self.kind]
         hazard_imls = self.hazard_imtls[ffl.imt]
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,

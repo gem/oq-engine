@@ -149,9 +149,9 @@ class RlzsAssoc(object):
         if self.num_samples:
             assert len(self.realizations) == self.num_samples, (
                 len(self.realizations), self.num_samples)
-            tot_weight = sum(rlz.weight for rlz in self.realizations)
             for rlz in self.realizations:
-                rlz.weight /= tot_weight
+                for k in rlz.weight.dic:
+                    rlz.weight.dic[k] = 1. / self.num_samples
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if not tot_weight.is_one():
