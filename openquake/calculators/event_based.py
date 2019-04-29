@@ -228,7 +228,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         :returns: a dict eid -> index in the events table
         """
-        return dict(zip(self.datastore['events']['eid'], range(self.E)))
+        return dict(zip(self.datastore['events']['id'], range(self.E)))
 
     def agg_dicts(self, acc, result):
         """
@@ -292,8 +292,8 @@ class EventBasedCalculator(base.HazardCalculator):
             for er in eid_rlz:
                 events[i] = er
                 i += 1
-        events.sort(order='eid')  # fast too
-        n_unique_events = len(numpy.unique(events['eid']))
+        events.sort(order='id')  # fast too
+        n_unique_events = len(numpy.unique(events['id']))
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
 
