@@ -114,7 +114,6 @@ class KothaEtAl2019(GMPE):
             self.c3 = c3
 
         self.sigma_mu_epsilon = sigma_mu_epsilon
-        print(self.c3, self.sigma_mu_epsilon)
         if self.sigma_mu_epsilon:
             # Connect to hdf5 and load tables into memory
             self.retreive_sigma_mu_data()
