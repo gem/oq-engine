@@ -52,6 +52,16 @@ class KothaEtAl2019(GMPE):
 
     In the core form of the GMPE no site term is included. This will be
     added in the subclasses.
+
+    :param c3:
+        User supplied table for the coefficient c3 controlling the anelastic
+        attenuation as an instance of :class:
+        `openquake.hazardlib.gsim.base.CoeffsTable`. If absent, the value is
+        taken from the normal coefficients table.
+
+    :param sigma_mu_epsilon:
+        The number by which to multiply the epistemic uncertainty (sigma_mu)
+        for the adjustment of the mean ground motion.
     """
     experimental = True
 
@@ -88,22 +98,23 @@ class KothaEtAl2019(GMPE):
     #: Required distance measure is Rjb (eq. 1).
     REQUIRES_DISTANCES = set(('rjb', ))
 
-    def __init__(self, stress_epsilon=0.0, c3=None, sigma_mu_epsilon=0.0):
+    def __init__(self, sigma_mu_epsilon=0.0, c3=None):
         """
-        Instantiate setting the stress_epsilon, sigma_mu_epsilon and c3 terms
+        Instantiate setting the sigma_mu_epsilon and c3 terms
         """
         super().__init__()
-        self.stress_epsilon = stress_epsilon
         if isinstance(c3, dict):
             # Inputing c3 as a dictionary sorted by the string representation
             # of the IMT
             c3in = {}
             for c3key in c3:
-                c3in[from_string(c3key)] = c3[c3key]
+                c3in[from_string(c3key)] = {"c3": c3[c3key]}
             self.c3 = CoeffsTable(sa_damping=5, table=c3in)
         else:
             self.c3 = c3
+
         self.sigma_mu_epsilon = sigma_mu_epsilon
+        print(self.c3, self.sigma_mu_epsilon)
         if self.sigma_mu_epsilon:
             # Connect to hdf5 and load tables into memory
             self.retreive_sigma_mu_data()
@@ -144,7 +155,6 @@ class KothaEtAl2019(GMPE):
 
         mean = (self.get_magnitude_scaling(C, rup.mag) +
                 self.get_distance_term(C, rup, dists.rjb, imt) +
-                self.get_tau_f_adjustment(C) +
                 self.get_site_amplification(C, sites))
         # GMPE originally in cm/s/s - convert to g
         if imt.name in "PGA SA":
@@ -154,8 +164,11 @@ class KothaEtAl2019(GMPE):
             # Apply the epistemic uncertainty factor (sigma_mu) multiplied by
             # the number of standard deviations
             sigma_mu = self.get_sigma_mu_adjustment(C, imt, rup, dists)
-            # Cap sigma_mu at 0.35
-            sigma_mu[sigma_mu > 0.35] = 0.35
+            # Cap sigma_mu at 0.5 ln units
+            sigma_mu[sigma_mu > 0.5] = 0.5
+            # Sigma mu should not be less than the standard deviation of the
+            # fault-to-fault variability
+            sigma_mu[sigma_mu < C["tau_fault"]] = C["tau_fault"]
             mean += (self.sigma_mu_epsilon * sigma_mu)
         return mean, stddevs
 
@@ -197,7 +210,7 @@ class KothaEtAl2019(GMPE):
         """
         Returns the c3 term
         """
-        c3 = self.c3[imt] if self.c3 else C["c3"]
+        c3 = self.c3[imt]["c3"] if self.c3 else C["c3"]
         return c3
 
     def get_site_amplification(self, C, sites):
@@ -205,12 +218,6 @@ class KothaEtAl2019(GMPE):
         In base model no site amplification is used
         """
         return 0.0
-
-    def get_tau_f_adjustment(self, C):
-        """
-        The "tau_fault" term is used to adjust the stress parameter
-        """
-        return self.stress_epsilon * C["tau_fault"]
 
     def get_sigma_mu_adjustment(self, C, imt, rup, dists):
         """
@@ -310,21 +317,6 @@ class KothaEtAl2019(GMPE):
     """)
 
     CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 6.2}
-
-
-## Adjustment factors based on the "value" term of a three-point discrete
-## approximation of a normal distribution according to Miller & Rice (1983)
-#CFACT = 1.732051
-#
-#
-## For the regional coefficients a "faster" attenuation means the c3 term
-## is made more strongly negative, and vice-versa for a "slower" attenuation
-#REGION_COEFFS = {"Average": 0., "Faster": -CFACT, "Slower": CFACT}
-#
-#
-## For other distributions (stress factor and sigma_mu) the coefficients are
-## increased or decreased by the "value" term
-#OTHER_COEFFS = {"Low": -CFACT, "Middle": 0., "High": CFACT}
 
 
 class KothaEtAl2019SERA(KothaEtAl2019):
