@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import csv
 import logging
+import collections
 import numpy
 from openquake.baselib import hdf5
 from openquake.hazardlib import valid, geo, InvalidFile
@@ -151,17 +152,28 @@ class MultiRiskCalculator(base.RiskCalculator):
         self.datastore['asset_risk'] = arr = build_asset_risk(
             self.assetcol, dmg_csq, hazard, ltypes, dstates,
             perils, no_frag_perils)
+        self.all_perils = perils + no_frag_perils
         return arr
+
+    def get_fields(self, cat):
+        return [cat + '-' + peril for peril in self.all_perils]
 
     def post_execute(self, arr):
         """
         Compute aggregated risk
         """
         md = extract(self.datastore, 'exposure_metadata')
+        categories = [cat.replace('value-', 'loss-') for cat in md] + [
+            ds + '-structural' for ds in self.riskmodel.damage_states]
         multi_risk = list(md.array)
         multi_risk += sorted(
             set(arr.dtype.names) -
             set(self.datastore['assetcol/array'].dtype.names))
-        tot = [(risk, arr[risk].sum()) for risk in multi_risk]
-        agg_risk = numpy.array(tot, [('name', hdf5.vstr), ('value', F32)])
+        tot = {risk: arr[risk].sum() for risk in multi_risk}
+        dt = [('peril', hdf5.vstr)] + [(c, float) for c in categories]
+        agg_risk = numpy.zeros(len(self.all_perils), dt)
+        for cat in categories:
+            agg_risk[cat] = [tot.get(f, numpy.nan)
+                             for f in self.get_fields(cat)]
+        agg_risk['peril'] = self.all_perils
         self.datastore['agg_risk'] = agg_risk
