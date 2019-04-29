@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed problems like SA(0.7) != SA(0.70) in iml_disagg
   * Exposed the outputs of the classical calculation in event based
     calculations with `compare_with_classical=true`
   * Made it possible to serialize together all kind of risk functions,
