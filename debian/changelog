@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Exposed the outputs of the classical calculation in event based
+    calculations with `compare_with_classical=true`
   * Made it possible to serialize together all kind of risk functions,
     including consequence functions that before were not HDF5-serializable
   * Fixed a MemoryError when counting the number of bytes stored in large
