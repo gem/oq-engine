@@ -105,7 +105,8 @@ class MultiRiskCalculator(base.RiskCalculator):
                 for row in csv.DictReader(f):
                     intensity = tofloat(row['intensity'])
                     if intensity > 0:
-                        data.append((float(row['lon']), float(row['lat']),
+                        data.append((valid.longitude(row['lon']),
+                                     valid.latitude(row['lat']),
                                      intensity))
             data = numpy.array(data, [('lon', float), ('lat', float),
                                       ('number', float)])
