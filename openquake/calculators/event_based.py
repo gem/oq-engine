@@ -36,6 +36,7 @@ from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters)
 from openquake.calculators.classical import ClassicalCalculator
+from openquake.engine import engine
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -439,6 +440,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # model, however usually this is quite fast and do not dominate
             # the computation
             self.cl.run(close=False)
+            engine.expose_outputs(self.cl.datastore)
             cl_mean_curves = get_mean_curves(self.cl.datastore)
             eb_mean_curves = get_mean_curves(self.datastore)
             self.rdiff, index = util.max_rel_diff_index(
