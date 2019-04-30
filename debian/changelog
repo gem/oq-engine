@@ -1,3 +1,7 @@
+  [Chris Van Houtte]
+  * Added new class to bradley_2013b.py for hazard maps
+  * Modified test case_37 to test multiple sites
+
   [Graeme Weatherill]
   * Adds Kotha et al (2019) shallow crustal GMPE for SERA
   * Adds 'ExperimentalWarning' to possible GMPE warnings
