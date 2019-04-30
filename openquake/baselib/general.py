@@ -387,8 +387,8 @@ def removetmp():
         if os.path.exists(path):  # not removed yet
             try:
                 os.remove(path)
-            except PermissionError:
-                pass
+            except BaseException as exc:
+                print('ignored in removetmp: %s' % exc)
 
 
 def git_suffix(fname):
