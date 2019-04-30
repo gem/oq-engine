@@ -55,6 +55,13 @@ class NotVerifiedWarning(UserWarning):
     """
 
 
+class ExperimentalWarning(UserWarning):
+    """
+    Raised for GMPEs that are intended for experimental use or maybe subject
+    to changes in future version.
+    """
+
+
 def gsim_imt_dt(sorted_gsims, sorted_imts):
     """
     Build a numpy dtype as a nested record with keys 'idx' and nested
@@ -182,6 +189,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     minimum_distance = 0  # set by valid.gsim
     superseded_by = None
     non_verified = False
+    experimental = False
 
     @classmethod
     def __init_subclass__(cls):
@@ -198,6 +206,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             msg = ('%s is not independently verified - the user is liable '
                    'for their application') % cls.__name__
             warnings.warn(msg, NotVerifiedWarning)
+        if cls.experimental:
+            msg = ('%s is experimental and may change in future versions - '
+                   'the user is liable for their application') % cls.__name__
+            warnings.warn(msg, ExperimentalWarning)
 
     def init(self):
         """

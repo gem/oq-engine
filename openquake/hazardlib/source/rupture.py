@@ -42,7 +42,7 @@ U64 = numpy.uint64
 TWO16 = U64(2 ** 16)
 TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
-events_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
+events_dt = numpy.dtype([('id', U64), ('rlz', U16)])
 classes = {}  # initialized in .init()
 
 
@@ -592,7 +592,7 @@ class EBRupture(object):
         events = self.get_events(rlzs_by_gsim)
         numpy.random.seed(self.serial)
         sess = numpy.random.choice(num_ses, len(events)) + 1
-        return dict(zip(events['eid'], sess))
+        return dict(zip(events['id'], sess))
 
     def export(self, mesh, rlzs_by_gsim, num_ses):
         """

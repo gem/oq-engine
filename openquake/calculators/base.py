@@ -578,7 +578,7 @@ class HazardCalculator(BaseCalculator):
         if not self.riskmodel:
             parent = self.datastore.parent
             if 'risk_model' in parent:
-                self.riskmodel = riskinput.read_composite_risk_model(parent)
+                self.riskmodel = riskinput.CompositeRiskModel.read(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
             raise InvalidFile('No intensity_measure_types specified in %s' %
@@ -911,7 +911,7 @@ def save_gmfs(calculator):
         eids, gmfs = readinput.eids, readinput.gmfs
     E = len(eids)
     events = numpy.zeros(E, rupture.events_dt)
-    events['eid'] = eids
+    events['id'] = eids
     calculator.eids = eids
     if hasattr(oq, 'number_of_ground_motion_fields'):
         if oq.number_of_ground_motion_fields != E:
@@ -939,7 +939,7 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     if len(events) == 0:
         E = gmfs.shape[1]
         events = numpy.zeros(E, rupture.events_dt)
-        events['eid'] = numpy.arange(E, dtype=U64)
+        events['id'] = numpy.arange(E, dtype=U64)
     dstore['events'] = events
     offset = 0
     gmfa = get_gmv_data(sitecol.sids, gmfs, events)
@@ -990,7 +990,7 @@ def import_gmfs(dstore, fname, sids):
     E = len(eids)
     eid2idx = dict(zip(eids, range(E)))
     events = numpy.zeros(E, rupture.events_dt)
-    events['eid'] = eids
+    events['id'] = eids
     dstore['events'] = events
     # store the GMFs
     dic = general.group_array(array.view(gmf_data_dt), 'sid')
