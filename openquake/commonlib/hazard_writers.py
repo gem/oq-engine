@@ -323,7 +323,7 @@ def rupture_to_element(rup, parent=None):
     elem = et.SubElement(rup_elem, 'stochasticEventSets')
     n = 0
     for ses in rup.events_by_ses:
-        eids = rup.events_by_ses[ses]['eid']
+        eids = rup.events_by_ses[ses]['id']
         n += len(eids)
         ses_elem = et.SubElement(elem, 'SES', id=ses)
         ses_elem.text = ' '.join(str(eid) for eid in eids)
