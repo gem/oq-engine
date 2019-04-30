@@ -288,7 +288,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
-        event_based.RUPTURES_PER_BLOCK = 20
         self.run_calc(case_miriam.__file__, 'job.ini')
 
         # check minimum_magnitude >= 5.2
