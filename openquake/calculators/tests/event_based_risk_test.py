@@ -21,7 +21,6 @@ import unittest
 import numpy
 
 from openquake.baselib.general import gettemp
-from openquake.calculators import event_based
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -296,7 +295,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check asset_loss_table
         tot = self.calc.datastore['asset_loss_table'].value.sum()
-        self.assertEqual(tot, 15787834.0)
+        self.assertEqual(tot, 15787827.0)
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname, delta=1E-5)
