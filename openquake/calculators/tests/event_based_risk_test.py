@@ -302,7 +302,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
-        os.remove(fname)
 
         # this is a case with exposure and region_grid_spacing=1
         self.run_calc(case_miriam.__file__, 'job2.ini')
