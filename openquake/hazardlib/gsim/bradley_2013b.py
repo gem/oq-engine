@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,12 +24,15 @@ Module exports :class:`Bradley2013ChchCBD`,
 :class:`Bradley2013ChchWestAdditionalSigma`,
 :class:`Bradley2013ChchEastAdditionalSigma`,
 :class:`Bradley2013ChchNorthAdditionalSigma`.
+:class:`Bradley2013ChchMaps`.
+:class:`Bradley2013ChchMapsAdditionalSigma`.
 """
 import numpy as np
 import shapely.geometry
-from openquake.hazardlib.gsim.bradley_2013 import Bradley2013LHC, convert_to_LHC
+from openquake.hazardlib.gsim.bradley_2013 import (
+    Bradley2013LHC, convert_to_LHC)
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.imt import PGA
 
 
 class Bradley2013bChchCBD(Bradley2013LHC):
