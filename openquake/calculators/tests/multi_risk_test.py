@@ -39,21 +39,21 @@ class MultiRiskTestCase(CalculatorTestCase):
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
         ae(md.array, ['number', 'occupants_night', 'value-structural'])
-        ae(md.multi_risk, ['building-LAHAR',
-                           'building-LAVA',
-                           'building-PYRO',
-                           'collapse-structural-ASH_DRY',
+        ae(md.multi_risk, ['collapse-structural-ASH_DRY',
                            'collapse-structural-ASH_WET',
                            'loss-structural-ASH_DRY',
                            'loss-structural-ASH_WET',
+                           'loss-structural-LAHAR',
+                           'loss-structural-LAVA',
+                           'loss-structural-PYRO',
                            'no_damage-structural-ASH_DRY',
                            'no_damage-structural-ASH_WET',
+                           'number-LAHAR',
+                           'number-LAVA',
+                           'number-PYRO',
                            'occupants_night-LAHAR',
                            'occupants_night-LAVA',
-                           'occupants_night-PYRO',
-                           'structural-LAHAR',
-                           'structural-LAVA',
-                           'structural-PYRO'])
+                           'occupants_night-PYRO'])
 
     def test_case_2(self):
         # case with two damage states
@@ -65,8 +65,8 @@ class MultiRiskTestCase(CalculatorTestCase):
         # check extract
         md = extract(self.calc.datastore, 'exposure_metadata')
         ae(md.array, ['number', 'occupants_night', 'value-structural'])
-        ae(md.multi_risk, ['building-LAHAR', 'occupants_night-LAHAR',
-                           'structural-LAHAR'])
+        ae(md.multi_risk, ['loss-structural-LAHAR', 'number-LAHAR',
+                           'occupants_night-LAHAR'])
 
         # check invalid key structural_fragility_file
         with self.assertRaises(ValueError):

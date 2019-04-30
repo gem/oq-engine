@@ -163,16 +163,8 @@ class OqParam(valid.ParamSet):
         try:
             return self._risk_files
         except AttributeError:
-            self._file_type, self._risk_files = get_risk_files(self.inputs)
+            self._risk_files = get_risk_files(self.inputs)
             return self._risk_files
-
-    @property
-    def file_type(self):
-        try:
-            return self._file_type
-        except AttributeError:
-            self._file_type, self._risk_files = get_risk_files(self.inputs)
-            return self._file_type
 
     @property
     def input_dir(self):
@@ -214,6 +206,9 @@ class OqParam(valid.ParamSet):
                             'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
             self.iml_disagg.pop('default')
+            # normalize things like SA(0.10) -> SA(0.1)
+            self.iml_disagg = {str(from_string(imt)): val
+                               for imt, val in self.iml_disagg.items()}
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(
@@ -226,7 +221,7 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
-        self._file_type, self._risk_files = get_risk_files(self.inputs)
+        self._risk_files = get_risk_files(self.inputs)
 
         self.check_source_model()
         if (self.hazard_calculation_id and
@@ -389,7 +384,7 @@ class OqParam(valid.ParamSet):
         if not costtypes and self.hazard_calculation_id:
             with util.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
-            self._file_type, self._risk_files = get_risk_files(parent.inputs)
+            self._risk_files = get_risk_files(parent.inputs)
             costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         return costtypes
 

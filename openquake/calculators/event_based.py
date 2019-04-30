@@ -36,6 +36,7 @@ from openquake.calculators import base, extract
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, gen_rupture_getters)
 from openquake.calculators.classical import ClassicalCalculator
+from openquake.engine import engine
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -227,7 +228,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         :returns: a dict eid -> index in the events table
         """
-        return dict(zip(self.datastore['events']['eid'], range(self.E)))
+        return dict(zip(self.datastore['events']['id'], range(self.E)))
 
     def agg_dicts(self, acc, result):
         """
@@ -291,8 +292,8 @@ class EventBasedCalculator(base.HazardCalculator):
             for er in eid_rlz:
                 events[i] = er
                 i += 1
-        events.sort(order='eid')  # fast too
-        n_unique_events = len(numpy.unique(events['eid']))
+        events.sort(order='id')  # fast too
+        n_unique_events = len(numpy.unique(events['id']))
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
 
@@ -439,6 +440,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # model, however usually this is quite fast and do not dominate
             # the computation
             self.cl.run(close=False)
+            engine.expose_outputs(self.cl.datastore)
             cl_mean_curves = get_mean_curves(self.cl.datastore)
             eb_mean_curves = get_mean_curves(self.datastore)
             self.rdiff, index = util.max_rel_diff_index(
