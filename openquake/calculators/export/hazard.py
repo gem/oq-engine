@@ -578,7 +578,7 @@ def export_gmf_data_csv(ekey, dstore):
         arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
     gmfa = dstore['gmf_data/data'].value[['eid', 'sid', 'gmv']].copy()
-    event_id = dstore['events']['eid']
+    event_id = dstore['events']['id']
     gmfa['eid'] = event_id[gmfa['eid']]
     if eid is None:  # we cannot use extract here
         f = dstore.build_fname('sitemesh', '', 'csv')
