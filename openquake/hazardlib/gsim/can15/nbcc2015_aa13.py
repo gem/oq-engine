@@ -25,7 +25,6 @@ Module exports :class:`NBCC2015_AA13_Base`,
                :class:`NBCC2015_AA13_stablecrust_high`,
 
 """
-
 import os
 import numpy as np
 from openquake.baselib import hdf5
@@ -40,7 +39,6 @@ BASE_PATH_AA13 = os.path.join(dirname, 'nbcc2015_tables')
 
 
 class NBCC2015_AA13_Base(GMPETable):
-
     """
     Implements the GMMs of the 5th Generation seismic hazard model of Canada
     as used in the 2015 National Building Code of Canada (NBCC2015).
@@ -60,9 +58,8 @@ class NBCC2015_AA13_Base(GMPETable):
     Openquake implementation is based off of the Openquake nga_east seed model:
     https://docs.openquake.org/oq-engine/3.0/_modules/openquake/hazardlib/
     gsim/nga_east.html
-
     """
-
+    experimental = True
     AA13_TABLE = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
