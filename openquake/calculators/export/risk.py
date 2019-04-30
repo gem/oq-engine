@@ -248,7 +248,7 @@ def export_losses_by_event(ekey, dstore):
         dtlist = [('event_id', U64), ('rup_id', U32), ('year', U32)] + \
                  oq.loss_dt_list()
         eids = dstore['losses_by_event']['eid']
-        year_of = year_dict(dstore['events']['eid'],
+        year_of = year_dict(dstore['events']['id'],
                             oq.investigation_time, oq.ses_seed)
         arr = numpy.zeros(len(dstore['losses_by_event']), dtlist)
         arr['event_id'] = eids
@@ -338,9 +338,9 @@ def export_agg_losses_ebr(ekey, dstore):
     events = dstore['events'].value
     events_by_rupid = collections.defaultdict(list)
     for event in events:
-        rupid = event['eid'] // TWO32
+        rupid = event['id'] // TWO32
         events_by_rupid[rupid].append(event)
-    year_of = year_dict(events['eid'], oq.investigation_time, oq.ses_seed)
+    year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
     rup_data = {}
     event_by_eid = {}  # eid -> event
     # populate rup_data and event_by_eid
@@ -349,16 +349,16 @@ def export_agg_losses_ebr(ekey, dstore):
         ruptures = rgetter.get_ruptures()
         for ebr in ruptures:
             for event in events_by_rupid[ebr.serial]:
-                event_by_eid[event['eid']] = event
+                event_by_eid[event['id']] = event
         if has_rup_data:
             rup_data.update(get_rup_data(ruptures))
     for r, row in enumerate(agg_losses):
         rec = elt[r]
         event = event_by_eid[row['eid']]
-        rec['event_id'] = eid = event['eid']
+        rec['event_id'] = eid = event['id']
         rec['year'] = year_of[eid]
         if rup_data:
-            rec['rup_id'] = rup_id = event['eid'] // TWO32
+            rec['rup_id'] = rup_id = event['id'] // TWO32
             (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
              rec['centroid_depth']) = rup_data[rup_id]
         for lt, i in lti.items():
@@ -494,7 +494,7 @@ def export_dmg_by_event(ekey, dstore):
         for rlz in rlzs:
             data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
             arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = events_by_rlz[rlz.ordinal]['eid']
+            arr['event_id'] = events_by_rlz[rlz.ordinal]['id']
             arr['rlzi'] = rlz.ordinal
             for field in damage_dt.names:
                 arr[field] = data[field].squeeze()
