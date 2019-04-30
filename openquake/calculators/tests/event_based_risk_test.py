@@ -297,9 +297,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check asset_loss_table
         tot = self.calc.datastore['asset_loss_table'].value.sum()
-        if os.environ.get('OQ_DISTRIBUTE') != 'no':
-            raise unittest.SkipTest('Incorrect with concurrent_tasks > 0!')
-        self.assertEqual(tot, 15847082.0)
+        self.assertEqual(tot, 15787834.0)
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname, delta=1E-5)
