@@ -494,7 +494,7 @@ def export_dmg_by_event(ekey, dstore):
         for rlz in rlzs:
             data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
             arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = events_by_rlz[rlz.ordinal]['eid']
+            arr['event_id'] = events_by_rlz[rlz.ordinal]['id']
             arr['rlzi'] = rlz.ordinal
             for field in damage_dt.names:
                 arr[field] = data[field].squeeze()
