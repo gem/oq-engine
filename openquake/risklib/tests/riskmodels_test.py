@@ -321,7 +321,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
     </vulnerabilityModel>
 </nrml>""")
-        vfs = {'structural': nrml.to_python(vuln_model)['PGA', 'RC/A']}
+        vfs = {('structural', 'vulnerability'):
+               nrml.to_python(vuln_model)['PGA', 'RC/A']}
         rm = riskmodels.ProbabilisticEventBased("RC/A", {}, vfs, [], False)
         assets = [0, 1]
         eids = numpy.array([1, 2, 3, 4, 5])
