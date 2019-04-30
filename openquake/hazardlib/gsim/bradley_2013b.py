@@ -490,23 +490,24 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
     The original code by the author was not made available at the time of
     development of this code. For this reason, this implementation is untested.
 
-    It appears from the model documentation that the CBD dL2L and dS2S are relative
-    to a baseline Vs30 value of 250 m/s and a baseline Z1 value of 330 m, although
-    this is unconfirmed.
+    It appears from the model documentation that the CBD dL2L and dS2S are
+    relative to a baseline Vs30 value of 250 m/s and a baseline Z1 value of
+    330 m, although this is unconfirmed.
 
-    Only the CBD subregion dS2S term is implemented here, because of difficulties
-    defining the boundaries of other subregions. Full details behind the choices
-    here are detailed in:
-    Van Houtte and Abbott (2019), "Implementation of the GNS Canterbury Seismic
-    Hazard Model in the OpenQuake Engine", Lower Hutt (NZ): GNS Science. 38 p.
-    (GNS Science report; 2019/11). doi:10.21420/1AEM-PZ85.
+    Only the CBD subregion dS2S term is implemented here, because of
+    difficulties defining the boundaries of other subregions. Full details
+    behind the choices here are detailed in:
+    Van Houtte and Abbott (2019), "Implementation of the GNS Canterbury
+    Seismic Hazard Model in the OpenQuake Engine", Lower Hutt (NZ): GNS
+    Science. 38 p. (GNS Science report; 2019/11). doi:10.21420/1AEM-PZ85.
     """
     #: Required site parameters are Vs30 (eq. 13b), Vs30 measured flag (eq. 20)
     #: and Z1.0 (eq. 13b), longitude and latitude.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0', 'lon', 'lat'))
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0', 'lon',
+                                     'lat'))
 
-    #: This implementation is non-verified because the author of the model does not
-    #: have code that can be made available.
+    #: This implementation is non-verified because the author of the model does
+    #: not have code that can be made available.
     non_verified = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -543,12 +544,14 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         # Adjust mean and standard deviation
         mean = self._adjust_mean_model(in_cshm, in_cbd, imt_per, b13_mean)
         mean += convert_to_LHC(imt)
-        stddevs = self._get_adjusted_stddevs(sites, rup, C, stddev_types, ln_y_ref, exp1, exp2,
-                                             in_cshm, in_cbd, imt_per)
+        stddevs = self._get_adjusted_stddevs(sites, rup, C, stddev_types,
+                                             ln_y_ref, exp1, exp2, in_cshm,
+                                             in_cbd, imt_per)
 
         return mean, stddevs
 
-    def _get_adjusted_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2, in_cshm, in_cbd, imt_per):
+    def _get_adjusted_stddevs(self, sites, rup, C, stddev_types, ln_y_ref,
+                              exp1, exp2, in_cshm, in_cbd, imt_per):
         # aftershock flag is zero, we consider only main shock.
         AS = 0
         Fmeasured = sites.vs30measured
@@ -574,10 +577,7 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
             * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
                       + (1 + NL) ** 2)
         )
-        # Get sigma reduction factors if site is in CBD polygon. Note that the model ignores
-        # a term for variability within sites in the CBD. From figures in the 2013 report, it
-        # appears that this term is only around 0.1-0.2 ln units. For this reason, the model
-        # is implemented here as published.
+        # Get sigma reduction factors if site is in CBD polygon.
         srf_sigma = np.array(np.ones(np.shape(in_cbd)))
         srf_phi = np.array(np.ones(np.shape(in_cbd)))
         srf_tau = np.array(np.ones(np.shape(in_cbd)))
@@ -587,7 +587,8 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
             # The tau reduction term is not used in this implementation
             # srf_tau[in_cbd == True] = self._get_SRF_tau(imt_per)
 
-        # Add 'additional sigma' specified in the Canterbury Seismic Hazard Model to total sigma
+        # Add 'additional sigma' specified in the Canterbury Seismic
+        # Hazard Model to total sigma
         additional_sigma = self._compute_additional_sigma()
 
         ret = []
@@ -595,15 +596,18 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 # eq. 21
-                scaled_sigma = np.sqrt(((1 + NL) ** 2) * (tau ** 2) + (sigma ** 2)) * srf_sigma
+                scaled_sigma = np.sqrt(((1 + NL) ** 2) *
+                                       (tau ** 2) + (sigma ** 2)) * srf_sigma
                 ret += [np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)]
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 scaled_phi = sigma * srf_phi
-                ret.append(np.sqrt(scaled_phi ** 2 + additional_sigma ** 2 / 2))
+                ret.append(np.sqrt(
+                    scaled_phi ** 2 + additional_sigma ** 2 / 2))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 # this is implied in eq. 21
                 scaled_tau = (np.abs((1 + NL) * tau)) * srf_tau
-                ret.append(np.sqrt(scaled_tau ** 2 + additional_sigma ** 2 / 2))
+                ret.append(np.sqrt(
+                    scaled_tau ** 2 + additional_sigma ** 2 / 2))
 
         return ret
 
@@ -622,31 +626,41 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
 
     def _check_in_cbd_polygon(self, lons, lats):
         """
-        Checks if site is located within the CBD polygon. The boundaries of the polygon implemented
-        here are from the 'Central City' Zoning Map in the Christchurch District Plan. See Figure
-        4.4 of Van Houtte and Abbott (2019).
+        Checks if site is located within the CBD polygon. The boundaries of
+        the polygon implemented here are from the 'Central City' Zoning Map
+        in the Christchurch District Plan. See Figure 4.4 of Van Houtte and
+        Abbott (2019).
         """
-        polygon = shapely.geometry.Polygon([(172.6259, -43.5209), (172.6505, -43.5209),
-                                            (172.6505, -43.5399), (172.6124, -43.5400),
-                                            (172.6123, -43.5289), (172.6124, -43.5245),
-                                            (172.6220, -43.5233)])
-        points = [shapely.geometry.Point(lons[ind], lats[ind]) for ind in np.arange(len(lons))]
-        in_cbd = np.asarray([polygon.contains(point) for point in points])
+        polygon = shapely.geometry.Polygon(
+            [(172.6259, -43.5209), (172.6505, -43.5209),
+             (172.6505, -43.5399), (172.6124, -43.5400),
+             (172.6123, -43.5289), (172.6124, -43.5245),
+             (172.6220, -43.5233)]
+        )
+        points = [shapely.geometry.Point(lons[ind], lats[ind])
+                  for ind in np.arange(len(lons))]
+        in_cbd = np.asarray([polygon.contains(point)
+                             for point in points])
 
         return in_cbd
 
     def _check_in_cshm_polygon(self, rup):
         """
-        Checks if any part of the rupture surface mesh is located within the intended boundaries
-        of the Canterbury Seismic Hazard Model in Gerstenberger et al. (2014), Seismic hazard
-        modelling for the recovery of Christchurch, Earthquake Spectra, 30(1), 17-29.
+        Checks if any part of the rupture surface mesh is located within the
+        intended boundaries of the Canterbury Seismic Hazard Model in
+        Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
+        of Christchurch, Earthquake Spectra, 30(1), 17-29.
         """
         lats = np.ravel(rup.surface.mesh.array[1])
         lons = np.ravel(rup.surface.mesh.array[0])
-        # These coordinates are provided by M Gerstenberger (personal communication, 10 August 2018)
+        # These coordinates are provided by M Gerstenberger (personal
+        # communication, 10 August 2018)
         polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                             (173.2, -43.9), (171.6, -43.9)])
-        points_in_polygon = [shapely.geometry.Point(lons[i], lats[i]).within(polygon) for i in np.arange(len(lons))]
+        points_in_polygon = [
+            shapely.geometry.Point(lons[i], lats[i]).within(polygon)
+            for i in np.arange(len(lons))
+        ]
         in_cshm = any(points_in_polygon)
 
         return in_cshm
