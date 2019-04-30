@@ -18,7 +18,6 @@
 import os
 import sys
 import abc
-import csv
 import pdb
 import logging
 import operator
@@ -31,7 +30,7 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib import InvalidFile, geo, valid
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import RtreeFilter, SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -82,11 +81,9 @@ def fix_ones(pmap):
 
 def build_weights(realizations, imt_dt):
     """
-    :returns: an array with the realization weights of shape (R, M)
+    :returns: an array with the realization weights of shape R
     """
-    arr = numpy.zeros((len(realizations), len(imt_dt.names)))
-    for m, imt in enumerate(imt_dt.names):
-        arr[:, m] = [rlz.weight[imt] for rlz in realizations]
+    arr = numpy.array([rlz.weight['default'] for rlz in realizations])
     return arr
 
 
@@ -418,48 +415,7 @@ class HazardCalculator(BaseCalculator):
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
-        """
-        Read the hazard fields as csv files, associate them to the sites
-        and create the `hazard` dataset.
-        """
-        oq = self.oqparam
-        fnames = oq.inputs['multi_peril']
-        dt = [(haz, float) for haz in oq.multi_peril]
-        N = len(self.sitecol)
-        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
-        for name, fname in zip(oq.multi_peril, fnames):
-            data = []
-            with open(fname) as f:
-                for row in csv.DictReader(f):
-                    intensity = valid.positivefloat(row['intensity'])
-                    if intensity > 0:
-                        data.append((float(row['lon']), float(row['lat']),
-                                     intensity))
-            data = numpy.array(data, [('lon', float), ('lat', float),
-                                      ('number', float)])
-            logging.info('Read %s with %d rows' % (fname, len(data)))
-            if len(data) != len(numpy.unique(data[['lon', 'lat']])):
-                raise InvalidFile('There are duplicated points in %s' % fname)
-            try:
-                asset_hazard_distance = oq.asset_hazard_distance[name]
-            except KeyError:
-                asset_hazard_distance = oq.asset_hazard_distance['default']
-            sites, filtdata, _discarded = geo.utils.assoc(
-                data, self.sitecol, asset_hazard_distance, 'filter')
-            z = numpy.zeros(N, float)
-            z[sites.sids] = filtdata['number']
-            self.datastore['multi_peril'][name] = z
-        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
-
-        # convert ASH into a GMF
-        # if 'ASH' in oq.multi_peril:
-        # in the future, if the stddevs will become available, we will
-        # be able to generate a distribution of GMFs, as we do for the
-        # ShakeMaps; for the moment, we will consider a single event
-        #    oq.number_of_ground_motion_fields = E = 1
-        #  events = numpy.zeros(E, rupture.events_dt)
-        #    gmf = self.datastore['multi_peril']['ASH'].reshape(N, E, 1)
-        #    save_gmf_data(self.datastore, self.sitecol, gmf, ['ASH'], events)
+        """Defined in MultiRiskCalculator"""
 
     def pre_execute(self):
         """
@@ -620,7 +576,7 @@ class HazardCalculator(BaseCalculator):
         if not self.riskmodel:
             parent = self.datastore.parent
             if 'risk_model' in parent:
-                self.riskmodel = riskinput.read_composite_risk_model(parent)
+                self.riskmodel = riskinput.CompositeRiskModel.read(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
             raise InvalidFile('No intensity_measure_types specified in %s' %
@@ -953,7 +909,7 @@ def save_gmfs(calculator):
         eids, gmfs = readinput.eids, readinput.gmfs
     E = len(eids)
     events = numpy.zeros(E, rupture.events_dt)
-    events['eid'] = eids
+    events['id'] = eids
     calculator.eids = eids
     if hasattr(oq, 'number_of_ground_motion_fields'):
         if oq.number_of_ground_motion_fields != E:
@@ -981,7 +937,7 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     if len(events) == 0:
         E = gmfs.shape[1]
         events = numpy.zeros(E, rupture.events_dt)
-        events['eid'] = numpy.arange(E, dtype=U64)
+        events['id'] = numpy.arange(E, dtype=U64)
     dstore['events'] = events
     offset = 0
     gmfa = get_gmv_data(sitecol.sids, gmfs, events)
@@ -1032,7 +988,7 @@ def import_gmfs(dstore, fname, sids):
     E = len(eids)
     eid2idx = dict(zip(eids, range(E)))
     events = numpy.zeros(E, rupture.events_dt)
-    events['eid'] = eids
+    events['id'] = eids
     dstore['events'] = events
     # store the GMFs
     dic = general.group_array(array.view(gmf_data_dt), 'sid')
@@ -1051,5 +1007,5 @@ def import_gmfs(dstore, fname, sids):
     dstore['gmf_data/imts'] = ' '.join(imts)
     sig_eps_dt = [('eid', U64), ('sig', (F32, n_imts)), ('eps', (F32, n_imts))]
     dstore['gmf_data/sigma_epsilon'] = numpy.zeros(0, sig_eps_dt)
-    dstore['weights'] = numpy.ones((1, n_imts))
+    dstore['weights'] = numpy.ones(1)
     return eids

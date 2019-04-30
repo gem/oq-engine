@@ -920,16 +920,14 @@ def get_risk_model(oqparam):
     consdict = get_risk_models(oqparam, 'consequence')
     if not tmap:  # the risk ids are the taxonomies already
         d = dict(ids=['?'], weights=[1.0])
-        for taxo in set(fragdict) | set(vulndict) | set(consdict):
-            tmap[taxo] = dict(fragility=d, consequence=d, vulnerability=d)
-        if consdict:  # the consequences must be consistent
-            check_equal_sets(consdict, fragdict)
-        for taxo in consdict:
-            cdict, fdict = consdict[taxo], fragdict[taxo]
-            check_equal_sets(cdict, fdict)
-            for loss_type in cdict:
-                c = cdict[loss_type]
-                f = fdict[loss_type]
+        for risk_id in set(fragdict) | set(vulndict) | set(consdict):
+            tmap[risk_id] = dict(
+                fragility=d, consequence=d, vulnerability=d)
+        for risk_id in consdict:
+            cdict, fdict = consdict[risk_id], fragdict[risk_id]
+            for loss_type, _ in cdict:
+                c = cdict[loss_type, 'consequence']
+                f = fdict[loss_type, 'fragility']
                 csq_dmg_states = len(c.params)
                 if csq_dmg_states != len(f):
                     raise ValueError(
@@ -1089,7 +1087,7 @@ def get_pmap_from_csv(oqparam, fnames):
         the site mesh and the hazard curves read by the .csv files
     """
     if not oqparam.imtls:
-        oqparam.set_risk_imtls(get_risk_models(oqparam, oqparam.file_type))
+        oqparam.set_risk_imtls(get_risk_models(oqparam))
     if not oqparam.imtls:
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
@@ -1170,7 +1168,7 @@ def get_scenario_from_nrml(oqparam, fname):
         a pair (eids, gmf array)
     """
     if not oqparam.imtls:
-        oqparam.set_risk_imtls(get_risk_models(oqparam, oqparam.file_type))
+        oqparam.set_risk_imtls(get_risk_models(oqparam))
     imts = sorted(oqparam.imtls)
     num_imts = len(imts)
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])
