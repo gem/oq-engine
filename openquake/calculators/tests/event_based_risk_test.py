@@ -21,7 +21,6 @@ import unittest
 import numpy
 
 from openquake.baselib.general import gettemp
-from openquake.calculators import event_based
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -117,11 +116,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)
 
+    def test_case_12(self):
+        # 1 assets, 2 samples
+        self.run_calc(case_master.__file__, 'job12.ini', exports='csv')
+        # alt = extract(self.calc.datastore, 'asset_loss_table')
+        [fname] = export(('avg_losses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_loss_12.csv', fname)
+
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
         # test the composite_risk_model keys (i.e. slash escaping)
-        crm = sorted(self.calc.datastore.getitem(self.calc.oqparam.risk_model))
+        crm = sorted(self.calc.datastore.getitem('risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
         # test the case when all GMFs are filtered out
@@ -245,19 +251,25 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # ------------------------- ebrisk calculator ---------------------- #
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
-                      aggregate_by='taxonomy',
-                      insured_losses='false')
+                      aggregate_by='taxonomy')
 
         # agg_losses-rlzs has shape (L=5, R=9)
         # agg_losses-stats has shape (L=5, S=4)
         fname = export(('agg_losses-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
+        fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/aggcurves.csv', fname)
+
         fname = export(('agg_maps-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggmaps.csv', fname)
 
         fname = export(('avg_losses', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/avg_losses-mean.csv',
+                              fname, delta=1E-5)
+
+        fname = export(('losses_by_event', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/elt.csv', fname)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
@@ -275,7 +287,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
-        event_based.RUPTURES_PER_BLOCK = 20
         self.run_calc(case_miriam.__file__, 'job.ini')
 
         # check minimum_magnitude >= 5.2
@@ -284,14 +295,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check asset_loss_table
         tot = self.calc.datastore['asset_loss_table'].value.sum()
-        self.assertEqual(tot, 15743430.0)
+        self.assertEqual(tot, 15787827.0)
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname, delta=1E-5)
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
-        os.remove(fname)
 
         # this is a case with exposure and region_grid_spacing=1
         self.run_calc(case_miriam.__file__, 'job2.ini')

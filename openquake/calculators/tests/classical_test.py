@@ -213,7 +213,7 @@ class ClassicalTestCase(CalculatorTestCase):
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-simple_fault.xml 0      Active Shallow Crust 55           447         
+simple_fault.xml 0      Active Shallow Crust 447          447         
 ================ ====== ==================== ============ ============""")
         # test classical
         self.assert_curves_ok([
@@ -333,11 +333,12 @@ hazard_uhs-std.csv
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     def test_case_19(self):
+        # this test is a lot faster without parallelism (from 89s to 25s)
         self.assert_curves_ok([
             'hazard_curve-mean_PGA.csv',
             'hazard_curve-mean_SA(0.1).csv',
             'hazard_curve-mean_SA(0.15).csv',
-        ], case_19.__file__, delta=1E-7)
+        ], case_19.__file__, delta=1E-5, concurrent_tasks='0')
 
     def test_case_20(self):  # Source geometry enumeration
         self.assert_curves_ok([
@@ -432,7 +433,9 @@ hazard_uhs-std.csv
         # NonParametricProbabilisticRupture.get_probability_no_exceedance
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
 
-    def test_case_30(self):  # point on the international data line
+    def test_case_30(self):
+        # point on the international data line
+        # this is also a test with IMT-dependent weights
         if NOT_DARWIN:  # broken on macOS
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
@@ -448,10 +451,18 @@ hazard_uhs-std.csv
             best_rlz = self.calc.datastore['best_rlz'].value
             numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
 
+    def test_case_30_sampling(self):
+        # IMT-dependent weights with sampling are not implemented
+        with self.assertRaises(NotImplementedError):
+            self.assert_curves_ok(
+                ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
+                case_30.__file__, number_of_logic_tree_samples='10')
+
     def test_case_31(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
-                               'hazard_curve-std-PGA.csv'], case_31.__file__)
+                               'hazard_curve-std-PGA.csv'], case_31.__file__,
+                              delta=1E-5)
 
     def test_case_32(self):
         # source specific logic tree

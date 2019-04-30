@@ -15,17 +15,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -67,12 +69,43 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
+def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
+    """
+    Split the given sources, filter the subsources and the compute the
+    PoEs. Yield back subtasks if the split sources contain more than
+    maxweight ruptures.
+    """
+    # first check if we are sampling the sources
+    ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    if ss:
+        splits, stime = split_sources(srcs)
+        srcs = readinput.random_filtered_sources(splits, srcfilter, ss)
+        yield classical(srcs, srcfilter, gsims, params, monitor)
+        return
+    sources = []
+    with monitor("filtering/splitting sources"):
+        for src, _sites in srcfilter(srcs):
+            if src.num_ruptures >= params['maxweight']:
+                splits, stime = split_sources([src])
+                sources.extend(srcfilter.filter(splits))
+            else:
+                sources.append(src)
+        blocks = list(block_splitter(sources, params['maxweight'],
+                                     operator.attrgetter('num_ruptures')))
+    if blocks:
+        # yield the first blocks (if any) and compute the last block in core
+        # NB: the last block is usually the smallest one
+        for block in blocks[:-1]:
+            yield classical, block, srcfilter, gsims, params
+        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
+
+
 @base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = classical
+    core_task = classical_split_filter
     accept_precalc = ['psha']
 
     def agg_dicts(self, acc, dic):
@@ -125,12 +158,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.core_task.__func__, monitor=self.monitor())
             source_ids = []
             data = []
-            for i, args in enumerate(self.gen_args()):
-                smap.submit(*args)
-                source_ids.append(get_src_ids(args[0]))
-                for src in args[0]:  # collect source data
+            for i, sources in enumerate(self._send_sources(smap)):
+                source_ids.append(get_src_ids(sources))
+                for src in sources:  # collect source data
                     data.append((i, src.nsites, src.num_ruptures, src.weight))
-            self.datastore['task_sources'] = encode(source_ids)
+            if source_ids:
+                self.datastore['task_sources'] = encode(source_ids)
             self.datastore.extend(
                 'source_data', numpy.array(data, source_data_dt))
         self.nsites = []
@@ -143,21 +176,22 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.store_source_info(self.calc_times)
             self.calc_times.clear()  # save a bit of memory
         if not self.nsites:
-            raise RuntimeError('All sources were filtered out!')
+            raise RuntimeError('All sources were filtered away!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         return acc
 
-    def gen_args(self):
-        """
-        Used in the case of large source model logic trees.
-        :yields: (sources, sites, gsims) triples
-        """
+    def _send_sources(self, smap):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
+        nrup = operator.attrgetter('num_ruptures')
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            pointsource_distance=oq.pointsource_distance)
+            pointsource_distance=oq.pointsource_distance,
+            maxweight=min(self.csm.get_maxweight(nrup, oq.concurrent_tasks),
+                          base.RUPTURES_PER_BLOCK))
+        logging.info('Max ruptures per task = %(maxweight)d', param)
+
         num_tasks = 0
         num_sources = 0
 
@@ -169,11 +203,14 @@ class ClassicalCalculator(base.HazardCalculator):
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
             if hasattr(sources, 'atomic') and sources.atomic:
-                yield sources, self.src_filter, gsims, param
+                smap.submit(sources, self.src_filter, gsims, param,
+                            func=classical)
+                yield sources
                 num_tasks += 1
             else:  # regroup the sources in blocks
-                for block in self.block_splitter(sources):
-                    yield block, self.src_filter, gsims, param
+                for block in block_splitter(sources, param['maxweight'], nrup):
+                    smap.submit(block, self.src_filter, gsims, param)
+                    yield block
                     num_tasks += 1
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
@@ -269,11 +306,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('best_rlz', U32, (N,))
         logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
-        iterargs = (
+        allargs = [  # this list is very fast to generate
             (getters.PmapGetter(parent, self.rlzs_assoc, t.sids, oq.poes),
              N, hstats, oq.individual_curves)
-            for t in self.sitecol.split_in_tiles(ct))
-        parallel.Starmap(build_hazard_stats, iterargs, self.monitor()).reduce(
+            for t in self.sitecol.split_in_tiles(ct)]
+        parallel.Starmap(build_hazard_stats, allargs, self.monitor()).reduce(
             self.save_hazard_stats)
 
 

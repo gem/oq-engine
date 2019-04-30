@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
+from functools import lru_cache
 import collections
 import operator
 import logging
@@ -26,12 +27,6 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
-try:
-    from functools import lru_cache
-except ImportError:
-    from openquake.risklib.utils import memoized
-else:
-    memoized = lru_cache(100)
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array, deprecated, println
@@ -45,6 +40,7 @@ F64 = numpy.float64
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
+memoized = lru_cache(100)
 
 
 def lit_eval(string):
@@ -94,7 +90,7 @@ def _normalize(kinds, info):
     return a, b, rlzs
 
 
-def parse(query_string, info):
+def parse(query_string, info={}):
     """
     :returns: a normalized query_dict as in the following examples:
 
@@ -114,7 +110,8 @@ def parse(query_string, info):
             qdic[key] = [loss_types[k] for k in val]
         else:
             qdic[key] = [lit_eval(v) for v in val]
-    qdic['k'], qdic['kind'], qdic['rlzs'] = _normalize(qdic['kind'], info)
+    if info:
+        qdic['k'], qdic['kind'], qdic['rlzs'] = _normalize(qdic['kind'], info)
     return qdic
 
 
@@ -197,8 +194,70 @@ def extract_realizations(dstore, dummy):
     arr = numpy.zeros(len(rlzs), dt)
     arr['ordinal'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
-    arr['gsims'] = rlzs['gsims']
+    arr['gsims'] = rlzs['branch_path']  # this is used in scenario by QGIS
     return arr
+
+
+@extract.add('exposure_metadata')
+def extract_exposure_metadata(dstore, what):
+    """
+    Extract the loss categories and the tags of the exposure.
+    Use it as /extract/exposure_metadata
+    """
+    dic = {}
+    dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
+    dic.update(dic1)
+    dic.update(dic2)
+    if 'asset_risk' in dstore:
+        dic['multi_risk'] = sorted(
+            set(dstore['asset_risk'].dtype.names) -
+            set(dstore['assetcol/array'].dtype.names))
+    names = [name for name in dstore['assetcol/array'].dtype.names
+             if name.startswith(('value-', 'number', 'occupants_'))
+             and not name.endswith('_None')]
+    return ArrayWrapper(numpy.array(names), dic)
+
+
+@extract.add('assets')
+def extract_assets(dstore, what):
+    """
+    Extract an array of assets, optionally filtered by tag.
+    Use it as /extract/assets?taxonomy=RC&taxonomy=MSBC&occupancy=RES
+    """
+    qdict = parse(what)
+    dic = {}
+    dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
+    dic.update(dic1)
+    dic.update(dic2)
+    arr = dstore['assetcol/array'].value
+    for tag, vals in qdict.items():
+        cond = numpy.zeros(len(arr), bool)
+        for val in vals:
+            tagidx, = numpy.where(dic[tag] == val)
+            cond |= arr[tag] == tagidx
+        arr = arr[cond]
+    return ArrayWrapper(arr, dic)
+
+
+@extract.add('asset_risk')
+def extract_asset_risk(dstore, what):
+    """
+    Extract an array of assets + risk fields, optionally filtered by tag.
+    Use it as /extract/asset_risk?taxonomy=RC&taxonomy=MSBC&occupancy=RES
+    """
+    qdict = parse(what)
+    dic = {}
+    dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
+    dic.update(dic1)
+    dic.update(dic2)
+    arr = dstore['asset_risk'].value
+    for tag, vals in qdict.items():
+        cond = numpy.zeros(len(arr), bool)
+        for val in vals:
+            tagidx, = numpy.where(dic[tag] == val)
+            cond |= arr[tag] == tagidx
+        arr = arr[cond]
+    return ArrayWrapper(arr, dic)
 
 
 @extract.add('asset_values', cache=True)
@@ -216,7 +275,6 @@ def extract_asset_values(dstore, sid):
     asset_refs = assetcol.asset_refs
     assets_by_site = assetcol.assets_by_site()
     lts = assetcol.loss_types
-    time_event = assetcol.time_event
     dt = numpy.dtype([('aref', asset_refs.dtype), ('aid', numpy.uint32)] +
                      [(str(lt), numpy.float32) for lt in lts])
     data = []
@@ -224,9 +282,9 @@ def extract_asset_values(dstore, sid):
         vals = numpy.zeros(len(assets), dt)
         for a, asset in enumerate(assets):
             vals[a]['aref'] = asset_refs[a]
-            vals[a]['aid'] = asset.ordinal
+            vals[a]['aid'] = asset['ordinal']
             for lt in lts:
-                vals[a][lt] = asset.value(lt, time_event)
+                vals[a][lt] = asset['value-' + lt]
         data.append(vals)
     return data
 
@@ -454,6 +512,41 @@ def get_loss_type_tags(what):
     return loss_type, tags
 
 
+def _get_curves(curves, li):
+    shp = curves.shape + curves.dtype.shape
+    return curves.value.view(F32).reshape(shp)[:, :, :, li]
+
+
+# this is used by the QGIS plugin, but it should be removed
+@extract.add('agg_curves')
+def extract_agg_curves(dstore, what):
+    """
+    Aggregate loss curves of the given loss type and tags for
+    event based risk calculations. Use it as
+    /extract/agg_curves/structural?taxonomy=RC&zipcode=20126
+    :returns:
+        array of shape (S, P), being P the number of return periods
+        and S the number of statistics
+    """
+    from openquake.calculators.export.loss_curves import get_loss_builder
+    oq = dstore['oqparam']
+    loss_type, tags = get_loss_type_tags(what)
+    if 'curves-stats' in dstore:  # event_based_risk
+        losses = _get_curves(dstore['curves-stats'], oq.lti[loss_type])
+        stats = dstore['curves-stats'].attrs['stats']
+    elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
+        losses = _get_curves(dstore['curves-rlzs'], oq.lti[loss_type])
+        assert losses.shape[1] == 1, 'There must be a single realization'
+        stats = [b'mean']  # suitable to be stored as hdf5 attribute
+    else:
+        raise KeyError('No curves found in %s' % dstore)
+    res = _filter_agg(dstore['assetcol'], losses, tags, stats)
+    cc = dstore['assetcol/cost_calculator']
+    res.units = cc.get_units(loss_types=[loss_type])
+    res.return_periods = get_loss_builder(dstore).return_periods
+    return res
+
+
 @extract.add('agg_losses')
 def extract_agg_losses(dstore, what):
     """
@@ -600,7 +693,7 @@ def build_damage_dt(dstore, mean_std=True):
     """
     oq = dstore['oqparam']
     damage_states = ['no_damage'] + list(
-        dstore.get_attr(oq.risk_model, 'limit_states'))
+        dstore.get_attr('risk_model', 'limit_states'))
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
@@ -610,8 +703,8 @@ def build_damage_dt(dstore, mean_std=True):
         else:
             dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
-    loss_types = dstore.get_attr(oq.risk_model, 'loss_types')
-    return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
+    loss_types = oq.loss_dt().names
+    return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
 def build_damage_array(data, damage_dt):
@@ -699,8 +792,7 @@ def crm_attrs(dstore, what):
         the attributes of the risk model, i.e. limit_states, loss_types,
         min_iml and covs, needed by the risk exporters.
     """
-    name = dstore['oqparam'].risk_model
-    return ArrayWrapper((), dstore.get_attrs(name))
+    return ArrayWrapper((), dstore.get_attrs('risk_model'))
 
 
 def _get(dstore, name):
@@ -755,7 +847,7 @@ def extract_event_info(dstore, eidx):
     http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
     """
     event = dstore['events'][int(eidx)]
-    serial = int(event['eid'] // TWO32)
+    serial = int(event['id'] // TWO32)
     ridx = list(dstore['ruptures']['serial']).index(serial)
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()

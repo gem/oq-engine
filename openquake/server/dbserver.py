@@ -70,8 +70,8 @@ class DbServer(object):
                     continue
                 try:
                     func = getattr(actions, cmd)
-                except AttributeError:
-                    sock.send('Invalid command ' + cmd)
+                except AttributeError:  # missing action
+                    sock.send(safely_call(self.db, (cmd,) + args))
                 else:
                     sock.send(safely_call(func, (self.db,) + args))
 

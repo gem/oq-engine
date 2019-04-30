@@ -1,4 +1,5 @@
 language: python
+dist: xenial
 
 python:
  - "3.6"
@@ -14,19 +15,19 @@ jobs:
     env: HAZARDLIB
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
-          nosetests --with-doctest -xvs openquake.baselib openquake.hazardlib openquake.hmtk;
+          pytest --doctest-module -xv openquake/baselib openquake/hazardlib openquake/hmtk;
           fi
   - stage: tests
     env: ENGINE
     before_script:
         - oq dbserver start &
     script:
-        - nosetests --with-doctest -xvs openquake.engine
-        - nosetests --with-doctest -xvs openquake.server
-        - nosetests --with-doctest -xvs openquake.calculators
-        - nosetests --with-doctest -xvs openquake.risklib
-        - nosetests --with-doctest -xvs openquake.commonlib
-        - nosetests --with-doctest -xvs openquake.commands
+        - pytest --doctest-module -xv openquake/engine
+        - pytest --doctest-module -xv openquake/server
+        - pytest --doctest-module -xv openquake/calculators
+        - pytest --doctest-module -xv openquake/risklib
+        - pytest --doctest-module -xv openquake/commonlib
+        - pytest --doctest-module -xv openquake/commands
         - oq webui migrate
     after_success:  # old sphinx does not work well with Python 3.5.4+
         - pip install sphinx==1.6.5

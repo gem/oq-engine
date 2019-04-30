@@ -40,10 +40,10 @@ def classical_damage(riskinputs, riskmodel, param, monitor):
     """
     result = AccumDict(accum=AccumDict())
     for ri in riskinputs:
-        for outputs in riskmodel.gen_outputs(ri, monitor):
-            for l, out in enumerate(outputs):
-                ordinals = [a.ordinal for a in outputs.assets]
-                result[l, outputs.rlzi] += dict(zip(ordinals, out))
+        for out in riskmodel.gen_outputs(ri, monitor):
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                ordinals = ri.assets['ordinal']
+                result[l, out.rlzi] += dict(zip(ordinals, out[loss_type]))
     return result
 
 
@@ -64,7 +64,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         """
         damages_dt = numpy.dtype([(ds, numpy.float32)
                                   for ds in self.riskmodel.damage_states])
-        damages = numpy.zeros((self.A, self.R, self.L * self.I), damages_dt)
+        damages = numpy.zeros((self.A, self.R, self.L), damages_dt)
         for l, r in result:
             for aid, fractions in result[l, r].items():
                 damages[aid, r, l] = tuple(fractions)

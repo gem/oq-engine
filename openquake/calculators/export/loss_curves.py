@@ -28,8 +28,7 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     :returns: a LossCurvesMapsBuilder instance
     """
     oq = dstore['oqparam']
-    name = dstore['weights'].dtype.names[0]
-    weights = dstore['weights'][name]
+    weights = dstore['weights'][:, 0]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
     num_events = countby(dstore['events'].value, 'rlz')
     periods = return_periods or oq.return_periods or scientific.return_periods(
@@ -69,8 +68,7 @@ class LossCurveExporter(object):
         arefs = [decode(aref) for aref in self.assetcol.asset_refs]
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
-        oqparam = dstore['oqparam']
-        self.loss_types = dstore.get_attr(oqparam.risk_model, 'loss_types')
+        self.loss_types = dstore.get_attr('risk_model', 'loss_types')
         self.R = dstore['csm_info'].get_num_rlzs()
 
     def parse(self, what):
@@ -100,7 +98,7 @@ class LossCurveExporter(object):
                     arefs.append(self.asset_refs[aid])
         elif spec.startswith('ref-'):  # passed the asset name
             arefs = [spec[4:]]
-            aids = [self.str2asset[arefs[0]].ordinal]
+            aids = [self.str2asset[arefs[0]]['ordinal']]
         else:
             raise ValueError('Wrong specification in %s' % what)
         return aids, arefs, spec, key

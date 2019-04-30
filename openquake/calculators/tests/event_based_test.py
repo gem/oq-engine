@@ -236,11 +236,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 10 samples * 40 SES
+        # 2 models x 3 GMPEs, 100 samples * 20 SES
         expected = [
             'hazard_curve-mean.csv',
-            'quantile_curve-0.1.csv',
-            'quantile_curve-0.9.csv',
         ]
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
@@ -250,11 +248,7 @@ class EventBasedTestCase(CalculatorTestCase):
         mean_cl = get_mean_curves(self.calc.cl.datastore)
         reldiff, _index = max_rel_diff_index(
             mean_cl, mean_eb, min_value=0.1)
-        self.assertLess(reldiff, 0.20)
-
-        # FIXME: investigate why max_gmf_size is not stored
-        # exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
-        # self.assertEqual(exp, 375496)
+        self.assertLess(reldiff, 0.10)
 
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')

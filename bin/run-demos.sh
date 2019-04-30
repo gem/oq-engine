@@ -18,6 +18,8 @@ for ini in $(find $1 -name job.ini | sort); do
     oq engine --run $ini --exports xml,hdf5
 done
 
+oq export hcurves 16  # export with GMPETables
+
 # test the --eos option
 oq engine --eos -1 /tmp
 
@@ -35,6 +37,12 @@ MPLBACKEND=Agg oq plot_memory
 # fake a failed/executing calculation to check that it is not exported
 oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
 oq db set_status -1 executing
+
+# run multi_risk test
+oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job.ini
+
+# run ebrisk
+oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
 
 # display the calculations
 oq db find %

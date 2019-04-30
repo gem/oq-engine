@@ -92,8 +92,9 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
-    insured_losses = valid.Param(valid.boolean, False)
+    # insured_losses = valid.Param(valid.boolean, False)
     multi_peril = valid.Param(valid.namelist, [])
+    humidity_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -103,13 +104,14 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
-    asset_hazard_distance = valid.Param(valid.positivefloat, 15)  # km
+    asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
+    modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -161,16 +163,8 @@ class OqParam(valid.ParamSet):
         try:
             return self._risk_files
         except AttributeError:
-            self._file_type, self._risk_files = get_risk_files(self.inputs)
+            self._risk_files = get_risk_files(self.inputs)
             return self._risk_files
-
-    @property
-    def file_type(self):
-        try:
-            return self._file_type
-        except AttributeError:
-            self._file_type, self._risk_files = get_risk_files(self.inputs)
-            return self._file_type
 
     @property
     def input_dir(self):
@@ -211,6 +205,10 @@ class OqParam(valid.ParamSet):
             logging.warning('Ignoring intensity_measure_types since '
                             'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
+            self.iml_disagg.pop('default')
+            # normalize things like SA(0.10) -> SA(0.1)
+            self.iml_disagg = {str(from_string(imt)): val
+                               for imt, val in self.iml_disagg.items()}
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(
@@ -223,7 +221,7 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
-        self._file_type, self._risk_files = get_risk_files(self.inputs)
+        self._risk_files = get_risk_files(self.inputs)
 
         self.check_source_model()
         if (self.hazard_calculation_id and
@@ -286,8 +284,7 @@ class OqParam(valid.ParamSet):
 
         # checks for ebrisk
         if self.calculation_mode == 'ebrisk':
-            if self.insured_losses:
-                raise ValueError('ebrisk does not support insured losses')
+            pass
             # elif self.number_of_logic_tree_samples == 0:
             #    logging.warning('ebrisk is not meant for full enumeration')
 
@@ -387,7 +384,7 @@ class OqParam(valid.ParamSet):
         if not costtypes and self.hazard_calculation_id:
             with util.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
-            self._file_type, self._risk_files = get_risk_files(parent.inputs)
+            self._risk_files = get_risk_files(parent.inputs)
             costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         return costtypes
 
@@ -486,9 +483,6 @@ class OqParam(valid.ParamSet):
         """
         loss_types = self.all_cost_types
         dts = [(str(lt), dtype) for lt in loss_types]
-        if self.insured_losses:
-            for lt in loss_types:
-                dts.append((str(lt) + '_ins', dtype))
         return dts
 
     def loss_maps_dt(self, dtype=F32):
@@ -577,17 +571,6 @@ class OqParam(valid.ParamSet):
                           'damage' in self.calculation_mode or
                           'bcr' in self.calculation_mode) else 'hazard'
 
-    @property
-    def risk_model(self):
-        """
-        :returns: 'fragility', 'vulnerability' or the empty string
-        """
-        if self.job_type == 'hazard':
-            return ('fragility' if self.file_type == 'fragility'
-                    else 'vulnerability')
-        return ('fragility' if 'damage' in self.calculation_mode
-                else 'vulnerability')
-
     def is_event_based(self):
         """
         The calculation mode is event_based, event_based_risk or ebrisk
@@ -652,8 +635,7 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if (not self.inputs.get('source_model_logic_tree') or not
-                self.inputs.get('gsim_logic_tree')):
+        if 'gsim_logic_tree' not in self.inputs:
             return True  # don't apply validation
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
@@ -748,34 +730,17 @@ class OqParam(valid.ParamSet):
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
-    def is_valid_risk_functions(self):
-        """
-        Invalid calculation_mode="{calculation_mode}" or missing
-        fragility_file/vulnerability_file in the .ini file.
-        """
-        if self.hazard_calculation_id:
-            parent_datasets = set(util.read(self.hazard_calculation_id))
-        else:
-            parent_datasets = set()
-        if 'damage' in self.calculation_mode:
-            return any(
-                key.endswith('_fragility') for key in self.inputs
-            ) or 'fragility' in parent_datasets
-        elif 'risk' in self.calculation_mode:
-            return any(
-                key.endswith('_vulnerability') for key in self.inputs
-            ) or 'vulnerability' in parent_datasets
-        return True
-
     def is_valid_sites(self):
         """
-        You cannot set at the same time both sites and site_model, choose one
+        The sites are overdetermined
         """
         if 'site_model' in self.inputs and 'sites' in self.inputs:
             return False
         elif 'site_model' in self.inputs and self.sites:
             return False
         elif 'sites' in self.inputs and self.sites:
+            return False
+        elif self.sites and self.region and self.region_grid_spacing:
             return False
         else:
             return True
@@ -818,7 +783,8 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-                self.calculation_mode.startswith('scenario')):
+            'multi_peril' in self.inputs or self.calculation_mode.startswith(
+                'scenario')):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 not self.hazard_calculation_id):
