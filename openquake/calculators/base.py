@@ -81,11 +81,10 @@ def fix_ones(pmap):
 
 def build_weights(realizations, imt_dt):
     """
-    :returns: an array with the realization weights of shape (R, M)
+    :returns: an array with the realization weights of shape (R, 1)
     """
-    arr = numpy.zeros((len(realizations), len(imt_dt.names)))
-    for m, imt in enumerate(imt_dt.names):
-        arr[:, m] = [rlz.weight[imt] for rlz in realizations]
+    arr = numpy.zeros((len(realizations), 1))
+    arr[:, 0] = [rlz.weight['default'] for rlz in realizations]
     return arr
 
 
