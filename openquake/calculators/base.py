@@ -81,11 +81,9 @@ def fix_ones(pmap):
 
 def build_weights(realizations, imt_dt):
     """
-    :returns: an array with the realization weights of shape (R, M)
+    :returns: an array with the realization weights of shape R
     """
-    arr = numpy.zeros((len(realizations), len(imt_dt.names)))
-    for m, imt in enumerate(imt_dt.names):
-        arr[:, m] = [rlz.weight[imt] for rlz in realizations]
+    arr = numpy.array([rlz.weight['default'] for rlz in realizations])
     return arr
 
 
@@ -1009,5 +1007,5 @@ def import_gmfs(dstore, fname, sids):
     dstore['gmf_data/imts'] = ' '.join(imts)
     sig_eps_dt = [('eid', U64), ('sig', (F32, n_imts)), ('eps', (F32, n_imts))]
     dstore['gmf_data/sigma_epsilon'] = numpy.zeros(0, sig_eps_dt)
-    dstore['weights'] = numpy.ones((1, n_imts))
+    dstore['weights'] = numpy.ones(1)
     return eids

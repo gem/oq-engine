@@ -100,7 +100,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         if len(assets_on_sid) == 0:
             continue
         num_events_per_sid += len(haz)
-        weights = getter.weights[haz['rlzi'], 0]
+        weights = getter.weights[haz['rlzi']]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
