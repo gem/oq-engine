@@ -103,9 +103,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         weights = getter.weights[haz['rlzi'], 0]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
-        if sid == 0:
-            for eid in haz['eid']:
-                debug('%s, task_no=%s', eid, monitor.task_no)
         haz['eid'] = eidx + e1
         with mon_risk:
             out = riskmodel.get_output(assets_by_taxo, haz)
