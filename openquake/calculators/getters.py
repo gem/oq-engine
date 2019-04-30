@@ -562,7 +562,7 @@ class RuptureGetter(object):
                 rgetter = self.__class__(
                     self.filename, list(rup_indices), self.grp_id,
                     self.trt, self.samples, self.rlzs_by_gsim, fe)
-                fe += len(rup_indices)
+                fe += rgetter.num_events
                 rgetter.weight = sum([self.weights[idx[ri]]
                                       for ri in rup_indices])
                 yield rgetter
