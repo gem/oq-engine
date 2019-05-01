@@ -185,7 +185,7 @@ def inhibitSigInt(signum, _stack):
 
 def raiseMasterKilled(signum, _stack):
     """
-    When a SIGTERM is received, raise the MasterKilled
+    When a SIGINT is received, raise the MasterKilled
     exception with an appropriate error message.
 
     :param int signum: the number of the received signal
@@ -196,7 +196,7 @@ def raiseMasterKilled(signum, _stack):
         signal.signal(signal.SIGINT, inhibitSigInt)
 
     msg = 'Received a signal %d' % signum
-    if signum in (signal.SIGTERM, signal.SIGINT):
+    if signum in (signal.SIGINT,):
         msg = 'The openquake master process was killed manually'
 
     # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
