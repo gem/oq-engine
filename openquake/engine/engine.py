@@ -195,21 +195,15 @@ def raiseMasterKilled(signum, _stack):
     if OQ_DISTRIBUTE.startswith('celery'):
         signal.signal(signal.SIGINT, inhibitSigInt)
 
-    msg = 'Received a signal %d' % signum
-    if signum in (signal.SIGINT,):
-        msg = 'The openquake master process was killed manually'
+    if signum == signal.SIGINT:
+        raise MasterKilled('The openquake master process was killed manually')
 
-    # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
-    # terminal died; in the workers, do nothing
-    # NB: there is no SIGHUP on Windows
-    if hasattr(signal, 'SIGHUP'):
-        if signum == signal.SIGHUP:
-            if os.getppid() == _PPID:
-                return
-            else:
-                msg = 'The openquake master lost its controlling terminal'
-
-    raise MasterKilled(msg)
+    if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
+        # kill the calculation only if os.getppid() != _PPID, i.e. the
+        # controlling terminal died; in the workers, do nothing
+        if signum == signal.SIGHUP and os.getppid() != _PPID:
+            raise MasterKilled(
+                'The openquake master lost its controlling terminal')
 
 
 # register the raiseMasterKilled callback for SIGTERM
