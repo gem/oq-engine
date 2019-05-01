@@ -198,6 +198,9 @@ def raiseMasterKilled(signum, _stack):
     if signum == signal.SIGINT:
         raise MasterKilled('The openquake master process was killed manually')
 
+    if signum == signal.SIGTERM:
+        raise SystemExit('SIGTERM')
+
     if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
         # kill the calculation only if os.getppid() != _PPID, i.e. the
         # controlling terminal died; in the workers, do nothing
