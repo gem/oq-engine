@@ -1,6 +1,6 @@
   [Daniele Viganò]
-  * Multiple DbServer ZMQ connection are restored to avoid errors under heavy load
-    on slower machines
+  * Multiple DbServer ZMQ connections are restored to avoid errors under heavy load
+    and/or on slower machines
 
   [Michele Simionato]
   * Removed the ugly registration of custom signals at import time: now they
