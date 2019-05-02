@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Adds adaptation of Abrahamson et al. (2016) 'BC Hydro' GMPEs calibrated to
+    Mediterranean data and with epistemic adjustment factors
+  
   [Marco Pagani]
   * Added tabular GMPEs as provided by Michal Kolaj, Natural Resources Canada
 
