@@ -2,6 +2,13 @@
   * Adds adaptation of Abrahamson et al. (2016) 'BC Hydro' GMPEs calibrated to
     Mediterranean data and with epistemic adjustment factors
   
+  [Michele Simionato]
+  * Remove the ugly registration of custom signals at import time: now they
+    are registered only if `engine.run_calc` is called
+  * Removed the dependency from rtree
+  * Removed all calls to ProcessPool.shutdown to speed up the tests and to
+    avoid non-deterministic errors in atexit._run_exitfuncs
+
   [Marco Pagani]
   * Added tabular GMPEs as provided by Michal Kolaj, Natural Resources Canada
 
