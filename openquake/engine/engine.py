@@ -300,6 +300,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     :param exports:
         A comma-separated string of export types.
     """
+    register_signals()
     setproctitle('oq-job-%d' % job_id)
     calc = base.calculators(oqparam, calc_id=job_id)
     logging.info('%s running %s [--hc=%s]',
