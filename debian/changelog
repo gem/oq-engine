@@ -96,7 +96,7 @@ python3-oq-engine (3.4.0-2~xenial01) xenial; urgency=low
   * Removed the now redundant command `oq extract hazard/rlzs`
 
   [Daniele Viganò]
-  * Fixed 'oq abort' and always mark killed jobs as 'aborted'
+  * Fixed 'oq abort' to always mark killed jobs as 'aborted'
 
   [Michele Simionato]
   * Made it possible to use in the Starmap tasks without a monitor argument
