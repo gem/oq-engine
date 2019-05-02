@@ -39,7 +39,7 @@ def abort(job_id):
     for p in psutil.process_iter():
         if p.name() == name:
             try:
-                os.kill(p.pid, signal.SIGINT)
+                os.kill(p.pid, signal.SIGTERM)
                 logs.dbcmd('set_status', job.id, 'aborted')
                 print('Job %d aborted' % job.id)
             except Exception as exc:

@@ -567,7 +567,7 @@ def save_task_info(self, res, mem_gb=0):
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
-    # unregister raiseMasterKilled in oq-workers to avoid deadlock
+    # unregister manage_signals in oq-workers to avoid deadlock
     # since processes are terminated via pool.terminate()
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     # prctl is still useful (on Linux) to terminate all spawned processes
