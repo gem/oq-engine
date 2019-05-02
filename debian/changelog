@@ -1,11 +1,19 @@
   [Michele Simionato]
+  * Removed the dependency from rtree
+  * Removed all calls to ProcessPool.shutdown to speed up the tests and to
+    avoid non-deterministic errors in atexit._run_exitfuncs
+
+  [Marco Pagani]
+  * Added tabular GMPEs as provided by Michal Kolaj, Natural Resources Canada
+
+  [Michele Simionato]
   * Extended the ebrisk calculator to support coefficients of variations
 
   [Graeme Weatherill]
   * Adds Kotha et al (2019) shallow crustal GMPE for SERA
   * Adds 'ExperimentalWarning' to possible GMPE warnings
   * Adds kwargs to check_gsim function
-  
+
   [Michele Simionato]
   * Fixed problems like SA(0.7) != SA(0.70) in iml_disagg
   * Exposed the outputs of the classical calculation in event based
