@@ -209,19 +209,20 @@ def manage_signals(signum, _stack):
                 'The openquake master lost its controlling terminal')
 
 
-# register the manage_signals callback for SIGTERM, SIGINT, SIGHUP
-# when using the Django development server this module is imported by a thread,
-# so one gets a `ValueError: signal only works in main thread` that
-# can be safely ignored
-try:
-    signal.signal(signal.SIGTERM, manage_signals)
-    signal.signal(signal.SIGINT, manage_signals)
-    if hasattr(signal, 'SIGHUP'):
-        # Do not register our SIGHUP handler if running with 'nohup'
-        if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
-            signal.signal(signal.SIGHUP, manage_signals)
-except ValueError:
-    pass
+def register_signals():
+    # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP
+    # when using the Django development server this module is imported by a
+    # thread, so one gets a `ValueError: signal only works in main thread` that
+    # can be safely ignored
+    try:
+        signal.signal(signal.SIGTERM, manage_signals)
+        signal.signal(signal.SIGINT, manage_signals)
+        if hasattr(signal, 'SIGHUP'):
+            # Do not register our SIGHUP handler if running with 'nohup'
+            if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
+                signal.signal(signal.SIGHUP, manage_signals)
+    except ValueError:
+        pass
 
 
 def job_from_file(job_ini, job_id, username, **kw):
