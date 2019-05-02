@@ -1,5 +1,9 @@
+  [Daniele Viganò]
+  * Multiple DbServer ZMQ connection are restored to avoid errors under heavy load
+    on slower machines
+
   [Michele Simionato]
-  * Remove the ugly registration of custom signals at import time: now they
+  * Removed the ugly registration of custom signals at import time: now they
     are registered only if `engine.run_calc` is called
   * Removed the dependency from rtree
   * Removed all calls to ProcessPool.shutdown to speed up the tests and to
