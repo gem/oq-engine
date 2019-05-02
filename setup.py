@@ -79,7 +79,6 @@ extras_require = {
     'celery':  ["celery >=4.0, <4.2"],
     'dask':  ["dask", "distributed"],
     'pam': ["python-pam", "django-pam"],
-    'rtree': ['rtree == 0.8.3'],
     'plotting':  [
         'basemap >=1.0',
         'pyproj >=1.9',
