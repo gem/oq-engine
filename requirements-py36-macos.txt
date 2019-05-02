@@ -4,7 +4,7 @@
 
 # GEM Mirror
 # We also provide pre-compiled macosx wheels for
-# h5py, Shapely, psutil, Rtree, PyYAML, Basemap
+# h5py, Shapely, psutil, PyYAML, Basemap
 
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/pytz-2018.3-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/setuptools-39.0.1-py2.py3-none-any.whl
@@ -36,11 +36,6 @@ http://cdn.ftp.openquake.org/wheelhouse/macos/py/toml-0.10.0-py2.py3-none-any.wh
 # comment the following lines to skip installation
 # of setproctitle (optional feature)
 http://cdn.ftp.openquake.org/wheelhouse/macos/py36/setproctitle-1.1.10-cp36-cp36m-macosx_10_6_intel.whl
-
-### Rtree ###
-# comment the following lines to skip installation
-# of Rtree (experimental wheel, optional feature)
-http://cdn.ftp.openquake.org/wheelhouse/macos/py36/Rtree-0.8.3-cp36-cp36m-macosx_10_6_intel.whl
 
 ### Plotting ###
 # comment the following lines to skip installation

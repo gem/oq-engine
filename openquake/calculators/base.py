@@ -31,7 +31,7 @@ from openquake.baselib import (
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.calc.filters import RtreeFilter, SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput
@@ -81,11 +81,9 @@ def fix_ones(pmap):
 
 def build_weights(realizations, imt_dt):
     """
-    :returns: an array with the realization weights of shape (R, M)
+    :returns: an array with the realization weights of shape R
     """
-    arr = numpy.zeros((len(realizations), len(imt_dt.names)))
-    for m, imt in enumerate(imt_dt.names):
-        arr[:, m] = [rlz.weight[imt] for rlz in realizations]
+    arr = numpy.array([rlz.weight['default'] for rlz in realizations])
     return arr
 
 
@@ -363,15 +361,6 @@ class HazardCalculator(BaseCalculator):
         if 'ucerf' in oq.calculation_mode:
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
-
-    @general.cached_property
-    def rtree_filter(self):
-        """
-        :returns: an RtreeFilter
-        """
-        return RtreeFilter(self.src_filter.sitecol,
-                           self.oqparam.maximum_distance,
-                           self.src_filter.filename)
 
     @property
     def E(self):
@@ -1009,5 +998,5 @@ def import_gmfs(dstore, fname, sids):
     dstore['gmf_data/imts'] = ' '.join(imts)
     sig_eps_dt = [('eid', U64), ('sig', (F32, n_imts)), ('eps', (F32, n_imts))]
     dstore['gmf_data/sigma_epsilon'] = numpy.zeros(0, sig_eps_dt)
-    dstore['weights'] = numpy.ones((1, n_imts))
+    dstore['weights'] = numpy.ones(1)
     return eids

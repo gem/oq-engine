@@ -567,7 +567,7 @@ def save_task_info(self, res, mem_gb=0):
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
-    # unregister raiseMasterKilled in oq-workers to avoid deadlock
+    # unregister SIGTERM in oq-workers to avoid deadlock
     # since processes are terminated via pool.terminate()
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
     # prctl is still useful (on Linux) to terminate all spawned processes
@@ -600,13 +600,13 @@ class Starmap(object):
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
-        elif distribute == 'no' and hasattr(cls, 'pool'):
-            cls.shutdown()
         elif distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
     @classmethod
     def shutdown(cls):
+        # shutting down the pool during the runtime causes mysterious
+        # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
