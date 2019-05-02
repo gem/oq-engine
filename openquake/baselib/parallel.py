@@ -600,15 +600,14 @@ class Starmap(object):
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
-        elif distribute == 'no' and hasattr(cls, 'pool'):
-            cls.shutdown()
         elif distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
     @classmethod
     def shutdown(cls):
+        # shutting down the pool during the runtime causes mysterious
+        # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
-            print('shutting down pool')
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
