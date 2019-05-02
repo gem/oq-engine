@@ -202,7 +202,6 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
-        eng.register_signals()
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
