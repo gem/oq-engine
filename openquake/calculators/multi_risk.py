@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import csv
 import logging
-import collections
 import numpy
 from openquake.baselib import hdf5
 from openquake.hazardlib import valid, geo, InvalidFile
@@ -170,10 +169,16 @@ class MultiRiskCalculator(base.RiskCalculator):
             set(arr.dtype.names) -
             set(self.datastore['assetcol/array'].dtype.names))
         tot = {risk: arr[risk].sum() for risk in multi_risk}
-        dt = [('peril', hdf5.vstr)] + [(c, float) for c in categories]
-        agg_risk = numpy.zeros(len(self.all_perils), dt)
+        cats = []
+        values = []
         for cat in categories:
-            agg_risk[cat] = [tot.get(f, numpy.nan)
-                             for f in self.get_fields(cat)]
+            val = [tot.get(f, numpy.nan) for f in self.get_fields(cat)]
+            if not numpy.isnan(val).all():
+                cats.append(cat)
+                values.append(val)
+        dt = [('peril', hdf5.vstr)] + [(c, float) for c in cats]
+        agg_risk = numpy.zeros(len(self.all_perils), dt)
+        for cat, val in zip(cats, values):
+            agg_risk[cat] = val
         agg_risk['peril'] = self.all_perils
         self.datastore['agg_risk'] = agg_risk
