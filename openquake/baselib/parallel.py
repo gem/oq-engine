@@ -608,6 +608,7 @@ class Starmap(object):
     @classmethod
     def shutdown(cls):
         if hasattr(cls, 'pool'):
+            print('shutting down pool')
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
