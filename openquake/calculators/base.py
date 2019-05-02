@@ -31,7 +31,7 @@ from openquake.baselib import (
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.calc.filters import RtreeFilter, SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput
@@ -361,15 +361,6 @@ class HazardCalculator(BaseCalculator):
         if 'ucerf' in oq.calculation_mode:
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
-
-    @general.cached_property
-    def rtree_filter(self):
-        """
-        :returns: an RtreeFilter
-        """
-        return RtreeFilter(self.src_filter.sitecol,
-                           self.oqparam.maximum_distance,
-                           self.src_filter.filename)
 
     @property
     def E(self):
