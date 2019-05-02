@@ -574,51 +574,6 @@ def cross_idl(lon1, lon2, *lons):
     return l1 * l2 < 0 and abs(l1 - l2) > 180
 
 
-# NB: this is not used anymore
-def normalize_lons(l1, l2):
-    """
-    An international date line safe way of returning a range of longitudes.
-
-    >>> normalize_lons(20, 30)  # no IDL within the range
-    [(20, 30)]
-    >>> normalize_lons(-17, +17)  # no IDL within the range
-    [(-17, 17)]
-    >>> normalize_lons(-178, +179)
-    [(-180, -178), (179, 180)]
-    >>> normalize_lons(178, -179)
-    [(-180, -179), (178, 180)]
-    >>> normalize_lons(179, -179)
-    [(-180, -179), (179, 180)]
-    >>> normalize_lons(177, -176)
-    [(-180, -176), (177, 180)]
-    """
-    if l1 > l2:  # exchange lons
-        l1, l2 = l2, l1
-    delta = l2 - l1
-    if l1 < 0 and l2 > 0 and delta > 180:
-        return [(-180, l1), (l2, 180)]
-    elif l1 > 0 and l2 > 180 and delta < 180:
-        return [(l1, 180), (-180, l2 - 360)]
-    elif l1 < -180 and l2 < 0 and delta < 180:
-        return [(l1 + 360, 180), (l2, -180)]
-    return [(l1, l2)]
-
-
-# NB: this is not used anymore
-def within(bbox, lonlat_index):
-    """
-    :param bbox: a bounding box in lon, lat
-    :param lonlat_index: an rtree index in lon, lat
-    :returns: array of indices within the bounding box
-    """
-    lon1, lat1, lon2, lat2 = bbox
-    set_ = set()
-    for l1, l2 in normalize_lons(lon1, lon2):
-        box = (l1, lat1, l2, lat2)
-        set_ |= set(lonlat_index.intersection(box))
-    return numpy.array(sorted(set_), numpy.uint32)
-
-
 def plane_fit(points):
     """
     This fits an n-dimensional plane to a set of points. See
