@@ -60,7 +60,6 @@ install_requires = [
     'h5py >=2.8, <2.9',
     'numpy >=1.14, <1.15',
     'scipy >=1.0.1, <1.2',
-    'rtree ==0.8.3',
     'pyzmq <18.0',
     'psutil >=2.0, <5.5',
     'shapely >=1.3, <1.7',
@@ -80,6 +79,7 @@ extras_require = {
     'celery':  ["celery >=4.0, <4.2"],
     'dask':  ["dask", "distributed"],
     'pam': ["python-pam", "django-pam"],
+    'rtree': ['rtree == 0.8.3'],
     'plotting':  [
         'basemap >=1.0',
         'pyproj >=1.9',
