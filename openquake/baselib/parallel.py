@@ -587,17 +587,18 @@ class Starmap(object):
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
-            # unregister SIGTERM in oq-workers to avoid deadlock
-            # since processes are terminated via pool.terminate()
-            orig_term = signal.signal(signal.SIGTERM, signal.SIG_DFL)
-            orig_int = signal.signal(signal.SIGINT, signal.SIG_IGN)
+            # unregister custom handlers before starting the processpool
+            term_handler = signal.signal(signal.SIGTERM, signal.SIG_DFL)
+            int_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = multiprocessing.get_context('spawn').Pool(
                 poolsize, init_workers)
-            signal.signal(signal.SIGTERM, orig_term)
-            signal.signal(signal.SIGINT, orig_int)
+            # after spawning the processes restore the original handlers
+            # i.e. the ones defined in openquake.engine.engine
+            signal.signal(signal.SIGTERM, term_handler)
+            signal.signal(signal.SIGINT, int_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
