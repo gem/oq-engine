@@ -183,10 +183,10 @@ def inhibitSigInt(signum, _stack):
     logs.LOG.warn('Killing job, please wait')
 
 
-def raiseMasterKilled(signum, _stack):
+def manage_signals(signum, _stack):
     """
-    When a SIGTERM is received, raise the MasterKilled
-    exception with an appropriate error message.
+    Convert a SIGTERM into a SystemExit exception and a SIGINT/SIGHUP into
+    a MasterKilled exception with an appropriate error message.
 
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
@@ -195,36 +195,34 @@ def raiseMasterKilled(signum, _stack):
     if OQ_DISTRIBUTE.startswith('celery'):
         signal.signal(signal.SIGINT, inhibitSigInt)
 
-    msg = 'Received a signal %d' % signum
-    if signum in (signal.SIGTERM, signal.SIGINT):
-        msg = 'The openquake master process was killed manually'
+    if signum == signal.SIGINT:
+        raise MasterKilled('The openquake master process was killed manually')
 
-    # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
-    # terminal died; in the workers, do nothing
-    # NB: there is no SIGHUP on Windows
-    if hasattr(signal, 'SIGHUP'):
-        if signum == signal.SIGHUP:
-            if os.getppid() == _PPID:
-                return
-            else:
-                msg = 'The openquake master lost its controlling terminal'
+    if signum == signal.SIGTERM:
+        raise SystemExit('SIGTERM')
 
-    raise MasterKilled(msg)
+    if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
+        # kill the calculation only if os.getppid() != _PPID, i.e. the
+        # controlling terminal died; in the workers, do nothing
+        if signum == signal.SIGHUP and os.getppid() != _PPID:
+            raise MasterKilled(
+                'The openquake master lost its controlling terminal')
 
 
-# register the raiseMasterKilled callback for SIGTERM
-# when using the Django development server this module is imported by a thread,
-# so one gets a `ValueError: signal only works in main thread` that
-# can be safely ignored
-try:
-    signal.signal(signal.SIGTERM, raiseMasterKilled)
-    signal.signal(signal.SIGINT, raiseMasterKilled)
-    if hasattr(signal, 'SIGHUP'):
-        # Do not register our SIGHUP handler if running with 'nohup'
-        if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
-            signal.signal(signal.SIGHUP, raiseMasterKilled)
-except ValueError:
-    pass
+def register_signals():
+    # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP
+    # when using the Django development server this module is imported by a
+    # thread, so one gets a `ValueError: signal only works in main thread` that
+    # can be safely ignored
+    try:
+        signal.signal(signal.SIGTERM, manage_signals)
+        signal.signal(signal.SIGINT, manage_signals)
+        if hasattr(signal, 'SIGHUP'):
+            # Do not register our SIGHUP handler if running with 'nohup'
+            if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
+                signal.signal(signal.SIGHUP, manage_signals)
+    except ValueError:
+        pass
 
 
 def job_from_file(job_ini, job_id, username, **kw):
@@ -302,6 +300,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     :param exports:
         A comma-separated string of export types.
     """
+    register_signals()
     setproctitle('oq-job-%d' % job_id)
     calc = base.calculators(oqparam, calc_id=job_id)
     logging.info('%s running %s [--hc=%s]',

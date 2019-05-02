@@ -691,5 +691,6 @@ def export_agg_risk_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    writer.save(dstore['agg_risk'].value, fname)
+    dset = dstore['agg_risk']
+    writer.save(dset.value, fname, dset.dtype.names)
     return [fname]
