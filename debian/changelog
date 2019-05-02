@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the dependency from rtree
   * Removed all calls to ProcessPool.shutdown to speed up the tests and to
     avoid non-deterministic errors in atexit._run_exitfuncs
 
