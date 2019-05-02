@@ -332,7 +332,11 @@ def hazard_items(dic, mesh, *extras, **kw):
     """
     for item in kw.items():
         yield item
-    arr = dic[next(iter(dic))]
+    try:
+        field = next(iter(dic))
+    except StopIteration:
+        return
+    arr = dic[field]
     dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
     for field, dtype, values in extras:
         dtlist.append((str(field), dtype))
