@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Removed all calls to ProcessPool.shutdown to speed up the tests and to
+    avoid non-deterministic errors in atexit._run_exitfuncs
+
   [Marco Pagani]
   * Added tabular GMPEs as provided by Michal Kolaj, Natural Resources Canada
 
