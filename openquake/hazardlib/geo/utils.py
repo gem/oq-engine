@@ -574,6 +574,7 @@ def cross_idl(lon1, lon2, *lons):
     return l1 * l2 < 0 and abs(l1 - l2) > 180
 
 
+# NB: this is not used anymore
 def normalize_lons(l1, l2):
     """
     An international date line safe way of returning a range of longitudes.
@@ -603,6 +604,7 @@ def normalize_lons(l1, l2):
     return [(l1, l2)]
 
 
+# NB: this is not used anymore
 def within(bbox, lonlat_index):
     """
     :param bbox: a bounding box in lon, lat
