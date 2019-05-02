@@ -67,6 +67,7 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
     The number of standard deviations above or below the mean to apply the
     statistical uncertainty sigma_mu term.
     """
+    experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
         super().__init__()
@@ -129,6 +130,7 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
+    experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
         super().__init__()
@@ -191,6 +193,8 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
     with theta6 calibrated to Mediterranean data, for the high
     magnitude scaling branch.
     """
+
+    experimental = True
 
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
         super().__init__()
@@ -261,6 +265,8 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
     to apply the statistical uncertainty sigma_mu term.
     """
 
+    experimental = True
+
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
         super().__init__()
         self.theta6_adj = theta6_adjustment
@@ -323,6 +329,8 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
     scaling branch.
     """
 
+    experimental = True
+
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
         super().__init__()
         self.theta6_adj = theta6_adjustment
@@ -384,6 +392,9 @@ class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     with theta6 calibrated to Mediterranean data, for the high magnitude
     scaling branch.
     """
+
+    experimental = True
+
     def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
         super().__init__()
         self.theta6_adj = theta6_adjustment
