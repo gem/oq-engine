@@ -133,7 +133,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         L = len(ltypes)
         D = len(dstates)
         A = len(self.assetcol)
-        ampl = self.oqparam.humidity_amplification_factor
+        ampl = self.oqparam.ash_wet_amplification_factor
         dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
         perils = []
         if 'ASH' in self.oqparam.multi_peril:
