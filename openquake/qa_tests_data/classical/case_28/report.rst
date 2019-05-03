@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     3,672,594,697      
-date           2019-03-19T10:05:35
-engine_version 3.5.0-gitad6b69ea66
+date           2019-05-03T06:44:12
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
 num_sites = 2, num_levels = 133, num_rlzs = 8
@@ -91,19 +91,19 @@ GridSources.xml 1      Tectonic_type_b 260          260
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      21        M    2     4     260          0.0       4.621E-04  2.00000   2         26    
-0      21        M    0     2     260          0.0       6.404E-04  2.00000   2         26    
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
+====== ========= ==== ===== ===== ============ ========= ========= ======
+0      21        M    0     2     260          0.00149   1.00000   26    
+1      21        M    2     4     260          6.995E-04 1.00000   26    
+====== ========= ==== ===== ===== ============ ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-M    0.0       2     
+M    0.00219   2     
 ==== ========= ======
 
 Duplicated sources
@@ -115,23 +115,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00161 5.395E-06 0.00161 0.00162 2      
-split_filter       0.00363 NaN       0.00363 0.00363 1      
+read_source_models 0.00204 5.808E-04 0.00163 0.00245 2      
+preclassical       0.00415 0.00188   0.00282 0.00547 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=626 B fnames=212 B            3.9 KB  
-split_filter       srcs=1.99 KB srcfilter=253 B dummy=14 B 2.48 KB 
-================== ======================================= ========
+================== ========================================================= ========
+task               sent                                                      received
+read_source_models converter=626 B fnames=212 B                              3.9 KB  
+preclassical       params=3.82 KB srcs=3.08 KB gsims=1.23 KB srcfilter=436 B 672 B   
+================== ========================================================= ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total split_filter       0.00363  1.29688   1     
-total read_source_models 0.00322  0.06641   2     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total preclassical       0.00829   0.0       2     
+total read_source_models 0.00408   0.0       2     
+managing sources         0.00295   0.0       1     
+store source_info        0.00199   0.0       1     
+aggregate curves         2.403E-04 0.0       2     
+======================== ========= ========= ======
