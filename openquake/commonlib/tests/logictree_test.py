@@ -2325,8 +2325,9 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
 
 
 class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
-    """ Test the applications of a source-specific uncertainty """
-    
+    """
+    Test the applications of a source-specific uncertainty
+    """
     def test_full_path(self):
         path = os.path.join(DATADIR, 'source_specific_uncertainty')
         fname_ini = os.path.join(path, 'job.ini')
@@ -2337,16 +2338,12 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         ssc_lt = SourceModelLogicTree(fname_ssc)
         gmc_lt = GsimLogicTree(fname_gmc)
 
-        montr = performance.Monitor()
-
+        mon = performance.Monitor()
         mags = [5.7, 5.98, 6.26, 6.54, 6.82, 7.1]
-
-        for sm in readinput.get_source_models(oqparam, gmc_lt, ssc_lt, montr):
+        for sm in readinput.get_source_models(oqparam, gmc_lt, ssc_lt, mon):
             for src in sm.src_groups[0]:
-                if src.source_id in ['a1', 'a2']:
-                    if src.source_id == 'a2':
-                        self.assertEqual(src.mfd.max_mag, 6.5)
-                    if src.source_id == 'a1':
-                        check = src.mfd.max_mag in mags
-                        msg = 'Wrong mmax value assigned to source \'a1\''
-                        self.assertTrue(check, msg)
+                if src.source_id == 'a2':
+                    self.assertEqual(src.mfd.max_mag, 6.5)
+                elif src.source_id == 'a1':
+                    msg = "Wrong mmax value assigned to source 'a1'"
+                    self.assertIn(src.mfd.max_mag, mags, msg)
