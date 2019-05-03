@@ -102,6 +102,9 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
+    """
+    Prefilter the sources and split the large ones.
+    """
     eff_ruptures = AccumDict(accum=0)   # grp_id -> num_ruptures
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # w, n, t
     for src, _sites in srcfilter(srcs):
