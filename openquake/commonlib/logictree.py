@@ -1416,7 +1416,10 @@ class GsimLogicTree(object):
             gsim = valid.gsim(branch['gsim'])
             self.values[branch['trt']].append(gsim)
             if isinstance(gsim, GMPETable):
-                gsim.init(dic[gsim.kwargs['gmpe_table']])
+                if 'gmpe_table' in gsim.kwargs:
+                    gsim.init(dic[gsim.kwargs['gmpe_table']])
+                else:
+                    gsim.init()
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'id', 'gsim', 'weight', ...)
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
