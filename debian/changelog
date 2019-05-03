@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Add support to source-specific uncertainties when the source
+    is included in just one of the several source models.
+
   [Michele Simionato]
   * Made it possible to serialize together all kind of risk functions,
     including consequence functions that before were not HDF5-serializable
