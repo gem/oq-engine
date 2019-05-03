@@ -104,15 +104,16 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
 def preclassical(srcs, srcfilter, gsims, params, monitor):
     eff_ruptures = AccumDict(accum=0)   # grp_id -> num_ruptures
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # w, n, t
-    [grp_id] = srcs[0].src_group_ids
     for src, _sites in srcfilter(srcs):
         t0 = time.time()
         if src.num_ruptures >= params['maxweight']:
             splits, stime = split_sources([src])
             for s in srcfilter.filter(splits):
-                eff_ruptures[grp_id] += s.num_ruptures
+                for grp_id in s.src_group_ids:
+                    eff_ruptures[grp_id] += s.num_ruptures
         else:
-            eff_ruptures[grp_id] += src.num_ruptures
+            for grp_id in src.src_group_ids:
+                eff_ruptures[grp_id] += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([src.weight, src.nsites, dt], F32)
     return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
