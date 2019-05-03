@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import time
 import logging
 import operator
 import numpy
@@ -100,6 +101,24 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
+def preclassical(srcs, srcfilter, gsims, params, monitor):
+    eff_ruptures = AccumDict(accum=0)   # grp_id -> num_ruptures
+    calc_times = AccumDict(accum=numpy.zeros(3, F32))  # w, n, t
+    [grp_id] = srcs[0].src_group_ids
+    for src, _sites in srcfilter(srcs):
+        t0 = time.time()
+        if src.num_ruptures >= params['maxweight']:
+            splits, stime = split_sources([src])
+            for s in srcfilter.filter(splits):
+                eff_ruptures[grp_id] += s.num_ruptures
+        else:
+            eff_ruptures[grp_id] += src.num_ruptures
+        dt = time.time() - t0
+        calc_times[src.id] += numpy.array([src.weight, src.nsites, dt], F32)
+    return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
+                rup_data={})
+
+
 @base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -120,7 +139,6 @@ class ClassicalCalculator(base.HazardCalculator):
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
-                self.nsites.append(len(pmap))
             for grp_id, data in dic['rup_data'].items():
                 if len(data):
                     self.datastore.extend('rup/grp-%02d' % grp_id, data)
@@ -166,7 +184,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['task_sources'] = encode(source_ids)
             self.datastore.extend(
                 'source_data', numpy.array(data, source_data_dt))
-        self.nsites = []
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
@@ -174,10 +191,11 @@ class ClassicalCalculator(base.HazardCalculator):
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
-            self.calc_times.clear()  # save a bit of memory
-        if not self.nsites:
+        nsites = [rec[1] for rec in self.calc_times.values()]  # w, n, t
+        if not nsites:
             raise RuntimeError('All sources were filtered away!')
-        logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
+        logging.info('Effective sites per task: %d', numpy.mean(nsites))
+        self.calc_times.clear()  # save a bit of memory
         return acc
 
     def _send_sources(self, smap):
@@ -320,17 +338,7 @@ class PreCalculator(ClassicalCalculator):
     Calculator to filter the sources and compute the number of effective
     ruptures
     """
-    def execute(self):
-        eff_ruptures = AccumDict(accum=0)
-        calc_times = AccumDict(accum=numpy.zeros(3, F32))  # w, n, t
-        for src in self.csm.get_sources():
-            for grp_id in src.src_group_ids:
-                eff_ruptures[grp_id] += src.num_ruptures
-                calc_times[src.id] += numpy.array(
-                    [src.weight, src.nsites, 0], F32)
-        self.store_rlz_info(eff_ruptures)
-        self.store_source_info(calc_times)
-        return {}
+    core_task = preclassical
 
 
 def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
