@@ -40,6 +40,10 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
+from openquake.baselib import performance
+from openquake.commonlib.logictree import SourceModelLogicTree, GsimLogicTree
+
+
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
@@ -2318,3 +2322,31 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         self.assertEqual(exc.lineno, 5)
         self.assertEqual(exc.offset, 61)
         self.assertEqual(exc.filename, smlt)
+
+
+class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
+    """ Test the applications of a source-specific uncertainty """
+    
+    def test_full_path(self):
+        path = os.path.join(DATADIR, 'source_specific_uncertainty')
+        fname_ini = os.path.join(path, 'job.ini')
+        fname_ssc = os.path.join(path, 'sscLt.xml')
+        fname_gmc = os.path.join(path, 'gmcLt.xml')
+
+        oqparam = readinput.get_oqparam(fname_ini)
+        ssc_lt = SourceModelLogicTree(fname_ssc)
+        gmc_lt = GsimLogicTree(fname_gmc)
+
+        montr = performance.Monitor()
+
+        mags = [5.7, 5.98, 6.26, 6.54, 6.82, 7.1]
+
+        for sm in readinput.get_source_models(oqparam, gmc_lt, ssc_lt, montr):
+            for src in sm.src_groups[0]:
+                if src.source_id in ['a1', 'a2']:
+                    if src.source_id == 'a2':
+                        self.assertEqual(src.mfd.max_mag, 6.5)
+                    if src.source_id == 'a1':
+                        check = src.mfd.max_mag in mags
+                        msg = 'Wrong mmax value assigned to source \'a1\''
+                        self.assertTrue(check, msg)
