@@ -2,12 +2,12 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ============== ===================
-checksum32     1,791,718,331      
-date           2019-03-19T10:05:57
-engine_version 3.5.0-gitad6b69ea66
+checksum32     1,736,466,096      
+date           2019-05-03T06:44:24
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
-num_sites = 1, num_levels = 78, num_rlzs = 160
+num_sites = 1, num_levels = 78, num_rlzs = 4
 
 Parameters
 ----------
@@ -41,11 +41,11 @@ source_model_logic_tree `simple_source_model_logic_tree.xml <simple_source_model
 
 Composite source model
 ----------------------
-========= ======= ====================== ================
-smlt_path weight  gsim_logic_tree        num_realizations
-========= ======= ====================== ================
-b1        1.00000 complex(0,2,5,0,4,4,1) 160             
-========= ======= ====================== ================
+========= ======= ===================== ================
+smlt_path weight  gsim_logic_tree       num_realizations
+========= ======= ===================== ================
+b1        1.00000 simple(0,0,0,0,4,0,0) 4               
+========= ======= ===================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -64,95 +64,78 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=16, rlzs=160)
-  0,'[AtkinsonBoore2003SInter]': ['40 realizations']
-  0,'[LinLee2008SInter]': ['40 realizations']
-  0,'[YoungsEtAl1997SInter]': ['40 realizations']
-  0,'[ZhaoEtAl2006SInter]': ['40 realizations']
-  1,'[FaccioliEtAl2010]': ['160 realizations']
-  2,'[Campbell2003SHARE]': ['80 realizations']
-  2,'[ToroEtAl2002SHARE]': ['80 realizations']
-  3,'[AkkarBommer2010]': ['32 realizations']
-  3,'[Campbell2003SHARE]': ['32 realizations']
-  3,'[CauzziFaccioli2008]': ['32 realizations']
-  3,'[ChiouYoungs2008]': ['32 realizations']
-  3,'[ToroEtAl2002SHARE]': ['32 realizations']
-  4,'[AtkinsonBoore2003SSlab]': ['40 realizations']
-  4,'[LinLee2008SSlab]': ['40 realizations']
-  4,'[YoungsEtAl1997SSlab]': ['40 realizations']
-  4,'[ZhaoEtAl2006SSlab]': ['40 realizations']>
+  <RlzsAssoc(size=4, rlzs=4)
+  4,'[AtkinsonBoore2003SSlab]': [0]
+  4,'[LinLee2008SSlab]': [1]
+  4,'[YoungsEtAl1997SSlab]': [2]
+  4,'[ZhaoEtAl2006SSlab]': [3]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============================ ====== ==================== ============ ============
-source_model                 grp_id trt                  eff_ruptures tot_ruptures
-============================ ====== ==================== ============ ============
-simple_area_source_model.xml 0      Subduction Interface 42,624       42,624      
-simple_area_source_model.xml 1      Volcanic             210          210         
-simple_area_source_model.xml 2      Shield               96,804       96,804      
-simple_area_source_model.xml 3      Stable Shallow Crust 81,154       81,154      
-simple_area_source_model.xml 4      Subduction Inslab    93,219       93,219      
-============================ ====== ==================== ============ ============
-
-============= =======
-#TRT models   5      
-#eff_ruptures 314,011
-#tot_ruptures 314,011
-#tot_weight   197,635
-============= =======
+============================ ====== ================= ============ ============
+source_model                 grp_id trt               eff_ruptures tot_ruptures
+============================ ====== ================= ============ ============
+simple_area_source_model.xml 4      Subduction Inslab 7,770        93,219      
+============================ ====== ================= ============ ============
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-4      s72       A    711   739   17,871       0.0       0.0        1.00000   0         1,787  
-4      s70       A    683   711   17,871       0.0       0.0        1.00000   0         1,787  
-4      s46       A    657   683   7,770        0.0       0.0        1.00000   0         777    
-4      s40       A    631   657   12,327       0.0       0.0        1.00000   0         1,233  
-4      s35       A    605   631   12,327       0.0       0.0        1.00000   0         1,233  
-4      s34       A    579   605   12,327       0.0       0.0        1.00000   0         1,233  
-4      s13       A    553   579   12,726       0.0       0.0        1.00000   0         1,273  
-3      scr304    A    543   553   574          0.0       0.0        1.00000   0         57     
-3      scr301    A    506   543   17,268       0.0       0.0        1.00000   0         1,727  
-3      scr299    A    496   506   1,572        0.0       0.0        1.00000   0         157    
-3      scr293    A    369   496   61,740       0.0       0.0        1.00000   0         6,174  
-2      sh6       A    362   369   12,900       0.0       0.0        1.00000   0         1,290  
-2      sh14      A    350   362   41,952       0.0       0.0        1.00000   0         4,195  
-2      sh13      A    338   350   41,952       0.0       0.0        1.00000   0         4,195  
-1      v4        A    327   338   168          0.0       0.0        1.00000   0         16     
-1      v1        A    323   327   42           0.0       0.0        1.00000   0         4.20000
-0      i20       C    217   323   9,241        0.0       0.0        1.00000   0         36,964 
-0      i17       C    0     217   33,383       0.0       0.0        1.00000   0         133,532
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
+====== ========= ==== ===== ===== ============ ========= ========= ======
+4      s46       A    657   683   7,770        1.431E-05 1.00000   777   
+4      s72       A    711   739   17,871       0.0       0.0       0.0   
+4      s70       A    683   711   17,871       0.0       0.0       0.0   
+4      s40       A    631   657   12,327       0.0       0.0       0.0   
+4      s35       A    605   631   12,327       0.0       0.0       0.0   
+4      s34       A    579   605   12,327       0.0       0.0       0.0   
+4      s13       A    553   579   12,726       0.0       0.0       0.0   
+3      scr304    A    543   553   574          0.0       0.0       0.0   
+3      scr301    A    506   543   17,268       0.0       0.0       0.0   
+3      scr299    A    496   506   1,572        0.0       0.0       0.0   
+3      scr293    A    369   496   61,740       0.0       0.0       0.0   
+2      sh6       A    362   369   12,900       0.0       0.0       0.0   
+2      sh14      A    350   362   41,952       0.0       0.0       0.0   
+2      sh13      A    338   350   41,952       0.0       0.0       0.0   
+1      v4        A    327   338   168          0.0       0.0       0.0   
+1      v1        A    323   327   42           0.0       0.0       0.0   
+0      i20       C    217   323   9,241        0.0       0.0       0.0   
+0      i17       C    0     217   33,383       0.0       0.0       0.0   
+====== ========= ==== ===== ===== ============ ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.0       16    
+A    1.431E-05 16    
 C    0.0       2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 4.89695 NaN    4.89695 4.89695 1      
-================== ======= ====== ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 5.18428 NaN     5.18428 5.18428 1      
+preclassical       0.00418 0.00402 0.00169 0.01535 17     
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=313 B fnames=119 B 45.04 KB
-================== ============================ ========
+================== ============================================================ ========
+task               sent                                                         received
+read_source_models converter=313 B fnames=119 B                                 45.04 KB
+preclassical       srcs=58.56 KB params=20.4 KB gsims=7.63 KB srcfilter=3.92 KB 4.78 KB 
+================== ============================================================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 4.89695  3.60938   1     
+total read_source_models 5.18428  0.0       1     
+total preclassical       0.07113  0.0       17    
+managing sources         0.01904  0.0       1     
+store source_info        0.00229  0.0       1     
+aggregate curves         0.00228  0.0       17    
 ======================== ======== ========= ======
