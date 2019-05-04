@@ -107,6 +107,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     eff_ruptures = AccumDict(accum=0)   # grp_id -> num_ruptures
     calc_times = AccumDict(accum=numpy.zeros(2, F32))  # weight, time
+    nsites = {}
     for src in srcs:
         t0 = time.time()
         if srcfilter.get_close_sites(src) is None:
@@ -115,8 +116,9 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
             eff_ruptures[grp_id] += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([src.weight, dt], F32)
+        nsites[src.id] = src.nsites
     return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data={})
+                rup_data={}, nsites=nsites)
 
 
 @base.calculators.add('classical')
@@ -135,6 +137,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param dic: dictionary with keys pmap, calc_times, eff_ruptures
         """
         with self.monitor('aggregate curves', autoflush=True):
+            if 'nsites' in dic:  # preclassical
+                acc.nsites += dic['nsites']
             acc.eff_ruptures += dic['eff_ruptures']
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
@@ -156,6 +160,7 @@ class ClassicalCalculator(base.HazardCalculator):
             num_gsims = len(csm_info.gsim_lt.get_gsims(grp.trt))
             zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
+        zd.nsites = AccumDict()  # src.id -> nsites
         return zd
 
     def execute(self):
@@ -191,6 +196,10 @@ class ClassicalCalculator(base.HazardCalculator):
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
+        if acc.nsites:
+            src_ids = list(acc.nsites)
+            nsites = list(acc.nsites.values())
+            self.datastore['source_info'][src_ids, 'num_sites'] = nsites
         if not self.calc_times:
             raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory

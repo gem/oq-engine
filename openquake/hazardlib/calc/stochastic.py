@@ -269,7 +269,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                 n_occ += ebr.n_occ
             eff_ruptures += src.num_ruptures
             dt = time.time() - t0
-            calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
+            calc_times[src.id] += numpy.array([n_occ, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(rup_array=rup_array, calc_times=calc_times,
                         eff_ruptures={grp_id: eff_ruptures})
