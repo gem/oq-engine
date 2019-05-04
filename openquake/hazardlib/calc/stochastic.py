@@ -155,8 +155,8 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     eb_ruptures = []
     numpy.random.seed(sources[0].serial)
     [grp_id] = set(src.src_group_id for src in sources)
-    # AccumDict of arrays with 3 elements weight, nsites, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    # AccumDict of arrays with 2 elements weight, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     # Set the parameters required to compute the number of occurrences
     # of the group of sources
     #  assert param['oqparam'].number_of_logic_tree_samples > 0
@@ -200,8 +200,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_counter[src.id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
-                calc_times[src.id] += numpy.array([len(rup_data[src.id]),
-                                                   src.nsites, dt])
+                calc_times[src.id] += numpy.array([len(rup_data[src.id]), dt])
         elif param['src_interdep'] == 'mutex':
             print('Not yet implemented')
             exit(0)
@@ -231,8 +230,8 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     :yields:
         dictionaries with keys rup_array, calc_times, eff_ruptures
     """
-    # AccumDict of arrays with 3 elements weight, nsites, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    # AccumDict of arrays with 2 elements weight, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     # Compute and save stochastic event sets
     num_ses = param['ses_per_logic_tree_path']
     eff_ruptures = 0
@@ -250,8 +249,8 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                             eff_ruptures={grp_id: eff_ruptures})
     else:
         eb_ruptures = []
-        # AccumDict of arrays with 3 elements weight, nsites, calc_time
-        calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+        # AccumDict of arrays with 2 elements weight, calc_time
+        calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
         [grp_id] = set(src.src_group_id for src in sources)
         for src, _sites in srcfilter(sources):
             t0 = time.time()
