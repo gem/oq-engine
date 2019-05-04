@@ -47,7 +47,7 @@ from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import case_2, case_5, case_16
+from openquake.qa_tests_data.event_based import case_2, case_5, case_16, case_21
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_exposure)
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
@@ -361,6 +361,13 @@ class ZipTestCase(unittest.TestCase):
              'vulnerability_model_nonstco.xml',
              'vulnerability_model_stco.xml'],
             names)
+        shutil.rmtree(dtemp)
+
+    def test_zip_ssmLT(self):
+        # zipping a directory containing a ssmLT.xml file
+        dtemp = os.path.join(tempfile.mkdtemp(), 'inp')
+        shutil.copytree(os.path.dirname(case_21.__file__), dtemp)
+        zip_cmd(dtemp)
         shutil.rmtree(dtemp)
 
 
