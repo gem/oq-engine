@@ -114,6 +114,7 @@ def normalize(key, fnames, base_path):
             if not os.path.exists(zpath):
                 raise OSError('No such file: %s or %s' % (val, zpath))
             with zipfile.ZipFile(zpath) as archive:
+                logging.info('Unzipping %s', zpath)
                 archive.extractall(os.path.dirname(zpath))
         filenames.append(val)
     return input_type, filenames
