@@ -151,7 +151,6 @@ def build_ruptures(sources, src_filter, param, monitor):
     sampl_mon = monitor('sampling ruptures', measuremem=True)
     res.trt = DEFAULT_TRT
     background_sids = src.get_background_sids(src_filter)
-    sitecol = src_filter.sitecol
     samples = getattr(src, 'samples', 1)
     n_occ = AccumDict(accum=0)
     t0 = time.time()
