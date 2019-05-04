@@ -106,7 +106,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     Prefilter the sources
     """
     eff_ruptures = AccumDict(accum=0)   # grp_id -> num_ruptures
-    calc_times = AccumDict(accum=numpy.zeros(3, F32))  # w, n, t
+    calc_times = AccumDict(accum=numpy.zeros(2, F32))  # weight, time
     for src in srcs:
         t0 = time.time()
         if srcfilter.get_close_sites(src) is None:
@@ -114,7 +114,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             eff_ruptures[grp_id] += src.num_ruptures
         dt = time.time() - t0
-        calc_times[src.id] += numpy.array([src.weight, src.nsites, dt], F32)
+        calc_times[src.id] += numpy.array([src.weight, dt], F32)
     return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
                 rup_data={})
 
@@ -184,17 +184,15 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['task_sources'] = encode(source_ids)
             self.datastore.extend(
                 'source_data', numpy.array(data, source_data_dt))
-        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.calc_times = AccumDict(accum=numpy.zeros(2, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
-        nsites = [rec[1] for rec in self.calc_times.values()]  # w, n, t
-        if not nsites:
+        if not self.calc_times:
             raise RuntimeError('All sources were filtered away!')
-        logging.info('Effective sites per task: %d', numpy.mean(nsites))
         self.calc_times.clear()  # save a bit of memory
         return acc
 
