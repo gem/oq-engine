@@ -248,7 +248,7 @@ class OqParam(valid.ParamSet):
 
             # check the IMTs vs the GSIMs
             self._gsims_by_trt = gsim_lt.values
-            for gsims in self._gsims_by_trt.values():
+            for trt, gsims in gsim_lt.values.items():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([valid.gsim(self.gsim)])
@@ -317,6 +317,8 @@ class OqParam(valid.ParamSet):
         """
         imts = set(from_string(imt).name for imt in self.imtls)
         for gsim in gsims:
+            if hasattr(gsim, 'weight'):  # disable the check
+                continue
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
                 names = set(cls.__name__ for cls in restrict_imts)
