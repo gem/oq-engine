@@ -118,6 +118,8 @@ def compute_pmap_stats(pmaps, stats, weights, imtls):
     for imt in imtls:
         slc = imtls(imt)
         w = [weight[imt] for weight in weights]
+        if sum(w) == 0:  # expect no data for this IMT
+            continue
         for i, array in enumerate(compute_stats(curves[:, :, slc], stats, w)):
             for j, sid in numpy.ndenumerate(sids):
                 out[sid].array[slc, i] = array[j]
