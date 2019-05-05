@@ -248,7 +248,7 @@ class OqParam(valid.ParamSet):
 
             # check the IMTs vs the GSIMs
             self._gsims_by_trt = gsim_lt.values
-            for trt, gsims in gsim_lt.values.items():
+            for gsims in gsim_lt.values.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([valid.gsim(self.gsim)])
