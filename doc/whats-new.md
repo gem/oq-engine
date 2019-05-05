@@ -392,7 +392,7 @@ serialize/deserialize literal Python objects to TOML format.
 environment.
 
 5. There is now a `sap.script` decorator that should be used instead
-of the `sap.Script`` class.
+of the `sap.Script` class.
 
 6. We added a command `oq info --parameters` tha displays the list of
 all the parameters recognized by job.ini files.
