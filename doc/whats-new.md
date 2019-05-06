@@ -147,7 +147,7 @@ originally coming from a CSV file, a regression introduced in engine
 
 5. We were losing line number information when parsing invalid
 gsim_logic_tree.xml files: now the error message contains the right
-line.
+line number.
 
 oq commands
 -----------
