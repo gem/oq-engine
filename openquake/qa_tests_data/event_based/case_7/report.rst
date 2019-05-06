@@ -2,21 +2,21 @@ Event-based PSHA with logic tree sampling
 =========================================
 
 ============== ===================
-checksum32     186,455,639        
-date           2019-03-19T10:04:12
-engine_version 3.5.0-gitad6b69ea66
+checksum32     1,264,506,295      
+date           2019-05-03T06:43:44
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
-num_sites = 3, num_levels = 38, num_rlzs = ?
+num_sites = 3, num_levels = 7, num_rlzs = ?
 
 Parameters
 ----------
 =============================== ==================
 calculation_mode                'event_based'     
-number_of_logic_tree_samples    10                
+number_of_logic_tree_samples    100               
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
-ses_per_logic_tree_path         40                
+ses_per_logic_tree_path         20                
 truncation_level                3.0               
 rupture_mesh_spacing            2.0               
 complex_fault_mesh_spacing      2.0               
@@ -41,12 +41,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      1         A    65    130   2,456        0.0       0.0        0.0       1         0.0   
-0      1         A    0     65    2,456        0.0       0.0        0.0       1         0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
+====== ========= ==== ===== ===== ============ ========= ========= ======
+1      1         A    65    130   2,456        0.0       0.0       0.0   
+0      1         A    0     65    2,456        0.0       0.0       0.0   
+====== ========= ==== ===== ===== ============ ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
@@ -63,25 +63,22 @@ Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-read_source_models 0.04960 0.00221 0.04803 0.05116 2      
-only_filter        0.00269 NaN     0.00269 0.00269 1      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.05634 6.283E-04 0.05590 0.05679 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=626 B fnames=218 B            8.42 KB 
-only_filter        srcs=6.55 KB srcfilter=253 B dummy=14 B 6.62 KB 
-================== ======================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=626 B fnames=218 B 8.42 KB 
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.09919  0.61719   2     
-total only_filter        0.00269  1.50391   1     
+total read_source_models 0.11269  0.0       2     
 ======================== ======== ========= ======
