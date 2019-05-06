@@ -12,7 +12,7 @@ This distribution has some differences with the packages we provide for Ubuntu a
 - includes its own distribution of the dependencies needed by the OpenQuake Engine
     - OpenSSL 1.0
     - Python 3.6
-    - Python dependencies (pip, numpy, scipy, h5py, django, shapely, rtree and few more)
+    - Python dependencies (pip, numpy, scipy, h5py, django, shapely, and few more)
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
 - currently does not support Celery (support for Celery is planned) and clusters setup

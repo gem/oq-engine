@@ -22,14 +22,12 @@ import operator
 import collections
 from contextlib import contextmanager
 import numpy
-import rtree
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import gettemp, cached_property
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
@@ -353,8 +351,6 @@ class SourceFilter(object):
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
         bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
-        if hasattr(self, 'index'):  # RtreeFilter
-            return within(bb, self.index)
         return self.sitecol.within_bbox(bb)
 
     def filter(self, sources):
@@ -371,72 +367,6 @@ class SourceFilter(object):
             if len(indices):
                 src.indices = indices
                 yield src
-
-
-class RtreeFilter(SourceFilter):
-    """
-    The RtreeFilter uses the rtree library. The index is generated at
-    instantiation time and stored in a temporary file. The filter should be
-    instantiated only once per calculation, after the site collection is
-    known. It should be used as follows::
-
-      rfilter = RtreeFilter(sitecol, integration_distance)
-      for src, sites in rfilter(sources):
-         do_something(...)
-
-    As a side effect, sets the `.indices` attribute of the source, i.e. the
-    number of sites within the integration distance. Notice that
-    libspatialindex indices cannot be properly pickled
-    (https://github.com/Toblerity/rtree/issues/65) this is why they must
-    be saved on the file system where they can be read from the workers.
-
-    NB: an RtreeFilter has an .indexpath attribute, but not a .sitecol
-    attribute nor an .index attribute, so it can be pickled and transferred
-    easily.
-
-    :param sitecol:
-        :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param integration_distance:
-        Integration distance dictionary (TRT -> distance in km)
-    """
-    def __init__(self, sitecol, integration_distance, filename=None):
-        assert sitecol, 'Mandatory in an RtreeFilter'
-        super().__init__(sitecol, integration_distance, filename)
-        self.indexpath = gettemp()
-        index = rtree.index.Index(self.indexpath)
-        lonlats = zip(sitecol.lons, sitecol.lats)
-        for i, (lon, lat) in enumerate(lonlats):
-            index.insert(i, (lon, lat, lon, lat))
-        index.close()
-
-    @cached_property
-    def index(self):
-        """
-        :returns: the underlying index object
-        """
-        return rtree.index.Index(self.indexpath)
-
-    def filter(self, sources):
-        """
-        :param sources: a sequence of sources
-        :yields: rtree-filtered sources
-        """
-        if self.sitecol is None:  # do not filter
-            yield from sources
-            return
-        for src in sources:
-            box = self.integration_distance.get_affected_box(src)
-            indices = within(box, self.index)
-            if len(indices):
-                src.indices = indices
-                yield src
-
-    def __getstate__(self):
-        # NB: the RtreeFilter can be transferred on a single machine only
-        # (on a cluster, even, with a shared_dir, there are permission errors)
-        return dict(filename=self.filename,
-                    indexpath=self.indexpath,
-                    integration_distance=self.integration_distance)
 
 
 nofilter = SourceFilter(None, {})
