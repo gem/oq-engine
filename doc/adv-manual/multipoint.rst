@@ -26,13 +26,11 @@ parameters of the underlying MFDs. For instance, in the case of an
 'incrementalMFD', the parameters are `min_mag` and `occurRates` and
 a `MultiMFD` object can be instantiated as follows::
 
-```python
-mmfd = MultiMFD('incrementalMFD',
+  mmfd = MultiMFD('incrementalMFD',
                 size=2,
                 bin_width=[2.0, 2.0],
                 min_mag=[4.5, 4.5],
                 occurRates=[[.3, .1], [.4, .2, .1]])
-```
 
 In this example there are two points and two underlying MFDs; the
 occurrence rates can be different for different MFDs: here the first
@@ -40,23 +38,22 @@ one has 2 occurrence rates while the second one has 3 occurrence
 rates.
 
 Having instantiated the `MultiMFD`, a `MultiPointSource` can be instantiated
-as in this example:
+as in this example::
 
-```python
-npd = PMF([(0.5, NodalPlane(1, 20, 3)),
-          (0.5, NodalPlane(2, 2, 4))])
-hd = PMF([(1, 4)])
-mesh = Mesh(numpy.array([0, 1]), numpy.array([0.5, 1]))
-tom = PoissonTOM(50.)
-rms = 2.0
-rar = 1.0
-usd = 10
-lsd = 20
-mps = MultiPointSource('mp1', 'multi point source',
-                       'Active Shallow Crust',
-                        mmfd, rms, PeerMSR(), rar,
-                        tom, usd, lsd, npd, hd, mesh)
-```
+   npd = PMF([(0.5, NodalPlane(1, 20, 3)),
+             (0.5, NodalPlane(2, 2, 4))])
+   hd = PMF([(1, 4)])
+   mesh = Mesh(numpy.array([0, 1]), numpy.array([0.5, 1]))
+   tom = PoissonTOM(50.)
+   rms = 2.0
+   rar = 1.0
+   usd = 10
+   lsd = 20
+   mps = MultiPointSource('mp1', 'multi point source',
+                          'Active Shallow Crust',
+                           mmfd, rms, PeerMSR(), rar,
+                           tom, usd, lsd, npd, hd, mesh)
+
 There are two major advantages when using `MultiPointSources`:
 
 1. the space used is a lot less than the space needed for an equivalent
@@ -70,7 +67,6 @@ source typologies (call `write_source_model(fname, [mps])` or
 `nrml.to_python(fname, sourceconverter)`) and in XML a `multiPointSource`
 looks like this::
 
-```xml
             <multiPointSource
             id="mp1"
             name="multi point source"
@@ -118,7 +114,6 @@ looks like this::
                     <hypoDepth depth="14.0" probability="1.0"/>
                 </hypoDepthDist>
             </multiPointSource>
-```
 
 The node `<lengths>` contains the lengths of the occurrence rates, 2 and 3
 respectively in this example. This is needed since the serializer writes
@@ -128,15 +123,13 @@ be lost otherwise.
 
 There is an optimization for the case of homogeneous parameters;
 for instance in this example the `bin_width` and `min_mag` are the same
-in all points; then it is possible to store these as one-element lists:
+in all points; then it is possible to store these as one-element lists::
 
-```python
-mmfd = MultiMFD('incrementalMFD',
-                size=2,
-                bin_width=[2.0],
-                min_mag=[4.5],
-                occurRates=[[.3, .1], [.4, .2, .1]])
-```
+   mmfd = MultiMFD('incrementalMFD',
+                   size=2,
+                   bin_width=[2.0],
+                   min_mag=[4.5],
+                   occurRates=[[.3, .1], [.4, .2, .1]])
 
 This saves memory and data transfer, compared to the version of the code
 above.

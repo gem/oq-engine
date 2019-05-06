@@ -29,8 +29,8 @@ class BaseGSIMTestCase(unittest.TestCase):
     def get_context_attributes(self, ctx):
         return set(vars(ctx)) - set(['_slots_'])
 
-    def check(self, filename, max_discrep_percentage):
-        gsim = self.GSIM_CLASS()
+    def check(self, filename, max_discrep_percentage, **kwargs):
+        gsim = self.GSIM_CLASS(**kwargs)
         gsim.init()
         filename = os.path.join(self.BASE_DATA_PATH, filename)
         errors, stats, sctx, rctx, dctx, ctxs = check_gsim(

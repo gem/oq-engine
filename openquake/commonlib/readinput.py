@@ -114,6 +114,7 @@ def normalize(key, fnames, base_path):
             if not os.path.exists(zpath):
                 raise OSError('No such file: %s or %s' % (val, zpath))
             with zipfile.ZipFile(zpath) as archive:
+                logging.info('Unzipping %s', zpath)
                 archive.extractall(os.path.dirname(zpath))
         filenames.append(val)
     return input_type, filenames
@@ -692,8 +693,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     if monitor.hdf5:
         sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
-        filename = (getattr(srcfilter, 'filename', None)
-                    if oqparam.prefilter_sources == 'no' else None)
+        filename = None
     source_ids = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
@@ -888,7 +888,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm = csm.grp_by_src()  # one group per source
 
     csm.info.gsim_lt.check_imts(oqparam.imtls)
-    parallel.Starmap.shutdown()  # save memory
     return csm
 
 
@@ -1407,8 +1406,7 @@ def get_checksum32(oqparam, hazard=False):
                        'maximum_distance', 'investigation_time',
                        'number_of_logic_tree_samples', 'imtls',
                        'ses_per_logic_tree_path', 'minimum_magnitude',
-                       'prefilter_sources', 'sites',
-                       'pointsource_distance', 'filter_distance'):
+                       'sites', 'pointsource_distance', 'filter_distance'):
                 hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff

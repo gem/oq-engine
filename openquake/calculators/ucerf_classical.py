@@ -53,7 +53,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance, maxweight=1E10)
-        self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
+        self.calc_times = general.AccumDict(accum=np.zeros(2, np.float32))
         rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups

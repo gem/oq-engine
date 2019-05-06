@@ -567,9 +567,6 @@ def save_task_info(self, res, mem_gb=0):
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
-    # unregister raiseMasterKilled in oq-workers to avoid deadlock
-    # since processes are terminated via pool.terminate()
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
     # prctl is still useful (on Linux) to terminate all spawned processes
     # when master is killed via SIGKILL
     try:
@@ -590,23 +587,28 @@ class Starmap(object):
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
-            orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+            # unregister custom handlers before starting the processpool
+            term_handler = signal.signal(signal.SIGTERM, signal.SIG_DFL)
+            int_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = multiprocessing.get_context('spawn').Pool(
                 poolsize, init_workers)
-            signal.signal(signal.SIGINT, orig_handler)
+            # after spawning the processes restore the original handlers
+            # i.e. the ones defined in openquake.engine.engine
+            signal.signal(signal.SIGTERM, term_handler)
+            signal.signal(signal.SIGINT, int_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
-        elif distribute == 'no' and hasattr(cls, 'pool'):
-            cls.shutdown()
         elif distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
     @classmethod
     def shutdown(cls):
+        # shutting down the pool during the runtime causes mysterious
+        # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
