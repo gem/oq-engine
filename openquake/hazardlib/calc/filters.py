@@ -368,4 +368,5 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
+
 nofilter = SourceFilter(None, {})

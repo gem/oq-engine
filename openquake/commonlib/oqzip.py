@@ -58,8 +58,9 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     checkfile = os.path.join(os.path.dirname(ssmLT), 'CHECKSUM.txt')
     with open(checkfile, 'w') as f:
         f.write(str(checksum))
-    files = logictree.collect_info(ssmLT).smpaths + [
-        os.path.abspath(ssmLT), os.path.abspath(checkfile)]
+    files = [os.path.abspath(ssmLT), os.path.abspath(checkfile)]
+    for fs in logictree.collect_info(ssmLT).smpaths.values():
+        files.extend(fs)
     general.zipfiles(files, archive_zip, log=log, cleanup=True)
     return archive_zip
 
