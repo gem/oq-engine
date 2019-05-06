@@ -116,7 +116,7 @@ run calculations concurrently only one calculation will run (the first
 submitted) and the other N-1 will wait. As soon as a calculation ends, the next
 one in the queue will start, by preserving the submission order. The queue
 is very simple and has no concept of priority, but it is extremely useful in
-case of large calculations. It solves the problem of a large calculations
+case of large calculations. It solves the problem of a large calculation
 sending the cluster out of memory and killing the calculations of the other
 users.
 
