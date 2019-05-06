@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     905,885,649        
-date           2019-03-19T10:05:24
-engine_version 3.5.0-gitad6b69ea66
+date           2019-05-03T06:44:10
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
 num_sites = 3, num_levels = 17, num_rlzs = 8
@@ -90,50 +90,53 @@ source_model_2.xml 3      Active Shallow Crust     240          240
 #TRT models   4  
 #eff_ruptures 510
 #tot_ruptures 510
-#tot_weight   88 
+#tot_weight   51 
 ============= ===
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-3      1         A    6     10    240          0.0       0.03130    48        16        41     
-2      1         A    2     6     240          0.0       0.03655    48        16        41     
-1      2         P    1     2     15           0.0       1.979E-05  3.00000   1         2.59808
-0      1         P    0     1     15           0.0       1.907E-05  3.00000   1         2.59808
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
+====== ========= ==== ===== ===== ============ ========= ========= =======
+2      1         A    2     6     240          0.00869   3.00000   41     
+3      1         A    6     10    240          0.00769   3.00000   41     
+1      2         P    1     2     15           2.384E-05 3.00000   2.59808
+0      1         P    0     1     15           2.360E-05 3.00000   2.59808
+====== ========= ==== ===== ===== ============ ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.0       2     
-P    0.0       2     
+A    0.01639   2     
+P    4.745E-05 2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00318 0.00137 0.00160 0.00402 3      
-split_filter       0.00619 0.00528 0.00245 0.00992 2      
+read_source_models 0.00543 0.00284 0.00219 0.00745 3      
+preclassical       0.00743 0.00456 0.00349 0.01207 4      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=939 B fnames=327 B            6.72 KB 
-split_filter       srcs=4.25 KB srcfilter=506 B dummy=28 B 10.21 KB
-================== ======================================= ========
+================== ======================================================== ========
+task               sent                                                     received
+read_source_models converter=939 B fnames=327 B                             6.72 KB 
+preclassical       srcs=6.1 KB params=2.59 KB gsims=1.09 KB srcfilter=872 B 1.31 KB 
+================== ======================================================== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total split_filter       0.01237  1.57031   2     
-total read_source_models 0.00954  0.45703   3     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total preclassical       0.02972   0.0       4     
+total read_source_models 0.01629   0.0       3     
+managing sources         0.00418   0.0       1     
+store source_info        0.00239   0.0       1     
+aggregate curves         5.994E-04 0.0       4     
+======================== ========= ========= ======

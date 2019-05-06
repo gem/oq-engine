@@ -131,8 +131,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     rupdata = {grp_id: [] for grp_id in grp_ids}
-    # AccumDict of arrays with 3 elements weight, nsites, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    # AccumDict of arrays with 2 elements weight, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
@@ -154,8 +154,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         if len(cmaker.rupdata):
             for gid in src.src_group_ids:
                 rupdata[gid].append(cmaker.rupdata)
-        calc_times[src.id] += numpy.array(
-            [src.weight, len(s_sites), time.time() - t0])
+        calc_times[src.id] += numpy.array([src.weight, time.time() - t0])
         # storing the number of contributing ruptures too
         eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
                          for gid in src.src_group_ids}

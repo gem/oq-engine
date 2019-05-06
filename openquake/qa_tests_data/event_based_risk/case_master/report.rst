@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     4,227,350,644      
-date           2019-03-19T10:04:32
-engine_version 3.5.0-gitad6b69ea66
+checksum32     3,970,054,203      
+date           2019-05-03T06:43:47
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
 num_sites = 7, num_levels = 46, num_rlzs = 8
@@ -92,16 +92,16 @@ source_model_2.xml 2      Active Shallow Crust 482          482
 source_model_2.xml 3      Stable Shallow Crust 1            1           
 ================== ====== ==================== ============ ============
 
-============= =====
-#TRT models   4    
-#eff_ruptures 969  
-#tot_ruptures 969  
-#tot_weight   2,564
-============= =====
+============= ===
+#TRT models   4  
+#eff_ruptures 969
+#tot_ruptures 969
+#tot_weight   969
+============= ===
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 8 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 30 tasks = 131.25 KB
+7 asset(s) x 8 realization(s) x 5 loss type(s) losses x 8 bytes x 30 tasks = 65.62 KB
 
 Exposure model
 --------------
@@ -122,22 +122,22 @@ tax3     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          0.04396   0.0        7.00000   1         0.0    
-2      1         S    4     6     482          0.04334   0.0        7.00000   1         0.0    
-1      2         S    2     4     4            0.00199   0.0        7.00000   1         2.00000
-3      2         X    6     402   1            2.580E-04 0.0        7.00000   1         0.0    
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
+====== ========= ==== ===== ===== ============ ========= ========= =======
+0      1         S    0     2     482          0.04977   7.00000   0.0    
+2      1         S    4     6     482          0.03727   7.00000   0.0    
+1      2         S    2     4     4            0.00356   7.00000   2.00000
+3      2         X    6     402   1            4.191E-04 7.00000   0.0    
+====== ========= ==== ===== ===== ============ ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.08929   3     
-X    2.580E-04 1     
+S    0.09060   3     
+X    4.191E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -150,34 +150,31 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-read_source_models 0.00748   0.00339   0.00508   0.00987   2      
-only_filter        0.00485   0.00105   0.00411   0.00559   2      
-sample_ruptures    0.02346   0.02395   7.811E-04 0.04447   4      
-get_eid_rlz        5.020E-04 2.574E-05 4.818E-04 5.310E-04 3      
+read_source_models 0.01294   0.00417   0.00999   0.01589   2      
+sample_ruptures    0.02765   0.02485   0.00421   0.05608   4      
+get_eid_rlz        6.076E-04 1.247E-04 4.637E-04 6.857E-04 3      
 ================== ========= ========= ========= ========= =======
 
 Data transfer
 -------------
-================== =============================================== ========
-task               sent                                            received
-read_source_models converter=626 B fnames=240 B                    13.94 KB
-only_filter        srcs=12.85 KB srcfilter=506 B dummy=28 B        13.12 KB
-sample_ruptures    param=21.98 KB sources=14.63 KB srcfilter=880 B 2.26 KB 
-get_eid_rlz        self=5 KB                                       1.04 KB 
-================== =============================================== ========
+================== ============================================== ========
+task               sent                                           received
+read_source_models converter=626 B fnames=240 B                   13.94 KB
+sample_ruptures    param=21.8 KB sources=14.01 KB srcfilter=872 B 2.26 KB 
+get_eid_rlz        self=4.89 KB                                   1.04 KB 
+================== ============================================== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total sample_ruptures    0.09383   1.61328   4     
-iter_ruptures            0.08853   0.0       4     
-total read_source_models 0.01495   0.26953   2     
-total only_filter        0.00971   2.08594   2     
-store source model       0.00440   0.0       2     
-saving ruptures          0.00216   0.0       1     
-store source_info        0.00200   0.0       1     
-total get_eid_rlz        0.00151   0.0       3     
-reading exposure         7.997E-04 0.0       1     
+total sample_ruptures    0.11058   0.42969   4     
+iter_ruptures            0.08994   0.0       4     
+total read_source_models 0.02588   0.0       2     
+store source model       0.00778   0.0       2     
+saving ruptures          0.00480   0.0       1     
+store source_info        0.00238   0.0       1     
+total get_eid_rlz        0.00182   0.0       3     
+reading exposure         8.576E-04 0.0       1     
 ======================== ========= ========= ======
