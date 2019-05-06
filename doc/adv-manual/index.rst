@@ -21,3 +21,4 @@ Contents:
    parametric-gmpes
    parallelization
    equivalent_distance_approximation
+   multipoint
