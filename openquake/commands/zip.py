@@ -40,6 +40,7 @@ def zip(what, archive_zip='', risk_file=''):
         sys.exit('Cannot zip %s' % what)
 
 
-zip.arg('what', 'path to a job.ini, a ssmLT.xml file, or an exposure.xml')
+zip.arg('what', 'path to a job.ini, an ssmLT.xml, an exposure.xml, '
+        'or to a directory containing a file ssmLT.xml')
 zip.arg('archive_zip', 'path to a non-existing .zip file')
 zip.opt('risk_file', 'optional file for risk')

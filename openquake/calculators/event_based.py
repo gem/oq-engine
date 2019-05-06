@@ -148,7 +148,7 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             self.build_ruptures.__func__, monitor=self.monitor())
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
-        calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        calc_times = AccumDict(accum=numpy.zeros(2, F32))
         ses_idx = 0
         for sm_id, sm in enumerate(self.csm.source_models):
             logging.info('Sending %s', sm)

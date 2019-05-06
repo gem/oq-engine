@@ -649,8 +649,10 @@ class SourceModelLogicTree(object):
                 self.root_branchset = branchset
             else:
                 self.apply_branchset(branchset_node, branchset)
+
             for branch in branchset.branches:
                 new_open_ends.add(branch)
+
             self.num_paths *= len(branchset.branches)
         if number > 0:
             logging.warning('There is a branching level with multiple '
@@ -1081,13 +1083,21 @@ class SourceModelLogicTree(object):
                     filters['applyToSourceType'])
 
         if 'applyToSources' in filters:
+            if (len(self.source_ids) > 1 and 'applyToBranches' not in
+                    branchset_node.attrib):
+                raise LogicTreeError(
+                    branchset_node, self.filename, "applyToBranch must be "
+                    "specified together with applyToSources")
+            cnt = 0
             for source_id in filters['applyToSources'].split():
                 for source_ids in self.source_ids.values():
-                    if source_id not in source_ids:
-                        raise LogicTreeError(
-                            branchset_node, self.filename,
-                            "source with id '%s' is not defined in source "
-                            "models" % source_id)
+                    if source_id in source_ids:
+                        cnt += 1
+            if cnt == 0:
+                raise LogicTreeError(
+                    branchset_node, self.filename,
+                    "source with id '%s' is not defined in source "
+                    "models" % source_id)
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
@@ -1416,7 +1426,10 @@ class GsimLogicTree(object):
             gsim = valid.gsim(branch['gsim'])
             self.values[branch['trt']].append(gsim)
             if isinstance(gsim, GMPETable):
-                gsim.init(dic[gsim.kwargs['gmpe_table']])
+                if 'gmpe_table' in gsim.kwargs:
+                    gsim.init(dic[gsim.kwargs['gmpe_table']])
+                else:
+                    gsim.init()
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'id', 'gsim', 'weight', ...)
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}

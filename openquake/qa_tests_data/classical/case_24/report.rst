@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2019-03-19T10:05:25
-engine_version 3.5.0-gitad6b69ea66
+date           2019-05-03T06:44:10
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
 num_sites = 1, num_levels = 197, num_rlzs = 1
@@ -73,41 +73,44 @@ source_model.xml 0      Active Shallow Crust 260          260
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     4     260          0.0       0.55759    52        52        26    
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
+====== ========= ==== ===== ===== ============ ========= ========= ======
+0      1         A    0     4     260          0.02160   1.00000   26    
+====== ========= ==== ===== ===== ============ ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.0       1     
+A    0.02160   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01182 NaN    0.01182 0.01182 1      
-split_filter       0.01770 NaN    0.01770 0.01770 1      
+read_source_models 0.01976 NaN    0.01976 0.01976 1      
+preclassical       0.02485 NaN    0.02485 0.02485 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=313 B fnames=107 B            2.28 KB 
-split_filter       srcs=1.91 KB srcfilter=253 B dummy=14 B 12.16 KB
-================== ======================================= ========
+================== ======================================================= ========
+task               sent                                                    received
+read_source_models converter=313 B fnames=107 B                            2.28 KB 
+preclassical       params=2.55 KB srcs=1.91 KB srcfilter=218 B gsims=161 B 336 B   
+================== ======================================================= ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total split_filter       0.01770  1.48047   1     
-total read_source_models 0.01182  0.27344   1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total preclassical       0.02485   0.0       1     
+total read_source_models 0.01976   0.0       1     
+managing sources         0.00369   0.0       1     
+store source_info        0.00309   0.0       1     
+aggregate curves         1.462E-04 0.0       1     
+======================== ========= ========= ======
