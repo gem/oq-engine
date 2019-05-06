@@ -74,8 +74,6 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
-    prefilter_sources = valid.Param(valid.Choice('rtree', 'numpy', 'no'),
-                                    'rtree')
     filter_distance = valid.Param(valid.Choice('rjb', 'rrup'), None)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
@@ -94,7 +92,7 @@ class OqParam(valid.ParamSet):
     inputs = valid.Param(dict, {})
     # insured_losses = valid.Param(valid.boolean, False)
     multi_peril = valid.Param(valid.namelist, [])
-    humidity_amplification_factor = valid.Param(valid.positivefloat, 1.0)
+    ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -206,6 +204,9 @@ class OqParam(valid.ParamSet):
                             'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
             self.iml_disagg.pop('default')
+            # normalize things like SA(0.10) -> SA(0.1)
+            self.iml_disagg = {str(from_string(imt)): val
+                               for imt, val in self.iml_disagg.items()}
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(

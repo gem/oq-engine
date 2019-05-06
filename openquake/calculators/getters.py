@@ -554,14 +554,15 @@ class RuptureGetter(object):
         """
         # NB: can be called only after .set_weights() has been called
         idx = {ri: i for i, ri in enumerate(self.rup_indices)}
+        fe = self.first_event
         for rup_indices in general.block_splitter(
                 self.rup_indices, maxweight, lambda ri: self.weights[idx[ri]]):
             if rup_indices:
                 # some indices may have weight 0 and are discarded
                 rgetter = self.__class__(
                     self.filename, list(rup_indices), self.grp_id,
-                    self.trt, self.samples, self.rlzs_by_gsim,
-                    self.first_event)
+                    self.trt, self.samples, self.rlzs_by_gsim, fe)
+                fe += rgetter.num_events
                 rgetter.weight = sum([self.weights[idx[ri]]
                                       for ri in rup_indices])
                 yield rgetter

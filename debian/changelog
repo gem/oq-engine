@@ -3,6 +3,34 @@
     is included in just one of the several source models.
 
   [Michele Simionato]
+  * Removed the experimental parameter `prefilter_sources`
+
+  [Daniele Viganò]
+  * Multiple DbServer ZMQ connections are restored to avoid errors under heavy
+  load and/or on slower machines
+
+  [Michele Simionato]
+  * Removed the ugly registration of custom signals at import time: now they
+    are registered only if `engine.run_calc` is called
+  * Removed the dependency from rtree
+  * Removed all calls to ProcessPool.shutdown to speed up the tests and to
+    avoid non-deterministic errors in atexit._run_exitfuncs
+
+  [Marco Pagani]
+  * Added tabular GMPEs as provided by Michal Kolaj, Natural Resources Canada
+
+  [Michele Simionato]
+  * Extended the ebrisk calculator to support coefficients of variations
+
+  [Graeme Weatherill]
+  * Adds Kotha et al (2019) shallow crustal GMPE for SERA
+  * Adds 'ExperimentalWarning' to possible GMPE warnings
+  * Adds kwargs to check_gsim function
+
+  [Michele Simionato]
+  * Fixed problems like SA(0.7) != SA(0.70) in iml_disagg
+  * Exposed the outputs of the classical calculation in event based
+    calculations with `compare_with_classical=true`
   * Made it possible to serialize together all kind of risk functions,
     including consequence functions that before were not HDF5-serializable
   * Fixed a MemoryError when counting the number of bytes stored in large
@@ -79,7 +107,7 @@ python3-oq-engine (3.4.0-2~xenial01) xenial; urgency=low
   * Removed the now redundant command `oq extract hazard/rlzs`
 
   [Daniele Viganò]
-  * Fixed 'oq abort' and always mark killed jobs as 'aborted'
+  * Fixed 'oq abort' to always mark killed jobs as 'aborted'
 
   [Michele Simionato]
   * Made it possible to use in the Starmap tasks without a monitor argument
