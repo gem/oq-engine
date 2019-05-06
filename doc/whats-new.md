@@ -150,6 +150,11 @@ originally coming from a CSV file, a regression introduced in engine
 gsim_logic_tree.xml files: now the error message contains the right
 line number.
 
+6. There was a bug when using `applyToSources` with `applyToBranches`
+in source model logic tree with multiple source models. It has been
+fixed and now it is actually required to specify `applyToBranches` in
+such situations.
+
 oq commands
 -----------
 
