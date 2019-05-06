@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Add support to source-specific uncertainties when the source
+    is included in just one of the several source models.
+
   [Michele Simionato]
   * Removed the experimental parameter `prefilter_sources`
 
