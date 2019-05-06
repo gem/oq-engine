@@ -9,9 +9,9 @@ Hazard calculators
 
 1. There was a big improvement in the case of extra-large source
 models. Now we use approximately 4 times less memory then before: for
-instance, we went down from 100 GB of required RAM to run Australia, to
+instance, we went down from 100 GB of RAM required to run Australia, to
 only 25 GB. This makes it possible to run large calculations on
-memory-constrained machines. The change also reduced substantially the
+memory-constrained machines. The change also reduces substantially the
 data transfer in sources. It was made possible by an advance in the
 parallelization strategy introduced in engine 3.4 (subtasks) that also
 reduced substantially the problem of slow tasks.
@@ -22,9 +22,9 @@ calculation time from 42 minutes to 42 seconds). Usually however the
 computation of the curves and statistics does not dominate the total
 time, so you may not see any significant difference.
 
-3. We optimized the checks performed on the source model logic tree
-(things like making sure that `applyToSources` refers to sources that
-actually exists). Again, even if the gain was spectacular (from 15
+3. We optimized the checks performed on the source model logic tree, 
+things like making sure that `applyToSources` refers to sources that
+actually exists. Again, even if the gain was spectacular (from 15
 minutes to 15 seconds in the case of Australia), you will likely see
 no difference because those checks are not dominating the total
 computation time, unless you are using the `preclassical` calculator.
@@ -48,8 +48,9 @@ Risk calculators
 -----------------
 
 1. A major refactoring of all risk calculators was performed, with a
-significant benefit both in terms of reduced complexity and of improved
-speed (we saw a speedup of 2x in some event based risk calculations).
+significant benefit both in terms of reduced complexity and of
+improved speed. In particular we saw a speedup of 2x in some event
+based risk calculations.
 
 2. In order to make the refactoring possible we had to change the
 `classical_risk` calculator, that was using different loss ratios for
@@ -59,7 +60,7 @@ in the generated loss curves.
 
 3. We changed the order in which the events are stored, with an effect on
 event based risk calculations with coefficients of variations. The change
-is akin to a change of seed, i.e. not relevant. More, now
+is akin to a change of seed, i.e. not relevant. Moreover, now
 the epsilons are stored and not transferred via rabbitmq, thus making
 the calculator simpler and more efficient.
 
@@ -72,7 +73,7 @@ based risk calculator. Also, some export bugs in `ebrisk` were fixed.
 to make it possible (in the next release) an unification of the `scenario_risk`
 and `scenario_damage` calculators.
 
-6. We changed the scenario_damage` calculator to accept silently single event
+6. We changed the `scenario_damage` calculator to accept silently single event
 calculations (before it was raising a warning): in this case we do not
 compute and do not export the standard deviations (before they were
 exported as NaNs).
@@ -117,7 +118,7 @@ submitted) and the other N-1 will wait. As soon as a calculation ends, the next
 one in the queue will start, by preserving the submission order. The queue
 is very simple and has no concept of priority, but it is extremely useful in
 case of large calculations. It solves the problem of a large calculation
-sending the cluster out of memory and killing the calculations of the other
+sending the cluster out of memory and killing the calculations of other
 users.
 
 As a side effect of the work on the queue system, various things have been
@@ -138,7 +139,7 @@ feature) the field names were not ordered and `vs30measured` was read
 as a float, not as a boolean. This caused an error which has been
 fixed.
 
-3. The was a bug while exporting the hazard curves in the case of
+3. There was a bug while exporting the hazard curves in the case of
 GMPETables (i.e. for the Canada model). It has been fixed.
 
 4. There was also a bug in the GMF export when the GMFs were
