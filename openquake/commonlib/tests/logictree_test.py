@@ -2347,3 +2347,15 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                 elif src.source_id == 'a1':
                     msg = "Wrong mmax value assigned to source 'a1'"
                     self.assertIn(src.mfd.max_mag, mags, msg)
+
+    def test_smlt_bad(self):
+        # apply to a source that does not exist in the given branch
+        path = os.path.join(DATADIR, 'source_specific_uncertainty')
+        job_ini = os.path.join(path, 'job.ini')
+        oqparam = readinput.get_oqparam(job_ini)
+        oqparam.inputs['source_model_logic_tree'] = os.path.join(
+            oqparam.base_path, 'smlt_bad.xml')
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_composite_source_model(oqparam)
+        self.assertIn('The source c1 is not in the source model, please fix '
+                      'applyToSources', str(ctx.exception))
