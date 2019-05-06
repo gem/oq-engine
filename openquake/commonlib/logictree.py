@@ -1083,6 +1083,11 @@ class SourceModelLogicTree(object):
                     filters['applyToSourceType'])
 
         if 'applyToSources' in filters:
+            if (len(self.source_ids) > 1 and 'applyToBranches' not in
+                    branchset_node.attrib):
+                raise LogicTreeError(
+                    branchset_node, self.filename, "applyToBranch must be "
+                    "specified together with applyToSources")
             cnt = 0
             for source_id in filters['applyToSources'].split():
                 for source_ids in self.source_ids.values():
