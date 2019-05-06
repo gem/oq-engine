@@ -495,4 +495,5 @@ hazard_uhs-std.csv
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "quantile_curve-0.5-PGA.csv",
                                "quantile_curve-0.16-PGA.csv",
-                               "quantile_curve-0.84-PGA.csv"], case_38.__file)
+                               "quantile_curve-0.84-PGA.csv"],
+                              case_38.__file__)
