@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="SINTERLT"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="SI"
+        >
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Subduction Interface"
+            branchSetID="SERASInter"
+            uncertaintyType="gmpeModel"
+            >
+                <logicTreeBranch
+                branchID="BCHSIFastSigmaLow"
+                >
+                    <uncertaintyModel>
+                        [BCHydroSERASInter]
+theta6_adjustment = -0.0015
+sigma_mu_epsilon = -1.732051
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.02778889
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BCHSIFast"
+                >
+                    <uncertaintyModel>
+                        [BCHydroSERASInter]
+theta6_adjustment = -0.0015
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.11112222
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BCHSIFastSigmaHigh"
+                >
+                    <uncertaintyModel>
+                        [BCHydroSERASInter]
+theta6_adjustment = -0.0015
+sigma_mu_epsilon = 1.732051
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.02778889
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BCHSISigmaLow"
+                >
+                    <uncertaintyModel>
+                        [BCHydroSERASInter]
+sigma_mu_epsilon = -1.732051
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.11112222
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BCHSI"
+                >
+                    <uncertaintyModel>
+                        BCHydroSERASInter
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.44435556
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BCHSISigmaHigh"
+                >
+                    <uncertaintyModel>
+                        [BCHydroSERASInter]
+sigma_mu_epsilon = 1.732051
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.11112222
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BCHSISlowSigmaLow"
+                >
+                    <uncertaintyModel>
+                        [BCHydroSERASInter]
+theta6_adjustment = 0.0015
+sigma_mu_epsilon = -1.732051
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.02778889
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BCHSISlow"
+                >
+                    <uncertaintyModel>
+                        [BCHydroSERASInter]
+theta6_adjustment = 0.0015
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.11112222
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BCHSISlowSigmaHigh"
+                >
+                    <uncertaintyModel>
+                        [BCHydroSERASInter]
+theta6_adjustment = 0.0015
+sigma_mu_epsilon = 1.732051
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.02778889
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>
