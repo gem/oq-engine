@@ -8,6 +8,13 @@ services:
       - RABBITMQ_DEFAULT_PASS=openquake
     networks:
       - cluster
+    # Make sure a proper ulimit is set:
+    # erl_child_setup will take forever otherwise
+    # see: https://groups.google.com/forum/#!topic/rabbitmq-users/hO06SB-QBqc
+    ulimits:
+      nofile:
+        soft: "65536"
+        hard: "65536"
   # Engine is not actually executed and is
   # exposed only to make sure it is built via
   # docker-compose build
