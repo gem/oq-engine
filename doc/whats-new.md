@@ -93,13 +93,15 @@ to be extensible to other kind of perils.
 hazardlib
 ----------
 
-We had three external contributions to hazarlib.
+We had four external contributions to hazarlib.
 
-1. Michal Kolaj provided tabular GMPEs for Canada
+1. Michal Kolaj provided tabular GMPEs for Canada.
 2. Graeme Weatherill provided Kotha et al. (2019) shallow crustal GMPE
-   for use in SERA project
+   for use in SERA project.
 3. Guillaume Daniel updated the Berge-Thierry (2003) GSIMs and added several
    alternatives for use with Mw.
+4. Chris van Houtte from New Zealand added a new class for Christchurch
+   GSIMs of kind Bradley (2013b).
 
 The job queue
 ---------------
