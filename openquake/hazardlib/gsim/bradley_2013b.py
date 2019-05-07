@@ -24,8 +24,11 @@ Module exports :class:`Bradley2013ChchCBD`,
 :class:`Bradley2013ChchWestAdditionalSigma`,
 :class:`Bradley2013ChchEastAdditionalSigma`,
 :class:`Bradley2013ChchNorthAdditionalSigma`.
+:class:`Bradley2013ChchMaps`.
+:class:`Bradley2013ChchMapsAdditionalSigma`.
 """
 import numpy as np
+import shapely.geometry
 from openquake.hazardlib.gsim.bradley_2013 import (
     Bradley2013LHC, convert_to_LHC)
 from openquake.hazardlib import const
@@ -474,5 +477,209 @@ class Bradley2013AdditionalSigma(Bradley2013LHC):
         Additional "epistemic" uncertainty version of the model. The value
         is not published, only available from G. McVerry
         (pers. communication 9/8/18).
+        """
+        return 0.35
+
+
+class Bradley2013bChchMaps(Bradley2013bChchCBD):
+    """
+    Implements GMPE developed by Brendon Bradley for Christchurch subregions,
+    and published as ""Systematic ground motion observations in the Canterbury
+    earthquakes and region-specific nonergodic empirical ground motion
+    modelling"" (2013), University of Canterbury Research Report 2013-03,
+    Department of Civil Engineering, University of Canterbury, Christchurch,
+    New Zealand.
+
+    The original code by the author was not made available at the time of
+    development of this code. For this reason, this implementation is untested.
+
+    It appears from the model documentation that the CBD dL2L and dS2S are
+    relative to a baseline Vs30 value of 250 m/s and a baseline Z1 value of
+    330 m, although this is unconfirmed.
+
+    Only the CBD subregion dS2S term is implemented here, because of
+    difficulties defining the boundaries of other subregions. Full details
+    behind the choices here are detailed in:
+    Van Houtte and Abbott (2019), "Implementation of the GNS Canterbury
+    Seismic Hazard Model in the OpenQuake Engine", Lower Hutt (NZ): GNS
+    Science. 38 p. (GNS Science report; 2019/11). doi:10.21420/1AEM-PZ85.
+    """
+    #: Required site parameters are Vs30 (eq. 13b), Vs30 measured flag (eq. 20)
+    #: and Z1.0 (eq. 13b), longitude and latitude.
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0', 'lon',
+                                     'lat'))
+
+    #: This implementation is non-verified because the author of the model does
+    #: not have code that can be made available.
+    non_verified = True
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
+        C = self.COEFFS[imt]
+        if isinstance(imt, PGA):
+            imt_per = 0.0
+        else:
+            imt_per = imt.period
+        # Check if any part of source is located within CSHM region
+        in_cshm = self._check_in_cshm_polygon(rup)
+        # Check if site is located in the CBD polygon
+        in_cbd = self._check_in_cbd_polygon(sites.lon, sites.lat)
+        # Fix CBD site terms before dS2S modification.
+        sites.vs30[in_cbd == True] = 250
+        sites.z1pt0[in_cbd == True] = 330
+        # intensity on a reference soil is used for both mean
+        # and stddev calculations.
+        ln_y_ref = self._get_ln_y_ref(rup, dists, C)
+        # exp1 and exp2 are parts of eq. 7
+        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
+        exp2 = np.exp(C['phi3'] * (1130 - 360))
+        # v1 is the period dependent site term. The Vs30 above which, the
+        # amplification is constant
+        v1 = self._get_v1(imt)
+        # Get log-mean from regular unadjusted model
+        b13_mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
+        # Adjust mean and standard deviation
+        mean = self._adjust_mean_model(in_cshm, in_cbd, imt_per, b13_mean)
+        mean += convert_to_LHC(imt)
+        stddevs = self._get_adjusted_stddevs(sites, rup, C, stddev_types,
+                                             ln_y_ref, exp1, exp2, in_cshm,
+                                             in_cbd, imt_per)
+
+        return mean, stddevs
+
+    def _get_adjusted_stddevs(self, sites, rup, C, stddev_types, ln_y_ref,
+                              exp1, exp2, in_cshm, in_cbd, imt_per):
+        # aftershock flag is zero, we consider only main shock.
+        AS = 0
+        Fmeasured = sites.vs30measured
+        Finferred = 1 - sites.vs30measured
+
+        # eq. 19 to calculate inter-event standard error
+        mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
+        tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
+
+        # b and c coeffs from eq. 10
+        b = C['phi2'] * (exp1 - exp2)
+        c = C['phi4']
+
+        y_ref = np.exp(ln_y_ref)
+        # eq. 20
+        NL = b * y_ref / (y_ref + c)
+        sigma = (
+            # first line of eq. 20
+            (C['sig1']
+             + 0.5 * (C['sig2'] - C['sig1']) * mag_test
+             + C['sig4'] * AS)
+            # second line
+            * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
+                      + (1 + NL) ** 2)
+        )
+        # Get sigma reduction factors if site is in CBD polygon.
+        srf_sigma = np.array(np.ones(np.shape(in_cbd)))
+        srf_phi = np.array(np.ones(np.shape(in_cbd)))
+        srf_tau = np.array(np.ones(np.shape(in_cbd)))
+        if in_cshm is True:
+            srf_sigma[in_cbd == True] = self._get_SRF_sigma(imt_per)
+            srf_phi[in_cbd == True] = self._get_SRF_phi(imt_per)
+            # The tau reduction term is not used in this implementation
+            # srf_tau[in_cbd == True] = self._get_SRF_tau(imt_per)
+
+        # Add 'additional sigma' specified in the Canterbury Seismic
+        # Hazard Model to total sigma
+        additional_sigma = self._compute_additional_sigma()
+
+        ret = []
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            if stddev_type == const.StdDev.TOTAL:
+                # eq. 21
+                scaled_sigma = np.sqrt(((1 + NL) ** 2) *
+                                       (tau ** 2) + (sigma ** 2)) * srf_sigma
+                ret += [np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)]
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                scaled_phi = sigma * srf_phi
+                ret.append(np.sqrt(
+                    scaled_phi ** 2 + additional_sigma ** 2 / 2))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                # this is implied in eq. 21
+                scaled_tau = (np.abs((1 + NL) * tau)) * srf_tau
+                ret.append(np.sqrt(
+                    scaled_tau ** 2 + additional_sigma ** 2 / 2))
+
+        return ret
+
+    def _adjust_mean_model(self, in_cshm, in_cbd, imt_per, b13_mean):
+
+        dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
+        # If the site is in the CBD polygon, get dL2L and dS2S terms
+        if in_cshm is True:
+            # Only apply the dL2L term only to sites located in the CBD.
+            dL2L[in_cbd == True] = self._get_dL2L(imt_per)
+            dS2S[in_cbd == True] = self._get_dS2S(imt_per)
+
+        mean = b13_mean + dL2L + dS2S
+
+        return mean
+
+    def _check_in_cbd_polygon(self, lons, lats):
+        """
+        Checks if site is located within the CBD polygon. The boundaries of
+        the polygon implemented here are from the 'Central City' Zoning Map
+        in the Christchurch District Plan. See Figure 4.4 of Van Houtte and
+        Abbott (2019).
+        """
+        polygon = shapely.geometry.Polygon(
+            [(172.6259, -43.5209), (172.6505, -43.5209),
+             (172.6505, -43.5399), (172.6124, -43.5400),
+             (172.6123, -43.5289), (172.6124, -43.5245),
+             (172.6220, -43.5233)]
+        )
+        points = [shapely.geometry.Point(lons[ind], lats[ind])
+                  for ind in np.arange(len(lons))]
+        in_cbd = np.asarray([polygon.contains(point)
+                             for point in points])
+
+        return in_cbd
+
+    def _check_in_cshm_polygon(self, rup):
+        """
+        Checks if any part of the rupture surface mesh is located within the
+        intended boundaries of the Canterbury Seismic Hazard Model in
+        Gerstenberger et al. (2014), Seismic hazard modelling for the recovery
+        of Christchurch, Earthquake Spectra, 30(1), 17-29.
+        """
+        lats = np.ravel(rup.surface.mesh.array[1])
+        lons = np.ravel(rup.surface.mesh.array[0])
+        # These coordinates are provided by M Gerstenberger (personal
+        # communication, 10 August 2018)
+        polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
+                                            (173.2, -43.9), (171.6, -43.9)])
+        points_in_polygon = [
+            shapely.geometry.Point(lons[i], lats[i]).within(polygon)
+            for i in np.arange(len(lons))
+        ]
+        in_cshm = any(points_in_polygon)
+
+        return in_cshm
+
+
+class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):
+    """
+    Extend :class:`Bradley2013ChchNorth` to implement the 'additional
+    epistemic uncertainty' version of the model in:
+    Gerstenberger, M., McVerry, G., Rhoades, D., Stirling, M. 2014.
+    "Seismic hazard modelling for the recovery of Christchurch",
+    Earthquake Spectra, 30(1), 17-29.
+    """
+
+    def _compute_additional_sigma(self):
+        """
+        Additional "epistemic" uncertainty version of the model.
         """
         return 0.35
