@@ -1,9 +1,25 @@
   [Graeme Weatherill]
-  * Adds adaptation of Abrahamson et al. (2016) 'BC Hydro' GMPEs calibrated to
-    Mediterranean data and with epistemic adjustment factors
+  * Adds adaptation of Abrahamson et al. (2016) 'BC Hydro' GMPEs calibrated to Mediterranean data and with epistemic adjustment factors
   
+  [Chris Van Houtte]
+  * Added new class to bradley_2013b.py for hazard maps
+  * Modified test case_37 to test multiple sites
+
+  [Marco Pagani]
+  * Fixed a bug in the logic tree parser and added a check to forbid logic
+    trees with applyToSources without applyToBranches, unless there is a
+    single source model branch
+
   [Michele Simionato]
-  * Remove the ugly registration of custom signals at import time: now they
+  * Removed the experimental parameter `prefilter_sources`
+
+  [Daniele Viganò]
+  * Multiple DbServer ZMQ connections are restored to avoid errors under heavy
+    load and/or on slower machines
+
+>>>>>>> master
+  [Michele Simionato]
+  * Removed the ugly registration of custom signals at import time: now they
     are registered only if `engine.run_calc` is called
   * Removed the dependency from rtree
   * Removed all calls to ProcessPool.shutdown to speed up the tests and to
@@ -100,7 +116,7 @@ python3-oq-engine (3.4.0-2~xenial01) xenial; urgency=low
   * Removed the now redundant command `oq extract hazard/rlzs`
 
   [Daniele Viganò]
-  * Fixed 'oq abort' and always mark killed jobs as 'aborted'
+  * Fixed 'oq abort' to always mark killed jobs as 'aborted'
 
   [Michele Simionato]
   * Made it possible to use in the Starmap tasks without a monitor argument
