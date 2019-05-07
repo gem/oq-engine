@@ -30,7 +30,7 @@ from openquake.qa_tests_data.classical import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_34, case_35, case_36, case_37)
+    case_34, case_35, case_36, case_37, case_38)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -252,14 +252,14 @@ hazard_uhs-std.csv
 
         # here is the size of assoc_by_grp for a complex logic tree
         # grp_id gsim_idx rlzis
-        # 0	0	 {0, 1}
-        # 0	1	 {2, 3}
-        # 1	0	 {0, 2}
-        # 1	1	 {1, 3}
-        # 2	0	 {4}
-        # 2	1	 {5}
-        # 3	0	 {6}
-        # 3	1	 {7}
+        # 00 {0, 1}
+        # 01 {2, 3}
+        # 10 {0, 2}
+        # 11 {1, 3}
+        # 20 {4}
+        # 21 {5}
+        # 30 {6}
+        # 31 {7}
         # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
 
         # full source model logic tree
@@ -489,3 +489,11 @@ hazard_uhs-std.csv
     def test_case_37(self):
         # chch gsims
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
+
+    def test_case_38(self):
+        # BC Hydro GMPEs with epistemic adjustments
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "quantile_curve-0.5-PGA.csv",
+                               "quantile_curve-0.16-PGA.csv",
+                               "quantile_curve-0.84-PGA.csv"],
+                              case_38.__file__)

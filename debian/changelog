@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds adaptation of Abrahamson et al. (2016) 'BC Hydro' GMPEs calibrated to Mediterranean data and with epistemic adjustment factors
+  
   [Chris Van Houtte]
   * Added new class to bradley_2013b.py for hazard maps
   * Modified test case_37 to test multiple sites
