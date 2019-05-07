@@ -1,4 +1,4 @@
-# Installing the OpenQuake Engine on a generic Linux distribution
+# Installing the OpenQuake Engine on a generic Linux distribution without sudo
 
 The OpenQuake Engine is also available in the form of **self-installable binary distribution**.
 This way of installing OpenQuake is strongly suggested for old versions of Linux which
