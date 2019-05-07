@@ -265,7 +265,7 @@ def export_hcurves_by_imt_csv(
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
-            lst.append(('poe-%s' % iml, F32))
+            lst.append(('poe-%.7f' % iml, F32))
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
