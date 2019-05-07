@@ -96,8 +96,10 @@ hazardlib
 We had four external contributions to hazarlib.
 
 1. Michal Kolaj provided tabular GMPEs for Canada.
-2. Graeme Weatherill provided Kotha et al. (2019) shallow crustal GMPE
-   for use in SERA project.
+2. Graeme Weatherill provided the Kotha et al. (2019) shallow crustal GMPE
+   and added a few adjustments to the BC Hydro GMPE to allow the user to
+   calibrate the anelastic attenuation coefficient (theta 6) and the
+   statistical uncertainty (sigma mu), for use in SERA project.
 3. Guillaume Daniel updated the Berge-Thierry (2003) GSIMs and added several
    alternatives for use with Mw.
 4. Chris van Houtte from New Zealand added a new class for Christchurch
