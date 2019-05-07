@@ -355,8 +355,8 @@ Deprecations
 
 1. The hazard XML exporters have been officially deprecated: unofficially,
 they have been deprecated for years, since the time we introduced the CSV
-exporters. You use the CSV for regular usage; for advanced postprocessing
-- typically involving the hazard curves for all realizations - you should use
+exporters. You use the CSV for regular usage; for advanced postprocessing -
+typically involving the hazard curves for all realizations - you should use
 the Extractor API instead.
 
 2. The scenario GMF XML exporter has been deprecated and will be removed in
