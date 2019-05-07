@@ -82,12 +82,13 @@ class BergeThierryEtAl2003Ms(GMPE):
                    for stddev_type in stddev_types)
 
         sigma = np.zeros(num_sites) + C['sigma'] * np.log(10)
-        sigma = np.sqrt(sigma ** 2 + (C['a'] ** 2) * (mag_conversion_sigma ** 2))
+        sigma = np.sqrt(sigma ** 2 + (C['a'] ** 2) * (
+            mag_conversion_sigma ** 2))
         stddevs = [sigma for _ in stddev_types]
 
         return stddevs
 
-    def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types, 
+    def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types,
         mag_conversion_sigma=0.0):
         """
         See :meth:`superclass method
@@ -112,8 +113,8 @@ class BergeThierryEtAl2003Ms(GMPE):
         # convert from log10 to ln, and from cm/s2 to g
         mean = mean * np.log(10) - 2 * np.log(10) - np.log(g)
 
-        stddevs = self._get_stddevs(C, stddev_types, rhypo.shape[0], 
-            mag_conversion_sigma=mag_conversion_sigma)
+        stddevs = self._get_stddevs(C, stddev_types, rhypo.shape[0],
+                                    mag_conversion_sigma=mag_conversion_sigma)
 
         return mean, stddevs
 
@@ -275,86 +276,93 @@ class BergeThierryEtAl2003SIGMA(BergeThierryEtAl2003Ms):
     published as "New Empirical Response Spectral Attenuation Laws For Moderate
     European Earthquakes" (2003, Journal of Earthquake Engineering, 193-222)
     The class implements also adjustment of the sigma value as required by
-    the SIGMA project to make standard deviations compatible with Mw (the GMPE was
-    originally developed for Ms).
-    Additional reference: 
-    - Carbon, D. et al., 2012, Final preliminary Probabilistic Hazard map for
-	  France's southeast 1/4, Deliverable D4-18, p.31, SIGMA project.
+    the SIGMA project to make standard deviations compatible with Mw
+    (the GMPE was originally developed for Ms).
+    Additional reference:
+    Carbon, D. et al., 2012, Final preliminary Probabilistic Hazard map for
+    France's southeast 1/4, Deliverable D4-18, p.31, SIGMA project.
     """
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        return super()._get_mean_and_stddevs(sites, rup, dists, imt, stddev_types, 
-            mag_conversion_sigma=0.2)
+        return super()._get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types, mag_conversion_sigma=0.2)
 
 
 class BergeThierryEtAl2003MwW(BergeThierryEtAl2003Ms):
     """
     Mw version of the Berge-Thierry et al. (2003) GMPE. For this conversion
     we use the Weatherill et al. (2016) conversion equation between Ms and Mw
-	Bilinear magnitude conversion relation.
-    """   
+    Bilinear magnitude conversion relation.
+    """
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         newrup = copy.copy(rup)
         if rup.mag <= 6.064:
             newrup.mag = (rup.mag - 2.369) / 0.616
-            return super()._get_mean_and_stddevs(sites, newrup, dists, imt, 
-                stddev_types, mag_conversion_sigma=0.147/0.616)
+            return super()._get_mean_and_stddevs(
+                sites, newrup, dists, imt, stddev_types,
+                mag_conversion_sigma=0.147/0.616)
         else:
             newrup.mag = (rup.mag - 0.100) / 0.994
-            return super()._get_mean_and_stddevs(sites, newrup, dists, imt, 
-                stddev_types, mag_conversion_sigma=0.174/0.994)
+            return super()._get_mean_and_stddevs(
+                sites, newrup, dists, imt, stddev_types,
+                mag_conversion_sigma=0.174/0.994)
 
 
 class BergeThierryEtAl2003MwL_MED(BergeThierryEtAl2003Ms):
     """
     Mw version of the Berge-Thierry et al. (2003) GMPE. For this conversion
-    we use the Lolli et al. (2014) conversion equation between Ms and Mw for 
+    we use the Lolli et al. (2014) conversion equation between Ms and Mw for
     the Euro-Mediterranean region.
-	Exponential model: Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
-	Parameters: (a,b,c) = (2.133,0.063,-6.205)
+    Exponential model: Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
+    Parameters: (a,b,c) = (2.133,0.063,-6.205)
     """
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         newrup = copy.copy(rup)
         newrup.mag = (np.log(rup.mag+6.205)-2.133)/0.063
         slope= 0.063*np.exp(2.133+0.063*newrup.mag)
-        return super()._get_mean_and_stddevs(sites, newrup, dists, imt, 
-                stddev_types, mag_conversion_sigma=0.1703/slope)
+        return super()._get_mean_and_stddevs(
+            sites, newrup, dists, imt, stddev_types,
+            mag_conversion_sigma=0.1703/slope)
 
 
 class BergeThierryEtAl2003MwL_ITA(BergeThierryEtAl2003Ms):
     """
     Mw version of the Berge-Thierry et al. (2003) GMPE. For this conversion
-    we use the Lolli et al. (2014) conversion equation between Ms and Mw for 
+    we use the Lolli et al. (2014) conversion equation between Ms and Mw for
     the ITA region.
-	Exponential model: Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
-	Parameters: (a,b,c) = (1.421,0.108,-1.863)
+    Exponential model: Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
+    Parameters: (a,b,c) = (1.421,0.108,-1.863)
     """
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         newrup = copy.copy(rup)
         newrup.mag = (np.log(rup.mag+1.863)-1.421)/0.108
-        slope= 0.108*np.exp(1.421+0.108*newrup.mag)
-        return super()._get_mean_and_stddevs(sites, newrup, dists, imt, 
-                stddev_types, mag_conversion_sigma=0.1685/slope)
+        slope = 0.108*np.exp(1.421+0.108*newrup.mag)
+        return super()._get_mean_and_stddevs(
+            sites, newrup, dists, imt, stddev_types,
+            mag_conversion_sigma=0.1685/slope)
 
 
 class BergeThierryEtAl2003MwL_GBL(BergeThierryEtAl2003Ms):
     """
     Mw version of the Berge-Thierry et al. (2003) GMPE. For this conversion
-    we use the Lolli et al. (2014) conversion equation between Ms and Mw for 
+    we use the Lolli et al. (2014) conversion equation between Ms and Mw for
     the GBL region (i.e. Global Scale).
-	Exponential model: Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
-	Parameters: for Ms<=5.5: (a,b,c) = (2.133,0.063,-6.205)
-	            for Ms>5.5: (a,b,c) = (-0.109,0.229,2.586)
-
+    Exponential model:
+    Mw = exp(a+b*Ms)+c  with slope=b*exp(a+b*Ms)
+    Parameters:
+    for Ms<=5.5: (a,b,c) = (2.133,0.063,-6.205)
+    for Ms>5.5: (a,b,c) = (-0.109,0.229,2.586)
     """
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         newrup = copy.copy(rup)
         if rup.mag < 5.75:
-            newrup.mag = (np.log(rup.mag + 6.205) - 2.133)/ 0.063
-            slope= 0.063*np.exp(2.133+0.063*newrup.mag)
-            return super()._get_mean_and_stddevs(sites, newrup, dists, imt, 
-                stddev_types, mag_conversion_sigma=0.1703/slope)
+            newrup.mag = (np.log(rup.mag + 6.205) - 2.133) / 0.063
+            slope = 0.063 * np.exp(2.133 + 0.063 * newrup.mag)
+            return super()._get_mean_and_stddevs(
+                sites, newrup, dists, imt, stddev_types,
+                mag_conversion_sigma=0.1703/slope)
         else:
             newrup.mag = (np.log(rup.mag - 2.586) + 0.109) / 0.229
             slope= 0.229*np.exp(-0.109+0.229*newrup.mag)
-            return super()._get_mean_and_stddevs(sites, newrup, dists, imt, 
-                stddev_types, mag_conversion_sigma=0.1462/slope)
+            return super()._get_mean_and_stddevs(
+                sites, newrup, dists, imt, stddev_types,
+                mag_conversion_sigma=0.1462/slope)
