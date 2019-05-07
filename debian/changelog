@@ -17,10 +17,6 @@
   * Multiple DbServer ZMQ connections are restored to avoid errors under heavy
     load and/or on slower machines
 
-<<<<<<< HEAD
->>>>>>> master
-=======
->>>>>>> 87b5682a07cd902a543271ff1d72ce997b7d9fc7
   [Michele Simionato]
   * Removed the ugly registration of custom signals at import time: now they
     are registered only if `engine.run_calc` is called
