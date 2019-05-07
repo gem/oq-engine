@@ -155,6 +155,14 @@ base
     :undoc-members:
     :show-inheritance:
 
+bchydro_epistemic
+------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.bchydro
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 berge_thierry_2003
 --------------------------------------------------
 
