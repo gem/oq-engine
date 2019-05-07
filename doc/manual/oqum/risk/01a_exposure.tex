@@ -353,45 +353,10 @@ per unit area.
 \paragraph{Example 5}
 
 In this example, additional information will be included, which is required
-for other risk analysis besides loss estimation, such as the calculation of
-insured losses or benefit/cost analysis. For the calculation of insured
-losses, it is necessary to establish how the insurance \glspl{limit} and
-\glspl{deductible} are going to be defined.
-Listing~\ref{lst:input_exposure_ins_rel_metadata} illustrates the metadata
-section of an \gls{exposuremodel} where the insurance \glspl{limit} and
-\glspl{deductible} for structural components will be defined relative to the
-structural replacement cost.
+for other risk analysis besides loss estimation, such as the
+benefit/cost analysis.
 
-\begin{listing}[htbp]
-  \inputminted[firstline=8,firstnumber=8,lastline=21,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_ins_rel.xml}
-  \caption{Example exposure model using relative insurance limits and deductibles: metadata definition (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_exposure_ins_rel.xml}{Download example})}
-  \label{lst:input_exposure_ins_rel_metadata}
-\end{listing}
-
-In this example, both the insurance \gls{limit} and the \gls{deductible} are
-defined as a fraction of the replacement cost, by setting the attribute
-\Verb+isAbsolute+ to \Verb+false+. Then, for each type of cost, the
-\gls{limit} and \gls{deductible} value can be stored for each asset, as
-illustrated in the snippet shown in
-Listing~\ref{lst:input_exposure_ins_rel_assets}.
-
-\begin{listing}[htbp]
-  \inputminted[firstline=22,firstnumber=22,lastline=32,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_ins_rel.xml}
-  \caption{Example exposure model using relative insurance limits and deductibles: assets definition (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_exposure_ins_rel.xml}{Download example})}
-  \label{lst:input_exposure_ins_rel_assets}
-\end{listing}
-
-On the other hand, a user could define one or both of these parameters as
-absolute values, by setting the aforementioned attribute to \Verb+true+. This
-is shown in the example shown in Listing~\ref{lst:input_exposure_ins_abs}.
-
-\begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_ins_abs.xml}
-  \caption{Example exposure model using absolute insurance limits and deductibles (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_exposure_ins_abs.xml}{Download example})}
-  \label{lst:input_exposure_ins_abs}
-\end{listing}
-
-Moreover, in order to perform a benefit/cost assessment, it is also necessary
+In order to perform a benefit/cost assessment, it is necessary
 to indicate the retrofitting cost. This parameter is handled in the same
 manner as the structural cost, and it should be stored according to the format
 shown in Listing~\ref{lst:input_exposure_retrofit}.
@@ -402,8 +367,8 @@ shown in Listing~\ref{lst:input_exposure_retrofit}.
   \label{lst:input_exposure_retrofit}
 \end{listing}
 
-Despite the fact that for the demonstration of how the insurance parameters
-and retrofitting cost can be stored the per building type of cost structure
+Despite the fact that for the demonstration of how the
+retrofitting cost can be stored the per building type of cost structure
 described in Example~1 was used, it is important to mention that any of the
 other cost storing approaches can also be employed (Examples 2--4).
 
