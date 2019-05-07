@@ -108,6 +108,6 @@ class BCHydroSERASSlabHighSigmaMuTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BCHydroSERASSlab
 
     def test_mean(self):
-        self.check("sera_bchydro/BCHydroSERA_SSlab_HIGH_SIGMA_MU_MEAN.csv",
+        self.check("sera_bchydro/BCHydroSERA_SSLAB_HIGH_SIGMA_MU_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    sigma_mu_epsilon=1.0)
