@@ -25,14 +25,6 @@ openquake.risklib.scientific module
     :undoc-members:
     :show-inheritance:
 
-openquake.risklib.utils module
-------------------------------
-
-.. automodule:: openquake.risklib.utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------
