@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     833,329,347        
-date           2019-03-19T10:04:36
-engine_version 3.5.0-gitad6b69ea66
+checksum32     1,442,023,754      
+date           2019-05-03T06:43:48
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
 num_sites = 281, num_levels = 50, num_rlzs = 1
@@ -111,37 +111,37 @@ PCR-SLSB-1 1.00000 0.0     1   1   3         3
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      D         C    8     12    3,345        3.62797   0.0        1.00000   0         2.00000
-0      F         C    0     8     2,348        2.24468   0.0        1.00000   0         2.00000
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
+====== ========= ==== ===== ===== ============ ========= ========= =======
+1      D         C    8     12    3,345        3.74694   281       2.00000
+0      F         C    0     8     2,348        2.27276   281       2.00000
+====== ========= ==== ===== ===== ============ ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    5.87264   2     
+C    6.01970   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =======
-operation-duration mean      stddev    min       max       outputs
-read_source_models 0.15428   NaN       0.15428   0.15428   1      
-sample_ruptures    2.94689   0.98605   2.24965   3.64413   2      
-get_eid_rlz        7.734E-04 9.460E-05 5.739E-04 9.670E-04 30     
-================== ========= ========= ========= ========= =======
+================== ======= ========= ========= ======= =======
+operation-duration mean    stddev    min       max     outputs
+read_source_models 0.20241 NaN       0.20241   0.20241 1      
+sample_ruptures    3.02269 1.04881   2.28107   3.76430 2      
+get_eid_rlz        0.00135 5.433E-04 7.741E-04 0.00364 30     
+================== ======= ========= ========= ======= =======
 
 Data transfer
 -------------
 ================== ============================================= ========
 task               sent                                          received
-read_source_models converter=358 B fnames=118 B                  2.23 KB 
-sample_ruptures    param=9.53 KB sources=2.38 KB srcfilter=440 B 44.83 KB
-get_eid_rlz        self=56.86 KB                                 9.74 KB 
+read_source_models converter=377 B fnames=118 B                  2.25 KB 
+sample_ruptures    param=9.42 KB sources=2.38 KB srcfilter=436 B 44.83 KB
+get_eid_rlz        self=55.72 KB                                 9.74 KB 
 ================== ============================================= ========
 
 Slowest operations
@@ -149,12 +149,12 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    5.89378  7.41406   2     
-iter_ruptures            5.86829  0.0       2     
-total read_source_models 0.15428  1.11719   1     
-reading exposure         0.04301  0.0       1     
-total get_eid_rlz        0.02320  0.31250   30    
-saving ruptures          0.01078  0.0       2     
-store source model       0.00562  0.0       1     
-store source_info        0.00220  0.0       1     
+total sample_ruptures    6.04537  4.73438   2     
+iter_ruptures            6.01518  0.0       2     
+total read_source_models 0.20241  0.0       1     
+reading exposure         0.04244  0.0       1     
+total get_eid_rlz        0.04062  0.0       30    
+saving ruptures          0.01088  0.0       2     
+store source model       0.00334  0.0       1     
+store source_info        0.00213  0.0       1     
 ======================== ======== ========= ======
