@@ -1,9 +1,18 @@
+  [Chris Van Houtte]
+  * Added new class to bradley_2013b.py for hazard maps
+  * Modified test case_37 to test multiple sites
+
+  [Marco Pagani]
+  * Fixed a bug in the logic tree parser and added a check to forbid logic
+    trees with applyToSources without applyToBranches, unless there is a
+    single source model branch
+
   [Michele Simionato]
   * Removed the experimental parameter `prefilter_sources`
 
   [Daniele Viganò]
   * Multiple DbServer ZMQ connections are restored to avoid errors under heavy
-  load and/or on slower machines
+    load and/or on slower machines
 
   [Michele Simionato]
   * Removed the ugly registration of custom signals at import time: now they
