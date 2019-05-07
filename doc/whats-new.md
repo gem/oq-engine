@@ -187,3 +187,7 @@ particularly useful.
 losses. This feature has been deprecated for a long time and was also
 buggy for scenario_risk. Users wanting the feature back should talk
 with us.
+
+7. We removed the parallel reading of the exposure introduced in engine v3.4
+since it was found buggy when used with the ebrisk calculator. It may return
+in the future.
