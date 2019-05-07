@@ -14,6 +14,7 @@ Containers can be also started in background using `$ docker-compose up -d`.
 More workers can be started via
 
 ```bash
+$ docker-compose pull
 $ docker-compose up --scale worker=N
 ```
 where `N` is the number of expected worker containers.
