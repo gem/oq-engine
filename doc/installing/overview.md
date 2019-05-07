@@ -13,7 +13,7 @@ A pre-configured VirtualBox appliance may be also [downloaded](https://downloads
 ### Linux
 
 If you are the only user using OpenQuake on the target system the best choice is using **binary packages for [Ubuntu](ubuntu.md)** or **[RedHat (and clones)](rhel.md)**.
-If you don't have root permissions to install new software or you have to use an unsupported distribution (see [FAQ](faq.md#unsupported-operating-systems)) you can try with the **[self-installable binary distribution for Linux](linux-generic.md)**.
+If you don't have root permissions (i.e. no `sudo`) to install new software or you have to use an unsupported distribution (see [FAQ](faq.md#unsupported-operating-systems)) you can try with the **[self-installable binary distribution for Linux without 'sudo'](linux-generic.md)**.
 
 ### macOS
 
