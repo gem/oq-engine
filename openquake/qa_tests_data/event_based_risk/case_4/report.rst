@@ -3,8 +3,8 @@ Event Based Risk for Turkey reduced
 
 ============== ===================
 checksum32     39,734,555         
-date           2019-03-19T10:04:23
-engine_version 3.5.0-gitad6b69ea66
+date           2019-05-03T06:43:46
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
 num_sites = 13, num_levels = 91, num_rlzs = 8
@@ -91,12 +91,12 @@ source_model          grp_id trt                  eff_ruptures tot_ruptures
 #TRT models   2    
 #eff_ruptures 3,090
 #tot_ruptures 3,099
-#tot_weight   588  
+#tot_weight   309  
 ============= =====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-14 asset(s) x 8 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 64 tasks = 56 KB
+14 asset(s) x 8 realization(s) x 1 loss type(s) losses x 8 bytes x 64 tasks = 56 KB
 
 Exposure model
 --------------
@@ -123,46 +123,44 @@ SAM_4S   1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id    code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      AS_TRAS334   A    0     23    760          0.20356   0.0        6.00000   1         2.00000
-0      AS_TRAS360   A    36    44    624          0.16381   0.0        3.00000   1         2.00000
-0      AS_TRAS346   A    23    36    527          0.14259   0.0        5.00000   1         2.00000
-0      AS_TRAS395   A    44    52    432          0.11503   0.0        3.00000   1         2.00000
-0      AS_TRAS458   A    61    67    399          0.11313   0.0        2.00000   1         2.00000
-0      AS_TRAS410   A    52    61    240          0.06510   0.0        2.00000   1         0.0    
-1      FSBG_TRBG989 A    67    74    108          0.03674   0.0        1.00000   1         2.00000
-2      100041       P    74    75    9            0.0       0.0        0.0       0         0.0    
-====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ============ ==== ===== ===== ============ ========= ========= =======
+grp_id source_id    code gidx1 gidx2 num_ruptures calc_time num_sites weight 
+====== ============ ==== ===== ===== ============ ========= ========= =======
+0      AS_TRAS334   A    0     23    760          0.21352   6.00000   2.00000
+0      AS_TRAS360   A    36    44    624          0.16391   3.00000   2.00000
+0      AS_TRAS346   A    23    36    527          0.15430   5.00000   2.00000
+0      AS_TRAS395   A    44    52    432          0.13021   3.00000   2.00000
+0      AS_TRAS458   A    61    67    399          0.12608   2.00000   2.00000
+0      AS_TRAS410   A    52    61    240          0.08778   2.00000   0.0    
+1      FSBG_TRBG989 A    67    74    108          0.03911   1.00000   2.00000
+2      100041       P    74    75    9            0.0       0.0       0.0    
+====== ============ ==== ===== ===== ============ ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.83995   7     
+A    0.91491   7     
 P    0.0       1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =======
-operation-duration mean      stddev    min       max       outputs
-read_source_models 0.01974   0.02799   0.00136   0.05196   3      
-only_filter        0.00338   NaN       0.00338   0.00338   1      
-sample_ruptures    0.12232   0.05733   0.03920   0.20669   7      
-get_eid_rlz        4.221E-04 1.599E-04 2.921E-04 8.135E-04 29     
-================== ========= ========= ========= ========= =======
+================== ========= ========= ========= ======= =======
+operation-duration mean      stddev    min       max     outputs
+read_source_models 0.02809   0.03729   0.00167   0.07075 3      
+sample_ruptures    0.11780   0.07003   0.00181   0.21786 8      
+get_eid_rlz        6.081E-04 5.149E-04 2.875E-04 0.00289 29     
+================== ========= ========= ========= ======= =======
 
 Data transfer
 -------------
 ================== ================================================ ========
 task               sent                                             received
 read_source_models converter=939 B fnames=362 B                     12.5 KB 
-only_filter        srcs=9.59 KB srcfilter=253 B dummy=14 B          9.35 KB 
-sample_ruptures    param=50.07 KB sources=16.45 KB srcfilter=1.5 KB 9.35 KB 
-get_eid_rlz        self=55.68 KB                                    8.21 KB 
+sample_ruptures    param=56.98 KB sources=17.07 KB srcfilter=1.7 KB 9.62 KB 
+get_eid_rlz        self=54.57 KB                                    8.21 KB 
 ================== ================================================ ========
 
 Slowest operations
@@ -170,13 +168,12 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    0.85623  3.16016   7     
-iter_ruptures            0.83573  0.0       7     
-total read_source_models 0.05923  0.71484   3     
-saving ruptures          0.01754  0.0       6     
-total get_eid_rlz        0.01224  0.12109   29    
-store source model       0.00584  0.0       3     
-total only_filter        0.00338  1.46484   1     
-store source_info        0.00198  0.0       1     
-reading exposure         0.00161  0.0       1     
+total sample_ruptures    0.94237  1.25000   8     
+iter_ruptures            0.91096  0.0       7     
+total read_source_models 0.08428  0.0       3     
+saving ruptures          0.02008  0.0       6     
+total get_eid_rlz        0.01764  0.0       29    
+store source model       0.00607  0.0       3     
+reading exposure         0.00213  0.0       1     
+store source_info        0.00181  0.0       1     
 ======================== ======== ========= ======
