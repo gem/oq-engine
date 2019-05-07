@@ -3,31 +3,31 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     3,490,620,350      
-date           2019-03-19T10:03:35
-engine_version 3.5.0-gitad6b69ea66
+date           2019-05-03T06:43:34
+engine_version 3.5.0-git7a6d15e809
 ============== ===================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
 
 Parameters
 ----------
-=============================== ============================================================================================================================================
-calculation_mode                'disaggregation'                                                                                                                            
-number_of_logic_tree_samples    0                                                                                                                                           
-maximum_distance                {'Stable Shallow Crust': 200.0, 'Active Shallow Crust': 200.0, 'Volcanic': 100.0, 'Subduction Interface': 200.0, 'Subduction Inslab': 200.0}
-investigation_time              50.0                                                                                                                                        
-ses_per_logic_tree_path         1                                                                                                                                           
-truncation_level                3.0                                                                                                                                         
-rupture_mesh_spacing            5.0                                                                                                                                         
-complex_fault_mesh_spacing      5.0                                                                                                                                         
-width_of_mfd_bin                0.1                                                                                                                                         
-area_source_discretization      15.0                                                                                                                                        
-ground_motion_correlation_model None                                                                                                                                        
-minimum_intensity               {}                                                                                                                                          
-random_seed                     23                                                                                                                                          
-master_seed                     0                                                                                                                                           
-ses_seed                        42                                                                                                                                          
-=============================== ============================================================================================================================================
+=============================== ==============================================================================================================================================================
+calculation_mode                'disaggregation'                                                                                                                                              
+number_of_logic_tree_samples    0                                                                                                                                                             
+maximum_distance                {'default': 200.0, 'Stable Shallow Crust': 200.0, 'Active Shallow Crust': 200.0, 'Volcanic': 100.0, 'Subduction Interface': 200.0, 'Subduction Inslab': 200.0}
+investigation_time              50.0                                                                                                                                                          
+ses_per_logic_tree_path         1                                                                                                                                                             
+truncation_level                3.0                                                                                                                                                           
+rupture_mesh_spacing            5.0                                                                                                                                                           
+complex_fault_mesh_spacing      5.0                                                                                                                                                           
+width_of_mfd_bin                0.1                                                                                                                                                           
+area_source_discretization      15.0                                                                                                                                                          
+ground_motion_correlation_model None                                                                                                                                                          
+minimum_intensity               {}                                                                                                                                                            
+random_seed                     23                                                                                                                                                            
+master_seed                     0                                                                                                                                                             
+ses_seed                        42                                                                                                                                                            
+=============================== ==============================================================================================================================================================
 
 Input files
 -----------
@@ -88,84 +88,85 @@ source_model_test_point.xml   1      Active Shallow Crust 624          624
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      f1        C    0     4     2,308        8.75671   163        37        37        9,232 
-1      p4        P    7     8     156          0.41449   1.669E-06  1.00000   1         15    
-1      p1        P    4     5     156          0.41025   1.049E-05  1.00000   1         15    
-1      p2        P    5     6     156          0.40459   3.099E-06  1.00000   1         15    
-1      p3        P    6     7     156          0.40137   2.146E-06  1.00000   1         15    
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
+====== ========= ==== ===== ===== ============ ========= ========= ======
+0      f1        C    0     4     2,308        9.47433   37        9,232 
+1      p1        P    4     5     156          0.45874   1.00000   15    
+1      p3        P    6     7     156          0.45664   1.00000   15    
+1      p4        P    7     8     156          0.45562   1.00000   15    
+1      p2        P    5     6     156          0.45189   1.00000   15    
+====== ========= ==== ===== ===== ============ ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    8.75671   1     
-P    1.63069   4     
+C    9.47433   1     
+P    1.82288   4     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-read_source_models 0.04114 0.05427 0.00277 0.07951 2      
-split_filter       4.41828 NaN     4.41828 4.41828 1      
-classical          0.34824 0.29895 0.00616 1.78100 30     
-build_hazard_stats 0.00703 NaN     0.00703 0.00703 1      
-================== ======= ======= ======= ======= =======
+====================== ======= ======= ========= ======= =======
+operation-duration     mean    stddev  min       max     outputs
+read_source_models     0.04957 0.06497 0.00363   0.09551 2      
+classical_split_filter 0.21035 0.79406 1.469E-04 4.52334 33     
+classical              0.48197 0.86666 0.00595   4.84498 28     
+build_hazard_stats     0.00470 NaN     0.00470   0.00470 1      
+====================== ======= ======= ========= ======= =======
 
 Fastest task
 ------------
-taskno=19, weight=8, duration=0 s, sources="f1"
+taskno=0, weight=2308, duration=0 s, sources="p4"
 
-======== ======= ====== ======= ======= =
-variable mean    stddev min     max     n
-======== ======= ====== ======= ======= =
-nsites   1.00000 NaN    1       1       1
-weight   8.00000 NaN    8.00000 8.00000 1
-======== ======= ====== ======= ======= =
+======== ======= ====== ===== ===== =
+variable mean    stddev min   max   n
+======== ======= ====== ===== ===== =
+nsites   1.00000 NaN    1     1     1
+weight   9,232   NaN    9,232 9,232 1
+======== ======= ====== ===== ===== =
 
 Slowest task
 ------------
-taskno=29, weight=130, duration=1 s, sources="f1"
+taskno=0, weight=2308, duration=4 s, sources="p4"
 
-======== ======= ====== ======= === =
-variable mean    stddev min     max n
-======== ======= ====== ======= === =
-nsites   1.00000 0.0    1       1   8
-weight   16      13     4.00000 48  8
-======== ======= ====== ======= === =
+======== ======= ====== ===== ===== =
+variable mean    stddev min   max   n
+======== ======= ====== ===== ===== =
+nsites   1.00000 NaN    1     1     1
+weight   9,232   NaN    9,232 9,232 1
+======== ======= ====== ===== ===== =
 
 Data transfer
 -------------
-================== =============================================================== =========
-task               sent                                                            received 
-read_source_models converter=626 B fnames=230 B                                    6.27 KB  
-split_filter       srcs=4.9 KB srcfilter=380 B dummy=14 B                          1.62 MB  
-classical          group=1.64 MB param=66.42 KB gsims=14.06 KB src_filter=10.17 KB 908.81 KB
-build_hazard_stats pgetter=6.08 KB hstats=65 B N=14 B individual_curves=13 B       11.87 KB 
-================== =============================================================== =========
+====================== ============================================================== ========
+task                   sent                                                           received
+read_source_models     converter=626 B fnames=230 B                                   6.27 KB 
+classical_split_filter srcs=1.39 MB params=73.51 KB gsims=15.47 KB srcfilter=11.73 KB 1.65 MB 
+classical              srcs=1.39 MB params=73.51 KB gsims=15.47 KB srcfilter=11.73 KB 728.3 KB
+build_hazard_stats     pgetter=0 B individual_curves=0 B hstats=0 B N=0 B             11.87 KB
+====================== ============================================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-total classical          10        2.29297   30    
-total split_filter       4.41828   5.56641   1     
-get_poes                 4.35649   0.0       2,932 
-make_contexts            2.92153   0.0       2,932 
-total read_source_models 0.08228   0.86328   2     
-aggregate curves         0.05572   0.96094   30    
-managing sources         0.04353   0.00391   1     
-saving probability maps  0.01441   0.0       1     
-total build_hazard_stats 0.00703   0.67188   1     
-combine pmaps            0.00576   0.67188   1     
-saving statistics        0.00338   0.0       1     
-store source model       0.00324   0.0       2     
-store source_info        0.00230   0.0       1     
-compute stats            9.141E-04 0.0       1     
-======================== ========= ========= ======
+============================ ========= ========= ======
+operation                    time_sec  memory_mb counts
+============================ ========= ========= ======
+total classical              13        3.24219   28    
+get_poes                     9.37708   0.0       2,932 
+make_contexts                7.65233   0.0       2,932 
+total classical_split_filter 6.94155   2.98828   33    
+filtering/splitting sources  4.53607   2.98828   5     
+total read_source_models     0.09914   0.0       2     
+aggregate curves             0.05540   1.03125   33    
+store source model           0.00554   0.0       2     
+total build_hazard_stats     0.00470   0.0       1     
+managing sources             0.00431   0.0       1     
+saving probability maps      0.00395   0.0       1     
+combine pmaps                0.00374   0.0       1     
+store source_info            0.00200   0.0       1     
+saving statistics            0.00174   0.0       1     
+compute stats                7.596E-04 0.0       1     
+============================ ========= ========= ======

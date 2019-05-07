@@ -359,7 +359,7 @@ def calc_abort(request, calc_id):
 
     if job.pid:  # is a spawned job
         try:
-            os.kill(job.pid, signal.SIGTERM)
+            os.kill(job.pid, signal.SIGINT)
         except Exception as exc:
             logging.error(exc)
         else:
