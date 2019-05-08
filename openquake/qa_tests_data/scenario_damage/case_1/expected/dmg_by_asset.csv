@@ -1,4 +1,4 @@
-asset_ref,CRESTA,region,taxonomy,lon,lat,modal-ds-structural
-a1,"?","?","RM",15.48000,38.09000,LS1
-a3,"?","?","RM",15.48000,38.25000,LS2
-a2,"01.1","Alhué","RC",15.56000,38.17000,no_damage
+CRESTA,id,region,taxonomy,lon,lat,modal-ds-structural
+"?","a1","?","RM",15.48000,38.09000,LS1
+"?","a3","?","RM",15.48000,38.25000,LS2
+"01.1","a2","Alhué","RC",15.56000,38.17000,no_damage
