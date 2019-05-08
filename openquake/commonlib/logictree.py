@@ -655,8 +655,8 @@ class SourceModelLogicTree(object):
 
             self.num_paths *= len(branchset.branches)
         if number > 0:
-            logging.warning('There is a branching level with multiple '
-                            'branchsets in %s', self.filename)
+            raise InvalidFile('there is a branching level with multiple '
+                              'branchsets in %s', self.filename)
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
