@@ -449,6 +449,16 @@ class BranchSet(object):
                                        occurrence_rates=occur_rates))
 
 
+def _bsnodes(branchinglevel):
+    if branchinglevel.tag.endswith('logicTreeBranchingLevel'):
+        return branchinglevel.nodes
+    elif branchinglevel.tag.endswith('logicTreeBranchSet'):
+        return [branchinglevel]
+    else:
+        raise ValueError('Expected BranchingLevel/BranchSet, got %s' %
+                         branchinglevel)
+
+
 class FakeSmlt(object):
     """
     A replacement for the SourceModelLogicTree class, to be used when
@@ -515,7 +525,7 @@ def collect_info(smlt):
     paths = collections.defaultdict(set)  # branchID -> paths
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
-        for bset in blevel:
+        for bset in _bsnodes(blevel):
             if 'applyToSources' in bset.attrib:
                 applytosources[bset['branchSetID']].extend(
                         bset['applyToSources'].split())
@@ -639,8 +649,7 @@ class SourceModelLogicTree(object):
         can have child branchsets (if there is one on the next level).
         """
         new_open_ends = set()
-        branchsets = branchinglevel_node.nodes
-        for number, branchset_node in enumerate(branchsets):
+        for number, branchset_node in enumerate(_bsnodes(branchinglevel_node)):
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
