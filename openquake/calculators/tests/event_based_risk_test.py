@@ -256,13 +256,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # agg_losses-rlzs has shape (L=5, R=9)
         # agg_losses-stats has shape (L=5, S=4)
         fname = export(('agg_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/agglosses.csv', fname)
+        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
 
         fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/aggcurves.csv', fname)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-5)
 
         fname = export(('agg_maps-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/aggmaps.csv', fname)
+        self.assertEqualFiles('expected/aggmaps.csv', fname, delta=1E-5)
 
         fname = export(('avg_losses', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/avg_losses-mean.csv',
