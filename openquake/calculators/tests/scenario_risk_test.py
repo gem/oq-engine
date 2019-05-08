@@ -53,9 +53,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['losses_by_event', 'csv']
         self.assertEqualFiles('expected/losses_by_event.csv', fname)
 
-        with self.assertRaises(IndexError):  # non-existing site_id
-            extract(self.calc.datastore, 'asset_values/1')
-
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
         [fname] = out['agglosses', 'csv']
