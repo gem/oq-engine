@@ -69,22 +69,27 @@ to manage vulnerability functions with coefficients of variations, which
 means that it is getting close to become a full replacement for the event
 based risk calculator. Also, some export bugs in `ebrisk` were fixed.
 
-5. The way the risk models are stored internally has changed significantly,
+5. `event_based_risk` calculations with zero coefficients of variations (i.e.
+with no epsilons) have been optimized in the same way as we did for `ebrisk`.
+This makes a difference if you have multiple assets of the same taxonomy on
+the same hazard site, otherwise the performance is the same as before.
+
+6. The way the risk models are stored internally has changed significantly,
 to make it possible (in the next release) an unification of the `scenario_risk`
 and `scenario_damage` calculators.
 
-6. We changed the `scenario_damage` calculator to accept silently single event
+67. We changed the `scenario_damage` calculator to accept silently single event
 calculations (before it was raising a warning): in this case we do not
 compute and do not export the standard deviations (before they were
 exported as NaNs).
 
-7. A new flag `modal_damage_state` has been added to the scenario damage
+8. A new flag `modal_damage_state` has been added to the scenario damage
 calculator. If it is set, instead of exporting for each asset the
 number of buildings in each damage state, the engine will export for
 each asset the damage state where most buildings are. This is a new
 and still experimental feature.
 
-8. A new experimental calculator called `multi_risk` has been introduced in
+9. A new experimental calculator called `multi_risk` has been introduced in
 the context of the CRAVE project (Collaborative Risk Assessment for Volcanoes
 and Earthquakes). It allows to compute losses and fatalities for volcanic perils
 associated to ash fall, lava, lahar and pyroclastic flow, but it is designed
