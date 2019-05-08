@@ -657,7 +657,7 @@ def export_asset_risk_csv(ekey, dstore):
     for tagname in md.tagnames:
         tostr[tagname] = getattr(md, tagname)
     arr = extract(dstore, 'asset_risk').array
-    arefs = dstore['assetcol/asset_refs'].value
+    arefs = dstore['assetcol/array']['id']
     rows = []
     lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
     perilnames = sorted(name for name in arr.dtype.names
