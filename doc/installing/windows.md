@@ -12,12 +12,11 @@ The OpenQuake Engine is available for Windows in the form of **self-installable 
 
 Requirements are:
 
-- One of the following editions of Windows
-    - Windows 7 (64bit)
-    - Windows 8 and 8.1 (64bit)
-    - Windows 10 (64bit)
+- Windows 10 (64bit)
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
+
+**Windows 7** is **deprecated** as a platform for running the Engine since it is reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support). Compatibility with Windows 7 will be removed in next Engine releases.
 
 ## Install or upgrade packages from the OpenQuake website
 
