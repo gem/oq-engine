@@ -192,7 +192,7 @@ magnitude more efficient, both in speed an memory occupation.
 The reason why the ``ebrisk`` calculator is so efficient is that
 it computes the GMFs in memory instead of reading them for the datastore.
 
-Now, let's discuss the second point. The ``event_based_risk`` calculator
+The ``event_based_risk`` calculator
 works by storing the GMFs in the hazard phase of the calculation and
 by reading them in the risk phase. This approach has his advantages:
 
