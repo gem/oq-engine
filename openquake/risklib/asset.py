@@ -704,7 +704,7 @@ def _get_exposure(fname, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ~tagNames or []
+    tagnames = ['id'] + (~tagNames or [])
     if set(tagnames) & {'taxonomy', 'exposure', 'country'}:
         raise InvalidFile('taxonomy, exposure and country are reserved names '
                           'you cannot use it in <tagNames>: %s' % fname)
@@ -992,6 +992,7 @@ class Exposure(object):
             tagnode = getattr(asset_node, 'tags', None)
             dic = {} if tagnode is None else tagnode.attrib.copy()
             dic['taxonomy'] = taxonomy
+            dic['id'] = param['asset_prefix'] + asset_node['id']
             idxs = self.tagcol.add_tags(dic, prefix)
         try:
             costs = asset_node.costs
