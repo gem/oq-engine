@@ -156,8 +156,8 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.c.get(extract_url + 'exposure_metadata')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertEqual(list(got['tagnames']), ['id', 'taxonomy'])
-        self.assertEqual(list(got['array']), ['number', 'value-structural'])
+        self.assertEqual(sorted(got['tagnames']), ['id', 'taxonomy'])
+        self.assertEqual(sorted(got['array']), ['number', 'value-structural'])
 
         # check assets
         resp = self.c.get(
