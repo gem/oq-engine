@@ -29,13 +29,17 @@ The OpenQuake Engine has at least three installation methods. To choose the one 
 ### Supported operating systems
 
 Binary packages are provided for the following 64bit operating systems:
-- [Windows](installing/windows.md)
-- [macOS](installing/macos.md)
-- Linux [Ubuntu](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux/Fedora](installing/rhel.md) via _deb_ and _rpm_
+- [Windows 10](installing/windows.md)
+- [macOS 10.9+](installing/macos.md)
+- Linux [Ubuntu 16.04+](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux 7+ and Fedora 28+](installing/rhel.md) via _deb_ and _rpm_
 - Any other generic Linux distribution via a [self-installable binary distribution](installing/linux-generic.md)
 - [Docker](installing/docker.md) hosts
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
+
+#### Windows 7 compatibility
+
+**Windows 7** is **deprecated** as a platform for running the Engine since it is reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support). Compatibility with Windows 7 will be removed in next Engine releases. Please upgrade your Windows installation to Windows 10.
 
 ******
 
@@ -53,7 +57,7 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ### 32bit support
 
-The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
+The OpenQuake Engine **requires a 64bit operating system**. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
 
 ******
 
