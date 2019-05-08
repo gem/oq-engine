@@ -253,11 +253,10 @@ class Asset(object):
 
 
 U8 = numpy.uint8
-U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
@@ -294,8 +293,8 @@ class TagCollection(object):
         except KeyError:
             dic[tagvalue] = idx = len(dic)
             getattr(self, tagname).append(tagvalue)
-            if idx > TWO16:
-                raise InvalidFile('contains more then %d tags' % TWO16)
+            if idx > TWO32:
+                raise InvalidFile('contains more then %d tags' % TWO32)
             return idx
 
     def add_tags(self, dic, prefix):
@@ -613,7 +612,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                         'deprecated and may be removed in the future')
     retro = ['retrofitted'] if first_asset._retrofitted else []
     float_fields = loss_types + retro
-    int_fields = [(str(name), U16) for name in tagnames]
+    int_fields = [(str(name), U32) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
         [('ordinal', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
