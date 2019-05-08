@@ -1504,7 +1504,7 @@ class GsimLogicTree(object):
                 raise InvalidLogicTree(
                     '%s: Branching level %s has multiple branchsets'
                     % (self.fname, branching_level['branchingLevelID']))
-            for branchset in branching_level:
+            for branchset in _bsnodes(branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
                     raise InvalidLogicTree(
                         '%s: only uncertainties of type "gmpeModel" '
