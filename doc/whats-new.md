@@ -198,3 +198,6 @@ with us.
 7. We removed the parallel reading of the exposure introduced in engine v3.4
 since it was found buggy when used with the ebrisk calculator. It may return
 in the future.
+
+8. Source model logic trees with more than one branching level are deprecated
+and raise a warning: they may raise an error in the future.
