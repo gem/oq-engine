@@ -32,7 +32,6 @@ class ValidationError(Exception):
     pass
 
 
-U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 
@@ -311,7 +310,7 @@ class CompositeRiskModel(collections.Mapping):
         return loss_ratios
 
     def __getitem__(self, key):
-        if isinstance(key, (int, U16)):  # a taxonomy index
+        if isinstance(key, (int, U32)):  # a taxonomy index
             key = self.taxonomy[key]
         return self._riskmodels[key]
 
