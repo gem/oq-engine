@@ -13,9 +13,9 @@ Contents:
 
    introduction
    common-mistakes
-   effective-realizations       
    hazard
    risk
+   effective-realizations       
    event-based-with-large-logic-tree
    extract-api
    parametric-gmpes
