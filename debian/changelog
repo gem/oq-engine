@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made the branching level optional
   * Made it possible to produce individual loss maps and curves with the
     ebrisk calculator with a single line `aggregate_by=id`
   * Added a limit of 2**32 events in event based calculations
