@@ -251,7 +251,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # ------------------------- ebrisk calculator ---------------------- #
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
-                      aggregate_by='taxonomy')
+                      aggregate_by='id')
 
         # agg_losses-rlzs has shape (L=5, R=9)
         # agg_losses-stats has shape (L=5, S=4)
