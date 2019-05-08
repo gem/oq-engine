@@ -30,6 +30,7 @@ import configparser
 import collections
 import toml
 import numpy
+import requests
 
 from openquake.baselib import performance, hdf5, parallel
 from openquake.baselib.general import (
@@ -105,8 +106,16 @@ def normalize(key, fnames, base_path):
     input_type, _ext = key.rsplit('_', 1)
     filenames = []
     for val in fnames:
-        if os.path.isabs(val):
+        if '://' in val:
+            # get the data from an URL
+            resp = requests.get(val)
+            _, val = val.rsplit('/', 1)
+            with open(os.path.join(base_path, val), 'wb') as f:
+                f.write(resp.content)
+        elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
+        if val.endswith('.zip'):
+            val = val[:-4] + '.xml'
         val = os.path.normpath(os.path.join(base_path, val))
         if (key in ('source_model_logic_tree_file', 'exposure_file') and
                 not os.path.exists(val)):
