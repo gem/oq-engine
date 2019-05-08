@@ -292,6 +292,8 @@ class EventBasedCalculator(base.HazardCalculator):
             for er in eid_rlz:
                 events[i] = er
                 i += 1
+                if i >= TWO32:
+                    raise ValueError('There are more than %d events!' % i)
         events.sort(order='id')  # fast too
         n_unique_events = len(numpy.unique(events['id']))
         assert n_unique_events == len(events), (n_unique_events, len(events))
