@@ -5,7 +5,6 @@
 <logicTree logicTreeID="lt1">
 
 <!-- Fault source geometry -->
-	<logicTreeBranchingLevel branchingLevelID="bl1">
 		<logicTreeBranchSet uncertaintyType="sourceModel"
 				    branchSetID="bs1">
 
@@ -16,12 +15,10 @@
 			</logicTreeBranch>
 
 		</logicTreeBranchSet>
-	</logicTreeBranchingLevel>
     
-    <!-- Max magnitude uncertainties -->
+     <!-- Max magnitude uncertainties -->
     
      <!-- MFT, NW, Grabens, Karakoram -->
-    <logicTreeBranchingLevel branchingLevelID="bl2">
         
         <logicTreeBranchSet branchSetID="bs21"
             uncertaintyType="maxMagGRRelative"
@@ -41,12 +38,8 @@
                 <uncertaintyModel>-0.2</uncertaintyModel>
                 <uncertaintyWeight>0.275</uncertaintyWeight>
             </logicTreeBranch>
-            
         </logicTreeBranchSet>
-    
-    </logicTreeBranchingLevel>
     <!-- Eastern -->
-    <logicTreeBranchingLevel branchingLevelID="bl3">
         
         <logicTreeBranchSet branchSetID="bs22"
             uncertaintyType="maxMagGRRelative"
@@ -68,10 +61,8 @@
             </logicTreeBranch>
             
         </logicTreeBranchSet>
-    
-    </logicTreeBranchingLevel>
+
     <!-- Background -->
-    <logicTreeBranchingLevel branchingLevelID="bl4">
         
         <logicTreeBranchSet branchSetID="bs23"
             uncertaintyType="maxMagGRRelative"
@@ -93,12 +84,10 @@
             </logicTreeBranch>
             
         </logicTreeBranchSet>
-    </logicTreeBranchingLevel>
  
     <!-- a and b uncertainties -->
 
     <!-- Main Frontal Thrust -->
-	<logicTreeBranchingLevel branchingLevelID="bl5">
 
 		<logicTreeBranchSet branchSetID="bs31"
 				    uncertaintyType="abGRAbsolute"
@@ -122,12 +111,9 @@
 				<uncertaintyWeight>0.275</uncertaintyWeight>
 			</logicTreeBranch>
 		</logicTreeBranchSet>
-        
 
-    </logicTreeBranchingLevel>
-    <!-- Karakoram -->
-    <logicTreeBranchingLevel branchingLevelID="bl6">    
-		
+        <!-- Karakoram -->
+                
 		<logicTreeBranchSet branchSetID="bs32"
 			            uncertaintyType="abGRAbsolute"
 				    applyToSources="2">
@@ -152,9 +138,7 @@
 
 		</logicTreeBranchSet>
 
-    </logicTreeBranchingLevel>
    <!-- Northern Grabens -->
-    <logicTreeBranchingLevel branchingLevelID="bl7">
         
 		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
 				    applyToSources="5"
@@ -180,9 +164,7 @@
 
 		</logicTreeBranchSet>
 
-    </logicTreeBranchingLevel>
     <!-- Eastern Strike-slip Area -->
-    <logicTreeBranchingLevel branchingLevelID="bl8">
 		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
 				    applyToSources="9"
 				    branchSetID="bs34">
@@ -207,9 +189,7 @@
 
 		</logicTreeBranchSet>
 
-    </logicTreeBranchingLevel>
     <!-- North-Western Strike-slip Normal Area -->
-    <logicTreeBranchingLevel branchingLevelID="bl9">
 
 		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
 				    applyToSources="10"
@@ -235,9 +215,7 @@
 
 		</logicTreeBranchSet>
 
-    </logicTreeBranchingLevel>    
     <!-- Random Area -->
-    <logicTreeBranchingLevel branchingLevelID="bl10">
 
 		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
 				    applyToSources="11"
@@ -262,8 +240,6 @@
 			</logicTreeBranch>
 
 		</logicTreeBranchSet>
-
-	</logicTreeBranchingLevel>
 	
 </logicTree>
 </nrml> 
