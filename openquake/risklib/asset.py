@@ -391,9 +391,6 @@ class AssetCollection(object):
     D, I = len('deductible-'), len('insurance_limit-')
 
     def __init__(self, exposure, assets_by_site, time_event):
-        self.asset_refs = numpy.array([
-            exposure.asset_refs[asset.ordinal]
-            for assets in assets_by_site for asset in assets])
         self.tagcol = exposure.tagcol
         self.cost_calculator = exposure.cost_calculator
         self.time_event = time_event
@@ -422,6 +419,13 @@ class AssetCollection(object):
         :returns: the tagnames
         """
         return self.tagcol.tagnames
+
+    @property
+    def asset_refs(self):
+        """
+        :returns: array of asset ids as strings
+        """
+        return self.tagcol.id[1:]
 
     def num_taxonomies_by_site(self):
         """
@@ -509,7 +513,6 @@ class AssetCollection(object):
         vars(new).update(vars(self))
         new.array = self.array[ok_indices]
         new.array['ordinal'] = numpy.arange(len(new.array))
-        new.asset_refs = self.asset_refs[ok_indices]
         return new
 
     def reduce_also(self, sitecol):
@@ -519,19 +522,16 @@ class AssetCollection(object):
         and turned into a complete site collection.
         """
         array = []
-        asset_refs = []
         for idx, sid in enumerate(sitecol.sids):
             mask = self.array['site_id'] == sid
             arr = self.array[mask]
             arr['site_id'] = idx
             array.append(arr)
-            asset_refs.append(self.asset_refs[mask])
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.tot_sites = len(sitecol)
         new.array = numpy.concatenate(array)
         new.array['ordinal'] = numpy.arange(len(new.array))
-        new.asset_refs = numpy.concatenate(asset_refs)
         sitecol.make_complete()
         return new
 
@@ -560,7 +560,7 @@ class AssetCollection(object):
                  'nbytes': self.array.nbytes}
         return dict(
             array=self.array, cost_calculator=self.cost_calculator,
-            tagcol=self.tagcol, asset_refs=self.asset_refs), attrs
+            tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
         for name in ('loss_types', 'deduc', 'i_lim', 'retro'):
@@ -572,7 +572,6 @@ class AssetCollection(object):
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
         self.cost_calculator = dic['cost_calculator']
-        self.asset_refs = dic['asset_refs'].value
         self.cost_calculator.tagi = {
             decode(tagname): i for i, tagname in enumerate(self.tagnames)}
 
