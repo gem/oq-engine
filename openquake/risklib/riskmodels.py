@@ -343,15 +343,12 @@ class ClassicalBCR(RiskModel):
 
     kind = 'vulnerability'
 
-    def __init__(self, taxonomy,
-                 risk_functions_orig,
-                 risk_functions_retro,
-                 hazard_imtls,
-                 lrem_steps_per_interval,
+    def __init__(self, taxonomy, risk_functions, retro_functions,
+                 hazard_imtls, lrem_steps_per_interval,
                  interest_rate, asset_life_expectancy):
         self.taxonomy = taxonomy
-        self.risk_functions = risk_functions_orig
-        self.retro_functions = risk_functions_retro
+        self.risk_functions = risk_functions
+        self.retro_functions = retro_functions
         self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
@@ -359,10 +356,10 @@ class ClassicalBCR(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.loss_ratios_orig = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for (lt, kind), vf in risk_functions_orig.items()}
+            for (lt, kind), vf in risk_functions.items()}
         self.loss_ratios_retro = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for (lt, kind), vf in risk_functions_retro.items()}
+            for (lt, kind), vf in retro_functions.items()}
 
     def __call__(self, loss_type, assets, hazard, eids=None, eps=None):
         """
