@@ -915,6 +915,17 @@ def check_equal_sets(a, b):
         raise ValueError('Missing %s' % diff)
 
 
+def merge(*dicts):
+    """
+    Merge a dictionary of dictionaries
+    """
+    dic = dicts[0]
+    for d in dicts[1:]:
+        for taxo in d:
+            dic[taxo].update(d[taxo])
+    return dic
+
+
 def get_risk_model(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -942,9 +953,7 @@ def get_risk_model(oqparam):
                         'The damage states in %s are different from the '
                         'damage states in the fragility functions, %s'
                         % (c, fragdict.limit_states))
-    riskdict = fragdict
-    riskdict.update(vulndict)
-    riskdict.update(consdict)
+    riskdict = merge(fragdict, vulndict, consdict)
     oqparam.set_risk_imtls(riskdict)
     if oqparam.calculation_mode.endswith('_bcr'):
         retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
