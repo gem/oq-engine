@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Model Deep_Seismicity.xml"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+	srcs_weights="1.0"
+        tectonicRegion="DeepSeismicity"
+        >
+            <pointSource
+            id="Deep_10014"
+            name=""
+            tectonicRegion="DeepSeismicity"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            -155.16 20.0
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        38.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="2.55"
+                >
+                    <occurRates>
+                        0.0013284321447992024 0.0010773067374334074 0.0008736538114220654 0.0007084992191088779 0.000574565276217156 0.00046595006420714884 0.0003778673569764943 0.0003064357115420926 0.00024850742879636996 0.00020152984734124208 0.00016343285818897665 0.00013253768356500918 0.00010748290006937752 8.716444634146092e-05 7.068697161231561e-05 5.732438127520773e-05 4.648784087975944e-05 3.76998286171908e-05 3.0573092896305476e-05 2.479358775705157e-05 2.0106634155450608e-05 1.630569730458442e-05 1.3223285535170268e-05 1.0723569625905088e-05 8.696397367793285e-06 7.052439608903009e-06 5.719253885686297e-06 4.638092181270857e-06 3.7613121417470477e-06 3.0502776733896737e-06 2.473656408760046e-06 2.0060390180149745e-06 1.6268195241455064e-06 1.3192872822383238e-06 1.069890610017107e-06 8.67639620887362e-07 7.036219447907216e-07 5.706099966766612e-07 4.6274248652688064e-07 3.752661363877564e-07 3.0432622294173783e-07 2.467967156894959e-07 2.0014252563040667e-07 1.623077943067743e-07 1.3162530056894548e-07
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="45.0" probability="0.25" rake="90.0" strike="0.0"/>
+                    <nodalPlane dip="45.0" probability="0.25" rake="90.0" strike="45.0"/>
+                    <nodalPlane dip="45.0" probability="0.25" rake="90.0" strike="90.0"/>
+                    <nodalPlane dip="45.0" probability="0.25" rake="90.0" strike="135.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="30.0" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
+
