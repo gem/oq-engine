@@ -7,7 +7,9 @@
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>
-			ssm/Area_65m/area_source_gp_HLE.xml
+                        ssm/Area_65m/area_source_gp_HLE.xml
+                        ssm/Area_65p/HLEKAOSFL_area.xml
+                        ssm/gridded_seismicity/point.xml
 		    </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
