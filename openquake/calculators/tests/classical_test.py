@@ -485,6 +485,7 @@ hazard_uhs-std.csv
     def test_case_36(self):
         # test with advanced applyToSources and preclassical
         self.run_calc(case_36.__file__, 'job.ini')
+        self.assertEqual(self.calc.R, 9)  # there are 9 realizations
 
     def test_case_37(self):
         # check gsims
