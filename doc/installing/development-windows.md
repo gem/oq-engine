@@ -2,8 +2,9 @@
 
 ## Prerequisites
 
-Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
-The OpenQuake Python distribution for Windows is also required. You can download a nightly snapshot from here: https://downloads.openquake.org/pkgs/windows/oq-engine/nightly/.
+- A copy of Windows 10 64bit
+- Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/)
+- The OpenQuake Python distribution for Windows. You can download a nightly snapshot from here: https://downloads.openquake.org/pkgs/windows/oq-engine/nightly/
 
 ## Extract the content of the downloaded zip
 

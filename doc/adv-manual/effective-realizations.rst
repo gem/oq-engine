@@ -2,8 +2,8 @@ The concept of effective realizations
 ==============================================
 
 The management of the logic trees is the most complicated thing in the
-OpenQuake libraries. The issue is that it is necessary to manage them
-in an efficient way, by avoiding redundant computation and storage,
+OpenQuake engine. The issue is that it is necessary to manage the logic
+trees in an efficient way, by avoiding redundant computation and storage,
 otherwise the engine will not be able to cope with large computations.
 
 Historically the engine did not fare well in the case of complex logic
@@ -87,8 +87,8 @@ The number of paths in the logic tree is 4 * 5 * 2 * 4 * 4 * 1 * 2 =
 realizations* per source model. However, in most computations, the
 user will be interested only in a subset of them. For instance, if the
 sources contributing to your region of interest are only of kind
-**Active_Shallow** and **Stable_Shallow**, you would consider only 4 *
-5 = 20 effective realizations instead of 1280. Doing so will improve
+*Active_Shallow* and *Stable_Shallow*, you would consider only 4 *
+5 = 20 effective realizations instead of 1280. Doing so may improve
 the computation time and the needed storage by a factor of 1280 / 20 =
 64, which is very significant.
 
@@ -154,7 +154,7 @@ it will export only two files with names like::
 How to analyze the logic tree of a calculation without running the calculation
 ------------------------------------------------------------------------------
 
-The engine provide some facilities to explore the logic tree of a
+The engine provides some facilities to explore the logic tree of a
 computation without running it. The command you need is the *info* command::
 
    $ oq info -h
@@ -175,7 +175,7 @@ SHARE source model, the SHARE source model logic tree file and the SHARE
 GMPE logic tree file as provided by the SHARE collaboration, as well as
 a `job.ini` file. If you run
 
-  `oq info SHARE.zip`
+  ``$ oq info SHARE.zip``
 
 all the files will be parsed and the full logic tree of the computation
 will be generated. This is very fast, it runs in exactly 1 minute on my
@@ -228,9 +228,10 @@ and will be discussed later on.
 The realization-association object
 ----------------------------------
 
-The `info` commands produces more output, which I have denoted simply as
-`<RlzsAssoc...>`. This output is the string representation of
-a Python object containing the associations between the pairs
+The `info` commands produces an additional output, which I have
+denoted simply as `<RlzsAssoc...>`. This output is the string
+representation of a Python object containing the associations between
+the pairs
 
   `(src_group_id, gsim) -> realizations`
 
