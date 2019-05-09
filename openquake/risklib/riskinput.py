@@ -36,6 +36,27 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
+def merge1(**kw):
+    """
+    Merge a dictionary of dictionaries
+    """
+    dic = {}
+    for kind, subdic in kw.items():
+        for k, v in subdic.items():
+            dic[k, kind] = v
+    return dic
+
+
+def merge(**kw):
+    """
+    Merge a dictionary of dictionaries
+    """
+    dic = {}
+    for kind, subdic in kw.items():
+        dic.update(subdic)
+    return dic
+
+
 class TaxonomyMapping(dict):
     """
     A dictionary taxonomy -> kind -> {ids, weights}
@@ -176,9 +197,9 @@ class CompositeRiskModel(collections.Mapping):
             for riskid, ffs_by_lt in fragdict.items():
                 self._riskmodels[riskid] = (
                     riskmodels.get_riskmodel(
-                        riskid, oqparam, fragility_functions=ffs_by_lt,
-                        vulnerability_functions=vulndict[riskid],
-                        consequence_functions=consdict[riskid]))
+                        riskid, oqparam, risk_functions=merge(
+                            fragility=ffs_by_lt,
+                            consequence=consdict[riskid])))
             self.kind = 'fragility'
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
@@ -188,8 +209,7 @@ class CompositeRiskModel(collections.Mapping):
                 self._riskmodels[riskid] = (
                     riskmodels.get_riskmodel(
                         riskid, oqparam,
-                        vulnerability_functions_orig=vf_orig,
-                        vulnerability_functions_retro=vf_retro))
+                        risk_functions=vf_orig, retro_functions=vf_retro))
             self.kind = 'vulnerability'
         else:
             # classical, event based and scenario calculators
@@ -200,8 +220,7 @@ class CompositeRiskModel(collections.Mapping):
                     vf.seed = oqparam.random_seed
                 self._riskmodels[riskid] = (
                     riskmodels.get_riskmodel(
-                        riskid, oqparam, fragility_functions=vulndict[riskid],
-                        vulnerability_functions=vfs))
+                        riskid, oqparam, risk_functions=vfs))
             self.kind = 'vulnerability'
 
         self.init(oqparam)
@@ -231,14 +250,16 @@ class CompositeRiskModel(collections.Mapping):
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (riskid, ', '.join(missing)))
             riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt, kind].imt]
-                              for lt, kind in riskmodel.risk_functions}
+                              for lt, kind in riskmodel.risk_functions
+                              if kind in 'vulnerability fragility'}
 
         self.taxonomies = sorted(taxonomies)
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
         for riskid, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
-                iml[rf.imt].append(rf.imls[0])
+                if hasattr(rf, 'imt'):
+                    iml[rf.imt].append(rf.imls[0])
         self.min_iml = {imt: min(iml[imt]) for imt in iml}
 
     @cached_property
@@ -278,8 +299,8 @@ class CompositeRiskModel(collections.Mapping):
                         allratios.append(ratios)
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
-                            rm.vulnerability_functions[
-                                loss_type, 'vulnerability'], len(ratios)))
+                            rm.risk_functions[loss_type, 'vulnerability'],
+                            len(ratios)))
                 if len(curve_resolutions) > 1:
                     # number of loss ratios is not the same for all taxonomies:
                     # then use the longest array; see classical_risk case_5
