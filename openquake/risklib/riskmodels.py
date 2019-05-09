@@ -165,22 +165,17 @@ def get_values(loss_type, assets, time_event=None):
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
+
+    :param taxonomy: a taxonomy string
+    :param risk_functions: a dict (loss_type, kind) -> risk_function
     """
     time_event = None  # used in scenario_risk
     compositemodel = None  # set by get_risk_model
     kind = None  # must be set in subclasses
 
-    def __init__(self, taxonomy, fragility_functions, vulnerability_functions):
+    def __init__(self, taxonomy, risk_functions):
         self.taxonomy = taxonomy
-        self.fragility_functions = fragility_functions
-        self.vulnerability_functions = vulnerability_functions
-
-    @property
-    def risk_functions(self):
-        """
-        :returns: fragility or vulnerability functions depending on the kind
-        """
-        return getattr(self, self.kind + '_functions')
+        self.risk_functions = risk_functions
 
     @property
     def loss_types(self):
@@ -199,12 +194,7 @@ class RiskModel(object):
                 if self.risk_functions[lt].imt == imt]
 
     def __toh5__(self):
-        dic = self.risk_functions.copy()
-        if hasattr(self, 'retro_functions'):
-            dic.update(self.retro_functions)
-        if hasattr(self, 'consequence_functions'):
-            dic.update(self.consequence_functions)
-        return dic, {'taxonomy': self.taxonomy}
+        return self.risk_functions, {'taxonomy': self.taxonomy}
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
@@ -240,7 +230,7 @@ class Classical(RiskModel):
     """
     kind = 'vulnerability'
 
-    def __init__(self, taxonomy, fragility_functions, vulnerability_functions,
+    def __init__(self, taxonomy, risk_functions,
                  hazard_imtls, lrem_steps_per_interval,
                  conditional_loss_poes, poes_disagg):
         """
@@ -248,8 +238,8 @@ class Classical(RiskModel):
             Intensity Measure Type for this riskmodel
         :param taxonomy:
             Taxonomy for this riskmodel
-        :param fragility_functions:
-            Dictionary of fragility functions by loss type
+        :param risk_functions:
+            Dictionary of risk functions by loss type, kind
         :param vulnerability_functions:
             Dictionary of vulnerability functions by loss type
         :param hazard_imtls:
@@ -264,15 +254,14 @@ class Classical(RiskModel):
         of the other parameters.
         """
         self.taxonomy = taxonomy
-        self.fragility_functions = fragility_functions
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = risk_functions
         self.hazard_imtls = hazard_imtls
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
         self.loss_ratios = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for (lt, kind), vf in vulnerability_functions.items()}
+            for (lt, kind), vf in risk_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, eids=None, eps=None):
         """
@@ -291,7 +280,7 @@ class Classical(RiskModel):
             a composite array (loss, poe) of shape (A, C)
         """
         n = len(assets)
-        vf = self.vulnerability_functions[loss_type, self.kind]
+        vf = self.risk_functions[loss_type, self.kind]
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
@@ -309,11 +298,10 @@ class ProbabilisticEventBased(RiskModel):
     """
     kind = 'vulnerability'
 
-    def __init__(self, taxonomy, fragility_functions, vulnerability_functions,
+    def __init__(self, taxonomy, risk_functions,
                  conditional_loss_poes, ignore_covs):
         self.taxonomy = taxonomy
-        self.fragility_functions = fragility_functions
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = risk_functions
         self.conditional_loss_poes = conditional_loss_poes
         self.ignore_covs = ignore_covs
 
@@ -333,7 +321,7 @@ class ProbabilisticEventBased(RiskModel):
         E = len(gmvs)
         A = len(assets)
         loss_ratios = numpy.zeros((A, E), F32)
-        vf = self.vulnerability_functions[loss_type, self.kind]
+        vf = self.risk_functions[loss_type, self.kind]
         means, covs, idxs = vf.interpolate(gmvs)
         if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
             pass
@@ -355,15 +343,12 @@ class ClassicalBCR(RiskModel):
 
     kind = 'vulnerability'
 
-    def __init__(self, taxonomy,
-                 vulnerability_functions_orig,
-                 vulnerability_functions_retro,
-                 hazard_imtls,
-                 lrem_steps_per_interval,
+    def __init__(self, taxonomy, risk_functions, retro_functions,
+                 hazard_imtls, lrem_steps_per_interval,
                  interest_rate, asset_life_expectancy):
         self.taxonomy = taxonomy
-        self.vulnerability_functions = vulnerability_functions_orig
-        self.retro_functions = vulnerability_functions_retro
+        self.risk_functions = risk_functions
+        self.retro_functions = retro_functions
         self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
@@ -371,10 +356,10 @@ class ClassicalBCR(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.loss_ratios_orig = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for (lt, kind), vf in vulnerability_functions_orig.items()}
+            for (lt, kind), vf in risk_functions.items()}
         self.loss_ratios_retro = {
             lt: tuple(vf.mean_loss_ratios_with_steps(lrem_steps_per_interval))
-            for (lt, kind), vf in vulnerability_functions_retro.items()}
+            for (lt, kind), vf in retro_functions.items()}
 
     def __call__(self, loss_type, assets, hazard, eids=None, eps=None):
         """
@@ -389,7 +374,7 @@ class ClassicalBCR(RiskModel):
             raise NotImplemented('retrofitted is not defined for ' + loss_type)
         n = len(assets)
         self.assets = assets
-        vf = self.vulnerability_functions[loss_type, self.kind]
+        vf = self.risk_functions[loss_type, self.kind]
         imls = self.hazard_imtls[vf.imt]
         vf_retro = self.retro_functions[loss_type, self.kind + '_retrofitted']
         curves_orig = functools.partial(
@@ -423,11 +408,9 @@ class Scenario(RiskModel):
     """
     kind = 'vulnerability'
 
-    def __init__(self, taxonomy, fragility_functions, vulnerability_functions,
-                 time_event=None):
+    def __init__(self, taxonomy, risk_functions, time_event=None):
         self.taxonomy = taxonomy
-        self.fragility_functions = fragility_functions
-        self.vulnerability_functions = vulnerability_functions
+        self.risk_functions = risk_functions
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, gmvs, eids, epsilons):
@@ -451,7 +434,7 @@ class Scenario(RiskModel):
         loss_matrix = numpy.empty((len(assets), E))
         loss_matrix.fill(numpy.nan)
 
-        vf = self.vulnerability_functions[loss_type, self.kind]
+        vf = self.risk_functions[loss_type, self.kind]
         means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         if len(epsilons):
@@ -472,12 +455,9 @@ class Damage(RiskModel):
     """
     kind = 'fragility'
 
-    def __init__(self, taxonomy, fragility_functions,
-                 vulnerability_functions, consequence_functions):
+    def __init__(self, taxonomy, risk_functions):
         self.taxonomy = taxonomy
-        self.fragility_functions = fragility_functions
-        self.vulnerability_functions = vulnerability_functions
-        self.consequence_functions = consequence_functions
+        self.risk_functions = risk_functions
 
     def __call__(self, loss_type, assets, gmvs, eids=None, eps=None):
         """
@@ -490,12 +470,12 @@ class Damage(RiskModel):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        ffs = self.fragility_functions[loss_type, self.kind]
+        ffs = self.risk_functions[loss_type, self.kind]
         damages = scientific.scenario_damage(ffs, gmvs).T
         E, D = damages.shape
         dmg_csq = numpy.zeros((E, D + 1))
         dmg_csq[:, :D] = damages
-        c_model = self.consequence_functions.get((loss_type, 'consequence'))
+        c_model = self.risk_functions.get((loss_type, 'consequence'))
         if c_model:  # compute consequences
             means = [0] + [par[0] for par in c_model.params]
             # NB: we add a 0 in front for nodamage state
@@ -510,13 +490,10 @@ class ClassicalDamage(Damage):
     """
     kind = 'fragility'
 
-    def __init__(self, taxonomy, fragility_functions, vulnerability_functions,
-                 consequence_functions, hazard_imtls, investigation_time,
-                 risk_investigation_time):
+    def __init__(self, taxonomy, risk_functions, hazard_imtls,
+                 investigation_time, risk_investigation_time):
         self.taxonomy = taxonomy
-        self.fragility_functions = fragility_functions
-        self.vulnerability_functions = vulnerability_functions
-        self.consequence_functions = consequence_functions
+        self.risk_functions = risk_functions
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
@@ -531,7 +508,7 @@ class ClassicalDamage(Damage):
 
         where N is the number of points and D the number of damage states.
         """
-        ffl = self.fragility_functions[loss_type, self.kind]
+        ffl = self.risk_functions[loss_type, self.kind]
         hazard_imls = self.hazard_imtls[ffl.imt]
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,
