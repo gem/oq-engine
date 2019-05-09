@@ -164,6 +164,10 @@ in source model logic tree with multiple source models. It has been
 fixed and now it is actually required to specify `applyToBranches` in
 such situations.
 
+7. It was impossible to export individual hazard curves from an event based
+calculations, since only the statistical hazard curves were stored. The issue
+has been fixed.
+
 oq commands
 -----------
 
@@ -179,9 +183,8 @@ of HDF5 files.
 Deprecations
 --------------------
 
-1. Windows 7 is deprecated as a platform for running the engine since it is reaching the
-[End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support).
-Compatibility with Windows 7 will be removed in next Engine releases.
+1. Windows 7 is deprecated as a platform for running the engine since it is
+reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support).
 
 Removals
 ------------------------
@@ -205,6 +208,3 @@ with us.
 7. We removed the parallel reading of the exposure introduced in engine v3.4
 since it was found buggy when used with the ebrisk calculator. It may return
 in the future.
-
-8. Source model logic trees with more than one branching level are deprecated
-and raise a warning: they may raise an error in the future.
