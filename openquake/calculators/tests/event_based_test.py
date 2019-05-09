@@ -194,8 +194,9 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname, _, _] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles('expected/gmf-data-bis.csv', fname)
         self.assertEqual(out['gmf_data', 'xml'], [])  # exported removed
-        [fname] = out['hcurves', 'csv']
-        self.assertEqualFiles('expected/hc-mean.csv', fname)
+        for fname in out['hcurves', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-6)
 
     def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
