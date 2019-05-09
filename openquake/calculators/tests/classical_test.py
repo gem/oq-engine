@@ -500,8 +500,8 @@ hazard_uhs-std.csv
                               case_38.__file__)
 
     def test_case_39(self):
-        # IMT weights == 0 for SA
+        # IMT weights == 0
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
-            'hazard_map-mean.csv'], case_39.__file__)
+            'hazard_map-mean.csv'], case_39.__file__, delta=1E-5)
