@@ -907,14 +907,6 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def check_equal_sets(a, b):
-    a_set = set(a)
-    b_set = set(b)
-    diff = a_set.symmetric_difference(b_set)
-    if diff:
-        raise ValueError('Missing %s' % diff)
-
-
 def get_risk_model(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
