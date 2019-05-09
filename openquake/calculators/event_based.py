@@ -401,13 +401,35 @@ class EventBasedCalculator(base.HazardCalculator):
             hstats = oq.hazard_stats()
             S = len(hstats)
             pmaps = list(result.values())
+            R = len(weights)
+            if len(pmaps) != R:
+                # this should never happen, unless I break the
+                # logic tree reduction mechanism during refactoring
+                raise AssertionError('Expected %d pmaps, got %d' %
+                                     (len(weights), len(pmaps)))
+            if oq.individual_curves:
+                logging.info('Saving individual hazard curves')
+                self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
+                self.datastore.set_attrs('hcurves-rlzs', nbytes=N * R * L * 4)
+                if oq.poes:
+                    P = len(oq.poes)
+                    M = len(oq.imtls)
+                    ds = self.datastore.create_dset(
+                        'hmaps-rlzs', F32, (N, R, M, P))
+                    self.datastore.set_attrs(
+                        'hmaps-rlzs', nbytes=N * R * P * M * 4)
+                for r, pmap in enumerate(pmaps):
+                    arr = numpy.zeros((N, L), F32)
+                    for sid in pmap:
+                        arr[sid] = pmap[sid].array[:, 0]
+                    self.datastore['hcurves-rlzs'][:, r] = arr
+                    if oq.poes:
+                        hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
+                        for sid in hmap:
+                            ds[sid, r] = hmap[sid].array
+
             if S:
                 logging.info('Computing statistical hazard curves')
-                if len(weights) != len(pmaps):
-                    # this should never happen, unless I break the
-                    # logic tree reduction mechanism during refactoring
-                    raise AssertionError('Expected %d pmaps, got %d' %
-                                         (len(weights), len(pmaps)))
                 self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
                 self.datastore.set_attrs('hcurves-stats', nbytes=N * S * L * 4)
                 if oq.poes:
