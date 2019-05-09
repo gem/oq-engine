@@ -363,6 +363,8 @@ class RiskModel(object):
         loss_matrix[:, :] = (loss_ratio_matrix.T * values).T
         return loss_matrix
 
+    scenario = scenario_risk
+
     def scenario_damage(self, loss_type, assets, gmvs, eids=None, eps=None):
         """
         :param loss_type: the loss type
@@ -427,6 +429,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     extra['risk_investigation_time'] = oqparam.risk_investigation_time
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
     extra['ignore_covs'] = oqparam.ignore_covs
+    extra['time_event'] = oqparam.time_event
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
         extra['asset_life_expectancy'] = oqparam.asset_life_expectancy
