@@ -416,7 +416,7 @@ class OqParam(valid.ParamSet):
         imtls = {}
         for taxonomy, risk_functions in risk_models.items():
             for risk_type, rf in risk_functions.items():
-                if not hasattr(rf, 'imt'):
+                if not hasattr(rf, 'imt'):  # for consequence
                     continue
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT

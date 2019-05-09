@@ -36,27 +36,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def merge1(**kw):
-    """
-    Merge a dictionary of dictionaries
-    """
-    dic = {}
-    for kind, subdic in kw.items():
-        for k, v in subdic.items():
-            dic[k, kind] = v
-    return dic
-
-
-def merge(**kw):
-    """
-    Merge a dictionary of dictionaries
-    """
-    dic = {}
-    for kind, subdic in kw.items():
-        dic.update(subdic)
-    return dic
-
-
 class TaxonomyMapping(dict):
     """
     A dictionary taxonomy -> kind -> {ids, weights}
