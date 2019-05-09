@@ -170,7 +170,6 @@ class RiskModel(object):
     """
     time_event = None  # used in scenario_risk
     compositemodel = None  # set by get_risk_model
-    kind = None  # must be set in subclasses
 
     def __init__(self, taxonomy, risk_functions):
         self.taxonomy = taxonomy
@@ -197,7 +196,7 @@ class RiskModel(object):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        setattr(self, self.kind + '_functions', dic)
+        self.risk_functions = dic
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.taxonomy)
