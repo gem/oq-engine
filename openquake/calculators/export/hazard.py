@@ -18,13 +18,12 @@
 
 import re
 import os
-import logging
 import operator
 import collections
 
 import numpy
 
-from openquake.baselib.general import humansize, group_array, deprecated
+from openquake.baselib.general import group_array, deprecated
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, filters
 from openquake.calculators.views import view
