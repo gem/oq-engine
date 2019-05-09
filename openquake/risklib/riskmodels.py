@@ -187,7 +187,6 @@ class RiskModel(object):
     """
     time_event = None  # used in scenario_risk
     compositemodel = None  # set by get_risk_model
-    kind = None  # must be set in subclasses
 
     def __init__(self, calcmode, taxonomy, risk_functions, **kw):
         self.calcmode = calcmode
