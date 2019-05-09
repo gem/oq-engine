@@ -36,46 +36,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-class TaxonomyMapping(dict):
-    """
-    A dictionary taxonomy -> kind -> {ids, weights}
-    serializable to HDF5 as an array with fields
-    taxonomy, fragility_ids, fragility_weights, consequence_ids,
-    consequence_weights, vulnerability_ids, vulnerability_weights.
-    """
-    dt = numpy.dtype([('taxonomy', hdf5.vstr),
-                      ('fragility_ids', hdf5.vstr),
-                      ('fragility_weights', hdf5.vfloat64),
-                      ('consequence_ids', hdf5.vstr),
-                      ('consequence_weights', hdf5.vfloat64),
-                      ('vulnerability_ids', hdf5.vstr),
-                      ('vulnerability_weights', hdf5.vfloat64)])
-
-    def __toh5__(self):
-        data = []
-        for taxonomy, dic in self.items():
-            row = (taxonomy,
-                   ' '.join(dic['fragility']['ids']),
-                   numpy.array(dic['fragility']['weights']),
-                   ' '.join(dic['consequence']['ids']),
-                   numpy.array(dic['consequence']['weights']),
-                   ' '.join(dic['vulnerability']['ids']),
-                   numpy.array(dic['vulnerability']['weights']))
-            data.append(row)
-        return numpy.array(data, self.dt), {}
-
-    def __fromh5__(self, array, dic):
-        for rec in array:
-            f = dict(ids=rec['fragility_ids'].split(),
-                     weights=rec['fragility_weights'])
-            c = dict(ids=rec['consequence_ids'].split(),
-                     weights=rec['consequence_weights'])
-            v = dict(ids=rec['vulnerability_ids'].split(),
-                     weights=rec['vulnerability_weights'])
-            self[rec['taxonomy']] = dict(
-                fragility=f, consequence=c, vulnerability=v)
-
-
 def get_assets_by_taxo(assets, epspath=None):
     """
     :param assets: an array of assets
