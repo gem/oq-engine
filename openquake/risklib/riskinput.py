@@ -136,7 +136,6 @@ class CompositeRiskModel(collections.Mapping):
                         riskid, oqparam,
                         risk_functions=vf_orig,
                         retro_functions=vf_retro))
-            self.kind = 'vulnerability'
         elif (extract(riskdict, 'fragility') or
               'damage' in oqparam.calculation_mode):
             # classical_damage/scenario_damage calculator
@@ -153,7 +152,6 @@ class CompositeRiskModel(collections.Mapping):
                 self._riskmodels[riskid] = (
                     riskmodels.get_riskmodel(
                         riskid, oqparam, risk_functions=ffs_by_lt))
-            self.kind = 'fragility'
         else:
             # classical, event based and scenario calculators
             for riskid, vfs in riskdict.items():
@@ -164,8 +162,6 @@ class CompositeRiskModel(collections.Mapping):
                 self._riskmodels[riskid] = (
                     riskmodels.get_riskmodel(
                         riskid, oqparam, risk_functions=vfs))
-            self.kind = 'vulnerability'
-
         self.init(oqparam)
 
     def has(self, kind):
