@@ -240,8 +240,6 @@ class Classical(RiskModel):
             Taxonomy for this riskmodel
         :param risk_functions:
             Dictionary of risk functions by loss type, kind
-        :param vulnerability_functions:
-            Dictionary of vulnerability functions by loss type
         :param hazard_imtls:
             The intensity measure types and levels of the hazard computation
         :param lrem_steps_per_interval:
