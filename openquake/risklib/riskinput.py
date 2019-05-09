@@ -209,8 +209,7 @@ class CompositeRiskModel(collections.Mapping):
                 self._riskmodels[riskid] = (
                     riskmodels.get_riskmodel(
                         riskid, oqparam,
-                        risk_functions_orig=vf_orig,
-                        risk_functions_retro=vf_retro))
+                        risk_functions=vf_orig, retro_functions=vf_retro))
             self.kind = 'vulnerability'
         else:
             # classical, event based and scenario calculators
