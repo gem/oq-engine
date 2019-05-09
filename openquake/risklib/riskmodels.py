@@ -79,8 +79,7 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(oqparam, kind='vulnerability vulnerability_retrofitted '
-                    'fragility consequence'):
+def get_risk_models(oqparam, kind='vulnerability fragility consequence'):
     """
     :param oqparam:
         an OqParam instance
