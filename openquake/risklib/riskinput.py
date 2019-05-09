@@ -118,6 +118,15 @@ def get_assets_by_taxo(assets, epspath=None):
     return assets_by_taxo
 
 
+def extract(rfdict, kind):
+    lst = []
+    for riskid, risk_functions in rfdict.items():
+        for (lt, k), rf in risk_functions.items():
+            if k == kind:
+                lst.append((riskid, rf))
+    return lst
+
+
 class CompositeRiskModel(collections.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -185,10 +194,11 @@ class CompositeRiskModel(collections.Mapping):
                 self._riskmodels[riskid] = (
                     riskmodels.get_riskmodel(
                         riskid, oqparam,
-                        risk_functions_orig=vf_orig,
-                        risk_functions_retro=vf_retro))
+                        risk_functions=vf_orig,
+                        retro_functions=vf_retro))
             self.kind = 'vulnerability'
-        elif sum(len(v) for v in riskdict.values()):
+        elif (extract(riskdict, 'fragility') or
+              'damage' in oqparam.calculation_mode):
             # classical_damage/scenario_damage calculator
             if oqparam.calculation_mode in ('classical', 'scenario'):
                 # case when the risk files are in the job_hazard.ini file
@@ -197,6 +207,7 @@ class CompositeRiskModel(collections.Mapping):
                     raise RuntimeError(
                         'There are risk files in %r but not '
                         'an exposure' % oqparam.inputs['job_ini'])
+
             self.damage_states = ['no_damage'] + list(riskdict.limit_states)
             for riskid, ffs_by_lt in riskdict.items():
                 self._riskmodels[riskid] = (
@@ -216,6 +227,9 @@ class CompositeRiskModel(collections.Mapping):
             self.kind = 'vulnerability'
 
         self.init(oqparam)
+
+    def has(self, kind):
+        return extract(self._riskmodels, kind)
 
     def init(self, oqparam):
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
@@ -286,13 +300,12 @@ class CompositeRiskModel(collections.Mapping):
                 allratios = []
                 for taxo in sorted(self):
                     rm = self[taxo]
-                    if loss_type in rm.loss_ratios:
+                    rf = rm.risk_functions.get((loss_type, 'vulnerability'))
+                    if rf and loss_type in rm.loss_ratios:
                         ratios = rm.loss_ratios[loss_type]
                         allratios.append(ratios)
                         curve_resolutions.add(len(ratios))
-                        lines.append('%s %d' % (
-                            rm.risk_functions[loss_type, 'vulnerability'],
-                            len(ratios)))
+                        lines.append('%s %d' % (rf, len(ratios)))
                 if len(curve_resolutions) > 1:
                     # number of loss ratios is not the same for all taxonomies:
                     # then use the longest array; see classical_risk case_5
@@ -302,7 +315,9 @@ class CompositeRiskModel(collections.Mapping):
                             rm.loss_ratios[loss_type] = allratios[-1]
                             logging.debug('Redefining loss ratios for %s', rm)
                 cp = scientific.CurveParams(
-                    l, loss_type, max(curve_resolutions), allratios[-1], True)
+                    l, loss_type, max(curve_resolutions), allratios[-1], True
+                ) if curve_resolutions else scientific.CurveParams(
+                    l, loss_type, 0, [], False)
             else:  # used only to store the association l -> loss_type
                 cp = scientific.CurveParams(l, loss_type, 0, [], False)
             cps.append(cp)
