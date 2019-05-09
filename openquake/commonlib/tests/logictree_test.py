@@ -357,7 +357,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
     def test_apply_to_occupied_branch(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
                                     branchSetID="bs1">
                   <logicTreeBranch branchID="b1">
@@ -365,8 +364,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
                                     branchSetID="bs1"
                                     applyToBranches="b1">
@@ -383,13 +380,12 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.LogicTreeError)
-        self.assertEqual(exc.lineno, 21)
+        self.assertEqual(exc.lineno, 18)
         error = "branch 'b1' already has child branchset"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
