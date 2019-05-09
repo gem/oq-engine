@@ -79,8 +79,7 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(oqparam, kind='vulnerability vulnerability_retrofitted '
-                    'fragility consequence'):
+def get_risk_models(oqparam, kind='vulnerability fragility consequence'):
     """
     :param oqparam:
         an OqParam instance
@@ -240,8 +239,6 @@ class Classical(RiskModel):
             Taxonomy for this riskmodel
         :param risk_functions:
             Dictionary of risk functions by loss type, kind
-        :param vulnerability_functions:
-            Dictionary of vulnerability functions by loss type
         :param hazard_imtls:
             The intensity measure types and levels of the hazard computation
         :param lrem_steps_per_interval:
