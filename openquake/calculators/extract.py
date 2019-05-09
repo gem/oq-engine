@@ -157,8 +157,7 @@ class Extract(dict):
     determined by the first part of `fullkey` (a slash-separated
     string) by passing as argument the second part of `fullkey`.
 
-    For instance extract(dstore, 'sitecol'), extract(dstore, 'asset_values/0')
-    etc.
+    For instance extract(dstore, 'sitecol').
     """
     def add(self, key, cache=False):
         def decorator(func):
@@ -258,35 +257,6 @@ def extract_asset_risk(dstore, what):
             cond |= arr[tag] == tagidx
         arr = arr[cond]
     return ArrayWrapper(arr, dic)
-
-
-@extract.add('asset_values', cache=True)
-def extract_asset_values(dstore, sid):
-    """
-    Extract an array of asset values for the given sid. Use it as
-    /extract/asset_values/0
-
-    :returns:
-        (aid, loss_type1, ..., loss_typeN) composite array
-    """
-    if sid:
-        return extract(dstore, 'asset_values')[int(sid)]
-    assetcol = extract(dstore, 'assetcol')
-    asset_refs = assetcol.asset_refs
-    assets_by_site = assetcol.assets_by_site()
-    lts = assetcol.loss_types
-    dt = numpy.dtype([('aref', asset_refs.dtype), ('aid', numpy.uint32)] +
-                     [(str(lt), numpy.float32) for lt in lts])
-    data = []
-    for assets in assets_by_site:
-        vals = numpy.zeros(len(assets), dt)
-        for a, asset in enumerate(assets):
-            vals[a]['aref'] = asset_refs[a]
-            vals[a]['aid'] = asset['ordinal']
-            for lt in lts:
-                vals[a][lt] = asset['value-' + lt]
-        data.append(vals)
-    return data
 
 
 @extract.add('asset_tags')

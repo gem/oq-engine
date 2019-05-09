@@ -380,13 +380,13 @@ class OqParam(valid.ParamSet):
         if it is there) in order.
         """
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
+        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             with util.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
             self._risk_files = get_risk_files(parent.inputs)
-            costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
-        return costtypes
+            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        return sorted(costtypes)
 
     @property
     def min_iml(self):
@@ -418,6 +418,8 @@ class OqParam(valid.ParamSet):
         imtls = {}
         for taxonomy, risk_functions in risk_models.items():
             for risk_type, rf in risk_functions.items():
+                if not hasattr(rf, 'imt'):  # for consequence
+                    continue
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
                 imls = list(rf.imls)
