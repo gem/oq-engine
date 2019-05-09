@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Name"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        srcs_weights="1.0"
+        tectonicRegion="Volcanic_Large"
+        >
+            <complexFaultSource
+            id="HLEKAOSFL"
+            name="None"
+            tectonicRegion="Volcanic_Large"
+            >
+                <complexFaultGeometry>
+                    <faultTopEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -155.7167 19.235 10.0 -155.5633 19.2583 10.0 -155.515 19.3433 10.0 -155.515 19.385 10.0 -155.515 19.4517 10.0 -155.4833 19.515 10.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <faultBottomEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -155.65 18.917 10.0 -154.6833 19.3333 10.0 -154.8067 19.5083 10.0 -154.995 19.4083 10.0 -155.2017 19.3467 10.0 -155.3167 19.465 10.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </complexFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    4.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.4329" bValue="0.5713" minMag="7.0" maxMag="8.2"/>
+                <rake>
+                    90
+                </rake>
+            </complexFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

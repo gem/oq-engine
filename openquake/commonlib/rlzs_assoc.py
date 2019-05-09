@@ -200,7 +200,7 @@ class RlzsAssoc(object):
         idx = numpy.arange(offset, offset + len(gsim_rlzs))
         rlzs = []
         for i, gsim_rlz in enumerate(gsim_rlzs):
-            weight = float(lt_model.weight) * gsim_rlz.weight
+            weight = lt_model.weight * gsim_rlz.weight
             rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
             self.gsim_by_trt.append(dict(zip(all_trts, gsim_rlz.value)))
             rlzs.append(rlz)
