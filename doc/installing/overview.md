@@ -21,7 +21,7 @@ Use the **[self-installable binary distribution for macOS](macos.md)**. No root 
 
 ### Windows
 
-Use the **[self-installable binary distribution for Windows](windows.md)**. Administrator level access may be required.
+Use the **[self-installable binary distribution for Windows 10](windows.md)**. Administrator level access may be required.
 
 ### PyPI
 

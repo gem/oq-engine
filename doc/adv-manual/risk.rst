@@ -117,6 +117,38 @@ obtained from a full-enumeration of these branches is nearly the same
 as the distribution of the hazard or loss results obtained from a
 full-enumeration of the entire logic-tree.
 
+Ignoring the coefficients of variations
+---------------------------------------
+
+The vulnerability functions contain the so called coefficients of variation,
+which are relevant for the calculation of asset correlation. They are used to
+build the so called epsilon matrix. Because of the coefficients of variation,
+two assets of the same taxonomy on the same hazard site will give different
+loss curves.
+
+There is clearly a performance penalty associated with the use
+of coefficients of variation: the epsilon matrix has to be computed and
+stored, and then the workers processes have to read it, which involves
+data transfer and memory usage.
+
+However, you should bear in mind that risk calculations are affected
+by so many uncertainties that asset correlation is often the least of your
+worries, especially for global scale calculations: ignoring the
+coefficients of variations can be a good strategy. Probably the
+answer you will get will be significative and certainly better than no
+answer at all, given than considering the coefficients could
+cause an out of memory error. To disable the coefficients of variation
+you can simply write
+
+``ignore_covs = true``
+
+in your `job.ini` file. If the coefficients of variation all already
+zero you can avoid that, of course. The performance benefit depends on
+how many assets of the same taxonomy are present on a given hazard
+site.  The more the better. In other words, this stategy plays well
+with the plan of aggregating the exposure on a large grid so that
+there a lot of assets (of the same taxonomy) on the same point.
+
 The ebrisk calculator
 ---------------------------------------
 
@@ -157,31 +189,10 @@ will not be much better than the ``event_based_risk`` calculator, but
 the larger your calculation is, the better it will work, and in situations
 like the Canada example here it can be orders of
 magnitude more efficient, both in speed an memory occupation.
-There are two reasons why the ``ebrisk`` calculator is so efficient:
+The reason why the ``ebrisk`` calculator is so efficient is that
+it computes the GMFs in memory instead of reading them for the datastore.
 
-1. it ignores the coefficient of variations in the vulnerability functions
-2. it computes the GMFs in memory instead of reading them for the datastore
-
-Let me explain better the first point. Suppose there are 10 assets of the same
-taxonomy on a given hazard site and suppose that the vulnerability function
-for that taxonomy has coefficients of variations are all zeros. Then the
-risk for all those assets will be exactly the same: still, the
-``event_based_risk`` will perform 10 times more calculations than needed
-and will keep in memory 10 times more data than needed.
-The ``ebrisk`` instead does not make that error. On the other hand, if
-the coefficients of variations are nonzero, the ``ebrisk`` calculator
-will give the wrong answer while the ``even_based_risk`` will give the right
-one.
-
-However, you should bear in mind that risk calculations are affected
-by so many uncertainties that asset correlation is the least of your
-worries, especially for global scale calculations: ignoring the
-coefficients of variations is a good enough strategy. Probably the
-answer you will get will be significative and certainly better than no
-answer at all, given than considering the coefficients will likely
-cause an out of memory error.
-
-Now, let's discuss the second point. The ``event_based_risk`` calculator
+The ``event_based_risk`` calculator
 works by storing the GMFs in the hazard phase of the calculation and
 by reading them in the risk phase. This approach has his advantages:
 

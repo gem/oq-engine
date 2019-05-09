@@ -323,7 +323,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 </nrml>""")
         vfs = {('structural', 'vulnerability'):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
-        rm = riskmodels.ProbabilisticEventBased("RC/A", {}, vfs, [], False)
+        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
+                                  ignore_covs=False)
         assets = [0, 1]
         eids = numpy.array([1, 2, 3, 4, 5])
         gmvs = numpy.array([.1, .2, .3, .4, .5])
