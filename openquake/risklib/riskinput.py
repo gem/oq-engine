@@ -118,9 +118,10 @@ def get_assets_by_taxo(assets, epspath=None):
     return assets_by_taxo
 
 
-def extract(rfdict, kind):
+def extract(rmdict, kind):
     lst = []
-    for riskid, risk_functions in rfdict.items():
+    for riskid, rm in rmdict.items():
+        risk_functions = getattr(rm, 'risk_functions', rm)
         for (lt, k), rf in risk_functions.items():
             if k == kind:
                 lst.append((riskid, rf))
