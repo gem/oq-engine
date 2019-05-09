@@ -667,14 +667,6 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
 
-            # same check for the consequence models, if any
-            if any(key.endswith('_consequence') for key in oq.inputs):
-                for taxonomy in taxonomies:
-                    cfs = self.riskmodel[taxonomy].consequence_functions
-                    if not cfs:
-                        raise ValueError(
-                            'Missing consequenceFunctions for %s' % taxonomy)
-
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
