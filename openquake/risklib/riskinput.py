@@ -131,11 +131,9 @@ class CompositeRiskModel(collections.Mapping):
             for (riskid, vf_orig), (riskid_, vf_retro) in \
                     zip(sorted(riskdict.items()), sorted(retrodict.items())):
                 assert riskid == riskid_  # same IDs
-                self._riskmodels[riskid] = (
-                    riskmodels.get_riskmodel(
-                        riskid, oqparam,
-                        risk_functions=vf_orig,
-                        retro_functions=vf_retro))
+                self._riskmodels[riskid] = riskmodels.get_riskmodel(
+                    riskid, oqparam, risk_functions=vf_orig,
+                    retro_functions=vf_retro)
         elif (extract(riskdict, 'fragility') or
               'damage' in oqparam.calculation_mode):
             # classical_damage/scenario_damage calculator
@@ -149,9 +147,8 @@ class CompositeRiskModel(collections.Mapping):
 
             self.damage_states = ['no_damage'] + list(riskdict.limit_states)
             for riskid, ffs_by_lt in riskdict.items():
-                self._riskmodels[riskid] = (
-                    riskmodels.get_riskmodel(
-                        riskid, oqparam, risk_functions=ffs_by_lt))
+                self._riskmodels[riskid] = riskmodels.get_riskmodel(
+                    riskid, oqparam, risk_functions=ffs_by_lt)
         else:
             # classical, event based and scenario calculators
             for riskid, vfs in riskdict.items():
@@ -159,9 +156,8 @@ class CompositeRiskModel(collections.Mapping):
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
                     vf.seed = oqparam.random_seed
-                self._riskmodels[riskid] = (
-                    riskmodels.get_riskmodel(
-                        riskid, oqparam, risk_functions=vfs))
+                self._riskmodels[riskid] = riskmodels.get_riskmodel(
+                    riskid, oqparam, risk_functions=vfs)
         self.init(oqparam)
 
     def has(self, kind):
