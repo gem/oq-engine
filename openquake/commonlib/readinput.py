@@ -942,16 +942,15 @@ def get_risk_model(oqparam):
                         'The damage states in %s are different from the '
                         'damage states in the fragility functions, %s'
                         % (c, fragdict.limit_states))
-    dic = {}
-    dic.update(fragdict)
-    dic.update(vulndict)
-    oqparam.set_risk_imtls(dic)
+    riskdict = fragdict
+    riskdict.update(vulndict)
+    riskdict.update(consdict)
+    oqparam.set_risk_imtls(riskdict)
     if oqparam.calculation_mode.endswith('_bcr'):
         retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
     else:
         retro = {}
-    return riskinput.CompositeRiskModel(
-        oqparam, tmap, fragdict, vulndict, consdict, retro)
+    return riskinput.CompositeRiskModel(oqparam, tmap, riskdict, retro)
 
 
 def get_exposure(oqparam):
