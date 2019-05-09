@@ -164,6 +164,10 @@ in source model logic tree with multiple source models. It has been
 fixed and now it is actually required to specify `applyToBranches` in
 such situations.
 
+7. It was impossible to export individual hazard curves from an event based
+calculations, since only the statistical hazard curves were stored. The issue
+has been fixed.
+
 oq commands
 -----------
 
@@ -175,6 +179,12 @@ for hazard calculations, when the exposure is not know.
 change the calculation owner: as a consequence, we have now an
 official mechanism to distribute engine calculations as a zip archive
 of HDF5 files.
+
+Deprecations
+--------------------
+
+1. Windows 7 is deprecated as a platform for running the engine since it is
+reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support).
 
 Removals
 ------------------------
