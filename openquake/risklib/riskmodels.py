@@ -184,14 +184,6 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def get_loss_types(self, imt):
-        """
-        :param imt: Intensity Measure Type string
-        :returns: loss types with risk functions of the given imt
-        """
-        return [lt for lt in self.loss_types
-                if self.risk_functions[lt].imt == imt]
-
     def __toh5__(self):
         return self.risk_functions, {'taxonomy': self.taxonomy}
 
