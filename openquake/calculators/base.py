@@ -579,7 +579,7 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         self.datastore['risk_model'] = rm = self.riskmodel
-        self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
+        #self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes('risk_model')
