@@ -530,39 +530,6 @@ def export_hazard_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('gmf_data', 'xml'))
-@deprecated(msg='Use the CSV exporter instead')
-def export_gmf(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    oq = dstore['oqparam']
-    if not oq.calculation_mode.startswith('scenario'):
-        return []
-    sitecol = dstore['sitecol']
-    investigation_time = (None if oq.calculation_mode == 'scenario'
-                          else oq.investigation_time)
-    fmt = ekey[-1]
-    gmf_data = dstore['gmf_data']
-    nbytes = gmf_data.attrs['nbytes']
-    logging.info('Internal size of the GMFs: %s', humansize(nbytes))
-    if nbytes > GMF_MAX_SIZE:
-        logging.warning(GMF_WARNING, dstore.filename)
-    data = gmf_data['data'].value
-    ses_idx = 1  # for scenario only
-    events = []
-    for eid, gmfa in group_array(data, 'eid').items():
-        rup = Event(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
-        events.append(rup)
-    fname = dstore.build_fname('gmf', 'scenario', fmt)
-    writer = hazard_writers.EventBasedGMFXMLWriter(
-        fname, sm_lt_path='', gsim_lt_path='')
-    writer.serialize(
-        GmfCollection(sitecol, oq.imtls, events, investigation_time))
-    return [fname]
-
-
 Event = collections.namedtuple('Event', ['eid', 'ses_idx', 'indices', 'gmfa'])
 
 
