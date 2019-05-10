@@ -73,16 +73,12 @@ class CompositeRiskModel(collections.Mapping):
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param tmap:
-        a taxonomy mapping
     :param fragdict:
         a dictionary riskid -> loss_type -> fragility functions
     :param vulndict:
         a dictionary riskid -> loss_type -> vulnerability function
     :param consdict:
         a dictionary riskid -> loss_type -> consequence functions
-    :param retrodict:
-        a dictionary riskid -> loss_type -> vulnerability function
     """
     @classmethod
     def read(cls, dstore):
@@ -91,11 +87,8 @@ class CompositeRiskModel(collections.Mapping):
         :returns: a :class:`CompositeRiskModel` instance
         """
         oqparam = dstore['oqparam']
-        tmap = (dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore
-                else {})
         crm = dstore.getitem('risk_model')
         riskdict = AccumDict(accum={})
-        retrodict = AccumDict(accum={})
         riskdict.limit_states = crm.attrs['limit_states']
         for quoted_id, rm in crm.items():
             riskid = unquote_plus(quoted_id)
@@ -117,23 +110,20 @@ class CompositeRiskModel(collections.Mapping):
                     rf.init()
                     if lt.endswith('_retrofitted'):
                         # strip _retrofitted, since len('_retrofitted') = 12
-                        retrodict[riskid][lt[:-12], 'vulnerability'] = rf
+                        riskdict[riskid][
+                            lt[:-12], 'vulnerability_retrofitted'] = rf
                     else:
                         riskdict[riskid][lt, 'vulnerability'] = rf
-        return CompositeRiskModel(oqparam, tmap, riskdict, retrodict)
+        return CompositeRiskModel(oqparam, riskdict)
 
-    def __init__(self, oqparam, tmap, riskdict, retrodict):
-        self.tmap = tmap
+    def __init__(self, oqparam, riskdict):
         self.damage_states = []
         self._riskmodels = {}  # riskid -> riskmodel
         if oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
-            for (riskid, vf_orig), (riskid_, vf_retro) in \
-                    zip(sorted(riskdict.items()), sorted(retrodict.items())):
-                assert riskid == riskid_  # same IDs
+            for riskid, risk_functions in sorted(riskdict.items()):
                 self._riskmodels[riskid] = riskmodels.get_riskmodel(
-                    riskid, oqparam, risk_functions=vf_orig,
-                    retro_functions=vf_retro)
+                    riskid, oqparam, risk_functions=risk_functions)
         elif (extract(riskdict, 'fragility') or
               'damage' in oqparam.calculation_mode):
             # classical_damage/scenario_damage calculator
