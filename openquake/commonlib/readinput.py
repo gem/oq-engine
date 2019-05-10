@@ -403,7 +403,7 @@ def get_site_model(oqparam):
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = read_csv(fname).array
+            sm = read_csv(fname, {None: float, 'vs30measured': bool}).array
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
