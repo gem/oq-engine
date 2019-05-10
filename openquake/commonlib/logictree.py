@@ -214,6 +214,12 @@ class Branch(object):
         self.value = value
         self.child_branchset = None
 
+    def __repr__(self):
+        if self.child_branchset:
+            return '%s%s' % (self.branch_id, self.child_branchset)
+        else:
+            return '%s' % self.branch_id
+
 
 # Define the keywords associated with the MFD
 MFD_UNCERTAINTY_TYPES = ['maxMagGRRelative', 'maxMagGRAbsolute',
@@ -447,6 +453,9 @@ class BranchSet(object):
             min_mag, bin_width, occur_rates = value
             mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                        occurrence_rates=occur_rates))
+
+    def __repr__(self):
+        return repr(self.branches)
 
 
 class FakeSmlt(object):
@@ -1228,6 +1237,9 @@ class SourceModelLogicTree(object):
         Returns a dictionary lt_path -> how many times that path was sampled
         """
         return collections.Counter(rlz.lt_path for rlz in self)
+
+    def __str__(self):
+        return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
 
 
 # used in GsimLogicTree
