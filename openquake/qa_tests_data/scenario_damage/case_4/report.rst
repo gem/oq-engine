@@ -3,8 +3,8 @@ Scenario Damage QA Test 4
 
 ============== ===================
 checksum32     1,140,149,609      
-date           2019-05-03T06:43:41
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:24
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 3, num_levels = 60, num_rlzs = 1
@@ -86,5 +86,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.137E-04 0.0       1     
+reading exposure 3.927E-04 0.0       1     
 ================ ========= ========= ======
