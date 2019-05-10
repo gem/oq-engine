@@ -1,4 +1,4 @@
-event_id,rlz_id:uint16,rup_id,year,business_interruption,contents,nonstructural,occupants,structural
+event_id,rlz_id,rup_id,year,business_interruption,contents,nonstructural,occupants,structural
 2250562863104,0,524,1,2.17270E+02,1.52241E+03,2.03401E+03,4.34540E-03,3.23538E+02
 2250562863105,0,524,1,1.18512E+02,9.53345E+02,1.72023E+03,2.37025E-03,0.00000E+00
 2250562863106,2,524,1,1.16379E+02,6.35953E+02,9.49279E+02,2.32758E-03,0.00000E+00
