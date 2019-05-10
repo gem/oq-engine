@@ -958,7 +958,8 @@ def import_gmfs(dstore, fname, sids):
     :param sids: the site IDs (complete)
     :returns: event_ids, num_rlzs
     """
-    array = writers.read_composite_array(fname).array
+    array = readinput.read_csv(
+        fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
     # has header rlzi, sid, eid, gmv_PGA, ...
     imts = [name[4:] for name in array.dtype.names[3:]]
     n_imts = len(imts)
