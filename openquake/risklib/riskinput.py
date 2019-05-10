@@ -126,7 +126,7 @@ class CompositeRiskModel(collections.Mapping):
         self._riskmodels = {}  # riskid -> riskmodel
         if oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
-            for riskid, risk_functions in riskdict.items():
+            for riskid, risk_functions in sorted(riskdict.items()):
                 self._riskmodels[riskid] = riskmodels.get_riskmodel(
                     riskid, oqparam, risk_functions=risk_functions)
         elif (extract(riskdict, 'fragility') or
