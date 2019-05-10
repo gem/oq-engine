@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     3,490,620,350      
-date           2019-05-03T06:43:34
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:18
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
@@ -91,11 +91,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
 ====== ========= ==== ===== ===== ============ ========= ========= ======
-0      f1        C    0     4     2,308        9.47433   37        9,232 
-1      p1        P    4     5     156          0.45874   1.00000   15    
-1      p3        P    6     7     156          0.45664   1.00000   15    
-1      p4        P    7     8     156          0.45562   1.00000   15    
-1      p2        P    5     6     156          0.45189   1.00000   15    
+0      f1        C    0     4     2,308        9.20134   0.0       9,232 
+1      p4        P    7     8     156          0.46964   0.0       15    
+1      p2        P    5     6     156          0.46012   0.0       15    
+1      p3        P    6     7     156          0.45440   0.0       15    
+1      p1        P    4     5     156          0.44232   0.0       15    
 ====== ========= ==== ===== ===== ============ ========= ========= ======
 
 Computation times by source typology
@@ -103,18 +103,18 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    9.47433   1     
-P    1.82288   4     
+C    9.20134   1     
+P    1.82649   4     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ====================== ======= ======= ========= ======= =======
 operation-duration     mean    stddev  min       max     outputs
-read_source_models     0.04957 0.06497 0.00363   0.09551 2      
-classical_split_filter 0.21035 0.79406 1.469E-04 4.52334 33     
-classical              0.48197 0.86666 0.00595   4.84498 28     
-build_hazard_stats     0.00470 NaN     0.00470   0.00470 1      
+read_source_models     0.04255 0.05359 0.00466   0.08044 2      
+classical_split_filter 0.21439 0.80260 1.462E-04 4.56507 33     
+classical              0.47010 0.87662 0.00565   4.88898 28     
+build_hazard_stats     0.00435 NaN     0.00435   0.00435 1      
 ====================== ======= ======= ========= ======= =======
 
 Fastest task
@@ -141,32 +141,32 @@ weight   9,232   NaN    9,232 9,232 1
 
 Data transfer
 -------------
-====================== ============================================================== ========
-task                   sent                                                           received
-read_source_models     converter=626 B fnames=230 B                                   6.27 KB 
-classical_split_filter srcs=1.39 MB params=73.51 KB gsims=15.47 KB srcfilter=11.73 KB 1.65 MB 
-classical              srcs=1.39 MB params=73.51 KB gsims=15.47 KB srcfilter=11.73 KB 728.3 KB
-build_hazard_stats     pgetter=0 B individual_curves=0 B hstats=0 B N=0 B             11.87 KB
-====================== ============================================================== ========
+====================== ============================================================== =========
+task                   sent                                                           received 
+read_source_models     converter=626 B fnames=230 B                                   6.27 KB  
+classical_split_filter srcs=1.39 MB params=73.51 KB gsims=15.47 KB srcfilter=11.76 KB 1.65 MB  
+classical              srcs=1.39 MB params=73.51 KB gsims=15.47 KB srcfilter=11.76 KB 728.08 KB
+build_hazard_stats     pgetter=0 B individual_curves=0 B hstats=0 B N=0 B             11.87 KB 
+====================== ============================================================== =========
 
 Slowest operations
 ------------------
 ============================ ========= ========= ======
 operation                    time_sec  memory_mb counts
 ============================ ========= ========= ======
-total classical              13        3.24219   28    
-get_poes                     9.37708   0.0       2,932 
-make_contexts                7.65233   0.0       2,932 
-total classical_split_filter 6.94155   2.98828   33    
-filtering/splitting sources  4.53607   2.98828   5     
-total read_source_models     0.09914   0.0       2     
-aggregate curves             0.05540   1.03125   33    
-store source model           0.00554   0.0       2     
-total build_hazard_stats     0.00470   0.0       1     
-managing sources             0.00431   0.0       1     
-saving probability maps      0.00395   0.0       1     
-combine pmaps                0.00374   0.0       1     
-store source_info            0.00200   0.0       1     
-saving statistics            0.00174   0.0       1     
-compute stats                7.596E-04 0.0       1     
+total classical              13        3.31641   28    
+get_poes                     9.15302   0.0       2,932 
+make_contexts                7.66745   0.0       2,932 
+total classical_split_filter 7.07491   3.34766   33    
+filtering/splitting sources  4.57571   3.31641   5     
+total read_source_models     0.08510   0.0       2     
+aggregate curves             0.05927   0.51562   33    
+store source model           0.00502   0.0       2     
+total build_hazard_stats     0.00435   0.0       1     
+saving probability maps      0.00379   0.0       1     
+combine pmaps                0.00349   0.0       1     
+managing sources             0.00343   0.0       1     
+saving statistics            0.00167   0.0       1     
+store source_info            0.00149   0.0       1     
+compute stats                6.773E-04 0.0       1     
 ============================ ========= ========= ======

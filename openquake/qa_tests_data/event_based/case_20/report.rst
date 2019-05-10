@@ -3,8 +3,8 @@ British Columbia With Vs30
 
 ============== ===================
 checksum32     2,623,339,741      
-date           2019-05-03T06:43:44
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:29
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -81,7 +81,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05075 0.01344 0.03756 0.07061 5      
+read_source_models 0.05397 0.01286 0.04271 0.07197 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -96,6 +96,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.25375  0.0       5     
-reading exposure         0.00153  0.0       1     
+total read_source_models 0.26985  0.0       5     
+reading exposure         0.00145  0.0       1     
 ======================== ======== ========= ======
