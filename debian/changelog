@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Removed the long time deprecated GMF XML export for scenario
+  * Removed the long time deprecated event loss table exporter for event based
+    risk and enhanced the losses_by_event exporter to export the realization ID
+  * Removed the long time deprecated GMF XML exporter for scenario
   * IMT-dependent weights in the gsim logic tree can be zero, to discard
     contributions outside the range of validity of (some of the) GSIMs
   * Now it is possible to export individual hazard curves from an event
