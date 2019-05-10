@@ -417,8 +417,9 @@ class OqParam(valid.ParamSet):
         # in that case we merge the IMLs
         imtls = {}
         for taxonomy, risk_functions in risk_models.items():
-            for risk_type, rf in risk_functions.items():
-                if not hasattr(rf, 'imt'):  # for consequence
+            for (lt, kind), rf in risk_functions.items():
+                if not hasattr(rf, 'imt') or kind.endswith('_retrofitted'):
+                    # for consequence or retrofitted
                     continue
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
