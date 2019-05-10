@@ -162,15 +162,18 @@ class CsvWriter(object):
         self.fmt = fmt
         self.fnames = set()
 
-    def save(self, data, fname, header=None):
+    def save(self, data, fname, header=None, comment=None):
         """
         Save data on fname.
 
         :param data: numpy array or list of lists
         :param fname: path name
         :param header: header to use
+        :param comment: optional dictionary to be converted in a comment
         """
-        write_csv(fname, data, self.sep, self.fmt, header)
+        if comment is not None:
+            comment = ', '.join('%s=%r' % item for item in comment.items())
+        write_csv(fname, data, self.sep, self.fmt, header, comment)
         self.fnames.add(getattr(fname, 'name', fname))
 
     def save_block(self, data, dest):
