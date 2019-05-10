@@ -3,8 +3,8 @@ Event Based Bogota
 
 ============== ===================
 checksum32     2,254,739,311      
-date           2019-05-03T06:43:42
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:26
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 5, num_levels = 104, num_rlzs = ?
@@ -100,7 +100,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.24561 0.27758 0.04933 0.44189 2      
+read_source_models 0.23045 0.25477 0.05030 0.41060 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -115,6 +115,6 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.49122   0.98828   2     
-reading exposure         4.859E-04 0.0       1     
+total read_source_models 0.46090   0.99609   2     
+reading exposure         5.875E-04 0.0       1     
 ======================== ========= ========= ======
