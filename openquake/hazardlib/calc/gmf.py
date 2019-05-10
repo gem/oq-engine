@@ -221,7 +221,10 @@ class GmfComputer(object):
 
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
-        return gmf, stddev_inter.max(axis=0), epsilons
+        if numpy.isnan(stddev_inter).any():
+            return gmf, numpy.nan, epsilons
+        else:
+            return gmf, stddev_inter.max(axis=0), epsilons
 
 
 # this is not used in the engine; it is still useful for usage in IPython
