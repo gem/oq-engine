@@ -193,8 +193,7 @@ class GmfComputer(object):
             total_residual = stddev_total * rvs(
                 distribution, num_sids, num_events)
             gmf = gsim.to_imt_unit_values(mean + total_residual)
-            stddev_inter = numpy.empty(num_events, F32)
-            stddev_inter.fill(numpy.nan)
+            stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
         else:
@@ -221,10 +220,8 @@ class GmfComputer(object):
 
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
-        if numpy.isnan(stddev_inter).any():
-            return gmf, numpy.nan, epsilons
-        else:
-            return gmf, stddev_inter.max(axis=0), epsilons
+            stdi = stddev_inter.max(axis=0)
+        return gmf, stdi, epsilons
 
 
 # this is not used in the engine; it is still useful for usage in IPython
