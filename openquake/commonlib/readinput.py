@@ -914,14 +914,9 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    tmap = {}  # _get_taxonomy_mapping(oqparam.inputs)
     riskdict = get_risk_models(oqparam)
     oqparam.set_risk_imtls(riskdict)
-    if oqparam.calculation_mode.endswith('_bcr'):
-        retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
-    else:
-        retro = {}
-    return riskinput.CompositeRiskModel(oqparam, tmap, riskdict, retro)
+    return riskinput.CompositeRiskModel(oqparam, riskdict)
 
 
 def get_exposure(oqparam):
