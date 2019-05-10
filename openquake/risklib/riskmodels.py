@@ -122,7 +122,7 @@ def get_risk_models(oqparam, kind='vulnerability fragility consequence'):
             # build a copy of the FragilityModel with different IM levels
             newfm = rm.build(oqparam.continuous_fragility_discretization,
                              oqparam.steps_per_interval)
-            for (imt, riskid), ffl in newfm.items():
+            for (imt, riskid), ffl in sorted(newfm.items()):
                 if not rdict.limit_states:
                     rdict.limit_states.extend(rm.limitStates)
                 # we are rejecting the case of loss types with different
@@ -134,14 +134,14 @@ def get_risk_models(oqparam, kind='vulnerability fragility consequence'):
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
         elif kind == 'consequence':
-            for riskid, cf in rm.items():
+            for riskid, cf in sorted(rm.items()):
                 rdict[riskid][loss_type, kind] = cf
         else:  # vulnerability
             cl_risk = oqparam.calculation_mode in (
                 'classical', 'classical_risk')
             # only for classical_risk reduce the loss_ratios
             # to make sure they are strictly increasing
-            for (imt, riskid), rf in rm.items():
+            for (imt, riskid), rf in sorted(rm.items()):
                 rdict[riskid][loss_type, kind] = (
                     rf.strictly_increasing() if cl_risk else rf)
     return rdict
