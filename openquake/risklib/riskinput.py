@@ -73,8 +73,6 @@ class CompositeRiskModel(collections.Mapping):
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param tmap:
-        a taxonomy mapping
     :param fragdict:
         a dictionary riskid -> loss_type -> fragility functions
     :param vulndict:
@@ -89,8 +87,6 @@ class CompositeRiskModel(collections.Mapping):
         :returns: a :class:`CompositeRiskModel` instance
         """
         oqparam = dstore['oqparam']
-        tmap = (dstore['taxonomy_mapping'] if 'taxonomy_mapping' in dstore
-                else {})
         crm = dstore.getitem('risk_model')
         riskdict = AccumDict(accum={})
         riskdict.limit_states = crm.attrs['limit_states']
@@ -118,10 +114,9 @@ class CompositeRiskModel(collections.Mapping):
                             lt[:-12], 'vulnerability_retrofitted'] = rf
                     else:
                         riskdict[riskid][lt, 'vulnerability'] = rf
-        return CompositeRiskModel(oqparam, tmap, riskdict)
+        return CompositeRiskModel(oqparam, riskdict)
 
-    def __init__(self, oqparam, tmap, riskdict):
-        self.tmap = tmap
+    def __init__(self, oqparam, riskdict):
         self.damage_states = []
         self._riskmodels = {}  # riskid -> riskmodel
         if oqparam.calculation_mode.endswith('_bcr'):
