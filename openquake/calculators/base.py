@@ -579,7 +579,7 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         self.datastore['risk_model'] = rm = self.riskmodel
-        self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
+        #self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes('risk_model')
@@ -666,14 +666,6 @@ class HazardCalculator(BaseCalculator):
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
-
-            # same check for the consequence models, if any
-            if any(key.endswith('_consequence') for key in oq.inputs):
-                for taxonomy in taxonomies:
-                    cfs = self.riskmodel[taxonomy].consequence_functions
-                    if not cfs:
-                        raise ValueError(
-                            'Missing consequenceFunctions for %s' % taxonomy)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
