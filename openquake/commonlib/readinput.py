@@ -264,7 +264,11 @@ def get_csv_header(fname, sep=','):
         return next(f).split(sep)
 
 
-def get_dt(dtypedict, names):
+def build_dt(dtypedict, names):
+    """
+    Build a composite dtype for a list of names and dictionary
+    name -> dtype with a None entry corresponding to the default dtype.
+    """
     lst = []
     for name in names:
         try:
@@ -314,7 +318,7 @@ def read_csv(fname, dtypedict={}, sep=','):
                 continue
             break
         header = first.strip().split(sep)
-        arr = numpy.loadtxt(f, get_dt(dtypedict, header), delimiter=sep,
+        arr = numpy.loadtxt(f, build_dt(dtypedict, header), delimiter=sep,
                             ndmin=1)
     return hdf5.ArrayWrapper(arr, attrs)
 
