@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     1,736,466,096      
-date           2019-05-03T06:44:24
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:08:05
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 1, num_levels = 78, num_rlzs = 4
@@ -83,7 +83,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
 ====== ========= ==== ===== ===== ============ ========= ========= ======
-4      s46       A    657   683   7,770        1.431E-05 1.00000   777   
+4      s46       A    657   683   7,770        0.00164   1.00000   777   
 4      s72       A    711   739   17,871       0.0       0.0       0.0   
 4      s70       A    683   711   17,871       0.0       0.0       0.0   
 4      s40       A    631   657   12,327       0.0       0.0       0.0   
@@ -108,7 +108,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    1.431E-05 16    
+A    0.00164   16    
 C    0.0       2     
 ==== ========= ======
 
@@ -116,8 +116,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 5.18428 NaN     5.18428 5.18428 1      
-preclassical       0.00418 0.00402 0.00169 0.01535 17     
+read_source_models 4.94977 NaN     4.94977 4.94977 1      
+preclassical       0.00349 0.00218 0.00168 0.01041 17     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -125,7 +125,7 @@ Data transfer
 ================== ============================================================ ========
 task               sent                                                         received
 read_source_models converter=313 B fnames=119 B                                 45.04 KB
-preclassical       srcs=58.56 KB params=20.4 KB gsims=7.63 KB srcfilter=3.92 KB 4.78 KB 
+preclassical       srcs=58.56 KB params=20.4 KB gsims=7.63 KB srcfilter=3.93 KB 4.9 KB  
 ================== ============================================================ ========
 
 Slowest operations
@@ -133,9 +133,9 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 5.18428  0.0       1     
-total preclassical       0.07113  0.0       17    
-managing sources         0.01904  0.0       1     
-store source_info        0.00229  0.0       1     
-aggregate curves         0.00228  0.0       17    
+total read_source_models 4.94977  0.21484   1     
+total preclassical       0.05928  0.21094   17    
+managing sources         0.01607  0.0       1     
+aggregate curves         0.00236  0.0       17    
+store source_info        0.00188  0.0       1     
 ======================== ======== ========= ======
