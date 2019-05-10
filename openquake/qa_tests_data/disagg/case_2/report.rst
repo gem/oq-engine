@@ -3,8 +3,8 @@ QA test for disaggregation case_2
 
 ============== ===================
 checksum32     2,473,169,806      
-date           2019-05-03T06:43:40
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:24
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -63,7 +63,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.02845 0.02274 0.01237 0.04453 2      
+read_source_models 0.02648 0.02845 0.00637 0.04660 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -78,5 +78,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.05690  0.0       2     
+total read_source_models 0.05297  0.0       2     
 ======================== ======== ========= ======
