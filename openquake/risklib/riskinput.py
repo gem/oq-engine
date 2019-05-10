@@ -146,12 +146,12 @@ class CompositeRiskModel(collections.Mapping):
                         'an exposure' % oqparam.inputs['job_ini'])
 
             self.damage_states = ['no_damage'] + list(riskdict.limit_states)
-            for riskid, ffs_by_lt in riskdict.items():
+            for riskid, ffs_by_lt in sorted(riskdict.items()):
                 self._riskmodels[riskid] = riskmodels.get_riskmodel(
                     riskid, oqparam, risk_functions=ffs_by_lt)
         else:
             # classical, event based and scenario calculators
-            for riskid, vfs in riskdict.items():
+            for riskid, vfs in sorted(riskdict.items()):
                 for vf in vfs.values():
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
