@@ -1,4 +1,4 @@
-event_id,rlz_id:uint16,rup_id,year,structural
+event_id,rlz_id,rup_id,year,structural
 180388626432,0,42,39,2.35503E+02
 180388626433,0,42,29,6.61698E+02
 180388626434,0,42,15,2.74907E+02
