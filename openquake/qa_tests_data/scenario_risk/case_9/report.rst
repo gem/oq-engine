@@ -3,8 +3,8 @@ Kish pga
 
 ============== ===================
 checksum32     4,282,897,091      
-date           2019-05-03T06:43:30
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:14
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 63, num_levels = 13, num_rlzs = 1
@@ -83,9 +83,9 @@ ST1      1.00000 NaN     1   1   1         1
 
 Slowest operations
 ------------------
-=================== ========= ========= ======
-operation           time_sec  memory_mb counts
-=================== ========= ========= ======
-building riskinputs 0.00306   0.0       1     
-reading exposure    9.162E-04 0.0       1     
-=================== ========= ========= ======
+=================== ======== ========= ======
+operation           time_sec memory_mb counts
+=================== ======== ========= ======
+building riskinputs 0.00283  0.0       1     
+reading exposure    0.00101  0.0       1     
+=================== ======== ========= ======

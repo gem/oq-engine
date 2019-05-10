@@ -3,8 +3,8 @@ Subduction backbone logic tree - 9 branch
 
 ============== ===================
 checksum32     2,927,813,965      
-date           2019-05-06T16:51:05
-engine_version 3.5.0-gitb5a44a2026
+date           2019-05-10T05:13:52
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 2, num_levels = 8, num_rlzs = 9
@@ -12,7 +12,7 @@ num_sites = 2, num_levels = 8, num_rlzs = 9
 Parameters
 ----------
 =============================== ===================
-calculation_mode                'classical'        
+calculation_mode                'preclassical'     
 number_of_logic_tree_samples    0                  
 maximum_distance                {'default': 1000.0}
 investigation_time              1.0                
@@ -35,7 +35,7 @@ Input files
 Name                    File                                                                            
 ======================= ================================================================================
 gsim_logic_tree         `gmpe_logic_tree_interface_9branch.xml <gmpe_logic_tree_interface_9branch.xml>`_
-job_ini                 `job_peer.ini <job_peer.ini>`_                                                  
+job_ini                 `job.ini <job.ini>`_                                                            
 source_model_logic_tree `peer_source_model_logic_tree.xml <peer_source_model_logic_tree.xml>`_          
 ======================= ================================================================================
 
@@ -84,7 +84,7 @@ Slowest sources
 ====== ============ ==== ===== ====== ============ ========= ========= =======
 grp_id source_id    code gidx1 gidx2  num_ruptures calc_time num_sites weight 
 ====== ============ ==== ===== ====== ============ ========= ========= =======
-0      PEERS3C3_TOR X    0     13,231 1            0.00608   2.00000   1.41421
+0      PEERS3C3_TOR X    0     13,231 1            0.00191   2.00000   1.41421
 ====== ============ ==== ===== ====== ============ ========= ========= =======
 
 Computation times by source typology
@@ -92,46 +92,33 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00608   1     
+X    0.00191   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-====================== ======= ========= ======= ======= =======
-operation-duration     mean    stddev    min     max     outputs
-read_source_models     13      NaN       13      13      1      
-classical_split_filter 0.01749 NaN       0.01749 0.01749 1      
-build_hazard_stats     0.01044 2.697E-05 0.01042 0.01046 2      
-====================== ======= ========= ======= ======= =======
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 10      NaN    10      10      1      
+preclassical       0.00234 NaN    0.00234 0.00234 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-====================== =========================================================== =========
-task                   sent                                                        received 
-read_source_models     converter=313 B fnames=130 B                                312.22 KB
-classical_split_filter srcs=311.75 KB gsims=1.09 KB params=518 B srcfilter=219 B   2.36 KB  
-build_hazard_stats     pgetter=17.97 KB hstats=476 B N=28 B individual_curves=26 B 1.81 KB  
-====================== =========================================================== =========
+================== ========================================================= =========
+task               sent                                                      received 
+read_source_models converter=313 B fnames=123 B                              312.22 KB
+preclassical       srcs=311.75 KB gsims=1.09 KB params=518 B srcfilter=219 B 343 B    
+================== ========================================================= =========
 
 Slowest operations
 ------------------
-============================ ======== ========= ======
-operation                    time_sec memory_mb counts
-============================ ======== ========= ======
-ClassicalCalculator.run      17       7.20703   1     
-total read_source_models     13       8.00781   1     
-export                       0.05276  0.09375   1     
-store source model           0.03696  1.18359   1     
-total build_hazard_stats     0.02088  2.63281   2     
-total classical_split_filter 0.01749  2.61328   1     
-managing sources             0.01498  0.83203   1     
-combine pmaps                0.01323  2.53516   2     
-filtering/splitting sources  0.01097  1.91016   1     
-compute stats                0.00709  0.09375   2     
-store source_info            0.00351  0.01562   1     
-saving probability maps      0.00302  0.01953   1     
-aggregate curves             0.00286  0.05469   1     
-get_poes                     0.00266  0.0       1     
-saving statistics            0.00254  0.00391   2     
-make_contexts                0.00151  0.0       1     
-============================ ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 10        4.61719   1     
+managing sources         0.00343   0.47656   1     
+total preclassical       0.00234   1.27734   1     
+store source_info        0.00171   0.0       1     
+aggregate curves         2.725E-04 0.0       1     
+======================== ========= ========= ======

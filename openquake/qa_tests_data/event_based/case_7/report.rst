@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     1,264,506,295      
-date           2019-05-03T06:43:44
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:29
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 3, num_levels = 7, num_rlzs = ?
@@ -63,10 +63,10 @@ Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.05634 6.283E-04 0.05590 0.05679 2      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.05459 0.00371 0.05196 0.05721 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
@@ -80,5 +80,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.11269  0.0       2     
+total read_source_models 0.10917  0.0       2     
 ======================== ======== ========= ======

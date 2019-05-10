@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     3,970,054,203      
-date           2019-05-03T06:43:47
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:32
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 7, num_levels = 46, num_rlzs = 8
@@ -125,10 +125,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
 ====== ========= ==== ===== ===== ============ ========= ========= =======
-0      1         S    0     2     482          0.04977   7.00000   0.0    
-2      1         S    4     6     482          0.03727   7.00000   0.0    
-1      2         S    2     4     4            0.00356   7.00000   2.00000
-3      2         X    6     402   1            4.191E-04 7.00000   0.0    
+2      1         S    4     6     482          0.05240   0.0       0.0    
+0      1         S    0     2     482          0.04835   0.0       0.0    
+1      2         S    2     4     4            0.00335   0.0       2.00000
+3      2         X    6     402   1            3.915E-04 0.0       0.0    
 ====== ========= ==== ===== ===== ============ ========= ========= =======
 
 Computation times by source typology
@@ -136,8 +136,8 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.09060   3     
-X    4.191E-04 1     
+S    0.10409   3     
+X    3.915E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -150,9 +150,9 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-read_source_models 0.01294   0.00417   0.00999   0.01589   2      
-sample_ruptures    0.02765   0.02485   0.00421   0.05608   4      
-get_eid_rlz        6.076E-04 1.247E-04 4.637E-04 6.857E-04 3      
+read_source_models 0.01057   0.00731   0.00539   0.01574   2      
+sample_ruptures    0.03188   0.02928   0.00399   0.05924   4      
+get_eid_rlz        5.700E-04 1.795E-04 3.645E-04 6.962E-04 3      
 ================== ========= ========= ========= ========= =======
 
 Data transfer
@@ -160,7 +160,7 @@ Data transfer
 ================== ============================================== ========
 task               sent                                           received
 read_source_models converter=626 B fnames=240 B                   13.94 KB
-sample_ruptures    param=21.8 KB sources=14.01 KB srcfilter=872 B 2.26 KB 
+sample_ruptures    param=21.8 KB sources=14.01 KB srcfilter=876 B 2.23 KB 
 get_eid_rlz        self=4.89 KB                                   1.04 KB 
 ================== ============================================== ========
 
@@ -169,12 +169,12 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total sample_ruptures    0.11058   0.42969   4     
-iter_ruptures            0.08994   0.0       4     
-total read_source_models 0.02588   0.0       2     
-store source model       0.00778   0.0       2     
-saving ruptures          0.00480   0.0       1     
-store source_info        0.00238   0.0       1     
-total get_eid_rlz        0.00182   0.0       3     
-reading exposure         8.576E-04 0.0       1     
+total sample_ruptures    0.12753   0.0       4     
+iter_ruptures            0.10336   0.0       4     
+total read_source_models 0.02113   0.0       2     
+store source model       0.00595   0.0       2     
+saving ruptures          0.00260   0.0       1     
+total get_eid_rlz        0.00171   0.0       3     
+store source_info        0.00163   0.0       1     
+reading exposure         8.626E-04 0.0       1     
 ======================== ========= ========= ======

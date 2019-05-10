@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 1
 
 ============== ===================
 checksum32     141,718,627        
-date           2019-05-03T06:44:10
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:57
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 1, num_levels = 6, num_rlzs = 1
@@ -76,7 +76,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
 ====== ========= ==== ===== ===== ============ ========= ========= =======
-0      1         P    0     1     1            2.313E-05 1.00000   0.10000
+0      1         P    0     1     1            0.00267   1.00000   0.10000
 ====== ========= ==== ===== ===== ============ ========= ========= =======
 
 Computation times by source typology
@@ -84,15 +84,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    2.313E-05 1     
+P    0.00267   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00154 NaN    0.00154 0.00154 1      
-preclassical       0.00330 NaN    0.00330 0.00330 1      
+read_source_models 0.00148 NaN    0.00148 0.00148 1      
+preclassical       0.00315 NaN    0.00315 0.00315 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -100,7 +100,7 @@ Data transfer
 ================== ===================================================== ========
 task               sent                                                  received
 read_source_models converter=305 B fnames=106 B                          1.56 KB 
-preclassical       srcs=1.14 KB params=573 B srcfilter=218 B gsims=147 B 335 B   
+preclassical       srcs=1.14 KB params=573 B srcfilter=219 B gsims=147 B 343 B   
 ================== ===================================================== ========
 
 Slowest operations
@@ -108,9 +108,9 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.00330   0.0       1     
-managing sources         0.00290   0.0       1     
-store source_info        0.00229   0.0       1     
-total read_source_models 0.00154   0.0       1     
-aggregate curves         1.478E-04 0.0       1     
+total preclassical       0.00315   0.0       1     
+managing sources         0.00228   0.0       1     
+total read_source_models 0.00148   0.0       1     
+store source_info        0.00141   0.0       1     
+aggregate curves         1.161E-04 0.0       1     
 ======================== ========= ========= ======
