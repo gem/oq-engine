@@ -3,8 +3,8 @@ Hazard France Reduced
 
 ============== ===================
 checksum32     3,844,410,873      
-date           2019-05-03T06:43:28
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:11
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 66, num_levels = 0, num_rlzs = 1
@@ -103,5 +103,5 @@ Slowest operations
 ================ ======== ========= ======
 operation        time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.01255  0.0       1     
+reading exposure 0.01253  0.0       1     
 ================ ======== ========= ======
