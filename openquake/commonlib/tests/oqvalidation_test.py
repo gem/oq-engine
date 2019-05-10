@@ -333,7 +333,7 @@ class OqParamTestCase(unittest.TestCase):
         vf = mock.Mock()
         vf.imt = 'SA (0.1)'
         vf.imls = [0.1, 0.2]
-        rm = dict(taxo=dict(structural=vf))
+        rm = dict(taxo={('structural', 'vulnerability'): vf})
         with self.assertRaises(KeyError) as ctx:
             oq.set_risk_imtls(rm)
         self.assertIn("'SA '", str(ctx.exception))
