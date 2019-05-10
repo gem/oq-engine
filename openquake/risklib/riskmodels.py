@@ -77,7 +77,8 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(oqparam, kind='vulnerability fragility consequence'):
+def get_risk_models(oqparam, kind='vulnerability fragility consequence '
+                    'vulnerability_retrofitted'):
     """
     :param oqparam:
         an OqParam instance
@@ -122,7 +123,7 @@ def get_risk_models(oqparam, kind='vulnerability fragility consequence'):
             # build a copy of the FragilityModel with different IM levels
             newfm = rm.build(oqparam.continuous_fragility_discretization,
                              oqparam.steps_per_interval)
-            for (imt, riskid), ffl in newfm.items():
+            for (imt, riskid), ffl in sorted(newfm.items()):
                 if not rdict.limit_states:
                     rdict.limit_states.extend(rm.limitStates)
                 # we are rejecting the case of loss types with different
@@ -134,14 +135,14 @@ def get_risk_models(oqparam, kind='vulnerability fragility consequence'):
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
         elif kind == 'consequence':
-            for riskid, cf in rm.items():
+            for riskid, cf in sorted(rm.items()):
                 rdict[riskid][loss_type, kind] = cf
-        else:  # vulnerability
+        else:  # vulnerability, vulnerability_retrofitted
             cl_risk = oqparam.calculation_mode in (
                 'classical', 'classical_risk')
             # only for classical_risk reduce the loss_ratios
             # to make sure they are strictly increasing
-            for (imt, riskid), rf in rm.items():
+            for (imt, riskid), rf in sorted(rm.items()):
                 rdict[riskid][loss_type, kind] = (
                     rf.strictly_increasing() if cl_risk else rf)
     return rdict
@@ -198,13 +199,15 @@ class RiskModel(object):
             self.loss_ratios = {
                 lt: tuple(vf.mean_loss_ratios_with_steps(steps))
                 for (lt, kind), vf in risk_functions.items()}
-        if kw.get('retro_functions'):
+        if calcmode == 'classical_bcr':
             self.loss_ratios_orig = {
                 lt: tuple(vf.mean_loss_ratios_with_steps(steps))
-                for (lt, kind), vf in risk_functions.items()}
+                for (lt, kind), vf in risk_functions.items()
+                if kind == 'vulnerability'}
             self.loss_ratios_retro = {
                 lt: tuple(vf.mean_loss_ratios_with_steps(steps))
-                for (lt, kind), vf in kw['retro_functions'].items()}
+                for (lt, kind), vf in risk_functions.items()
+                if kind == 'vulnerability_retrofitted'}
 
     @property
     def loss_types(self):
@@ -305,7 +308,7 @@ class RiskModel(object):
         self.assets = assets
         vf = self.risk_functions[loss_type, 'vulnerability']
         imls = self.hazard_imtls[vf.imt]
-        vf_retro = self.retro_functions[loss_type, 'vulnerability_retrofitted']
+        vf_retro = self.risk_functions[loss_type, 'vulnerability_retrofitted']
         curves_orig = functools.partial(
             scientific.classical, vf, imls,
             loss_ratios=self.loss_ratios_orig[loss_type])
