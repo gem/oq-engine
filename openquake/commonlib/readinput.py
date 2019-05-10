@@ -28,7 +28,6 @@ import tempfile
 import functools
 import configparser
 import collections
-import toml
 import numpy
 import requests
 
@@ -47,7 +46,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import logictree, source, writers
+from openquake.commonlib import logictree, source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
@@ -265,17 +264,59 @@ def get_csv_header(fname, sep=','):
         return next(f).split(sep)
 
 
-def read_csv(fname, sep=','):
+def get_dt(dtypedict, names):
+    lst = []
+    for name in names:
+        try:
+            dt = dtypedict[name]
+        except KeyError:
+            dt = dtypedict[None]
+        lst.append((name, dt))
+    return numpy.dtype(lst)
+
+
+def parse_comment(comment):
+    """
+    Parse a comment of the form
+    # investigation_time=50.0, imt="PGA", ...
+    and returns it as pairs of strings:
+
+    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
+    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
+    """
+    names, vals = [], []
+    pieces = comment.split('=')
+    for i, piece in enumerate(pieces):
+        if i == 0:  # first line
+            names.append(piece.strip())
+        elif i == len(pieces) - 1:  # last line
+            vals.append(ast.literal_eval(piece))
+        else:
+            val, name = piece.rsplit(',', 1)
+            vals.append(ast.literal_eval(val))
+            names.append(name.strip())
+    return list(zip(names, vals))
+
+
+def read_csv(fname, dtypedict={}, sep=','):
     """
     :param fname: a CSV file with an header and float fields
+    :param dtypedict: a dictionary fieldname -> dtype, None -> default
     :param sep: separato (default the comma)
     :return: a structured array of floats
     """
+    attrs = {}
     with open(fname, encoding='utf-8-sig') as f:
-        header = next(f).strip().split(sep)
-        dt = numpy.dtype([(h, numpy.bool if h == 'vs30measured' else float)
-                          for h in header])
-        return numpy.loadtxt(f, dt, delimiter=sep)
+        while True:
+            first = next(f)
+            if first.startswith('#'):
+                attrs = dict(parse_comment(first[1:]))
+                continue
+            break
+        header = first.strip().split(sep)
+        arr = numpy.loadtxt(f, get_dt(dtypedict, header), delimiter=sep,
+                            ndmin=1)
+    return hdf5.ArrayWrapper(arr, attrs)
 
 
 def get_mesh(oqparam):
@@ -362,7 +403,7 @@ def get_site_model(oqparam):
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = read_csv(fname)
+            sm = read_csv(fname).array
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
@@ -1003,7 +1044,8 @@ def _get_gmfs(oqparam):
                'oqparam.set_risk_imtls(get_risk_models(oqparam))?')
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
-        array = writers.read_composite_array(fname).array
+        array = read_csv(
+            fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
         # the array has the structure sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
         required_imts = list(oqparam.imtls)
@@ -1067,8 +1109,8 @@ def get_pmap_from_csv(oqparam, fnames):
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
 
-    dic = {wrapper.imt: wrapper.array
-           for wrapper in map(writers.read_composite_array, fnames)}
+    read = functools.partial(read_csv, dtypedict={None: float})
+    dic = {wrapper.imt: wrapper.array for wrapper in map(read, fnames)}
     array = dic[next(iter(dic))]
     mesh = geo.Mesh(array['lon'], array['lat'])
     num_levels = sum(len(imls) for imls in oqparam.imtls.values())
