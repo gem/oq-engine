@@ -3,8 +3,8 @@ Reduced Hazard Italy
 
 ============== ===================
 checksum32     1,879,307,037      
-date           2019-05-03T06:43:43
-engine_version 3.5.0-git7a6d15e809
+date           2019-05-10T05:07:28
+engine_version 3.5.0-gitbaeb4c1e35
 ============== ===================
 
 num_sites = 148, num_levels = 30, num_rlzs = ?
@@ -92,7 +92,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.02340 NaN    0.02340 0.02340 1      
+read_source_models 0.02785 NaN    0.02785 0.02785 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -107,6 +107,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.02340  0.0       1     
-reading exposure         0.00259  0.0       1     
+total read_source_models 0.02785  0.0       1     
+reading exposure         0.00245  0.0       1     
 ======================== ======== ========= ======
