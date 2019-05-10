@@ -1264,6 +1264,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             )
         sb1, sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.child_branchset is sb3.child_branchset)
+        self.assertEqual(
+            str(lt),
+            '<_TestableSourceModelLogicTree[sb1[b2], sb2[b3], sb3[b2]]>')
 
     def test_comments(self):
         source_model_logic_tree = _make_nrml("""\
