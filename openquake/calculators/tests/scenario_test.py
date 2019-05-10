@@ -22,7 +22,6 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10)
 from openquake.baselib.node import floatformat
-from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -60,11 +59,6 @@ class ScenarioTestCase(CalculatorTestCase):
                 gmvs = gmfa[sid, :, imti]
                 median[imt].append(numpy.median(gmvs))
         return median
-
-    def test_case_1(self):
-        with floatformat('%5.1E'):
-            out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
-        self.assertEqualFiles('expected.xml', out['gmf_data', 'xml'][0])
 
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
@@ -112,11 +106,6 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertAlmostEqual(f2, 0)
 
     def test_case_9(self):
-        with floatformat('%10.6E'):
-            out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
-        [f] = out['gmf_data', 'xml']
-        self.assertEqualFiles('gmf.xml', f)
-
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
         f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)

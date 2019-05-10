@@ -307,17 +307,21 @@ class ContextMaker(object):
 
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, sctx, dctx, imtls, trunclevel):
-        pne_array = numpy.zeros(
-            (len(sctx.sids), len(imtls.array), len(self.gsims)))
+        nsites = len(sctx.sids)
+        pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
             dctx_ = dctx.roundup(gsim.minimum_distance)
-            pnos = []  # list of arrays nsites x nlevels
             for imt in imtls:
-                poes = gsim.get_poes(
-                    sctx, rupture, dctx_,
-                    imt_module.from_string(imt), imtls[imt], trunclevel)
-                pnos.append(rupture.get_probability_no_exceedance(poes))
-            pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
+                slc = imtls(imt)
+                if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
+                    # ignore the gsim
+                    pno = numpy.ones((nsites, slc.stop - slc.start))
+                else:
+                    poes = gsim.get_poes(
+                        sctx, rupture, dctx_,
+                        imt_module.from_string(imt), imtls[imt], trunclevel)
+                    pno = rupture.get_probability_no_exceedance(poes)
+                pne_array[:, slc, i] = pno
         return pne_array
 
     def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
