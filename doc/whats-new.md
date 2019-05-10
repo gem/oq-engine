@@ -109,6 +109,9 @@ We had four external contributions to hazarlib.
    alternatives for use with Mw.
 4. Chris van Houtte from New Zealand added a new class for Christchurch
    GSIMs of kind Bradley (2013b).
+5. Giovanni Lanzano from INGV contributed the Lanzano and Luzi (2019)
+   GMPE for volcanic zones in Italy
+
 
 The job queue
 ---------------
