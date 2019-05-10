@@ -909,14 +909,6 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def check_equal_sets(a, b):
-    a_set = set(a)
-    b_set = set(b)
-    diff = a_set.symmetric_difference(b_set)
-    if diff:
-        raise ValueError('Missing %s' % diff)
-
-
 def get_risk_model(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -924,36 +916,9 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    tmap = _get_taxonomy_mapping(oqparam.inputs)
-    fragdict = get_risk_models(oqparam, 'fragility')
-    vulndict = get_risk_models(oqparam, 'vulnerability')
-    consdict = get_risk_models(oqparam, 'consequence')
-    if not tmap:  # the risk ids are the taxonomies already
-        d = dict(ids=['?'], weights=[1.0])
-        for risk_id in set(fragdict) | set(vulndict) | set(consdict):
-            tmap[risk_id] = dict(
-                fragility=d, consequence=d, vulnerability=d)
-        for risk_id in consdict:
-            cdict, fdict = consdict[risk_id], fragdict[risk_id]
-            for loss_type, _ in cdict:
-                c = cdict[loss_type, 'consequence']
-                f = fdict[loss_type, 'fragility']
-                csq_dmg_states = len(c.params)
-                if csq_dmg_states != len(f):
-                    raise ValueError(
-                        'The damage states in %s are different from the '
-                        'damage states in the fragility functions, %s'
-                        % (c, fragdict.limit_states))
-    dic = {}
-    dic.update(fragdict)
-    dic.update(vulndict)
-    oqparam.set_risk_imtls(dic)
-    if oqparam.calculation_mode.endswith('_bcr'):
-        retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
-    else:
-        retro = {}
-    return riskinput.CompositeRiskModel(
-        oqparam, tmap, fragdict, vulndict, consdict, retro)
+    riskdict = get_risk_models(oqparam)
+    oqparam.set_risk_imtls(riskdict)
+    return riskinput.CompositeRiskModel(oqparam, riskdict)
 
 
 def get_exposure(oqparam):
@@ -1302,39 +1267,6 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
-def _get_taxonomy_mapping(inputs):
-    # returns a TaxonomyMapping taxonomy -> risk_key -> {ids, weights}
-    fname = inputs.get('taxonomy_mapping')
-    if fname is None:
-        return riskinput.TaxonomyMapping()
-    with open(fname, 'r', encoding='utf-8-sig') as f:
-        dic = toml.load(f)
-    expected = {'fragility', 'consequence', 'vulnerability'}
-    for taxonomy, subdic in dic.items():
-        not_expected = set(subdic) - expected
-        if not_expected:
-            raise InvalidFile('%s: unknown key %s' % fname, not_expected)
-        for key, val in subdic.items():
-            if isinstance(val, str):
-                subdic[key] = {'ids': val, 'weights': [1.0]}
-            elif isinstance(val, dict):
-                for k in ('ids', 'weights'):
-                    if k not in val:
-                        raise InvalidFile('%s:%s missing %s' %
-                                          (fname, taxonomy, k))
-                    elif k == 'ids':
-                        valid.namelist(val[k])
-                    elif k == 'weights':
-                        valid.weights(val[k])
-            else:
-                raise InvalidFile('%s:%s unespected %s' %
-                                  (fname, taxonomy, val))
-    tmap = riskinput.TaxonomyMapping()
-    tmap.update(dic)
-    return tmap
-
-
-# used in oq zip and oq checksum
 def get_input_files(oqparam, hazard=False):
     """
     :param oqparam: an OqParam instance

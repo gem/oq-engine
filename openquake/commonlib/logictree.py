@@ -1284,7 +1284,8 @@ class ImtWeight(object):
     def __mul__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self.dic[k] * other[k] for k in self.dic}
+            keys = set(self.dic) | set(other.dic)
+            new.dic = {k: self[k] * other[k] for k in keys}
         else:  # assume a float
             new.dic = {k: self.dic[k] * other for k in self.dic}
         return new
@@ -1313,7 +1314,7 @@ class ImtWeight(object):
         """
         Check that all the inner weights are 1 up to the precision
         """
-        return all(abs(v - 1.) < pmf.PRECISION for v in self.dic.values())
+        return all(abs(v - 1.) < pmf.PRECISION for v in self.dic.values() if v)
 
     def __getitem__(self, imt):
         try:
@@ -1457,6 +1458,8 @@ class GsimLogicTree(object):
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'id', 'gsim', 'weight', ...)
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
+            if len(weight.dic) > 1:
+                gsim.weight = weight
             bt = BranchTuple(branch['trt'], branch['id'], gsim, weight, True)
             self.branches.append(bt)
 
@@ -1561,13 +1564,15 @@ class GsimLogicTree(object):
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.fname, gsim))
+                    if len(weight.dic) > 1:
+                        gsim.weight = weight
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
                         branchset['applyToTectonicRegionType'],
                         branch_id, gsim, weight, effective)
                     branches.append(bt)
                 tot = sum(weights)
-                assert tot.is_one(), tot
+                assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
                 if duplicated(branch_ids):
                     raise InvalidLogicTree(
                         'There where duplicated branchIDs in %s' % self.fname)
