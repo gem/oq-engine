@@ -145,7 +145,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_2_correlation(self):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation=1.0)
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
         # test losses_by_tag with a single realization
@@ -182,7 +182,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
 
-        fnames = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        fnames = export(('losses_by_event', 'csv'), self.calc.datastore)
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
@@ -296,9 +296,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # check asset_loss_table
         tot = self.calc.datastore['asset_loss_table'].value.sum()
         self.assertEqual(tot, 15787827.0)
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
-                              fname, delta=1E-5)
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
@@ -319,7 +316,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
 
     def test_case_4_hazard(self):

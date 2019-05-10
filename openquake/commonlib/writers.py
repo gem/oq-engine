@@ -88,6 +88,7 @@ class HeaderTranslator(object):
 
 htranslator = HeaderTranslator(
     '(rlzi):uint16',
+    '(rlz_id):uint16',
     '(sid):uint32',
     '(eid):uint64',
     '(imti):uint8',

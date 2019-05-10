@@ -271,7 +271,6 @@ DISPLAY_NAME = {
     'agg_maps-stats': 'Aggregate Loss Maps Statistics',
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
-    'agg_loss_table': 'Aggregate Loss Table',
     'agg_losses-rlzs': 'Aggregate Asset Losses',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
