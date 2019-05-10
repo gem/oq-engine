@@ -1,3 +1,6 @@
+  [Giovanni Lanzano]
+  * Lanzano and Luzi (2019) GMPE for volcanic zones in Italy
+
   [Michele Simionato]
   * Now it is possible to export individual hazard curves from an event
     based calculation by setting `hazard_curves_from_gmfs = true` and
