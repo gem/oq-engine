@@ -25,11 +25,10 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, countby, AccumDict, CallableDict)
+    humansize, groupby, countby, AccumDict, CallableDict,
+    get_array, group_array)
 from openquake.baselib.performance import perf_dt
-from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
@@ -874,17 +873,29 @@ def view_extreme_groups(token, dstore):
     return rst_table(data[::-1])
 
 
-@view.add('extreme_gmfs')
-def view_extreme_gmfs(token, dstore):
+@view.add('gmvs_to_hazard')
+def view_gmvs_to_hazard(token, dstore):
     """
     Show the number of GMFs over the highest IML
     """
+    args = token.split(':')[1:]  # called as view_gmvs_to_hazard:sid:rlz
+    if not args:
+        sid, rlz = 0, 0
+    elif len(args) == 1:  # only sid specified
+        sid, rlz = int(args[0]), 0
+    else:
+        sid, rlz = int(args[0]), int(args[1])
+    assert sid in dstore['sitecol'].sids
+    assert rlz < dstore['csm_info'].get_num_rlzs()
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
-    gmv = dstore['gmf_data/data']['gmv']
+    data = dstore['gmf_data/data'].value
+    data = data[(data['sid'] == sid) & (data['rlzi'] == rlz)]
     tbl = []
+    gmv = data['gmv']
     for imti, (imt, imls) in enumerate(oq.imtls.items()):
-        exceeding = numpy.sum(gmv[:, imti] >= imls[-1])
-        poes = 1 - numpy.exp(- exceeding / num_ses)
-        tbl.append((imt, exceeding, poes))
-    return rst_table(tbl, ['imt', 'exceeding', 'poes'])
+        for iml in imls:
+            exceeding = numpy.sum(gmv[:, imti] >= iml)
+            poe = 1 - numpy.exp(- exceeding / num_ses)
+            tbl.append((sid, rlz, imt, iml, exceeding, poe))
+    return rst_table(tbl, ['sid', 'rlz', 'imt', 'iml', 'num_exceeding', 'poe'])
