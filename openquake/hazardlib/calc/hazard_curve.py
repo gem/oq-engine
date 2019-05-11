@@ -134,8 +134,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # AccumDict of arrays with 2 elements weight, calc_time
     calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
+    nsites = {}  # src.id -> num_sites
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
+        nsites[src.id] = src.nsites
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
@@ -172,7 +174,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         if len(data):
             rupdata[gid] = numpy.concatenate(data)
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data=rupdata)
+                rup_data=rupdata, nsites=nsites)
 
 
 def calc_hazard_curves(
