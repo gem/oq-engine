@@ -895,6 +895,7 @@ def view_gmvs_to_hazard(token, dstore):
     gmv = data['gmv']
     for imti, (imt, imls) in enumerate(oq.imtls.items()):
         for iml in imls:
+            # same algorithm as in _gmvs_to_haz_curve
             exceeding = numpy.sum(gmv[:, imti] >= iml)
             poe = 1 - numpy.exp(- exceeding / num_ses)
             tbl.append((sid, rlz, imt, iml, exceeding, poe))
