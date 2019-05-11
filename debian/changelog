@@ -5,6 +5,12 @@
   * IMT-dependent weights in the gsim logic tree can be zero, to discard
     contributions outside the range of validity of (some of the) GSIMs
   * Now it is possible to export individual hazard curves from an event
+  * Added a view gmvs_to_hazard
+
+  [Giovanni Lanzano]
+  * Lanzano and Luzi (2019) GMPE for volcanic zones in Italy
+
+  [Michele Simionato]
     based calculation by setting `hazard_curves_from_gmfs = true` and
     `individual_curves = true (before only the statistics were saved)
   * Made it possible to download remote source models
