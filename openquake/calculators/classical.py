@@ -137,16 +137,15 @@ class ClassicalCalculator(base.HazardCalculator):
         :param dic: dictionary with keys pmap, calc_times, eff_ruptures
         """
         with self.monitor('aggregate curves', autoflush=True):
-            if 'nsites' in dic:  # preclassical
-                acc.nsites += dic['nsites']
+            acc.nsites.update(dic['nsites'])
             acc.eff_ruptures += dic['eff_ruptures']
+            self.calc_times += dic['calc_times']
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
             for grp_id, data in dic['rup_data'].items():
                 if len(data):
                     self.datastore.extend('rup/grp-%02d' % grp_id, data)
-        self.calc_times += dic['calc_times']
         return acc
 
     def acc0(self):
