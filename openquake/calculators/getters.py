@@ -395,7 +395,6 @@ class GmfGetter(object):
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path
             with monitor('building hazard', measuremem=True):
                 gmfdata = self.get_gmfdata()  # returned later
                 hazard = self.get_hazard(data=gmfdata)
@@ -407,7 +406,7 @@ class GmfGetter(object):
                         for imti, imt in enumerate(oq.imtls):
                             poes = _gmvs_to_haz_curve(
                                 gmvs[:, imti], oq.imtls[imt],
-                                oq.investigation_time, duration)
+                                oq.ses_per_logic_tree_path)
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
         elif oq.ground_motion_fields:  # fast lane
             with monitor('building hazard', measuremem=True):

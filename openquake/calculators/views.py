@@ -872,3 +872,19 @@ def view_extreme_groups(token, dstore):
     data = dstore['disagg_by_grp'].value
     data.sort(order='extreme_poe')
     return rst_table(data[::-1])
+
+
+@view.add('extreme_gmfs')
+def view_extreme_gmfs(token, dstore):
+    """
+    Show the number of GMFs over the highest IML
+    """
+    oq = dstore['oqparam']
+    num_ses = oq.ses_per_logic_tree_path
+    gmv = dstore['gmf_data/data']['gmv']
+    tbl = []
+    for imti, (imt, imls) in enumerate(oq.imtls.items()):
+        exceeding = numpy.sum(gmv[:, imti] >= imls[-1])
+        poes = 1 - numpy.exp(- exceeding / num_ses)
+        tbl.append((imt, exceeding, poes))
+    return rst_table(tbl, ['imt', 'exceeding', 'poes'])
