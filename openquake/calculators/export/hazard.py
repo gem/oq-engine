@@ -99,8 +99,9 @@ def export_ruptures_csv(ekey, dstore):
                  rgetter.trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
     rows.sort()  # by rupture serial
-    comment = 'investigation_time=%s, ses_per_logic_tree_path=%s' % (
-        oq.investigation_time, oq.ses_per_logic_tree_path)
+    comment = dstore.metadata
+    comment.update(investigation_time=oq.investigation_time,
+                   ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
     writers.write_csv(dest, rows, header=header, sep='\t', comment=comment)
     return [dest]
 
@@ -245,22 +246,22 @@ def add_imt(fname, imt):
 
 
 def export_hcurves_by_imt_csv(
-        key, kind, rlzs_assoc, fname, sitecol, array, oq, checksum):
+        key, kind, fname, sitecol, array, imtls, comment):
     """
     Export the curves of the given realization into CSV.
 
     :param key: output_type and export_type
     :param kind: a string with the kind of output (realization or statistics)
-    :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param fname: name of the exported file
     :param sitecol: site collection
     :param array: an array of shape (N, L) and dtype numpy.float32
-    :param oq: job.ini parameters
+    :param imtls: intensity measure types and levels
+    :param comment: comment dictionary
     """
     nsites = len(sitecol)
     fnames = []
-    for imt, imls in oq.imtls.items():
-        slc = oq.imtls(imt)
+    for imt, imls in imtls.items():
+        slc = imtls(imt)
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
@@ -269,19 +270,18 @@ def export_hcurves_by_imt_csv(
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             hcurves[sid] = (lon, lat, dep) + tuple(array[sid, slc])
-        fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
-            rlzs_assoc, kind, oq.investigation_time) + (
-                ', imt="%s", checksum=%d' % (imt, checksum)
-            ), header=[name for (name, dt) in lst]))
+        comment.update(imt=imt)
+        fnames.append(
+            writers.write_csv(dest, hcurves, comment=comment,
+                              header=[name for (name, dt) in lst]))
     return fnames
 
 
-def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
+def hazard_curve_name(dstore, ekey, kind):
     """
     :param calc_id: the calculation ID
     :param ekey: the export key
     :param kind: the kind of key
-    :param rlzs_assoc: a RlzsAssoc instance
     """
     key, fmt = ekey
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
@@ -291,17 +291,6 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
     else:
         fname = dstore.build_fname(prefix, kind, fmt)
     return fname
-
-
-def _comment(rlzs_assoc, kind, investigation_time):
-    rlz = rlzs_assoc.get_rlz(kind)
-    if not rlz:
-        return '%s, investigation_time=%s' % (kind, investigation_time)
-    else:
-        return (
-            'source_model_tree_path=%s, gsim_tree_path=%s, '
-            'investigation_time=%s' % (
-                rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time))
 
 
 def build_hcurves(getter, imtls, monitor):
@@ -338,17 +327,16 @@ def export_hcurves_csv(ekey, dstore):
     """
     oq = dstore['oqparam']
     info = get_info(dstore)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    R = len(rlzs_assoc.realizations)
+    R = dstore['csm_info'].get_num_rlzs()
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
-    checksum = dstore.get_attr('/', 'checksum32')
+    comment = dstore.metadata
     hmap_dt = oq.hmap_dt()
     for kind in oq.get_kinds(kind, R):
-        fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
-        comment = _comment(rlzs_assoc, kind, oq.investigation_time)
+        fname = hazard_curve_name(dstore, (key, fmt), kind)
+        comment.update(kind=kind, investigation_time=oq.investigation_time)
         if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
                 oq.hazard_maps):
             hmap = extract(dstore, 'hmaps?kind=' + kind)[kind]
@@ -356,19 +344,17 @@ def export_hcurves_csv(ekey, dstore):
             uhs_curves = calc.make_uhs(hmap, info)
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
-                comment=comment + ', checksum=%d' % checksum)
+                comment=comment)
             fnames.append(fname)
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
             fnames.extend(
                 export_hmaps_csv(ekey, fname, sitemesh,
-                                 hmap.flatten().view(hmap_dt),
-                                 comment + ', checksum=%d' % checksum))
+                                 hmap.flatten().view(hmap_dt), comment))
         elif key == 'hcurves':
             hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
             fnames.extend(
                 export_hcurves_by_imt_csv(
-                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq,
-                    checksum))
+                    ekey, kind, fname, sitecol, hcurves, oq.imtls, comment))
     return sorted(fnames)
 
 
@@ -415,8 +401,7 @@ def export_uhs_xml(ekey, dstore):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
         uhs = extract(dstore, 'uhs?kind=' + kind)[kind]
         for p, poe in enumerate(oq.poes):
-            fname = hazard_curve_name(
-                dstore, (key, fmt), kind + '-%s' % poe, rlzs_assoc)
+            fname = hazard_curve_name(dstore, (key, fmt), kind + '-%s' % poe)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
@@ -457,7 +442,7 @@ def export_hcurves_xml(ekey, dstore):
         else:
             smlt_path = ''
             gsimlt_path = ''
-        name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
+        name = hazard_curve_name(dstore, ekey, kind)
         hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
         for im in oq.imtls:
             slc = oq.imtls(im)
@@ -500,8 +485,7 @@ def export_hmaps_xml(ekey, dstore):
         for m, imt in enumerate(oq.imtls):
             for p, poe in enumerate(oq.poes):
                 suffix = '-%s-%s' % (poe, imt)
-                fname = hazard_curve_name(
-                    dstore, ekey, kind + suffix, rlzs_assoc)
+                fname = hazard_curve_name(dstore, ekey, kind + suffix)
                 data = [HazardMap(site[0], site[1], hmap[m, p])
                         for site, hmap in zip(sitemesh, hmaps)]
                 writer = writercls(
@@ -711,25 +695,20 @@ def save_disagg_to_csv(metadata, matrices):
     Save disaggregation matrices to multiple .csv files.
     """
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
-    base_header = ','.join(
-        '%s=%s' % (key, value) for key, value in metadata.items()
-        if value is not None and key not in skip_keys)
+    com = {key: value for key, value in metadata.items()
+           if value is not None and key not in skip_keys}
     for disag_tup, (poe, iml, matrix, fname) in matrices.items():
-        header = '%s,poe=%.7f,iml=%.7e\n' % (base_header, poe, iml)
-
+        com.update(poe='%.7f' % poe, iml='%.7e' % iml)
         if disag_tup == ('Mag', 'Lon', 'Lat'):
             matrix = numpy.swapaxes(matrix, 0, 1)
             matrix = numpy.swapaxes(matrix, 1, 2)
             disag_tup = ('Lon', 'Lat', 'Mag')
 
         axis = [metadata[v] for v in disag_tup]
-        header += ','.join(v for v in disag_tup)
-        header += ',poe'
-
+        com.update(key=','.join(v for v in disag_tup))
         # compute axis mid points
         axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
                 else ax for ax in axis]
-
         values = None
         if len(axis) == 1:
             values = numpy.array([axis[0], matrix.flatten()]).T
@@ -738,8 +717,7 @@ def save_disagg_to_csv(metadata, matrices):
             values = [g.flatten() for g in grids]
             values.append(matrix.flatten())
             values = numpy.array(values).T
-
-        writers.write_csv(fname, values, comment=header, fmt='%.5E')
+        writers.write_csv(fname, values, comment=com, fmt='%.5E')
 
 
 @export.add(('disagg', 'csv'), ('disagg-stats', 'csv'))
