@@ -197,12 +197,6 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     """
     :returns: a compound array of hazard maps of shape nsites
     """
-    if isinstance(pmap, probability_map.ProbabilityMap):
-        # this is here for compatibility with the
-        # past, it could be removed in the future
-        hmap = make_hmap(pmap, imtls, poes)
-        pdic = general.DictArray({imt: poes for imt in imtls})
-        return convert_to_array(hmap, nsites, pdic)
     try:
         hcurves = pmap.value
     except AttributeError:
