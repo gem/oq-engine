@@ -81,8 +81,10 @@ def export_agg_curve_rlzs(ekey, dstore):
             row = tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
-        dest = dstore.build_fname('agg_loss', tag, 'csv')
-        writer.save(rows, dest, header)
+        dest = dstore.build_fname('agg_loss_curve', tag, 'csv')
+        com = dict(
+            kind=tag, risk_investigation_time=oq.risk_investigation_time)
+        writer.save(rows, dest, header, comment=com)
     return writer.getsaved()
 
 
@@ -333,15 +335,18 @@ def export_loss_maps_csv(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
     assets = get_assets(dstore)
     value = get_loss_maps(dstore, kind)
+    oq = dstore['oqparam']
     if kind == 'rlzs':
         tags = dstore['csm_info'].get_rlzs_assoc().realizations
     else:
-        oq = dstore['oqparam']
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantiles]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for i, tag in enumerate(tags):
+        uid = getattr(tag, 'uid', tag)
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
-        writer.save(compose_arrays(assets, value[:, i]), fname)
+        com = dict(
+            kind=uid, risk_investigation_time=oq.risk_investigation_time)
+        writer.save(compose_arrays(assets, value[:, i]), fname, comment=com)
     return writer.getsaved()
 
 
