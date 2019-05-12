@@ -73,6 +73,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     header = ('annual_frequency_of_exceedence', 'return_period',
               'loss_type') + tagnames + ('loss_value', 'loss_ratio')
     expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
+    md = dstore.metadata
     for r, tag in enumerate(tags):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
@@ -82,9 +83,9 @@ def export_agg_curve_rlzs(ekey, dstore):
                 loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
         dest = dstore.build_fname('agg_loss_curve', tag, 'csv')
-        com = dict(
-            kind=tag, risk_investigation_time=oq.risk_investigation_time)
-        writer.save(rows, dest, header, comment=com)
+        md.update(dict(
+            kind=tag, risk_investigation_time=oq.risk_investigation_time))
+        writer.save(rows, dest, header, comment=md)
     return writer.getsaved()
 
 
@@ -341,12 +342,13 @@ def export_loss_maps_csv(ekey, dstore):
     else:
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantiles]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    md = dstore.metadata
     for i, tag in enumerate(tags):
         uid = getattr(tag, 'uid', tag)
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
-        com = dict(
-            kind=uid, risk_investigation_time=oq.risk_investigation_time)
-        writer.save(compose_arrays(assets, value[:, i]), fname, comment=com)
+        md.update(
+            dict(kind=uid, risk_investigation_time=oq.risk_investigation_time))
+        writer.save(compose_arrays(assets, value[:, i]), fname, comment=md)
     return writer.getsaved()
 
 
@@ -514,7 +516,7 @@ def export_agglosses(ekey, dstore):
         stddev = agglosses[l]['stddev']
         losses.append((lt, unit, mean, stddev))
     dest = dstore.build_fname('agglosses', '', 'csv')
-    writers.write_csv(dest, losses, header=header)
+    writers.write_csv(dest, losses, header=header, comment=dstore.metadata)
     return [dest]
 
 
