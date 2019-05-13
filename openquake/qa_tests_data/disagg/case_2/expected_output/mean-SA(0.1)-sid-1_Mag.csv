@@ -1,5 +1,4 @@
-# imt=SA,investigation_time=1.0,lon=0.0,lat=0.0,poe=0.0305785,iml=1.0000000e-01
-Mag,poe
+# imt='SA', investigation_time=1.0, lon=0.0, lat=0.0, poe='0.0305785', iml='1.0000000e-01', key='Mag'
 5.05000E+00,4.36804E-03
 5.15000E+00,3.85115E-03
 5.25000E+00,3.60507E-03

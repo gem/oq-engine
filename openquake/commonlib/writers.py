@@ -101,8 +101,10 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     :param header:
        optional list with the names of the columns to display
     :param comment:
-       optional first line starting with a # character
+       optional comment dictionary
     """
+    if comment is not None:
+        comment = ', '.join('%s=%r' % item for item in comment.items())
     close = True
     if dest is None:  # write on a temporary file
         fd, dest = tempfile.mkstemp(suffix='.csv')
@@ -171,8 +173,6 @@ class CsvWriter(object):
         :param header: header to use
         :param comment: optional dictionary to be converted in a comment
         """
-        if comment is not None:
-            comment = ', '.join('%s=%r' % item for item in comment.items())
         write_csv(fname, data, self.sep, self.fmt, header, comment)
         self.fnames.add(getattr(fname, 'name', fname))
 
