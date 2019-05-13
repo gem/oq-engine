@@ -14,8 +14,8 @@
                     <uncertaintyModel>AbrahamsonEtAl2015SInterHigh</uncertaintyModel>
                     <uncertaintyWeight>0.3333</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch branchID="MontalvaEtAl2016SInter">
-                    <uncertaintyModel>MontalvaEtAl2016SInter</uncertaintyModel>
+                <logicTreeBranch branchID="MontalvaEtAl2017SInter">
+                    <uncertaintyModel>MontalvaEtAl2017SInter</uncertaintyModel>
                     <uncertaintyWeight>0.3334</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
