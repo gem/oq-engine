@@ -184,8 +184,6 @@ class TromansEtAl2019(GMPE):
         Apply vs-kappa adjustment factors defined using a dictionary organised
         by IMT, or else none.
     """
-    experimental = True
-
     #: Supported tectonic region type is 'active shallow crust'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
