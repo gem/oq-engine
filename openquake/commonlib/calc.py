@@ -142,7 +142,7 @@ def compute_hazard_maps(curves, imls, poes):
 # #########################  GMF->curves #################################### #
 
 # NB (MS): the approach used here will not work for non-poissonian models
-def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
+def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     """
     Given a set of ground motion values (``gmvs``) and intensity measure levels
     (``imls``), compute hazard curve probabilities of exceedance.
@@ -151,20 +151,8 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
         A list of ground motion values, as floats.
     :param imls:
         A list of intensity measure levels, as floats.
-    :param float invest_time:
-        Investigation time, in years. It is with this time span that we compute
-        probabilities of exceedance.
-
-        Another way to put it is the following. When computing a hazard curve,
-        we want to answer the question: What is the probability of ground
-        motion meeting or exceeding the specified levels (``imls``) in a given
-        time span (``invest_time``).
-    :param float duration:
-        Time window during which GMFs occur. Another was to say it is, the
-        period of time over which we simulate ground motion occurrences.
-
-        NOTE: Duration is computed as the calculation investigation time
-        multiplied by the number of stochastic event sets.
+    :param ses_per_logic_tree_path:
+        Number of stochastic event sets: the larger, the best convergency
 
     :returns:
         Numpy array of PoEs (probabilities of exceedance).
@@ -175,7 +163,7 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     # => num_exceeding = [1, 1, 0] coming from 0.04750576 > [0.03, 0.04, 0.05]
     imls = numpy.array(imls).reshape((len(imls), 1))
     num_exceeding = numpy.sum(numpy.array(gmvs) >= imls, axis=1)
-    poes = 1 - numpy.exp(- (invest_time / duration) * num_exceeding)
+    poes = 1 - numpy.exp(- num_exceeding / ses_per_logic_tree_path)
     return poes
 
 
