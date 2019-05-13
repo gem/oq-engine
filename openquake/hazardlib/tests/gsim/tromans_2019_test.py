@@ -104,14 +104,14 @@ class SigmaFunctionsTestCase(unittest.TestCase):
         lower = []
         upper = []
         for mag in mags:
-            central.append(HOMOSKEDASTIC_PHI["central"](PGA(), mag))
-            lower.append(HOMOSKEDASTIC_PHI["lower"](PGA(), mag))
-            upper.append(HOMOSKEDASTIC_PHI["upper"](PGA(), mag))
+            central.append(HOMOSKEDASTIC_PHI["central"](PGA()))
+            lower.append(HOMOSKEDASTIC_PHI["lower"](PGA()))
+            upper.append(HOMOSKEDASTIC_PHI["upper"](PGA()))
         np.testing.assert_array_almost_equal(
             np.array(lower) / np.array(central), 0.84 * np.ones(len(mags))
             )
         np.testing.assert_array_almost_equal(
-            np.array(lower) / np.array(central), 1.16 * np.ones(len(mags))
+            np.array(upper) / np.array(central), 1.16 * np.ones(len(mags))
             )
 
     def test_homoskedastic_tau_branches(self):
@@ -120,15 +120,13 @@ class SigmaFunctionsTestCase(unittest.TestCase):
         lower = []
         upper = []
         for mag in mags:
-            central.append(HOMOSKEDASTIC_TAU["central"](PGA(), mag))
-            lower.append(HOMOSKEDASTIC_TAU["lower"](PGA(), mag))
-            upper.append(HOMOSKEDASTIC_TAU["upper"](PGA(), mag))
+            central.append(HOMOSKEDASTIC_TAU["central"](PGA()))
+            lower.append(HOMOSKEDASTIC_TAU["lower"](PGA()))
+            upper.append(HOMOSKEDASTIC_TAU["upper"](PGA()))
         np.testing.assert_array_almost_equal(
-            np.array(lower) / np.array(central), 0.84 * np.ones(len(mags))
-            )
+            np.array(lower), np.array(central) - 0.075)
         np.testing.assert_array_almost_equal(
-            np.array(lower) / np.array(central), 1.16 * np.ones(len(mags))
-            )
+            np.array(upper), np.array(central) + 0.075)
 
 
 class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
@@ -152,8 +150,8 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         """
         Compares two means that differ by an adjustment factor
         """
-        np.testing.asset_array_almost_equal(np.exp(arr1) / np.exp(arr2),
-                                            diffs * np.ones(arr1.shape))
+        np.testing.assert_array_almost_equal(np.exp(arr1) / np.exp(arr2),
+                                             diffs * np.ones(arr1.shape))
 
     def test_scaling_factors(self):
         gsim_1 = self.gsim("BindiEtAl2014Rjb", branch="central",
@@ -176,9 +174,9 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         # PGA
         self._compare_arrays(
             gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
-                                        PGA(), [const.StdDev.TOTAL]),
+                                        PGA(), [const.StdDev.TOTAL])[0],
             gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
-                                        PGA(), [const.StdDev.TOTAL]), 1.2)
+                                        PGA(), [const.StdDev.TOTAL])[0], 1.2)
 
         # SA(0.2)
         self._compare_arrays(
@@ -189,79 +187,85 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
         # SA(1.0)
         self._compare_arrays(
             gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
-                                        SA(0.2), [const.StdDev.TOTAL])[0],
+                                        SA(1.0), [const.StdDev.TOTAL])[0],
             gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
-                                        SA(0.2), [const.StdDev.TOTAL])[0], 1.4)
+                                        SA(1.0), [const.StdDev.TOTAL])[0], 1.4)
 
 
-#class TromansEtAl2019TestCaseCentralHomo(BaseGSIMTestCase):
-#    """
-#    Tests the standard deviation model of the Tromans et al. (2019) GMPE
-#    for the central branch with homoskedastic sigma
-#    """
-#    GSIM_CLASS = TromansEtAl2019
-#
-#    def test_std_total(self):
-#        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_CENTRAL.csv",
-#                   branch="central", homoskedastic_sigma=True)
-#
-#
-#class TromansEtAl2019TestCaseLowerHomo(BaseGSIMTestCase):
-#    """
-#    Tests the standard deviation model of the Tromans et al. (2019) GMPE
-#    for the lower branch with homoskedastic sigma
-#    """
-#    GSIM_CLASS = TromansEtAl2019
-#
-#    def test_std_total(self):
-#        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_LOWER.csv",
-#                   branch="lower", homoskedastic_sigma=True)
-#
-#
-#class TromansEtAl2019TestCaseUpperHomo(BaseGSIMTestCase):
-#    """
-#    Tests the standard deviation model of the Tromans et al. (2019) GMPE
-#    for the lower branch with homoskedastic sigma
-#    """
-#    GSIM_CLASS = TromansEtAl2019
-#
-#    def test_std_total(self):
-#        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_UPPER.csv",
-#                   branch="upper", homoskedastic_sigma=True)
-#
-#
-#class TromansEtAl2019TestCaseCentralHetero(BaseGSIMTestCase):
-#    """
-#    Tests the standard deviation model of the Tromans et al. (2019) GMPE
-#    for the central branch with heteroskedastic sigma
-#    """
-#    GSIM_CLASS = TromansEtAl2019
-#
-#    def test_std_total(self):
-#        self.check(
-#            "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_CENTRAL.csv",
-#            branch="central", homoskedastic_sigma=False)
-#
-#
-#class TromansEtAl2019TestCaseLowerHetero(BaseGSIMTestCase):
-#    """
-#    Tests the standard deviation model of the Tromans et al. (2019) GMPE
-#    for the lower branch with heteroskedastic sigma
-#    """
-#    GSIM_CLASS = TromansEtAl2019
-#
-#    def test_std_total(self):
-#        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_LOWER.csv",
-#                   branch="lower", homoskedastic_sigma=False)
-#
-#
-#class TromansEtAl2019TestCaseUpperHetero(BaseGSIMTestCase):
-#    """
-#    Tests the standard deviation model of the Tromans et al. (2019) GMPE
-#    for the lower branch with heteroskedastic sigma
-#    """
-#    GSIM_CLASS = TromansEtAl2019
-#
-#    def test_std_total(self):
-#        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_UPPER.csv",
-#                   branch="upper", homoskedastic_sigma=False)
+class TromansEtAl2019TestCaseCentralHomo(BaseGSIMTestCase):
+    """
+    Tests the standard deviation model of the Tromans et al. (2019) GMPE
+    for the central branch with homoskedastic sigma
+    """
+    GSIM_CLASS = TromansEtAl2019
+
+    def test_std_total(self):
+        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_CENTRAL.csv",
+                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+                   branch="central", homoskedastic_sigma=True)
+
+
+class TromansEtAl2019TestCaseLowerHomo(BaseGSIMTestCase):
+    """
+    Tests the standard deviation model of the Tromans et al. (2019) GMPE
+    for the lower branch with homoskedastic sigma
+    """
+    GSIM_CLASS = TromansEtAl2019
+
+    def test_std_total(self):
+        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_LOWER.csv",
+                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+                   branch="lower", homoskedastic_sigma=True)
+
+
+class TromansEtAl2019TestCaseUpperHomo(BaseGSIMTestCase):
+    """
+    Tests the standard deviation model of the Tromans et al. (2019) GMPE
+    for the lower branch with homoskedastic sigma
+    """
+    GSIM_CLASS = TromansEtAl2019
+
+    def test_std_total(self):
+        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HOMO_UPPER.csv",
+                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+                   branch="upper", homoskedastic_sigma=True)
+
+
+class TromansEtAl2019TestCaseCentralHetero(BaseGSIMTestCase):
+    """
+    Tests the standard deviation model of the Tromans et al. (2019) GMPE
+    for the central branch with heteroskedastic sigma
+    """
+    GSIM_CLASS = TromansEtAl2019
+
+    def test_std_total(self):
+        self.check(
+            "./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_CENTRAL.csv",
+            max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+            branch="central", homoskedastic_sigma=False)
+
+
+class TromansEtAl2019TestCaseLowerHetero(BaseGSIMTestCase):
+    """
+    Tests the standard deviation model of the Tromans et al. (2019) GMPE
+    for the lower branch with heteroskedastic sigma
+    """
+    GSIM_CLASS = TromansEtAl2019
+
+    def test_std_total(self):
+        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_LOWER.csv",
+                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+                   branch="lower", homoskedastic_sigma=False)
+
+
+class TromansEtAl2019TestCaseUpperHetero(BaseGSIMTestCase):
+    """
+    Tests the standard deviation model of the Tromans et al. (2019) GMPE
+    for the lower branch with heteroskedastic sigma
+    """
+    GSIM_CLASS = TromansEtAl2019
+
+    def test_std_total(self):
+        self.check("./tromans_2019/Tromans_2019_TOTAL_STDDEV_HETERO_UPPER.csv",
+                   max_discrep_percentage=0.01, gmpe_name="BindiEtAl2014Rjb",
+                   branch="upper", homoskedastic_sigma=False)
