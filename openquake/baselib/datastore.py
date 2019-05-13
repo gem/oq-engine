@@ -77,6 +77,8 @@ def hdf5new(datadir=None):
     generated filename.
     """
     datadir = datadir or get_datadir()
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
     calc_id = get_last_calc_id(datadir) + 1
     fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
     new = hdf5.File(fname, 'w')
