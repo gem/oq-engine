@@ -186,7 +186,10 @@ of HDF5 files.
 Deprecations
 --------------------
 
-1. Windows 7 is deprecated as a platform for running the engine since it is
+1. Source model logic trees with more than one branching level are deprecated
+and raise a warning: they will raise an error in the future.
+
+2. Windows 7 is deprecated as a platform for running the engine since it is
 reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support).
 
 Removals
