@@ -121,13 +121,6 @@ def get_heteroskedastic_phi(imt, mag):
     else:
         return C["const_phiss"]
 
-#def get_heteroskedastic_tau(imt, mag):
-#    """
-#
-#    """
-#
-#    return get_ask_2014_tau(C, mag)
-
 
 HETEROSKEDASTIC_PHI = {
     "upper": lambda imt, mag: 1.16 * get_heteroskedastic_phi(imt, mag),
@@ -151,40 +144,6 @@ HOMOSKEDASTIC_TAU = {
     "lower": lambda imt: get_heteroskedastic_tau(imt, 6.0) - 0.075}
 
 
-#def get_heteroskedastic_sigma(imt, mag, branch):
-#    """
-#    Returns the total standard deviation for the heteroskedastic branch
-#    of the Hinkley NPP Logic Tree based on:
-#    sigma_ss = sqrt(tau ^ 2 + phi_ss ^ 2)
-#    :param imt:
-#        Intensity measure type
-#    :param float mag:
-#        Earthquake magnitude
-#    :param str branch:
-#        Logic tree branch as either {"upper" | "central" | "lower"}
-#    """
-#    return np.sqrt(HETEROSKEDASTIC_TAU[branch](imt, mag) ** 2.0 +
-#                   HETEROSKEDASTIC_PHI[branch](imt, mag) ** 2.0 +
-#                   DELTA_PHI_S2S[imt]["dfs2s"] ** 2.0)
-#
-#def get_homoskedastic_sigma(imt, branch):
-#    """
-#    Returns the total standard deviation for the homoskedastic branch
-#    of the Hinkley NPP Logic Tree based on:
-#    sigma_ss = sqrt(tau ^ 2 + phi_ss ^ 2)
-#    :param imt:
-#        Intensity measure type
-#    :param float mag:
-#        Earthquake magnitude
-#    :param str branch:
-#        Logic tree branch as either {"upper" | "central" | "lower"}
-#
-#    """
-#    return np.sqrt(HOMOSKEDASTIC_TAU[branch](imt) ** 2.0 +
-#                   HOMOSKEDASTIC_PHI[branch](imt) ** 2.0 +
-#                   DELTA_PHI_S2S[imt]["dfs2s"] ** 2.0)
-
-
 uppernames = '''
 DEFINED_FOR_INTENSITY_MEASURE_TYPES
 DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -197,7 +156,8 @@ REQUIRES_DISTANCES
 class TromansEtAl2019(GMPE):
     """
     Implements a meta GMPE to apply the standard deviation model and
-    adjustments described in Tromans et al. (2019):
+    adjustments described in Tromans et al. (2019), for application to
+    a nuclear power plant site in the UK:
 
     Tromans, I. J., Aldama-Bustos, G., Douglas, J., Lessi-Cheimariou, A.,
     Hunt, S., Davi, M., Musson, R. M. W., Garrard, G., Strasser, F. and
@@ -259,8 +219,6 @@ class TromansEtAl2019(GMPE):
     def __init__(self, gmpe_name, branch="central",
                  homoskedastic_sigma=False,  scaling_factor=None,
                  vskappa=None):
-        """
-        """
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         # Update the required_parameters
