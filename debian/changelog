@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `oq reset` in the case of an empty datadir
   * Added a comment line with useful metadata to the engine CSV outputs
   * Removed the long time deprecated event loss table exporter for event based
     risk and enhanced the losses_by_event exporter to export the realization ID
