@@ -673,11 +673,8 @@ class SourceModelLogicTree(object):
 
             self.num_paths *= len(branchset.branches)
         if number > 0:
-            logging.warning('There is a branching level with multiple '
-                            'branchsets in %s', self.filename)
-            # TODO:
-            # raise InvalidLogicTree('there is a branching level with multiple'
-            #                        ' branchsets in %s' % self.filename)
+            raise InvalidLogicTree('there is a branching level with multiple'
+                                   ' branchsets in %s' % self.filename)
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
@@ -1179,11 +1176,6 @@ class SourceModelLogicTree(object):
                     raise LogicTreeError(
                         branchset_node, self.filename,
                         "branch '%s' already has child branchset" % branch_id)
-                if branch not in self.open_ends:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        'applyToBranches must reference only branches '
-                        'from previous branching level')
                 branch.child_branchset = branchset
         else:
             for branch in self.open_ends:
