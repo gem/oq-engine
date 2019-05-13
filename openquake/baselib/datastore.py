@@ -385,6 +385,15 @@ class DataStore(collections.MutableMapping):
         except KeyError:
             return default
 
+    @property
+    def metadata(self):
+        """
+        :returns: datastore metadata version, date, checksum as a dictionary
+        """
+        a = self.hdf5.attrs
+        return dict(generated_by='OpenQuake engine %s' % a['engine_version'],
+                    start_date=a['date'], checksum=a['checksum32'])
+
     def __getitem__(self, key):
         if self.hdf5 == ():  # the datastore is closed
             raise ValueError('Cannot find %s in %s' % (key, self))
