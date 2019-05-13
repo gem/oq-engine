@@ -270,30 +270,6 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    # used in multi_risk
-    def get_dmg_csq(self, assets_by_site, gmf):
-        """
-        :returns:
-            an array of shape (A, L, 1, D + 1) with the number of buildings
-            in each damage state for each asset and loss type
-        """
-        A = sum(len(assets) for assets in assets_by_site)
-        L = len(self.loss_types)
-        D = len(self.damage_states)
-        out = numpy.zeros((A, L, 1, D + 1), F32)
-        for assets, gmv in zip(assets_by_site, gmf):
-            group = group_array(assets, 'taxonomy')
-            for taxonomy, assets in group.items():
-                for l, loss_type in enumerate(self.loss_types):
-                    fracs = self[taxonomy].scenario_damage(
-                        loss_type, assets, [gmv])
-                    for asset, frac in zip(assets, fracs):
-                        dmg = asset['number'] * frac[0, :D]
-                        csq = asset['value-' + loss_type] * frac[0, D]
-                        out[asset['ordinal'], l, 0, :D] = dmg
-                        out[asset['ordinal'], l, 0, D] = csq
-        return out
-
     def gen_outputs(self, riskinput, monitor, epspath=None, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
