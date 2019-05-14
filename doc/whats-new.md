@@ -142,10 +142,6 @@ filter calculator the precise filter is used and they are correctly
 discarded. The bounding box filter is enough to save disk space and
 storing time.
 
-10. We reduced drastically the number of client sockets attached to
-the DbServer, which was a waste of resources, and we removed the
-DbServer log file, which was not used.
-
 Experimental new features
 -------------------------
 
@@ -167,6 +163,17 @@ These features are not documented yet, since we are in an experimental
 phase, but we have tests and examples in the engine code base; users
 wanting to play with these features should contact us and we will be
 keen to help.
+
+The GMF exporter now also export informations about the inter event
+residuals and inter event standard deviations for each event. Here is an
+example of the file that could be generated:
+```
+$ cat sigma_epsilon.csv
+eid,sig_PGA,sig_SA(0.1),eps_PGA,eps_SA(0.1)
+12884901888,2.600000E-01,3.180000E-01,1.887697E+00,-7.447188E-01
+12884901889,2.600000E-01,3.180000E-01,-3.726182E-01,1.771590E-01
+12884901890,2.600000E-01,3.180000E-01,-8.312525E-01,5.412349E-01
+```
 
 hazardlib/HMTK
 -----------------------------
@@ -315,7 +322,6 @@ now it prints a message only for jobs that were really aborted.
 6. The documentation for the event loss table exporter in the manual
 was horribly outdated and has been fixed.
 
-
 Changes
 -----------------------------------------------
 
@@ -327,38 +333,28 @@ executed with a previous release.
 from the GMF csv export: they were redundant in event based calculations
 and confusing in scenario calculations where there is a single realization.
 
-3. The GMF exporter now also export informations about the inter event
-residuals and inter event standard deviations for each event. Here is an
-example of the file that could be generated:
-```
-$ cat sigma_epsilon.csv
-eid,sig_PGA,sig_SA(0.1),eps_PGA,eps_SA(0.1)
-12884901888,2.600000E-01,3.180000E-01,1.887697E+00,-7.447188E-01
-12884901889,2.600000E-01,3.180000E-01,-3.726182E-01,1.771590E-01
-12884901890,2.600000E-01,3.180000E-01,-8.312525E-01,5.412349E-01
-```
-4. We removed the `site_model.xml` exporter since it was not used.
+3. We removed the `site_model.xml` exporter since it was not used.
 
-5. We removed the command `oq extract hazard/rlzs`: if you want to export
+4. We removed the command `oq extract hazard/rlzs`: if you want to export
 all the hazard curves, set the flag `individual_curves=true` in the
 job.ini, as explained in
 https://github.com/gem/oq-engine/blob/engine-3.4/doc/faq-hazard.md
 
-6. We removed the parameter `max_site_model_distance`, since its role
+5. We removed the parameter `max_site_model_distance`, since its role
 is now taken by the `asset_hazard_distance` parameter.
  
-7. We changed the syntax of the ``MultiGMPE`` feature which was
+6. We changed the syntax of the ``MultiGMPE`` feature which was
 experimental and undocumented. It is now stable and documented here:
 https://github.com/gem/oq-engine/blob/engine-3.4/doc/adv-manual/parametric-gmpes.rst.
 
-8. In the `job.ini` file you should replace the parameters
+7. In the `job.ini` file you should replace the parameters
 `quantile_loss_curves` and `quantile_loss_maps` with `quantiles`, otherwise
 you will get an annoying warning.
 
-9. We changed the exporter for the aggregate losses: now the
+8. We changed the exporter for the aggregate losses: now the
 exposed value and loss ratios are exported too.
 
-10. The exporter for the loss curves now exports more fields.
+9. The exporter for the loss curves now exports more fields.
 
 Deprecations
 --------------------
@@ -406,3 +402,7 @@ of the `sap.Script` class.
 
 6. We added a command `oq info --parameters` tha displays the list of
 all the parameters recognized by job.ini files.
+
+7. We reduced drastically the number of client sockets attached to
+the DbServer, which was a waste of resources, and we removed the
+DbServer log file, which was not used.
