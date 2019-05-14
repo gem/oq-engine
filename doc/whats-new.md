@@ -1,6 +1,6 @@
 This is a major release featuring a new `multi_risk` calculator,
 several improvements to the hazard and risk calculators as well as a
-few bug fixes. Over 120 pull requests were merged. For the complete list
+few bug fixes. Nearly 140 pull requests were merged. For the complete list
 of changes, see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.5/debian/changelog
 
@@ -34,7 +34,7 @@ computation time, unless you are using the `preclassical` calculator.
 since all the realizations have the same weight, at the cost of making
 more difficult other features that were deemed less important.
 In practice, it means that you will have slightly different numbers
-in calculations using sampling of the logic tree, but such differences
+in calculations with sampling of the logic tree, but such differences
 are akin to a change of the `random_seed`, i.e. not relevant.
 
 5. Since a long time ago, the event based calculator has a debug flag
@@ -50,7 +50,7 @@ Risk calculators
 1. A major refactoring of all risk calculators was performed, with a
 significant benefit both in terms of reduced complexity and of
 improved speed. In particular we saw a speedup of 2x in some event
-based risk calculations.
+based risk calculations (in the risk part, not the hazard part).
 
 2. In order to make the refactoring possible we had to change the
 `classical_risk` calculator, that was using different loss ratios for
@@ -75,7 +75,7 @@ This makes a difference if you have multiple assets of the same taxonomy on
 the same hazard site, otherwise the performance is the same as before.
 
 6. The way the risk models are stored internally has changed significantly,
-to make it possible (in the next release) an unification of the `scenario_risk`
+to make it possible (in the future) an unification of the `scenario_risk`
 and `scenario_damage` calculators.
 
 67. We changed the `scenario_damage` calculator to accept silently single event
@@ -98,7 +98,7 @@ to be extensible to other kind of perils.
 hazardlib
 ----------
 
-We had four external contributions to hazarlib.
+We had five external contributions to hazarlib.
 
 1. Michal Kolaj provided tabular GMPEs for Canada.
 2. Graeme Weatherill provided the Kotha et al. (2019) shallow crustal GMPE
@@ -211,6 +211,6 @@ losses. This feature has been deprecated for a long time and was also
 buggy for scenario_risk. Users wanting the feature back should talk
 with us.
 
-7. We removed the parallel reading of the exposure introduced in engine v3.4
+5. We removed the parallel reading of the exposure introduced in engine v3.4
 since it was found buggy when used with the ebrisk calculator. It may return
 in the future.
