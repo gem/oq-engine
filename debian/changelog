@@ -1,5 +1,5 @@
-  [Michele Simionato]
-  * Fixed a potential encoding bug while reading XML files
+  [Paul Henshaw]
+  * Fixed an encoding bug while reading XML files on Windows
 
 python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
 
