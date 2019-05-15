@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Adds the Tromans et al. (2019) adjustable GMPE for application to PSHA
+    in the UK
+
   [Michele Simionato]
   * Added a check on missing intensity_measure_types in event based
   * Fixed `oq prepare_site_model` in the case of an empty datadir
