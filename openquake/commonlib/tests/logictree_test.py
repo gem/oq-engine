@@ -238,37 +238,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_two_branchsets_on_first_level(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm1</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>sm2</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error(
-            'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
-            logictree.LogicTreeError
-        )
-        self.assertEqual(exc.lineno, 11)
-        error = 'there must be only one branch set on first branching level'
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
-
     def test_branch_id_not_unique(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
