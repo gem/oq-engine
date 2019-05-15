@@ -605,6 +605,7 @@ class SourceModelLogicTree(object):
         self.seed = seed
         self.num_samples = num_samples
         self.branches = {}  # branch_id -> branch
+        self.bsetdict = {}
         self.open_ends = set()
         self.tectonic_region_types = set()
         self.source_types = set()
@@ -664,6 +665,8 @@ class SourceModelLogicTree(object):
         new_open_ends = set()
         for number, branchset_node in enumerate(
                 _bsnodes(self.filename, branchinglevel_node)):
+            attrs = branchset_node.attrib.copy()
+            self.bsetdict[attrs.pop('branchSetID')] = attrs
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
@@ -1242,6 +1245,18 @@ class SourceModelLogicTree(object):
         Returns a dictionary lt_path -> how many times that path was sampled
         """
         return collections.Counter(rlz.lt_path for rlz in self)
+
+    def __toh5__(self):
+        tbl = []
+        for branch in self.branches:
+            row = (br['branchID'], ~br.uncertaintyModel, ~br.uncertaintyWeight)
+            tbl.append(row)
+        dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
+              ('uncertainty', hdf5.vstr), ('weight', float)]
+        return numpy.array(tbl, dt), self.bsetdict
+
+    def __fromh5__(self, array, attrs):
+        import pdb; pdb.set_trace()
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
