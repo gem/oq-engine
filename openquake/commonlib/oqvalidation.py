@@ -93,7 +93,7 @@ class OqParam(valid.ParamSet):
     # insured_losses = valid.Param(valid.boolean, False)
     multi_peril = valid.Param(valid.namelist, [])
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
-    intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
+    intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
@@ -248,7 +248,7 @@ class OqParam(valid.ParamSet):
 
             # check the IMTs vs the GSIMs
             self._gsims_by_trt = gsim_lt.values
-            for gsims in self._gsims_by_trt.values():
+            for gsims in gsim_lt.values.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([valid.gsim(self.gsim)])
@@ -317,6 +317,8 @@ class OqParam(valid.ParamSet):
         """
         imts = set(from_string(imt).name for imt in self.imtls)
         for gsim in gsims:
+            if hasattr(gsim, 'weight'):  # disable the check
+                continue
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
                 names = set(cls.__name__ for cls in restrict_imts)
@@ -378,13 +380,13 @@ class OqParam(valid.ParamSet):
         if it is there) in order.
         """
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
+        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             with util.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
             self._risk_files = get_risk_files(parent.inputs)
-            costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
-        return costtypes
+            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        return sorted(costtypes)
 
     @property
     def min_iml(self):
@@ -415,7 +417,10 @@ class OqParam(valid.ParamSet):
         # in that case we merge the IMLs
         imtls = {}
         for taxonomy, risk_functions in risk_models.items():
-            for risk_type, rf in risk_functions.items():
+            for (lt, kind), rf in risk_functions.items():
+                if not hasattr(rf, 'imt') or kind.endswith('_retrofitted'):
+                    # for consequence or retrofitted
+                    continue
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
                 imls = list(rf.imls)
@@ -669,7 +674,7 @@ class OqParam(valid.ParamSet):
                         'Correlation model %s does not accept IMT=%s' % (
                             self.ground_motion_correlation_model, imt))
         if self.risk_files:  # IMTLs extracted from the risk files
-            return (self.intensity_measure_types is None and
+            return (self.intensity_measure_types == '' and
                     self.intensity_measure_types_and_levels is None)
         elif not hasattr(self, 'hazard_imtls') and not hasattr(
                 self, 'risk_imtls'):

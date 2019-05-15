@@ -18,7 +18,7 @@
 import csv
 import logging
 import numpy
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.hazardlib import valid, geo, InvalidFile
 from openquake.calculators import base
 from openquake.calculators.extract import extract
@@ -27,6 +27,33 @@ U16 = numpy.uint16
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+
+
+def get_dmg_csq(crm, assets_by_site, gmf):
+    """
+    :param crm: a CompositeRiskModel object
+    :param assets_by_site: a list of arrays per each site
+    :param gmf: a ground motion field
+    :returns:
+        an array of shape (A, L, 1, D + 1) with the number of buildings
+        in each damage state for each asset and loss type
+    """
+    A = sum(len(assets) for assets in assets_by_site)
+    L = len(crm.loss_types)
+    D = len(crm.damage_states)
+    out = numpy.zeros((A, L, 1, D + 1), F32)
+    for assets, gmv in zip(assets_by_site, gmf):
+        group = general.group_array(assets, 'taxonomy')
+        for taxonomy, assets in group.items():
+            for l, loss_type in enumerate(crm.loss_types):
+                fracs = crm[taxonomy].scenario_damage(
+                    loss_type, assets, [gmv])
+                for asset, frac in zip(assets, fracs):
+                    dmg = asset['number'] * frac[0, :D]
+                    csq = asset['value-' + loss_type] * frac[0, D]
+                    out[asset['ordinal'], l, 0, :D] = dmg
+                    out[asset['ordinal'], l, 0, D] = csq
+    return out
 
 
 def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
@@ -136,12 +163,11 @@ class MultiRiskCalculator(base.RiskCalculator):
         dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
         perils = []
         if 'ASH' in self.oqparam.multi_peril:
+            assets = self.assetcol.assets_by_site()
             gmf = self.datastore['multi_peril']['ASH']
-            dmg_csq[:, 0] = self.riskmodel.get_dmg_csq(
-                self.assetcol.assets_by_site(), gmf)
+            dmg_csq[:, 0] = get_dmg_csq(self.riskmodel, assets, gmf)
             perils.append('ASH_DRY')
-            dmg_csq[:, 1] = self.riskmodel.get_dmg_csq(
-                self.assetcol.assets_by_site(), gmf * ampl)
+            dmg_csq[:, 1] = get_dmg_csq(self.riskmodel, assets, gmf * ampl)
             perils.append('ASH_WET')
         hazard = self.datastore['multi_peril']
         no_frag_perils = []
