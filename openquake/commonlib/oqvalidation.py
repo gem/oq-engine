@@ -674,7 +674,7 @@ class OqParam(valid.ParamSet):
                         'Correlation model %s does not accept IMT=%s' % (
                             self.ground_motion_correlation_model, imt))
         if self.risk_files:  # IMTLs extracted from the risk files
-            return (self.intensity_measure_types is None and
+            return (self.intensity_measure_types == '' and
                     self.intensity_measure_types_and_levels is None)
         elif not hasattr(self, 'hazard_imtls') and not hasattr(
                 self, 'risk_imtls'):
