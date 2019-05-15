@@ -10,6 +10,9 @@
   * Now it is possible to export individual hazard curves from an event
   * Added a view gmvs_to_hazard
 
+  [Michele Simionato]
+  * Fixed a bug in the asset_risk exporter for uppercase tags
+
   [Paul Henshaw]
   * Fixed an encoding bug while reading XML files on Windows
 
