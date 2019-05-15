@@ -1,8 +1,3 @@
-  [Paul Henshaw]
-  * Fixed an encoding bug while reading XML files on Windows
-
-python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
-
   [Michele Simionato]
   * Added a check on missing intensity_measure_types in event based
   * Fixed `oq prepare_site_model` in the case of an empty datadir
@@ -14,6 +9,11 @@ python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
     contributions outside the range of validity of (some of the) GSIMs
   * Now it is possible to export individual hazard curves from an event
   * Added a view gmvs_to_hazard
+
+  [Paul Henshaw]
+  * Fixed an encoding bug while reading XML files on Windows
+
+python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
 
   [Giovanni Lanzano]
   * Lanzano and Luzi (2019) GMPE for volcanic zones in Italy
