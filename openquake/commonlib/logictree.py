@@ -198,6 +198,8 @@ class Branch(object):
     """
     Branch object, represents a ``<logicTreeBranch />`` element.
 
+    :param bs_id:
+        BranchSetID of the branchset to which the branch belongs
     :param branch_id:
         Value of ``@branchID`` attribute.
     :param weight:
@@ -208,7 +210,8 @@ class Branch(object):
         of ``<uncertaintyModel />`` child node. Type depends
         on the branchset's uncertainty type.
     """
-    def __init__(self, branch_id, weight, value):
+    def __init__(self, bs_id, branch_id, weight, value):
+        self.bs_id = bs_id
         self.branch_id = branch_id
         self.weight = weight
         self.value = value
@@ -732,6 +735,7 @@ class SourceModelLogicTree(object):
         :return:
             ``None``, all branches are attached to provided branchset.
         """
+        bs_id = branchset_node['branchSetID']
         weight_sum = 0
         branches = branchset_node.nodes
         values = []
@@ -746,7 +750,7 @@ class SourceModelLogicTree(object):
                     value_node, branchnode, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
             branch_id = branchnode.attrib.get('branchID')
-            branch = Branch(branch_id, weight, value)
+            branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
                 raise LogicTreeError(
                     branchnode, self.filename,
@@ -1248,12 +1252,12 @@ class SourceModelLogicTree(object):
 
     def __toh5__(self):
         tbl = []
-        for branch in self.branches:
-            row = (br['branchID'], ~br.uncertaintyModel, ~br.uncertaintyWeight)
-            tbl.append(row)
+        for brid, br in self.branches.items():
+            tbl.append((br.bs_id, brid, br.value, br.weight))
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
               ('uncertainty', hdf5.vstr), ('weight', float)]
-        return numpy.array(tbl, dt), self.bsetdict
+        dic = {k: repr(v) for k, v in self.bsetdict.items()}
+        return numpy.array(tbl, dt), dic
 
     def __fromh5__(self, array, attrs):
         import pdb; pdb.set_trace()
@@ -1334,7 +1338,7 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def toml(uncertainty):
+def to_toml(uncertainty):
     """
     Converts an uncertainty node into a TOML string
     """
@@ -1550,7 +1554,7 @@ class GsimLogicTree(object):
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
-                    uncertainty = toml(branch.uncertaintyModel)
+                    uncertainty = to_toml(branch.uncertaintyModel)
                     try:
                         gsim = valid.gsim(uncertainty)
                     except Exception as exc:
