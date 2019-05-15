@@ -458,6 +458,20 @@ class BranchSet(object):
         return repr(self.branches)
 
 
+def _bsnodes(fname, branchinglevel):
+    if branchinglevel.tag.endswith('logicTreeBranchingLevel'):
+        if len(branchinglevel) > 1:
+            raise InvalidLogicTree(
+                '%s: Branching level %s has multiple branchsets'
+                % (fname, branchinglevel['branchingLevelID']))
+        return branchinglevel.nodes
+    elif branchinglevel.tag.endswith('logicTreeBranchSet'):
+        return [branchinglevel]
+    else:
+        raise ValueError('Expected BranchingLevel/BranchSet, got %s' %
+                         branchinglevel)
+
+
 class FakeSmlt(object):
     """
     A replacement for the SourceModelLogicTree class, to be used when
@@ -524,7 +538,7 @@ def collect_info(smlt):
     paths = collections.defaultdict(set)  # branchID -> paths
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
-        for bset in blevel:
+        for bset in _bsnodes(smlt, blevel):
             if 'applyToSources' in bset.attrib:
                 applytosources[bset['branchSetID']].extend(
                         bset['applyToSources'].split())
@@ -648,8 +662,8 @@ class SourceModelLogicTree(object):
         can have child branchsets (if there is one on the next level).
         """
         new_open_ends = set()
-        branchsets = branchinglevel_node.nodes
-        for number, branchset_node in enumerate(branchsets):
+        for number, branchset_node in enumerate(
+                _bsnodes(self.filename, branchinglevel_node)):
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
@@ -664,8 +678,8 @@ class SourceModelLogicTree(object):
 
             self.num_paths *= len(branchset.branches)
         if number > 0:
-            logging.warning('There is a branching level with multiple '
-                            'branchsets in %s', self.filename)
+            raise InvalidLogicTree('there is a branching level with multiple'
+                                   ' branchsets in %s' % self.filename)
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
@@ -1120,12 +1134,7 @@ class SourceModelLogicTree(object):
           or "gmpeModel".
         """
         if depth == 0:
-            if number > 0:
-                raise LogicTreeError(
-                    branchset_node, self.filename,
-                    'there must be only one branch set '
-                    'on first branching level')
-            elif branchset.uncertainty_type != 'sourceModel':
+            if branchset.uncertainty_type != 'sourceModel':
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     'first branchset must define an uncertainty '
@@ -1167,18 +1176,14 @@ class SourceModelLogicTree(object):
                     raise LogicTreeError(
                         branchset_node, self.filename,
                         "branch '%s' already has child branchset" % branch_id)
-                if branch not in self.open_ends:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        'applyToBranches must reference only branches '
-                        'from previous branching level')
                 branch.child_branchset = branchset
         else:
             for branch in self.open_ends:
                 branch.child_branchset = branchset
 
     def _get_source_model(self, source_model_file):
-        return open(os.path.join(self.basepath, source_model_file))
+        return open(os.path.join(self.basepath, source_model_file),
+                    encoding='utf-8')
 
     def collect_source_model_data(self, branch_id, source_model):
         """
@@ -1272,7 +1277,8 @@ class ImtWeight(object):
     def __mul__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self.dic[k] * other[k] for k in self.dic}
+            keys = set(self.dic) | set(other.dic)
+            new.dic = {k: self[k] * other[k] for k in keys}
         else:  # assume a float
             new.dic = {k: self.dic[k] * other for k in self.dic}
         return new
@@ -1301,7 +1307,7 @@ class ImtWeight(object):
         """
         Check that all the inner weights are 1 up to the precision
         """
-        return all(abs(v - 1.) < pmf.PRECISION for v in self.dic.values())
+        return all(abs(v - 1.) < pmf.PRECISION for v in self.dic.values() if v)
 
     def __getitem__(self, imt):
         try:
@@ -1364,7 +1370,7 @@ class GsimLogicTree(object):
         return cls(repr(gsim), ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
-        self.fname = fname
+        self.filename = fname
         trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
             raise ValueError(
@@ -1415,8 +1421,8 @@ class GsimLogicTree(object):
         dic = {'branches': numpy.array(branches, dt)}
 
         # manage gmpe_tables, if any
-        if hasattr(self, 'fname'):
-            dirname = os.path.dirname(self.fname)
+        if hasattr(self, 'filename'):  # missing for fake logic trees
+            dirname = os.path.dirname(self.filename)
             for gmpe_table in sorted(self.gmpe_tables):
                 dic[gmpe_table] = d = {}
                 filename = os.path.join(dirname, gmpe_table)
@@ -1445,6 +1451,8 @@ class GsimLogicTree(object):
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'id', 'gsim', 'weight', ...)
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
+            if len(weight.dic) > 1:
+                gsim.weight = weight
             bt = BranchTuple(branch['trt'], branch['id'], gsim, weight, True)
             self.branches.append(bt)
 
@@ -1503,19 +1511,15 @@ class GsimLogicTree(object):
         branches = []
         branchsetids = set()
         for branching_level in self._ltnode:
-            if len(branching_level) > 1:
-                raise InvalidLogicTree(
-                    '%s: Branching level %s has multiple branchsets'
-                    % (self.fname, branching_level['branchingLevelID']))
-            for branchset in branching_level:
+            for branchset in _bsnodes(self.filename, branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
                     raise InvalidLogicTree(
                         '%s: only uncertainties of type "gmpeModel" '
-                        'are allowed in gmpe logic tree' % self.fname)
+                        'are allowed in gmpe logic tree' % self.filename)
                 bsid = branchset['branchSetID']
                 if bsid in branchsetids:
                     raise InvalidLogicTree(
-                        '%s: Duplicated branchSetID %s' % (self.fname, bsid))
+                        '%s: Duplicated branchSetID %s' % (self.filename, bsid))
                 else:
                     branchsetids.add(bsid)
                 trt = branchset.attrib.get('applyToTectonicRegionType')
@@ -1527,7 +1531,7 @@ class GsimLogicTree(object):
                 weights = []
                 branch_ids = []
                 for branch in branchset:
-                    weight = ImtWeight(branch, self.fname)
+                    weight = ImtWeight(branch, self.filename)
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
@@ -1536,33 +1540,36 @@ class GsimLogicTree(object):
                         gsim = valid.gsim(uncertainty)
                     except Exception as exc:
                         raise ValueError(
-                            "%s in file %s" % (exc, self.fname)) from exc
-                    if (isinstance(self.fname, str)
+                            "%s in file %s" % (exc, self.filename)) from exc
+                    if (isinstance(self.filename, str)
                             and isinstance(gsim, GMPETable)):
                         # a bit hackish: set the GMPE_DIR equal to the
                         # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.fname)
+                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     if isinstance(gsim, GMPETable):
                         gsim.init()
                         if 'gmpe_table' in gsim.kwargs:
                             self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
-                                               (self.fname, gsim))
+                                               (self.filename, gsim))
+                    if len(weight.dic) > 1:
+                        gsim.weight = weight
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
                         branchset['applyToTectonicRegionType'],
                         branch_id, gsim, weight, effective)
                     branches.append(bt)
                 tot = sum(weights)
-                assert tot.is_one(), tot
+                assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
                 if duplicated(branch_ids):
                     raise InvalidLogicTree(
-                        'There where duplicated branchIDs in %s' % self.fname)
+                        'There where duplicated branchIDs in %s' %
+                        self.filename)
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
-                (self.fname, trts))
+                (self.filename, trts))
         branches.sort(key=lambda b: (b.trt, b.id))
         # TODO: add an .idx to each GSIM ?
         return branches
