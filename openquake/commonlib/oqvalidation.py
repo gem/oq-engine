@@ -93,7 +93,7 @@ class OqParam(valid.ParamSet):
     # insured_losses = valid.Param(valid.boolean, False)
     multi_peril = valid.Param(valid.namelist, [])
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
-    intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
+    intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
