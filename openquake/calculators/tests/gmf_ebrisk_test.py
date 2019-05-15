@@ -84,7 +84,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_4.__file__, 'job_risk.ini',
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
-        [fname] = export(('agg_loss_table', 'csv'), calc1)
+        [fname] = export(('losses_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 

@@ -35,8 +35,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput
-from openquake.commonlib import (
-    readinput, logictree, source, calc, writers, util)
+from openquake.commonlib import readinput, logictree, source, calc, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
@@ -579,7 +578,7 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         self.datastore['risk_model'] = rm = self.riskmodel
-        self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
+        #self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes('risk_model')
@@ -666,14 +665,6 @@ class HazardCalculator(BaseCalculator):
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
-
-            # same check for the consequence models, if any
-            if any(key.endswith('_consequence') for key in oq.inputs):
-                for taxonomy in taxonomies:
-                    cfs = self.riskmodel[taxonomy].consequence_functions
-                    if not cfs:
-                        raise ValueError(
-                            'Missing consequenceFunctions for %s' % taxonomy)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
@@ -966,7 +957,8 @@ def import_gmfs(dstore, fname, sids):
     :param sids: the site IDs (complete)
     :returns: event_ids, num_rlzs
     """
-    array = writers.read_composite_array(fname).array
+    array = readinput.read_csv(
+        fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
     # has header rlzi, sid, eid, gmv_PGA, ...
     imts = [name[4:] for name in array.dtype.names[3:]]
     n_imts = len(imts)
