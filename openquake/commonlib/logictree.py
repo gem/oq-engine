@@ -1421,7 +1421,7 @@ class GsimLogicTree(object):
         dic = {'branches': numpy.array(branches, dt)}
 
         # manage gmpe_tables, if any
-        if self.filename:
+        if hasattr(self, 'filename'):  # missing for fake logic trees
             dirname = os.path.dirname(self.filename)
             for gmpe_table in sorted(self.gmpe_tables):
                 dic[gmpe_table] = d = {}
