@@ -66,10 +66,17 @@ def columns(line):
 orig_open = open
 
 
-def check_open(fname, mode='r', buffering=-1, encoding=None, newline=None):
-    if fname.endswith('.xml') and encoding != 'utf-8':
+def check_open(fname, mode='r', buffering=-1, encoding=None, errors=None,
+               newline=None, closefd=True, opener=None):
+    if (isinstance(fname, str) and fname.endswith('.xml') and 'b' not in mode
+            and encoding != 'utf-8'):
         raise ValueError('Please set the encoding to utf-8!')
-    return orig_open(fname, mode, buffering, encoding, newline=newline)
+    return orig_open(fname, mode, buffering, encoding, errors, newline,
+                     closefd, opener)
+
+
+def open8(fname, mode='r'):
+    return orig_open(fname, mode, encoding='utf-8')
 
 
 class CalculatorTestCase(unittest.TestCase):
@@ -156,11 +163,11 @@ class CalculatorTestCase(unittest.TestCase):
             expected_dir = os.path.dirname(expected)
             if not os.path.exists(expected_dir):
                 os.makedirs(expected_dir)
-            open(expected, 'w').write('')
+            open8(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
-        expected_lines = make_comparable(open(expected).readlines())
-        actual_lines = make_comparable(open(actual).readlines()[:lastline])
+        expected_lines = make_comparable(open8(expected).readlines())
+        actual_lines = make_comparable(open8(actual).readlines()[:lastline])
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
             for exp, got in zip(expected_lines, actual_lines):
@@ -173,7 +180,7 @@ class CalculatorTestCase(unittest.TestCase):
                 # use this path when the expected outputs have changed
                 # for a good reason
                 logging.info('overriding %s', expected)
-                open(expected, 'w').write(''.join(actual_lines))
+                open8(expected, 'w').write(''.join(actual_lines))
             else:
                 # normally raise an exception
                 raise DifferentFiles('%s %s' % (expected, actual))
@@ -182,8 +189,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Make sure the content of the exported file is the expected one
         """
-        with open(os.path.join(self.calc.oqparam.export_dir, fname)) as actual:
-            self.assertEqual(expected_content, actual.read())
+        with open8(os.path.join(self.calc.oqparam.export_dir, fname)) as got:
+            self.assertEqual(expected_content, got.read())
 
     def assertEventsByRlz(self, events_by_rlz):
         """
