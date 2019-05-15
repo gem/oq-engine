@@ -24,6 +24,7 @@ from openquake.hazardlib.gsim.base import (RuptureContext,
                                            SitesContext,
                                            DistancesContext)
 from openquake.hazardlib.gsim.tromans_2019 import (TromansEtAl2019,
+                                                   TromansEtAl2019SigmaMu,
                                                    HOMOSKEDASTIC_PHI,
                                                    HOMOSKEDASTIC_TAU,
                                                    HETEROSKEDASTIC_PHI,
@@ -190,6 +191,52 @@ class TromansEtAl2019AdjustmentsTestCase(unittest.TestCase):
                                         SA(1.0), [const.StdDev.TOTAL])[0],
             gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
                                         SA(1.0), [const.StdDev.TOTAL])[0], 1.4)
+
+
+class TromansEtAl2019SigmaMuTestCase(TromansEtAl2019AdjustmentsTestCase):
+    """
+    Tests the Tromans et al (2019) GMPE with the sigma mu adjustment
+    """
+    def setUp(self):
+        """
+        """
+        self.gsim = TromansEtAl2019SigmaMu
+        self.rctx = RuptureContext()
+        self.rctx.mag = 6.5
+        self.rctx.rake = 0.
+        self.dctx = DistancesContext()
+        self.dctx.rjb = np.array([5., 10., 20., 50., 100.])
+        self.sctx = SitesContext()
+        self.sctx.vs30 = 500. * np.ones(5)
+
+    def test_alatik_youngs_factors(self):
+        self.assertAlmostEqual(
+            self.gsim.get_alatik_youngs_sigma_mu(5.0, -90., PGA()),
+            0.121)
+        self.assertAlmostEqual(
+            self.gsim.get_alatik_youngs_sigma_mu(5.0, -90., SA(0.5)),
+            0.121)
+        self.assertAlmostEqual(
+            self.gsim.get_alatik_youngs_sigma_mu(7.5, -90., SA(0.5)),
+            0.149)
+        self.assertAlmostEqual(
+            self.gsim.get_alatik_youngs_sigma_mu(5.0, -90., SA(np.exp(1))),
+            0.1381)
+        self.assertAlmostEqual(
+            self.gsim.get_alatik_youngs_sigma_mu(5.0, 90., SA(0.2)),
+            0.083)
+
+    def test_sigma_mu_scaling(self):
+        gsim_1 = self.gsim("BindiEtAl2014Rjb", branch="central",
+                           sigma_mu_epsilon=1.0)
+
+        gsim_2 = self.gsim("BindiEtAl2014Rjb", branch="central")
+
+        mean_1 = gsim_1.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+                                             PGA(), [const.StdDev.TOTAL])[0]
+        mean_2 = gsim_2.get_mean_and_stddevs(self.sctx, self.rctx, self.dctx,
+                                             PGA(), [const.StdDev.TOTAL])[0]
+        self._compare_arrays(mean_1, mean_2, np.exp(0.083))
 
 
 class TromansEtAl2019TestCaseCentralHomo(BaseGSIMTestCase):
