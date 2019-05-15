@@ -1,3 +1,4 @@
+# kind='rlz-000', risk_investigation_time=1.0
 annual_frequency_of_exceedence,return_period,loss_type,NAME_1,loss_value,loss_ratio
 2.00000E-02,50,structural,RegionA,6.13490E+02,1.53372E-01
 2.00000E-02,50,structural,RegionB,9.63000E+02,9.63001E-02
