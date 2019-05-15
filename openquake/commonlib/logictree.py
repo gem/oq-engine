@@ -458,8 +458,12 @@ class BranchSet(object):
         return repr(self.branches)
 
 
-def _bsnodes(branchinglevel):
+def _bsnodes(fname, branchinglevel):
     if branchinglevel.tag.endswith('logicTreeBranchingLevel'):
+        if len(branchinglevel) > 1:
+            raise InvalidLogicTree(
+                '%s: Branching level %s has multiple branchsets'
+                % (fname, branchinglevel['branchingLevelID']))
         return branchinglevel.nodes
     elif branchinglevel.tag.endswith('logicTreeBranchSet'):
         return [branchinglevel]
@@ -534,7 +538,7 @@ def collect_info(smlt):
     paths = collections.defaultdict(set)  # branchID -> paths
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
-        for bset in _bsnodes(blevel):
+        for bset in _bsnodes(smlt, blevel):
             if 'applyToSources' in bset.attrib:
                 applytosources[bset['branchSetID']].extend(
                         bset['applyToSources'].split())
@@ -658,7 +662,8 @@ class SourceModelLogicTree(object):
         can have child branchsets (if there is one on the next level).
         """
         new_open_ends = set()
-        for number, branchset_node in enumerate(_bsnodes(branchinglevel_node)):
+        for number, branchset_node in enumerate(
+                _bsnodes(self.filename, branchinglevel_node)):
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
@@ -1129,12 +1134,7 @@ class SourceModelLogicTree(object):
           or "gmpeModel".
         """
         if depth == 0:
-            if number > 0:
-                raise LogicTreeError(
-                    branchset_node, self.filename,
-                    'there must be only one branch set '
-                    'on first branching level')
-            elif branchset.uncertainty_type != 'sourceModel':
+            if branchset.uncertainty_type != 'sourceModel':
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     'first branchset must define an uncertainty '
@@ -1370,7 +1370,7 @@ class GsimLogicTree(object):
         return cls(repr(gsim), ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
-        self.fname = fname
+        self.filename = fname
         trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
             raise ValueError(
@@ -1422,7 +1422,7 @@ class GsimLogicTree(object):
 
         # manage gmpe_tables, if any
         if hasattr(self, 'fname'):
-            dirname = os.path.dirname(self.fname)
+            dirname = os.path.dirname(self.filename)
             for gmpe_table in sorted(self.gmpe_tables):
                 dic[gmpe_table] = d = {}
                 filename = os.path.join(dirname, gmpe_table)
@@ -1511,19 +1511,15 @@ class GsimLogicTree(object):
         branches = []
         branchsetids = set()
         for branching_level in self._ltnode:
-            if len(branching_level) > 1:
-                raise InvalidLogicTree(
-                    '%s: Branching level %s has multiple branchsets'
-                    % (self.fname, branching_level['branchingLevelID']))
-            for branchset in _bsnodes(branching_level):
+            for branchset in _bsnodes(self.filename, branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
                     raise InvalidLogicTree(
                         '%s: only uncertainties of type "gmpeModel" '
-                        'are allowed in gmpe logic tree' % self.fname)
+                        'are allowed in gmpe logic tree' % self.filename)
                 bsid = branchset['branchSetID']
                 if bsid in branchsetids:
                     raise InvalidLogicTree(
-                        '%s: Duplicated branchSetID %s' % (self.fname, bsid))
+                        '%s: Duplicated branchSetID %s' % (self.filename, bsid))
                 else:
                     branchsetids.add(bsid)
                 trt = branchset.attrib.get('applyToTectonicRegionType')
@@ -1535,7 +1531,7 @@ class GsimLogicTree(object):
                 weights = []
                 branch_ids = []
                 for branch in branchset:
-                    weight = ImtWeight(branch, self.fname)
+                    weight = ImtWeight(branch, self.filename)
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
@@ -1544,19 +1540,19 @@ class GsimLogicTree(object):
                         gsim = valid.gsim(uncertainty)
                     except Exception as exc:
                         raise ValueError(
-                            "%s in file %s" % (exc, self.fname)) from exc
-                    if (isinstance(self.fname, str)
+                            "%s in file %s" % (exc, self.filename)) from exc
+                    if (isinstance(self.filename, str)
                             and isinstance(gsim, GMPETable)):
                         # a bit hackish: set the GMPE_DIR equal to the
                         # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.fname)
+                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     if isinstance(gsim, GMPETable):
                         gsim.init()
                         if 'gmpe_table' in gsim.kwargs:
                             self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
-                                               (self.fname, gsim))
+                                               (self.filename, gsim))
                     if len(weight.dic) > 1:
                         gsim.weight = weight
                     self.values[trt].append(gsim)
@@ -1568,11 +1564,12 @@ class GsimLogicTree(object):
                 assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
                 if duplicated(branch_ids):
                     raise InvalidLogicTree(
-                        'There where duplicated branchIDs in %s' % self.fname)
+                        'There where duplicated branchIDs in %s' %
+                        self.filename)
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
-                (self.fname, trts))
+                (self.filename, trts))
         branches.sort(key=lambda b: (b.trt, b.id))
         # TODO: add an .idx to each GSIM ?
         return branches
