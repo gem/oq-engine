@@ -183,6 +183,10 @@ class TromansEtAl2019(GMPE):
     :param vskappa:
         Apply vs-kappa adjustment factors defined using a dictionary organised
         by IMT, or else none.
+
+    :param phi_ds2s:
+        Adds the phi_ds2s term to the sigma model (True) or retains the
+        single station model
     """
     #: Supported tectonic region type is 'active shallow crust'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -216,7 +220,7 @@ class TromansEtAl2019(GMPE):
 
     def __init__(self, gmpe_name, branch="central",
                  homoskedastic_sigma=False,  scaling_factor=None,
-                 vskappa=None):
+                 vskappa=None, phi_ds2s=False):
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         # Update the required_parameters
@@ -241,6 +245,7 @@ class TromansEtAl2019(GMPE):
             self.vskappa = None
         self.branch = branch
         self.homoskedastic_sigma = homoskedastic_sigma
+        self.phi_ds2s = phi_ds2s
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -276,7 +281,8 @@ class TromansEtAl2019(GMPE):
             tau = np.zeros(nsites) + HETEROSKEDASTIC_TAU[self.branch](imt, mag)
             phi = np.zeros(nsites) + HETEROSKEDASTIC_PHI[self.branch](imt, mag)
         # Add on the delta phi_d2s
-        phi = np.sqrt(phi ** 2. + DELTA_PHI_S2S[imt]["dfs2s"] ** 2.)
+        if self.phi_ds2s:
+            phi = np.sqrt(phi ** 2. + DELTA_PHI_S2S[imt]["dfs2s"] ** 2.)
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -287,3 +293,72 @@ class TromansEtAl2019(GMPE):
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(tau)
         return stddevs
+
+
+class TromansEtAl2019SigmaMu(TromansEtAl2019):
+    """
+    Extension of the Tromans et al. (2019) to facilitate the application
+    of the statistical uncertainty (sigma_mu) adjustment using the factors
+    described by Al Atik & Youngs (2014)
+
+    Al Atik, L. and Youngs, R. R. (2014) "Epistemic Uncertainty for
+    NGA-West 2 Models", Earthquake Spectra, 30(3): 1301 - 1318
+    """
+    #: Required rupture parameters are magnitude and style of faulting, others
+    #: will be taken from the GMPE
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+
+    def __init__(self, gmpe_name, branch="central", sigma_mu_epsilon=0.0,
+                 homoskedastic_sigma=False,  scaling_factor=None,
+                 vskappa=None):
+        super().__init__(gmpe_name=gmpe_name, branch=branch,
+                         homoskedastic_sigma=homoskedastic_sigma,
+                         scaling_factor=scaling_factor, vskappa=vskappa)
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        Returns the mean and standard deviations applying, where specified,
+        scalar adjustment and vs-kappa adjustment to the mean from the
+        original GMPE
+        """
+        # Retrieve the mean values from the GMPE - cannot avoid calling
+        # the stddevs part, but no stddevs will be returned.
+        mean = self.gmpe.get_mean_and_stddevs(sites, rup, dists, imt, [])[0]
+        # Apply scaling factor
+        if self.scaling_factor:
+            mean += self.scaling_factor
+        # Apply sigma_mu epsilon factor
+        if self.sigma_mu_epsilon:
+            mean += (self.sigma_mu_epsilon *
+                     self.get_alatik_youngs_sigma_mu(rup.mag, rup.rake, imt))
+        # Apply vs-kappa correction
+        if self.vskappa:
+            mean += self.vskappa[imt]["vskappa"]
+        # Get stddevs
+        stddevs = self.get_stddevs(stddev_types, imt, rup.mag, mean.shape)
+        return mean, stddevs
+
+    @staticmethod
+    def get_alatik_youngs_sigma_mu(mag, rake, imt):
+        """
+        Implements the statistical uncertainty model of Al Atik & Youngs (2014)
+        given in equations 9 to 11 in the manuscript.
+        """
+        if str(imt) == "PGA":
+            period = 0.01
+        elif str(imt).startswith("SA"):
+            period = imt.period
+        else:
+            raise ValueError("Al Atik & Youngs (2014) Model not supported "
+                             "for %s" % str(imt))
+        if mag >= 7.0:
+            sigma_mu = 0.056 * (mag - 7.0) + 0.083
+        else:
+            sigma_mu = 0.083
+        if period >= 1.0:
+            sigma_mu += (0.0171 * np.log(period))
+        if rake >= -135. and rake <= -45.:
+            # Normal faulting case
+            sigma_mu += 0.038
+        return sigma_mu
