@@ -785,10 +785,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'sm', {'lt': lt, 'sm': sm}, 'base',
             ExpatError, exc_filename='sm')
 
-    def test_referencing_over_level_boundaries(self):
-        lt = _make_nrml("""\
+    def test_apply_to_branches(self):
+        smlt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
                                     branchSetID="bs1">
                   <logicTreeBranch branchID="b1">
@@ -800,8 +799,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
                                     branchSetID="bs1" applyToSources="src01"
                                     applyToBranches="b1">
@@ -810,8 +807,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl3">
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
                                     branchSetID="bs1" applyToSources="src01"
                                     applyToBranches="b2">
@@ -820,19 +815,14 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error(
-            'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
-            logictree.LogicTreeError
-        )
-        self.assertEqual(exc.lineno, 27)
-        error = 'applyToBranches must reference only branches ' \
-                'from previous branching level'
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
+        lt = _TestableSourceModelLogicTree(
+            'lt', {'lt': smlt, 'sm1': sm, 'sm2': sm}, 'basepath')
+        self.assertEqual(
+            str(lt),
+            '<_TestableSourceModelLogicTree[b1[b3], b2[b4]]>')
 
     def test_gmpe_uncertainty(self):
         lt = _make_nrml("""\
@@ -1202,7 +1192,6 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
     def test_apply_to_branches(self):
         source_model_logic_tree = _make_nrml("""\
         <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
                                     branchSetID="bs1">
                     <logicTreeBranch branchID="sb1">
@@ -1218,8 +1207,6 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                         <uncertaintyWeight>0.1</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-            <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
                                     branchSetID="bs2"
                                     applyToBranches="sb1 sb3">
@@ -1237,7 +1224,6 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
