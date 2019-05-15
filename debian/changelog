@@ -16,7 +16,7 @@
     based calculation by setting `hazard_curves_from_gmfs = true` and
     `individual_curves = true (before only the statistics were saved)
   * Made it possible to download remote source models
-  * Made the branching level optional
+  * Removed the branching level concept in the logic trees
   * Made it possible to produce individual loss maps and curves with the
     ebrisk calculator with a single line `aggregate_by=id`
   * Added a limit of 2**32 events in event based calculations
