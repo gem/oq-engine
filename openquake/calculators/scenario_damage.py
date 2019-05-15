@@ -63,7 +63,7 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
                     result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
-                    if riskmodel.consequences:
+                    if riskmodel.has('consequence'):
                         csq = fractions[:, D] * asset['value-' + loss_type]
                         result['c_asset'].append(
                             (l, r, asset['ordinal'], scientific.mean_std(csq)))

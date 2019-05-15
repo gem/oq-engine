@@ -166,11 +166,14 @@ class CalculatorTestCase(unittest.TestCase):
             open8(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
-        expected_lines = make_comparable(open8(expected).readlines())
-        actual_lines = make_comparable(open8(actual).readlines()[:lastline])
+        expected_lines = [line for line in open8(expected)
+                          if not line.startswith('#')]
+        actual_lines = [line for line in open8(actual).readlines()[:lastline]
+                        if not line.startswith('#')]
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
-            for exp, got in zip(expected_lines, actual_lines):
+            for exp, got in zip(make_comparable(expected_lines),
+                                make_comparable(actual_lines)):
                 if delta:
                     self.practicallyEqual(exp, got, delta)
                 else:
