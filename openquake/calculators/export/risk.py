@@ -661,7 +661,7 @@ def export_asset_risk_csv(ekey, dstore):
     rows = []
     lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
     perilnames = sorted(name for name in arr.dtype.names
-                        if name.upper() == name)
+                        if name in 'LAVA LAHAR PYRO ASH')
     expnames = [name for name in arr.dtype.names if name not in md.tagnames
                 and 'loss' not in name and name not in perilnames
                 and name not in 'lon lat']
