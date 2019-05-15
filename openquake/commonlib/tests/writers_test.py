@@ -117,7 +117,7 @@ class WriteCsvTestCase(unittest.TestCase):
     def test_flat(self):
         imt_dt = numpy.dtype([('PGA', I32, 3), ('PGV', I32, 4)])
         a = numpy.array([([1, 2, 3], [4, 5, 6, 7])], imt_dt)
-        self.assert_export(a, 'PGA:int32:3,PGV:int32:4\n1 2 3,4 5 6 7\n')
+        self.assert_export(a, 'PGA:3,PGV:4\n1 2 3,4 5 6 7\n')
 
     def test_nested(self):
         imt_dt = numpy.dtype([('PGA', I32, 3), ('PGV', I32, 4)])
@@ -126,5 +126,5 @@ class WriteCsvTestCase(unittest.TestCase):
         a = numpy.array([(([1, 2, 3], [4, 5, 6, 7]),
                           ([1, 2, 4], [3, 5, 6, 7]), 8)], gmf_dt)
         self.assert_export(
-            a, 'A~PGA:int32:3,A~PGV:int32:4,B~PGA:int32:3,B~PGV:int32:4,'
-            'idx:int32\n1 2 3,4 5 6 7,1 2 4,3 5 6 7,8\n')
+            a, 'A~PGA:3,A~PGV:4,B~PGA:3,B~PGV:4,'
+            'idx\n1 2 3,4 5 6 7,1 2 4,3 5 6 7,8\n')

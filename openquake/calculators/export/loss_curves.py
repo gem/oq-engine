@@ -60,6 +60,7 @@ class LossCurveExporter(object):
     """
     def __init__(self, dstore):
         self.dstore = dstore
+        self.oq = dstore['oqparam']
         try:
             self.builder = get_loss_builder(dstore)
         except KeyError:  # no 'events' for non event_based_risk
@@ -128,7 +129,10 @@ class LossCurveExporter(object):
                             data.append((aref, loss_type, loss, poe))
             dest = self.dstore.build_fname(
                 'loss_curves', '%s-%s' % (spec, key) if spec else key, 'csv')
-            writer.save(data, dest)
+            com = dict(
+                kind=key,
+                risk_investigation_time=self.oq.risk_investigation_time)
+            writer.save(data, dest, comment=com)
         return writer.getsaved()
 
     def export(self, export_type, what):

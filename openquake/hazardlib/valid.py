@@ -654,6 +654,8 @@ def intensity_measure_types(value):
     :param value: input string
     :returns: non-empty list of Intensity Measure Type objects
 
+    >>> intensity_measure_types('')
+    []
     >>> intensity_measure_types('PGA')
     ['PGA']
     >>> intensity_measure_types('PGA, SA(1.00)')
@@ -667,6 +669,8 @@ def intensity_measure_types(value):
     ...
     ValueError: The IMTs are not sorted by period: SA(1), PGA
     """
+    if not value:
+        return []
     imts = []
     for chunk in value.split(','):
         imts.append(imt.from_string(chunk.strip()))

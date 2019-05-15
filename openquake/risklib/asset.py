@@ -253,11 +253,10 @@ class Asset(object):
 
 
 U8 = numpy.uint8
-U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
@@ -294,8 +293,8 @@ class TagCollection(object):
         except KeyError:
             dic[tagvalue] = idx = len(dic)
             getattr(self, tagname).append(tagvalue)
-            if idx > TWO16:
-                raise InvalidFile('contains more then %d tags' % TWO16)
+            if idx > TWO32:
+                raise InvalidFile('contains more then %d tags' % TWO32)
             return idx
 
     def add_tags(self, dic, prefix):
@@ -391,9 +390,6 @@ class AssetCollection(object):
     D, I = len('deductible-'), len('insurance_limit-')
 
     def __init__(self, exposure, assets_by_site, time_event):
-        self.asset_refs = numpy.array([
-            exposure.asset_refs[asset.ordinal]
-            for assets in assets_by_site for asset in assets])
         self.tagcol = exposure.tagcol
         self.cost_calculator = exposure.cost_calculator
         self.time_event = time_event
@@ -422,6 +418,13 @@ class AssetCollection(object):
         :returns: the tagnames
         """
         return self.tagcol.tagnames
+
+    @property
+    def asset_refs(self):
+        """
+        :returns: array of asset ids as strings
+        """
+        return self.tagcol.id[1:]
 
     def num_taxonomies_by_site(self):
         """
@@ -509,7 +512,6 @@ class AssetCollection(object):
         vars(new).update(vars(self))
         new.array = self.array[ok_indices]
         new.array['ordinal'] = numpy.arange(len(new.array))
-        new.asset_refs = self.asset_refs[ok_indices]
         return new
 
     def reduce_also(self, sitecol):
@@ -519,19 +521,16 @@ class AssetCollection(object):
         and turned into a complete site collection.
         """
         array = []
-        asset_refs = []
         for idx, sid in enumerate(sitecol.sids):
             mask = self.array['site_id'] == sid
             arr = self.array[mask]
             arr['site_id'] = idx
             array.append(arr)
-            asset_refs.append(self.asset_refs[mask])
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.tot_sites = len(sitecol)
         new.array = numpy.concatenate(array)
         new.array['ordinal'] = numpy.arange(len(new.array))
-        new.asset_refs = numpy.concatenate(asset_refs)
         sitecol.make_complete()
         return new
 
@@ -560,7 +559,7 @@ class AssetCollection(object):
                  'nbytes': self.array.nbytes}
         return dict(
             array=self.array, cost_calculator=self.cost_calculator,
-            tagcol=self.tagcol, asset_refs=self.asset_refs), attrs
+            tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
         for name in ('loss_types', 'deduc', 'i_lim', 'retro'):
@@ -572,7 +571,6 @@ class AssetCollection(object):
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
         self.cost_calculator = dic['cost_calculator']
-        self.asset_refs = dic['asset_refs'].value
         self.cost_calculator.tagi = {
             decode(tagname): i for i, tagname in enumerate(self.tagnames)}
 
@@ -614,7 +612,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                         'deprecated and may be removed in the future')
     retro = ['retrofitted'] if first_asset._retrofitted else []
     float_fields = loss_types + retro
-    int_fields = [(str(name), U16) for name in tagnames]
+    int_fields = [(str(name), U32) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
         [('ordinal', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
@@ -704,7 +702,7 @@ def _get_exposure(fname, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ~tagNames or []
+    tagnames = ['id'] + (~tagNames or [])
     if set(tagnames) & {'taxonomy', 'exposure', 'country'}:
         raise InvalidFile('taxonomy, exposure and country are reserved names '
                           'you cannot use it in <tagNames>: %s' % fname)
@@ -992,6 +990,7 @@ class Exposure(object):
             tagnode = getattr(asset_node, 'tags', None)
             dic = {} if tagnode is None else tagnode.attrib.copy()
             dic['taxonomy'] = taxonomy
+            dic['id'] = param['asset_prefix'] + asset_node['id']
             idxs = self.tagcol.add_tags(dic, prefix)
         try:
             costs = asset_node.costs
