@@ -31,8 +31,8 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 3.4** 'Omori'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.4#openquake-engine.
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.4/doc/whats-new.md)
+Current stable version is the **OpenQuake Engine 3.5** 'Palmieri'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.5#openquake-engine.
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.5/doc/whats-new.md)
 
 ## Documentation (master tree)
 
