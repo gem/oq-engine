@@ -22,6 +22,7 @@ import shutil
 import logging
 import tempfile
 import unittest
+import builtins
 import sys
 
 import numpy
@@ -62,12 +63,22 @@ def columns(line):
     return data
 
 
+orig_open = open
+
+
+def check_open(fname, mode='r', buffering=-1, encoding=None, newline=None):
+    if fname.endswith('.xml') and encoding != 'utf-8':
+        raise ValueError('Please set the encoding to utf-8!')
+    return orig_open(fname, mode, buffering, encoding, newline=newline)
+
+
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
 
     @classmethod
     def setUpClass(cls):
+        builtins.open = check_open
         cls.duration = general.AccumDict()
 
     def get_calc(self, testfile, job_ini, **kw):
@@ -200,3 +211,4 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         print('durations =', cls.duration)
+        builtins.open = orig_open
