@@ -23,7 +23,7 @@ import numpy.testing
 
 from openquake.baselib.general import group_array, gettemp
 from openquake.baselib.datastore import read
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators.views import view
@@ -345,6 +345,15 @@ class EventBasedTestCase(CalculatorTestCase):
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
         self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+
+        # error for missing intensity_measure_types
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(
+                case_19.__file__, 'job.ini',
+                hazard_calculation_id=str(self.calc.datastore.calc_id),
+                intensity_measure_types='')
+        self.assertIn('There are no intensity measure types in',
+                      str(ctx.exception))
 
     def test_case_20(self):  # test for Vancouver using the NRCan15SiteTerm
         self.run_calc(case_20.__file__, 'job.ini')
