@@ -1179,7 +1179,7 @@ class SourceModelLogicTree(object):
 
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file),
-					encoding='utf-8')
+                    encoding='utf-8')
 
     def collect_source_model_data(self, branch_id, source_model):
         """
