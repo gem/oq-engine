@@ -610,22 +610,18 @@ def export_asset_risk_csv(ekey, dstore):
     tostr = {'taxonomy': md.taxonomy}
     for tagname in md.tagnames:
         tostr[tagname] = getattr(md, tagname)
+    tagnames = sorted(set(md.tagnames) - {'id'})
     arr = extract(dstore, 'asset_risk').array
-    arefs = dstore['assetcol/array']['id']
     rows = []
     lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
-    perilnames = sorted(name for name in arr.dtype.names
-                        if name.upper() == name)
     expnames = [name for name in arr.dtype.names if name not in md.tagnames
-                and 'loss' not in name and name not in perilnames
-                and name not in 'lon lat']
-    colnames = (['asset_ref'] + sorted(md.tagnames) + ['lon', 'lat'] +
-                expnames + perilnames + lossnames)
+                and 'loss' not in name and name not in 'lon lat']
+    colnames = ['id'] + tagnames + ['lon', 'lat'] + expnames + lossnames
     # sanity check
-    assert len(colnames) == len(arr.dtype.names) + 1
-    for aref, rec in zip(arefs, arr):
-        row = [aref]
-        for name in colnames[1:]:
+    assert len(colnames) == len(arr.dtype.names)
+    for rec in arr:
+        row = []
+        for name in colnames:
             value = rec[name]
             try:
                 row.append('"%s"' % tostr[name][value])
