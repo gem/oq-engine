@@ -28,8 +28,8 @@ import tempfile
 import functools
 import configparser
 import collections
-import toml
 import numpy
+import requests
 
 from openquake.baselib import performance, hdf5, parallel
 from openquake.baselib.general import (
@@ -46,7 +46,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import logictree, source, writers
+from openquake.commonlib import logictree, source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
@@ -105,8 +105,16 @@ def normalize(key, fnames, base_path):
     input_type, _ext = key.rsplit('_', 1)
     filenames = []
     for val in fnames:
-        if os.path.isabs(val):
+        if '://' in val:
+            # get the data from an URL
+            resp = requests.get(val)
+            _, val = val.rsplit('/', 1)
+            with open(os.path.join(base_path, val), 'wb') as f:
+                f.write(resp.content)
+        elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
+        if val.endswith('.zip'):
+            val = val[:-4] + '.xml'
         val = os.path.normpath(os.path.join(base_path, val))
         if (key in ('source_model_logic_tree_file', 'exposure_file') and
                 not os.path.exists(val)):
@@ -256,17 +264,63 @@ def get_csv_header(fname, sep=','):
         return next(f).split(sep)
 
 
-def read_csv(fname, sep=','):
+def build_dt(dtypedict, names):
+    """
+    Build a composite dtype for a list of names and dictionary
+    name -> dtype with a None entry corresponding to the default dtype.
+    """
+    lst = []
+    for name in names:
+        try:
+            dt = dtypedict[name]
+        except KeyError:
+            dt = dtypedict[None]
+        lst.append((name, dt))
+    return numpy.dtype(lst)
+
+
+def parse_comment(comment):
+    """
+    Parse a comment of the form
+    # investigation_time=50.0, imt="PGA", ...
+    and returns it as pairs of strings:
+
+    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
+    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
+    """
+    names, vals = [], []
+    pieces = comment.split('=')
+    for i, piece in enumerate(pieces):
+        if i == 0:  # first line
+            names.append(piece.strip())
+        elif i == len(pieces) - 1:  # last line
+            vals.append(ast.literal_eval(piece))
+        else:
+            val, name = piece.rsplit(',', 1)
+            vals.append(ast.literal_eval(val))
+            names.append(name.strip())
+    return list(zip(names, vals))
+
+
+def read_csv(fname, dtypedict={}, sep=','):
     """
     :param fname: a CSV file with an header and float fields
+    :param dtypedict: a dictionary fieldname -> dtype, None -> default
     :param sep: separato (default the comma)
     :return: a structured array of floats
     """
+    attrs = {}
     with open(fname, encoding='utf-8-sig') as f:
-        header = next(f).strip().split(sep)
-        dt = numpy.dtype([(h, numpy.bool if h == 'vs30measured' else float)
-                          for h in header])
-        return numpy.loadtxt(f, dt, delimiter=sep)
+        while True:
+            first = next(f)
+            if first.startswith('#'):
+                attrs = dict(parse_comment(first[1:]))
+                continue
+            break
+        header = first.strip().split(sep)
+        arr = numpy.loadtxt(f, build_dt(dtypedict, header), delimiter=sep,
+                            ndmin=1)
+    return hdf5.ArrayWrapper(arr, attrs)
 
 
 def get_mesh(oqparam):
@@ -353,7 +407,7 @@ def get_site_model(oqparam):
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = read_csv(fname)
+            sm = read_csv(fname, {None: float, 'vs30measured': bool}).array
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
@@ -900,14 +954,6 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def check_equal_sets(a, b):
-    a_set = set(a)
-    b_set = set(b)
-    diff = a_set.symmetric_difference(b_set)
-    if diff:
-        raise ValueError('Missing %s' % diff)
-
-
 def get_risk_model(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
@@ -915,36 +961,9 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    tmap = _get_taxonomy_mapping(oqparam.inputs)
-    fragdict = get_risk_models(oqparam, 'fragility')
-    vulndict = get_risk_models(oqparam, 'vulnerability')
-    consdict = get_risk_models(oqparam, 'consequence')
-    if not tmap:  # the risk ids are the taxonomies already
-        d = dict(ids=['?'], weights=[1.0])
-        for risk_id in set(fragdict) | set(vulndict) | set(consdict):
-            tmap[risk_id] = dict(
-                fragility=d, consequence=d, vulnerability=d)
-        for risk_id in consdict:
-            cdict, fdict = consdict[risk_id], fragdict[risk_id]
-            for loss_type, _ in cdict:
-                c = cdict[loss_type, 'consequence']
-                f = fdict[loss_type, 'fragility']
-                csq_dmg_states = len(c.params)
-                if csq_dmg_states != len(f):
-                    raise ValueError(
-                        'The damage states in %s are different from the '
-                        'damage states in the fragility functions, %s'
-                        % (c, fragdict.limit_states))
-    dic = {}
-    dic.update(fragdict)
-    dic.update(vulndict)
-    oqparam.set_risk_imtls(dic)
-    if oqparam.calculation_mode.endswith('_bcr'):
-        retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
-    else:
-        retro = {}
-    return riskinput.CompositeRiskModel(
-        oqparam, tmap, fragdict, vulndict, consdict, retro)
+    riskdict = get_risk_models(oqparam)
+    oqparam.set_risk_imtls(riskdict)
+    return riskinput.CompositeRiskModel(oqparam, riskdict)
 
 
 def get_exposure(oqparam):
@@ -1029,7 +1048,8 @@ def _get_gmfs(oqparam):
                'oqparam.set_risk_imtls(get_risk_models(oqparam))?')
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
-        array = writers.read_composite_array(fname).array
+        array = read_csv(
+            fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
         # the array has the structure sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
         required_imts = list(oqparam.imtls)
@@ -1093,8 +1113,8 @@ def get_pmap_from_csv(oqparam, fnames):
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
 
-    dic = {wrapper.imt: wrapper.array
-           for wrapper in map(writers.read_composite_array, fnames)}
+    read = functools.partial(read_csv, dtypedict={None: float})
+    dic = {wrapper.imt: wrapper.array for wrapper in map(read, fnames)}
     array = dic[next(iter(dic))]
     mesh = geo.Mesh(array['lon'], array['lat'])
     num_levels = sum(len(imls) for imls in oqparam.imtls.values())
@@ -1293,39 +1313,6 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
-def _get_taxonomy_mapping(inputs):
-    # returns a TaxonomyMapping taxonomy -> risk_key -> {ids, weights}
-    fname = inputs.get('taxonomy_mapping')
-    if fname is None:
-        return riskinput.TaxonomyMapping()
-    with open(fname, 'r', encoding='utf-8-sig') as f:
-        dic = toml.load(f)
-    expected = {'fragility', 'consequence', 'vulnerability'}
-    for taxonomy, subdic in dic.items():
-        not_expected = set(subdic) - expected
-        if not_expected:
-            raise InvalidFile('%s: unknown key %s' % fname, not_expected)
-        for key, val in subdic.items():
-            if isinstance(val, str):
-                subdic[key] = {'ids': val, 'weights': [1.0]}
-            elif isinstance(val, dict):
-                for k in ('ids', 'weights'):
-                    if k not in val:
-                        raise InvalidFile('%s:%s missing %s' %
-                                          (fname, taxonomy, k))
-                    elif k == 'ids':
-                        valid.namelist(val[k])
-                    elif k == 'weights':
-                        valid.weights(val[k])
-            else:
-                raise InvalidFile('%s:%s unespected %s' %
-                                  (fname, taxonomy, val))
-    tmap = riskinput.TaxonomyMapping()
-    tmap.update(dic)
-    return tmap
-
-
-# used in oq zip and oq checksum
 def get_input_files(oqparam, hazard=False):
     """
     :param oqparam: an OqParam instance
