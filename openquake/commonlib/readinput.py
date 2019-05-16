@@ -1067,15 +1067,14 @@ def get_pmap_from_csv(oqparam, fnames):
     :returns:
         the site mesh and the hazard curves read by the .csv files
     """
-    oqparam.set_risk_imtls(get_risk_models(oqparam))
     read = functools.partial(hdf5.read_csv, dtypedict={None: float})
     imtls = {}
     dic = {}
     for wrapper in map(read, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
-    #oqparam.investigation_time = wrapper.investigation_time
     oqparam.hazard_imtls = imtls
+    oqparam.set_risk_imtls(get_risk_models(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     num_levels = sum(len(imls) for imls in oqparam.imtls.values())
