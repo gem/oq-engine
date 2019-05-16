@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Serialized also the source model logic tree inside the datastore
   * Added a check on missing intensity_measure_types in event based
   * Fixed `oq prepare_site_model` in the case of an empty datadir
   * Added a comment line with useful metadata to the engine CSV outputs
