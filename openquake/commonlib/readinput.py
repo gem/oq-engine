@@ -1067,6 +1067,7 @@ def get_pmap_from_csv(oqparam, fnames):
     :returns:
         the site mesh and the hazard curves read by the .csv files
     """
+    oqparam.set_risk_imtls(get_risk_models(oqparam))
     read = functools.partial(hdf5.read_csv, dtypedict={None: float})
     imtls = {}
     dic = {}
