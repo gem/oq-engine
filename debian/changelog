@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added the ability to use as taxonomy_mapping.csv file
   * Fixed a bug in classical_damage from CSV: for hazard intensity measure
     levels different from the fragility levels, the engine was giving incorrect
     results
