@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed a bug in classical_damage from CSV: for hazard intensity measure
+    levels different from the fragility levels, the engine was giving incorrect
+    results
   * Serialized also the source model logic tree inside the datastore
   * Added a check on missing intensity_measure_types in event based
   * Fixed `oq prepare_site_model` in the case of an empty datadir
