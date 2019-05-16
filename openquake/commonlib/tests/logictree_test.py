@@ -1025,6 +1025,38 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     exc.message, error,
                     "wrong exception message: %s" % exc.message)
 
+    def test_duplicated_values(self):
+        sm = _whatever_sourcemodel()
+        lt = _make_nrml("""\
+        <logicTree>
+         <logicTreeBranchSet uncertaintyType="sourceModel"
+                             branchSetID="bs1">
+            <logicTreeBranch branchID="b1">
+              <uncertaintyModel>sm</uncertaintyModel>
+              <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+          </logicTreeBranchSet>
+          <logicTreeBranchSet branchSetID="bs1" uncertaintyType="bGRRelative">
+            <logicTreeBranch branchID="b71">
+                 <uncertaintyModel> 7.7 </uncertaintyModel>
+                 <uncertaintyWeight>0.333</uncertaintyWeight>
+             </logicTreeBranch>
+             <logicTreeBranch branchID="b72">
+                 <uncertaintyModel> 7.695 </uncertaintyModel>
+                 <uncertaintyWeight>0.333</uncertaintyWeight>
+             </logicTreeBranch>
+             <logicTreeBranch branchID="b73">
+                 <uncertaintyModel> 7.7 </uncertaintyModel>
+                 <uncertaintyWeight>0.334</uncertaintyWeight>
+            </logicTreeBranch>
+          </logicTreeBranchSet>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm': sm}, 'base', logictree.LogicTreeError)
+        self.assertIn('duplicate values in uncertaintyModel: 7.7 7.695 7.7',
+                      str(exc))
+
 
 class SourceModelLogicTreeTestCase(unittest.TestCase):
     def assert_branch_equal(self, branch, branch_id, weight_str, value,
