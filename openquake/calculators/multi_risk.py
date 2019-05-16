@@ -152,7 +152,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
     def execute(self):
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
+        self.riskmodel.tmap = self.assetcol.tagcol.taxonomy
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         P = len(self.oqparam.multi_peril) + 1
