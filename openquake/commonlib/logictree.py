@@ -34,6 +34,7 @@ import itertools
 import collections
 import operator
 from collections import namedtuple
+import toml
 import numpy
 from openquake.baselib import hdf5, node, python3compat
 from openquake.baselib.general import groupby, duplicated
@@ -762,19 +763,6 @@ class SourceModelLogicTree(object):
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
         if len(set(values)) < len(values):
-            # TODO: add a test for this case
-            # <logicTreeBranch branchID="b71">
-            #     <uncertaintyModel> 7.7 </uncertaintyModel>
-            #     <uncertaintyWeight>0.333</uncertaintyWeight>
-            # </logicTreeBranch>
-            # <logicTreeBranch branchID="b72">
-            #     <uncertaintyModel> 7.695 </uncertaintyModel>
-            #     <uncertaintyWeight>0.333</uncertaintyWeight>
-            # </logicTreeBranch>
-            # <logicTreeBranch branchID="b73">
-            #     <uncertaintyModel> 7.7 </uncertaintyModel>
-            #     <uncertaintyWeight>0.334</uncertaintyWeight>
-            # </logicTreeBranch>
             raise LogicTreeError(
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
@@ -1256,11 +1244,18 @@ class SourceModelLogicTree(object):
             tbl.append((br.bs_id, brid, br.value, br.weight))
         dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
               ('uncertainty', hdf5.vstr), ('weight', float)]
-        dic = {k: repr(v) for k, v in self.bsetdict.items()}
-        return numpy.array(tbl, dt), dic
+        dic = dict(branches=numpy.array(tbl, dt),
+                   branchsets=toml.dumps(self.bsetdict))
+        return dic, {}
 
-    def __fromh5__(self, array, attrs):
-        import pdb; pdb.set_trace()
+    def __fromh5__(self, dic, attrs):
+        # TODO: this is not complete the child_branchset must be built too
+        self.bsetdict = toml.loads(dic['branchsets'])
+        self.branches = {}
+        for rec in dic['branchset']:
+            br = Branch(rec['branchset'], rec['branch'], rec['weight'],
+                        rec['uncertainty'])
+            self.branches[br.branch_id] = br
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
