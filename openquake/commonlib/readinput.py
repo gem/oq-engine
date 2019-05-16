@@ -1061,12 +1061,7 @@ def get_pmap_from_csv(oqparam, fnames):
     :returns:
         the site mesh and the hazard curves read by the .csv files
     """
-    if not oqparam.imtls:
-        oqparam.set_risk_imtls(get_risk_models(oqparam))
-    if not oqparam.imtls:
-        raise ValueError('Missing intensity_measure_types_and_levels in %s'
-                         % oqparam.inputs['job_ini'])
-
+    oqparam.set_risk_imtls(get_risk_models(oqparam))
     read = functools.partial(hdf5.read_csv, dtypedict={None: float})
     dic = {wrapper.imt: wrapper.array for wrapper in map(read, fnames)}
     array = dic[next(iter(dic))]
