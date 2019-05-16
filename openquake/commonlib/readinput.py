@@ -348,7 +348,8 @@ def get_site_model(oqparam):
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = read_csv(fname, {None: float, 'vs30measured': bool}).array
+            sm = hdf5.read_csv(
+                 fname, {None: float, 'vs30measured': bool}).array
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
@@ -993,7 +994,7 @@ def _get_gmfs(oqparam):
                'oqparam.set_risk_imtls(get_risk_models(oqparam))?')
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
-        array = read_csv(
+        array = hdf5.read_csv(
             fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
         # the array has the structure sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
@@ -1058,7 +1059,7 @@ def get_pmap_from_csv(oqparam, fnames):
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
 
-    read = functools.partial(read_csv, dtypedict={None: float})
+    read = functools.partial(hdf5.read_csv, dtypedict={None: float})
     dic = {wrapper.imt: wrapper.array for wrapper in map(read, fnames)}
     array = dic[next(iter(dic))]
     mesh = geo.Mesh(array['lon'], array['lat'])
