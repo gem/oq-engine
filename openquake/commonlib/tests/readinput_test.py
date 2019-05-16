@@ -487,69 +487,6 @@ PGA,PGV
         self.assertIn("Expected 1 sites, got 2 nodes in", str(ctx.exception))
 
 
-class TestLoadCurvesTestCase(unittest.TestCase):
-    """
-    Read the hazard curves from a NRML file
-    """
-    def test(self):
-        fname = general.gettemp('''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <!-- Spectral Acceleration (SA) example -->
-    <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2" investigationTime="50.0" IMT="SA" saPeriod="0.025" saDamping="5.0">
-        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02</IMLs>
-
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-122.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
-        </hazardCurve>
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-123.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8727e-02 9.8265e-02 9.4956e-02</poEs>
-        </hazardCurve>
-    </hazardCurves>
-
-    <!-- Basic example, using PGA as IMT -->
-    <hazardCurves sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7" investigationTime="50.0" IMT="PGA">
-        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02 3.3700e-02</IMLs>
-
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-122.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-01 9.8226e-01 9.4947e-01 9.2947e-01</poEs>
-        </hazardCurve>
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-123.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-02 9.8216e-02 9.4945e-02 9.2947e-02</poEs>
-        </hazardCurve>
-    </hazardCurves>
-</nrml>
-''', suffix='.xml')
-        oqparam = object.__new__(oqvalidation.OqParam)
-        oqparam.inputs = dict(hazard_curves=fname)
-        sitecol = readinput.get_site_collection(oqparam)
-        self.assertEqual(len(sitecol), 2)
-        self.assertEqual(sorted(oqparam.hazard_imtls.items()),
-                         [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
-                          ('SA(0.025)', [0.005, 0.007, 0.0137])])
-        hcurves = readinput.pmap.convert(oqparam.imtls, 2)
-        assert_allclose(hcurves['PGA'], numpy.array(
-            [[0.098728, 0.098216, 0.094945, 0.092947],
-             [0.98728, 0.98226, 0.94947, 0.92947]]))
-        assert_allclose(hcurves['SA(0.025)'], numpy.array(
-            [[0.098727, 0.098265, 0.094956],
-             [0.98728, 0.98266, 0.94957]]))
-
-
 class GetCompositeSourceModelTestCase(unittest.TestCase):
     # test the case in_memory=False, used when running `oq info job.ini`
 
