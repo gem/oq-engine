@@ -1052,6 +1052,14 @@ def _get_gmfs(oqparam):
     return eids, gmfs
 
 
+def levels_from(header):
+    levels = []
+    for field in header:
+        if field.startswith('poe-'):
+            levels.append(float(field[4:]))
+    return levels
+
+
 def get_pmap_from_csv(oqparam, fnames):
     """
     :param oqparam:
@@ -1061,10 +1069,15 @@ def get_pmap_from_csv(oqparam, fnames):
     :returns:
         the site mesh and the hazard curves read by the .csv files
     """
-    oqparam.set_risk_imtls(get_risk_models(oqparam))
     read = functools.partial(hdf5.read_csv, dtypedict={None: float})
-    dic = {wrapper.imt: wrapper.array for wrapper in map(read, fnames)}
-    array = dic[next(iter(dic))]
+    imtls = {}
+    dic = {}
+    for wrapper in map(read, fnames):
+        dic[wrapper.imt] = wrapper.array
+        imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
+    oqparam.hazard_imtls = imtls
+    oqparam.set_risk_imtls(get_risk_models(oqparam))
+    array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     num_levels = sum(len(imls) for imls in oqparam.imtls.values())
     data = numpy.zeros((len(mesh), num_levels))
