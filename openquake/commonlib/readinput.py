@@ -264,65 +264,6 @@ def get_csv_header(fname, sep=','):
         return next(f).split(sep)
 
 
-def build_dt(dtypedict, names):
-    """
-    Build a composite dtype for a list of names and dictionary
-    name -> dtype with a None entry corresponding to the default dtype.
-    """
-    lst = []
-    for name in names:
-        try:
-            dt = dtypedict[name]
-        except KeyError:
-            dt = dtypedict[None]
-        lst.append((name, dt))
-    return numpy.dtype(lst)
-
-
-def parse_comment(comment):
-    """
-    Parse a comment of the form
-    # investigation_time=50.0, imt="PGA", ...
-    and returns it as pairs of strings:
-
-    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
-    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
-    """
-    names, vals = [], []
-    pieces = comment.split('=')
-    for i, piece in enumerate(pieces):
-        if i == 0:  # first line
-            names.append(piece.strip())
-        elif i == len(pieces) - 1:  # last line
-            vals.append(ast.literal_eval(piece))
-        else:
-            val, name = piece.rsplit(',', 1)
-            vals.append(ast.literal_eval(val))
-            names.append(name.strip())
-    return list(zip(names, vals))
-
-
-def read_csv(fname, dtypedict={}, sep=','):
-    """
-    :param fname: a CSV file with an header and float fields
-    :param dtypedict: a dictionary fieldname -> dtype, None -> default
-    :param sep: separato (default the comma)
-    :return: a structured array of floats
-    """
-    attrs = {}
-    with open(fname, encoding='utf-8-sig') as f:
-        while True:
-            first = next(f)
-            if first.startswith('#'):
-                attrs = dict(parse_comment(first[1:]))
-                continue
-            break
-        header = first.strip().split(sep)
-        arr = numpy.loadtxt(f, build_dt(dtypedict, header), delimiter=sep,
-                            ndmin=1)
-    return hdf5.ArrayWrapper(arr, attrs)
-
-
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
@@ -407,7 +348,8 @@ def get_site_model(oqparam):
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = read_csv(fname, {None: float, 'vs30measured': bool}).array
+            sm = hdf5.read_csv(
+                 fname, {None: float, 'vs30measured': bool}).array
             if 'site_id' in sm.dtype.names:
                 raise InvalidFile('%s: you passed a sites.csv file instead of '
                                   'a site_model.csv file!' % fname)
@@ -588,6 +530,18 @@ def get_source_model_lt(oqparam, validate=True):
                                   int(oqparam.random_seed),
                                   oqparam.number_of_logic_tree_samples)
     return smlt
+
+
+def get_risk_lt(oqparam):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        a :class:`openquake.commonlib.logictree.RiskLogicTree` instance
+    """
+    fname = oqparam.inputs['taxonomy_mapping']
+    array = hdf5.read_csv(fname, {None: hdf5.vstr, 'weight': float}).array
+    return logictree.RiskLogicTree(array)
 
 
 def check_nonparametric_sources(fname, smodel, investigation_time):
@@ -1048,7 +1002,7 @@ def _get_gmfs(oqparam):
                'oqparam.set_risk_imtls(get_risk_models(oqparam))?')
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
-        array = read_csv(
+        array = hdf5.read_csv(
             fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
         # the array has the structure sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
@@ -1113,7 +1067,7 @@ def get_pmap_from_csv(oqparam, fnames):
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
 
-    read = functools.partial(read_csv, dtypedict={None: float})
+    read = functools.partial(hdf5.read_csv, dtypedict={None: float})
     dic = {wrapper.imt: wrapper.array for wrapper in map(read, fnames)}
     array = dic[next(iter(dic))]
     mesh = geo.Mesh(array['lon'], array['lat'])

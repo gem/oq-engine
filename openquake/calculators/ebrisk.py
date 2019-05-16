@@ -163,7 +163,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['aggregate_by'] = self.oqparam.aggregate_by
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
         # initialize the riskmodel
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
+        self.riskmodel.tmap = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         self.L = L = len(self.riskmodel.loss_types)
         A = len(self.assetcol)
