@@ -793,7 +793,7 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
+        self.riskmodel.tmap = self.assetcol.tagcol.taxonomy
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
@@ -958,7 +958,7 @@ def import_gmfs(dstore, fname, sids):
     :param sids: the site IDs (complete)
     :returns: event_ids, num_rlzs
     """
-    array = readinput.read_csv(
+    array = hdf5.read_csv(
         fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
     # has header rlzi, sid, eid, gmv_PGA, ...
     imts = [name[4:] for name in array.dtype.names[3:]]
