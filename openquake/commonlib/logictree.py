@@ -1533,7 +1533,8 @@ class GsimLogicTree(object):
                 bsid = branchset['branchSetID']
                 if bsid in branchsetids:
                     raise InvalidLogicTree(
-                        '%s: Duplicated branchSetID %s' % (self.filename, bsid))
+                        '%s: Duplicated branchSetID %s' %
+                        (self.filename, bsid))
                 else:
                     branchsetids.add(bsid)
                 trt = branchset.attrib.get('applyToTectonicRegionType')
@@ -1624,3 +1625,12 @@ class GsimLogicTree(object):
                  (b.trt, b.id, b.gsim, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
+
+
+class RiskLogicTree(object):
+    def __init__(self, filename):
+        self.filename = filename
+        array = hdf5.read_csv(filename, {None: hdf5.vstr})
+        tagname = array.dtype.names[0]
+        for key, rec in group_array(array, tagname, 'expotaxonomy').items():
+            print(rec)
