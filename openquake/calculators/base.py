@@ -689,6 +689,7 @@ class HazardCalculator(BaseCalculator):
             if not self.rlzs_assoc:
                 raise RuntimeError('Empty logic tree: too much filtering?')
             self.datastore['csm_info'] = self.csm.info
+            self.datastore['source_model_lt'] = self.csm.source_model_lt
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         if self.oqparam.imtls:
