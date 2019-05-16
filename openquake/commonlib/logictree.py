@@ -34,6 +34,7 @@ import itertools
 import collections
 import operator
 from collections import namedtuple
+import toml
 import numpy
 from openquake.baselib import hdf5, node, python3compat
 from openquake.baselib.general import groupby, duplicated
@@ -198,6 +199,8 @@ class Branch(object):
     """
     Branch object, represents a ``<logicTreeBranch />`` element.
 
+    :param bs_id:
+        BranchSetID of the branchset to which the branch belongs
     :param branch_id:
         Value of ``@branchID`` attribute.
     :param weight:
@@ -208,7 +211,8 @@ class Branch(object):
         of ``<uncertaintyModel />`` child node. Type depends
         on the branchset's uncertainty type.
     """
-    def __init__(self, branch_id, weight, value):
+    def __init__(self, bs_id, branch_id, weight, value):
+        self.bs_id = bs_id
         self.branch_id = branch_id
         self.weight = weight
         self.value = value
@@ -605,6 +609,7 @@ class SourceModelLogicTree(object):
         self.seed = seed
         self.num_samples = num_samples
         self.branches = {}  # branch_id -> branch
+        self.bsetdict = {}
         self.open_ends = set()
         self.tectonic_region_types = set()
         self.source_types = set()
@@ -664,6 +669,8 @@ class SourceModelLogicTree(object):
         new_open_ends = set()
         for number, branchset_node in enumerate(
                 _bsnodes(self.filename, branchinglevel_node)):
+            attrs = branchset_node.attrib.copy()
+            self.bsetdict[attrs.pop('branchSetID')] = attrs
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
@@ -729,6 +736,7 @@ class SourceModelLogicTree(object):
         :return:
             ``None``, all branches are attached to provided branchset.
         """
+        bs_id = branchset_node['branchSetID']
         weight_sum = 0
         branches = branchset_node.nodes
         values = []
@@ -743,7 +751,7 @@ class SourceModelLogicTree(object):
                     value_node, branchnode, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
             branch_id = branchnode.attrib.get('branchID')
-            branch = Branch(branch_id, weight, value)
+            branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
                 raise LogicTreeError(
                     branchnode, self.filename,
@@ -755,19 +763,6 @@ class SourceModelLogicTree(object):
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
         if len(set(values)) < len(values):
-            # TODO: add a test for this case
-            # <logicTreeBranch branchID="b71">
-            #     <uncertaintyModel> 7.7 </uncertaintyModel>
-            #     <uncertaintyWeight>0.333</uncertaintyWeight>
-            # </logicTreeBranch>
-            # <logicTreeBranch branchID="b72">
-            #     <uncertaintyModel> 7.695 </uncertaintyModel>
-            #     <uncertaintyWeight>0.333</uncertaintyWeight>
-            # </logicTreeBranch>
-            # <logicTreeBranch branchID="b73">
-            #     <uncertaintyModel> 7.7 </uncertaintyModel>
-            #     <uncertaintyWeight>0.334</uncertaintyWeight>
-            # </logicTreeBranch>
             raise LogicTreeError(
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
@@ -1243,6 +1238,25 @@ class SourceModelLogicTree(object):
         """
         return collections.Counter(rlz.lt_path for rlz in self)
 
+    def __toh5__(self):
+        tbl = []
+        for brid, br in self.branches.items():
+            tbl.append((br.bs_id, brid, br.value, br.weight))
+        dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
+              ('uncertainty', hdf5.vstr), ('weight', float)]
+        dic = dict(branches=numpy.array(tbl, dt),
+                   branchsets=toml.dumps(self.bsetdict))
+        return dic, {}
+
+    def __fromh5__(self, dic, attrs):
+        # TODO: this is not complete the child_branchset must be built too
+        self.bsetdict = toml.loads(dic['branchsets'])
+        self.branches = {}
+        for rec in dic['branchset']:
+            br = Branch(rec['branchset'], rec['branch'], rec['weight'],
+                        rec['uncertainty'])
+            self.branches[br.branch_id] = br
+
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
 
@@ -1319,7 +1333,7 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def toml(uncertainty):
+def to_toml(uncertainty):
     """
     Converts an uncertainty node into a TOML string
     """
@@ -1536,7 +1550,7 @@ class GsimLogicTree(object):
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
-                    uncertainty = toml(branch.uncertaintyModel)
+                    uncertainty = to_toml(branch.uncertaintyModel)
                     try:
                         gsim = valid.gsim(uncertainty)
                     except Exception as exc:
