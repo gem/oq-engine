@@ -22,6 +22,7 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.commonlib import logictree
 from openquake.risklib.scientific import losses_by_period
 from openquake.risklib.riskinput import get_assets_by_taxo, cache_epsilons
 from openquake.calculators import base, event_based, getters
@@ -163,7 +164,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['aggregate_by'] = self.oqparam.aggregate_by
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
         # initialize the riskmodel
-        self.riskmodel.tmap = self.assetcol.tagcol.taxonomy
+        self.riskmodel.tmap = logictree.taxonomy_mapping(
+            self.oqparam.inputs.get('taxonomy_mapping'),
+            self.assetcol.tagcol.taxonomy)
         self.param['riskmodel'] = self.riskmodel
         self.L = L = len(self.riskmodel.loss_types)
         A = len(self.assetcol)

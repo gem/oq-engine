@@ -37,7 +37,7 @@ from collections import namedtuple
 import toml
 import numpy
 from openquake.baselib import hdf5, node, python3compat
-from openquake.baselib.general import groupby, duplicated
+from openquake.baselib.general import groupby, group_array, duplicated
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -1627,10 +1627,19 @@ class GsimLogicTree(object):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
 
 
-class RiskLogicTree(object):
-    def __init__(self, filename):
-        self.filename = filename
-        array = hdf5.read_csv(filename, {None: hdf5.vstr})
-        tagname = array.dtype.names[0]
-        for key, rec in group_array(array, tagname, 'expotaxonomy').items():
-            print(rec)
+def taxonomy_mapping(filename, taxonomies):
+    """
+    :param filename: path to the CSV file containing the taxonomy associations
+    :param taxonomies: an array taxonomy string -> taxonomy index
+    """
+    if filename is None:  # trivial mapping
+        return taxonomies
+    dic = {}  # taxonomy index -> risk taxonomy
+    arr = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
+    tagname = arr.dtype.names[0]
+    taxo2idx = {taxo: idx for idx, taxo in enumerate(taxonomies)}
+    for recs in group_array(arr, tagname, 'expotaxonomy').values():
+        [rec] = recs
+        assert abs(recs['weight'].sum() - 1.) < pmf.PRECISION
+        dic[taxo2idx[rec['expotaxonomy']]] = rec['risktaxonomy']
+    return dic
