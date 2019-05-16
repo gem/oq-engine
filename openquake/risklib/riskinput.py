@@ -261,7 +261,7 @@ class CompositeRiskModel(collections.Mapping):
 
     def __getitem__(self, key):
         if isinstance(key, (int, U32)):  # a taxonomy index
-            key = self.taxonomy[key]
+            key = self.tmap[key]
         return self._riskmodels[key]
 
     def __iter__(self):
