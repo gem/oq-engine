@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Accepted a list-like syntax like `return_periods=[30, 60, 120, 240, 480]`
+    in the job.ini, as written in the manual
   * Fixed a bug in the asset_risk exporter for uppercase tags
 
   [Paul Henshaw]
@@ -20,7 +22,7 @@ python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
   [Graeme Weatherill]
   * Adds adaptation of Abrahamson et al. (2016) 'BC Hydro' GMPEs calibrated
     to Mediterranean data and with epistemic adjustment factors
-  
+
   [Chris Van Houtte]
   * Added new class to bradley_2013b.py for hazard maps
   * Modified test case_37 to test multiple sites
