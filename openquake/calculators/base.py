@@ -578,7 +578,6 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         self.datastore['risk_model'] = rm = self.riskmodel
-        #self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes('risk_model')
@@ -657,9 +656,14 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
-                             if taxo != '?')
-
+            tmap_arr, tmap_lst = logictree.taxonomy_mapping(
+                self.oqparam.inputs.get('taxonomy_mapping'),
+                self.assetcol.tagcol.taxonomy)
+            self.riskmodel.tmap = tmap_lst
+            if len(tmap_arr):
+                self.datastore['taxonomy_mapping'] = tmap_arr
+            taxonomies = set(taxo for items in self.riskmodel.tmap
+                             for taxo, weight in items if taxo != '?')
             # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.riskmodel.taxonomies)
             if self.riskmodel and missing:
@@ -689,6 +693,7 @@ class HazardCalculator(BaseCalculator):
             if not self.rlzs_assoc:
                 raise RuntimeError('Empty logic tree: too much filtering?')
             self.datastore['csm_info'] = self.csm.info
+            self.datastore['source_model_lt'] = self.csm.source_model_lt
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         if self.oqparam.imtls:
@@ -752,11 +757,6 @@ class RiskCalculator(HazardCalculator):
         oq = self.oqparam
         E = oq.number_of_ground_motion_fields
         oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
-        extra = self.riskmodel.get_extra_imts(oq.risk_imtls)
-        if extra:
-            logging.warning('There are risk functions for not available IMTs '
-                            'which will be ignored: %s' % extra)
-
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
@@ -792,7 +792,10 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
+        if not hasattr(self.riskmodel, 'tmap'):
+            _, self.riskmodel.tmap = logictree.taxonomy_mapping(
+                self.oqparam.inputs.get('taxonomy_mapping'),
+                self.assetcol.tagcol.taxonomy)
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
@@ -957,13 +960,24 @@ def import_gmfs(dstore, fname, sids):
     :param sids: the site IDs (complete)
     :returns: event_ids, num_rlzs
     """
-    array = readinput.read_csv(
+    array = hdf5.read_csv(
         fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
-    # has header rlzi, sid, eid, gmv_PGA, ...
-    imts = [name[4:] for name in array.dtype.names[3:]]
+    first = array.dtype.names[0]
+    if first == 'rlzi':
+        imts = [name[4:] for name in array.dtype.names[3:]]
+    else:
+        imts = [name[4:] for name in array.dtype.names[2:]]
     n_imts = len(imts)
     gmf_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
+    arr = numpy.zeros(len(array), gmf_data_dt)
+    col = 0
+    for name in array.dtype.names:
+        if name.startswith('gmv_'):
+            arr['gmv'][:, col] = array[name]
+            col += 1
+        else:
+            arr[name] = array[name]
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
@@ -973,7 +987,7 @@ def import_gmfs(dstore, fname, sids):
     events['id'] = eids
     dstore['events'] = events
     # store the GMFs
-    dic = general.group_array(array.view(gmf_data_dt), 'sid')
+    dic = general.group_array(arr, 'sid')
     lst = []
     offset = 0
     for sid in sids:

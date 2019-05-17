@@ -20,6 +20,7 @@ import logging
 import numpy
 from openquake.baselib import hdf5, general
 from openquake.hazardlib import valid, geo, InvalidFile
+from openquake.commonlib import logictree
 from openquake.calculators import base
 from openquake.calculators.extract import extract
 
@@ -46,8 +47,9 @@ def get_dmg_csq(crm, assets_by_site, gmf):
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
             for l, loss_type in enumerate(crm.loss_types):
-                fracs = crm[taxonomy].scenario_damage(
-                    loss_type, assets, [gmv])
+                # NB: risk logic trees are not yet supported in multi_risk
+                [rm], [w] = crm.get_rmodels_weights(taxonomy)
+                fracs = rm.scenario_damage(loss_type, assets, [gmv])
                 for asset, frac in zip(assets, fracs):
                     dmg = asset['number'] * frac[0, :D]
                     csq = asset['value-' + loss_type] * frac[0, D]
@@ -152,7 +154,6 @@ class MultiRiskCalculator(base.RiskCalculator):
         self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
     def execute(self):
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         P = len(self.oqparam.multi_peril) + 1

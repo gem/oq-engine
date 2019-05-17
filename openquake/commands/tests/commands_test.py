@@ -26,8 +26,9 @@ import unittest
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib.datastore import read
+from openquake.baselib.hdf5 import read_csv
 from openquake import commonlib
-from openquake.commonlib.readinput import read_csv, get_oqparam
+from openquake.commonlib.readinput import get_oqparam
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show

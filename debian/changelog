@@ -3,6 +3,11 @@
     in the UK
 
   [Michele Simionato]
+  * Added the ability to use as taxonomy_mapping.csv file
+  * Fixed a bug in classical_damage from CSV: for hazard intensity measure
+    levels different from the fragility levels, the engine was giving incorrect
+    results
+  * Serialized also the source model logic tree inside the datastore
   * Added a check on missing intensity_measure_types in event based
   * Fixed `oq prepare_site_model` in the case of an empty datadir
   * Added a comment line with useful metadata to the engine CSV outputs
@@ -15,6 +20,9 @@
   * Added a view gmvs_to_hazard
 
   [Michele Simionato]
+  * Accepted GMF CSV files without a `rlzi` column
+  * Accepted a list-like syntax like `return_periods=[30, 60, 120, 240, 480]`
+    in the job.ini, as written in the manual
   * Fixed a bug in the asset_risk exporter for uppercase tags
 
   [Paul Henshaw]
