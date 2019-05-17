@@ -162,10 +162,9 @@ class CompositeRiskModel(collections.Mapping):
         for rm in self.values():
             ltypes.update(rm.loss_types)
         self.loss_types = sorted(ltypes)
-
-        taxonomies = set()
+        self.taxonomies = set()
         for riskid, riskmodel in self._riskmodels.items():
-            taxonomies.add(riskid)
+            self.taxonomies.add(riskid)
             riskmodel.compositemodel = self
             for lt, vf in riskmodel.risk_functions.items():
                 # save the number of nonzero coefficients of variation
@@ -181,7 +180,6 @@ class CompositeRiskModel(collections.Mapping):
                               for lt, kind in riskmodel.risk_functions
                               if kind in 'vulnerability fragility'}
 
-        self.taxonomies = sorted(taxonomies)
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
         for riskid, rm in self._riskmodels.items():
@@ -198,18 +196,6 @@ class CompositeRiskModel(collections.Mapping):
         # .taxonomy must be set by the engine
         tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         return tdict
-
-    def get_extra_imts(self, imts):
-        """
-        Returns the extra IMTs in the risk functions, i.e. the ones not in
-        the `imts` set (the set of IMTs for which there is hazard).
-        """
-        extra_imts = set()
-        for taxonomy in self.taxonomies:
-            for (lt, kind), rf in self[taxonomy].risk_functions.items():
-                if rf.imt not in imts:
-                    extra_imts.add(rf.imt)
-        return extra_imts
 
     def make_curve_params(self, oqparam):
         # the CurveParams are used only in classical_risk, classical_bcr
@@ -259,10 +245,18 @@ class CompositeRiskModel(collections.Mapping):
             loss_ratios[cp.loss_type] = tuple(cp.ratios)
         return loss_ratios
 
-    def __getitem__(self, key):
-        if isinstance(key, (int, U32)):  # a taxonomy index
-            key = self.taxonomy[key]
-        return self._riskmodels[key]
+    def __getitem__(self, taxo):
+        return self._riskmodels[taxo]
+
+    def get_rmodels_weights(self, taxidx):
+        """
+        :returns: a list of weighted risk models for the given taxonomy index
+        """
+        rmodels, weights = [], []
+        for key, weight in self.tmap[taxidx]:
+            rmodels.append(self._riskmodels[key])
+            weights.append(weight)
+        return rmodels, weights
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
@@ -331,14 +325,19 @@ class CompositeRiskModel(collections.Mapping):
                     epsilons = assets_by_taxo.eps[taxonomy][:, eids]
                 else:  # no CoVs
                     epsilons = ()
-                rm = self[taxonomy]
-                if len(data) == 0:
-                    dat = [0]
-                elif len(eids):  # gmfs
-                    dat = data[:, rm.imti[lt]]
-                else:  # hcurves
-                    dat = data[rm.imti[lt]]
-                ls.append(rm(lt, assets_, dat, eids, epsilons))
+                arrays = []
+                rmodels, weights = self.get_rmodels_weights(taxonomy)
+                for rm in rmodels:
+                    if len(data) == 0:
+                        dat = [0]
+                    elif len(eids):  # gmfs
+                        dat = data[:, rm.imti[lt]]
+                    else:  # hcurves
+                        dat = data[rm.imti[lt]]
+                    arrays.append(rm(lt, assets_, dat, eids, epsilons))
+                res = arrays[0] if len(arrays) == 1 else numpy.sum(
+                    a * w for a, w in zip(arrays, weights))
+                ls.append(res)
             arr = numpy.concatenate(ls)
             dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
         return hdf5.ArrayWrapper((), dic)
@@ -349,7 +348,6 @@ class CompositeRiskModel(collections.Mapping):
         :returns: a new CompositeRiskModel reduced to the given taxonomies
         """
         new = copy.copy(self)
-        new.taxonomies = sorted(taxonomies)
         new._riskmodels = {}
         for riskid, rm in self._riskmodels.items():
             if riskid in taxonomies:
@@ -389,19 +387,10 @@ class RiskInput(object):
         self.hazard_getter = hazard_getter
         self.assets = assets
         self.weight = len(assets)
-        taxonomies_set = set()
         aids = []
         for asset in self.assets:
-            taxonomies_set.add(asset['taxonomy'])
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
-        self.taxonomies = sorted(taxonomies_set)
-        self.by_site = hazard_getter.__class__.__name__ != 'GmfGetter'
-
-    @property
-    def imt_taxonomies(self):
-        """Return a list of pairs (imt, taxonomies) with a single element"""
-        return [(self.imt, self.taxonomies)]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
