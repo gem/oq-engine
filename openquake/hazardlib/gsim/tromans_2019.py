@@ -155,7 +155,7 @@ REQUIRES_DISTANCES
 
 class TromansEtAl2019(GMPE):
     """
-    Implements a meta GMPE to apply the standard deviation model and
+    Implements a modifiable GMPE to apply the standard deviation model and
     adjustments described in Tromans et al. (2019), for application to
     a nuclear power plant site in the UK:
 
@@ -220,7 +220,7 @@ class TromansEtAl2019(GMPE):
 
     def __init__(self, gmpe_name, branch="central",
                  homoskedastic_sigma=False,  scaling_factor=None,
-                 vskappa=None, phi_ds2s=False):
+                 vskappa=None, phi_ds2s=True):
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         # Update the required_parameters
@@ -275,7 +275,6 @@ class TromansEtAl2019(GMPE):
             # Homoskedastic sigma branch
             tau = np.zeros(nsites) + HOMOSKEDASTIC_TAU[self.branch](imt)
             phi = np.zeros(nsites) + HOMOSKEDASTIC_PHI[self.branch](imt)
-            phi = np.sqrt(phi ** 2. + DELTA_PHI_S2S[imt]["dfs2s"] ** 2.)
         else:
             # Heteroskedastic sigma branch
             tau = np.zeros(nsites) + HETEROSKEDASTIC_TAU[self.branch](imt, mag)
