@@ -400,7 +400,6 @@ class AssetCollection(object):
         if any(field.startswith('occupants_') for field in fields):
             self.loss_types.append('occupants')
         self.loss_types.sort()
-        self.retro = [n for n in fields if n == 'retrofitted']
 
     @property
     def tagnames(self):
@@ -541,7 +540,6 @@ class AssetCollection(object):
         attrs = {'time_event': self.time_event or 'None',
                  'occupancy_periods': op,
                  'loss_types': ' '.join(self.loss_types),
-                 'retro': ' '.join(self.retro),
                  'tot_sites': self.tot_sites,
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
@@ -550,7 +548,7 @@ class AssetCollection(object):
             tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
-        for name in ('loss_types', 'retro'):
+        for name in ('loss_types',):
             setattr(self, name, [decode(x) for x in attrs[name].split()])
         self.occupancy_periods = attrs['occupancy_periods']
         self.time_event = attrs['time_event']
