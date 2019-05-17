@@ -578,10 +578,6 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         self.datastore['risk_model'] = rm = self.riskmodel
-        tmap = self.oqparam.inputs.get('taxonomy_mapping')
-        if tmap:
-            self.datastore['taxonomy_mapping'] = hdf5.read_csv(
-                tmap, {None: hdf5.vstr, 'weight': float}).array
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes('risk_model')
@@ -660,9 +656,12 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            self.riskmodel.tmap = logictree.taxonomy_mapping(
+            tmap_arr, tmap_lst = logictree.taxonomy_mapping(
                 self.oqparam.inputs.get('taxonomy_mapping'),
                 self.assetcol.tagcol.taxonomy)
+            self.riskmodel.tmap = tmap_lst
+            if len(tmap_arr):
+                self.datastore['taxonomy_mapping'] = tmap_arr
             taxonomies = set(taxo for items in self.riskmodel.tmap
                              for taxo, weight in items if taxo != '?')
             # check that we are covering all the taxonomies in the exposure
@@ -793,7 +792,7 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        self.riskmodel.tmap = logictree.taxonomy_mapping(
+        _, self.riskmodel.tmap = logictree.taxonomy_mapping(
             self.oqparam.inputs.get('taxonomy_mapping'),
             self.assetcol.tagcol.taxonomy)
         with self.monitor('building riskinputs', autoflush=True):
