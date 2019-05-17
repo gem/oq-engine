@@ -16,6 +16,8 @@
   * Added a view gmvs_to_hazard
 
   [Michele Simionato]
+  * Accepted a list-like syntax like `return_periods=[30, 60, 120, 240, 480]`
+    in the job.ini, as written in the manual
   * Fixed a bug in the asset_risk exporter for uppercase tags
 
   [Paul Henshaw]
