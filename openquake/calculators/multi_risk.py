@@ -47,8 +47,8 @@ def get_dmg_csq(crm, assets_by_site, gmf):
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
             for l, loss_type in enumerate(crm.loss_types):
-                fracs = crm[taxonomy].scenario_damage(
-                    loss_type, assets, [gmv])
+                [rm], [w] = crm.get_rmodels_weights(taxonomy)
+                fracs = rm.scenario_damage(loss_type, assets, [gmv])
                 for asset, frac in zip(assets, fracs):
                     dmg = asset['number'] * frac[0, :D]
                     csq = asset['value-' + loss_type] * frac[0, D]
