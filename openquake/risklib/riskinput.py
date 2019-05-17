@@ -387,19 +387,10 @@ class RiskInput(object):
         self.hazard_getter = hazard_getter
         self.assets = assets
         self.weight = len(assets)
-        taxonomies_set = set()
         aids = []
         for asset in self.assets:
-            taxonomies_set.add(asset['taxonomy'])
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
-        self.taxonomies = sorted(taxonomies_set)
-        self.by_site = hazard_getter.__class__.__name__ != 'GmfGetter'
-
-    @property
-    def imt_taxonomies(self):
-        """Return a list of pairs (imt, taxonomies) with a single element"""
-        return [(self.imt, self.taxonomies)]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
