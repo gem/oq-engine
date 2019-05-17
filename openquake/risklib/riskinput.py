@@ -245,10 +245,18 @@ class CompositeRiskModel(collections.Mapping):
             loss_ratios[cp.loss_type] = tuple(cp.ratios)
         return loss_ratios
 
-    def __getitem__(self, key):
-        if isinstance(key, (int, U32)):  # a taxonomy index
-            key = self.tmap[key]
-        return self._riskmodels[key]
+    def __getitem__(self, taxo):
+        return self._riskmodels[taxo]
+
+    def get_rmodels_weights(self, taxidx):
+        """
+        :returns: a list of weighted risk models for the given taxonomy index
+        """
+        rmodels, weights = [], []
+        for key, weight in self.tmap[taxidx]:
+            rmodels.append(self._riskmodels[key])
+            weights.append(weight)
+        return rmodels, weights
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
@@ -317,14 +325,19 @@ class CompositeRiskModel(collections.Mapping):
                     epsilons = assets_by_taxo.eps[taxonomy][:, eids]
                 else:  # no CoVs
                     epsilons = ()
-                rm = self[taxonomy]
-                if len(data) == 0:
-                    dat = [0]
-                elif len(eids):  # gmfs
-                    dat = data[:, rm.imti[lt]]
-                else:  # hcurves
-                    dat = data[rm.imti[lt]]
-                ls.append(rm(lt, assets_, dat, eids, epsilons))
+                arrays = []
+                rmodels, weights = self.get_rmodels_weights(taxonomy)
+                for rm in rmodels:
+                    if len(data) == 0:
+                        dat = [0]
+                    elif len(eids):  # gmfs
+                        dat = data[:, rm.imti[lt]]
+                    else:  # hcurves
+                        dat = data[rm.imti[lt]]
+                    arrays.append(rm(lt, assets_, dat, eids, epsilons))
+                res = arrays[0] if len(arrays) == 1 else numpy.average(
+                    arrays, weights)
+                ls.append(res)
             arr = numpy.concatenate(ls)
             dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
         return hdf5.ArrayWrapper((), dic)

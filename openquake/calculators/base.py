@@ -661,10 +661,11 @@ class HazardCalculator(BaseCalculator):
                 self.oqparam.inputs.get('taxonomy_mapping'),
                 self.assetcol.tagcol.taxonomy)
             if hasattr(self.riskmodel.tmap, 'values'):
-                taxonomies = set(self.riskmodel.tmap.values())
+                taxonomies = set(taxo for items in self.riskmodel.tmap.values()
+                                 for taxo, weight in items)
             else:
-                taxonomies = set(taxo for taxo in self.riskmodel.tmap
-                                 if taxo != '?')
+                taxonomies = set(taxo for items in self.riskmodel.tmap
+                                 for taxo, weight in items if taxo != '?')
             # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.riskmodel.taxonomies)
             if self.riskmodel and missing:
