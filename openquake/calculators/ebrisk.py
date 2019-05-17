@@ -22,7 +22,6 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.commonlib import logictree
 from openquake.risklib.scientific import losses_by_period
 from openquake.risklib.riskinput import get_assets_by_taxo, cache_epsilons
 from openquake.calculators import base, event_based, getters
