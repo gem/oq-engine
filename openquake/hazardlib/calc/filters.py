@@ -259,10 +259,9 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if sitecol is not None and filename and not os.path.exists(filename):
-            # store the sitecol
+        if filename and not os.path.exists(filename):  # store the sitecol
             with hdf5.File(filename, 'w') as h5:
-                h5['sitecol'] = sitecol
+                h5['sitecol'] = sitecol if sitecol else ()
         else:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
