@@ -1647,6 +1647,8 @@ def taxonomy_mapping(filename, taxonomies):
     lst = [[("?", 1)]]
     for idx, taxo in enumerate(taxonomies, 1):
         recs = dic[taxo]
-        assert abs(recs['weight'].sum() - 1.) < pmf.PRECISION
+        if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
+            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
+                              (filename, taxo))
         lst.append([(rec['conversion'], rec['weight']) for rec in recs])
     return lst
