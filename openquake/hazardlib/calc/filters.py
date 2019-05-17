@@ -277,9 +277,10 @@ class SourceFilter(object):
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
-        if self.filename is None or not os.path.exists(self.filename):
-            # case of nofilter/None sitecol
+        if self.filename is None:
             return
+        elif not os.path.exists(self.filename):
+            raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
         with hdf5.File(self.filename, 'r') as h5:
             self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
