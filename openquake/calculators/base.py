@@ -967,11 +967,23 @@ def import_gmfs(dstore, fname, sids):
     :returns: event_ids, num_rlzs
     """
     array = writers.read_composite_array(fname).array
-    # has header rlzi, sid, eid, gmv_PGA, ...
-    imts = [name[4:] for name in array.dtype.names[3:]]
+    # has header rlzi, sid, eid, gmv_PGA, ... or sid, eid, gmv_PGA, ...
+    first = array.dtype.names[0]
+    if first == 'rlzi':
+        imts = [name[4:] for name in array.dtype.names[3:]]
+    else:
+        imts = [name[4:] for name in array.dtype.names[2:]]
     n_imts = len(imts)
     gmf_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
+    arr = numpy.zeros(len(array), gmf_data_dt)
+    col = 0
+    for name in array.dtype.names:
+        if name.startswith('gmv_'):
+            arr['gmv'][:, col] = array[name]
+            col += 1
+        else:
+            arr[name] = array[name]
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
@@ -981,7 +993,7 @@ def import_gmfs(dstore, fname, sids):
     events['id'] = eids
     dstore['events'] = events
     # store the GMFs
-    dic = general.group_array(array.view(gmf_data_dt), 'sid')
+    dic = general.group_array(arr, 'sid')
     lst = []
     offset = 0
     for sid in sids:
