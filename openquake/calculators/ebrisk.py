@@ -22,6 +22,7 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.commonlib import logictree
 from openquake.risklib.scientific import losses_by_period
 from openquake.risklib.riskinput import get_assets_by_taxo, cache_epsilons
 from openquake.calculators import base, event_based, getters
@@ -162,8 +163,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['ses_ratio'] = self.oqparam.ses_ratio
         self.param['aggregate_by'] = self.oqparam.aggregate_by
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
-        # initialize the riskmodel
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         self.L = L = len(self.riskmodel.loss_types)
         A = len(self.assetcol)
@@ -186,10 +185,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.riskmodel, self.E))
         parent = self.datastore.parent
-        if parent and 'losses_by_event' in parent:
-            # just regenerate the loss curves
-            return {}
-        elif parent:
+        if parent:
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             nruptures = len(parent['ruptures'])

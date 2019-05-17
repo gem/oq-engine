@@ -28,6 +28,7 @@ from openquake.baselib.general import AccumDict, cached_property, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
@@ -350,6 +351,9 @@ class EventBasedCalculator(base.HazardCalculator):
             self.build_events_from_sources()
             if oq.ground_motion_fields is False:
                 return {}
+        if not oq.imtls:
+            raise InvalidFile('There are no intensity measure types in %s' %
+                              oq.inputs['job_ini'])
         iterargs = ((rgetter, self.src_filter, self.param)
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
