@@ -533,7 +533,7 @@ def positivefloats(value):
     :returns:
         a list of positive floats
     """
-    values = value.lstrip('[').rstrip(']').split()
+    values = value.strip('[]').split()
     floats = list(map(positivefloat, values))
     return floats
 
@@ -996,7 +996,7 @@ def integers(value):
     """
     if '.' in value:
         raise ValueError('There are decimal points in %s' % value)
-    values = value.lstrip('[').rstrip(']').replace(',', ' ').split()
+    values = value.strip('[]').replace(',', ' ').split()
     if not values:
         raise ValueError('Not a list of integers: %r' % value)
     try:
