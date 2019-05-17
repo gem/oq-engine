@@ -608,6 +608,7 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
+            self.datastore['cost_calculator'] = exposure.cost_calculator
             self.datastore['assetcol/num_taxonomies'] = (
                 self.assetcol.num_taxonomies_by_site())
             if hasattr(readinput.exposure, 'exposures'):
