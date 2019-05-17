@@ -1631,17 +1631,24 @@ def taxonomy_mapping(filename, taxonomies):
     """
     :param filename: path to the CSV file containing the taxonomy associations
     :param taxonomies: an array taxonomy string -> taxonomy index
+    :returns: (array, [[(taxonomy, weight), ...], ...])
     """
     if filename is None:  # trivial mapping
-        return taxonomies
+        return (), [[(taxo, 1)] for taxo in taxonomies]
     dic = {}  # taxonomy index -> risk taxonomy
     arr = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
-    names = arr.dtype.names
-    assert names[:3] == ('taxonomy', 'conversion', 'weight')
-    keyfields = ('taxonomy',) + names[3:]
-    taxo2idx = {taxo: idx for idx, taxo in enumerate(taxonomies)}
-    for recs in group_array(arr, *keyfields).values():
-        [rec] = recs
-        assert abs(recs['weight'].sum() - 1.) < pmf.PRECISION
-        dic[taxo2idx[rec['taxonomy']]] = rec['conversion']
-    return dic
+    assert arr.dtype.names == ('taxonomy', 'conversion', 'weight')
+    dic = group_array(arr, 'taxonomy')
+    taxonomies = taxonomies[1:]  # strip '?'
+    missing = set(taxonomies) - set(dic)
+    if missing:
+        raise InvalidFile('The taxonomies %s are in the exposure but not in %s'
+                          % (missing, filename))
+    lst = [[("?", 1)]]
+    for idx, taxo in enumerate(taxonomies, 1):
+        recs = dic[taxo]
+        if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
+            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
+                              (filename, taxo))
+        lst.append([(rec['conversion'], rec['weight']) for rec in recs])
+    return arr, lst
