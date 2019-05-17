@@ -1,3 +1,8 @@
+
+  [Marco Pagani]
+  * Implemented a modified GMPE that add between and within std to GMPEs only 
+    supporting total std
+
   [Michele Simionato]
   * Now it is possible to export individual hazard curves from an event
     based calculation by setting `hazard_curves_from_gmfs = true` and
