@@ -1633,7 +1633,7 @@ def taxonomy_mapping(filename, taxonomies):
     :param taxonomies: an array taxonomy string -> taxonomy index
     """
     if filename is None:  # trivial mapping
-        return taxonomies
+        return [[(taxo, 1)] for taxo in taxonomies]
     dic = {}  # taxonomy index -> risk taxonomy
     arr = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
     names = arr.dtype.names
@@ -1643,5 +1643,5 @@ def taxonomy_mapping(filename, taxonomies):
     for recs in group_array(arr, *keyfields).values():
         [rec] = recs
         assert abs(recs['weight'].sum() - 1.) < pmf.PRECISION
-        dic[taxo2idx[rec['taxonomy']]] = rec['conversion']
+        dic[taxo2idx[rec['taxonomy']]] = [(rec['conversion'], rec['weight'])]
     return dic
