@@ -533,7 +533,8 @@ def positivefloats(value):
     :returns:
         a list of positive floats
     """
-    floats = list(map(positivefloat, value.split()))
+    values = value.strip('[]').split()
+    floats = list(map(positivefloat, values))
     return floats
 
 
@@ -654,6 +655,8 @@ def intensity_measure_types(value):
     :param value: input string
     :returns: non-empty list of Intensity Measure Type objects
 
+    >>> intensity_measure_types('')
+    []
     >>> intensity_measure_types('PGA')
     ['PGA']
     >>> intensity_measure_types('PGA, SA(1.00)')
@@ -667,6 +670,8 @@ def intensity_measure_types(value):
     ...
     ValueError: The IMTs are not sorted by period: SA(1), PGA
     """
+    if not value:
+        return []
     imts = []
     for chunk in value.split(','):
         imts.append(imt.from_string(chunk.strip()))
@@ -991,7 +996,7 @@ def integers(value):
     """
     if '.' in value:
         raise ValueError('There are decimal points in %s' % value)
-    values = value.replace(',', ' ').split()
+    values = value.strip('[]').replace(',', ' ').split()
     if not values:
         raise ValueError('Not a list of integers: %r' % value)
     try:
