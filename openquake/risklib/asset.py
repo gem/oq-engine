@@ -381,14 +381,6 @@ class TagCollection(object):
 
 
 class AssetCollection(object):
-    # the information about the assets is stored in a numpy array and in a
-    # variable-length dataset aids_by_tags; we could store everything in a
-    # single array and it would be easier, but then we would need to transfer
-    # unneeded strings; also we would have to use fixed-length string, since
-    # numpy has no concept of variable-lenght strings; unless we associate
-    # numbers to each tagvalue, which is possible
-    D, I = len('deductible-'), len('insurance_limit-')
-
     def __init__(self, exposure, assets_by_site, time_event):
         self.tagcol = exposure.tagcol
         self.cost_calculator = exposure.cost_calculator
@@ -408,8 +400,6 @@ class AssetCollection(object):
         if any(field.startswith('occupants_') for field in fields):
             self.loss_types.append('occupants')
         self.loss_types.sort()
-        self.deduc = [n for n in fields if n.startswith('deductible-')]
-        self.i_lim = [n for n in fields if n.startswith('insurance_limit-')]
         self.retro = [n for n in fields if n == 'retrofitted']
 
     @property
@@ -551,8 +541,6 @@ class AssetCollection(object):
         attrs = {'time_event': self.time_event or 'None',
                  'occupancy_periods': op,
                  'loss_types': ' '.join(self.loss_types),
-                 'deduc': ' '.join(self.deduc),
-                 'i_lim': ' '.join(self.i_lim),
                  'retro': ' '.join(self.retro),
                  'tot_sites': self.tot_sites,
                  'tagnames': encode(self.tagnames),
@@ -562,7 +550,7 @@ class AssetCollection(object):
             tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
-        for name in ('loss_types', 'deduc', 'i_lim', 'retro'):
+        for name in ('loss_types', 'retro'):
             setattr(self, name, [decode(x) for x in attrs[name].split()])
         self.occupancy_periods = attrs['occupancy_periods']
         self.time_event = attrs['time_event']
