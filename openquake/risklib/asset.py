@@ -548,8 +548,7 @@ class AssetCollection(object):
             tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
-        for name in ('loss_types',):
-            setattr(self, name, [decode(x) for x in attrs[name].split()])
+        self.loss_types = attrs['loss_types'].split()
         self.occupancy_periods = attrs['occupancy_periods']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
