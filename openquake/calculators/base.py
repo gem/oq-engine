@@ -578,7 +578,7 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         self.datastore['risk_model'] = rm = self.riskmodel
-        #self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
+        # self.datastore['taxonomy_mapping'] = self.riskmodel.tmap
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes('risk_model')
@@ -660,12 +660,8 @@ class HazardCalculator(BaseCalculator):
             self.riskmodel.tmap = logictree.taxonomy_mapping(
                 self.oqparam.inputs.get('taxonomy_mapping'),
                 self.assetcol.tagcol.taxonomy)
-            if hasattr(self.riskmodel.tmap, 'values'):
-                taxonomies = set(taxo for items in self.riskmodel.tmap.values()
-                                 for taxo, weight in items)
-            else:
-                taxonomies = set(taxo for items in self.riskmodel.tmap
-                                 for taxo, weight in items if taxo != '?')
+            taxonomies = set(taxo for items in self.riskmodel.tmap
+                             for taxo, weight in items if taxo != '?')
             # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.riskmodel.taxonomies)
             if self.riskmodel and missing:
