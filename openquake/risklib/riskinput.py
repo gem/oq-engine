@@ -335,8 +335,8 @@ class CompositeRiskModel(collections.Mapping):
                     else:  # hcurves
                         dat = data[rm.imti[lt]]
                     arrays.append(rm(lt, assets_, dat, eids, epsilons))
-                res = arrays[0] if len(arrays) == 1 else numpy.average(
-                    arrays, weights)
+                res = arrays[0] if len(arrays) == 1 else numpy.sum(
+                    a * w for a, w in zip(arrays, weights))
                 ls.append(res)
             arr = numpy.concatenate(ls)
             dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
