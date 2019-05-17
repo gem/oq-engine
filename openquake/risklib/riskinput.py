@@ -162,10 +162,9 @@ class CompositeRiskModel(collections.Mapping):
         for rm in self.values():
             ltypes.update(rm.loss_types)
         self.loss_types = sorted(ltypes)
-
-        taxonomies = set()
+        self.taxonomies = set()
         for riskid, riskmodel in self._riskmodels.items():
-            taxonomies.add(riskid)
+            self.taxonomies.add(riskid)
             riskmodel.compositemodel = self
             for lt, vf in riskmodel.risk_functions.items():
                 # save the number of nonzero coefficients of variation
@@ -181,7 +180,6 @@ class CompositeRiskModel(collections.Mapping):
                               for lt, kind in riskmodel.risk_functions
                               if kind in 'vulnerability fragility'}
 
-        self.taxonomies = sorted(taxonomies)
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
         for riskid, rm in self._riskmodels.items():
@@ -198,18 +196,6 @@ class CompositeRiskModel(collections.Mapping):
         # .taxonomy must be set by the engine
         tdict = {taxo: idx for idx, taxo in enumerate(self.taxonomy)}
         return tdict
-
-    def get_extra_imts(self, imts):
-        """
-        Returns the extra IMTs in the risk functions, i.e. the ones not in
-        the `imts` set (the set of IMTs for which there is hazard).
-        """
-        extra_imts = set()
-        for taxonomy in self.taxonomies:
-            for (lt, kind), rf in self[taxonomy].risk_functions.items():
-                if rf.imt not in imts:
-                    extra_imts.add(rf.imt)
-        return extra_imts
 
     def make_curve_params(self, oqparam):
         # the CurveParams are used only in classical_risk, classical_bcr
@@ -349,7 +335,6 @@ class CompositeRiskModel(collections.Mapping):
         :returns: a new CompositeRiskModel reduced to the given taxonomies
         """
         new = copy.copy(self)
-        new.taxonomies = sorted(taxonomies)
         new._riskmodels = {}
         for riskid, rm in self._riskmodels.items():
             if riskid in taxonomies:
