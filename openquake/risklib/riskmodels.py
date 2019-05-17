@@ -219,7 +219,8 @@ class RiskModel(object):
 
     def __call__(self, loss_type, assets, gmvs, eids, epsilons):
         meth = getattr(self, self.calcmode)
-        return meth(loss_type, assets, gmvs, eids, epsilons)
+        res = meth(loss_type, assets, gmvs, eids, epsilons)
+        return res
 
     def __toh5__(self):
         return self.risk_functions, {'taxonomy': self.taxonomy}
