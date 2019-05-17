@@ -2345,3 +2345,46 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
             readinput.get_composite_source_model(oqparam)
         self.assertIn('The source c1 is not in the source model, please fix '
                       'applyToSources', str(ctx.exception))
+
+
+class TaxonomyMappingTestCase(unittest.TestCase):
+    taxonomies = '? taxo1 taxo2 taxo3 taxo4'.split()
+
+    def test_missing_taxo(self):
+        xml = '''taxonomy,conversion,weight
+taxo1,taxo1,1
+taxo2,taxo2,1
+taxo3,taxo3,1
+'''
+        with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
+            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        self.assertIn("{'taxo4'} are in the exposure but not in",
+                      str(ctx.exception))
+
+    def test_wrong_weight(self):
+        xml = '''taxonomy,conversion,weight
+taxo1,taxo1,1
+taxo2,taxo2,1
+taxo3,taxo3,1
+taxo4,taxo1,.5
+taxo4,taxo2,.4
+'''
+        with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
+            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        self.assertIn("the weights do not sum up to 1 for taxo4",
+                      str(ctx.exception))
+
+    def test_mixed_lines(self):
+        xml = '''taxonomy,conversion,weight
+taxo1,taxo1,1
+taxo2,taxo2,1
+taxo4,taxo2,.5
+taxo3,taxo3,1
+taxo4,taxo1,.5
+'''
+        lst = logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        self.assertEqual(lst, [[('?', 1)],
+                               [('taxo1', 1.0)],
+                               [('taxo2', 1.0)],
+                               [('taxo3', 1.0)],
+                               [('taxo2', 0.5), ('taxo1', 0.5)]])
