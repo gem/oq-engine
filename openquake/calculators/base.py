@@ -792,9 +792,10 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        _, self.riskmodel.tmap = logictree.taxonomy_mapping(
-            self.oqparam.inputs.get('taxonomy_mapping'),
-            self.assetcol.tagcol.taxonomy)
+        if not hasattr(self.riskmodel, 'tmap'):
+            _, self.riskmodel.tmap = logictree.taxonomy_mapping(
+                self.oqparam.inputs.get('taxonomy_mapping'),
+                self.assetcol.tagcol.taxonomy)
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
