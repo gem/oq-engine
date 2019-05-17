@@ -2382,7 +2382,7 @@ taxo4,taxo2,.5
 taxo3,taxo3,1
 taxo4,taxo1,.5
 '''
-        lst = logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        arr, lst = logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
         self.assertEqual(lst, [[('?', 1)],
                                [('taxo1', 1.0)],
                                [('taxo2', 1.0)],
