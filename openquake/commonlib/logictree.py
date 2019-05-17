@@ -34,9 +34,10 @@ import itertools
 import collections
 import operator
 from collections import namedtuple
+import toml
 import numpy
 from openquake.baselib import hdf5, node, python3compat
-from openquake.baselib.general import groupby, duplicated
+from openquake.baselib.general import groupby, group_array, duplicated
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -198,6 +199,8 @@ class Branch(object):
     """
     Branch object, represents a ``<logicTreeBranch />`` element.
 
+    :param bs_id:
+        BranchSetID of the branchset to which the branch belongs
     :param branch_id:
         Value of ``@branchID`` attribute.
     :param weight:
@@ -208,7 +211,8 @@ class Branch(object):
         of ``<uncertaintyModel />`` child node. Type depends
         on the branchset's uncertainty type.
     """
-    def __init__(self, branch_id, weight, value):
+    def __init__(self, bs_id, branch_id, weight, value):
+        self.bs_id = bs_id
         self.branch_id = branch_id
         self.weight = weight
         self.value = value
@@ -458,8 +462,12 @@ class BranchSet(object):
         return repr(self.branches)
 
 
-def _bsnodes(branchinglevel):
+def _bsnodes(fname, branchinglevel):
     if branchinglevel.tag.endswith('logicTreeBranchingLevel'):
+        if len(branchinglevel) > 1:
+            raise InvalidLogicTree(
+                '%s: Branching level %s has multiple branchsets'
+                % (fname, branchinglevel['branchingLevelID']))
         return branchinglevel.nodes
     elif branchinglevel.tag.endswith('logicTreeBranchSet'):
         return [branchinglevel]
@@ -534,7 +542,7 @@ def collect_info(smlt):
     paths = collections.defaultdict(set)  # branchID -> paths
     applytosources = collections.defaultdict(list)  # branchID -> source IDs
     for blevel in blevels:
-        for bset in _bsnodes(blevel):
+        for bset in _bsnodes(smlt, blevel):
             if 'applyToSources' in bset.attrib:
                 applytosources[bset['branchSetID']].extend(
                         bset['applyToSources'].split())
@@ -601,6 +609,7 @@ class SourceModelLogicTree(object):
         self.seed = seed
         self.num_samples = num_samples
         self.branches = {}  # branch_id -> branch
+        self.bsetdict = {}
         self.open_ends = set()
         self.tectonic_region_types = set()
         self.source_types = set()
@@ -658,7 +667,10 @@ class SourceModelLogicTree(object):
         can have child branchsets (if there is one on the next level).
         """
         new_open_ends = set()
-        for number, branchset_node in enumerate(_bsnodes(branchinglevel_node)):
+        for number, branchset_node in enumerate(
+                _bsnodes(self.filename, branchinglevel_node)):
+            attrs = branchset_node.attrib.copy()
+            self.bsetdict[attrs.pop('branchSetID')] = attrs
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
@@ -673,11 +685,8 @@ class SourceModelLogicTree(object):
 
             self.num_paths *= len(branchset.branches)
         if number > 0:
-            logging.warning('There is a branching level with multiple '
-                            'branchsets in %s', self.filename)
-            # TODO:
-            # raise InvalidLogicTree('there is a branching level with multiple'
-            #                        ' branchsets in %s' % self.filename)
+            raise InvalidLogicTree('there is a branching level with multiple'
+                                   ' branchsets in %s' % self.filename)
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
@@ -727,6 +736,7 @@ class SourceModelLogicTree(object):
         :return:
             ``None``, all branches are attached to provided branchset.
         """
+        bs_id = branchset_node['branchSetID']
         weight_sum = 0
         branches = branchset_node.nodes
         values = []
@@ -741,7 +751,7 @@ class SourceModelLogicTree(object):
                     value_node, branchnode, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
             branch_id = branchnode.attrib.get('branchID')
-            branch = Branch(branch_id, weight, value)
+            branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
                 raise LogicTreeError(
                     branchnode, self.filename,
@@ -753,19 +763,6 @@ class SourceModelLogicTree(object):
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
         if len(set(values)) < len(values):
-            # TODO: add a test for this case
-            # <logicTreeBranch branchID="b71">
-            #     <uncertaintyModel> 7.7 </uncertaintyModel>
-            #     <uncertaintyWeight>0.333</uncertaintyWeight>
-            # </logicTreeBranch>
-            # <logicTreeBranch branchID="b72">
-            #     <uncertaintyModel> 7.695 </uncertaintyModel>
-            #     <uncertaintyWeight>0.333</uncertaintyWeight>
-            # </logicTreeBranch>
-            # <logicTreeBranch branchID="b73">
-            #     <uncertaintyModel> 7.7 </uncertaintyModel>
-            #     <uncertaintyWeight>0.334</uncertaintyWeight>
-            # </logicTreeBranch>
             raise LogicTreeError(
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
@@ -1132,12 +1129,7 @@ class SourceModelLogicTree(object):
           or "gmpeModel".
         """
         if depth == 0:
-            if number > 0:
-                raise LogicTreeError(
-                    branchset_node, self.filename,
-                    'there must be only one branch set '
-                    'on first branching level')
-            elif branchset.uncertainty_type != 'sourceModel':
+            if branchset.uncertainty_type != 'sourceModel':
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     'first branchset must define an uncertainty '
@@ -1179,18 +1171,14 @@ class SourceModelLogicTree(object):
                     raise LogicTreeError(
                         branchset_node, self.filename,
                         "branch '%s' already has child branchset" % branch_id)
-                if branch not in self.open_ends:
-                    raise LogicTreeError(
-                        branchset_node, self.filename,
-                        'applyToBranches must reference only branches '
-                        'from previous branching level')
                 branch.child_branchset = branchset
         else:
             for branch in self.open_ends:
                 branch.child_branchset = branchset
 
     def _get_source_model(self, source_model_file):
-        return open(os.path.join(self.basepath, source_model_file))
+        return open(os.path.join(self.basepath, source_model_file),
+                    encoding='utf-8')
 
     def collect_source_model_data(self, branch_id, source_model):
         """
@@ -1249,6 +1237,25 @@ class SourceModelLogicTree(object):
         Returns a dictionary lt_path -> how many times that path was sampled
         """
         return collections.Counter(rlz.lt_path for rlz in self)
+
+    def __toh5__(self):
+        tbl = []
+        for brid, br in self.branches.items():
+            tbl.append((br.bs_id, brid, br.value, br.weight))
+        dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
+              ('uncertainty', hdf5.vstr), ('weight', float)]
+        dic = dict(branches=numpy.array(tbl, dt),
+                   branchsets=toml.dumps(self.bsetdict))
+        return dic, {}
+
+    def __fromh5__(self, dic, attrs):
+        # TODO: this is not complete the child_branchset must be built too
+        self.bsetdict = toml.loads(dic['branchsets'])
+        self.branches = {}
+        for rec in dic['branchset']:
+            br = Branch(rec['branchset'], rec['branch'], rec['weight'],
+                        rec['uncertainty'])
+            self.branches[br.branch_id] = br
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
@@ -1326,7 +1333,7 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def toml(uncertainty):
+def to_toml(uncertainty):
     """
     Converts an uncertainty node into a TOML string
     """
@@ -1377,7 +1384,7 @@ class GsimLogicTree(object):
         return cls(repr(gsim), ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
-        self.fname = fname
+        self.filename = fname
         trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
             raise ValueError(
@@ -1428,8 +1435,8 @@ class GsimLogicTree(object):
         dic = {'branches': numpy.array(branches, dt)}
 
         # manage gmpe_tables, if any
-        if hasattr(self, 'fname'):
-            dirname = os.path.dirname(self.fname)
+        if hasattr(self, 'filename'):  # missing for fake logic trees
+            dirname = os.path.dirname(self.filename)
             for gmpe_table in sorted(self.gmpe_tables):
                 dic[gmpe_table] = d = {}
                 filename = os.path.join(dirname, gmpe_table)
@@ -1518,19 +1525,16 @@ class GsimLogicTree(object):
         branches = []
         branchsetids = set()
         for branching_level in self._ltnode:
-            if len(branching_level) > 1:
-                raise InvalidLogicTree(
-                    '%s: Branching level %s has multiple branchsets'
-                    % (self.fname, branching_level['branchingLevelID']))
-            for branchset in _bsnodes(branching_level):
+            for branchset in _bsnodes(self.filename, branching_level):
                 if branchset['uncertaintyType'] != 'gmpeModel':
                     raise InvalidLogicTree(
                         '%s: only uncertainties of type "gmpeModel" '
-                        'are allowed in gmpe logic tree' % self.fname)
+                        'are allowed in gmpe logic tree' % self.filename)
                 bsid = branchset['branchSetID']
                 if bsid in branchsetids:
                     raise InvalidLogicTree(
-                        '%s: Duplicated branchSetID %s' % (self.fname, bsid))
+                        '%s: Duplicated branchSetID %s' %
+                        (self.filename, bsid))
                 else:
                     branchsetids.add(bsid)
                 trt = branchset.attrib.get('applyToTectonicRegionType')
@@ -1542,28 +1546,28 @@ class GsimLogicTree(object):
                 weights = []
                 branch_ids = []
                 for branch in branchset:
-                    weight = ImtWeight(branch, self.fname)
+                    weight = ImtWeight(branch, self.filename)
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
-                    uncertainty = toml(branch.uncertaintyModel)
+                    uncertainty = to_toml(branch.uncertaintyModel)
                     try:
                         gsim = valid.gsim(uncertainty)
                     except Exception as exc:
                         raise ValueError(
-                            "%s in file %s" % (exc, self.fname)) from exc
-                    if (isinstance(self.fname, str)
+                            "%s in file %s" % (exc, self.filename)) from exc
+                    if (isinstance(self.filename, str)
                             and isinstance(gsim, GMPETable)):
                         # a bit hackish: set the GMPE_DIR equal to the
                         # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.fname)
+                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     if isinstance(gsim, GMPETable):
                         gsim.init()
                         if 'gmpe_table' in gsim.kwargs:
                             self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
-                                               (self.fname, gsim))
+                                               (self.filename, gsim))
                     if len(weight.dic) > 1:
                         gsim.weight = weight
                     self.values[trt].append(gsim)
@@ -1575,11 +1579,12 @@ class GsimLogicTree(object):
                 assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
                 if duplicated(branch_ids):
                     raise InvalidLogicTree(
-                        'There where duplicated branchIDs in %s' % self.fname)
+                        'There where duplicated branchIDs in %s' %
+                        self.filename)
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
-                (self.fname, trts))
+                (self.filename, trts))
         branches.sort(key=lambda b: (b.trt, b.id))
         # TODO: add an .idx to each GSIM ?
         return branches
@@ -1620,3 +1625,30 @@ class GsimLogicTree(object):
                  (b.trt, b.id, b.gsim, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
+
+
+def taxonomy_mapping(filename, taxonomies):
+    """
+    :param filename: path to the CSV file containing the taxonomy associations
+    :param taxonomies: an array taxonomy string -> taxonomy index
+    :returns: (array, [[(taxonomy, weight), ...], ...])
+    """
+    if filename is None:  # trivial mapping
+        return (), [[(taxo, 1)] for taxo in taxonomies]
+    dic = {}  # taxonomy index -> risk taxonomy
+    arr = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
+    assert arr.dtype.names == ('taxonomy', 'conversion', 'weight')
+    dic = group_array(arr, 'taxonomy')
+    taxonomies = taxonomies[1:]  # strip '?'
+    missing = set(taxonomies) - set(dic)
+    if missing:
+        raise InvalidFile('The taxonomies %s are in the exposure but not in %s'
+                          % (missing, filename))
+    lst = [[("?", 1)]]
+    for idx, taxo in enumerate(taxonomies, 1):
+        recs = dic[taxo]
+        if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
+            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
+                              (filename, taxo))
+        lst.append([(rec['conversion'], rec['weight']) for rec in recs])
+    return arr, lst
