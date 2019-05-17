@@ -189,10 +189,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.riskmodel, self.E))
         parent = self.datastore.parent
-        if parent and 'losses_by_event' in parent:
-            # just regenerate the loss curves
-            return {}
-        elif parent:
+        if parent:
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             nruptures = len(parent['ruptures'])
