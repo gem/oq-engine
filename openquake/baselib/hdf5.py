@@ -48,8 +48,6 @@ def maybe_encode(value):
     if isinstance(value, (list, tuple)):
         if value and isinstance(value[0], str):
             return encode(value)
-        else:
-            return []
     return value
 
 
