@@ -365,8 +365,6 @@ class TagCollection(object):
     def __fromh5__(self, dic, attrs):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
         for tagname in dic:
-            setattr(self, tagname + '_idx',
-                    {tag: idx for idx, tag in enumerate(dic[tagname])})
             setattr(self, tagname, dic[tagname].value)
 
     def __iter__(self):
@@ -383,7 +381,6 @@ class TagCollection(object):
 class AssetCollection(object):
     def __init__(self, exposure, assets_by_site, time_event):
         self.tagcol = exposure.tagcol
-        self.cost_calculator = exposure.cost_calculator
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
@@ -544,8 +541,7 @@ class AssetCollection(object):
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(
-            array=self.array, cost_calculator=self.cost_calculator,
-            tagcol=self.tagcol), attrs
+            array=self.array, tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
         self.loss_types = attrs['loss_types'].split()
@@ -555,9 +551,6 @@ class AssetCollection(object):
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
-        self.cost_calculator = dic['cost_calculator']
-        self.cost_calculator.tagi = {
-            decode(tagname): i for i, tagname in enumerate(self.tagnames)}
 
     def __repr__(self):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
