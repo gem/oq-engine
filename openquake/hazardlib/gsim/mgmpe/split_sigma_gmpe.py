@@ -1,19 +1,20 @@
-# The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2019, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-#
+# 
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module :mod:`openquake.hazardlib.mgmpe.split_sigma_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.SplitSigmaGMPE`
@@ -36,8 +37,6 @@ class SplitSigmaGMPE(GMPE):
     :param string corr_func:
         A scalar defining the values of the between event standard deviation
     """
-
-    # Parameters
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
@@ -48,18 +47,17 @@ class SplitSigmaGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name, within_absolute=None, between_absolute=None):
-        #
-        # Create the original GMPE
         super().__init__(gmpe_name=gmpe_name)
+        # Create the original GMPE
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
         assert self.DEFINED_FOR_STANDARD_DEVIATION_TYPES == set([
             const.StdDev.TOTAL]), "this GMM already supports several STD types"
-        #
+
         # Set options for obtaining within and between stds
         self.between_absolute = between_absolute
         self.within_absolute = within_absolute
-        #
+
         # Set the supported stds
         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
             const.StdDev.TOTAL,
@@ -73,12 +71,10 @@ class SplitSigmaGMPE(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-
         # compute mean and standard deviation
         stds_total_type = [const.StdDev.TOTAL]
-        mean, std_total = self.gmpe.get_mean_and_stddevs(sites, rup,
-                                                         dists, imt,
-                                                         stds_total_type)
+        mean, std_total = self.gmpe.get_mean_and_stddevs(
+            sites, rup, dists, imt, stds_total_type)
         stddvs = self._get_stddvs(np.array(std_total[0]), stds_types)
         return mean, stddvs
 
@@ -100,14 +96,14 @@ class SplitSigmaGMPE(GMPE):
             between = np.ones_like(total) * self.between_absolute
             if np.any(total - between < 0):
                 raise ValueError('Between event std larger than total')
-            within = (total**2 - between**2)**0.5
+            within = np.sqrt(total**2 - between**2)
             new_stds['between'] = between
             new_stds['within'] = within
         elif np.isscalar(self.within_absolute):
             within = np.ones_like(total) * self.within_absolute
             if np.any(total - within < 0):
                 raise ValueError('Within event std larger than total')
-            between = (total**2 - within**2)**0.5
+            between = np.sqrt(total**2 - within**2)
             new_stds['between'] = between
             new_stds['within'] = within
         else:
