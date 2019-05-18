@@ -365,8 +365,6 @@ class TagCollection(object):
     def __fromh5__(self, dic, attrs):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
         for tagname in dic:
-            setattr(self, tagname + '_idx',
-                    {tag: idx for idx, tag in enumerate(dic[tagname])})
             setattr(self, tagname, dic[tagname].value)
 
     def __iter__(self):
