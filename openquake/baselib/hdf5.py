@@ -45,8 +45,11 @@ def maybe_encode(value):
     """
     If value is a sequence of strings, encode it
     """
-    if isinstance(value, (list, tuple)) and isinstance(value[0], str):
-        return encode(value)
+    if isinstance(value, (list, tuple)):
+        if value and isinstance(value[0], str):
+            return encode(value)
+        else:
+            return []
     return value
 
 
