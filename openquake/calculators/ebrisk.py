@@ -39,8 +39,7 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    with monitor('weighting ruptures'):
-        rupgetter.set_weights(srcfilter, param['num_taxonomies'])
+    rupgetter.set_weights(srcfilter, param['num_taxonomies'])
     if rupgetter.weights.sum() <= param['maxweight']:
         yield ebrisk(rupgetter, srcfilter, param, monitor)
     else:
