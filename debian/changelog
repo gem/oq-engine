@@ -1,3 +1,8 @@
+
+  [Marco Pagani]
+  * Implemented a modified GMPE that add between and within std to GMPEs only 
+    supporting total std
+
   [Michele Simionato]
   * Added the ability to use as taxonomy_mapping.csv file
   * Fixed a bug in classical_damage from CSV: for hazard intensity measure
