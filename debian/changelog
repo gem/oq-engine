@@ -1,4 +1,3 @@
-
   [Marco Pagani]
   * Implemented a modified GMPE that add between and within std to GMPEs only 
     supporting total std
@@ -20,6 +19,8 @@
   * Now it is possible to export individual hazard curves from an event
   * Added a view gmvs_to_hazard
 
+python3-oq-engine (3.5.1-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Added a `rlzi` column to to sig_eps.csv output
   * Accepted GMF CSV files without a `rlzi` column
@@ -29,6 +30,8 @@
 
   [Paul Henshaw]
   * Fixed an encoding bug while reading XML files on Windows
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 20 May 2019 13:49:25 +0000
 
 python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
 
