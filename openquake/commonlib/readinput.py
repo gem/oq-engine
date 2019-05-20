@@ -530,18 +530,6 @@ def get_source_model_lt(oqparam, validate=True):
     return smlt
 
 
-def get_risk_lt(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        a :class:`openquake.commonlib.logictree.RiskLogicTree` instance
-    """
-    fname = oqparam.inputs['taxonomy_mapping']
-    array = hdf5.read_csv(fname, {None: hdf5.vstr, 'weight': float}).array
-    return logictree.RiskLogicTree(array)
-
-
 def check_nonparametric_sources(fname, smodel, investigation_time):
     """
     :param fname:
