@@ -365,8 +365,6 @@ class TagCollection(object):
     def __fromh5__(self, dic, attrs):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
         for tagname in dic:
-            setattr(self, tagname + '_idx',
-                    {tag: idx for idx, tag in enumerate(dic[tagname])})
             setattr(self, tagname, dic[tagname].value)
 
     def __iter__(self):
@@ -381,17 +379,8 @@ class TagCollection(object):
 
 
 class AssetCollection(object):
-    # the information about the assets is stored in a numpy array and in a
-    # variable-length dataset aids_by_tags; we could store everything in a
-    # single array and it would be easier, but then we would need to transfer
-    # unneeded strings; also we would have to use fixed-length string, since
-    # numpy has no concept of variable-lenght strings; unless we associate
-    # numbers to each tagvalue, which is possible
-    D, I = len('deductible-'), len('insurance_limit-')
-
     def __init__(self, exposure, assets_by_site, time_event):
         self.tagcol = exposure.tagcol
-        self.cost_calculator = exposure.cost_calculator
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
@@ -408,9 +397,6 @@ class AssetCollection(object):
         if any(field.startswith('occupants_') for field in fields):
             self.loss_types.append('occupants')
         self.loss_types.sort()
-        self.deduc = [n for n in fields if n.startswith('deductible-')]
-        self.i_lim = [n for n in fields if n.startswith('insurance_limit-')]
-        self.retro = [n for n in fields if n == 'retrofitted']
 
     @property
     def tagnames(self):
@@ -551,28 +537,20 @@ class AssetCollection(object):
         attrs = {'time_event': self.time_event or 'None',
                  'occupancy_periods': op,
                  'loss_types': ' '.join(self.loss_types),
-                 'deduc': ' '.join(self.deduc),
-                 'i_lim': ' '.join(self.i_lim),
-                 'retro': ' '.join(self.retro),
                  'tot_sites': self.tot_sites,
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(
-            array=self.array, cost_calculator=self.cost_calculator,
-            tagcol=self.tagcol), attrs
+            array=self.array, tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
-        for name in ('loss_types', 'deduc', 'i_lim', 'retro'):
-            setattr(self, name, [decode(x) for x in attrs[name].split()])
+        self.loss_types = attrs['loss_types'].split()
         self.occupancy_periods = attrs['occupancy_periods']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
-        self.cost_calculator = dic['cost_calculator']
-        self.cost_calculator.tagi = {
-            decode(tagname): i for i, tagname in enumerate(self.tagnames)}
 
     def __repr__(self):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))

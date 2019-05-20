@@ -39,8 +39,7 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    with monitor('weighting ruptures'):
-        rupgetter.set_weights(srcfilter, param['num_taxonomies'])
+    rupgetter.set_weights(srcfilter, param['num_taxonomies'])
     if rupgetter.weights.sum() <= param['maxweight']:
         yield ebrisk(rupgetter, srcfilter, param, monitor)
     else:
@@ -94,7 +93,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     times = numpy.zeros(N)  # risk time per site_id
     num_events_per_sid = 0
     epspath = param['epspath']
+    gmf_nbytes = 0
     for sid, haz in hazard.items():
+        gmf_nbytes += haz.nbytes
         t0 = time.time()
         assets_on_sid = assets_by_site[sid]
         if len(assets_on_sid) == 0:
@@ -133,7 +134,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         for rec in elt:
             agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
     res = {'elt': elt, 'agg_losses': agg, 'times': times,
-           'events_per_sid': num_events_per_sid}
+           'events_per_sid': num_events_per_sid, 'gmf_nbytes': gmf_nbytes}
     if param['avg_losses']:
         res['losses_by_A'] = losses_by_A * param['ses_ratio']
     if param['asset_loss_table']:
@@ -162,8 +163,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['ses_ratio'] = self.oqparam.ses_ratio
         self.param['aggregate_by'] = self.oqparam.aggregate_by
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
-        # initialize the riskmodel
-        self.riskmodel.tmap = self.assetcol.tagcol.taxonomy
         self.param['riskmodel'] = self.riskmodel
         self.L = L = len(self.riskmodel.loss_types)
         A = len(self.assetcol)
@@ -186,10 +185,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.riskmodel, self.E))
         parent = self.datastore.parent
-        if parent and 'losses_by_event' in parent:
-            # just regenerate the loss curves
-            return {}
-        elif parent:
+        if parent:
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             nruptures = len(parent['ruptures'])
@@ -220,7 +216,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 first_event += rgetter.num_events
                 smap.submit(rgetter, self.src_filter, self.param)
         self.events_per_sid = []
-        return smap.reduce(self.agg_dicts, numpy.zeros(self.N))
+        self.gmf_nbytes = 0
+        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
+        logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
+        return res
 
     def agg_dicts(self, acc, dic):
         """
@@ -244,6 +243,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 idx = numpy.argsort(eidx)
                 self.datastore['asset_loss_table'][:, eidx[idx]] = alt[:, idx]
         self.events_per_sid.append(dic['events_per_sid'])
+        self.gmf_nbytes += dic['gmf_nbytes']
         return acc + dic['times']
 
     def get_shape(self, *sizes):

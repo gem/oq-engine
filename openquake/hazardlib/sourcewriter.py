@@ -395,7 +395,6 @@ def get_source_attributes(source):
             for data in source.data:
                 weights.append(data[0].weight)
             attrs['rup_weights'] = numpy.array(weights)
-    print(attrs)
     return attrs
 
 

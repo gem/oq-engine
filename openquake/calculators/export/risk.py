@@ -504,7 +504,7 @@ agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
 def export_agglosses(ekey, dstore):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    cc = dstore['assetcol/cost_calculator']
+    cc = dstore['cost_calculator']
     unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
     agglosses = dstore[ekey[0]]

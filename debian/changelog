@@ -1,6 +1,13 @@
   [Michele Simionato]
   * Removed the (long time deprecated) capability to read hazard curves from
     XML files: you must use CSV files instead
+  
+  [Marco Pagani]
+  * Implemented a modified GMPE that add between and within std to GMPEs only 
+    supporting total std
+
+  [Michele Simionato]
+  * Added the ability to use a taxonomy_mapping.csv file
   * Fixed a bug in classical_damage from CSV: for hazard intensity measure
     levels different from the fragility levels, the engine was giving incorrect
     results
@@ -17,6 +24,10 @@
   * Added a view gmvs_to_hazard
 
   [Michele Simionato]
+  * Added a `rlzi` column to to sig_eps.csv output
+  * Accepted GMF CSV files without a `rlzi` column
+  * Accepted a list-like syntax like `return_periods=[30, 60, 120, 240, 480]`
+    in the job.ini, as written in the manual
   * Fixed a bug in the asset_risk exporter for uppercase tags
 
   [Paul Henshaw]
@@ -28,6 +39,7 @@ python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
   * Lanzano and Luzi (2019) GMPE for volcanic zones in Italy
 
   [Michele Simionato]
+  * Now it is possible to export individual hazard curves from an event
     based calculation by setting `hazard_curves_from_gmfs = true` and
     `individual_curves = true (before only the statistics were saved)
   * Made it possible to download remote source models

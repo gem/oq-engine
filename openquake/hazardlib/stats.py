@@ -210,6 +210,8 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
     R = arrayNR.shape[1]
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
+        if not stats:
+            return
         statnames, statfuncs = zip(*stats.items())
         weights = dstore['weights'].value
         dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)

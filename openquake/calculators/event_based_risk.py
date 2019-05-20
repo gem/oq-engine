@@ -318,7 +318,7 @@ class EbrCalculator(base.RiskCalculator):
             dic = {r: arr['loss'] for r, arr in lbr.items()}
             array, arr_stats = b.build(dic, stats)
         loss_types = ' '.join(self.oqparam.loss_dt().names)
-        units = self.assetcol.cost_calculator.get_units(loss_types.split())
+        units = self.datastore['cost_calculator'].get_units(loss_types.split())
         if oq.individual_curves or self.R == 1:
             self.datastore['agg_curves-rlzs'] = array
             self.datastore.set_attrs(
