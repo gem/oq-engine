@@ -303,8 +303,6 @@ def get_mesh(oqparam):
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
             mesh, pmap = get_pmap_from_csv(oqparam, fname)
-        elif fname.endswith('.xml'):
-            mesh, pmap = get_pmap_from_nrml(oqparam, fname)
         else:
             raise NotImplementedError('Reading from %s' % fname)
         return mesh
@@ -1078,39 +1076,6 @@ def get_pmap_from_csv(oqparam, fnames):
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
-
-
-@deprecated(msg='Use the .csv format for the hazard curves instead')
-def get_pmap_from_nrml(oqparam, fname):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param fname:
-        an XML file containing hazard curves
-    :returns:
-        site mesh, curve array
-    """
-    hcurves_by_imt = {}
-    oqparam.hazard_imtls = imtls = {}
-    for hcurves in nrml.read(fname):
-        imt = hcurves['IMT']
-        oqparam.investigation_time = hcurves['investigationTime']
-        if imt == 'SA':
-            imt += '(%s)' % hcurves['saPeriod']
-        imtls[imt] = ~hcurves.IMLs
-        data = sorted((~node.Point.pos, ~node.poEs) for node in hcurves[1:])
-        hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
-    lons, lats = [], []
-    for xy, poes in data:
-        lons.append(xy[0])
-        lats.append(xy[1])
-    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    num_levels = sum(len(v) for v in imtls.values())
-    array = numpy.zeros((len(mesh), num_levels))
-    imtls = DictArray(imtls)
-    for imt_ in hcurves_by_imt:
-        array[:, imtls(imt_)] = hcurves_by_imt[imt_]
-    return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
 # used in get_scenario_from_nrml
