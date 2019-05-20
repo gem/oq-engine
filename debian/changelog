@@ -35,6 +35,7 @@ python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
   * Lanzano and Luzi (2019) GMPE for volcanic zones in Italy
 
   [Michele Simionato]
+  * Now it is possible to export individual hazard curves from an event
     based calculation by setting `hazard_curves_from_gmfs = true` and
     `individual_curves = true (before only the statistics were saved)
   * Made it possible to download remote source models
