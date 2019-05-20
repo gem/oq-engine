@@ -433,7 +433,7 @@ def view_exposure_info(token, dstore):
     """
     assetcol = dstore['assetcol/array'][:]
     taxonomies = sorted(set(dstore['assetcol'].taxonomies))
-    cc = dstore['assetcol/cost_calculator']
+    cc = dstore['cost_calculator']
     ra_flag = ['relative', 'absolute']
     data = [('#assets', len(assetcol)),
             ('#taxonomies', len(taxonomies)),
