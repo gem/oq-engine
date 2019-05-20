@@ -44,6 +44,11 @@ debugging flag meant for internal usage it was missing some pieces, in
 particular it was not possible to export the generated curves in the
 usual way. This has been fixed.
 
+6. Since release 3.4 the GMF exporter exports a file `sig_eps.csv`
+containing for each event ID the associated inter-event standard deviation
+and the residual. There is now an additional column `rlzi` for the
+associated realization index.
+
 Risk calculators
 -----------------
 
