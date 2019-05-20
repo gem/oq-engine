@@ -21,6 +21,7 @@
   * Added a view gmvs_to_hazard
 
   [Michele Simionato]
+  * Added a `rlzi` column to to sig_eps.csv output
   * Accepted GMF CSV files without a `rlzi` column
   * Accepted a list-like syntax like `return_periods=[30, 60, 120, 240, 480]`
     in the job.ini, as written in the manual
