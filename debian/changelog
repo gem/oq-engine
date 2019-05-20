@@ -1,10 +1,13 @@
-
+  [Michele Simionato]
+  * Removed the (long time deprecated) capability to read hazard curves from
+    XML files: you must use CSV files instead
+  
   [Marco Pagani]
   * Implemented a modified GMPE that add between and within std to GMPEs only 
     supporting total std
 
   [Michele Simionato]
-  * Added the ability to use as taxonomy_mapping.csv file
+  * Added the ability to use a taxonomy_mapping.csv file
   * Fixed a bug in classical_damage from CSV: for hazard intensity measure
     levels different from the fragility levels, the engine was giving incorrect
     results
