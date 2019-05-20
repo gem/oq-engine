@@ -279,9 +279,13 @@ class GmfGetter(object):
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        M32 = (F32, len(oqparam.imtls))
         self.gmv_dt = oqparam.gmf_data_dt()
-        self.sig_eps_dt = [('eid', U64), ('sig', M32), ('eps', M32)]
+        self.sig_eps_dt = [('eid', U64), ('rlzi', U16)]
+        for imt in oqparam.imtls:
+            self.sig_eps_dt.append(('sig_' + imt, F32))
+        for imt in oqparam.imtls:
+            self.sig_eps_dt.append(('eps_' + imt, F32))
+        M32 = (F32, len(oqparam.imtls))
         self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U64)])
         self.cmaker = ContextMaker(
             rupgetter.trt, rupgetter.rlzs_by_gsim,
@@ -359,8 +363,9 @@ class GmfGetter(object):
                         tot = gmf.sum(axis=0)  # shape (M,)
                         if not tot.sum():
                             continue
-                        sigmas = sig[:, n + ei]
-                        self.sig_eps.append((eid, sigmas, eps[:, n + ei]))
+                        tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
+                                    list(eps[:, n + ei]))
+                        self.sig_eps.append(tup)
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 data.append((rlzi, sid, eid, gmv))
