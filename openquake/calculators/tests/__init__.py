@@ -168,8 +168,13 @@ class CalculatorTestCase(unittest.TestCase):
             os.path.join(self.calc.oqparam.export_dir, fname2))
         expected_lines = [line for line in open8(expected)
                           if not line.startswith('#')]
-        actual_lines = [line for line in open8(actual).readlines()[:lastline]
-                        if not line.startswith('#')]
+        comments = []
+        actual_lines = []
+        for line in open8(actual).readlines()[:lastline]:
+            if line.startswith('#'):
+                comments.append(line)
+            else:
+                actual_lines.append(line)
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
             for exp, got in zip(make_comparable(expected_lines),
@@ -183,7 +188,7 @@ class CalculatorTestCase(unittest.TestCase):
                 # use this path when the expected outputs have changed
                 # for a good reason
                 logging.info('overriding %s', expected)
-                open8(expected, 'w').write(''.join(actual_lines))
+                open8(expected, 'w').write(''.join(comments + actual_lines))
             else:
                 # normally raise an exception
                 raise DifferentFiles('%s %s' % (expected, actual))

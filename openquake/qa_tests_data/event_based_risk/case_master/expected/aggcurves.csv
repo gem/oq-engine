@@ -1,4 +1,4 @@
-# kind='mean', risk_investigation_time=50.0
+# generated_by='OpenQuake engine 3.6.0-git56c1b852f5', start_date='2019-05-21T09:12:04', checksum=543178696, kind='mean', risk_investigation_time=50.0
 annual_frequency_of_exceedence,return_period,loss_type,id,loss_value,loss_ratio
 5.00000E-01,2,business_interruption,a1,7.84892E+00,3.92446E-03
 5.00000E-01,2,business_interruption,a2,7.63334E+00,3.81667E-03
