@@ -63,10 +63,7 @@ def export_agg_curve_rlzs(ekey, dstore):
             else ['mean'] + ['quantile-%s' % q for q in oq.quantiles])
     periods = agg_curve.attrs['return_periods']
     loss_types = tuple(agg_curve.attrs['loss_types'].split())
-    if any(lt.endswith('_ins') for lt in loss_types):
-        L = len(loss_types) // 2
-    else:
-        L = len(loss_types)
+    L = len(loss_types)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
     tagcol = dstore['assetcol/tagcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
