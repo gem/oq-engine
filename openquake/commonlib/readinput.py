@@ -306,9 +306,6 @@ def get_mesh(oqparam):
         else:
             raise NotImplementedError('Reading from %s' % fname)
         return mesh
-    elif 'gmfs' in oqparam.inputs:
-        eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
-        return geo.Mesh.from_coords(oqparam.sites)
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
@@ -980,56 +977,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             and sitecol is not sitecol.complete):
         assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
-
-
-def _get_gmfs(oqparam):
-    M = len(oqparam.imtls)
-    assert M, ('oqparam.imtls is empty, did you call '
-               'oqparam.set_risk_imtls(get_risk_models(oqparam))?')
-    fname = oqparam.inputs['gmfs']
-    if fname.endswith('.csv'):
-        array = hdf5.read_csv(
-            fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
-        # the array has the structure sid, eid, gmv_PGA, gmv_...
-        dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
-        required_imts = list(oqparam.imtls)
-        imts = [name[4:] for name in array.dtype.names[3:]]
-        if imts != required_imts:
-            raise ValueError('Required %s, but %s contains %s' % (
-                required_imts, fname, imts))
-        dtlist.append(('gmv', (F32, M)))
-        eids = numpy.unique(array['eid'])
-        E = len(eids)
-        found_eids = set(eids)
-        expected_eids = set(range(E))  # expected incremental eids
-        missing_eids = expected_eids - found_eids
-        if missing_eids:
-            raise InvalidFile('Missing eids in the gmfs.csv file: %s'
-                              % missing_eids)
-        assert expected_eids == found_eids, (expected_eids, found_eids)
-        eidx = {eid: e for e, eid in enumerate(eids)}
-        sitecol = get_site_collection(oqparam)
-        expected_sids = set(sitecol.sids)
-        found_sids = set(numpy.unique(array['sid']))
-        missing_sids = found_sids - expected_sids
-        if missing_sids:
-            raise InvalidFile(
-                'Found site IDs missing in the sites.csv file: %s' %
-                missing_sids)
-        N = len(sitecol)
-        gmfs = numpy.zeros((N, E, M), F32)
-        counter = collections.Counter()
-        for row in array.view(dtlist):
-            key = row['sid'], eidx[row['eid']]
-            gmfs[key] = row['gmv']
-            counter[key] += 1
-        dupl = [key for key in counter if counter[key] > 1]
-        if dupl:
-            raise InvalidFile('Duplicated (sid, eid) in the GMFs file: '
-                              '%s' % dupl)
-    else:
-        raise NotImplemented('Reading from %s' % fname)
-    return eids, gmfs
 
 
 def levels_from(header):
