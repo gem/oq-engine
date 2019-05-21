@@ -65,18 +65,18 @@ def export_agg_curve_rlzs(ekey, dstore):
     loss_types = tuple(agg_curve.attrs['loss_types'].split())
     L = len(loss_types)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
-    tagcol = dstore['assetcol/tagcol']
+    assetcol = dstore['assetcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     header = ('annual_frequency_of_exceedence', 'return_period',
               'loss_type') + tagnames + ('loss_value', 'loss_ratio')
-    expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
+    expvalue = assetcol.agg_value(*oq.aggregate_by)  # shape (T1, T2, ..., L)
     md = dstore.metadata
     for r, tag in enumerate(tags):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
             p, l, *tagidxs = multi_idx
             evalue = expvalue[tuple(tagidxs) + (l % L,)]
-            row = tagcol.get_tagvalues(tagnames, tagidxs) + (
+            row = assetcol.tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
         dest = dstore.build_fname('agg_loss_curve', tag, 'csv')
@@ -160,8 +160,8 @@ def export_agg_losses(ekey, dstore):
     dt = oq.loss_dt()
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats().items())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    expvalue = dstore['exposed_value'].value  # shape (T1, T2, ..., L)
-    tagcol = dstore['assetcol/tagcol']
+    assetcol = dstore['assetcol']
+    expvalue = assetcol.agg_value(*oq.aggregate_by)  # shape (T1, T2, ..., L)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
     header = ('loss_type',) + tagnames + (
         'loss_value', 'exposed_value', 'loss_ratio')
@@ -170,7 +170,7 @@ def export_agg_losses(ekey, dstore):
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
             l, *tagidxs = multi_idx
             evalue = expvalue[tuple(tagidxs) + (l,)]
-            row = tagcol.get_tagvalues(tagnames, tagidxs) + (
+            row = assetcol.tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, evalue, loss / evalue)
             rows.append((dt.names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
