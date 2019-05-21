@@ -543,14 +543,6 @@ class HazardCalculator(BaseCalculator):
                         '%d assets were discarded; use `oq show discarded` to'
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
-
-        # reduce the riskmodel to the relevant taxonomies
-        taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
-                         if taxo != '?')
-        if len(self.riskmodel.taxonomies) > len(taxonomies):
-            logging.info('Reducing risk model from %d to %d taxonomies',
-                         len(self.riskmodel.taxonomies), len(taxonomies))
-            self.riskmodel = self.riskmodel.reduce(taxonomies)
         return readinput.exposure
 
     def load_riskmodel(self):
@@ -670,6 +662,11 @@ class HazardCalculator(BaseCalculator):
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
+            if len(self.riskmodel.taxonomies) > len(taxonomies):
+                logging.info('Reducing risk model from %d to %d taxonomies',
+                             len(self.riskmodel.taxonomies), len(taxonomies))
+                self.riskmodel = self.riskmodel.reduce(taxonomies)
+                self.riskmodel.tmap = tmap_lst
 
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
