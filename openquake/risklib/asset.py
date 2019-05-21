@@ -483,7 +483,8 @@ class AssetCollection(object):
                     aval[asset['ordinal'], lti] = asset[lt + '_None']
                 elif lt in self.fields:
                     aval[asset['ordinal'], lti] = asset['value-' + lt]
-        return self.aggregate_by(list(tagnames), aval)
+        res = self.aggregate_by(list(tagnames), aval)
+        return res
 
     def reduce(self, sitecol):
         """
@@ -536,7 +537,7 @@ class AssetCollection(object):
                  'occupancy_periods': op,
                  'loss_types': ' '.join(self.loss_types),
                  'tot_sites': self.tot_sites,
-                 'fields': self.fields,
+                 'fields': ' '.join(self.fields),
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(
@@ -547,7 +548,7 @@ class AssetCollection(object):
         self.occupancy_periods = attrs['occupancy_periods']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
-        self.fields = attrs['fields']
+        self.fields = attrs['fields'].split()
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
