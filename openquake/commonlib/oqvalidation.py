@@ -476,13 +476,13 @@ class OqParam(valid.ParamSet):
 
     def loss_dt(self, dtype=F32):
         """
-        Return a composite dtype based on the loss types, including occupants
+        :returns: a composite dtype based on the loss types including occupants
         """
         return numpy.dtype(self.loss_dt_list(dtype))
 
     def loss_dt_list(self, dtype=F32):
         """
-        Return a data type list [(loss_name, dtype), ...]
+        :returns: a data type list [(loss_name, dtype), ...]
         """
         loss_types = self.all_cost_types
         dts = [(str(lt), dtype) for lt in loss_types]
@@ -498,7 +498,7 @@ class OqParam(valid.ParamSet):
 
     def gmf_data_dt(self):
         """
-        Return a composite data type for the GMFs
+        :returns: a composite data type for the GMFs
         """
         return numpy.dtype(
             [('rlzi', U16), ('sid', U32),
