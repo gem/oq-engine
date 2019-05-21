@@ -379,7 +379,7 @@ class TagCollection(object):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, assets_by_site, time_event):
+    def __init__(self, exposure, assets_by_site, time_event, loss_types):
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
@@ -392,11 +392,9 @@ class AssetCollection(object):
         elif self.occupancy_periods.strip() != periods.strip():
             raise ValueError('Expected %s, got %s' %
                              (periods, self.occupancy_periods))
-        fields = self.array.dtype.names
-        self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
-        if any(field.startswith('occupants_') for field in fields):
-            self.loss_types.append('occupants')
-        self.loss_types.sort()
+        self.loss_types = loss_types
+        self.fields = [f[6:] for f in self.array.dtype.names
+                       if f.startswith('value-')]
 
     @property
     def tagnames(self):
@@ -483,9 +481,10 @@ class AssetCollection(object):
             for lti, lt in enumerate(self.loss_types):
                 if lt == 'occupants':
                     aval[asset['ordinal'], lti] = asset[lt + '_None']
-                else:
+                elif lt in self.fields:
                     aval[asset['ordinal'], lti] = asset['value-' + lt]
-        return self.aggregate_by(list(tagnames), aval)
+        res = self.aggregate_by(list(tagnames), aval)
+        return res
 
     def reduce(self, sitecol):
         """
@@ -538,6 +537,7 @@ class AssetCollection(object):
                  'occupancy_periods': op,
                  'loss_types': ' '.join(self.loss_types),
                  'tot_sites': self.tot_sites,
+                 'fields': ' '.join(self.fields),
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(
@@ -548,6 +548,7 @@ class AssetCollection(object):
         self.occupancy_periods = attrs['occupancy_periods']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
+        self.fields = attrs['fields'].split()
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
