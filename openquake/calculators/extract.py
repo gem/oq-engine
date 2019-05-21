@@ -515,7 +515,7 @@ def extract_agg_curves(dstore, what):
     else:
         raise KeyError('No curves found in %s' % dstore)
     res = _filter_agg(dstore['assetcol'], losses, tags, stats)
-    cc = dstore['assetcol/cost_calculator']
+    cc = dstore['cost_calculator']
     res.units = cc.get_units(loss_types=[loss_type])
     res.return_periods = get_loss_builder(dstore).return_periods
     return res
