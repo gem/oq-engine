@@ -430,63 +430,6 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         self.assertIn("is missing", str(ctx.exception))
 
 
-class TestReadGmfXmlTestCase(unittest.TestCase):
-    """
-    Read the GMF from a NRML file
-    """
-    def setUp(self):
-        self.oqparam = mock.Mock()
-        self.oqparam.base_path = '/'
-        self.oqparam.inputs = {}
-        self.oqparam.imtls = {'PGA': None, 'PGV': None}
-        self.oqparam.number_of_ground_motion_fields = 5
-
-    def test_ok(self):
-        fname = os.path.join(DATADIR,  'gmfdata.xml')
-        eids, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
-        assert_allclose(eids, range(5))
-        self.assertEqual(
-            writers.write_csv(BytesIO(), gmfa), b'''\
-PGA,PGV
-6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01,6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01
-1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01,1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01
-1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01,1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01''')
-
-    def test_err(self):
-        # missing ruptureId
-        fname = os.path.join(DATADIR,  'gmfdata_err.xml')
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Found a missing ruptureId 1", str(ctx.exception))
-
-    def test_err2(self):
-        # wrong mesh
-        fname = os.path.join(DATADIR,  'gmfdata_err2.xml')
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Expected 4 sites, got 3 nodes in", str(ctx.exception))
-
-    def test_two_nodes_on_the_same_point(self):
-        # after rounding of the coordinates two points can collide
-        fname = general.gettemp('''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-      xmlns:gml="http://www.opengis.net/gml">
-<gmfCollection gsimTreePath="" sourceModelTreePath="">
-  <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="0">
-      <node gmv="0.0126515007046" lon="12.12477995" lat="43.5812"/>
-      <node gmv="0.0124056290492" lon="12.12478193" lat="43.5812"/>
-    </gmf>
-  </gmfSet>
-</gmfCollection>
-</nrml>''')
-        self.oqparam.imtls = {'PGA': None}
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Expected 1 sites, got 2 nodes in", str(ctx.exception))
-
-
 class GetCompositeSourceModelTestCase(unittest.TestCase):
     # test the case in_memory=False, used when running `oq info job.ini`
 
