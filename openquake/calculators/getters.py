@@ -36,6 +36,18 @@ U64 = numpy.uint64
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
+def sig_eps_dt(imts):
+    """
+    :returns: a composite data type for the sig_eps output
+    """
+    lst = [('eid', U64), ('rlzi', U16)]
+    for imt in imts:
+        lst.append(('sig_' + imt, F32))
+    for imt in imts:
+        lst.append(('eps_' + imt, F32))
+    return numpy.dtype(lst)
+
+
 class PmapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
@@ -280,11 +292,7 @@ class GmfGetter(object):
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.gmv_dt = oqparam.gmf_data_dt()
-        self.sig_eps_dt = [('eid', U64), ('rlzi', U16)]
-        for imt in oqparam.imtls:
-            self.sig_eps_dt.append(('sig_' + imt, F32))
-        for imt in oqparam.imtls:
-            self.sig_eps_dt.append(('eps_' + imt, F32))
+        self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
         M32 = (F32, len(oqparam.imtls))
         self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U64)])
         self.cmaker = ContextMaker(
