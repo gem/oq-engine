@@ -1027,12 +1027,6 @@ def _get_gmfs(oqparam):
         if dupl:
             raise InvalidFile('Duplicated (sid, eid) in the GMFs file: '
                               '%s' % dupl)
-    elif fname.endswith('.xml'):
-        eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
-        N, E = gmfs_by_imt.shape
-        gmfs = numpy.zeros((N, E, M), F32)
-        for imti, imtstr in enumerate(oqparam.imtls):
-            gmfs[:, :, imti] = gmfs_by_imt[imtstr]
     else:
         raise NotImplemented('Reading from %s' % fname)
     return eids, gmfs
@@ -1076,111 +1070,6 @@ def get_pmap_from_csv(oqparam, fnames):
         for field in ('lon', 'lat', 'depth'):  # sanity check
             numpy.testing.assert_equal(arr[field], array[field])
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
-
-
-# used in get_scenario_from_nrml
-def _extract_eids_sitecounts(gmfset):
-    eids = set()
-    counter = collections.Counter()
-    for gmf in gmfset:
-        eids.add(gmf['ruptureId'])
-        for node in gmf:
-            counter[node['lon'], node['lat']] += 1
-    eids = numpy.array(sorted(eids), numpy.uint64)
-    if (eids != numpy.arange(len(eids), dtype=numpy.uint64)).any():
-        raise ValueError('There are ruptureIds in the gmfs_file not in the '
-                         'range [0, %d)' % len(eids))
-    return eids, counter
-
-
-@deprecated(msg='Use the .csv format for the GMFs instead')
-def get_scenario_from_nrml(oqparam, fname):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param fname:
-        the NRML files containing the GMFs
-    :returns:
-        a pair (eids, gmf array)
-    """
-    if not oqparam.imtls:
-        oqparam.set_risk_imtls(get_risk_models(oqparam))
-    imts = sorted(oqparam.imtls)
-    num_imts = len(imts)
-    imt_dt = numpy.dtype([(imt, F32) for imt in imts])
-    gmfset = nrml.read(fname).gmfCollection.gmfSet
-    eids, sitecounts = _extract_eids_sitecounts(gmfset)
-    coords = sorted(sitecounts)
-    oqparam.sites = [(lon, lat, 0) for lon, lat in coords]
-    site_idx = {lonlat: i for i, lonlat in enumerate(coords)}
-    oqparam.number_of_ground_motion_fields = num_events = len(eids)
-    num_sites = len(oqparam.sites)
-    gmf_by_imt = numpy.zeros((num_events, num_sites), imt_dt)
-    counts = collections.Counter()
-    for i, gmf in enumerate(gmfset):
-        if len(gmf) != num_sites:  # there must be one node per site
-            raise InvalidFile('Expected %d sites, got %d nodes in %s, line %d'
-                              % (num_sites, len(gmf), fname, gmf.lineno))
-        counts[gmf['ruptureId']] += 1
-        imt = gmf['IMT']
-        if imt == 'SA':
-            imt = 'SA(%s)' % gmf['saPeriod']
-        for node in gmf:
-            sid = site_idx[node['lon'], node['lat']]
-            gmf_by_imt[imt][i % num_events, sid] = node['gmv']
-
-    for rupid, count in sorted(counts.items()):
-        if count < num_imts:
-            raise InvalidFile("Found a missing ruptureId %d in %s" %
-                              (rupid, fname))
-        elif count > num_imts:
-            raise InvalidFile("Found a duplicated ruptureId '%s' in %s" %
-                              (rupid, fname))
-    expected_gmvs_per_site = num_imts * len(eids)
-    for lonlat, counts in sitecounts.items():
-        if counts != expected_gmvs_per_site:
-            raise InvalidFile(
-                '%s: expected %d gmvs at location %s, found %d' %
-                (fname, expected_gmvs_per_site, lonlat, counts))
-    return eids, gmf_by_imt.T
-
-
-def get_mesh_hcurves(oqparam):
-    """
-    Read CSV data in the format `lon lat, v1-vN, w1-wN, ...`.
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        the mesh of points and the data as a dictionary
-        imt -> array of curves for each site
-    """
-    imtls = oqparam.imtls
-    lon_lats = set()
-    data = AccumDict()  # imt -> list of arrays
-    ncols = len(imtls) + 1  # lon_lat + curve_per_imt ...
-    csvfile = oqparam.inputs['hazard_curves']
-    for line, row in enumerate(csv.reader(csvfile), 1):
-        try:
-            if len(row) != ncols:
-                raise ValueError('Expected %d columns, found %d' %
-                                 ncols, len(row))
-            x, y = row[0].split()
-            lon_lat = valid.longitude(x), valid.latitude(y)
-            if lon_lat in lon_lats:
-                raise DuplicatedPoint(lon_lat)
-            lon_lats.add(lon_lat)
-            for i, imt_ in enumerate(imtls, 1):
-                values = valid.decreasing_probabilities(row[i])
-                if len(values) != len(imtls[imt_]):
-                    raise ValueError('Found %d values, expected %d' %
-                                     (len(values), len(imtls([imt_]))))
-                data += {imt_: [numpy.array(values)]}
-        except (ValueError, DuplicatedPoint) as err:
-            raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
-    lons, lats = zip(*sorted(lon_lats))
-    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
 
 
 # used in utils/reduce_sm and utils/extract_source
