@@ -1,9 +1,9 @@
   [Michele Simionato]
-  * Removed the (long time deprecated) capability to read hazard curves from
-    XML files: you must use CSV files instead
+  * Removed the (long time deprecated) capability to read hazard curves and
+    ground motion fields from XML files: you must use CSV files instead
 
   [Marco Pagani]
-  * Implemented a modified GMPE that add between and within std to GMPEs only 
+  * Implemented a modified GMPE that add between and within std to GMPEs only
     supporting total std
 
   [Michele Simionato]
