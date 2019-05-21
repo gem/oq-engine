@@ -354,6 +354,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)
 
+        [fname] = out['agg_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
+
     def test_asset_loss_table(self):
         # this is a case with L=1, R=1, T=2, P=3
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv')
