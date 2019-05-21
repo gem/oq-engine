@@ -370,6 +370,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['agg_curves-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
         [fname] = out['agg_maps-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_maps.csv', fname, delta=1E-5)
