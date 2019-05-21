@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in the exporter of the aggregate loss curves: now the loss
+    ratios are computed correctly even in presence of occupants
   * Removed the (long time deprecated) capability to read hazard curves and
     ground motion fields from XML files: you must use CSV files instead
 
