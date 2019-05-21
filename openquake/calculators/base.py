@@ -961,13 +961,8 @@ def import_gmfs(dstore, fname, sids):
     :param sids: the site IDs (complete)
     :returns: event_ids, num_rlzs
     """
-    array = hdf5.read_csv(
-        fname, {'rlzi': U16, 'sid': U32, 'eid': U64, None: F32}).array
-    first = array.dtype.names[0]
-    if first == 'rlzi':
-        imts = [name[4:] for name in array.dtype.names[3:]]
-    else:
-        imts = [name[4:] for name in array.dtype.names[2:]]
+    array = hdf5.read_csv(fname, {'sid': U32, 'eid': U64, None: F32}).array
+    imts = [name[4:] for name in array.dtype.names[2:]]
     n_imts = len(imts)
     gmf_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
@@ -998,11 +993,10 @@ def import_gmfs(dstore, fname, sids):
             offset += n
             gmvs = dic[sid]
             gmvs['eid'] = get_idxs(gmvs, eid2idx)
-            gmvs['rlzi'] = 0   # effectively there is only 1 realization
             dstore.extend('gmf_data/data', gmvs)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
-    sig_eps_dt = [('eid', U64), ('sig', (F32, n_imts)), ('eps', (F32, n_imts))]
+    sig_eps_dt = getters.sig_eps_dt(imts)
     dstore['gmf_data/sigma_epsilon'] = numpy.zeros(0, sig_eps_dt)
     dstore['weights'] = numpy.ones(1)
     return eids
