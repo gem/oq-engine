@@ -431,6 +431,7 @@ class DistancesContext(BaseContext):
 
     def __init__(self, param_dist_pairs=()):
         for param, dist in param_dist_pairs:
+            dist.flags.writeable = False
             setattr(self, param, dist)
 
     def roundup(self, minimum_distance):
