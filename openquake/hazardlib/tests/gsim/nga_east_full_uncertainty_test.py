@@ -553,15 +553,9 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
     """
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 
-    def get_context_attributes(self, ctx):
-        att = inspect.getmembers(ctx, lambda a: not inspect.isroutine(a))
-        att = [k for k, v in att if '_abc' not in k
-               and not (k.startswith('_') and k.endswith('_'))]
-        return set(att)
-
     def check(self, gsim, filename, max_discrep_percentage):
         filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
+        errors, stats, sctx, rctx, dctx = check_gsim(
             gsim, open(filename), max_discrep_percentage)
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
@@ -569,10 +563,6 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
         self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
         self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
-        self.assertTrue(
-            np.all(ctxs),
-            msg='Contexts objects have been changed by method '
-                'get_mean_and_stddevs')
         if errors:
             raise AssertionError(stats)
         print()
