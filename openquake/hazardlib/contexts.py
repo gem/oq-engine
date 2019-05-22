@@ -60,6 +60,7 @@ def get_distances(rupture, mesh, param):
         dist = numpy.zeros_like(mesh.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
+    dist.flags.writeable = False
     return dist
 
 
@@ -431,7 +432,6 @@ class DistancesContext(BaseContext):
 
     def __init__(self, param_dist_pairs=()):
         for param, dist in param_dist_pairs:
-            dist.flags.writeable = False
             setattr(self, param, dist)
 
     def roundup(self, minimum_distance):
