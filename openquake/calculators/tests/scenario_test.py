@@ -105,6 +105,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertAlmostEqual(f2, 0)
 
     def test_case_9(self):
+        # test for minimum_distance
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
         f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)
