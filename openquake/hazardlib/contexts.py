@@ -315,7 +315,8 @@ class ContextMaker(object):
             for imt in imtls:
                 slc = imtls(imt)
                 if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
-                    # ignore the gsim
+                    # set by the engine when parsing the gsim logictree;
+                    # when 0 ignore the gsim: see _build_trts_branches
                     pno = numpy.ones((nsites, slc.stop - slc.start))
                 else:
                     poes = gsim.get_poes(
@@ -449,6 +450,7 @@ class DistancesContext(BaseContext):
             if small_distances.any():
                 array = numpy.array(array)  # make a copy first
                 array[small_distances] = minimum_distance
+                array.flags.writeable = False
             setattr(ctx, dist, array)
         return ctx
 
