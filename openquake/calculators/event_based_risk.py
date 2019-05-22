@@ -154,7 +154,7 @@ class EbrCalculator(base.RiskCalculator):
         oq = self.oqparam
         super().pre_execute()
         parent = self.datastore.parent
-        if not self.oqparam.ground_motion_fields:
+        if not oq.ground_motion_fields:
             return  # this happens in the reportwriter
 
         self.L = len(self.riskmodel.lti)
@@ -208,7 +208,7 @@ class EbrCalculator(base.RiskCalculator):
         A = self.A
         S = len(stats)
         P = len(builder.return_periods)
-        C = len(self.oqparam.conditional_loss_poes)
+        C = len(oq.conditional_loss_poes)
         L = self.L
         self.loss_maps_dt = (F32, (C, L))
         if oq.individual_curves or R == 1:
@@ -317,7 +317,7 @@ class EbrCalculator(base.RiskCalculator):
             lbr = group_array(dstore['losses_by_event'].value, 'rlzi')
             dic = {r: arr['loss'] for r, arr in lbr.items()}
             array, arr_stats = b.build(dic, stats)
-        loss_types = ' '.join(self.oqparam.loss_dt().names)
+        loss_types = ' '.join(oq.loss_dt().names)
         units = self.datastore['cost_calculator'].get_units(loss_types.split())
         if oq.individual_curves or self.R == 1:
             self.datastore['agg_curves-rlzs'] = array
