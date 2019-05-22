@@ -82,6 +82,8 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         orig_rctx = copy.deepcopy(rctx)
         orig_dctx = copy.deepcopy(dctx)
         for imt, expected_result in expected_results.items():
+            for slot in vars(dctx):
+                getattr(dctx, slot).flags.writeable = False
             mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
                                                       imt, stddev_types)
             ctxs.append(
