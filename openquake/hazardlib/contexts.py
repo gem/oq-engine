@@ -447,7 +447,7 @@ class DistancesContext(BaseContext):
         for dist, array in vars(self).items():
             small_distances = array < minimum_distance
             if small_distances.any():
-                array = array[:]  # make a copy first
+                array = numpy.array(array)  # make a copy first
                 array[small_distances] = minimum_distance
             setattr(ctx, dist, array)
         return ctx
