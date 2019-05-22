@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a mutability bug in the DistancesContext with CauzziFaccioli2008
+    and made all context arrays read-only
   * Fixed a bug with the minimum_distance feature
   * Fixed a bug in the exporter of the aggregate loss curves: now the loss
     ratios are computed correctly even in presence of occupants
