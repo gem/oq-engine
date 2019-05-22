@@ -21,7 +21,6 @@ from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10)
-from openquake.baselib.node import floatformat
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -106,6 +105,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertAlmostEqual(f2, 0)
 
     def test_case_9(self):
+        # test for minimum_distance
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
         f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)
