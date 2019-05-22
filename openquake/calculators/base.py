@@ -150,6 +150,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
+            logging.info('Checksum of the input files: %(checksum32)s', attrs)
         self.datastore.flush()
 
     def check_precalc(self, precalc_mode):
