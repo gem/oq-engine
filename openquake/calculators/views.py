@@ -47,6 +47,24 @@ view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
 
 # ########################## utility functions ############################## #
 
+def newarray(array, dt):
+    """
+    :returns: a copy of the given array, with changed field names
+    """
+    if isinstance(dt, list):
+        dt = numpy.dtype(dt)
+    if array.dtype.names:
+        new = numpy.zeros(array.shape, dt)
+        for oldname, (name, _) in zip(array.dtype.names, dt):
+            new[name] = array[oldname]
+    else:
+        # convert the second dimension into names
+        new = numpy.zeros(len(array), dt)
+        for i, (name, _) in enumerate(dt.descr):
+            new[name] = array[:, i]
+    return new
+
+
 def form(value):
     """
     Format numbers in a nice way.
@@ -362,7 +380,7 @@ def view_totlosses(token, dstore):
     """
     oq = dstore['oqparam']
     tot_losses = dstore['losses_by_asset']['mean'].sum(axis=0)
-    return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
+    return rst_table(newarray(tot_losses, oq.loss_dt()), fmt='%.6E')
 
 
 # for event based risk and ebrisk
@@ -385,7 +403,7 @@ def view_portfolio_losses(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    data = portfolio_loss(dstore).view(loss_dt)[:, 0]
+    data = newarray(portfolio_loss(dstore), loss_dt)
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
@@ -737,7 +755,7 @@ def view_global_hmaps(token, dstore):
     oq = dstore['oqparam']
     dt = numpy.dtype([('%s-%s' % (imt, poe), F32)
                       for imt in oq.imtls for poe in oq.poes])
-    array = dstore['hmaps/mean'].value.view(dt)[:, 0]
+    array = newarray(dstore['hmaps/mean'].value, dt)
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
         res[name] = array[name].mean()
