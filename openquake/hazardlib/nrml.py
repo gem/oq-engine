@@ -98,7 +98,7 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-class SourceModel(collections.Sequence):
+class SourceModel(collections.abc.Sequence):
     """
     A container of source groups with attributes name, investigation_time
     and start_time. It is serialize on hdf5 as follows:
