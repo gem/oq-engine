@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib.general import group_array, deprecated
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, filters
-from openquake.calculators.views import view
+from openquake.calculators.views import view, newarray
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import GmfGetter, gen_rupture_getters
@@ -571,7 +571,14 @@ def _expand_gmv(array, imts):
                 dtlist.append(('gmv_' + imt, F32))
         else:
             dtlist.append((name, dt))
-    return array.view(dtlist)
+    new = numpy.zeros(len(array), dtlist)
+    for name in dtype.names:
+        if name == 'gmv':
+            for i, imt in enumerate(imts):
+                new['gmv_' + imt] = array['gmv'][:, i]
+        else:
+            new[name] = array[name]
+    return new
 
 
 def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
