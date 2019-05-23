@@ -102,6 +102,8 @@ class AreaSource(ParametricSeismicSource):
         # generate "reference ruptures" -- all the ruptures that have the same
         # epicenter location (first point of the polygon's mesh) but different
         # magnitudes, nodal planes, hypocenters' depths and occurrence rates
+        # NB: all this mumbo-jumbo is done to avoid multiple calls to
+        # PointSource._get_rupture_surface
         ref_ruptures = []
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             for np_prob, np in self.nodal_plane_distribution.data:
