@@ -389,7 +389,7 @@ class Table(list):
 # we cannot use a namedtuple here because one would get a PicklingError:
 # Can't pickle <class 'openquake.server.dbapi.Row'>: attribute lookup
 # openquake.server.dbapi.Row failed
-class Row(collections.Sequence):
+class Row(collections.abc.Sequence):
     """
     A pickleable row, working both as a tuple and an object:
 
