@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized src.sample_ruptures for (multi)point sources and are sources
   * Fixed a mutability bug in the DistancesContext and made all context
     arrays read-only: the fix may affect calculations using the GMPEs
     berge_thierry_2003, cauzzi_faccioli_2008 and zhao_2006;
