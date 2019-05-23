@@ -83,7 +83,7 @@ class Piecewise(object):
         return self.y[idx]
 
 
-class IntegrationDistance(collections.Mapping):
+class IntegrationDistance(collections.abc.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type. The integration distances can be scalars or
