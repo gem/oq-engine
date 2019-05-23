@@ -84,8 +84,8 @@ extras_require = {
         'pyproj >=1.9',
     ],
     'dev':  [
-        'nose >=1.3, <1.4',
-        'flake8 >=3.5, <3.6',
+        'pytest >=4.5',
+        'flake8 >=3.5, <3.8',
         'pdbpp',
         'ipython',
     ]
