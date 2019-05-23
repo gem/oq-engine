@@ -37,7 +37,7 @@ source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
 
-class SourceGroup(collections.Sequence):
+class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
 
