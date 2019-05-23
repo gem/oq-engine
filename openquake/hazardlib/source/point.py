@@ -190,41 +190,6 @@ class PointSource(ParametricSeismicSource):
                 if not npdist:
                     break
 
-    def sample_ruptures(self, eff_num_ses, ir_monitor):
-        """
-        :param eff_num_ses: number of stochastic event sets * number of samples
-        :param ir_monitor: a monitor object for .iter_ruptures()
-        :yields: pairs (rupture, num_occurrences[num_samples])
-        """
-        tom = self.temporal_occurrence_model
-        rup_args = []
-        rates = []
-        with ir_monitor:
-            for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-                for np_prob, np in self.nodal_plane_distribution.data:
-                    for hc_prob, hc_depth in self.hypocenter_distribution.data:
-                        args = (
-                            mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth)
-                        rup_args.append(args)
-                        rates.append(mag_occ_rate * np_prob * hc_prob)
-        eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
-        numpy.random.seed(self.serial)
-        occurs = numpy.random.poisson(eff_rates)
-        serials = numpy.arange(self.serial, self.serial + self.num_ruptures)
-        quartets = zip(occurs, rup_args, rates, serials)
-        for (num_occ, args, rate, serial) in quartets:
-            if num_occ:
-                mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth = args
-                hypocenter = Point(latitude=self.location.latitude,
-                                   longitude=self.location.longitude,
-                                   depth=hc_depth)
-                surface = self._get_rupture_surface(mag, np, hypocenter)
-                rup = ParametricProbabilisticRupture(
-                    mag, np.rake, self.tectonic_region_type, hypocenter,
-                    surface, rate, tom)
-                rup.serial = serial  # used as seed
-                yield rup, num_occ
-
     def count_ruptures(self):
         """
         See :meth:
