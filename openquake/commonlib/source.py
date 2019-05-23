@@ -326,7 +326,7 @@ class CompositionInfo(object):
             self.__class__.__name__, '\n'.join(summary))
 
 
-class CompositeSourceModel(collections.Sequence):
+class CompositeSourceModel(collections.abc.Sequence):
     """
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance

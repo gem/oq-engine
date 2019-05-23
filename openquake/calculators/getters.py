@@ -224,7 +224,7 @@ class PmapGetter(object):
                 self.weights, self.imtls)
 
 
-class GmfDataGetter(collections.Mapping):
+class GmfDataGetter(collections.abc.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
