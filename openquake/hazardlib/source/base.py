@@ -149,6 +149,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         rates = []
         for src in self:
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+                if mag < self.min_mag:
+                    continue
                 for np_prob, np in src.nodal_plane_distribution.data:
                     for hc_prob, hc_depth in src.hypocenter_distribution.data:
                         args = (mag_occ_rate, np_prob, hc_prob,
