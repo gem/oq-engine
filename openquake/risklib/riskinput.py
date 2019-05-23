@@ -67,7 +67,7 @@ def extract(rmdict, kind):
     return lst
 
 
-class CompositeRiskModel(collections.Mapping):
+class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
 
