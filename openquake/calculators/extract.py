@@ -788,7 +788,7 @@ def losses_by_tag(dstore, tag):
     dt = [(tag, vstr)] + dstore['oqparam'].loss_dt_list()
     aids = dstore['assetcol/array'][tag]
     dset, stats = _get(dstore, 'avg_losses')
-    arr = dset.value
+    arr = dset[()]
     tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
     for s, stat in enumerate(stats):
         out = numpy.zeros(len(tagvalues), dt)

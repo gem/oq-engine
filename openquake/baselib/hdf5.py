@@ -241,7 +241,7 @@ class ByteCounter(object):
             self.nbytes += nbytes
 
 
-class Group(collections.Mapping):
+class Group(collections.abc.Mapping):
     """
     A mock for a h5py group object
     """
@@ -271,9 +271,9 @@ class File(h5py.File):
     >>> f = File('/tmp/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
     >>> dic = f['dic']
-    >>> dic['a']['x'].value
+    >>> dic['a']['x'][()]
     1
-    >>> dic['b'].value
+    >>> dic['b'][()]
     3
     >>> f.close()
     """

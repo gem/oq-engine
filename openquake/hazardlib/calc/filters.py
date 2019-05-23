@@ -19,7 +19,7 @@ import os
 import sys
 import time
 import operator
-import collections
+import collections.abc
 from contextlib import contextmanager
 import numpy
 from scipy.interpolate import interp1d
@@ -83,7 +83,7 @@ class Piecewise(object):
         return self.y[idx]
 
 
-class IntegrationDistance(collections.Mapping):
+class IntegrationDistance(collections.abc.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type. The integration distances can be scalars or
