@@ -35,8 +35,7 @@ import tempfile
 import importlib
 import itertools
 import subprocess
-import collections
-from collections.abc import Mapping, Container
+from collections.abc import Mapping, Container, MutableSequence
 
 import numpy
 from decorator import decorator
@@ -79,7 +78,7 @@ def nokey(item):
     return 'Unspecified'
 
 
-class WeightedSequence(collections.MutableSequence):
+class WeightedSequence(MutableSequence):
     """
     A wrapper over a sequence of weighted items with a total weight attribute.
     Adding items automatically increases the weight.
@@ -735,7 +734,7 @@ def _slicedict_n(imt_dt):
     return slicedic, n
 
 
-class DictArray(collections.Mapping):
+class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays serializable to HDF5:
 

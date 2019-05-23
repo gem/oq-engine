@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
-import collections
+import collections.abc
 import pickle
 import time
 import logging
@@ -37,7 +37,7 @@ source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
 
-class SourceGroup(collections.Sequence):
+class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
 
