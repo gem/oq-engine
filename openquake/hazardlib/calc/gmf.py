@@ -209,6 +209,9 @@ class GmfComputer(object):
             if self.correlation_model is not None:
                 intra_residual = self.correlation_model.apply_correlation(
                     self.sites, imt, intra_residual, stddev_intra)
+                sh = intra_residual.shape
+                if len(sh) == 1:  # a vector
+                    intra_residual = intra_residual.reshape(sh + (1,))
 
             epsilons = rvs(distribution, num_events)
             inter_residual = stddev_inter * epsilons
