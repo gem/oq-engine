@@ -206,14 +206,15 @@ def export_losses_by_asset(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    loss_dt = dstore['oqparam'].loss_dt(stat_dt)
     losses_by_asset = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
-        losses = losses_by_asset[:, rlz.ordinal, 0]
+        losses = losses_by_asset[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
-        data = compose_arrays(assets, losses)
+        data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
         writer.save(data, dest)
     return writer.getsaved()
 
