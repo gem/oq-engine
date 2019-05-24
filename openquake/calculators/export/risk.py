@@ -211,7 +211,7 @@ def export_losses_by_asset(ekey, dstore):
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
-        losses = losses_by_asset[:, rlz.ordinal]
+        losses = losses_by_asset[:, rlz.ordinal, 0]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
@@ -235,12 +235,16 @@ def export_losses_by_event(ekey, dstore):
     dest = dstore.build_fname('losses_by_event', '', 'csv')
     if oq.calculation_mode.startswith('scenario'):
         dtlist = [('eid', U64)] + oq.loss_dt_list()
+        num_loss_types = len(dtlist) - 1
         arr = dstore['losses_by_event'].value[['eid', 'loss']]
-        z = numpy.zeros(len(arr), dtlist)
-        z['eid'] = arr['eid']
-        for i, (name, _) in enumerate(dtlist[1:]):
-            z[name] = arr['loss'][:, i]
-        writer.save(z, dest)
+        if num_loss_types == 1:
+            writer.save(arr, dest)
+        else:
+            z = numpy.zeros(len(arr), dtlist)
+            z['eid'] = arr['eid']
+            for i, (name, _) in enumerate(dtlist[1:]):
+                z[name] = arr['loss'][:, i]
+            writer.save(z, dest)
     elif oq.calculation_mode == 'ebrisk':
         tagcol = dstore['assetcol/tagcol']
         lbe = dstore['losses_by_event'].value
@@ -252,7 +256,7 @@ def export_losses_by_event(ekey, dstore):
         dic['loss_type'] = ('?',) + oq.loss_dt().names
         aw = hdf5.ArrayWrapper(lbe['loss'], dic)  # shape (E, L, T...)
         writer.save(aw.to_table(), dest)
-    else:
+    else:  # event_based_risk
         dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
                   ('year', U32)] + oq.loss_dt_list()
         eids = dstore['losses_by_event']['eid']
