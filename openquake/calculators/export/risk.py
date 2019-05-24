@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import itertools
 import collections
-import logging
 import numpy
 
 from openquake.baselib import hdf5
@@ -235,9 +234,15 @@ def export_losses_by_event(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
     if oq.calculation_mode.startswith('scenario'):
-        dtlist = [('eid', U64)] + oq.loss_dt_list()
         arr = dstore['losses_by_event'].value[['eid', 'loss']]
-        writer.save(arr.copy().view(dtlist), dest)
+        dtlist = [('eid', U64)] + oq.loss_dt_list()
+        num_loss_types = len(dtlist) - 1
+        loss = arr['loss']
+        z = numpy.zeros(len(arr), dtlist)
+        z['eid'] = arr['eid']
+        for i, (name, _) in enumerate(dtlist[1:]):
+            z[name] = loss[:, i] if num_loss_types > 1 else loss
+        writer.save(z, dest)
     elif oq.calculation_mode == 'ebrisk':
         tagcol = dstore['assetcol/tagcol']
         lbe = dstore['losses_by_event'].value
