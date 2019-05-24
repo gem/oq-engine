@@ -378,18 +378,30 @@ class BaseContext(metaclass=abc.ABCMeta):
     """
     Base class for context object.
     """
-
     def __eq__(self, other):
         """
         Return True if ``other`` has same attributes with same values.
         """
         if isinstance(other, self.__class__):
             if self._slots_ == other._slots_:
-                self_other = [
-                    numpy.all(
-                        getattr(self, s, None) == getattr(other, s, None))
-                    for s in self._slots_]
-                return numpy.all(self_other)
+                oks = []
+                for s in self._slots_:
+                    a, b = getattr(self, s, None), getattr(other, s, None)
+                    if a is None and b is None:
+                        ok = True
+                    elif a is None and b is not None:
+                        ok = False
+                    elif a is not None and b is None:
+                        ok = False
+                    elif hasattr(a, 'shape') and hasattr(b, 'shape'):
+                        if a.shape == b.shape:
+                            ok = numpy.allclose(a, b)
+                        else:
+                            ok = False
+                    else:
+                        ok = a == b
+                    oks.append(ok)
+                return numpy.all(oks)
         return False
 
 
