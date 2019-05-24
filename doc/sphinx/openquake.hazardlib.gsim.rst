@@ -836,7 +836,7 @@ travasarou_2003
     :undoc-members:
     :show-inheritance:
 
-tromana_2019
+tromans_2019
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.tromans_2019
