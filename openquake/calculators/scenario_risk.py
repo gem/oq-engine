@@ -109,7 +109,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.param['E'] = E
         # assuming the weights are the same for all IMTs
         try:
-            self.param['weights'] = self.datastore['weights'].value
+            self.param['weights'] = self.datastore['weights'][()]
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.param['event_slice'] = self.event_slice

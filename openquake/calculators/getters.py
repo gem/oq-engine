@@ -118,7 +118,7 @@ class PmapGetter(object):
                 ds = dset['array']
                 L, G = ds.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, G)
-                for idx, sid in enumerate(dset['sids'].value):
+                for idx, sid in enumerate(dset['sids'][()]):
                     if sid in ok_sids:
                         pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
                 self._pmap_by_grp[grp] = pmap
@@ -183,7 +183,7 @@ class PmapGetter(object):
         if not kind or kind == 'all':  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
-                    yield k, self.dstore['hcurves/' + k].value
+                    yield k, self.dstore['hcurves/' + k][()]
             elif num_rlzs == 1:
                 yield 'mean', self.get(0)
             return
@@ -196,7 +196,7 @@ class PmapGetter(object):
         if 'hcurves' in self.dstore and kind == 'stats':
             for k in sorted(self.dstore['hcurves']):
                 if not k.startswith('rlz'):
-                    yield k, self.dstore['hcurves/' + k].value
+                    yield k, self.dstore['hcurves/' + k][()]
 
     def get_mean(self, grp=None):
         """
@@ -238,7 +238,7 @@ class GmfDataGetter(collections.abc.Mapping):
             return
         self.dstore.open('r')  # if not already open
         try:
-            self.imts = self.dstore['gmf_data/imts'].value.split()
+            self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
         self.data = {}
@@ -322,7 +322,7 @@ class GmfGetter(object):
         if hasattr(self, 'computers'):  # init already called
             return
         with hdf5.File(self.rupgetter.filename, 'r') as parent:
-            self.weights = parent['weights'].value
+            self.weights = parent['weights'][()]
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             sitecol = self.sitecol.filtered(ebr.sids)

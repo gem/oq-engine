@@ -203,7 +203,7 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
     """
     if arrayNR is None:
         # assume the -rlzs array is already stored
-        arrayNR = dstore[prefix + '-rlzs'].value
+        arrayNR = dstore[prefix + '-rlzs'][()]
     else:
         # store passed the -rlzs array
         dstore[prefix + '-rlzs'] = arrayNR
@@ -213,6 +213,6 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
         if not stats:
             return
         statnames, statfuncs = zip(*stats.items())
-        weights = dstore['weights'].value
+        weights = dstore['weights'][()]
         dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
         dstore.set_attrs(prefix + '-stats', stats=encode(statnames))
