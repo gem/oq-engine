@@ -67,7 +67,6 @@ def build_catalogue_from_file(filename):
     Creates a "minimal" catalogue from a raw csv file
     """
     raw_data = np.genfromtxt(filename, delimiter=",")
-    neq = raw_data.shape[0]
     return Catalogue.make_from_dict({"eventID": raw_data[:, 0].astype(int),
                                      "year": raw_data[:, 1].astype(int),
                                      "dtime": raw_data[:, 2],
