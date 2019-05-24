@@ -34,7 +34,7 @@ REQUIRES_DISTANCES
 '''.split()
 
 
-class MultiGMPE(GMPE, collections.Mapping):
+class MultiGMPE(GMPE, collections.abc.Mapping):
     """
     The MultiGMPE can call ground motions for various IMTs when instantiated
     with a dictionary of ground motion models organised by IMT or a string

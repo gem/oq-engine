@@ -241,7 +241,7 @@ class ByteCounter(object):
             self.nbytes += nbytes
 
 
-class Group(collections.Mapping):
+class Group(collections.abc.Mapping):
     """
     A mock for a h5py group object
     """
