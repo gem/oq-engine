@@ -183,7 +183,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     Returns the slowest sources
     """
-    info = dstore['source_info'].value
+    info = dstore['source_info'][()]
     info.sort(order='calc_time')
     return rst_table(info[::-1][:maxrows])
 
@@ -368,7 +368,7 @@ def view_totlosses(token, dstore):
 # for event based risk and ebrisk
 def portfolio_loss(dstore):
     R = dstore['csm_info'].get_num_rlzs()
-    array = dstore['losses_by_event'].value
+    array = dstore['losses_by_event'][()]
     L = array.dtype['loss'].shape[0]  # loss has shape L, T...
     data = numpy.zeros((R, L), F32)
     for row in array:
@@ -447,7 +447,7 @@ def view_exposure_info(token, dstore):
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
     num_events = len(dstore['events'])
-    events_by_rlz = countby(dstore['events'].value, 'rlz')
+    events_by_rlz = countby(dstore['events'][()], 'rlz')
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),
@@ -510,7 +510,7 @@ def view_num_units(token, dstore):
     """
     Display the number of units by taxonomy
     """
-    taxo = dstore['assetcol/tagcol/taxonomy'].value
+    taxo = dstore['assetcol/tagcol/taxonomy'][()]
     counts = collections.Counter()
     for asset in dstore['assetcol']:
         counts[taxo[asset['taxonomy']]] += asset['number']
@@ -524,7 +524,7 @@ def view_assets_by_site(token, dstore):
     """
     Display statistical information about the distribution of the assets
     """
-    taxonomies = dstore['assetcol/tagcol/taxonomy'].value
+    taxonomies = dstore['assetcol/tagcol/taxonomy'][()]
     assets_by_site = dstore['assetcol'].assets_by_site()
     data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
     num_assets = AccumDict()
@@ -572,7 +572,7 @@ def view_task_info(token, dstore):
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
         [task] = args
-        array = dstore['task_info/' + task].value
+        array = dstore['task_info/' + task][()]
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
@@ -612,13 +612,13 @@ def view_task_hazard(token, dstore):
     if 'source_data' not in dstore:
         return 'Missing source_data'
     if 'classical_split_filter' in tasks:
-        data = dstore['task_info/classical_split_filter'].value
+        data = dstore['task_info/classical_split_filter'][()]
     else:
-        data = dstore['task_info/compute_gmfs'].value
+        data = dstore['task_info/compute_gmfs'][()]
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
-    arr = get_array(dstore['source_data'].value, taskno=taskno)
+    arr = get_array(dstore['source_data'][()], taskno=taskno)
     st = [stats('nsites', arr['nsites']), stats('weight', arr['weight'])]
     sources = dstore['task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
@@ -636,7 +636,7 @@ def view_task_risk(token, dstore):
      $ oq show task_risk:-1  # the slowest task
     """
     [key] = dstore['task_info']
-    data = dstore['task_info/' + key].value
+    data = dstore['task_info/' + key][()]
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
@@ -691,7 +691,7 @@ def view_dupl_sources_time(token, dstore):
     Display the time spent computing duplicated sources
     """
     info = dstore['source_info']
-    items = sorted(group_array(info.value, 'source_id').items())
+    items = sorted(group_array(info[()], 'source_id').items())
     tbl = []
     tot_time = 0
     for source_id, records in items:
@@ -737,7 +737,7 @@ def view_global_hmaps(token, dstore):
     oq = dstore['oqparam']
     dt = numpy.dtype([('%s-%s' % (imt, poe), F32)
                       for imt in oq.imtls for poe in oq.poes])
-    array = dstore['hmaps/mean'].value.view(dt)[:, 0]
+    array = dstore['hmaps/mean'][()].view(dt)[:, 0]
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
         res[name] = array[name].mean()
@@ -762,7 +762,7 @@ def view_mean_disagg(token, dstore):
     """
     tbl = []
     for key, dset in sorted(dstore['disagg'].items()):
-        vals = [ds.value.mean() for k, ds in sorted(dset.items())]
+        vals = [ds[()].mean() for k, ds in sorted(dset.items())]
         tbl.append([key] + vals)
     header = ['key'] + sorted(dset)
     return rst_table(sorted(tbl), header=header)
@@ -775,7 +775,7 @@ def view_elt(token, dstore):
     """
     oq = dstore['oqparam']
     R = len(dstore['csm_info'].rlzs)
-    dic = group_array(dstore['losses_by_event'].value, 'rlzi')
+    dic = group_array(dstore['losses_by_event'][()], 'rlzi')
     header = oq.loss_dt().names
     tbl = []
     for rlzi in range(R):
@@ -804,10 +804,10 @@ def view_act_ruptures_by_src(token, dstore):
     """
     Display the actual number of ruptures by source in event based calculations
     """
-    data = dstore['ruptures'].value[['srcidx', 'serial']]
+    data = dstore['ruptures'][('srcidx', 'serial')]
     counts = sorted(countby(data, 'srcidx').items(),
                     key=operator.itemgetter(1), reverse=True)
-    src_info = dstore['source_info'].value[['grp_id', 'source_id']]
+    src_info = dstore['source_info'][('grp_id', 'source_id')]
     table = [['src_id', 'grp_id', 'act_ruptures']]
     for srcidx, act_ruptures in counts:
         src = src_info[srcidx]
@@ -838,8 +838,8 @@ def view_dupl_sources(token, dstore):
     """
     Show the sources with the same ID and the truly duplicated sources
     """
-    fields = ['source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures']
-    dic = group_array(dstore['source_info'].value[fields], 'source_id')
+    fields = ('source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures')
+    dic = group_array(dstore['source_info'][fields], 'source_id')
     sameid = []
     dupl = []
     for source_id, group in dic.items():
@@ -868,7 +868,7 @@ def view_extreme_groups(token, dstore):
     """
     Show the source groups contributing the most to the highest IML
     """
-    data = dstore['disagg_by_grp'].value
+    data = dstore['disagg_by_grp'][()]
     data.sort(order='extreme_poe')
     return rst_table(data[::-1])
 
@@ -889,7 +889,7 @@ def view_gmvs_to_hazard(token, dstore):
     assert rlz < dstore['csm_info'].get_num_rlzs()
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
-    data = dstore['gmf_data/data'].value
+    data = dstore['gmf_data/data'][()]
     data = data[(data['sid'] == sid) & (data['rlzi'] == rlz)]
     tbl = []
     gmv = data['gmv']
