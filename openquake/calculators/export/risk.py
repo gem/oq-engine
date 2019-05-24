@@ -237,15 +237,12 @@ def export_losses_by_event(ekey, dstore):
         arr = dstore['losses_by_event'].value[['eid', 'loss']]
         dtlist = [('eid', U64)] + oq.loss_dt_list()
         num_loss_types = len(dtlist) - 1
-        if num_loss_types == 1:
-            writer.save(arr, dest)
-        else:
-            loss = arr['loss']
-            z = numpy.zeros(len(arr), dtlist)
-            z['eid'] = arr['eid']
-            for i, (name, _) in enumerate(dtlist[1:]):
-                z[name] = loss[:, i]
-            writer.save(z, dest)
+        loss = arr['loss']
+        z = numpy.zeros(len(arr), dtlist)
+        z['eid'] = arr['eid']
+        for i, (name, _) in enumerate(dtlist[1:]):
+            z[name] = loss[:, i] if num_loss_types > 1 else loss
+        writer.save(z, dest)
     elif oq.calculation_mode == 'ebrisk':
         tagcol = dstore['assetcol/tagcol']
         lbe = dstore['losses_by_event'].value
