@@ -202,7 +202,6 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
         pga = PGA()
 
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
-        
         corma = cormo._get_correlation_matrix(self.SITECOL, sa)
         corma2 = cormo._get_correlation_matrix(self.SITECOL, pga)
         self.assertTrue((corma == corma2).all())
