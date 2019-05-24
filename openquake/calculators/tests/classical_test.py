@@ -448,7 +448,7 @@ hazard_uhs-std.csv
                                          ('grp-02', 1385)])
 
             # check best_rlz on 5 sites
-            best_rlz = self.calc.datastore['best_rlz'].value
+            best_rlz = self.calc.datastore['best_rlz'][()]
             numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
 
     def test_case_30_sampling(self):

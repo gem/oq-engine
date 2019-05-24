@@ -193,7 +193,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.store_source_info(calc_times)
         logging.info('Reordering the ruptures and storing the events')
         attrs = self.datastore.getitem('ruptures').attrs
-        sorted_ruptures = self.datastore.getitem('ruptures').value
+        sorted_ruptures = self.datastore.getitem('ruptures')[()]
         # order the ruptures by serial
         sorted_ruptures.sort(order='serial')
         ngroups = len(self.csm.info.trt_by_grp)
@@ -378,11 +378,12 @@ class EventBasedCalculator(base.HazardCalculator):
                     dset[sid, 0] = start
                     dset[sid, 1] = stop
                     num_evs[sid] = (stop - start).sum()
-                avg_events_by_sid = num_evs.value.sum() / N
+                num_evs = num_evs[()]
+                avg_events_by_sid = num_evs.sum() / N
                 logging.info('Found ~%d GMVs per site', avg_events_by_sid)
                 self.datastore.set_attrs(
                     'gmf_data', avg_events_by_sid=avg_events_by_sid,
-                    max_events_by_sid=num_evs.value.max())
+                    max_events_by_sid=num_evs.max())
         elif oq.ground_motion_fields:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
