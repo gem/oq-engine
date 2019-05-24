@@ -571,7 +571,14 @@ def _expand_gmv(array, imts):
                 dtlist.append(('gmv_' + imt, F32))
         else:
             dtlist.append((name, dt))
-    return array.view(dtlist)
+    new = numpy.zeros(len(array), dtlist)
+    for name in dtype.names:
+        if name == 'gmv':
+            for i, imt in enumerate(imts):
+                new['gmv_' + imt] = array['gmv'][:, i]
+        else:
+            new[name] = array[name]
+    return new
 
 
 def _build_csv_data(array, rlz, sitecol, imts, investigation_time):

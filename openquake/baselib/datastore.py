@@ -130,7 +130,7 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-class DataStore(collections.MutableMapping):
+class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
     filesystem.
