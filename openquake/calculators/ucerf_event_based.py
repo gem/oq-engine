@@ -111,7 +111,7 @@ def sample_background_model(
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
-    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])].value
+    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])][()]
     # Select magnitudes above the minimum magnitudes
     mag_idx = bg_magnitudes >= min_mag
     mags = bg_magnitudes[mag_idx]

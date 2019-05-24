@@ -365,7 +365,7 @@ class TagCollection(object):
     def __fromh5__(self, dic, attrs):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
         for tagname in dic:
-            setattr(self, tagname, dic[tagname].value)
+            setattr(self, tagname, dic[tagname][()])
 
     def __iter__(self):
         tags = []
@@ -550,7 +550,7 @@ class AssetCollection(object):
         self.tot_sites = attrs['tot_sites']
         self.fields = attrs['fields'].split()
         self.nbytes = attrs['nbytes']
-        self.array = dic['array'].value
+        self.array = dic['array'][()]
         self.tagcol = dic['tagcol']
 
     def __repr__(self):

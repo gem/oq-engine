@@ -1442,13 +1442,13 @@ class GsimLogicTree(object):
                 filename = os.path.join(dirname, gmpe_table)
                 with hdf5.File(filename, 'r') as f:
                     for group, dset in f.items():
-                        if hasattr(dset, 'value'):  # dataset, not group
-                            d[group] = dset.value
+                        if hasattr(dset, 'shape'):  # dataset, not group
+                            d[group] = dset[()]
                             if group == 'Distances':
                                 d['distance_type'] = (
                                     python3compat.decode(dset.attrs['metric']))
                         else:
-                            d[group] = {k: ds.value for k, ds in dset.items()}
+                            d[group] = {k: ds[()] for k, ds in dset.items()}
         return dic, {}
 
     def __fromh5__(self, dic, attrs):
