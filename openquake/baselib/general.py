@@ -735,7 +735,7 @@ def _slicedict_n(imt_dt):
     return slicedic, n
 
 
-class DictArray(collections.Mapping):
+class DictArray(collections.abc.Mapping):
     """
     A small wrapper over a dictionary of arrays serializable to HDF5:
 
