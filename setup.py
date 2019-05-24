@@ -59,7 +59,7 @@ install_requires = [
     'mock >=1.0, <2.1',
     'h5py >=2.8, <2.9',
     'numpy >=1.14, <1.17',
-    'scipy >=1.0.1, <1.2',
+    'scipy >=1.0.1, <1.4',
     'pyzmq <18.0',
     'psutil >=2.0, <5.5',
     'shapely >=1.3, <1.7',
