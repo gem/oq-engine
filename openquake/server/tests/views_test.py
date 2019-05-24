@@ -40,6 +40,11 @@ from openquake.server.dbserver import db, get_status
 from openquake.commands import engine
 
 
+def loadnpz(lines):
+    bio = io.BytesIO(b''.join(ln for ln in lines))
+    return numpy.load(bio, allow_pickle=True)
+
+
 class EngineServerTestCase(unittest.TestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -148,37 +153,32 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check asset_tags
         resp = self.c.get(extract_url + 'asset_tags')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['taxonomy']), 7)
 
         # check exposure_metadata
         resp = self.c.get(extract_url + 'exposure_metadata')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(sorted(got['tagnames']), ['id', 'taxonomy'])
         self.assertEqual(sorted(got['array']), ['number', 'value-structural'])
 
         # check assets
         resp = self.c.get(
             extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 25)
 
         # check avg_losses-rlzs
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
         self.assertEqual(resp.status_code, 200)
 
         # check *-aggregation
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=*')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['tags']), 6)  # expected 6 taxonomies
         self.assertEqual(len(got['array']), 6)  # expected 6 aggregates
         self.assertEqual(resp.status_code, 200)
@@ -193,8 +193,7 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check MFD distribution
         extract_url = '/v1/calc/%s/extract/event_based_mfd' % job_id
-        data = b''.join(ln for ln in self.c.get(extract_url))
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(self.c.get(extract_url))
         self.assertGreater(len(got['array']['mag']), 1)
         self.assertGreater(len(got['array']['freq']), 1)
 
