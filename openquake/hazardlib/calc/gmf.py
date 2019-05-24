@@ -207,13 +207,11 @@ class GmfComputer(object):
                 distribution, num_sids, num_events)
 
             if self.correlation_model is not None:
-                ir = self.correlation_model.apply_correlation(
+                intra_residual = self.correlation_model.apply_correlation(
                     self.sites, imt, intra_residual, stddev_intra)
-                # this fixes a mysterious bug: ir[row] is actually
-                # a matrix of shape (E, 1) and not a vector of size E
-                intra_residual = numpy.zeros(ir.shape)
-                for i, val in numpy.ndenumerate(ir):
-                    intra_residual[i] = val
+                sh = intra_residual.shape
+                if len(sh) == 1:  # a vector
+                    intra_residual = intra_residual.reshape(sh + (1,))
 
             epsilons = rvs(distribution, num_events)
             inter_residual = stddev_inter * epsilons

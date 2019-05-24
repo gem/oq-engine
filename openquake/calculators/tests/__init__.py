@@ -150,7 +150,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,
-            delta=None, lastline=None):
+            delta=1E-6, lastline=None):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -177,6 +177,7 @@ class CalculatorTestCase(unittest.TestCase):
                 actual_lines.append(line)
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
+            self.assertEqual(expected_lines[0], actual_lines[0])  # header
             for exp, got in zip(make_comparable(expected_lines),
                                 make_comparable(actual_lines)):
                 if delta:

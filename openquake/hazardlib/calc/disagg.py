@@ -21,17 +21,15 @@
 :func:`disaggregation` as well as several aggregation functions for
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
-import sys
 import warnings
 import operator
 import numpy
 import scipy.stats
 
 from openquake.hazardlib import pmf
-from openquake.baselib.python3compat import raise_
 from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import AccumDict, pack, groupby
+from openquake.baselib.general import pack, groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -83,7 +81,8 @@ def collect_bin_data(ruptures, sitecol, cmaker, iml4,
     """
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
+    epsilons = numpy.linspace(
+        -truncation_level, truncation_level, n_epsilons + 1)
     acc = cmaker.disaggregate(
         sitecol, ruptures, iml4, truncnorm, epsilons, monitor)
     return pack(acc, 'mags dists lons lats'.split())
