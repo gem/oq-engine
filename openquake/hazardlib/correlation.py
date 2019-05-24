@@ -197,8 +197,8 @@ class HM2018CorrelationModel(BaseCorrelationModel):
                 # corresponding to sites.complete, here we compute only the
                 # correlation matrix corresponding to sites.
                 cormaLow = numpy.linalg.cholesky(
-                       numpy.diag(stddev_intra[sites.sids]) *
-                       self._get_correlation_matrix(sites, imt) *
+                       numpy.diag(stddev_intra[sites.sids]) @
+                       self._get_correlation_matrix(sites, imt) @
                        numpy.diag(stddev_intra[sites.sids]))
                 self.cache[imt] = cormaLow
 
