@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import itertools
 import collections
+import logging
 import numpy
 
 from openquake.baselib import hdf5
@@ -28,7 +29,6 @@ from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
-from openquake.calculators.views import newarray
 from openquake.calculators import getters
 from openquake.commonlib import writers, hazard_writers
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -214,7 +214,7 @@ def export_losses_by_asset(ekey, dstore):
     for rlz in rlzs:
         losses = losses_by_asset[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
-        data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
+        data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
         writer.save(data, dest)
     return writer.getsaved()
 
@@ -236,16 +236,8 @@ def export_losses_by_event(ekey, dstore):
     dest = dstore.build_fname('losses_by_event', '', 'csv')
     if oq.calculation_mode.startswith('scenario'):
         dtlist = [('eid', U64)] + oq.loss_dt_list()
-        num_loss_types = len(dtlist) - 1
         arr = dstore['losses_by_event'].value[['eid', 'loss']]
-        if num_loss_types == 1:
-            writer.save(arr, dest)
-        else:
-            z = numpy.zeros(len(arr), dtlist)
-            z['eid'] = arr['eid']
-            for i, (name, _) in enumerate(dtlist[1:]):
-                z[name] = arr['loss'][:, i]
-            writer.save(z, dest)
+        writer.save(arr.copy().view(dtlist), dest)
     elif oq.calculation_mode == 'ebrisk':
         tagcol = dstore['assetcol/tagcol']
         lbe = dstore['losses_by_event'].value
@@ -257,7 +249,7 @@ def export_losses_by_event(ekey, dstore):
         dic['loss_type'] = ('?',) + oq.loss_dt().names
         aw = hdf5.ArrayWrapper(lbe['loss'], dic)  # shape (E, L, T...)
         writer.save(aw.to_table(), dest)
-    else:  # event_based_risk
+    else:
         dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
                   ('year', U32)] + oq.loss_dt_list()
         eids = dstore['losses_by_event']['eid']
@@ -293,7 +285,7 @@ def _compact(array):
     lst = []
     for name in dt.names:
         lst.append((name, (dt[name], e)))
-    return newarray(array, lst)
+    return array.view(numpy.dtype(lst)).reshape(a)
 
 
 @export.add(('rup_loss_table', 'xml'))
