@@ -47,7 +47,7 @@ def build_loss_tables(dstore):
     idx_by_ser = dict(zip(serials, range(len(serials))))
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
-    for rec in dstore['losses_by_event'].value:  # call .value for speed
+    for rec in dstore['losses_by_event'][()]:  # call .value for speed
         idx = idx_by_ser[rec['eid'] // TWO32]
         tbl[idx] += rec['loss']
         lbr[rec['rlzi']] += rec['loss']
@@ -162,9 +162,9 @@ class EbrCalculator(base.RiskCalculator):
         self.A = len(self.assetcol)
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.events = parent['events'].value[['id', 'rlz']]
+            self.events = parent['events'][('id', 'rlz')]
         else:
-            self.events = self.datastore['events'].value[['id', 'rlz']]
+            self.events = self.datastore['events'][('id', 'rlz')]
         if oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -314,7 +314,7 @@ class EbrCalculator(base.RiskCalculator):
                 dstore.set_attrs('rup_loss_table', ridx=ridx)
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
-            lbr = group_array(dstore['losses_by_event'].value, 'rlzi')
+            lbr = group_array(dstore['losses_by_event'][()], 'rlzi')
             dic = {r: arr['loss'] for r, arr in lbr.items()}
             array, arr_stats = b.build(dic, stats)
         loss_types = ' '.join(oq.loss_dt().names)
