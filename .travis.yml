@@ -75,7 +75,7 @@ install:
     fi
   - pip -q install -e .
   # FIXME remove me!
-  - pip -q install -U numpy
+  - pip -q install -U numpy scipy
 
 before_script:
   - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
