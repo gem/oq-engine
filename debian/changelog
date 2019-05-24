@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Adds the Tromans et al. (2019) adjustable GMPE for application to PSHA
+    in the UK
+
   [Michele Simionato]
   * Optimized src.sample_ruptures for (multi)point sources and are sources
   * Fixed a mutability bug in the DistancesContext and made all context
