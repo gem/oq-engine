@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib.general import group_array, deprecated
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, filters
-from openquake.calculators.views import view, newarray
+from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import GmfGetter, gen_rupture_getters
