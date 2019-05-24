@@ -207,9 +207,8 @@ class GmfComputer(object):
                 distribution, num_sids, num_events)
 
             if self.correlation_model is not None:
-                ir = self.correlation_model.apply_correlation(
+                intra_residual = self.correlation_model.apply_correlation(
                     self.sites, imt, intra_residual, stddev_intra)
-                intra_residual = ir.reshape(ir.shape + (1,))
 
             epsilons = rvs(distribution, num_events)
             inter_residual = stddev_inter * epsilons
