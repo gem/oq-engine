@@ -307,11 +307,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
         acc = list(parallel.Starmap(compute_loss_curves_maps, allargs, mon))
         # copy performance information from the cache to the datastore
-        pd = mon.hdf5['performance_data'].value
+        pd = mon.hdf5['performance_data'][()]
         hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
         self.datastore['task_info/compute_loss_curves_and_maps'] = (
-            mon.hdf5['task_info/compute_loss_curves_maps'].value)
+            mon.hdf5['task_info/compute_loss_curves_maps'][()])
         self.datastore.open('r+')
         with self.monitor('saving loss_curves and maps', autoflush=True):
             for r, (curves, maps) in acc:
@@ -331,7 +331,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
         # sanity check with the asset_loss_table
         if oq.asset_loss_table and len(oq.aggregate_by) == 1:
-            alt = self.datastore['asset_loss_table'].value
+            alt = self.datastore['asset_loss_table'][()]
             if alt.sum() == 0:  # nothing was saved
                 return
             logging.info('Checking the loss curves')
@@ -352,7 +352,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             builder.num_events[r],
                             builder.eff_time)
             numpy.testing.assert_allclose(
-                curves, self.datastore['agg_curves-rlzs'].value)
+                curves, self.datastore['agg_curves-rlzs'][()])
 
 
 # 1) parallelizing by events does not work, we need all the events

@@ -527,7 +527,7 @@ def export_gmf_data_csv(ekey, dstore):
     else:
         arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-    gmfa = dstore['gmf_data/data'].value[['eid', 'sid', 'gmv']].copy()
+    gmfa = dstore['gmf_data/data'][('eid', 'sid', 'gmv')]
     event_id = dstore['events']['id']
     gmfa['eid'] = event_id[gmfa['eid']]
     if eid is None:  # we cannot use extract here
@@ -540,7 +540,7 @@ def export_gmf_data_csv(ekey, dstore):
         writers.write_csv(fname, _expand_gmv(gmfa, imts))
         if 'sigma_epsilon' in dstore['gmf_data']:
             sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
-            sig_eps = dstore['gmf_data/sigma_epsilon'].value
+            sig_eps = dstore['gmf_data/sigma_epsilon'][()]
             sig_eps['eid'] = event_id[sig_eps['eid']]
             sig_eps.sort(order='eid')
             writers.write_csv(sig_eps_csv, sig_eps)
@@ -766,7 +766,7 @@ def export_disagg_csv(ekey, dstore):
         for poe, label in zip(poes, disagg_outputs):
             tup = tuple(label.split('_'))
             fname = dstore.export_path(key + '_%s.csv' % label)
-            data[tup] = poe, iml, matrix[label].value, fname
+            data[tup] = poe, iml, matrix[label][()], fname
             fnames.append(fname)
         save_disagg_to_csv(metadata, data)
     return fnames
@@ -775,11 +775,11 @@ def export_disagg_csv(ekey, dstore):
 @export.add(('disagg_by_src', 'csv'))
 def export_disagg_by_src_csv(ekey, dstore):
     paths = []
-    srcdata = dstore['disagg_by_grp'].value
+    srcdata = dstore['disagg_by_grp'][()]
     header = ['source_id', 'poe']
     by_poe = operator.itemgetter(1)
     for name in dstore['disagg_by_src']:
-        probs = dstore['disagg_by_src/' + name].value
+        probs = dstore['disagg_by_src/' + name][()]
         ok = probs > 0
         src = srcdata[ok]
         data = [header] + sorted(zip(add_quotes(src['grp_name']), probs[ok]),

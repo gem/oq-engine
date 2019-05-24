@@ -35,7 +35,7 @@ def export_csv(ekey, dstore):
     """
     name = ekey[0] + '.csv'
     try:
-        array = dstore[ekey[0]].value
+        array = dstore[ekey[0]][()]
     except AttributeError:
         # this happens if the key correspond to a HDF5 group
         return []  # write a custom exporter in this case
@@ -71,7 +71,7 @@ def export_input_zip(ekey, dstore):
     """
     dest = dstore.export_path('input.zip')
     nbytes = dstore.get_attr('input/zip', 'nbytes')
-    zbytes = dstore['input/zip'].value
+    zbytes = dstore['input/zip'][()]
     # when reading input_zip some terminating null bytes are truncated (for
     # unknown reasons) therefore they must be restored
     zbytes += b'\x00' * (nbytes - len(zbytes))

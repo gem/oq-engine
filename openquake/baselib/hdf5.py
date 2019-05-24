@@ -271,9 +271,9 @@ class File(h5py.File):
     >>> f = File('/tmp/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
     >>> dic = f['dic']
-    >>> dic['a']['x'].value
+    >>> dic['a']['x'][()]
     1
-    >>> dic['b'].value
+    >>> dic['b'][()]
     3
     >>> f.close()
     """
@@ -359,8 +359,8 @@ class File(h5py.File):
             if hasattr(h5obj, 'items'):  # is group
                 h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
                          for k, v in h5obj.items()}
-            elif hasattr(h5obj, 'value'):
-                h5obj = h5obj.value
+            elif hasattr(h5obj, 'shape'):
+                h5obj = h5obj[()]
             if hasattr(obj, '__fromh5__'):
                 obj.__fromh5__(h5obj, h5attrs)
             else:  # Group object
