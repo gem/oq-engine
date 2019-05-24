@@ -58,8 +58,8 @@ install_requires = [
     'setuptools',
     'mock >=1.0, <2.1',
     'h5py >=2.8, <2.9',
-    'numpy >=1.14, <1.15',
-    'scipy >=1.0.1, <1.2',
+    'numpy >=1.14, <1.17',
+    'scipy >=1.0.1, <1.4',
     'pyzmq <18.0',
     'psutil >=2.0, <5.5',
     'shapely >=1.3, <1.7',
@@ -84,8 +84,8 @@ extras_require = {
         'pyproj >=1.9',
     ],
     'dev':  [
-        'nose >=1.3, <1.4',
-        'flake8 >=3.5, <3.6',
+        'pytest >=4.5',
+        'flake8 >=3.5, <3.8',
         'pdbpp',
         'ipython',
     ]
