@@ -159,5 +159,5 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
             rupture, sites, [PGV()], ChiouYoungs2014NearFaultEffect(),
             truncation_level=0, realizations=1)
         gmf = fields[PGV()]
-        self.assertAlmostEquals(2.27395, gmf[0], delta=1e-4)
-        self.assertAlmostEquals(3.38409, gmf[1], delta=1e-4)
+        self.assertAlmostEqual(2.27395, gmf[0], delta=1e-4)
+        self.assertAlmostEqual(3.38409, gmf[1], delta=1e-4)
