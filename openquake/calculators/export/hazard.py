@@ -595,57 +595,6 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
     return rows, comment
 
 
-@export.add(('gmf_scenario', 'csv'))
-def export_gmf_scenario_csv(ekey, dstore):
-    what = ekey[0].split('/')
-    if len(what) == 1:
-        raise ValueError(r'Missing "/rup-\d+"')
-    oq = dstore['oqparam']
-    csm_info = dstore['csm_info']
-    rlzs_assoc = csm_info.get_rlzs_assoc()
-    num_ruptures = len(dstore['ruptures'])
-    imts = list(oq.imtls)
-    mo = re.match(r'rup-(\d+)$', what[1])
-    if mo is None:
-        raise ValueError(
-            r"Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
-    ridx = int(mo.group(1))
-    assert 0 <= ridx < num_ruptures, ridx
-    # for scenario there is an unique grp_id=0
-    [rgetter] = gen_rupture_getters(dstore, slice(ridx, ridx + 1))
-    [ebr] = rgetter.get_ruptures()
-    sitecol = dstore['sitecol'].complete
-    srcfilter = filters.SourceFilter(sitecol, oq.maximum_distance)
-    getter = GmfGetter(rgetter, srcfilter, oq)
-    getter.init()
-    eids = rgetter.get_eid_rlz()['eid']
-    sids = getter.computers[0].sids
-    rlzs = rlzs_assoc.realizations
-    hazardr = [collections.defaultdict(list) for rlz in rlzs]
-    for sid, haz in getter.get_hazard().items():
-        for rec in haz:
-            hazardr[rec['rlzi']][sid].append(rec)
-    fields = ['eid-%03d' % eid for eid in eids]
-    dt = numpy.dtype([(f, F32) for f in fields])
-    mesh = numpy.zeros(len(sids), [('lon', F64), ('lat', F64)])
-    mesh['lon'] = sitecol.lons[sids]
-    mesh['lat'] = sitecol.lats[sids]
-    writer = writers.CsvWriter(fmt='%.5f')
-    for rlzi in range(len(rlzs)):
-        hazard = hazardr[rlzi]
-        for imti, imt in enumerate(imts):
-            gmfs = numpy.zeros(len(sids), dt)
-            for s, sid in enumerate(sids):
-                for rec in hazard[sid]:
-                    event = 'eid-%03d' % rec['eid']
-                    gmfs[s][event] = rec['gmv'][imti]
-            dest = dstore.build_fname(
-                'gmf', 'rup-%s-rlz-%s-%s' % (ebr.serial, rlzi, imt), 'csv')
-            data = util.compose_arrays(mesh, gmfs)
-            writer.save(data, dest)
-    return writer.getsaved()
-
-
 @export.add(('gmf_data', 'npz'))
 def export_gmf_scenario_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
