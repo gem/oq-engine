@@ -241,6 +241,7 @@ class GmfDataGetter(collections.abc.Mapping):
             self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
+        self.rlzs = self.dstore['events']['rlz']
         self.data = {}
         for sid in self.sids:
             self.data[sid] = data = self[sid]
@@ -249,7 +250,7 @@ class GmfDataGetter(collections.abc.Mapping):
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.E = len(self.dstore['events'])
+        self.E = len(self.rlzs)
 
     def get_hazard(self, gsim=None):
         """
@@ -268,7 +269,7 @@ class GmfDataGetter(collections.abc.Mapping):
         data = [dset[start:stop] for start, stop in idxs]
         if len(data) == 0:  # site ID with no data
             return {}
-        return general.group_array(numpy.concatenate(data), 'rlzi')
+        return group_by_rlz(numpy.concatenate(data), self.rlzs)
 
     def __iter__(self):
         return iter(self.sids)
@@ -342,7 +343,9 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and
         yields arrays of the dtype (sid, eid, imti, gmv), one for rupture
         """
+        hc = self.oqparam.hazard_curves_from_gmfs
         self.sig_eps = []
+        self.rlz_by_sid = collections.defaultdict(list)
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
@@ -377,6 +380,8 @@ class GmfGetter(object):
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 data.append((rlzi, sid, eid, gmv))
+                                if hc:
+                                    self.rlz_by_sid[sid].append(rlzi)
                     n += e
             yield numpy.array(data, self.gmv_dt)
 
@@ -412,7 +417,7 @@ class GmfGetter(object):
                 gmfdata = self.get_gmfdata()  # returned later
                 hazard = self.get_hazard(data=gmfdata)
             for sid, hazardr in hazard.items():
-                dic = general.group_array(hazardr, 'rlzi')
+                dic = group_by_rlz(hazardr, self.rlz_by_sid[sid])
                 for rlzi, array in dic.items():
                     with hc_mon:
                         gmvs = array['gmv']
@@ -440,6 +445,20 @@ class GmfGetter(object):
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
         return res
+
+
+def group_by_rlz(data, rlzs):
+    """
+    :param data: a composite array of D elements with a field `eid`
+    :param rlzs: an array of E >= D elements or a list of D elements
+    :returns: a dictionary rlzi -> data for each realization
+    """
+    if isinstance(rlzs, numpy.ndarray):
+        rlzs = rlzs[data['eid']]
+    acc = general.AccumDict(accum=[])
+    for rec, rlzi in zip(data, rlzs):
+        acc[rlzi].append(rec)
+    return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
 def gen_rupture_getters(dstore, slc=slice(None),
