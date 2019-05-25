@@ -105,10 +105,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
-    def sample_ruptures(self, eff_num_ses, ir_monitor):
+    def sample_ruptures(self, eff_num_ses):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
-        :param ir_monitor: a monitor object for .iter_ruptures()
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
         tom = getattr(self, 'temporal_occurrence_model', None)
