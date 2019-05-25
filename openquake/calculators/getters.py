@@ -343,7 +343,6 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and
         yields arrays of the dtype (sid, eid, imti, gmv), one for rupture
         """
-        hc = self.oqparam.hazard_curves_from_gmfs
         self.sig_eps = []
         self.rlz_by_sid = collections.defaultdict(list)
         for computer in self.computers:
@@ -379,9 +378,8 @@ class GmfGetter(object):
                         self.sig_eps.append(tup)
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
-                                data.append((rlzi, sid, eid, gmv))
-                                if hc:
-                                    self.rlz_by_sid[sid].append(rlzi)
+                                data.append((sid, eid, gmv))
+                                self.rlz_by_sid[sid].append(rlzi)
                     n += e
             yield numpy.array(data, self.gmv_dt)
 
