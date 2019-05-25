@@ -641,19 +641,21 @@ def _gmf_scenario(data, num_sites, imts):
         arr = gmfa[rec['sid']]
         for imt, gmv in zip(imts, rec['gmv']):
             arr[imt][eid2idx[rec['eid']]] = gmv
-    return gmfa, E
+    return gmfa
 
 
+# used by the QGIS plugin
 @extract.add('gmf_data')
 def extract_gmf_scenario_npz(dstore, what):
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
-    data_by_rlzi = group_array(dstore['gmf_data/data'][()], 'rlzi')
-    for rlzi in data_by_rlzi:
-        gmfa, e = _gmf_scenario(data_by_rlzi[rlzi], n, oq.imtls)
-        logging.info('Exporting array of shape %s for rlz %d',
-                     (n, e), rlzi)
+    data = dstore['gmf_data/data'][()]
+    rlz = dstore['events']['rlz']
+    for rlzi in sorted(set(rlz)):
+        idx = rlz[data['eid']] == rlzi
+        gmfa = _gmf_scenario(data[idx], n, oq.imtls)
+        logging.info('Exporting array%s for rlz#%d', gmfa.shape, rlzi)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
 
 
