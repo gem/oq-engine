@@ -73,10 +73,11 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
-        hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
+        hazard = getter.get_hazard()  # sid -> (sid, eid, gmv)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     events = rupgetter.get_eid_rlz()
+    rlz = dict(events)  # event_id -> rlz
     # numpy.testing.assert_equal(events['eid'], sorted(events['eid']))
     eid2idx = dict(zip(events['eid'], range(e1, e1 + E)))
     tagnames = param['aggregate_by']
@@ -102,7 +103,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             continue
         num_events_per_sid += len(haz)
         if param['avg_losses']:
-            weights = getter.weights[getter.rlz_by_sid[sid]]
+            weights = getter.weights[[rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
