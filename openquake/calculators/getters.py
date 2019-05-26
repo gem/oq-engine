@@ -343,12 +343,8 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and
         yields arrays of the dtype (sid, eid, imti, gmv), one for rupture
         """
-        oq = self.oqparam
         self.sig_eps = []
-        rlz_by_sid = (oq.hazard_curves_from_gmfs or
-                      oq.calculation_mode == 'ebrisk' and oq.avg_losses)
-        if rlz_by_sid:
-            self.rlz_by_sid = collections.defaultdict(list)
+        self.eid2rlz = {}
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
@@ -380,11 +376,10 @@ class GmfGetter(object):
                         tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         self.sig_eps.append(tup)
+                        self.eid2rlz[eid] = rlzi
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 data.append((sid, eid, gmv))
-                                if rlz_by_sid:
-                                    self.rlz_by_sid[sid].append(rlzi)
                     n += e
             yield numpy.array(data, self.gmv_dt)
 
@@ -420,7 +415,7 @@ class GmfGetter(object):
                 gmfdata = self.get_gmfdata()  # returned later
                 hazard = self.get_hazard(data=gmfdata)
             for sid, hazardr in hazard.items():
-                dic = group_by_rlz(hazardr, self.rlz_by_sid[sid])
+                dic = group_by_rlz(hazardr, self.eid2rlz)
                 for rlzi, array in dic.items():
                     with hc_mon:
                         gmvs = array['gmv']
@@ -450,17 +445,15 @@ class GmfGetter(object):
         return res
 
 
-def group_by_rlz(data, rlzs):
+def group_by_rlz(data, eid2rlz):
     """
     :param data: a composite array of D elements with a field `eid`
-    :param rlzs: an array of E >= D elements or a list of D elements
+    :param eid2rlz: an array of E >= D elements or a dictionary
     :returns: a dictionary rlzi -> data for each realization
     """
-    if isinstance(rlzs, numpy.ndarray):
-        rlzs = rlzs[data['eid']]
     acc = general.AccumDict(accum=[])
-    for rec, rlzi in zip(data, rlzs):
-        acc[rlzi].append(rec)
+    for rec in data:
+        acc[eid2rlz[rec['eid']]].append(rec)
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
