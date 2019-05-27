@@ -73,7 +73,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
-        hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
+        hazard = getter.get_hazard()  # sid -> (sid, eid, gmv)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     events = rupgetter.get_eid_rlz()
@@ -101,7 +101,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         if len(assets_on_sid) == 0:
             continue
         num_events_per_sid += len(haz)
-        weights = getter.weights[haz['rlzi']]
+        if param['avg_losses']:
+            weights = getter.weights[
+                [getter.eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
@@ -138,7 +140,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     if param['avg_losses']:
         res['losses_by_A'] = losses_by_A * param['ses_ratio']
     if param['asset_loss_table']:
-        res['alt_eids'] = alt, events['eid']
+        eidx = numpy.array([eid2idx[eid] for eid in events['eid']])
+        res['alt_eidx'] = alt, eidx
     return res
 
 
@@ -238,8 +241,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
-                alt, eids = dic['alt_eids']
-                eidx = numpy.array([self.eid2idx[eid] for eid in eids])
+                alt, eidx = dic['alt_eidx']
                 idx = numpy.argsort(eidx)
                 self.datastore['asset_loss_table'][:, eidx[idx]] = alt[:, idx]
         self.events_per_sid.append(dic['events_per_sid'])
