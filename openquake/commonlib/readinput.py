@@ -113,16 +113,18 @@ def normalize(key, fnames, base_path):
         elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
         if val.endswith('.zip'):
-            val = val[:-4] + '.xml'
-        val = os.path.normpath(os.path.join(base_path, val))
-        if (key in ('source_model_logic_tree_file', 'exposure_file') and
-                not os.path.exists(val)):
-            zpath = val[:-4] + '.zip'
-            if not os.path.exists(zpath):
-                raise OSError('No such file: %s or %s' % (val, zpath))
+            zpath = os.path.normpath(os.path.join(base_path, val))
             with zipfile.ZipFile(zpath) as archive:
                 logging.info('Unzipping %s', zpath)
                 archive.extractall(os.path.dirname(zpath))
+            if key == 'exposure_file':
+                val = 'exposure.xml'
+            elif key == 'source_model_logic_tree_file':
+                val = 'ssmLT.xml'
+            else:
+                raise KeyError('Unknown key %s' % key)
+        val = os.path.normpath(os.path.join(base_path, val))
+        assert os.path.exists(val), val
         filenames.append(val)
     return input_type, filenames
 
