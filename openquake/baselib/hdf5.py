@@ -682,7 +682,7 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
-def read_csv(fname, dtypedict={}, sep=','):
+def read_csv(fname, dtypedict={None: float}, sep=','):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
