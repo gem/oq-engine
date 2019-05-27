@@ -124,7 +124,9 @@ def normalize(key, fnames, base_path):
             else:
                 raise KeyError('Unknown key %s' % key)
         val = os.path.normpath(os.path.join(base_path, val))
-        assert os.path.exists(val), val
+        if not os.path.exists(val):
+            # tested in archive_err_2
+            raise OSError('No such file: %s' % val)
         filenames.append(val)
     return input_type, filenames
 
