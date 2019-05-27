@@ -647,7 +647,7 @@ def extract(dset, *d_slices):
 def parse_comment(comment):
     """
     Parse a comment of the form
-    # investigation_time=50.0, imt="PGA", ...
+    `investigation_time=50.0, imt="PGA", ...`
     and returns it as pairs of strings:
 
     >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
