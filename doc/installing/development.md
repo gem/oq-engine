@@ -114,12 +114,12 @@ It's strongly recommended to install Python dependencies using our Python wheels
 
 ```bash
 # For Linux
-pip install -r oq-engine/requirements-py36-linux64.txt
+pip install -r oq-engine/requirements-py36-linux64.txt -r oq-engine/requirements-extra-py36-linux64.txt
 ```
 
 ```bash
 # For macOS
-pip install -r oq-engine/requirements-py36-macos.txt
+pip install -r oq-engine/requirements-py36-macos.txt -r oq-engine/requirements-extra-py36-macos.txt
 ```
 
 The OpenQuake Engine source code must be installed via `pip` using the `--editable` flag. See `pip install --help` for further help.
@@ -220,6 +220,8 @@ pip install -e oq-engine/[dev,celery]
 pip install -e oq-engine/[dev,pam]
 # oq-engine with support for both
 pip install -e oq-engine/[dev,celery,pam]
+# oq-engine with GDAL
+pip install -e oq-engine/[platform]
 ```
 
 *<a name="note2">[2]</a>: unsupported systems:*
