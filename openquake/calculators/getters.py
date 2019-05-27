@@ -118,7 +118,7 @@ class PmapGetter(object):
                 ds = dset['array']
                 L, G = ds.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, G)
-                for idx, sid in enumerate(dset['sids'].value):
+                for idx, sid in enumerate(dset['sids'][()]):
                     if sid in ok_sids:
                         pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
                 self._pmap_by_grp[grp] = pmap
@@ -183,7 +183,7 @@ class PmapGetter(object):
         if not kind or kind == 'all':  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
-                    yield k, self.dstore['hcurves/' + k].value
+                    yield k, self.dstore['hcurves/' + k][()]
             elif num_rlzs == 1:
                 yield 'mean', self.get(0)
             return
@@ -196,7 +196,7 @@ class PmapGetter(object):
         if 'hcurves' in self.dstore and kind == 'stats':
             for k in sorted(self.dstore['hcurves']):
                 if not k.startswith('rlz'):
-                    yield k, self.dstore['hcurves/' + k].value
+                    yield k, self.dstore['hcurves/' + k][()]
 
     def get_mean(self, grp=None):
         """
@@ -238,9 +238,10 @@ class GmfDataGetter(collections.abc.Mapping):
             return
         self.dstore.open('r')  # if not already open
         try:
-            self.imts = self.dstore['gmf_data/imts'].value.split()
+            self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
+        self.rlzs = self.dstore['events']['rlz']
         self.data = {}
         for sid in self.sids:
             self.data[sid] = data = self[sid]
@@ -249,7 +250,7 @@ class GmfDataGetter(collections.abc.Mapping):
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.E = len(self.dstore['events'])
+        self.E = len(self.rlzs)
 
     def get_hazard(self, gsim=None):
         """
@@ -268,7 +269,7 @@ class GmfDataGetter(collections.abc.Mapping):
         data = [dset[start:stop] for start, stop in idxs]
         if len(data) == 0:  # site ID with no data
             return {}
-        return general.group_array(numpy.concatenate(data), 'rlzi')
+        return group_by_rlz(numpy.concatenate(data), self.rlzs)
 
     def __iter__(self):
         return iter(self.sids)
@@ -322,7 +323,7 @@ class GmfGetter(object):
         if hasattr(self, 'computers'):  # init already called
             return
         with hdf5.File(self.rupgetter.filename, 'r') as parent:
-            self.weights = parent['weights'].value
+            self.weights = parent['weights'][()]
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             sitecol = self.sitecol.filtered(ebr.sids)
@@ -343,6 +344,7 @@ class GmfGetter(object):
         yields arrays of the dtype (sid, eid, imti, gmv), one for rupture
         """
         self.sig_eps = []
+        self.eid2rlz = {}
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
@@ -374,9 +376,10 @@ class GmfGetter(object):
                         tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         self.sig_eps.append(tup)
+                        self.eid2rlz[eid] = rlzi
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
-                                data.append((rlzi, sid, eid, gmv))
+                                data.append((sid, eid, gmv))
                     n += e
             yield numpy.array(data, self.gmv_dt)
 
@@ -412,7 +415,7 @@ class GmfGetter(object):
                 gmfdata = self.get_gmfdata()  # returned later
                 hazard = self.get_hazard(data=gmfdata)
             for sid, hazardr in hazard.items():
-                dic = general.group_array(hazardr, 'rlzi')
+                dic = group_by_rlz(hazardr, self.eid2rlz)
                 for rlzi, array in dic.items():
                     with hc_mon:
                         gmvs = array['gmv']
@@ -429,7 +432,7 @@ class GmfGetter(object):
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []
-        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
+        gmfdata.sort(order=('sid', 'eid'))
         start = stop = 0
         for sid, rows in itertools.groupby(gmfdata['sid']):
             for row in rows:
@@ -440,6 +443,18 @@ class GmfGetter(object):
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt),
                    indices=numpy.array(indices, (U32, 3)))
         return res
+
+
+def group_by_rlz(data, eid2rlz):
+    """
+    :param data: a composite array of D elements with a field `eid`
+    :param eid2rlz: an array of E >= D elements or a dictionary
+    :returns: a dictionary rlzi -> data for each realization
+    """
+    acc = general.AccumDict(accum=[])
+    for rec in data:
+        acc[eid2rlz[rec['eid']]].append(rec)
+    return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
 def gen_rupture_getters(dstore, slc=slice(None),
