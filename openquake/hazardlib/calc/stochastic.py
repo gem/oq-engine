@@ -235,7 +235,6 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     # Compute and save stochastic event sets
     num_ses = param['ses_per_logic_tree_path']
     eff_ruptures = 0
-    ir_mon = monitor('iter_ruptures', measuremem=False)
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
     if (getattr(sources, 'atomic', False) and
@@ -263,7 +262,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
             n_occ = 0
-            for rup, n_occ in src.sample_ruptures(samples * num_ses, ir_mon):
+            for rup, n_occ in src.sample_ruptures(samples * num_ses):
                 ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
                 eb_ruptures.append(ebr)
                 n_occ += ebr.n_occ

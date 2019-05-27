@@ -143,7 +143,7 @@ def extract_(dstore, dspath):
     """
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
-        return ArrayWrapper(obj.value, obj.attrs)
+        return ArrayWrapper(obj[()], obj.attrs)
     elif isinstance(obj, Group):
         return ArrayWrapper(numpy.array(list(obj)), obj.attrs)
     else:
@@ -228,7 +228,7 @@ def extract_assets(dstore, what):
     dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
     dic.update(dic1)
     dic.update(dic2)
-    arr = dstore['assetcol/array'].value
+    arr = dstore['assetcol/array'][()]
     for tag, vals in qdict.items():
         cond = numpy.zeros(len(arr), bool)
         for val in vals:
@@ -249,7 +249,7 @@ def extract_asset_risk(dstore, what):
     dic1, dic2 = dstore['assetcol/tagcol'].__toh5__()
     dic.update(dic1)
     dic.update(dic2)
-    arr = dstore['asset_risk'].value
+    arr = dstore['asset_risk'][()]
     for tag, vals in qdict.items():
         cond = numpy.zeros(len(arr), bool)
         for val in vals:
@@ -488,7 +488,7 @@ def get_loss_type_tags(what):
 
 def _get_curves(curves, li):
     shp = curves.shape + curves.dtype.shape
-    return curves.value.view(F32).reshape(shp)[:, :, :, li]
+    return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
 # this is used by the QGIS plugin, but it should be removed
@@ -603,21 +603,21 @@ def extract_losses_by_asset(dstore, what):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
-        losses_by_asset = dstore['losses_by_asset'].value
+        losses_by_asset = dstore['losses_by_asset'][()]
         for rlz in rlzs:
             # I am exporting the 'mean' and ignoring the 'stddev'
             losses = cast(losses_by_asset[:, rlz.ordinal]['mean'], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
-        avg_losses = dstore['avg_losses-stats'].value
+        avg_losses = dstore['avg_losses-stats'][()]
         stats = dstore['avg_losses-stats'].attrs['stats']
         for s, stat in enumerate(stats):
             losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
-        avg_losses = dstore['avg_losses-rlzs'].value
+        avg_losses = dstore['avg_losses-rlzs'][()]
         losses = cast(avg_losses, loss_dt)
         data = util.compose_arrays(assets, losses)
         yield 'rlz-000', data
@@ -625,7 +625,7 @@ def extract_losses_by_asset(dstore, what):
 
 @extract.add('losses_by_event')
 def extract_losses_by_event(dstore, what):
-    dic = group_array(dstore['losses_by_event'].value, 'rlzi')
+    dic = group_array(dstore['losses_by_event'][()], 'rlzi')
     for rlzi in dic:
         yield 'rlz-%03d' % rlzi, dic[rlzi]
 
@@ -641,19 +641,21 @@ def _gmf_scenario(data, num_sites, imts):
         arr = gmfa[rec['sid']]
         for imt, gmv in zip(imts, rec['gmv']):
             arr[imt][eid2idx[rec['eid']]] = gmv
-    return gmfa, E
+    return gmfa
 
 
+# used by the QGIS plugin
 @extract.add('gmf_data')
 def extract_gmf_scenario_npz(dstore, what):
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
-    data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
-    for rlzi in data_by_rlzi:
-        gmfa, e = _gmf_scenario(data_by_rlzi[rlzi], n, oq.imtls)
-        logging.info('Exporting array of shape %s for rlz %d',
-                     (n, e), rlzi)
+    data = dstore['gmf_data/data'][()]
+    rlz = dstore['events']['rlz']
+    for rlzi in sorted(set(rlz)):
+        idx = rlz[data['eid']] == rlzi
+        gmfa = _gmf_scenario(data[idx], n, oq.imtls)
+        logging.info('Exporting array%s for rlz#%d', gmfa.shape, rlzi)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
 
 
@@ -719,7 +721,7 @@ def extract_mfd(dstore, what):
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd
     """
     dd = collections.defaultdict(int)
-    for rup in dstore['ruptures'].value:
+    for rup in dstore['ruptures']:
         dd[rup['mag']] += 1
     dt = numpy.dtype([('mag', float), ('freq', int)])
     magfreq = numpy.array(sorted(dd.items(), key=operator.itemgetter(0)), dt)
@@ -736,7 +738,7 @@ def extract_src_loss_table(dstore, loss_type):
     oq = dstore['oqparam']
     li = oq.lti[loss_type]
     source_ids = dstore['source_info']['source_id']
-    idxs = dstore['ruptures'].value[['srcidx', 'grp_id']]
+    idxs = dstore['ruptures'][('srcidx', 'grp_id')]
     losses = dstore['rup_loss_table'][:, li]
     slt = numpy.zeros(len(source_ids), [('grp_id', U32), (loss_type, F32)])
     for loss, (srcidx, grp_id) in zip(losses, idxs):
