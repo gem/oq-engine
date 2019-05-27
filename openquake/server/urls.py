@@ -50,15 +50,15 @@ if settings.WEBUI:
 
 if settings.LOCKDOWN:
     from django.contrib import admin
-    from django.contrib.auth.views import login, logout
+    from django.contrib.auth.views import LoginView, LogoutView
 
     admin.autodiscover()
     urlpatterns += [
         url(r'^admin/', admin.site.urls),
-        url(r'^accounts/login/$', login,
-            {'template_name': 'account/login.html'}, name="login"),
-        url(r'^accounts/logout/$', logout,
-            {'template_name': 'account/logout.html'}, name="logout"),
+        url(r'accounts/login/$', LoginView.as_view(
+            template_name='account/login.html'), name="login"),
+        url(r'^accounts/logout/$', LogoutView.as_view(
+            template_name='account/logout.html'), name="logout"),
         url(r'^accounts/ajax_login/$', views.ajax_login),
         url(r'^accounts/ajax_logout/$', views.ajax_logout),
     ]
