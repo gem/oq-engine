@@ -73,7 +73,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
-        hazard = getter.get_hazard()  # sid -> (rlzi, sid, eid, gmv)
+        hazard = getter.get_hazard()  # sid -> (sid, eid, gmv)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     events = rupgetter.get_eid_rlz()
@@ -101,7 +101,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         if len(assets_on_sid) == 0:
             continue
         num_events_per_sid += len(haz)
-        weights = getter.weights[haz['rlzi']]
+        if param['avg_losses']:
+            weights = getter.weights[
+                [getter.eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
@@ -138,7 +140,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     if param['avg_losses']:
         res['losses_by_A'] = losses_by_A * param['ses_ratio']
     if param['asset_loss_table']:
-        res['alt_eids'] = alt, events['eid']
+        eidx = numpy.array([eid2idx[eid] for eid in events['eid']])
+        res['alt_eidx'] = alt, eidx
     return res
 
 
@@ -238,8 +241,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
-                alt, eids = dic['alt_eids']
-                eidx = numpy.array([self.eid2idx[eid] for eid in eids])
+                alt, eidx = dic['alt_eidx']
                 idx = numpy.argsort(eidx)
                 self.datastore['asset_loss_table'][:, eidx[idx]] = alt[:, idx]
         self.events_per_sid.append(dic['events_per_sid'])
@@ -307,11 +309,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
         acc = list(parallel.Starmap(compute_loss_curves_maps, allargs, mon))
         # copy performance information from the cache to the datastore
-        pd = mon.hdf5['performance_data'].value
+        pd = mon.hdf5['performance_data'][()]
         hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
         self.datastore['task_info/compute_loss_curves_and_maps'] = (
-            mon.hdf5['task_info/compute_loss_curves_maps'].value)
+            mon.hdf5['task_info/compute_loss_curves_maps'][()])
         self.datastore.open('r+')
         with self.monitor('saving loss_curves and maps', autoflush=True):
             for r, (curves, maps) in acc:
@@ -331,7 +333,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
         # sanity check with the asset_loss_table
         if oq.asset_loss_table and len(oq.aggregate_by) == 1:
-            alt = self.datastore['asset_loss_table'].value
+            alt = self.datastore['asset_loss_table'][()]
             if alt.sum() == 0:  # nothing was saved
                 return
             logging.info('Checking the loss curves')
@@ -352,7 +354,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             builder.num_events[r],
                             builder.eff_time)
             numpy.testing.assert_allclose(
-                curves, self.datastore['agg_curves-rlzs'].value)
+                curves, self.datastore['agg_curves-rlzs'][()])
 
 
 # 1) parallelizing by events does not work, we need all the events

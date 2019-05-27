@@ -294,7 +294,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertGreaterEqual(minmag, 5.2)
 
         # check asset_loss_table
-        tot = self.calc.datastore['asset_loss_table'].value.sum()
+        tot = self.calc.datastore['asset_loss_table'][()].sum()
         self.assertEqual(tot, 15787827.0)
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(

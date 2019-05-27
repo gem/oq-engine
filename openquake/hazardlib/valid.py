@@ -1234,9 +1234,9 @@ class RjbEquivalent(object):
     """
     def __init__(self, filename):
         with hdf5.File(filename, 'r') as f:
-            self.repi = f['default/repi'].value  # shape D
-            self.mags = f['default/mags'].value  # shape M
-            self.reqv = f['default/reqv'].value  # shape D x M
+            self.repi = f['default/repi'][()]  # shape D
+            self.mags = f['default/mags'][()]  # shape M
+            self.reqv = f['default/reqv'][()]  # shape D x M
 
     def get(self, repi, mag):
         """

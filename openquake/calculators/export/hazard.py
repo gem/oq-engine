@@ -527,7 +527,7 @@ def export_gmf_data_csv(ekey, dstore):
     else:
         arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-    gmfa = dstore['gmf_data/data'].value[['eid', 'sid', 'gmv']].copy()
+    gmfa = dstore['gmf_data/data'][('eid', 'sid', 'gmv')]
     event_id = dstore['events']['id']
     gmfa['eid'] = event_id[gmfa['eid']]
     if eid is None:  # we cannot use extract here
@@ -540,7 +540,7 @@ def export_gmf_data_csv(ekey, dstore):
         writers.write_csv(fname, _expand_gmv(gmfa, imts))
         if 'sigma_epsilon' in dstore['gmf_data']:
             sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
-            sig_eps = dstore['gmf_data/sigma_epsilon'].value
+            sig_eps = dstore['gmf_data/sigma_epsilon'][()]
             sig_eps['eid'] = event_id[sig_eps['eid']]
             sig_eps.sort(order='eid')
             writers.write_csv(sig_eps_csv, sig_eps)
@@ -593,57 +593,6 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
             data['gmv'])
         rows.append(row)
     return rows, comment
-
-
-@export.add(('gmf_scenario', 'csv'))
-def export_gmf_scenario_csv(ekey, dstore):
-    what = ekey[0].split('/')
-    if len(what) == 1:
-        raise ValueError(r'Missing "/rup-\d+"')
-    oq = dstore['oqparam']
-    csm_info = dstore['csm_info']
-    rlzs_assoc = csm_info.get_rlzs_assoc()
-    num_ruptures = len(dstore['ruptures'])
-    imts = list(oq.imtls)
-    mo = re.match(r'rup-(\d+)$', what[1])
-    if mo is None:
-        raise ValueError(
-            r"Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
-    ridx = int(mo.group(1))
-    assert 0 <= ridx < num_ruptures, ridx
-    # for scenario there is an unique grp_id=0
-    [rgetter] = gen_rupture_getters(dstore, slice(ridx, ridx + 1))
-    [ebr] = rgetter.get_ruptures()
-    sitecol = dstore['sitecol'].complete
-    srcfilter = filters.SourceFilter(sitecol, oq.maximum_distance)
-    getter = GmfGetter(rgetter, srcfilter, oq)
-    getter.init()
-    eids = rgetter.get_eid_rlz()['eid']
-    sids = getter.computers[0].sids
-    rlzs = rlzs_assoc.realizations
-    hazardr = [collections.defaultdict(list) for rlz in rlzs]
-    for sid, haz in getter.get_hazard().items():
-        for rec in haz:
-            hazardr[rec['rlzi']][sid].append(rec)
-    fields = ['eid-%03d' % eid for eid in eids]
-    dt = numpy.dtype([(f, F32) for f in fields])
-    mesh = numpy.zeros(len(sids), [('lon', F64), ('lat', F64)])
-    mesh['lon'] = sitecol.lons[sids]
-    mesh['lat'] = sitecol.lats[sids]
-    writer = writers.CsvWriter(fmt='%.5f')
-    for rlzi in range(len(rlzs)):
-        hazard = hazardr[rlzi]
-        for imti, imt in enumerate(imts):
-            gmfs = numpy.zeros(len(sids), dt)
-            for s, sid in enumerate(sids):
-                for rec in hazard[sid]:
-                    event = 'eid-%03d' % rec['eid']
-                    gmfs[s][event] = rec['gmv'][imti]
-            dest = dstore.build_fname(
-                'gmf', 'rup-%s-rlz-%s-%s' % (ebr.serial, rlzi, imt), 'csv')
-            data = util.compose_arrays(mesh, gmfs)
-            writer.save(data, dest)
-    return writer.getsaved()
 
 
 @export.add(('gmf_data', 'npz'))
@@ -766,7 +715,7 @@ def export_disagg_csv(ekey, dstore):
         for poe, label in zip(poes, disagg_outputs):
             tup = tuple(label.split('_'))
             fname = dstore.export_path(key + '_%s.csv' % label)
-            data[tup] = poe, iml, matrix[label].value, fname
+            data[tup] = poe, iml, matrix[label][()], fname
             fnames.append(fname)
         save_disagg_to_csv(metadata, data)
     return fnames
@@ -775,11 +724,11 @@ def export_disagg_csv(ekey, dstore):
 @export.add(('disagg_by_src', 'csv'))
 def export_disagg_by_src_csv(ekey, dstore):
     paths = []
-    srcdata = dstore['disagg_by_grp'].value
+    srcdata = dstore['disagg_by_grp'][()]
     header = ['source_id', 'poe']
     by_poe = operator.itemgetter(1)
     for name in dstore['disagg_by_src']:
-        probs = dstore['disagg_by_src/' + name].value
+        probs = dstore['disagg_by_src/' + name][()]
         ok = probs > 0
         src = srcdata[ok]
         data = [header] + sorted(zip(add_quotes(src['grp_name']), probs[ok]),
