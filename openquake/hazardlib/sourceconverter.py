@@ -52,7 +52,7 @@ def check_dupl(dist):
         values.add(value)
         got.append(value)
     if len(values) < n:
-        raise ValueError('There are repeated values in %s' % got)
+        raise ValueError('There are repeated values %s in' % got)
 
 
 class SourceGroup(collections.abc.Sequence):
