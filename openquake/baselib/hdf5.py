@@ -359,8 +359,8 @@ class File(h5py.File):
             if hasattr(h5obj, 'items'):  # is group
                 h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
                          for k, v in h5obj.items()}
-            elif hasattr(h5obj, 'value'):
-                h5obj = h5obj.value
+            elif hasattr(h5obj, 'shape'):
+                h5obj = h5obj[()]
             if hasattr(obj, '__fromh5__'):
                 obj.__fromh5__(h5obj, h5attrs)
             else:  # Group object

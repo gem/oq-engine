@@ -197,10 +197,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     """
     :returns: a compound array of hazard maps of shape nsites
     """
-    try:
-        hcurves = pmap.value
-    except AttributeError:
-        hcurves = pmap
+    hcurves = pmap[()]
     dtlist = [('%s-%s' % (imt, poe), F32) for imt in imtls for poe in poes]
     array = numpy.zeros(len(pmap), dtlist)
     for imt, imls in imtls.items():
