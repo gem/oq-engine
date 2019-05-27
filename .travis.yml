@@ -2,7 +2,7 @@ language: python
 dist: xenial
 
 python:
- - "3.7"
+ - "3.6"
 
 cache:
   pip: true
@@ -69,14 +69,11 @@ install:
   # Also pip does not cache data when requirements includes full http URLs, so we need
   # to download the wheels first, put the folder in cache and then install the wheels from there.
   # A second run of 'pip download' will download only the missing wheels.
-  # FIXME wheels are disabled for now
-  # - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
-  #     pip download -r requirements-py36-linux64.txt -d wheels &&
-  #     pip -q install wheels/* ;
-  #   fi
+  - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
+      pip download -r requirements-py36-linux64.txt -d wheels &&
+      pip -q install wheels/* ;
+    fi
   - pip -q install -e .
-  # FIXME remove me!
-  - pip -q install -U numpy scipy h5py
 
 before_script:
   - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
