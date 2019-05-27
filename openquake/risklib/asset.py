@@ -45,8 +45,7 @@ class CostCalculator(object):
 
     The same "formula" applies to retrofitting cost.
     """
-    def __init__(self, cost_types, area_types, units,
-                 deduct_abs=True, limit_abs=True, tagi={'taxonomy': 0}):
+    def __init__(self, cost_types, area_types, units, tagi={'taxonomy': 0}):
         if set(cost_types) != set(area_types):
             raise ValueError('cost_types has keys %s, area_types has keys %s'
                              % (sorted(cost_types), sorted(area_types)))
@@ -57,8 +56,6 @@ class CostCalculator(object):
         self.cost_types = cost_types
         self.area_types = area_types
         self.units = units
-        self.deduct_abs = deduct_abs
-        self.limit_abs = limit_abs
         self.tagi = tagi
 
     def __call__(self, loss_type, values, area, number):
@@ -104,8 +101,7 @@ class CostCalculator(object):
         array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
         array['area_type'] = [self.area_types[lt] for lt in loss_types]
         array['unit'] = [self.units[lt] for lt in loss_types]
-        attrs = dict(deduct_abs=self.deduct_abs, limit_abs=self.limit_abs,
-                     loss_types=hdf5.array_of_vstr(loss_types))
+        attrs = dict(loss_types=hdf5.array_of_vstr(loss_types))
         return array, attrs
 
     def __fromh5__(self, array, attrs):
@@ -130,10 +126,6 @@ class Asset(object):
     represent a replacement cost (e.g. structural cost, business
     interruption cost) or another quantity that can be considered for
     a risk analysis (e.g. occupants).
-
-    Optionally, a Asset instance can hold also a collection of
-    deductible values and insured limits considered for insured losses
-    calculations.
     """
     def __init__(self,
                  ordinal,
@@ -142,8 +134,6 @@ class Asset(object):
                  location,
                  values,
                  area=1,
-                 deductibles=None,
-                 insurance_limits=None,
                  retrofitted=None,
                  calc=costcalculator):
         """
@@ -157,12 +147,6 @@ class Asset(object):
             geographic location of the asset
         :param dict values:
             asset values keyed by loss types
-        :param dict deductible:
-            deductible values (expressed as a percentage relative to
-            the value of the asset) keyed by loss types
-        :param dict insurance_limits:
-            insured limits values (expressed as a percentage relative to
-            the value of the asset) keyed by loss types
         :param retrofitted:
             asset retrofitted value
         :param calc:
@@ -177,8 +161,6 @@ class Asset(object):
         self.values = values
         self.area = area
         self._retrofitted = retrofitted
-        self.deductibles = deductibles
-        self.insurance_limits = insurance_limits
         self.calc = calc
         self._cost = {}  # cache for the costs
 
@@ -204,29 +186,6 @@ class Asset(object):
             val = self.calc(loss_type, self.values, self.area, self.number)
             self._cost[loss_type] = val
         return val
-
-    def deductible(self, loss_type, dummy=None):
-        """
-        :returns: the deductible fraction of the asset cost for `loss_type`
-        """
-        val = self.calc(loss_type, self.deductibles, self.area, self.number)
-        if self.calc.deduct_abs:  # convert to relative value
-            return val / self.calc(loss_type, self.values,
-                                   self.area, self.number)
-        else:
-            return val
-
-    def insurance_limit(self, loss_type, dummy=None):
-        """
-        :returns: the limit fraction of the asset cost for `loss_type`
-        """
-        val = self.calc(loss_type, self.insurance_limits, self.area,
-                        self.number)
-        if self.calc.limit_abs:  # convert to relative value
-            return val / self.calc(loss_type, self.values,
-                                   self.area, self.number)
-        else:
-            return val
 
     def retrofitted(self):
         """
@@ -584,11 +543,6 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     # loss_types can be ['value-business_interruption', 'value-contents',
     # 'value-nonstructural', 'occupants_None', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
-    deductible_d = first_asset.deductibles or {}
-    limit_d = first_asset.insurance_limits or {}
-    if deductible_d or limit_d:
-        logging.warning('Exposures with insuranceLimit/deductible fields are '
-                        'deprecated and may be removed in the future')
     retro = ['retrofitted'] if first_asset._retrofitted else []
     float_fields = loss_types + retro
     int_fields = [(str(name), U32) for name in tagnames]
@@ -658,14 +612,6 @@ def _get_exposure(fname, stop=None):
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
     try:
-        inslimit = conversions.insuranceLimit
-    except AttributeError:
-        inslimit = Node('insuranceLimit', text=True)
-    try:
-        deductible = conversions.deductible
-    except AttributeError:
-        deductible = Node('deductible', text=True)
-    try:
         area = conversions.area
     except AttributeError:
         # NB: the area type cannot be an empty string because when sending
@@ -709,14 +655,8 @@ def _get_exposure(fname, stop=None):
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
-    insurance_limit_is_absolute = il = inslimit.get('isAbsolute')
-    deductible_is_absolute = de = deductible.get('isAbsolute')
     cc = CostCalculator(
-        {}, {}, {},
-        True if de is None else de,
-        True if il is None else il,
-        {name: i for i, name in enumerate(tagnames)},
-    )
+        {}, {}, {}, {name: i for i, name in enumerate(tagnames)})
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
@@ -936,8 +876,6 @@ class Exposure(object):
 
     def _add_asset(self, idx, asset_node, param):
         values = {}
-        deductibles = {}
-        insurance_limits = {}
         retrofitted = None
         asset_id = asset_node['id'].encode('utf8')
         prefix = param['asset_prefix'].encode('utf8')
@@ -987,14 +925,6 @@ class Exposure(object):
                     retrofitted = float(cost.get('retrofitted', 0))
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = float(cost['value'])
-                    try:
-                        deductibles[cost_type] = cost['deductible']
-                    except KeyError:
-                        pass
-                    try:
-                        insurance_limits[cost_type] = cost['insuranceLimit']
-                    except KeyError:
-                        pass
 
         # check we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
@@ -1020,8 +950,7 @@ class Exposure(object):
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset_node.get('area', 1))
         ass = Asset(idx, idxs, number, location, values, area,
-                    deductibles, insurance_limits, retrofitted,
-                    self.cost_calculator)
+                    retrofitted, self.cost_calculator)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):
