@@ -470,7 +470,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     maxweight = numpy.ceil(len(rup_array) / (concurrent_tasks or 1))
-    nr, ne = 0, 0
+    nr, ne, first_event = 0, 0, 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
@@ -479,8 +479,10 @@ def gen_rupture_getters(dstore, slc=slice(None),
         for block in general.block_splitter(arr, maxweight):
             rgetter = RuptureGetter(
                 hdf5cache or dstore.filename, numpy.array(block), grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id],
+                first_event)
             rgetter.weight = getattr(block, 'weight', len(block))
+            first_event += rgetter.num_events
             yield rgetter
             nr += len(block)
             ne += rgetter.num_events
