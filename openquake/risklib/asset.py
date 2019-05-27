@@ -666,8 +666,7 @@ def _get_exposure(fname, stop=None):
     asset_refs = []
     exp = Exposure(
         exposure['id'], exposure['category'],
-        description.text, cost_types, occupancy_periods,
-        insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
+        description.text, cost_types, occupancy_periods, retrofitted,
         area.attrib, assets, asset_refs, cc, TagCollection(tagnames))
     assets_text = exposure.assets.text.strip()
     if assets_text:
@@ -700,8 +699,7 @@ class Exposure(object):
     A class to read the exposure from XML/CSV files
     """
     fields = ['id', 'category', 'description', 'cost_types',
-              'occupancy_periods', 'insurance_limit_is_absolute',
-              'deductible_is_absolute', 'retrofitted',
+              'occupancy_periods', 'retrofitted',
               'area', 'assets', 'asset_refs',
               'cost_calculator', 'tagcol']
 
@@ -741,8 +739,6 @@ class Exposure(object):
             else:
                 assert exposure.cost_types == exp.cost_types
                 assert exposure.occupancy_periods == exp.occupancy_periods
-                assert (exposure.insurance_limit_is_absolute ==
-                        exp.insurance_limit_is_absolute)
                 assert exposure.retrofitted == exp.retrofitted
                 assert exposure.area == exp.area
                 exp.assets.extend(exposure.assets)
