@@ -30,8 +30,6 @@ http://cdn.ftp.openquake.org/wheelhouse/macos/py/pyshp-1.2.3-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py36/PyYAML-3.12-cp36-cp36m-macosx_10_6_intel.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/toml-0.10.0-py2.py3-none-any.whl
 
-## Extra ##
-
 ### setproctitle ###
 # comment the following lines to skip installation
 # of setproctitle (optional feature)
@@ -45,4 +43,3 @@ http://cdn.ftp.openquake.org/wheelhouse/macos/py/pyparsing-2.2.0-py2.py3-none-an
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py36/matplotlib-2.1.2-cp36-cp36m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py36/pyproj-1.9.5.1-cp36-cp36m-macosx_10_6_intel.whl
-http://cdn.ftp.openquake.org/wheelhouse/macos/py36/basemap-1.1.0-cp36-cp36m-macosx_10_6_intel.whl
