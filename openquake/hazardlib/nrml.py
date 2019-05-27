@@ -76,7 +76,7 @@ import re
 import sys
 import logging
 import operator
-import collections
+import collections.abc
 
 import numpy
 
