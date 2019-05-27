@@ -37,6 +37,24 @@ source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
 
+def check_dupl(dist):
+    """
+    Raise a ValueError if the distribution contains two identical values.
+
+    :param dist: a list of pairs [(prob, value)...]
+    """
+    n = len(dist)
+    values = set()
+    got = []
+    for prob, value in dist:
+        if hasattr(value, '_slots_'):
+            value = tuple(getattr(value, s) for s in value._slots_)
+        values.add(value)
+        got.append(value)
+    if len(values) < n:
+        raise ValueError('There are repeated values in %s' % got)
+
+
 class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
@@ -607,6 +625,8 @@ class SourceConverter(RuptureConverter):
                 prob, strike, dip, rake = (
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
+        with context(self.fname, node.nodalPlaneDist):
+            check_dupl(npdist)
             if not self.spinning_floating:
                 npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
@@ -620,11 +640,13 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.pmf.PMF` instance
         """
         with context(self.fname, node):
-            hcdist = [(hd['probability'], hd['depth'])
-                      for hd in node.hypoDepthDist]
+            hdnode = node.hypoDepthDist
+            hddist = [(hd['probability'], hd['depth']) for hd in hdnode]
+        with context(self.fname, hdnode):
+            check_dupl(hddist)
             if not self.spinning_floating:  # consider the first hypocenter
-                hcdist = [(1, hcdist[0][1])]
-            return pmf.PMF(hcdist)
+                hddist = [(1, hddist[0][1])]
+            return pmf.PMF(hddist)
 
     def convert_areaSource(self, node):
         """
