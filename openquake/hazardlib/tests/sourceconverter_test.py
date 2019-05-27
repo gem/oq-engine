@@ -246,6 +246,23 @@ class SourceConverterTestCase(unittest.TestCase):
         msg = "Wrong cluster definition"
         self.assertEqual(sg[0].cluster, True, msg)
 
+    def test_dupl_values_npdist(self):
+        raise unittest.SkipTest
+        testfile = os.path.join(testdir, 'wrong-npdist.xml')
+        with self.assertRaises(ValueError) as ctx:
+            nrml.to_python(testfile)
+        self.assertIn('There are repeated values '
+                      '[(135.0, 90.0, -90.0), (135.0, 90.0, -90.0)] in',
+                      str(ctx.exception))
+
+    def test_dupl_values_hddist(self):
+        raise unittest.SkipTest
+        testfile = os.path.join(testdir, 'wrong-hddist.xml')
+        with self.assertRaises(ValueError) as ctx:
+            nrml.to_python(testfile)
+        self.assertIn('There are repeated values [5.5, 16.5, 16.5] in',
+                      str(ctx.exception))
+
 
 class SourceGroupHDF5TestCase(unittest.TestCase):
     def test_serialization(self):
