@@ -19,7 +19,7 @@ import os
 import sys
 import time
 import operator
-import collections
+import collections.abc
 from contextlib import contextmanager
 import numpy
 from scipy.interpolate import interp1d
