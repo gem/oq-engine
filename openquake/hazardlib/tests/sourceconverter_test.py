@@ -247,7 +247,6 @@ class SourceConverterTestCase(unittest.TestCase):
         self.assertEqual(sg[0].cluster, True, msg)
 
     def test_dupl_values_npdist(self):
-        raise unittest.SkipTest
         testfile = os.path.join(testdir, 'wrong-npdist.xml')
         with self.assertRaises(ValueError) as ctx:
             nrml.to_python(testfile)
@@ -256,7 +255,6 @@ class SourceConverterTestCase(unittest.TestCase):
                       str(ctx.exception))
 
     def test_dupl_values_hddist(self):
-        raise unittest.SkipTest
         testfile = os.path.join(testdir, 'wrong-hddist.xml')
         with self.assertRaises(ValueError) as ctx:
             nrml.to_python(testfile)
