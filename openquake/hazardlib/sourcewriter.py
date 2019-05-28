@@ -260,11 +260,14 @@ def build_nodal_plane_dist(npd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     npds = []
+    dist = []
     for prob, npd in npd.data:
+        dist.append((prob, (npd.dip, npd.strike, npd.rake)))
         nodal_plane = Node(
             "nodalPlane", {"dip": npd.dip, "probability": prob,
                            "strike": npd.strike, "rake": npd.rake})
         npds.append(nodal_plane)
+    sourceconverter.check_dupl(dist)
     return Node("nodalPlaneDist", nodes=npds)
 
 
@@ -279,9 +282,11 @@ def build_hypo_depth_dist(hdd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     hdds = []
+    dist = []
     for (prob, depth) in hdd.data:
-        hdds.append(
-            Node("hypoDepth", {"depth": depth, "probability": prob}))
+        dist.append((prob, depth))
+        hdds.append(Node("hypoDepth", {"depth": depth, "probability": prob}))
+    sourceconverter.check_dupl(dist)
     return Node("hypoDepthDist", nodes=hdds)
 
 
