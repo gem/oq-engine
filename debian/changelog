@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Made more robust the gsim logic tree parser: lines like
+    `<uncertaintyModel gmpe_table="../gm_tables/Woffshore_low_clC.hdf5">`
+    are accepted again
   * Added a check against duplicated values in nodal plane distributions and
     hypocenter depth distributions
   * Changed the support for zipped exposures and source models: now the
