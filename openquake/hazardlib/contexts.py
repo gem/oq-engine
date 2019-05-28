@@ -326,14 +326,14 @@ class ContextMaker(object):
                 pne_array[:, slc, i] = pno
         return pne_array
 
-    def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
+    def disaggregate(self, sitecol, ruptures, iml3, truncnorm, epsilons,
                      monitor=Monitor()):
         """
         Disaggregate (separate) PoE in different contributions.
 
         :param sitecol: a SiteCollection with N sites
         :param ruptures: an iterator over ruptures with the same TRT
-        :param iml4: a 4d array of IMLs of shape (N, R, M, P)
+        :param iml3: a 3d array of IMLs of shape (N, M, P)
         :param truncnorm: an instance of scipy.stats.truncnorm
         :param epsilons: the epsilon bins
         :param monitor: a Monitor instance
@@ -353,20 +353,21 @@ class ContextMaker(object):
             with clo_mon:  # this is faster than computing orig_dctx
                 closest_points = rupture.surface.get_closest_points(sitecol)
             cache = {}
-            for rlz, gsim in self.gsim_by_rlzi.items():
-                dctx = orig_dctx.roundup(gsim.minimum_distance)
-                for m, imt in enumerate(iml4.imts):
-                    for p, poe in enumerate(iml4.poes_disagg):
-                        iml = tuple(iml4.array[:, rlz, m, p])
-                        try:
-                            pne = cache[gsim, imt, iml]
-                        except KeyError:
-                            with pne_mon:
-                                pne = gsim.disaggregate_pne(
-                                    rupture, sitecol, dctx, imt, iml,
-                                    truncnorm, epsilons)
-                                cache[gsim, imt, iml] = pne
-                        acc[poe, str(imt), rlz].append(pne)
+            for m, imt in enumerate(iml3.imts):
+                for p, poe in enumerate(iml3.poes_disagg):
+                    iml = tuple(iml3.array[:, m, p])
+                    r = iml3.rlzi[n, m, p]
+                    gsim = self.gsim_by_rlzi[r]
+                    dctx = orig_dctx.roundup(gsim.minimum_distance)
+                    try:
+                        pne = cache[gsim, imt, iml]
+                    except KeyError:
+                        with pne_mon:
+                            pne = gsim.disaggregate_pne(
+                                rupture, sitecol, dctx, imt, iml,
+                                truncnorm, epsilons)
+                            cache[gsim, imt, iml] = pne
+                    acc[poe, str(imt), r].append(pne)
             acc['mags'].append(rupture.mag)
             acc['dists'].append(getattr(dctx, self.filter_distance))
             acc['lons'].append(closest_points.lons)

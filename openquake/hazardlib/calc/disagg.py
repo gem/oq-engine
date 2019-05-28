@@ -39,41 +39,54 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
-def _imls(curves, poe, imt, imls, rlzi):
+def median(values):
+    """
+    :returns: the (left) median and the index
+    """
+    dic = {v: i for i, v in enumerate(values)}
+    n = len(values)
+    values.sort()
+    val = values[n // 2]
+    return val, dic[val]
+
+
+def _imls(curves, poe, imt, imls):
     if poe is None:  # iml_disagg was set
         return imls
     # else return interpolated intensity measure levels
-    levels = [numpy.interp(poe, curve[rlzi][imt][::-1], imls[::-1])
-              if curve else numpy.nan for curve in curves]
-    return numpy.array(levels)  # length N
+    levels = [numpy.interp(poe, curves[rlzi][imt][::-1], imls[::-1])
+              if curves else numpy.nan for rlzi in len(curves)]
+    return median(levels)  # length R
 
 
-def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
+def make_iml(iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
     """
-    :returns: an ArrayWrapper over a 4D array of shape (N, R, M, P)
+    :returns: an ArrayWrapper over a 3D array of shape (N, M, P)
     """
     if imtls is None:
         imtls = {imt: [iml] for imt, iml in iml_disagg.items()}
     N = len(curves) or 1
     M = len(imtls)
     P = len(poes_disagg)
-    arr = numpy.zeros((N, R, M, P))
+    arr = numpy.zeros((N, M, P))
     imts = [from_string(imt) for imt in imtls]
+    rlzi = numpy.zeros((N, M, P))
     for m, imt in enumerate(imtls):
         imls = imtls[imt]
         for p, poe in enumerate(poes_disagg):
-            for r in range(R):
-                arr[:, r, m, p] = _imls(curves, poe, imt, imls, r)
-    return ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
+            for n in range(N):
+                arr[n, m, p], rlzi[n, m, p] = _imls(curves[n], poe, imt, imls)
+    return ArrayWrapper(
+        arr, dict(poes_disagg=poes_disagg, imts=imts, rlzi=rlzi))
 
 
-def collect_bin_data(ruptures, sitecol, cmaker, iml4,
+def collect_bin_data(sources, sitecol, cmaker, iml3,
                      truncation_level, n_epsilons, monitor=Monitor()):
     """
     :param ruptures: a list of ruptures
     :param sitecol: a SiteCollection instance
     :param cmaker: a ContextMaker instance
-    :param iml4: an ArrayWrapper of intensities of shape (N, R, M, P)
+    :param iml3: an ArrayWrapper of intensities of shape (N, M, P)
     :param truncation_level: the truncation level
     :param n_epsilons: the number of epsilons
     :param monitor: a Monitor instance
@@ -84,7 +97,7 @@ def collect_bin_data(ruptures, sitecol, cmaker, iml4,
     epsilons = numpy.linspace(
         -truncation_level, truncation_level, n_epsilons + 1)
     acc = cmaker.disaggregate(
-        sitecol, ruptures, iml4, truncnorm, epsilons, monitor)
+                sitecol, ruptures, iml3, truncnorm, epsilons, monitor)
     return pack(acc, 'mags dists lons lats'.split())
 
 
@@ -282,7 +295,7 @@ def disaggregation(
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
-    iml4 = make_iml4(1, {str(imt): iml})
+    iml = make_iml({str(imt): iml})
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
@@ -294,7 +307,7 @@ def disaggregation(
             trt, rlzs_by_gsim, source_filter.integration_distance,
             {'filter_distance': filter_distance})
         bdata[trt] = collect_bin_data(
-            ruptures, sitecol, cmaker, iml4, truncation_level, n_epsilons)
+            srcs, sitecol, cmaker, iml, truncation_level, n_epsilons)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
