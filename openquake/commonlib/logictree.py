@@ -1343,7 +1343,7 @@ def to_toml(uncertainty):
     for k, v in uncertainty.attrib.items():
         try:
             v = ast.literal_eval(v)
-        except ValueError:
+        except (SyntaxError, ValueError):
             v = repr(v)
         text += '\n%s = %s' % (k, v)
     return text
