@@ -22,7 +22,7 @@ import time
 import logging
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source, tom
@@ -37,7 +37,7 @@ source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
 
-def check_dupl(dist):
+def check_dupl(dist, fname=None, lineno=None):
     """
     Raise a ValueError if the distribution contains two identical values.
 
@@ -52,7 +52,11 @@ def check_dupl(dist):
         values.add(value)
         got.append(value)
     if len(values) < n:
-        raise ValueError('There are repeated values %s in' % got)
+        if config.general.strict:
+            raise ValueError('There are repeated values in %s' % got)
+        else:
+            logging.error('There are repeated values in %s %s:%s',
+                          got, fname, lineno)
 
 
 class SourceGroup(collections.abc.Sequence):
@@ -627,7 +631,7 @@ class SourceConverter(RuptureConverter):
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
         with context(self.fname, npnode):
-            check_dupl(npdist, npnode, self.fname)
+            check_dupl(npdist, self.fname, npnode.lineno)
             if not self.spinning_floating:
                 npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
@@ -644,7 +648,7 @@ class SourceConverter(RuptureConverter):
             hdnode = node.hypoDepthDist
             hddist = [(hd['probability'], hd['depth']) for hd in hdnode]
         with context(self.fname, hdnode):
-            check_dupl(hddist, hdnode, self.fname)
+            check_dupl(hddist, self.fname, hdnode.lineno)
             if not self.spinning_floating:  # consider the first hypocenter
                 hddist = [(1, hddist[0][1])]
             return pmf.PMF(hddist)
