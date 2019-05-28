@@ -63,9 +63,9 @@ jobs:
     env: python
     script:
         - pip wheel --no-deps .
-        - zipinfo -1 openquake.engine*.whl | grep '^openquake/' | grep -v 'nrml_examples' | sort > zip
-        - find openquake/ -type f | grep -Ev 'openquake/__init__.py|/tests/|nrml_examples' | sort > find
-        - diff -uN find zip
+        - find openquake/ -type f | grep -Ev 'openquake/__init__.py|/tests/|nrml_examples' | sort > sources
+        - zipinfo -1 openquake.engine*.whl | grep '^openquake/' | grep -v 'nrml_examples' | sort > package
+        - diff -uN sources package
 
 before_install:
   - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
