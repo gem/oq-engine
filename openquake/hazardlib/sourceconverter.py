@@ -52,8 +52,7 @@ def check_dupl(dist, node, fname):
         values.add(value)
         got.append(value)
     if len(values) < n:
-        logging.warn('Duplicated values in %s:%d', fname, node.lineno)
-        # raise ValueError('There are repeated values %s in' % got)
+        raise ValueError('There are repeated values %s in' % got)
 
 
 class SourceGroup(collections.abc.Sequence):
