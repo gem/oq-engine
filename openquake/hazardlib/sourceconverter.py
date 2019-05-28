@@ -37,7 +37,7 @@ source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
 
-def check_dupl(dist, node, fname):
+def check_dupl(dist):
     """
     Raise a ValueError if the distribution contains two identical values.
 
