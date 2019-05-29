@@ -19,7 +19,7 @@ import os
 import io
 import unittest
 import numpy
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, config
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import update_source_model, \
     SourceConverter
@@ -249,6 +249,7 @@ class SourceConverterTestCase(unittest.TestCase):
     def test_dupl_values_npdist(self):
         testfile = os.path.join(testdir, 'wrong-npdist.xml')
         with self.assertRaises(ValueError) as ctx:
+            config.general.strict = True
             nrml.to_python(testfile)
         self.assertIn('There are repeated values in '
                       '[(135.0, 90.0, -90.0), (135.0, 90.0, -90.0)]',
@@ -257,6 +258,7 @@ class SourceConverterTestCase(unittest.TestCase):
     def test_dupl_values_hddist(self):
         testfile = os.path.join(testdir, 'wrong-hddist.xml')
         with self.assertRaises(ValueError) as ctx:
+            config.general.strict = True
             nrml.to_python(testfile)
         self.assertIn('There are repeated values in [5.5, 16.5, 16.5]',
                       str(ctx.exception))
