@@ -3,7 +3,7 @@
 # !! must update pip first! so wheels will be used !!
 
 # GEM Mirror
-# We also provide pre-compiled macosx wheels for
+# We also provide pre-compiled macosx_10_9_x86_64 wheels for
 # h5py, Shapely, psutil, PyYAML, Basemap
 
 http://cdn.ftp.openquake.org/wheelhouse/v2/macos/py/pytz-2018.3-py2.py3-none-any.whl
