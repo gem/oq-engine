@@ -67,8 +67,8 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
         # accumulating below; if S is the length of the complete sites
         # the correlation matrix has shape (S, S) and the residuals (N, s),
         # where s is the number of samples
-        return numpy.sum(corma[sites.sids, sid] * res
-                         for sid, res in zip(sites.sids, residuals))
+        return sum(corma[sites.sids, sid] * res
+                   for sid, res in zip(sites.sids, residuals))
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
