@@ -112,6 +112,11 @@ def unzip_rename(zpath, name):
         return xpath
     dpath = os.path.dirname(zpath)
     with zipfile.ZipFile(zpath) as archive:
+        for nam in archive.namelist():
+            fname = os.path.join(dpath, nam)
+            if os.path.exists(fname):
+                raise NameError('Cannot unzip %s: the file %s would be '
+                                'overridden' % (zpath, fname))
         logging.info('Unzipping %s', zpath)
         archive.extractall(dpath)
     xname = os.path.join(dpath, name)
