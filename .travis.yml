@@ -20,7 +20,7 @@ jobs:
   - stage: tests
     env: ENGINE
     before_script:
-        - oq dbserver start &
+        - oq dbserver start
     script:
         - pytest --doctest-module -xv openquake/engine
         - pytest --doctest-module -xv openquake/server
