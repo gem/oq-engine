@@ -16,4 +16,5 @@ dist
 local_settings.py
 demos/*/*.zip
 *.swp
+.tox
 venv
