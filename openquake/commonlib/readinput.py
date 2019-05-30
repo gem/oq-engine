@@ -100,6 +100,26 @@ def extract_from_zip(path, candidates):
             if os.path.basename(f) in candidates]
 
 
+def unzip_rename(zpath, name):
+    """
+    :param zpath: full path to a .zip archive
+    :param name: exposure.xml or ssmLT.xml
+    :returns: path to an .xml file with the same name of the archive
+    """
+    xpath = zpath[:-4] + '.xml'
+    if os.path.exists(xpath):
+        # already unzipped
+        return xpath
+    dpath = os.path.dirname(zpath)
+    with zipfile.ZipFile(zpath) as archive:
+        logging.info('Unzipping %s', zpath)
+        archive.extractall(dpath)
+    xname = os.path.join(dpath, name)
+    if os.path.exists(xname):
+        os.rename(xname, xpath)
+    return xpath
+
+
 def normalize(key, fnames, base_path):
     input_type, _ext = key.rsplit('_', 1)
     filenames = []
@@ -114,16 +134,15 @@ def normalize(key, fnames, base_path):
             raise ValueError('%s=%s is an absolute path' % (key, val))
         if val.endswith('.zip'):
             zpath = os.path.normpath(os.path.join(base_path, val))
-            with zipfile.ZipFile(zpath) as archive:
-                logging.info('Unzipping %s', zpath)
-                archive.extractall(os.path.dirname(zpath))
             if key == 'exposure_file':
-                val = 'exposure.xml'
+                name = 'exposure.xml'
             elif key == 'source_model_logic_tree_file':
-                val = 'ssmLT.xml'
+                name = 'ssmLT.xml'
             else:
                 raise KeyError('Unknown key %s' % key)
-        val = os.path.normpath(os.path.join(base_path, val))
+            val = unzip_rename(zpath, name)
+        else:
+            val = os.path.normpath(os.path.join(base_path, val))
         if not os.path.exists(val):
             # tested in archive_err_2
             raise OSError('No such file: %s' % val)
