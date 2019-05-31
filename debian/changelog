@@ -46,6 +46,17 @@
   * Now it is possible to export individual hazard curves from an event
   * Added a view gmvs_to_hazard
 
+python3-oq-engine (3.5.2-1~xenial01) xenial; urgency=low
+
+  [Daniele Viganò]
+  * Fixed packaging issue, the .hdf5 tables for Canada were missing
+
+  [Michele Simionato]
+  * Fixed regression in the gsim logic tree parser for the case
+    of .hdf5 tables
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 31 May 2019 08:01:08 +0000
+
 python3-oq-engine (3.5.1-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
