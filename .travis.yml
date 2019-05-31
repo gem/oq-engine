@@ -62,8 +62,8 @@ jobs:
   - stage: packaging
     env: EXEC
     script:
-        - ./.travis/shebangs.sh
-        - ./.travis/executables.sh
+        - ./.travis/py_shebangs.sh
+        - ./.travis/py_executables.sh
   - stage: packaging
     env: WHL
     script:
