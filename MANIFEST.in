@@ -18,3 +18,4 @@ recursive-include openquake/hazardlib/gsim *.csv *.hdf5
 recursive-include openquake/commonlib/nrml_examples *.xml *.csv *.geojson
 # QA tests data
 recursive-include openquake/qa_tests_data *.* README
+recursive-exclude openquake/qa_tests_data *.pyc
