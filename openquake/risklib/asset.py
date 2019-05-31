@@ -460,22 +460,24 @@ class AssetCollection(object):
 
     def reduce_also(self, sitecol):
         """
-        :returns: a reduced AssetCollection on the given sitecol
-        NB: diffently from .reduce, also the SiteCollection is reduced
+        Reduced self on the given sitecol.
+        NB: also the SiteCollection is reduced
         and turned into a complete site collection.
         """
-        array = []
-        for idx, sid in enumerate(sitecol.sids):
-            arr = self[self['site_id'] == sid]
-            arr['site_id'] = idx
-            array.append(arr)
-        new = object.__new__(self.__class__)
-        vars(new).update(vars(self))
-        new.tot_sites = len(sitecol)
-        new.array = numpy.concatenate(array)
-        new.array['ordinal'] = numpy.arange(len(new.array))
+        uniq, inv = numpy.unique(self['site_id'], return_inverse=True)
+        if len(uniq) == len(sitecol) and (uniq == sitecol.sids).all():
+            # do not reduce the assetcol, just fix the site IDs
+            self.array['site_id'] = numpy.arange(len(uniq))[inv]
+        else:  # the sitecol is shorter, like in case_shakemap
+            arrays = []
+            for idx, sid in enumerate(sitecol.sids):
+                arr = self[self['site_id'] == sid]
+                arr['site_id'] = idx
+                arrays.append(arr)
+            self.array = numpy.concatenate(arrays)
+            self.array['ordinal'] = numpy.arange(len(self.array))
+            self.tot_sites = len(sitecol)
         sitecol.make_complete()
-        return new
 
     def __iter__(self):
         for i in range(len(self)):

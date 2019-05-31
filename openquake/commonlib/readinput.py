@@ -1004,7 +1004,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
         t0 = time.time()
-        assetcol = assetcol.reduce_also(sitecol)
+        assetcol.reduce_also(sitecol)
         logging.info('Reduced sitecol in %.1f seconds', time.time() - t0)
     return sitecol, assetcol, discarded
 
