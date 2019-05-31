@@ -20,4 +20,4 @@
 
 checkcmd find
 
-find . -not -path '*/\.*' -name \*.py -type f -executable -exec grep -LE '^#!.*env python3$' '{}' \; | grep -E '.'; test $? -ne 0
+find . -not -path '*/\.*' -name \*.py -type f -executable -exec grep -LE '^#!.*env python3$' '{}' \; | grep -E '.'; test $? -eq 1
