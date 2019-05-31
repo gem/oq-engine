@@ -752,6 +752,11 @@ class RiskCalculator(HazardCalculator):
         oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
+            # for instance for the test case_shakemap the haz_sitecol
+            # has sids in range(0, 26) while sitecol.sids is
+            # [8, 9, 10, 11, 13, 15, 16, 17, 18];
+            # the total assetcol has 26 assets on the total sites
+            # and the reduced assetcol has 9 assets on the reduced sites
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
             sitecol, shakemap, discarded = get_sitecol_shakemap(
@@ -760,7 +765,7 @@ class RiskCalculator(HazardCalculator):
                 oq.discard_assets)
             if len(discarded):
                 self.datastore['discarded'] = discarded
-            assetcol = assetcol.reduce_also(sitecol)
+            assetcol.reduce_also(sitecol)
 
         logging.info('Building GMFs')
         with self.monitor('building/saving GMFs'):
