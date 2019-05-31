@@ -466,8 +466,7 @@ class AssetCollection(object):
         """
         array = []
         for idx, sid in enumerate(sitecol.sids):
-            mask = self.array['site_id'] == sid
-            arr = self.array[mask]
+            arr = self[self['site_id'] == sid]
             arr['site_id'] = idx
             array.append(arr)
         new = object.__new__(self.__class__)
