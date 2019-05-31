@@ -62,10 +62,9 @@ jobs:
   - stage: packaging
     env: python
     script:
-        - pip wheel --no-deps .
-        - find openquake/ -type f | grep -Ev 'openquake/__init__.py|/tests/|nrml_examples' | sort > sources
-        - zipinfo -1 openquake.engine*.whl | grep '^openquake/' | grep -v 'nrml_examples' | sort > package
-        - diff -uN sources package
+        - ./.travis/shebangs.sh
+        - ./.travis/executables.sh
+        - ./.travis/packaging.sh
 
 before_install:
   - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
