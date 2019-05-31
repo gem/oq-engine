@@ -721,6 +721,8 @@ def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
                 rec[field] = asset.location['lat']
             elif field == 'number' and 'number' not in asset.attrib:
                 rec[field] = 1
+            elif field == 'area' and 'area' not in asset.attrib:
+                rec[field] = 1
             elif field.startswith('value-'):
                 cost = field[6:]
                 if cost not in ignore_missing_costs:
