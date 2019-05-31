@@ -60,12 +60,14 @@ jobs:
             oq dbserver status | grep -q 'dbserver not-running';
           fi
   - stage: packaging
-    env: python
+    env: EXEC
     script:
-        - pip wheel --no-deps .
-        - find openquake/ -type f | grep -Ev 'openquake/__init__.py|/tests/|nrml_examples' | sort > sources
-        - zipinfo -1 openquake.engine*.whl | grep '^openquake/' | grep -v 'nrml_examples' | sort > package
-        - diff -uN sources package
+        - ./.travis/py_shebangs.sh
+        - ./.travis/py_executables.sh
+  - stage: packaging
+    env: WHL
+    script:
+        - ./.travis/packaging.sh
 
 before_install:
   - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
