@@ -20,6 +20,7 @@ import ast
 import csv
 import copy
 import zlib
+import time
 import shutil
 import random
 import zipfile
@@ -1002,7 +1003,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
+        t0 = time.time()
         assetcol = assetcol.reduce_also(sitecol)
+        logging.info('Reduced sitecol in %d seconds', time.time() - t0)
     return sitecol, assetcol, discarded
 
 
