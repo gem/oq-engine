@@ -1,6 +1,6 @@
 [Unit]
 Description=The OpenQuake Engine Celery instance
-Documentation=https://github.com/gem/oq-engine/wiki
+Documentation=https://github.com/gem/oq-engine/
 After=network.target openquake-dbserver.service
 
 [Service]
