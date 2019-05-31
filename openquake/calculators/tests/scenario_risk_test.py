@@ -76,6 +76,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(tbl.array.shape, (1, 1))  # 1 taxonomy, 1 rlz
 
     def test_case_3(self):
+        # a4 has a missing cost
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
 
         [fname] = out['losses_by_asset', 'csv']
