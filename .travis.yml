@@ -15,7 +15,7 @@ jobs:
     env: HAZARDLIB
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
-          pytest --doctest-module -xv openquake/baselib openquake/hazardlib openquake/hmtk;
+          pytest -n auto --doctest-module -xv openquake/baselib openquake/hazardlib openquake/hmtk;
           fi
   - stage: tests
     env: ENGINE
@@ -80,6 +80,7 @@ install:
       pip download -r requirements-py36-linux64.txt -r requirements-extra-py36-linux64.txt -d wheels &&
       pip -q install wheels/* ;
     fi
+  - pip install pytest-xdist
   - pip -q install -e .
 
 before_script:
