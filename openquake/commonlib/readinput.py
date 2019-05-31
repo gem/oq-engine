@@ -1005,7 +1005,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             and sitecol is not sitecol.complete):
         t0 = time.time()
         assetcol = assetcol.reduce_also(sitecol)
-        logging.info('Reduced sitecol in %d seconds', time.time() - t0)
+        logging.info('Reduced sitecol in %.1f seconds', time.time() - t0)
     return sitecol, assetcol, discarded
 
 
