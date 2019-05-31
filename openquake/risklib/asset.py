@@ -808,13 +808,13 @@ class Exposure(object):
         if self.occupancy_periods:
             fields.extend(self.occupancy_periods.split())
         fields.extend(self.tagcol.tagnames)
-        return set(fields)
+        return fields
 
     def _read_csv(self):
         """
         :yields: asset nodes
         """
-        expected_header = self._csv_header()
+        expected_header = set(self._csv_header())
         for fname in self.datafiles:
             with open(fname, encoding='utf-8') as f:
                 fields = next(csv.reader(f))
