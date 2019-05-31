@@ -663,12 +663,10 @@ def _get_exposure(fname, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    assets = []
-    asset_refs = []
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, assets, asset_refs, cc, TagCollection(tagnames))
+        area.attrib, [], [], cc, TagCollection(tagnames))
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -693,6 +691,43 @@ def _minimal_tagcol(fnames, by_country):
     else:
         alltags = ['taxonomy'] + list(tagnames)
     return TagCollection(alltags)
+
+
+def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
+    """
+    :returns: an array of assets from the asset nodes
+    """
+    dtlist = [(f, object) for f in fields]
+    if retrofitted:
+        dtlist.append(('retrofitted', object))
+    nodes = list(asset_nodes)
+    array = numpy.zeros(len(nodes), dtlist)
+    for asset, rec in zip(nodes, array):
+        # fix asset.attrib
+        for occ in getattr(asset, 'occupancies', []):
+            asset.attrib[occ['period']] = occ['occupants']
+        for cost in getattr(asset, 'costs', []):
+            asset.attrib[cost['type']] = cost['value']
+            if retrofitted and 'retrofitted' in cost.attrib:
+                rec['retrofitted'] = cost['value']
+        if hasattr(asset, 'tags'):
+            asset.attrib.update(asset.tags.attrib)
+
+        # set record
+        for field in fields:
+            if field == 'lon':
+                rec[field] = asset.location['lon']
+            elif field == 'lat':
+                rec[field] = asset.location['lat']
+            elif field == 'number' and 'number' not in asset.attrib:
+                rec[field] = 1
+            elif field.startswith('value-'):
+                cost = field[6:]
+                if cost not in ignore_missing_costs:
+                    rec[field] = asset[cost]
+            else:
+                rec[field] = asset.attrib.get(field, '?')
+    return array
 
 
 class Exposure(object):
@@ -764,6 +799,8 @@ class Exposure(object):
         param['fname'] = fname
         param['ignore_missing_costs'] = set(ignore_missing_costs)
         exposure, assetnodes = _get_exposure(param['fname'])
+        array = assets2array(assetnodes, exposure._csv_header(),
+                             exposure.retrofitted, ignore_missing_costs)
         if tagcol:
             exposure.tagcol = tagcol
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
@@ -796,25 +833,25 @@ class Exposure(object):
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
 
-    def _csv_header(self):
+    def _csv_header(self, value='value-'):
         """
         Extract the expected CSV header from the exposure metadata
         """
         fields = ['id', 'number', 'taxonomy', 'lon', 'lat']
         for name in self.cost_types['name']:
-            fields.append(name)
+            fields.append(value + name)
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
         if self.occupancy_periods:
             fields.extend(self.occupancy_periods.split())
         fields.extend(self.tagcol.tagnames)
-        return fields
+        return sorted(set(fields))
 
     def _read_csv(self):
         """
         :yields: asset nodes
         """
-        expected_header = set(self._csv_header())
+        expected_header = set(self._csv_header(''))
         for fname in self.datafiles:
             with open(fname, encoding='utf-8') as f:
                 fields = next(csv.reader(f))
