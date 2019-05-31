@@ -21,7 +21,7 @@
 checkcmd pip find zipinfo diff
 
 function finish {
-  rm -f sources package
+  rm -Rf sources package "$tmp"
 }
 trap finish EXIT
 
