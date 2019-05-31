@@ -60,12 +60,12 @@ jobs:
             oq dbserver status | grep -q 'dbserver not-running';
           fi
   - stage: packaging
-    env: exec
+    env: EXEC
     script:
         - ./.travis/shebangs.sh
         - ./.travis/executables.sh
   - stage: packaging
-    env: whl
+    env: WHL
     script:
         - ./.travis/packaging.sh
 
