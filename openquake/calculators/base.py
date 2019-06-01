@@ -861,18 +861,6 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
-def get_gmv_data(sids, gmfs, events, gmf_data_dt):
-    """
-    Convert an array of shape (N, E, M) into an array of type gmv_data_dt
-    """
-    N, E, M = gmfs.shape
-    # NB: ordering of the loops: first site, then event
-    lst = [(sids[s], ei, gmfs[s, ei])
-           for s in numpy.arange(N, dtype=U32)
-           for ei, event in enumerate(events)]
-    return numpy.array(lst, gmf_data_dt)
-
-
 def save_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or event_based_risk calculator
@@ -919,9 +907,13 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
         events = numpy.zeros(E, rupture.events_dt)
         events['id'] = numpy.arange(E, dtype=U64)
     dstore['events'] = events
-    gdt = dstore['oqparam'].gmf_data_dt()
     offset = 0
-    gmfa = get_gmv_data(sitecol.sids, gmfs, events, gdt)
+    # convert an array of shape (N, E, M) into an array of type gmv_data_dt
+    N, E, M = gmfs.shape
+    lst = [(sitecol.sids[s], ei, gmfs[s, ei])
+           for s in numpy.arange(N, dtype=U32)
+           for ei, event in enumerate(events)]
+    gmfa = numpy.array(lst, dstore['oqparam'].gmf_data_dt())
     dstore['gmf_data/data'] = gmfa
     dic = general.group_array(gmfa, 'sid')
     lst = []
