@@ -500,8 +500,7 @@ class AssetCollection(object):
                  'fields': ' '.join(self.fields),
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
-        return dict(
-            array=self.array, tagcol=self.tagcol), attrs
+        return dict(array=self.array, tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
         self.loss_types = attrs['loss_types'].split()
