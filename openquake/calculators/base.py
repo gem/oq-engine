@@ -861,18 +861,16 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
-def get_gmv_data(sids, gmfs, events):
+def get_gmv_data(sids, gmfs, events, gmf_data_dt):
     """
     Convert an array of shape (N, E, M) into an array of type gmv_data_dt
     """
     N, E, M = gmfs.shape
-    gmv_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (M,)))])
     # NB: ordering of the loops: first site, then event
-    lst = [(event['rlz'], sids[s], ei, gmfs[s, ei])
+    lst = [(sids[s], ei, gmfs[s, ei])
            for s in numpy.arange(N, dtype=U32)
            for ei, event in enumerate(events)]
-    return numpy.array(lst, gmv_data_dt)
+    return numpy.array(lst, gmf_data_dt)
 
 
 def save_gmfs(calculator):
@@ -921,8 +919,9 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
         events = numpy.zeros(E, rupture.events_dt)
         events['id'] = numpy.arange(E, dtype=U64)
     dstore['events'] = events
+    gdt = dstore['oqparam'].gmf_data_dt()
     offset = 0
-    gmfa = get_gmv_data(sitecol.sids, gmfs, events)
+    gmfa = get_gmv_data(sitecol.sids, gmfs, events, gdt)
     dstore['gmf_data/data'] = gmfa
     dic = general.group_array(gmfa, 'sid')
     lst = []
@@ -959,13 +958,14 @@ def import_gmfs(dstore, fname, sids):
     :returns: event_ids, num_rlzs
     """
     array = hdf5.read_csv(fname, {'sid': U32, 'eid': U64, None: F32}).array
-    imts = [name[4:] for name in array.dtype.names[2:]]
-    n_imts = len(imts)
-    gmf_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
+    names = array.dtype.names
+    if names[0] == 'rlzi':  # backward compatbility
+        names = names[1:]
+    imts = [name[4:] for name in names[2:]]
+    gmf_data_dt = dstore['oqparam'].gmf_data_dt()
     arr = numpy.zeros(len(array), gmf_data_dt)
     col = 0
-    for name in array.dtype.names:
+    for name in names:
         if name.startswith('gmv_'):
             arr['gmv'][:, col] = array[name]
             col += 1
