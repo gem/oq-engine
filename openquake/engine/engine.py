@@ -26,6 +26,7 @@ import sys
 import json
 import time
 import signal
+import socket
 import getpass
 import logging
 import traceback
@@ -57,6 +58,11 @@ _PPID = os.getppid()  # the controlling terminal PID
 GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND is_running=1 AND pid > 0 ORDER BY id'''
+
+
+def get_engine_version(dummy):
+    return {socket.gethostname(): [__version__]}
+
 
 if OQ_DISTRIBUTE == 'zmq':
 
@@ -313,6 +319,15 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         logs.LOG.warn(msg)
     if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
         set_concurrent_tasks_default(job_id)
+
+        tasks = [(i,) for i in range(OqParam.concurrent_tasks.default // 3)]
+        version = parallel.Starmap(get_engine_version, tasks).reduce()
+        vset = set()
+        for versions in version.values():
+            vset.update(versions)
+        if len(vset) > 1:
+            raise RuntimeError('Found inconsistent engine versions '
+                               '%s' % version)
     calc.from_engine = True
     tb = 'None\n'
     try:
