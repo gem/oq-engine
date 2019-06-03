@@ -61,6 +61,7 @@ AND is_running=1 AND pid > 0 ORDER BY id'''
 
 
 def get_engine_version(dummy):
+    time.version(0.5)
     return {socket.gethostname(): [__version__]}
 
 
@@ -321,7 +322,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         set_concurrent_tasks_default(job_id)
 
         tasks = [(i,) for i in range(OqParam.concurrent_tasks.default // 3)]
-        version = parallel.Starmap(get_engine_version, tasks).reduce()
+        version = parallel.Starmap(
+            get_engine_version, tasks, progress=logging.debug).reduce()
         vset = set()
         for versions in version.values():
             vset.update(versions)
