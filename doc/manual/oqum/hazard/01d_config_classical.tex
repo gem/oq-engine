@@ -158,12 +158,12 @@ The file containing the site model has the following structure:
 \end{listing}
 
 Notice that the $0$ for the field \texttt{vs30measured} means that the
-\texttt{vs30} field is inferred, not measured. This is the default, so you
-can just skip the field. Also, most of the GMPEs are not sensitive to
-it.  The same can be said for the \texttt{backarc} parameter: $0$
-means false and this is the default, so you can skip such column. All
-columns that are not needed by the GMPEs your are using can be safely
-skipped, while you will get an error if a relevant column is missing.
+\texttt{vs30} field is inferred, not measured. Most of the GMPEs are not
+sensitive to it, so you can usually skip it.  For the \texttt{backarc}
+parameter $0$ means false and this is the default, so you can skip
+such column. All columns that have defaults or are not needed by the
+GMPEs you are using can be skipped, while you will get an error
+if a relevant column is missing.
 
 If the closest available site with soil conditions is at a distance greater than 5~km from the investigation location, a warning is generated.
 
