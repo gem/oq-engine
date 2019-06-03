@@ -61,7 +61,7 @@ AND is_running=1 AND pid > 0 ORDER BY id'''
 
 
 def get_engine_version(dummy):
-    time.sleep(0.5)
+    time.sleep(0.25)
     return {socket.gethostname(): [__version__]}
 
 
