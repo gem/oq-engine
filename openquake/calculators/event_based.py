@@ -354,6 +354,11 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
+        if (oq.number_of_logic_tree_samples == 0  # full enumeration
+                and self.R > oq.max_potential_paths):
+            raise ValueError(
+                'There are too many realizations (%d) '
+                'use sampling instead of full enumeration' % self.R)
         iterargs = ((rgetter, self.src_filter, self.param)
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
