@@ -351,13 +351,13 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, exposure.tagcol.tagnames, time_event)
-        periods = exposure.occupancy_periods
-        if self.occupancy_periods and not periods:
+        exp_periods = exposure.occupancy_periods
+        if self.occupancy_periods and not exp_periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
                             'in the exposure', self.occupancy_periods)
-        elif self.occupancy_periods.strip() != periods.strip():
+        elif self.occupancy_periods.strip() != exp_periods.strip():
             raise ValueError('Expected %s, got %s' %
-                             (periods, self.occupancy_periods))
+                             (exp_periods, self.occupancy_periods))
         self.loss_types = loss_types
         self.fields = [f[6:] for f in self.array.dtype.names
                        if f.startswith('value-')]
@@ -703,6 +703,11 @@ def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
     """
     :returns: an array of assets from the asset nodes
     """
+    first_asset = asset_nodes[0]
+    for occ in getattr(first_asset, 'occupancies', []):
+        name = 'occupants_' + occ['period']
+        if name not in fields:
+            fields.append(name)
     dtlist = [(f, object) for f in fields]
     if retrofitted:
         dtlist.append(('retrofitted', object))
@@ -711,7 +716,7 @@ def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
     for asset, rec in zip(nodes, array):
         # fix asset.attrib
         for occ in getattr(asset, 'occupancies', []):
-            asset.attrib[occ['period']] = occ['occupants']
+            asset.attrib['occupants_' + occ['period']] = occ['occupants']
         for cost in getattr(asset, 'costs', []):
             asset.attrib[cost['type']] = cost['value']
             if retrofitted and 'retrofitted' in cost.attrib:
@@ -731,8 +736,11 @@ def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
                 rec[field] = 1
             elif field.startswith('value-'):
                 cost = field[6:]
-                if cost not in ignore_missing_costs:
+                try:
                     rec[field] = asset[cost]
+                except KeyError:
+                    if cost not in ignore_missing_costs:
+                        raise
             else:
                 rec[field] = asset.attrib.get(field, '?')
     return array
@@ -816,7 +824,7 @@ class Exposure(object):
         nodes = assetnodes if assetnodes else exposure._read_csv()
         if asset_nodes:  # this is useful for the GED4ALL import script
             return nodes
-        exposure._populate_from(nodes, param, check_dupl)
+        exposure._populate_from(array, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
@@ -850,8 +858,8 @@ class Exposure(object):
             fields.append(value + name)
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
-        if self.occupancy_periods:
-            fields.extend(self.occupancy_periods.split())
+        for op in self.occupancy_periods.split():
+            fields.append('occupants_' + op)
         fields.extend(self.tagcol.tagnames)
         return sorted(set(fields))
 
@@ -905,68 +913,49 @@ class Exposure(object):
                         asset.nodes.extend([loc, costs, occupancies, tags])
                     yield asset
 
-    def _populate_from(self, asset_nodes, param, check_dupl):
+    def _populate_from(self, asset_array, param, check_dupl):
         asset_refs = set()
-        for idx, asset_node in enumerate(asset_nodes):
-            asset_id = asset_node['id']
+        for idx, asset in enumerate(asset_array):
+            asset_id = asset['id']
             # check_dupl is False only in oq prepare_site_model since
             # in that case we are only interested in the asset locations
             if check_dupl and asset_id in asset_refs:
                 raise nrml.DuplicatedID(asset_id)
             asset_refs.add(param['asset_prefix'] + asset_id)
-            self._add_asset(idx, asset_node, param)
+            self._add_asset(idx, asset, param)
 
-    def _add_asset(self, idx, asset_node, param):
+    def _add_asset(self, idx, asset, param):
         values = {}
         retrofitted = None
-        asset_id = asset_node['id'].encode('utf8')
-        prefix = param['asset_prefix'].encode('utf8')
+        asset_id = asset['id']
+        prefix = param['asset_prefix']
         # FIXME: in case of an exposure split in CSV files the line number
         # is None because param['fname'] points to the .xml file :-(
-        with context(param['fname'], asset_node):
-            self.asset_refs.append(prefix + asset_id)
-            taxonomy = asset_node['taxonomy']
-            if 'damage' in param['calculation_mode']:
-                # calculators of 'damage' kind require the 'number'
-                # if it is missing a KeyError is raised
-                number = asset_node['number']
-            else:
-                # some calculators ignore the 'number' attribute;
-                # if it is missing it is considered 1, since we are going
-                # to multiply by it
-                try:
-                    number = asset_node['number']
-                except KeyError:
-                    number = 1
-                else:
-                    if 'occupants' in self.cost_types['name']:
-                        values['occupants_None'] = number
-            location = asset_node.location['lon'], asset_node.location['lat']
-            if param['region'] and not geometry.Point(*location).within(
-                    param['region']):
-                param['out_of_region'] += 1
-                return
-            tagnode = getattr(asset_node, 'tags', None)
-            dic = {} if tagnode is None else tagnode.attrib.copy()
-            dic['taxonomy'] = taxonomy
-            dic['id'] = param['asset_prefix'] + asset_node['id']
-            idxs = self.tagcol.add_tags(dic, prefix)
-        try:
-            costs = asset_node.costs
-        except AttributeError:
-            costs = Node('costs', [])
-        try:
-            occupancies = asset_node.occupancies
-        except AttributeError:
-            occupancies = Node('occupancies', [])
-        for cost in costs:
-            with context(param['fname'], cost):
-                cost_type = cost['type']
-                if cost_type == 'structural':
-                    # retrofitted is defined only for structural
-                    retrofitted = float(cost.get('retrofitted', 0))
-                if cost_type in param['relevant_cost_types']:
-                    values[cost_type] = float(cost['value'])
+        self.asset_refs.append(prefix + asset_id)
+        taxonomy = asset['taxonomy']
+        number = asset['number']
+        if 'occupants' in self.cost_types['name']:
+            values['occupants_None'] = number
+        location = asset['lon'], asset['lat']
+        if param['region'] and not geometry.Point(*location).within(
+                param['region']):
+            param['out_of_region'] += 1
+            return
+        dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames}
+        dic['taxonomy'] = taxonomy
+        dic['id'] = prefix + asset_id
+        idxs = self.tagcol.add_tags(dic, prefix)
+        tot_occupants = 0
+        num_occupancies = 0
+        for name in asset.dtype.names:
+            if name.startswith('value-'):
+                values[name[6:]] = asset[name]
+            elif name.startswith('occupants_'):
+                values[name] = occ = float(asset[name])
+                tot_occupants += occ
+                num_occupancies += 1
+        if tot_occupants:  # store average occupants
+            values['occupants_None'] = tot_occupants / num_occupancies
 
         # check we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
@@ -978,19 +967,13 @@ class Exposure(object):
                 values[cost_type] = None
         elif missing and 'damage' not in param['calculation_mode']:
             # missing the costs is okay for damage calculators
-            with context(param['fname'], asset_node):
-                raise ValueError("Invalid Exposure. "
-                                 "Missing cost %s for asset %s" % (
-                                     missing, asset_id))
-        tot_occupants = 0
-        for occupancy in occupancies:
-            with context(param['fname'], occupancy):
-                occupants = 'occupants_%s' % occupancy['period']
-                values[occupants] = float(occupancy['occupants'])
-                tot_occupants += values[occupants]
-        if occupancies:  # store average occupants
-            values['occupants_None'] = tot_occupants / len(occupancies)
-        area = float(asset_node.get('area', 1))
+            raise ValueError("Invalid Exposure. "
+                             "Missing cost %s for asset %s" % (
+                                 missing, asset_id))
+        try:
+            area = asset['area']
+        except ValueError:
+            area = 1
         ass = Asset(idx, idxs, number, location, values, area,
                     retrofitted, self.cost_calculator)
         self.assets.append(ass)
