@@ -817,7 +817,8 @@ class Exposure(object):
             exposure.tagcol = tagcol
         if assetnodes:
             array = assets2array(assetnodes, exposure._csv_header(),
-                                 exposure.retrofitted, ignore_missing_costs)
+                                 calculation_mode == 'classical_bcr',
+                                 ignore_missing_costs)
         else:
             array = exposure._read_csv()
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
@@ -900,7 +901,10 @@ class Exposure(object):
 
     def _add_asset(self, idx, asset, param):
         values = {}
-        retrofitted = None
+        try:
+            retrofitted = asset['retrofitted']
+        except ValueError:
+            retrofitted = None
         asset_id = asset['id']
         prefix = param['asset_prefix']
         # FIXME: in case of an exposure split in CSV files the line number
@@ -913,7 +917,8 @@ class Exposure(object):
                 param['region']):
             param['out_of_region'] += 1
             return
-        dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames}
+        dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
+               if asset[tagname] != '?'}
         dic['taxonomy'] = taxonomy
         dic['id'] = prefix + asset_id
         idxs = self.tagcol.add_tags(dic, prefix)
