@@ -18,3 +18,4 @@ demos/*/*.zip
 *.swp
 .tox
 venv
+*.whl
