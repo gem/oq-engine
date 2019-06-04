@@ -720,7 +720,7 @@ def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
         for cost in getattr(asset, 'costs', []):
             asset.attrib[cost['type']] = cost['value']
             if retrofitted and 'retrofitted' in cost.attrib:
-                rec['retrofitted'] = cost['value']
+                rec['retrofitted'] = float(cost['retrofitted'])
         if hasattr(asset, 'tags'):
             asset.attrib.update(asset.tags.attrib)
 
@@ -880,7 +880,7 @@ class Exposure(object):
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
                         (fname, sorted(expected_header), sorted(header)))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
-                None: object}
+                'retrofitted': float, None: object}
         rename = {}
         for field in self.cost_types['name']:
             conv[field] = float
