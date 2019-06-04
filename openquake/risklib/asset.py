@@ -816,9 +816,10 @@ class Exposure(object):
         if tagcol:
             exposure.tagcol = tagcol
         if assetnodes:
-            array = assets2array(assetnodes, exposure._csv_header(),
-                                 calculation_mode == 'classical_bcr',
-                                 ignore_missing_costs)
+            array = assets2array(
+                assetnodes, exposure._csv_header(),
+                exposure.retrofitted or calculation_mode == 'classical_bcr',
+                ignore_missing_costs)
         else:
             array = exposure._read_csv()
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
