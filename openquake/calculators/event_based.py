@@ -344,7 +344,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
         if oq.hazard_calculation_id and 'ruptures' in self.datastore:
             # from ruptures
-            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+            self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
         else:
             # from sources

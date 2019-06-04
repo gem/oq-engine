@@ -334,7 +334,11 @@ class File(h5py.File):
         else:
             pyclass = ''
         if isinstance(obj, (dict, Group)) and obj:
-            for k, v in sorted(obj.items()):
+            for k, v in obj.items():
+                # NB: there was a line sorted(obj.items()) here
+                # it was removed because it caused the absurd issue
+                # https://github.com/gem/oq-engine/issues/4761
+                # for an exposure with more than 65536 assets
                 if isinstance(k, tuple):  # multikey
                     k = '-'.join(k)
                 key = '%s/%s' % (path, quote_plus(k))
