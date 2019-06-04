@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the reading of large CSV exposures
   * Fixed the --hc functionality across users
   * Optimized the reduction of the site collection on the exposure sites
   * Made more robust the gsim logic tree parser: lines like
