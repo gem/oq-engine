@@ -686,10 +686,11 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
-def read_csv(fname, dtypedict={None: float}, sep=','):
+def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
+    :param renamedict: aliases for some fields to reanem
     :param sep: separato (default the comma)
     :return: a structured array of floats
     """
@@ -704,4 +705,10 @@ def read_csv(fname, dtypedict={None: float}, sep=','):
         header = first.strip().split(sep)
         arr = numpy.loadtxt(f, build_dt(dtypedict, header), delimiter=sep,
                             ndmin=1)
+    if renamedict:
+        newnames = []
+        for name in arr.dtype.names:
+            new = renamedict.get(name, name)
+            newnames.append(new)
+        arr.dtype.names = newnames
     return ArrayWrapper(arr, attrs)
