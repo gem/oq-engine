@@ -848,7 +848,7 @@ class Exposure(object):
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
 
-    def _csv_header(self, value='value-'):
+    def _csv_header(self, value='value-', occupants='occupants_'):
         """
         Extract the expected CSV header from the exposure metadata
         """
@@ -858,7 +858,7 @@ class Exposure(object):
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
         for op in self.occupancy_periods.split():
-            fields.append('occupants_' + op)
+            fields.append(occupants + op)
         fields.extend(self.tagcol.tagnames)
         return sorted(set(fields))
 
@@ -866,7 +866,7 @@ class Exposure(object):
         """
         :yields: asset nodes
         """
-        expected_header = set(self._csv_header(''))
+        expected_header = set(self._csv_header('', ''))
         for fname in self.datafiles:
             with open(fname, encoding='utf-8') as f:
                 fields = next(csv.reader(f))
@@ -885,8 +885,12 @@ class Exposure(object):
         for field in self.cost_types['name']:
             conv[field] = float
             rename[field] = 'value-' + field
+        for field in self.occupancy_periods.split():
+            conv[field] = float
+            rename[field] = 'occupants_' + field
         for fname in self.datafiles:
-            yield from hdf5.read_csv(fname, conv, rename).array
+            array = hdf5.read_csv(fname, conv, rename).array
+            yield from array
 
     def _populate_from(self, asset_array, param, check_dupl):
         asset_refs = set()
