@@ -704,7 +704,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
             break
         header = first.strip().split(sep)
         arr = numpy.loadtxt(f, build_dt(dtypedict, header), delimiter=sep,
-                            ndmin=1)
+                            ndmin=1, comments=None)
     if renamedict:
         newnames = []
         for name in arr.dtype.names:
