@@ -317,14 +317,21 @@ class TagCollection(object):
 
     def __toh5__(self):
         dic = {}
+        sizes = []
         for tagname in self.tagnames:
             dic[tagname] = numpy.array(getattr(self, tagname), hdf5.vstr)
-        return dic, {'tagnames': numpy.array(self.tagnames, hdf5.vstr)}
+            sizes.append(len(dic[tagname]))
+        return dic, {'tagnames': numpy.array(self.tagnames, hdf5.vstr),
+                     'tagsizes': numpy.array(sizes)}
 
     def __fromh5__(self, dic, attrs):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
+        sizes = []
         for tagname in dic:
             setattr(self, tagname, dic[tagname][()])
+            sizes.append(len(dic[tagname]))
+        # sanity check to protect against /home/michele/oqdata/calc_10826.hdf5
+        numpy.testing.assert_equal(sorted(sizes), sorted(attrs['tagsizes']))
 
     def __iter__(self):
         tags = []
@@ -500,8 +507,7 @@ class AssetCollection(object):
                  'fields': ' '.join(self.fields),
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
-        return dict(
-            array=self.array, tagcol=self.tagcol), attrs
+        return dict(array=self.array, tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
         self.loss_types = attrs['loss_types'].split()

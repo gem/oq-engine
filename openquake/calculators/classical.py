@@ -170,7 +170,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         if oq.hazard_calculation_id and not oq.compare_with_classical:
-            parent = datastore.read(self.oqparam.hazard_calculation_id)
+            parent = util.read(self.oqparam.hazard_calculation_id)
             self.csm_info = parent['csm_info']
             parent.close()
             self.calc_stats(parent)  # post-processing
