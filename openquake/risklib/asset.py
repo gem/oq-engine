@@ -730,10 +730,8 @@ def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
                 rec[field] = asset.location['lon']
             elif field == 'lat':
                 rec[field] = asset.location['lat']
-            elif field == 'number' and 'number' not in asset.attrib:
-                rec[field] = 1
-            elif field == 'area' and 'area' not in asset.attrib:
-                rec[field] = 1
+            elif field in 'area number':
+                rec[field] = float(asset.attrib.get(field, 1))
             elif field.startswith('value-'):
                 cost = field[6:]
                 try:
@@ -815,15 +813,15 @@ class Exposure(object):
         param['fname'] = fname
         param['ignore_missing_costs'] = set(ignore_missing_costs)
         exposure, assetnodes = _get_exposure(param['fname'])
-        array = assets2array(assetnodes, exposure._csv_header(),
-                             exposure.retrofitted, ignore_missing_costs)
         if tagcol:
             exposure.tagcol = tagcol
+        if assetnodes:
+            array = assets2array(assetnodes, exposure._csv_header(),
+                                 exposure.retrofitted, ignore_missing_costs)
+        else:
+            array = exposure._read_csv()
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
             ['occupants'])
-        nodes = assetnodes if assetnodes else exposure._read_csv()
-        if asset_nodes:  # this is useful for the GED4ALL import script
-            return nodes
         exposure._populate_from(array, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
@@ -880,38 +878,14 @@ class Exposure(object):
                     raise InvalidFile(
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
                         (fname, sorted(expected_header), sorted(header)))
-        occupancy_periods = self.occupancy_periods.split()
+        conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
+                None: object}
+        rename = {}
+        for field in self.cost_types['name']:
+            conv[field] = float
+            rename[field] = 'value-' + field
         for fname in self.datafiles:
-            with open(fname, encoding='utf-8') as f:
-                for i, dic in enumerate(csv.DictReader(f), 1):
-                    asset = Node('asset', lineno=i)
-                    with context(fname, asset):
-                        asset['id'] = dic['id']
-                        asset['number'] = valid.positivefloat(dic['number'])
-                        asset['taxonomy'] = dic['taxonomy']
-                        if 'area' in dic:  # optional attribute
-                            asset['area'] = dic['area']
-                        loc = Node('location',
-                                   dict(lon=valid.longitude(dic['lon']),
-                                        lat=valid.latitude(dic['lat'])))
-                        costs = Node('costs')
-                        for cost in self.cost_types['name']:
-                            a = dict(type=cost, value=dic[cost])
-                            if 'retrofitted' in dic:
-                                a['retrofitted'] = dic['retrofitted']
-                            costs.append(Node('cost', a))
-                        occupancies = Node('occupancies')
-                        for period in occupancy_periods:
-                            a = dict(occupants=float(dic[period]),
-                                     period=period)
-                            occupancies.append(Node('occupancy', a))
-                        tags = Node('tags')
-                        for tagname in self.tagcol.tagnames:
-                            if tagname not in (
-                                    'taxonomy', 'exposure', 'country'):
-                                tags.attrib[tagname] = dic[tagname]
-                        asset.nodes.extend([loc, costs, occupancies, tags])
-                    yield asset
+            yield from hdf5.read_csv(fname, conv, rename).array
 
     def _populate_from(self, asset_array, param, check_dupl):
         asset_refs = set()
@@ -934,8 +908,6 @@ class Exposure(object):
         self.asset_refs.append(prefix + asset_id)
         taxonomy = asset['taxonomy']
         number = asset['number']
-        if 'occupants' in self.cost_types['name']:
-            values['occupants_None'] = number
         location = asset['lon'], asset['lat']
         if param['region'] and not geometry.Point(*location).within(
                 param['region']):
@@ -954,7 +926,8 @@ class Exposure(object):
                 values[name] = occ = float(asset[name])
                 tot_occupants += occ
                 num_occupancies += 1
-        if tot_occupants:  # store average occupants
+        if num_occupancies:
+            # store average occupants
             values['occupants_None'] = tot_occupants / num_occupancies
 
         # check we are not missing a cost type
