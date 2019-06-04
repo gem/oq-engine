@@ -690,8 +690,8 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
-    :param renamedict: aliases for some fields to reanem
-    :param sep: separato (default the comma)
+    :param renamedict: aliases for the fields to rename
+    :param sep: separator (default comma)
     :return: a structured array of floats
     """
     attrs = {}
