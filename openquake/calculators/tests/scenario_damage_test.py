@@ -45,7 +45,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual)
 
     def test_case_1(self):
-        # test with a single event
+        # test with a single event and a missing tag
         self.assert_ok(case_1, 'job_risk.ini')
         got = view('num_units', self.calc.datastore)
         self.assertEqual('''\
