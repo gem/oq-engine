@@ -275,8 +275,9 @@ def poll_queue(job_id, pid, poll_time):
             jobs = logs.dbcmd(GET_JOBS)
             failed = [job.id for job in jobs if not psutil.pid_exists(job.pid)]
             if failed:
-                logs.dbcmd("UPDATE job SET status='failed', is_running=0 "
-                           "WHERE id in (?X)", failed)
+                for job in failed:
+                    logs.dbcmd('update_job', job,
+                               {'status': 'failed', 'is_running': 0})
             elif any(job.id < job_id for job in jobs):
                 if first_time:
                     logs.LOG.warn('Waiting for jobs %s', [j.id for j in jobs])
