@@ -22,7 +22,7 @@ import collections
 import operator
 import numpy
 
-from openquake.baselib import hdf5, datastore
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, cached_property, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -46,21 +46,7 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = U64(2 ** 32)
-rlzs_by_grp_dt = numpy.dtype(
-    [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
 by_grp = operator.attrgetter('src_group_id')
-
-
-def store_rlzs_by_grp(dstore):
-    """
-    Save in the datastore a composite array with fields (grp_id, gsim_id, rlzs)
-    """
-    lst = []
-    assoc = dstore['csm_info'].get_rlzs_assoc()
-    for grp, arr in assoc.by_grp().items():
-        for gsim_id, rlzs in enumerate(arr):
-            lst.append((int(grp[4:]), gsim_id, rlzs))
-    dstore['csm_info/rlzs_by_grp'] = numpy.array(lst, rlzs_by_grp_dt)
 
 
 # ######################## GMF calculator ############################ #
@@ -187,7 +173,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # logic tree reduction, must be called before storing the events
         self.store_rlz_info(eff_ruptures)
-        store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)

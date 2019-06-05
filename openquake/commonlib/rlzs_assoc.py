@@ -170,23 +170,6 @@ class RlzsAssoc(object):
         """Array with the weight of the realizations"""
         return numpy.array([rlz.weight for rlz in self.realizations])
 
-    def combine_pmaps(self, pmap_by_grp):
-        """
-        :param pmap_by_grp: dictionary group string -> probability map
-        :returns: a list of probability maps, one per realization
-        """
-        grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
-        num_levels = pmap_by_grp[grp].shape_y
-        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
-                 for _ in self.realizations]
-        array = self.by_grp()
-        for grp in pmap_by_grp:
-            for gsim_idx, rlzis in enumerate(array[grp]):
-                pmap = pmap_by_grp[grp].extract(gsim_idx)
-                for rlzi in rlzis:
-                    pmaps[rlzi] |= pmap
-        return pmaps
-
     def get_rlz(self, rlzstr):
         r"""
         Get a Realization instance for a string of the form 'rlz-\d+'
