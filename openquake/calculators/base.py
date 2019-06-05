@@ -53,6 +53,9 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 RUPTURES_PER_BLOCK = 100000  # used in classical_split_filter
 
+rlzs_by_grp_dt = numpy.dtype(
+    [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
+
 
 class InvalidCalculationID(Exception):
     """
@@ -705,6 +708,14 @@ class HazardCalculator(BaseCalculator):
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
+
+        # save a composite array with fields (grp_id, gsim_id, rlzs)
+        lst = []
+        for grp, arr in self.rlzs_assoc.by_grp().items():
+            for gsim_id, rlzs in enumerate(arr):
+                lst.append((int(grp[4:]), gsim_id, rlzs))
+        self.datastore['csm_info/rlzs_by_grp'] = numpy.array(
+            lst, rlzs_by_grp_dt)
         self.datastore.flush()
 
     def store_source_info(self, calc_times):
