@@ -791,7 +791,7 @@ def view_pmap(token, dstore):
     pmap = {}
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     weights = [rlz.weight for rlz in rlzs_assoc.realizations]
-    pgetter = getters.PmapGetter(dstore, rlzs_assoc, weights)
+    pgetter = getters.PmapGetter(dstore, rlzs_assoc.by_grp(), weights)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
 
