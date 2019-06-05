@@ -39,8 +39,8 @@ def dbcmd(action, *args):
     """
     A dispatcher to the database server.
 
-    :param action: database action to perform
-    :param args: arguments
+    :param string action: database action to perform
+    :param tuple args: arguments
     """
     sock = zeromq.Socket('tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT),
                          zeromq.zmq.REQ, 'connect')
