@@ -817,7 +817,9 @@ class RiskCalculator(HazardCalculator):
         else:
             dstore = self.datastore
         if kind == 'poe':  # hcurves, shape (R, N)
-            getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
+            by_grp = self.rlzs_assoc.by_grp()
+            ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+            getter = getters.PmapGetter(dstore, by_grp, ws, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
         if dstore is self.datastore:
