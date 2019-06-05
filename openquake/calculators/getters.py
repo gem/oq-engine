@@ -57,15 +57,13 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, rlzs_assoc=None, sids=None, poes=()):
+    def __init__(self, dstore, by_grp, weights, sids=None, poes=()):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
-        rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
-        self.weights = numpy.array(
-            [rlz.weight for rlz in rlzs_assoc.realizations])
-        self.array = rlzs_assoc.by_grp()
+        self.weights = weights
+        self.array = by_grp
         self.poes = poes
-        self.num_rlzs = len(rlzs_assoc.realizations)
+        self.num_rlzs = len(weights)
         self.eids = None
         self.nbytes = 0
         self.sids = sids
