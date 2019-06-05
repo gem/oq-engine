@@ -60,7 +60,10 @@ class PmapGetter(object):
     def __init__(self, dstore, by_grp, weights, sids=None, poes=()):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
-        self.weights = weights
+        if len(weights[0].dic) == 1:  # no weights by IMT
+            self.weights = numpy.array([w['weight'] for w in weights])
+        else:
+            self.weights = weights
         self.array = by_grp
         self.poes = poes
         self.num_rlzs = len(weights)
