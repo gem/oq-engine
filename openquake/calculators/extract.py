@@ -754,7 +754,9 @@ def extract_mean_std_curves(dstore, what):
     """
     Yield imls/IMT and poes/IMT containg mean and stddev for all sites
     """
-    getter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    w = [rlz.weight for rlz in rlzs_assoc.realizations]
+    getter = getters.PmapGetter(dstore, rlzs_assoc.by_grp(), w)
     arr = getter.get_mean().array
     for imt in getter.imtls:
         yield 'imls/' + imt, getter.imtls[imt]
