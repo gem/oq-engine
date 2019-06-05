@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
+import itertools
 import logging
 import csv
 import os
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib import hdf5, general, parallel
+from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -781,8 +782,7 @@ class Exposure(object):
                             ignore_missing_costs, asset_nodes, check_dupl,
                             prefix, tagcol))
         exp = None
-        for exposure in parallel.Starmap(
-                Exposure.read_exp, allargs, distribute='no'):
+        for exposure in itertools.starmap(Exposure.read_exp, allargs):
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
