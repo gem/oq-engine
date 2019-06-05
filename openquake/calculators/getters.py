@@ -60,16 +60,15 @@ class PmapGetter(object):
     def __init__(self, dstore, rlzs_assoc=None, sids=None, poes=()):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
-        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        self.weights = numpy.array(
+            [rlz.weight for rlz in rlzs_assoc.realizations])
+        self.array = rlzs_assoc.by_grp()
         self.poes = poes
-        self.num_rlzs = len(self.rlzs_assoc.realizations)
+        self.num_rlzs = len(rlzs_assoc.realizations)
         self.eids = None
         self.nbytes = 0
         self.sids = sids
-
-    @property
-    def weights(self):
-        return [rlz.weight for rlz in self.rlzs_assoc.realizations]
 
     @property
     def imts(self):
@@ -142,20 +141,30 @@ class PmapGetter(object):
         assert self.sids is not None
         pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
         grps = [grp] if grp is not None else sorted(self.pmap_by_grp)
-        array = self.rlzs_assoc.by_grp()
         for grp in grps:
-            for gsim_idx, rlzis in enumerate(array[grp]):
+            for gsim_idx, rlzis in enumerate(self.array[grp]):
                 for r in rlzis:
                     if r == rlzi:
                         pmap |= self.pmap_by_grp[grp].extract(gsim_idx)
                         break
         return pmap
 
-    def get_pmaps(self):  # used in classical
+    def get_pmaps(self, pmap_by_grp=None):  # used in classical
         """
         :returns: a list of R probability maps
         """
-        return self.rlzs_assoc.combine_pmaps(self.pmap_by_grp)
+        if pmap_by_grp is None:
+            pmap_by_grp = self.pmap_by_grp
+        grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
+        num_levels = pmap_by_grp[grp].shape_y
+        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
+                 for _ in range(self.num_rlzs)]
+        for grp in pmap_by_grp:
+            for gsim_idx, rlzis in enumerate(self.array[grp]):
+                pmap = pmap_by_grp[grp].extract(gsim_idx)
+                for rlzi in rlzis:
+                    pmaps[rlzi] |= pmap
+        return pmaps
 
     def get_hcurves(self, imtls=None):
         """
@@ -218,7 +227,7 @@ class PmapGetter(object):
         else:  # multiple realizations
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
-            pmaps = self.rlzs_assoc.combine_pmaps(dic)
+            pmaps = self.get_pmaps(dic)
             return stats.compute_pmap_stats(
                 pmaps, [stats.mean_curve, stats.std_curve],
                 self.weights, self.imtls)
