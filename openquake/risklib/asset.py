@@ -923,7 +923,8 @@ class Exposure(object):
             param['out_of_region'] += 1
             return
         dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
-               if tagname != 'country' and asset[tagname] != '?'}
+               if tagname not in ('country', 'exposure') and
+               asset[tagname] != '?'}
         dic['taxonomy'] = taxonomy
         dic['id'] = prefix + asset_id
         idxs = self.tagcol.add_tags(dic, prefix)
