@@ -342,7 +342,10 @@ class File(h5py.File):
                 if isinstance(k, tuple):  # multikey
                     k = '-'.join(k)
                 key = '%s/%s' % (path, quote_plus(k))
-                self[key] = v
+                if isinstance(v, numpy.ndarray) and isinstance(v[0], str):
+                    self.create_dataset(key, v.shape, vstr)[:] = v
+                else:
+                    self[key] = v
             if isinstance(obj, Group):
                 self.save_attrs(
                     path, obj.attrs, __pyclass__=cls2dotname(Group))
