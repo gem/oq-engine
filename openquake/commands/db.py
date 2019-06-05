@@ -39,7 +39,7 @@ def convert(strings):
     for s in strings:
         try:
             yield ast.literal_eval(s)
-        except:
+        except Exception:
             yield s
 
 
