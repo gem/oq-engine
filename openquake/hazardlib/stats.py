@@ -117,7 +117,8 @@ def compute_pmap_stats(pmaps, stats, weights, imtls):
     out = p0.__class__.build(L, nstats, sids)
     for imt in imtls:
         slc = imtls(imt)
-        w = [weight[imt] for weight in weights]
+        w = [weight[imt] if hasattr(weight, 'dic') else weight
+             for weight in weights]
         if sum(w) == 0:  # expect no data for this IMT
             continue
         for i, array in enumerate(compute_stats(curves[:, :, slc], stats, w)):
