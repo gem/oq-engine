@@ -672,7 +672,7 @@ def view_global_hcurves(token, dstore):
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    weights = [rlz.weights for rlz in rlzs_assoc.realizations]
+    weights = [rlz.weight for rlz in rlzs_assoc.realizations]
     mean = getters.PmapGetter(dstore, rlzs_assoc, weights).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
@@ -790,7 +790,7 @@ def view_pmap(token, dstore):
     grp = token.split(':')[1]  # called as pmap:grp
     pmap = {}
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    weights = [rlz.weights for rlz in rlzs_assoc.realizations]
+    weights = [rlz.weight for rlz in rlzs_assoc.realizations]
     pgetter = getters.PmapGetter(dstore, rlzs_assoc, weights)
     pmap = pgetter.get_mean(grp)
     return str(pmap)
