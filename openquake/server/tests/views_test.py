@@ -86,15 +86,9 @@ class EngineServerTestCase(unittest.TestCase):
                 break
             time.sleep(0.5)
 
-    def postzip(self, archive, cmd='run'):
-        path = os.path.join(self.datadir, archive)
-        if cmd == 'run':
-            with open(path, 'rb') as a:
-                resp = self.post('run', dict(archive=a))
-        elif cmd == 'submit':
-            resp = self.post('run', dict(job_ini=path))
-        else:
-            raise ValueError('Invalid command: %s' % cmd)
+    def postzip(self, archive):
+        with open(os.path.join(self.datadir, archive), 'rb') as a:
+            resp = self.post('run', dict(archive=a))
         try:
             js = json.loads(resp.content.decode('utf8'))
         except Exception:
