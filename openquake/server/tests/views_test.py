@@ -86,9 +86,15 @@ class EngineServerTestCase(unittest.TestCase):
                 break
             time.sleep(0.5)
 
-    def postzip(self, archive):
-        with open(os.path.join(self.datadir, archive), 'rb') as a:
-            resp = self.post('run', dict(archive=a))
+    def postzip(self, archive, cmd='run'):
+        path = os.path.join(self.datadir, archive)
+        if cmd == 'run':
+            with open(path, 'rb') as a:
+                resp = self.post('run', dict(archive=a))
+        elif cmd == 'submit':
+            resp = self.post('run', dict(job_ini=path))
+        else:
+            raise ValueError('Invalid command: %s' % cmd)
         try:
             js = json.loads(resp.content.decode('utf8'))
         except Exception:
@@ -126,7 +132,7 @@ class EngineServerTestCase(unittest.TestCase):
         assert resp.status_code == 404, resp
 
     def test_ok(self):
-        job_id = self.postzip('archive_ok.zip')
+        job_id = self.postzip('archive_ok.zip', 'submit')
         self.wait()
         log = self.get('%s/log/:' % job_id)
         self.assertGreater(len(log), 0)
