@@ -40,9 +40,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 
 
 def _imls(curves, poe, imt, imls, rlzi):
-    if poe is None:  # iml_disagg was set
-        return imls
-    # else return interpolated intensity measure levels
+    # return interpolated intensity measure levels
     levels = [numpy.interp(poe, curve[rlzi][imt][::-1], imls[::-1])
               if curve else numpy.nan for curve in curves]
     return numpy.array(levels)  # length N
@@ -61,9 +59,12 @@ def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
     imts = [from_string(imt) for imt in imtls]
     for m, imt in enumerate(imtls):
         imls = imtls[imt]
-        for p, poe in enumerate(poes_disagg):
-            for r in range(R):
-                arr[:, r, m, p] = _imls(curves, poe, imt, imls, r)
+        if poes_disagg == (None,):
+            arr[:, :, m, 0] = imls
+        else:
+            for p, poe in enumerate(poes_disagg):
+                for r in range(R):
+                    arr[:, r, m, p] = _imls(curves, poe, imt, imls, r)
     return ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
