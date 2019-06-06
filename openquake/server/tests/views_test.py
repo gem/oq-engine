@@ -132,7 +132,7 @@ class EngineServerTestCase(unittest.TestCase):
         assert resp.status_code == 404, resp
 
     def test_ok(self):
-        job_id = self.postzip('archive_ok.zip', 'submit')
+        job_id = self.postzip('archive_ok.zip')
         self.wait()
         log = self.get('%s/log/:' % job_id)
         self.assertGreater(len(log), 0)
