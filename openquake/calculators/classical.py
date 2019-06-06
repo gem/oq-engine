@@ -196,9 +196,13 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
         if acc.nsites:
-            src_ids = sorted(acc.nsites)
-            nsites = [acc.nsites[i] for i in src_ids]
-            self.datastore['source_info'][src_ids, 'num_sites'] = nsites
+            if len(acc.nsites) > 50000:
+                logging.warn(
+                    'There are %d contributing sources', len(acc.nsites))
+            else:
+                src_ids = sorted(acc.nsites)
+                nsites = [acc.nsites[i] for i in src_ids]
+                self.datastore['source_info'][src_ids, 'num_sites'] = nsites
         if not self.calc_times:
             raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory
