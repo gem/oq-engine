@@ -484,6 +484,46 @@ def calc_run(request):
                         status=status)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_submit(request):
+    """
+    Submit a calculation from local files
+
+    :param request:
+        a `django.http.HttpRequest` object with a `job_ini` attribute.
+        If the request has the attribute `hazard_job_id`, the results of the
+        specified hazard calculations will be re-used as input by the risk
+        calculation.
+    """
+    hazard_job_id = request.POST.get('hazard_job_id')
+
+    if hazard_job_id:
+        hazard_job_id = int(hazard_job_id)
+    inifile = request.POST.get('job_ini')
+    if not inifile:
+        msg = 'Missing job_ini in the request'
+        logging.error(msg)
+        return HttpResponse(content=json.dumps([msg]), content_type=JSON,
+                            status=500)
+
+    user = utils.get_user(request)
+    try:
+        job_id, pid = submit_job(inifile, user, hazard_job_id)
+    except Exception as exc:  # no job created, for instance missing .xml file
+        # get the exception message
+        exc_msg = str(exc)
+        logging.error(exc_msg)
+        response_data = exc_msg.splitlines()
+        status = 500
+    else:
+        response_data = dict(job_id=job_id, status='created', pid=pid)
+        status = 200
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=status)
+
+
 RUNCALC = '''\
 import os, sys, pickle
 from openquake.commonlib import logs

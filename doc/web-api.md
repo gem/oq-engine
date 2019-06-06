@@ -249,6 +249,18 @@ Parameters:
 Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
 
 
+#### POST /v1/calc/submit
+
+Submit a new calculation by specifying a input file local to the server
+
+Parameters:
+
+    * job_ini: a local oq engine job configuration file or a zipped archive
+    * hazard_job_id: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
+
+Response: a JSON dictionary with keys 'job_id', 'status', 'pid'
+
+
 #### POST /v1/valid/
 
 Check if a given XML text is a valid NRML.
