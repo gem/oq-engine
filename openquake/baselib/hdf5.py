@@ -290,7 +290,7 @@ class File(h5py.File):
         self.path = path
         return self
 
-    def save_vlen(self, key, data):  # not used yet
+    def save_vlen(self, key, data):  # used in SourceWriterTestCase
         """
         Save a sequence of variable-length arrays
 
@@ -346,9 +346,12 @@ class File(h5py.File):
             if isinstance(obj, Group):
                 self.save_attrs(
                     path, obj.attrs, __pyclass__=cls2dotname(Group))
-        elif isinstance(obj, numpy.ndarray) and len(obj) and isinstance(
+        elif isinstance(obj, numpy.ndarray) and obj.shape and isinstance(
                 obj[0], str):
             self.create_dataset(path, obj.shape, vstr)[:] = obj
+        elif isinstance(obj, list) and len(obj) and isinstance(
+                obj[0], numpy.ndarray):
+            self.save_vlen(path, obj)
         else:
             super().__setitem__(path, obj)
         if pyclass:
