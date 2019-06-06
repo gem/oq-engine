@@ -320,7 +320,7 @@ class TagCollection(object):
         dic = {}
         sizes = []
         for tagname in self.tagnames:
-            dic[tagname] = numpy.array(getattr(self, tagname), hdf5.vstr)
+            dic[tagname] = numpy.array(getattr(self, tagname))
             sizes.append(len(dic[tagname]))
         return dic, {'tagnames': numpy.array(self.tagnames, hdf5.vstr),
                      'tagsizes': numpy.array(sizes)}

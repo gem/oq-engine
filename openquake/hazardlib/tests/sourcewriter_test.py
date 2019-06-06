@@ -78,7 +78,7 @@ class SourceWriterTestCase(unittest.TestCase):
     def test_collection(self):
         self.check_round_trip(COLLECTION)
 
-    def test_collection(self):
+    def test_mutex(self):
         self.check_round_trip(MUTEX)
 
     def test_multipoint(self):
