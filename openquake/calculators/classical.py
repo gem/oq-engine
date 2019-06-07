@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5, datastore
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
