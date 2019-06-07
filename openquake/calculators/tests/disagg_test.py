@@ -86,14 +86,12 @@ class DisaggregationTestCase(CalculatorTestCase):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok([
-            'rlz-0-PGA--3.0--3.0.xml', 'rlz-0-PGA-0.0-0.0.xml',
-            'rlz-1-PGA--3.0--3.0.xml', 'rlz-1-PGA-0.0-0.0.xml',
-            'rlz-2-PGA-0.0-0.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
-            case_2.__file__)
+            'rlz-0-SA(0.1)-sid-0.xml',
+            'rlz-0-SA(0.1)-sid-1.xml'], case_2.__file__)
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 6)  # number of CSV files
+        self.assertEqual(len(fnames), 2)  # number of CSV files
 
         #fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         #self.assertEqual(len(fnames), 2)  # 2 sid x 1 key x 1 poe x 1 imt

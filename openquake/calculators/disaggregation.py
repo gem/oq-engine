@@ -47,27 +47,28 @@ def _to_matrix(matrices, num_trts):
     return mat
 
 
-def gen_iml3s(R, iml_disagg, imtls, poes_disagg, curves):
+def gen_iml3s(rlzis, iml_disagg, imtls, poes_disagg, curves):
     """
-    :yields: N arrays of shape (R, M, P)
+    :yields: N arrays of shape (M, P)
     """
     M = len(imtls)
     P = len(poes_disagg)
     imts = [from_string(imt) for imt in imtls]
     for s, curve in enumerate(curves):
-        arr = numpy.empty((R, M, P))
+        arr = numpy.empty((M, P))
         arr.fill(numpy.nan)
         if poes_disagg == (None,):
+            r = 0
             for m, imt in enumerate(imtls):
-                arr[:, m, 0] = imtls[imt]
+                arr[m, 0] = imtls[imt]
         elif curve:
-            for r in range(R):
-                c = curve[r]
-                for m, imt in enumerate(imtls):
-                    poes = c[imt][::-1]
-                    imls = imtls[imt][::-1]
-                    arr[r, m] = numpy.interp(poes_disagg, poes, imls)
-        yield hdf5.ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
+            r = rlzis[s]
+            for m, imt in enumerate(imtls):
+                poes = curve[r][imt][::-1]
+                imls = imtls[imt][::-1]
+                arr[m] = numpy.interp(poes_disagg, poes, imls)
+        yield hdf5.ArrayWrapper(
+            arr, dict(poes_disagg=poes_disagg, imts=imts, rlzi=r))
 
 
 def _iml2s(iml_disagg, imtls, poes_disagg, curves):
@@ -278,6 +279,7 @@ producing too small PoEs.'''
             raise RuntimeError('All sources were filtered away!')
 
         poes_disagg = oq.poes_disagg or (None,)
+        N = len(self.sitecol)
         R = len(self.rlzs_assoc.realizations)
         M = len(oq.imtls)
         P = len(poes_disagg)
@@ -285,8 +287,12 @@ producing too small PoEs.'''
             logging.warning(
                 'You have %d realizations, %d IMTs and %d poes_disagg: the '
                 'disaggregation will be heavy and memory consuming', R, M, P)
+        try:
+            rlzs = self.datastore['best_rlz'][()]
+        except KeyError:
+            rlzs = numpy.zeros(N, int)
         iml3s = list(
-            gen_iml3s(R, oq.iml_disagg, oq.imtls, poes_disagg, curves))
+            gen_iml3s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves))
         if oq.disagg_by_src:
             if R == 1:
                 iml2s = _iml2s(oq.iml_disagg, oq.imtls, poes_disagg, curves)
@@ -334,10 +340,10 @@ producing too small PoEs.'''
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             iml3 = iml3s[s]
-            for r in range(R):
-                for p, poe in enumerate(oq.poes_disagg or [None]):
-                    for m, imt in enumerate(oq.imtls):
-                        self.imldict[s, r, poe, imt] = iml3[r, m, p]
+            r = rlzs[s]
+            for p, poe in enumerate(oq.poes_disagg or [None]):
+                for m, imt in enumerate(oq.imtls):
+                    self.imldict[s, r, poe, imt] = iml3[m, p]
 
         for smodel in csm.source_models:
             sm_id = smodel.ordinal
@@ -356,9 +362,10 @@ producing too small PoEs.'''
 
         self.num_ruptures = [0] * len(self.trts)
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
-        results = parallel.Starmap(
-            compute_disagg, all_args, self.monitor()
-        ).reduce(self.agg_result, AccumDict(accum={}))
+        mon = self.monitor()
+        mon.cache_info = numpy.zeros(3)
+        results = parallel.Starmap(compute_disagg, all_args, mon).reduce(
+            self.agg_result, AccumDict(accum={}))
 
         # set eff_ruptures
         trti = csm.info.trt2i()
@@ -468,7 +475,7 @@ producing too small PoEs.'''
         lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
-            rlz='rlz-%d' if isinstance(rlz_id, int) else rlz_id,
+            rlz='rlz-%d' % rlz_id if isinstance(rlz_id, int) else rlz_id,
             imt=imt_str, sid=site_id)
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]

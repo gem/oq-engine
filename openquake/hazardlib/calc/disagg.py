@@ -46,7 +46,7 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
     :param cmaker: a ContextMaker instance
     :param sitecol: a SiteCollection with N=1 site
     :param ruptures: an iterator over ruptures with the same TRT
-    :param iml3: a 3D array of IMLs of shape (R, M, P)
+    :param iml3: a 2D array of IMLs of shape (M, P)
     :param truncnorm: an instance of scipy.stats.truncnorm
     :param epsilons: the epsilon bins
     :param monitor: a Monitor instance
@@ -54,7 +54,11 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
         an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
     """
     assert len(sitecol) == 1, sitecol
-    acc = AccumDict(accum=[])
+    acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[])
+    try:
+        gsim = cmaker.gsim_by_rlzi[iml3.rlzi]
+    except KeyError:
+        return acc
     ctx_mon = monitor('disagg_contexts', measuremem=False)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     clo_mon = monitor('get_closest', measuremem=False)
@@ -67,20 +71,19 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
         with clo_mon:  # this is faster than computing orig_dctx
             closest_points = rupture.surface.get_closest_points(sitecol)
         cache = {}
-        for rlz, gsim in cmaker.gsim_by_rlzi.items():
-            dctx = orig_dctx.roundup(gsim.minimum_distance)
-            for m, imt in enumerate(iml3.imts):
-                for p, poe in enumerate(iml3.poes_disagg):
-                    iml = iml3[rlz, m, p]
-                    try:
-                        pne = cache[gsim, imt, iml]
-                    except KeyError:
-                        with pne_mon:
-                            pne = disaggregate_pne(
-                                gsim, rupture, sitecol, dctx, imt, iml,
-                                truncnorm, epsilons)
-                            cache[gsim, imt, iml] = pne
-                    acc[poe, str(imt), rlz].append(pne)
+        dctx = orig_dctx.roundup(gsim.minimum_distance)
+        for m, imt in enumerate(iml3.imts):
+            for p, poe in enumerate(iml3.poes_disagg):
+                iml = iml3[m, p]
+                try:
+                    pne = cache[gsim, imt, iml]
+                except KeyError:
+                    with pne_mon:
+                        pne = disaggregate_pne(
+                            gsim, rupture, sitecol, dctx, imt, iml,
+                            truncnorm, epsilons)
+                        cache[gsim, imt, iml] = pne
+                acc[poe, str(imt), iml3.rlzi].append(pne)
         acc['mags'].append(rupture.mag)
         acc['dists'].append(getattr(dctx, cmaker.filter_distance))
         acc['lons'].append(closest_points.lons)
@@ -354,8 +357,8 @@ def disaggregation(
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
-    iml3 = ArrayWrapper(numpy.array([[[iml]]]),
-                        dict(imts=[imt], poes_disagg=[None]))
+    iml3 = ArrayWrapper(numpy.array([[iml]]),
+                        dict(imts=[imt], poes_disagg=[None], rlzi=0))
     for trt, srcs in by_trt.items():
         ruptures = []
         for src in srcs:
