@@ -76,9 +76,9 @@ class DisaggTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(
             dist_bins, [0., 10., 20., 30., 40., 50., 60., 70., 80.])
         numpy.testing.assert_almost_equal(
-            lat_bins, [[-0.6, -0.4, -0.2, 0., 0.2, 0.4, 0.6]])
+            lat_bins, [-0.6, -0.4, -0.2, 0., 0.2, 0.4, 0.6])
         numpy.testing.assert_almost_equal(
-            lon_bins, [[-0.6, -0.4, -0.2, 0., 0.2, 0.4, 0.6]])
+            lon_bins, [-0.6, -0.4, -0.2, 0., 0.2, 0.4, 0.6])
         numpy.testing.assert_almost_equal(eps_bins, [-3., -1., 1., 3.])
         self.assertEqual(trt_bins, ['Active Shallow Crust'])
 
