@@ -38,7 +38,7 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
-def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
+def disaggregate(cmaker, sitecol, ruptures, iml2, truncnorm, epsilons,
                  monitor=Monitor()):
     """
     Disaggregate (separate) PoE in different contributions.
@@ -46,7 +46,7 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
     :param cmaker: a ContextMaker instance
     :param sitecol: a SiteCollection with N=1 site
     :param ruptures: an iterator over ruptures with the same TRT
-    :param iml3: a 2D array of IMLs of shape (M, P)
+    :param iml2: a 2D array of IMLs of shape (M, P)
     :param truncnorm: an instance of scipy.stats.truncnorm
     :param epsilons: the epsilon bins
     :param monitor: a Monitor instance
@@ -56,7 +56,7 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
     assert len(sitecol) == 1, sitecol
     acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[])
     try:
-        gsim = cmaker.gsim_by_rlzi[iml3.rlzi]
+        gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
         return acc
     ctx_mon = monitor('disagg_contexts', measuremem=False)
@@ -72,9 +72,9 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
             closest_points = rupture.surface.get_closest_points(sitecol)
         cache = {}
         dctx = orig_dctx.roundup(gsim.minimum_distance)
-        for m, imt in enumerate(iml3.imts):
-            for p, poe in enumerate(iml3.poes_disagg):
-                iml = iml3[m, p]
+        for m, imt in enumerate(iml2.imts):
+            for p, poe in enumerate(iml2.poes_disagg):
+                iml = iml2[m, p]
                 try:
                     pne = cache[gsim, imt, iml]
                 except KeyError:
@@ -83,7 +83,7 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
                             gsim, rupture, sitecol, dctx, imt, iml,
                             truncnorm, epsilons)
                         cache[gsim, imt, iml] = pne
-                acc[poe, str(imt), iml3.rlzi].append(pne)
+                acc[poe, str(imt), iml2.rlzi].append(pne)
         acc['mags'].append(rupture.mag)
         acc['dists'].append(getattr(dctx, cmaker.filter_distance))
         acc['lons'].append(closest_points.lons)
@@ -357,7 +357,7 @@ def disaggregation(
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
-    iml3 = ArrayWrapper(numpy.array([[iml]]),
+    iml2 = ArrayWrapper(numpy.array([[iml]]),
                         dict(imts=[imt], poes_disagg=[None], rlzi=0))
     for trt, srcs in by_trt.items():
         ruptures = []
@@ -367,7 +367,7 @@ def disaggregation(
             trt, rlzs_by_gsim, source_filter.integration_distance,
             {'filter_distance': filter_distance})
         bdata[trt] = collect_bin_data(
-            ruptures, sitecol, cmaker, iml3, truncation_level, n_epsilons)
+            ruptures, sitecol, cmaker, iml2, truncation_level, n_epsilons)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
