@@ -26,7 +26,6 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib.stats import compute_stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -366,31 +365,6 @@ producing too small PoEs.'''
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
 
-    def build_stats(self, results, hstats):
-        """
-        :param results: dict key -> 6D disagg_matrix
-        :param hstats: (statname, statfunc) pairs
-        """
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        R = len(weights)
-        T = len(self.trts)
-        dic = {}  # sid, poe, imt -> disagg_matrix
-        for sid in self.sitecol.sids:
-            bins = disagg.get_bins(self.bin_edges, sid)
-            shape = tuple(len(bin) - 1 for bin in bins)
-            for poe in self.oqparam.poes_disagg or (None,):
-                for imt in self.oqparam.imtls:
-                    dic[sid, poe, imt] = numpy.zeros((R, T) + shape)
-        for (sid, rlzi, poe, imt), matrix in results.items():
-            dic[sid, poe, imt][rlzi] = matrix
-        res = {}  # sid, stat, poe, imt -> disagg_matrix
-        for (sid, poe, imt), array in dic.items():
-            wei_imt = [weight[imt] for weight in weights]
-            for stat, func in hstats:
-                [matrix] = compute_stats(array, [func], wei_imt)
-                res[sid, stat, poe, imt] = matrix
-        return res
-
     def get_NRPM(self):
         """
         :returns: (num_sites, num_rlzs, num_poes, num_imts)
@@ -417,28 +391,19 @@ producing too small PoEs.'''
         shp = self.get_NRPM()
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, R=%d, P=%d, M=%d)', numpy.prod(shp), *shp)
-        self.save_disagg_result('disagg', results)
+        self.save_disagg_result(results, trts=encode(self.trts),
+                                num_ruptures=self.num_ruptures)
 
-        hstats = self.oqparam.hazard_stats()
-        if len(self.rlzs_assoc.realizations) > 1 and hstats:
-            with self.monitor('computing and saving stats', measuremem=True):
-                res = self.build_stats(results, hstats.items())
-                self.save_disagg_result('disagg-stats', res)
-
-        self.datastore.set_attrs(
-            'disagg', trts=encode(self.trts), num_ruptures=self.num_ruptures)
-
-    def save_disagg_result(self, dskey, results):
+    def save_disagg_result(self, results, **attrs):
         """
         Save the computed PMFs in the datastore
 
-        :param dskey:
-            dataset key; can be 'disagg' or 'disagg-stats'
         :param results:
             a dictionary sid, rlz, poe, imt -> 6D disagg_matrix
         """
         for (sid, rlz, poe, imt), matrix in sorted(results.items()):
-            self._save_result(dskey, sid, rlz, poe, imt, matrix)
+            self._save_result('disagg', sid, rlz, poe, imt, matrix)
+        self.datastore.set_attrs('disagg', **attrs)
 
     def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix):
         disagg_outputs = self.oqparam.disagg_outputs
@@ -462,10 +427,7 @@ producing too small PoEs.'''
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
-        try:
-            attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
-        except KeyError:  # when saving the stats
-            attrs['iml'] = self.oqparam.iml_disagg.get(imt_str, -1)
+        attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
