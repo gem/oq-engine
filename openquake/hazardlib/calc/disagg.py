@@ -31,35 +31,11 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import pack, groupby, AccumDict
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
-
-
-def make_iml4(R, iml_disagg, imtls, poes_disagg, curves):
-    """
-    :yields: N arrays of shape (R, M, P)
-    """
-    M = len(imtls)
-    P = len(poes_disagg)
-    imts = [from_string(imt) for imt in imtls]
-    for s, curve in enumerate(curves):
-        arr = numpy.empty((R, M, P))
-        arr.fill(numpy.nan)
-        if poes_disagg == (None,):
-            for m, imt in enumerate(imtls):
-                arr[:, m, 0] = imtls[imt]
-        elif curve:
-            for r in range(R):
-                c = curve[r]
-                for m, imt in enumerate(imtls):
-                    poes = c[imt][::-1]
-                    imls = imtls[imt][::-1]
-                    arr[r, m] = numpy.interp(poes_disagg, poes, imls)
-        yield ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
 def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
@@ -171,7 +147,7 @@ def collect_bin_data(ruptures, sitecol, cmaker, iml3,
     :param ruptures: a list of ruptures
     :param sitecol: a SiteCollection instance with a single site
     :param cmaker: a ContextMaker instance
-    :param iml4: an ArrayWrapper of intensities of shape (R, M, P)
+    :param iml3: an ArrayWrapper of intensities of shape (R, M, P)
     :param truncation_level: the truncation level
     :param n_epsilons: the number of epsilons
     :param monitor: a Monitor instance
