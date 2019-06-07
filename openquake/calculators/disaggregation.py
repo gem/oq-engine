@@ -70,6 +70,30 @@ def gen_iml3s(R, iml_disagg, imtls, poes_disagg, curves):
         yield hdf5.ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
+def _iml2s(iml_disagg, imtls, poes_disagg, curves):
+    """
+    :returns: a list of N arrays of shape (M, P)
+    """
+    M = len(imtls)
+    P = len(poes_disagg)
+    imts = [from_string(imt) for imt in imtls]
+    lst = []
+    for s, curve in enumerate(curves):
+        arr = numpy.empty((M, P))
+        arr.fill(numpy.nan)
+        if poes_disagg == (None,):
+            for m, imt in enumerate(imtls):
+                arr[m, 0] = imtls[imt]
+        elif curve:
+            for m, imt in enumerate(imtls):
+                poes = curve[0][imt][::-1]
+                imls = imtls[imt][::-1]
+                arr[m] = numpy.interp(poes_disagg, poes, imls)
+        a = hdf5.ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
+        lst.append(a)
+    return lst
+
+
 def compute_disagg(sitecol, sources, cmaker, iml3s, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -253,18 +277,20 @@ producing too small PoEs.'''
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
 
+        poes_disagg = oq.poes_disagg or (None,)
         R = len(self.rlzs_assoc.realizations)
         M = len(oq.imtls)
-        P = len(oq.poes_disagg) or 1
+        P = len(poes_disagg)
         if R * M * P > 10:
             logging.warning(
                 'You have %d realizations, %d IMTs and %d poes_disagg: the '
                 'disaggregation will be heavy and memory consuming', R, M, P)
-        iml3s = list(gen_iml3s(
-            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves))
+        iml3s = list(
+            gen_iml3s(R, oq.iml_disagg, oq.imtls, poes_disagg, curves))
         if oq.disagg_by_src:
             if R == 1:
-                self.build_disagg_by_src(iml3s)
+                iml2s = _iml2s(oq.iml_disagg, oq.imtls, poes_disagg, curves)
+                self.build_disagg_by_src(iml2s)
             else:
                 logging.warning('disagg_by_src works only with 1 realization, '
                                 'you have %d', R)
@@ -479,10 +505,10 @@ producing too small PoEs.'''
                     ' poe=%s; perhaps the number of intensity measure'
                     ' levels is too small?', poe_agg, poe)
 
-    def build_disagg_by_src(self, iml3s):
+    def build_disagg_by_src(self, iml2s):
         """
         :param dstore: a datastore
-        :param iml3s: N arrays of IMLs with shape (1, M, P)
+        :param iml2s: N arrays of IMLs with shape (M, P)
         """
         logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
@@ -496,7 +522,7 @@ producing too small PoEs.'''
         P = len(poes_disagg)
         for rec in self.sitecol.array:
             sid = rec['sids']
-            iml3 = iml3s[sid]
+            iml2 = iml2s[sid]
             for imti, imt in enumerate(oq.imtls):
                 xs = oq.imtls[imt]
                 poes = numpy.zeros((G, P))
@@ -504,7 +530,7 @@ producing too small PoEs.'''
                     pmap = pmap_by_grp['grp-%02d' % grp_id]
                     if sid in pmap:
                         ys = pmap[sid].array[oq.imtls(imt), 0]
-                        poes[g] = numpy.interp(iml3[0, imti, :], xs, ys)
+                        poes[g] = numpy.interp(iml2[imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                               else 'poe-%s' % poe)
