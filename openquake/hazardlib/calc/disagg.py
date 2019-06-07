@@ -26,10 +26,10 @@ import operator
 import numpy
 import scipy.stats
 
-from openquake.hazardlib import pmf
+from openquake.hazardlib import pmf, contexts, const
 from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import pack, groupby
+from openquake.baselib.general import pack, groupby, AccumDict
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -37,15 +37,6 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
-
-
-def _imls(curves, poe, imt, imls, rlzi):
-    if poe is None:  # iml_disagg was set
-        return imls
-    # else return interpolated intensity measure levels
-    levels = [numpy.interp(poe, curve[rlzi][imt][::-1], imls[::-1])
-              if curve else numpy.nan for curve in curves]
-    return numpy.array(levels)  # length N
 
 
 def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
@@ -61,10 +52,119 @@ def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
     imts = [from_string(imt) for imt in imtls]
     for m, imt in enumerate(imtls):
         imls = imtls[imt]
-        for p, poe in enumerate(poes_disagg):
-            for r in range(R):
-                arr[:, r, m, p] = _imls(curves, poe, imt, imls, r)
+        if poes_disagg == (None,):
+            arr[:, :, m, 0] = imls
+        else:
+            for p, poe in enumerate(poes_disagg):
+                for r in range(R):
+                    for s, curve in enumerate(curves):
+                        if curve:
+                            arr[s, r, m, p] = numpy.interp(
+                                poe, curve[r][imt][::-1], imls[::-1])
+                        else:
+                            arr[s, r, m, p] = numpy.nan
     return ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
+
+
+def disaggregate(cmaker, sitecol, ruptures, iml4, truncnorm, epsilons,
+                 monitor=Monitor()):
+    """
+    Disaggregate (separate) PoE in different contributions.
+
+    :param cmaker: a ContextMaker instance
+    :param sitecol: a SiteCollection with N sites
+    :param ruptures: an iterator over ruptures with the same TRT
+    :param iml4: a 4d array of IMLs of shape (N, R, M, P)
+    :param truncnorm: an instance of scipy.stats.truncnorm
+    :param epsilons: the epsilon bins
+    :param monitor: a Monitor instance
+    :returns:
+        an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
+    """
+    acc = AccumDict(accum=[])
+    ctx_mon = monitor('disagg_contexts', measuremem=False)
+    pne_mon = monitor('disaggregate_pne', measuremem=False)
+    clo_mon = monitor('get_closest', measuremem=False)
+    for rupture in ruptures:
+        with ctx_mon:
+            orig_dctx = contexts.DistancesContext(
+                (param, contexts.get_distances(rupture, sitecol, param))
+                for param in cmaker.REQUIRES_DISTANCES)
+            cmaker.add_rup_params(rupture)
+        with clo_mon:  # this is faster than computing orig_dctx
+            closest_points = rupture.surface.get_closest_points(sitecol)
+        cache = {}
+        for rlz, gsim in cmaker.gsim_by_rlzi.items():
+            dctx = orig_dctx.roundup(gsim.minimum_distance)
+            for m, imt in enumerate(iml4.imts):
+                for p, poe in enumerate(iml4.poes_disagg):
+                    iml = tuple(iml4.array[:, rlz, m, p])
+                    try:
+                        pne = cache[gsim, imt, iml]
+                    except KeyError:
+                        with pne_mon:
+                            pne = disaggregate_pne(
+                                gsim, rupture, sitecol, dctx, imt, iml,
+                                truncnorm, epsilons)
+                            cache[gsim, imt, iml] = pne
+                    acc[poe, str(imt), rlz].append(pne)
+        acc['mags'].append(rupture.mag)
+        acc['dists'].append(getattr(dctx, cmaker.filter_distance))
+        acc['lons'].append(closest_points.lons)
+        acc['lats'].append(closest_points.lats)
+    return acc
+
+
+def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm, epsilons):
+    """
+    Disaggregate (separate) PoE of ``iml`` in different contributions
+    each coming from ``epsilons`` distribution bins.
+
+    Other parameters are the same as for :meth:`get_poes`, with
+    differences that ``truncation_level`` is required to be positive.
+
+    :returns:
+        Contribution to probability of exceedance of ``iml`` coming
+        from different sigma bands in the form of a 2d numpy array of
+        probabilities with shape (n_sites, n_epsilons)
+    """
+    # compute mean and standard deviations
+    mean, [stddev] = gsim.get_mean_and_stddevs(sctx, rupture, dctx, imt,
+                                               [const.StdDev.TOTAL])
+
+    # compute iml value with respect to standard (mean=0, std=1)
+    # normal distributions
+    standard_imls = (gsim.to_distribution_values(iml) - mean) / stddev
+
+    # compute epsilon bins contributions
+    contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
+                             truncnorm.cdf(epsilons[:-1]))
+
+    # take the minimum epsilon larger than standard_iml
+    bins = numpy.searchsorted(epsilons, standard_imls)
+    poe_by_site = []
+    n_epsilons = len(epsilons) - 1
+    for lvl, bin in zip(standard_imls, bins):  # one per site
+        if bin == 0:
+            poe_by_site.append(contribution_by_bands)
+        elif bin > n_epsilons:
+            poe_by_site.append(numpy.zeros(n_epsilons))
+        else:
+            # for other cases (when ``lvl`` falls somewhere in the
+            # histogram):
+            poe = numpy.concatenate([
+                # take zeros for bins that are on the left hand side
+                # from the bin ``lvl`` falls into,
+                numpy.zeros(bin - 1),
+                # ... area of the portion of the bin containing ``lvl``
+                # (the portion is limited on the left hand side by
+                # ``lvl`` and on the right hand side by the bin edge),
+                [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
+                # ... and all bins on the right go unchanged.
+                contribution_by_bands[bin:]])
+            poe_by_site.append(poe)
+    poes = numpy.array(poe_by_site)  # shape (n_sites, n_epsilons)
+    return rupture.get_probability_no_exceedance(poes)
 
 
 def collect_bin_data(ruptures, sitecol, cmaker, iml4,
@@ -80,11 +180,9 @@ def collect_bin_data(ruptures, sitecol, cmaker, iml4,
     :returns: a dictionary (poe, imt, rlzi) -> probabilities of shape (N, E)
     """
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
-    truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    epsilons = numpy.linspace(
-        -truncation_level, truncation_level, n_epsilons + 1)
-    acc = cmaker.disaggregate(
-        sitecol, ruptures, iml4, truncnorm, epsilons, monitor)
+    tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
+    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
+    acc = disaggregate(cmaker, sitecol, ruptures, iml4, tn, eps, monitor)
     return pack(acc, 'mags dists lons lats'.split())
 
 

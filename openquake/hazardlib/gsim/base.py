@@ -352,58 +352,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
-    def disaggregate_pne(self, rupture, sctx, dctx, imt, iml,
-                         truncnorm, epsilons):
-        """
-        Disaggregate (separate) PoE of ``iml`` in different contributions
-        each coming from ``epsilons`` distribution bins.
-
-        Other parameters are the same as for :meth:`get_poes`, with
-        differences that ``truncation_level`` is required to be positive.
-
-        :returns:
-            Contribution to probability of exceedance of ``iml`` coming
-            from different sigma bands in the form of a 2d numpy array of
-            probabilities with shape (n_sites, n_epsilons)
-        """
-        # compute mean and standard deviations
-        mean, [stddev] = self.get_mean_and_stddevs(sctx, rupture, dctx, imt,
-                                                   [const.StdDev.TOTAL])
-
-        # compute iml value with respect to standard (mean=0, std=1)
-        # normal distributions
-        standard_imls = (self.to_distribution_values(iml) - mean) / stddev
-
-        # compute epsilon bins contributions
-        contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
-                                 truncnorm.cdf(epsilons[:-1]))
-
-        # take the minimum epsilon larger than standard_iml
-        bins = numpy.searchsorted(epsilons, standard_imls)
-        poe_by_site = []
-        n_epsilons = len(epsilons) - 1
-        for lvl, bin in zip(standard_imls, bins):  # one per site
-            if bin == 0:
-                poe_by_site.append(contribution_by_bands)
-            elif bin > n_epsilons:
-                poe_by_site.append(numpy.zeros(n_epsilons))
-            else:
-                # for other cases (when ``lvl`` falls somewhere in the
-                # histogram):
-                poe = numpy.concatenate([
-                    # take zeros for bins that are on the left hand side
-                    # from the bin ``lvl`` falls into,
-                    numpy.zeros(bin - 1),
-                    # ... area of the portion of the bin containing ``lvl``
-                    # (the portion is limited on the left hand side by
-                    # ``lvl`` and on the right hand side by the bin edge),
-                    [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
-                    # ... and all bins on the right go unchanged.
-                    contribution_by_bands[bin:]])
-                poe_by_site.append(poe)
-        poes = numpy.array(poe_by_site)  # shape (n_sites, n_epsilons)
-        return rupture.get_probability_no_exceedance(poes)
-
     @abc.abstractmethod
     def to_distribution_values(self, values):
         """
