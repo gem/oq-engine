@@ -39,12 +39,10 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
-def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
+def make_iml4(R, iml_disagg, imtls, poes_disagg=(None,), curves=()):
     """
     :returns: a list of N arrays of shape (R, M, P)
     """
-    if imtls is None:
-        imtls = {imt: [iml] for imt, iml in iml_disagg.items()}
     N = len(curves) or 1
     M = len(imtls)
     P = len(poes_disagg)
