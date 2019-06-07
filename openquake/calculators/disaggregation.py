@@ -259,10 +259,13 @@ producing too small PoEs.'''
         poes_disagg = oq.poes_disagg or (None,)
         N = len(self.sitecol)
         R = len(self.rlzs_assoc.realizations)
-        try:
-            rlzs = self.datastore['best_rlz'][()]
-        except KeyError:
-            rlzs = numpy.zeros(N, int)
+        if oq.rlzi is None:
+            try:
+                rlzs = self.datastore['best_rlz'][()]
+            except KeyError:
+                rlzs = numpy.zeros(N, int)
+        else:
+            rlzs = [oq.rlzi] * N
         iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
