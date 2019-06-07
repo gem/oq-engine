@@ -47,13 +47,14 @@ def _to_matrix(matrices, num_trts):
     return mat
 
 
-def gen_iml3s(rlzis, iml_disagg, imtls, poes_disagg, curves):
+def _iml2s(rlzis, iml_disagg, imtls, poes_disagg, curves):
     """
-    :yields: N arrays of shape (M, P)
+    :returns: a list of N arrays of shape (M, P)
     """
     M = len(imtls)
     P = len(poes_disagg)
     imts = [from_string(imt) for imt in imtls]
+    lst = []
     for s, curve in enumerate(curves):
         arr = numpy.empty((M, P))
         arr.fill(numpy.nan)
@@ -67,35 +68,13 @@ def gen_iml3s(rlzis, iml_disagg, imtls, poes_disagg, curves):
                 poes = curve[r][imt][::-1]
                 imls = imtls[imt][::-1]
                 arr[m] = numpy.interp(poes_disagg, poes, imls)
-        yield hdf5.ArrayWrapper(
+        aw = hdf5.ArrayWrapper(
             arr, dict(poes_disagg=poes_disagg, imts=imts, rlzi=r))
-
-
-def _iml2s(iml_disagg, imtls, poes_disagg, curves):
-    """
-    :returns: a list of N arrays of shape (M, P)
-    """
-    M = len(imtls)
-    P = len(poes_disagg)
-    imts = [from_string(imt) for imt in imtls]
-    lst = []
-    for s, curve in enumerate(curves):
-        arr = numpy.empty((M, P))
-        arr.fill(numpy.nan)
-        if poes_disagg == (None,):
-            for m, imt in enumerate(imtls):
-                arr[m, 0] = imtls[imt]
-        elif curve:
-            for m, imt in enumerate(imtls):
-                poes = curve[0][imt][::-1]
-                imls = imtls[imt][::-1]
-                arr[m] = numpy.interp(poes_disagg, poes, imls)
-        a = hdf5.ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
-        lst.append(a)
+        lst.append(aw)
     return lst
 
 
-def compute_disagg(sitecol, sources, cmaker, iml3s, trti, bin_edges,
+def compute_disagg(sitecol, sources, cmaker, iml2s, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -106,8 +85,8 @@ def compute_disagg(sitecol, sources, cmaker, iml3s, trti, bin_edges,
         list of hazardlib source objects
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param iml3s:
-        a list of N arrays of shape (R, M, P)
+    :param iml2s:
+        a list of N arrays of shape (M, P)
     :param dict trti:
         tectonic region type index
     :param bin_egdes:
@@ -126,10 +105,10 @@ def compute_disagg(sitecol, sources, cmaker, iml3s, trti, bin_edges,
     ruptures = []
     for src in sources:
         ruptures.extend(src.iter_ruptures())
-    for sid, iml3 in zip(sitecol.sids, iml3s):
+    for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
         bin_data = disagg.collect_bin_data(
-            ruptures, singlesitecol, cmaker, iml3,
+            ruptures, singlesitecol, cmaker, iml2,
             oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
         if bin_data:  # dictionary poe, imt, rlzi -> pne
             bins = disagg.get_bins(bin_edges, sid)
@@ -291,11 +270,9 @@ producing too small PoEs.'''
             rlzs = self.datastore['best_rlz'][()]
         except KeyError:
             rlzs = numpy.zeros(N, int)
-        iml3s = list(
-            gen_iml3s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves))
+        iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
-                iml2s = _iml2s(oq.iml_disagg, oq.imtls, poes_disagg, curves)
                 self.build_disagg_by_src(iml2s)
             else:
                 logging.warning('disagg_by_src works only with 1 realization, '
@@ -339,11 +316,11 @@ producing too small PoEs.'''
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
-            iml3 = iml3s[s]
+            iml2 = iml2s[s]
             r = rlzs[s]
             for p, poe in enumerate(oq.poes_disagg or [None]):
                 for m, imt in enumerate(oq.imtls):
-                    self.imldict[s, r, poe, imt] = iml3[m, p]
+                    self.imldict[s, r, poe, imt] = iml2[m, p]
 
         for smodel in csm.source_models:
             sm_id = smodel.ordinal
@@ -357,7 +334,7 @@ producing too small PoEs.'''
                     {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
-                        (src_filter.sitecol, block, cmaker, iml3s, trti,
+                        (src_filter.sitecol, block, cmaker, iml2s, trti,
                          self.bin_edges, oq))
 
         self.num_ruptures = [0] * len(self.trts)
