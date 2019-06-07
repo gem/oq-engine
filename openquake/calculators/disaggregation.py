@@ -23,11 +23,12 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
@@ -46,7 +47,30 @@ def _to_matrix(matrices, num_trts):
     return mat
 
 
-def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
+def gen_iml3s(R, iml_disagg, imtls, poes_disagg, curves):
+    """
+    :yields: N arrays of shape (R, M, P)
+    """
+    M = len(imtls)
+    P = len(poes_disagg)
+    imts = [from_string(imt) for imt in imtls]
+    for s, curve in enumerate(curves):
+        arr = numpy.empty((R, M, P))
+        arr.fill(numpy.nan)
+        if poes_disagg == (None,):
+            for m, imt in enumerate(imtls):
+                arr[:, m, 0] = imtls[imt]
+        elif curve:
+            for r in range(R):
+                c = curve[r]
+                for m, imt in enumerate(imtls):
+                    poes = c[imt][::-1]
+                    imls = imtls[imt][::-1]
+                    arr[r, m] = numpy.interp(poes_disagg, poes, imls)
+        yield hdf5.ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
+
+
+def compute_disagg(sitecol, sources, cmaker, iml3s, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -57,12 +81,12 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
         list of hazardlib source objects
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param iml4:
-        an array of intensities of shape (N, R, M, P)
+    :param iml3s:
+        a list of N arrays of shape (R, M, P)
     :param dict trti:
         tectonic region type index
     :param bin_egdes:
-        a dictionary site_id -> edges
+        a quintet (mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
     :param oqparam:
         the parameters in the job.ini file
     :param monitor:
@@ -71,21 +95,24 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
         a dictionary of probability arrays, with composite key
         (sid, rlzi, poe, imt, iml, trti).
     """
-    result = {'trti': trti, 'num_ruptures': 0}
+    result = {'trti': trti, 'num_ruptures': 0,
+              'cache_info': numpy.zeros(3)}
     # all the time is spent in collect_bin_data
     ruptures = []
     for src in sources:
         ruptures.extend(src.iter_ruptures())
-    bin_data = disagg.collect_bin_data(
-        ruptures, sitecol, cmaker, iml4,
-        oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
-    if bin_data:  # dictionary poe, imt, rlzi -> pne
-        for sid in sitecol.sids:
+    for sid, iml3 in zip(sitecol.sids, iml3s):
+        singlesitecol = sitecol.filtered([sid])
+        bin_data = disagg.collect_bin_data(
+            ruptures, singlesitecol, cmaker, iml3,
+            oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
+        if bin_data:  # dictionary poe, imt, rlzi -> pne
+            bins = disagg.get_bins(bin_edges, sid)
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
-                    bin_data, bin_edges, sid, monitor).items():
+                    bin_data, bins, monitor).items():
                 result[sid, rlzi, poe, imt] = matrix
-        result['cache_info'] = monitor.cache_info
-        result['num_ruptures'] = len(bin_data.mags)
+        result['cache_info'] += monitor.cache_info
+        result['num_ruptures'] += len(bin_data.mags)
     return result  # sid, rlzi, poe, imt, iml -> array
 
 
@@ -233,17 +260,16 @@ producing too small PoEs.'''
             logging.warning(
                 'You have %d realizations, %d IMTs and %d poes_disagg: the '
                 'disaggregation will be heavy and memory consuming', R, M, P)
-        iml4 = disagg.make_iml4(
-            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
+        iml3s = list(gen_iml3s(
+            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves))
         if oq.disagg_by_src:
             if R == 1:
-                self.build_disagg_by_src(iml4)
+                self.build_disagg_by_src(iml3s)
             else:
                 logging.warning('disagg_by_src works only with 1 realization, '
                                 'you have %d', R)
 
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
-        self.bin_edges = {}
 
         # build trt_edges
         trts = tuple(sorted(set(sg.trt for smodel in csm.source_models
@@ -279,13 +305,13 @@ producing too small PoEs.'''
         # build all_args
         all_args = []
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
-        R = iml4.shape[1]
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
+            iml3 = iml3s[s]
             for r in range(R):
                 for p, poe in enumerate(oq.poes_disagg or [None]):
                     for m, imt in enumerate(oq.imtls):
-                        self.imldict[s, r, poe, imt] = iml4[s, r, m, p]
+                        self.imldict[s, r, poe, imt] = iml3[r, m, p]
 
         for smodel in csm.source_models:
             sm_id = smodel.ordinal
@@ -299,7 +325,7 @@ producing too small PoEs.'''
                     {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
-                        (src_filter.sitecol, block, cmaker, iml4, trti,
+                        (src_filter.sitecol, block, cmaker, iml3s, trti,
                          self.bin_edges, oq))
 
         self.num_ruptures = [0] * len(self.trts)
@@ -326,9 +352,9 @@ producing too small PoEs.'''
         """
         b = self.bin_edges
         for sid in self.sitecol.sids:
-            logging.info(
-                'disagg_matrix_shape=%s, site=#%d',
-                str(disagg.get_shape(b, sid) + (len(self.trts),)), sid)
+            bins = disagg.get_bins(b, sid)
+            shape = [len(bin) - 1 for bin in bins] + [len(self.trts)]
+            logging.info('disagg_matrix_shape=%s, site=#%d', str(shape), sid)
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
         for sid in self.sitecol.sids:
@@ -346,7 +372,8 @@ producing too small PoEs.'''
         T = len(self.trts)
         dic = {}  # sid, poe, imt -> disagg_matrix
         for sid in self.sitecol.sids:
-            shape = disagg.get_shape(self.bin_edges, sid)
+            bins = disagg.get_bins(self.bin_edges, sid)
+            shape = tuple(len(bin) - 1 for bin in bins)
             for poe in self.oqparam.poes_disagg or (None,):
                 for imt in self.oqparam.imtls:
                     dic[sid, poe, imt] = numpy.zeros((R, T) + shape)
@@ -452,10 +479,10 @@ producing too small PoEs.'''
                     ' poe=%s; perhaps the number of intensity measure'
                     ' levels is too small?', poe_agg, poe)
 
-    def build_disagg_by_src(self, iml4):
+    def build_disagg_by_src(self, iml3s):
         """
         :param dstore: a datastore
-        :param iml4: 4D array of IMLs with shape (N, 1, M, P)
+        :param iml3s: N arrays of IMLs with shape (1, M, P)
         """
         logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
@@ -469,6 +496,7 @@ producing too small PoEs.'''
         P = len(poes_disagg)
         for rec in self.sitecol.array:
             sid = rec['sids']
+            iml3 = iml3s[sid]
             for imti, imt in enumerate(oq.imtls):
                 xs = oq.imtls[imt]
                 poes = numpy.zeros((G, P))
@@ -476,7 +504,7 @@ producing too small PoEs.'''
                     pmap = pmap_by_grp['grp-%02d' % grp_id]
                     if sid in pmap:
                         ys = pmap[sid].array[oq.imtls(imt), 0]
-                        poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
+                        poes[g] = numpy.interp(iml3[0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                               else 'poe-%s' % poe)
