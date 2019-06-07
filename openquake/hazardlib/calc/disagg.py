@@ -26,10 +26,10 @@ import operator
 import numpy
 import scipy.stats
 
-from openquake.hazardlib import pmf
+from openquake.hazardlib import pmf, contexts
 from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import pack, groupby
+from openquake.baselib.general import pack, groupby, AccumDict
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -68,6 +68,54 @@ def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
     return ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
+def disaggregate(cmaker, sitecol, ruptures, iml4, truncnorm, epsilons,
+                 monitor=Monitor()):
+    """
+    Disaggregate (separate) PoE in different contributions.
+
+    :param sitecol: a SiteCollection with N sites
+    :param ruptures: an iterator over ruptures with the same TRT
+    :param iml4: a 4d array of IMLs of shape (N, R, M, P)
+    :param truncnorm: an instance of scipy.stats.truncnorm
+    :param epsilons: the epsilon bins
+    :param monitor: a Monitor instance
+    :returns:
+        an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
+    """
+    acc = AccumDict(accum=[])
+    ctx_mon = monitor('disagg_contexts', measuremem=False)
+    pne_mon = monitor('disaggregate_pne', measuremem=False)
+    clo_mon = monitor('get_closest', measuremem=False)
+    for rupture in ruptures:
+        with ctx_mon:
+            orig_dctx = contexts.DistancesContext(
+                (param, contexts.get_distances(rupture, sitecol, param))
+                for param in cmaker.REQUIRES_DISTANCES)
+            cmaker.add_rup_params(rupture)
+        with clo_mon:  # this is faster than computing orig_dctx
+            closest_points = rupture.surface.get_closest_points(sitecol)
+        cache = {}
+        for rlz, gsim in cmaker.gsim_by_rlzi.items():
+            dctx = orig_dctx.roundup(gsim.minimum_distance)
+            for m, imt in enumerate(iml4.imts):
+                for p, poe in enumerate(iml4.poes_disagg):
+                    iml = tuple(iml4.array[:, rlz, m, p])
+                    try:
+                        pne = cache[gsim, imt, iml]
+                    except KeyError:
+                        with pne_mon:
+                            pne = gsim.disaggregate_pne(
+                                rupture, sitecol, dctx, imt, iml,
+                                truncnorm, epsilons)
+                            cache[gsim, imt, iml] = pne
+                    acc[poe, str(imt), rlz].append(pne)
+        acc['mags'].append(rupture.mag)
+        acc['dists'].append(getattr(dctx, cmaker.filter_distance))
+        acc['lons'].append(closest_points.lons)
+        acc['lats'].append(closest_points.lats)
+    return acc
+
+
 def collect_bin_data(ruptures, sitecol, cmaker, iml4,
                      truncation_level, n_epsilons, monitor=Monitor()):
     """
@@ -81,11 +129,9 @@ def collect_bin_data(ruptures, sitecol, cmaker, iml4,
     :returns: a dictionary (poe, imt, rlzi) -> probabilities of shape (N, E)
     """
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
-    truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    epsilons = numpy.linspace(
-        -truncation_level, truncation_level, n_epsilons + 1)
-    acc = cmaker.disaggregate(
-        sitecol, ruptures, iml4, truncnorm, epsilons, monitor)
+    tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
+    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
+    acc = disaggregate(cmaker, sitecol, ruptures, iml4, tn, eps, monitor)
     return pack(acc, 'mags dists lons lats'.split())
 
 
