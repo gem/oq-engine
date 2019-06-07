@@ -365,15 +365,14 @@ producing too small PoEs.'''
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
 
-    def get_NRPM(self):
+    def get_NPM(self):
         """
-        :returns: (num_sites, num_rlzs, num_poes, num_imts)
+        :returns: (num_sites, num_poes, num_imts)
         """
         N = len(self.sitecol)
-        R = len(self.rlzs_assoc.realizations)
         P = len(self.oqparam.poes_disagg or (None,))
         M = len(self.oqparam.imtls)
-        return (N, R, P, M)
+        return N, P, M
 
     def post_execute(self, results):
         """
@@ -388,9 +387,9 @@ producing too small PoEs.'''
         results = {k: _to_matrix(v, T) for k, v in results.items()}
 
         # get the number of outputs
-        shp = self.get_NRPM()
+        shp = self.get_NPM()
         logging.info('Extracting and saving the PMFs for %d outputs '
-                     '(N=%s, R=%d, P=%d, M=%d)', numpy.prod(shp), *shp)
+                     '(N=%s, P=%d, M=%d)', numpy.prod(shp), *shp)
         self.save_disagg_result(results, trts=encode(self.trts),
                                 num_ruptures=self.num_ruptures)
 
