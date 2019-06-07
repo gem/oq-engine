@@ -410,8 +410,7 @@ producing too small PoEs.'''
         lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
-            rlz='rlz-%d' % rlz_id if isinstance(rlz_id, int) else rlz_id,
-            imt=imt_str, sid=site_id)
+            rlz='rlz-%d' % rlz_id, imt=imt_str, sid=site_id)
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
