@@ -260,12 +260,6 @@ producing too small PoEs.'''
         poes_disagg = oq.poes_disagg or (None,)
         N = len(self.sitecol)
         R = len(self.rlzs_assoc.realizations)
-        M = len(oq.imtls)
-        P = len(poes_disagg)
-        if R * M * P > 10:
-            logging.warning(
-                'You have %d realizations, %d IMTs and %d poes_disagg: the '
-                'disaggregation will be heavy and memory consuming', R, M, P)
         try:
             rlzs = self.datastore['best_rlz'][()]
         except KeyError:
