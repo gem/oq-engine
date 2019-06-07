@@ -327,9 +327,9 @@ producing too small PoEs.'''
         """
         b = self.bin_edges
         for sid in self.sitecol.sids:
-            logging.info(
-                'disagg_matrix_shape=%s, site=#%d',
-                str(disagg.get_shape(b, sid) + (len(self.trts),)), sid)
+            bins = disagg.get_bins(b, sid)
+            shape = [len(bin) - 1 for bin in bins] + [len(self.trts)]
+            logging.info('disagg_matrix_shape=%s, site=#%d', str(shape), sid)
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
         for sid in self.sitecol.sids:
@@ -347,7 +347,8 @@ producing too small PoEs.'''
         T = len(self.trts)
         dic = {}  # sid, poe, imt -> disagg_matrix
         for sid in self.sitecol.sids:
-            shape = disagg.get_shape(self.bin_edges, sid)
+            bins = disagg.get_bins(self.bin_edges, sid)
+            shape = [len(bin) - 1 for bin in bins]
             for poe in self.oqparam.poes_disagg or (None,):
                 for imt in self.oqparam.imtls:
                     dic[sid, poe, imt] = numpy.zeros((R, T) + shape)
