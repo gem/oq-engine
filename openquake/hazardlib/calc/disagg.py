@@ -58,8 +58,7 @@ def make_iml4(R, iml_disagg, imtls, poes_disagg=(None,), curves=()):
                 for m, imt in enumerate(imtls):
                     poes = c[imt][::-1]
                     imls = imtls[imt][::-1]
-                    for p, poe in enumerate(poes_disagg):
-                        arr[r, m, p] = numpy.interp(poe, poes, imls)
+                    arr[r, m] = numpy.interp(poes_disagg, poes, imls)
         yield ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
