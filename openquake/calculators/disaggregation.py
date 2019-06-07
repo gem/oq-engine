@@ -76,11 +76,12 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
     ruptures = []
     for src in sources:
         ruptures.extend(src.iter_ruptures())
-    bin_data = disagg.collect_bin_data(
-        ruptures, sitecol, cmaker, iml4,
-        oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
-    if bin_data:  # dictionary poe, imt, rlzi -> pne
-        for sid in sitecol.sids:
+    for sid, iml3 in zip(sitecol.sids, iml4):
+        singlesitecol = sitecol.filtered([sid])
+        bin_data = disagg.collect_bin_data(
+            ruptures, singlesitecol, cmaker, iml3,
+            oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
+        if bin_data:  # dictionary poe, imt, rlzi -> pne
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
                     bin_data, bin_edges, sid, monitor).items():
                 result[sid, rlzi, poe, imt] = matrix
@@ -279,13 +280,13 @@ producing too small PoEs.'''
         # build all_args
         all_args = []
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
-        R = iml4.shape[1]
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
+            iml3 = iml4[s]
             for r in range(R):
                 for p, poe in enumerate(oq.poes_disagg or [None]):
                     for m, imt in enumerate(oq.imtls):
-                        self.imldict[s, r, poe, imt] = iml4[s, r, m, p]
+                        self.imldict[s, r, poe, imt] = iml3[r, m, p]
 
         for smodel in csm.source_models:
             sm_id = smodel.ordinal
@@ -469,6 +470,7 @@ producing too small PoEs.'''
         P = len(poes_disagg)
         for rec in self.sitecol.array:
             sid = rec['sids']
+            iml3 = iml4[sid]
             for imti, imt in enumerate(oq.imtls):
                 xs = oq.imtls[imt]
                 poes = numpy.zeros((G, P))
@@ -476,7 +478,7 @@ producing too small PoEs.'''
                     pmap = pmap_by_grp['grp-%02d' % grp_id]
                     if sid in pmap:
                         ys = pmap[sid].array[oq.imtls(imt), 0]
-                        poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
+                        poes[g] = numpy.interp(iml3[0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                               else 'poe-%s' % poe)
