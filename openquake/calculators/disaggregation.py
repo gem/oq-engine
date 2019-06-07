@@ -361,6 +361,11 @@ producing too small PoEs.'''
             bins = disagg.get_bins(b, sid)
             shape = [len(bin) - 1 for bin in bins] + [len(self.trts)]
             logging.info('disagg_matrix_shape=%s, site=#%d', str(shape), sid)
+            matrix_size = numpy.prod(shape)
+            if matrix_size > 1E6:
+                raise ValueError(
+                    'The disaggregation matrix for site #%d is too large '
+                    '(%d elements): fix the binnning!', matrix_size)
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
         for sid in self.sitecol.sids:
