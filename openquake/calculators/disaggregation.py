@@ -58,7 +58,7 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml4:
-        an array of intensities of shape (N, R, M, P)
+        a list of N arrays of shape (R, M, P)
     :param dict trti:
         tectonic region type index
     :param bin_egdes:
@@ -71,7 +71,8 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
         a dictionary of probability arrays, with composite key
         (sid, rlzi, poe, imt, iml, trti).
     """
-    result = {'trti': trti, 'num_ruptures': 0}
+    result = {'trti': trti, 'num_ruptures': 0,
+              'cache_info': numpy.zeros(3)}
     # all the time is spent in collect_bin_data
     ruptures = []
     for src in sources:
@@ -86,8 +87,8 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
                     bin_data, bins, monitor).items():
                 result[sid, rlzi, poe, imt] = matrix
-        result['cache_info'] = monitor.cache_info
-        result['num_ruptures'] = len(bin_data.mags)
+        result['cache_info'] += monitor.cache_info
+        result['num_ruptures'] += len(bin_data.mags)
     return result  # sid, rlzi, poe, imt, iml -> array
 
 
