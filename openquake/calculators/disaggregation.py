@@ -236,8 +236,8 @@ producing too small PoEs.'''
             logging.warning(
                 'You have %d realizations, %d IMTs and %d poes_disagg: the '
                 'disaggregation will be heavy and memory consuming', R, M, P)
-        iml4 = disagg.make_iml4(
-            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
+        iml4 = list(disagg.make_iml4(
+            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves))
         if oq.disagg_by_src:
             if R == 1:
                 self.build_disagg_by_src(iml4)

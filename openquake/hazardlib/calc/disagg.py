@@ -41,12 +41,11 @@ from openquake.hazardlib.gsim.base import ContextMaker
 
 def make_iml4(R, iml_disagg, imtls, poes_disagg=(None,), curves=()):
     """
-    :returns: a list of N arrays of shape (R, M, P)
+    :yields: N arrays of shape (R, M, P)
     """
     M = len(imtls)
     P = len(poes_disagg)
     imts = [from_string(imt) for imt in imtls]
-    lst = []
     for s, curve in enumerate(curves):
         arr = numpy.empty((R, M, P))
         arr.fill(numpy.nan)
@@ -54,14 +53,14 @@ def make_iml4(R, iml_disagg, imtls, poes_disagg=(None,), curves=()):
             for m, imt in enumerate(imtls):
                 arr[:, m, 0] = imtls[imt]
         elif curve:
-            for m, imt in enumerate(imtls):
-                imls = imtls[imt]
-                for p, poe in enumerate(poes_disagg):
-                    for r in range(R):
-                        arr[r, m, p] = numpy.interp(
-                            poe, curve[r][imt][::-1], imls[::-1])
-        lst.append(ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts)))
-    return lst
+            for r in range(R):
+                c = curve[r]
+                for m, imt in enumerate(imtls):
+                    poes = c[imt][::-1]
+                    imls = imtls[imt][::-1]
+                    for p, poe in enumerate(poes_disagg):
+                        arr[r, m, p] = numpy.interp(poe, poes, imls)
+        yield ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
 def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
