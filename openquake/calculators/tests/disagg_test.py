@@ -93,11 +93,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # number of CSV files
 
-        #fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
-        #self.assertEqual(len(fnames), 2)  # 2 sid x 1 key x 1 poe x 1 imt
-        #for fname in fnames:
-        #    self.assertEqualFiles(
-        #        'expected_output/%s' % strip_calc_id(fname), fname)
+        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)  # 2 sid x 1 key x 1 poe x 1 imt
+        for fname in fnames:
+            self.assertEqualFiles(
+                'expected_output/%s' % strip_calc_id(fname), fname)
 
     def test_case_3(self):
         with self.assertRaises(ValueError) as ctx:
@@ -114,8 +114,12 @@ producing too small PoEs.''')
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
 
-        #fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
-        #self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
+        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 32)  # 1 sid x 8 keys x 2 poe x 2 imt
+        for fname in fnames:
+            if 'Mag_Dist' in fname:
+                self.assertEqualFiles(
+                    'expected_output/%s' % strip_calc_id(fname), fname)
 
     def test_case_5(self):
         # this exercise gridded nonparametric sources
@@ -129,9 +133,12 @@ producing too small PoEs.''')
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
 
-        #fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
-        #self.assertEqual(len(fnames), 192)  # 2 sid x 8 keys x 2 poe x 2 imt
-        # = 64 x 3 for mean, quantile-0.15, quantile-0.85
+        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
+        for fname in fnames:
+            if 'Mag_Dist' in fname:
+                self.assertEqualFiles(
+                    'expected_output/%s' % strip_calc_id(fname), fname)
 
     def test_disagg_by_src(self):
         # this is a case with iml_disagg and disagg_by_src
