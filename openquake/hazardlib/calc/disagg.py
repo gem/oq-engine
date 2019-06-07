@@ -43,26 +43,25 @@ def make_iml4(R, iml_disagg, imtls, poes_disagg=(None,), curves=()):
     """
     :returns: a list of N arrays of shape (R, M, P)
     """
-    N = len(curves) or 1
     M = len(imtls)
     P = len(poes_disagg)
-    arr = numpy.zeros((N, R, M, P))
     imts = [from_string(imt) for imt in imtls]
-    for m, imt in enumerate(imtls):
-        imls = imtls[imt]
+    lst = []
+    for s, curve in enumerate(curves):
+        arr = numpy.empty((R, M, P))
+        arr.fill(numpy.nan)
         if poes_disagg == (None,):
-            arr[:, :, m, 0] = imls
-        else:
-            for p, poe in enumerate(poes_disagg):
-                for r in range(R):
-                    for s, curve in enumerate(curves):
-                        if curve:
-                            arr[s, r, m, p] = numpy.interp(
-                                poe, curve[r][imt][::-1], imls[::-1])
-                        else:
-                            arr[s, r, m, p] = numpy.nan
-    return [ArrayWrapper(a, dict(poes_disagg=poes_disagg, imts=imts))
-            for a in arr]
+            for m, imt in enumerate(imtls):
+                arr[:, m, 0] = imtls[imt]
+        elif curve:
+            for m, imt in enumerate(imtls):
+                imls = imtls[imt]
+                for p, poe in enumerate(poes_disagg):
+                    for r in range(R):
+                        arr[r, m, p] = numpy.interp(
+                            poe, curve[r][imt][::-1], imls[::-1])
+        lst.append(ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts)))
+    return lst
 
 
 def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
