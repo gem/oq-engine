@@ -117,7 +117,7 @@ producing too small PoEs.''')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 32)  # 1 sid x 8 keys x 2 poe x 2 imt
         for fname in fnames:
-            if 'Mag_Dist' in fname:
+            if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
@@ -136,7 +136,7 @@ producing too small PoEs.''')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
         for fname in fnames:
-            if 'Mag_Dist' in fname:
+            if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
