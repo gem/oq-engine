@@ -53,6 +53,7 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
     :returns:
         an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
     """
+    assert len(sitecol) == 1, sitecol
     acc = AccumDict(accum=[])
     ctx_mon = monitor('disagg_contexts', measuremem=False)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
