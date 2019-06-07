@@ -348,7 +348,7 @@ producing too small PoEs.'''
         dic = {}  # sid, poe, imt -> disagg_matrix
         for sid in self.sitecol.sids:
             bins = disagg.get_bins(self.bin_edges, sid)
-            shape = [len(bin) - 1 for bin in bins]
+            shape = tuple(len(bin) - 1 for bin in bins)
             for poe in self.oqparam.poes_disagg or (None,):
                 for imt in self.oqparam.imtls:
                     dic[sid, poe, imt] = numpy.zeros((R, T) + shape)
