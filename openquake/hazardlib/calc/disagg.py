@@ -209,6 +209,14 @@ def lon_lat_bins(bb, coord_bin_width):
     return lon_bins, lat_bins
 
 
+def get_bins(bin_edges, sid):
+    """
+    :returns: mags, dists, lons, lats, eps for the given sid
+    """
+    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
+    return mag_bins, dist_bins, lon_bins[sid], lat_bins[sid], eps_bins
+
+
 def get_shape(bin_edges, sid):
     """
     :returns:
@@ -221,17 +229,16 @@ def get_shape(bin_edges, sid):
 
 
 # this is fast
-def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
+def build_disagg_matrix(bdata, bins, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
-    :param bin_edges: bin edges
-    :param sid: site index
+    :param bins: bin edges
     :param mon: a Monitor instance
     :returns: a dictionary key -> matrix|pmf for each key in bdata
     """
     with mon('build_disagg_matrix'):
-        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
-        dim1, dim2, dim3, dim4, dim5 = shape = get_shape(bin_edges, sid)
+        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
+        dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
 
         # find bin indexes of rupture attributes; bins are assumed closed
         # on the lower bound, and open on the upper bound, that is [ )
@@ -241,8 +248,8 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
         # index of the upper bound of the bin
         mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
         dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
-        lons_idx = _digitize_lons(bdata.lons, lon_bins[sid])
-        lats_idx = numpy.digitize(bdata.lats, lat_bins[sid]) - 1
+        lons_idx = _digitize_lons(bdata.lons, lon_bins)
+        lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
 
         # because of the way numpy.digitize works, values equal to the last bin
         # edge are associated to an index equal to len(bins) which is not a
@@ -421,12 +428,12 @@ def disaggregation(
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
 
-    bin_edges = (mag_bins, dist_bins, [lon_bins], [lat_bins], eps_bins)
+    bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
     matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        dic = build_disagg_matrix(bdata[trt], bin_edges, sid=0)
+        dic = build_disagg_matrix(bdata[trt], bin_edges)
         if dic:  # (poe, imt, rlzi) -> matrix
             [mat] = dic.values()
             matrix[..., trt_num[trt]] = mat

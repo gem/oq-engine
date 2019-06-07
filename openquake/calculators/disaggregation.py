@@ -62,7 +62,7 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
     :param dict trti:
         tectonic region type index
     :param bin_egdes:
-        a dictionary site_id -> edges
+        a quintet (mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
     :param oqparam:
         the parameters in the job.ini file
     :param monitor:
@@ -82,8 +82,9 @@ def compute_disagg(sitecol, sources, cmaker, iml4, trti, bin_edges,
             ruptures, singlesitecol, cmaker, iml3,
             oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
         if bin_data:  # dictionary poe, imt, rlzi -> pne
+            bins = disagg.get_bins(bin_edges, sid)
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
-                    bin_data, bin_edges, sid, monitor).items():
+                    bin_data, bins, monitor).items():
                 result[sid, rlzi, poe, imt] = matrix
         result['cache_info'] = monitor.cache_info
         result['num_ruptures'] = len(bin_data.mags)
@@ -244,7 +245,6 @@ producing too small PoEs.'''
                                 'you have %d', R)
 
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
-        self.bin_edges = {}
 
         # build trt_edges
         trts = tuple(sorted(set(sg.trt for smodel in csm.source_models
