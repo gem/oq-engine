@@ -217,17 +217,6 @@ def get_bins(bin_edges, sid):
     return mag_bins, dist_bins, lon_bins[sid], lat_bins[sid], eps_bins
 
 
-def get_shape(bin_edges, sid):
-    """
-    :returns:
-        the shape of the disaggregation matrix for the given site, of form
-        (#mags-1, #dists-1, #lons-1, #lats-1, #eps-1)
-    """
-    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
-    return (len(mag_bins) - 1, len(dist_bins) - 1,
-            len(lon_bins[sid]) - 1, len(lat_bins[sid]) - 1, len(eps_bins) - 1)
-
-
 # this is fast
 def build_disagg_matrix(bdata, bins, mon=Monitor):
     """
