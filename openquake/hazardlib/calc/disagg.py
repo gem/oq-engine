@@ -116,17 +116,18 @@ def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
     return acc
 
 
+# in practice this is always called with a single site
 def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm, epsilons):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
 
-    Other parameters are the same as for :meth:`get_poes`, with
+    Other parameters are the same as for `gsim.get_poes`, with
     differences that ``truncation_level`` is required to be positive.
 
     :returns:
         Contribution to probability of exceedance of ``iml`` coming
-        from different sigma bands in the form of a 2d numpy array of
+        from different sigma bands in the form of a 2D numpy array of
         probabilities with shape (n_sites, n_epsilons)
     """
     # compute mean and standard deviations
@@ -168,6 +169,7 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm, epsilons):
     return rupture.get_probability_no_exceedance(poes)
 
 
+# in practice this is always called with a single site
 def collect_bin_data(ruptures, sitecol, cmaker, iml3,
                      truncation_level, n_epsilons, monitor=Monitor()):
     """
@@ -254,7 +256,7 @@ def build_disagg_matrix(bdata, bins, mon=Monitor):
         cache_hit = 0
         num_zeros = 0
         for k, pnes in bdata.items():
-            # pnes has shape (U, E)
+            # pnes has shape (U, 1, E)
             cache_key = pnes.sum()
             if cache_key == pnes.size:  # all pnes are 1
                 num_zeros += 1
