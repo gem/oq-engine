@@ -41,7 +41,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 
 def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
     """
-    :returns: an ArrayWrapper over a 4D array of shape (N, R, M, P)
+    :returns: a list of N arrays of shape (R, M, P)
     """
     if imtls is None:
         imtls = {imt: [iml] for imt, iml in iml_disagg.items()}
@@ -63,18 +63,19 @@ def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
                                 poe, curve[r][imt][::-1], imls[::-1])
                         else:
                             arr[s, r, m, p] = numpy.nan
-    return ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
+    return [ArrayWrapper(a, dict(poes_disagg=poes_disagg, imts=imts))
+            for a in arr]
 
 
-def disaggregate(cmaker, sitecol, ruptures, iml4, truncnorm, epsilons,
+def disaggregate(cmaker, sitecol, ruptures, iml3, truncnorm, epsilons,
                  monitor=Monitor()):
     """
     Disaggregate (separate) PoE in different contributions.
 
     :param cmaker: a ContextMaker instance
-    :param sitecol: a SiteCollection with N sites
+    :param sitecol: a SiteCollection with N=1 site
     :param ruptures: an iterator over ruptures with the same TRT
-    :param iml4: a 4d array of IMLs of shape (N, R, M, P)
+    :param iml3: a 3D array of IMLs of shape (R, M, P)
     :param truncnorm: an instance of scipy.stats.truncnorm
     :param epsilons: the epsilon bins
     :param monitor: a Monitor instance
@@ -96,9 +97,9 @@ def disaggregate(cmaker, sitecol, ruptures, iml4, truncnorm, epsilons,
         cache = {}
         for rlz, gsim in cmaker.gsim_by_rlzi.items():
             dctx = orig_dctx.roundup(gsim.minimum_distance)
-            for m, imt in enumerate(iml4.imts):
-                for p, poe in enumerate(iml4.poes_disagg):
-                    iml = tuple(iml4.array[:, rlz, m, p])
+            for m, imt in enumerate(iml3.imts):
+                for p, poe in enumerate(iml3.poes_disagg):
+                    iml = iml3[rlz, m, p]
                     try:
                         pne = cache[gsim, imt, iml]
                     except KeyError:
@@ -167,13 +168,13 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm, epsilons):
     return rupture.get_probability_no_exceedance(poes)
 
 
-def collect_bin_data(ruptures, sitecol, cmaker, iml4,
+def collect_bin_data(ruptures, sitecol, cmaker, iml3,
                      truncation_level, n_epsilons, monitor=Monitor()):
     """
     :param ruptures: a list of ruptures
-    :param sitecol: a SiteCollection instance
+    :param sitecol: a SiteCollection instance with a single site
     :param cmaker: a ContextMaker instance
-    :param iml4: an ArrayWrapper of intensities of shape (N, R, M, P)
+    :param iml4: an ArrayWrapper of intensities of shape (R, M, P)
     :param truncation_level: the truncation level
     :param n_epsilons: the number of epsilons
     :param monitor: a Monitor instance
@@ -182,7 +183,7 @@ def collect_bin_data(ruptures, sitecol, cmaker, iml4,
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
     eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
-    acc = disaggregate(cmaker, sitecol, ruptures, iml4, tn, eps, monitor)
+    acc = disaggregate(cmaker, sitecol, ruptures, iml3, tn, eps, monitor)
     return pack(acc, 'mags dists lons lats'.split())
 
 
@@ -239,9 +240,9 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
         # the 'minus 1' is needed because the digitize method returns the
         # index of the upper bound of the bin
         mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
-        dists_idx = numpy.digitize(bdata.dists[:, sid], dist_bins) - 1
-        lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins[sid])
-        lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins[sid]) - 1
+        dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
+        lons_idx = _digitize_lons(bdata.lons, lon_bins[sid])
+        lats_idx = numpy.digitize(bdata.lats, lat_bins[sid]) - 1
 
         # because of the way numpy.digitize works, values equal to the last bin
         # edge are associated to an index equal to len(bins) which is not a
@@ -256,8 +257,8 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
         cache = {}
         cache_hit = 0
         num_zeros = 0
-        for k, allpnes in bdata.items():
-            pnes = allpnes[:, sid, :]  # shape (U, N, E)
+        for k, pnes in bdata.items():
+            # pnes has shape (U, E)
             cache_key = pnes.sum()
             if cache_key == pnes.size:  # all pnes are 1
                 num_zeros += 1
@@ -380,7 +381,7 @@ def disaggregation(
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
-    iml4 = make_iml4(1, {str(imt): iml})
+    iml3 = make_iml4(1, {str(imt): iml})[0]
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
@@ -392,7 +393,7 @@ def disaggregation(
             trt, rlzs_by_gsim, source_filter.integration_distance,
             {'filter_distance': filter_distance})
         bdata[trt] = collect_bin_data(
-            ruptures, sitecol, cmaker, iml4, truncation_level, n_epsilons)
+            ruptures, sitecol, cmaker, iml3, truncation_level, n_epsilons)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
