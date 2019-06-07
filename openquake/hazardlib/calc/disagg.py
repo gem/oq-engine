@@ -379,10 +379,11 @@ def disaggregation(
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
-    iml3 = make_iml4(1, {str(imt): iml})[0]
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
+    iml3 = ArrayWrapper(numpy.array([[[iml]]]),
+                        dict(imts=[imt], poes_disagg=[None]))
     for trt, srcs in by_trt.items():
         ruptures = []
         for src in srcs:
