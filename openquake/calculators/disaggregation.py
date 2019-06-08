@@ -96,8 +96,7 @@ def compute_disagg(sitecol, sources, cmaker, iml2s, trti, bin_edges,
         a dictionary of probability arrays, with composite key
         (sid, rlzi, poe, imt, iml, trti).
     """
-    result = {'trti': trti, 'num_ruptures': 0,
-              'cache_info': numpy.zeros(3)}
+    result = {'trti': trti, 'num_ruptures': 0}
     # all the time is spent in collect_bin_data
     ruptures = []
     for src in sources:
@@ -112,7 +111,6 @@ def compute_disagg(sitecol, sources, cmaker, iml2s, trti, bin_edges,
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
                     bin_data, bins, monitor).items():
                 result[sid, rlzi, poe, imt] = matrix
-        result['cache_info'] += monitor.cache_info
         result['num_ruptures'] += len(bin_data.mags)
     return result  # sid, rlzi, poe, imt, iml -> array
 
@@ -174,7 +172,6 @@ producing too small PoEs.'''
         # this is fast
         trti = result.pop('trti')
         self.num_ruptures[trti] += result.pop('num_ruptures')
-        self.cache_info += result.pop('cache_info', 0)
         for key, val in result.items():
             acc[key][trti] = agg_probs(acc[key].get(trti, 0), val)
         return acc
@@ -332,9 +329,7 @@ producing too small PoEs.'''
                          self.bin_edges, oq))
 
         self.num_ruptures = [0] * len(self.trts)
-        self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         mon = self.monitor()
-        mon.cache_info = numpy.zeros(3)
         results = parallel.Starmap(compute_disagg, all_args, mon).reduce(
             self.agg_result, AccumDict(accum={}))
 
@@ -344,10 +339,6 @@ producing too small PoEs.'''
             for sg in smodel.src_groups:
                 sg.eff_ruptures = self.num_ruptures[trti[sg.trt]]
         self.datastore['csm_info'] = csm.info
-
-        ops, hits, num_zeros = self.cache_info
-        logging.info('Cache speedup %s', ops / (ops - hits))
-        logging.info('Discarded zero matrices: %d', num_zeros)
         return results
 
     def save_bin_edges(self):
