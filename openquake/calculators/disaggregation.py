@@ -47,28 +47,26 @@ def _to_matrix(matrices, num_trts):
 
 
 def _iml2s(rlzis, iml_disagg, imtls, poes_disagg, curves):
-    """
-    :returns: a list of N arrays of shape (M, P)
-    """
+    # a list of N arrays of shape (M, P) with intensities
     M = len(imtls)
     P = len(poes_disagg)
     imts = [from_string(imt) for imt in imtls]
     lst = []
     for s, curve in enumerate(curves):
-        arr = numpy.empty((M, P))
-        arr.fill(numpy.nan)
+        iml2 = numpy.empty((M, P))
+        iml2.fill(numpy.nan)
         if poes_disagg == (None,):
             r = 0
             for m, imt in enumerate(imtls):
-                arr[m, 0] = imtls[imt]
+                iml2[m, 0] = imtls[imt]
         elif curve:
             r = rlzis[s]
             for m, imt in enumerate(imtls):
                 poes = curve[r][imt][::-1]
                 imls = imtls[imt][::-1]
-                arr[m] = numpy.interp(poes_disagg, poes, imls)
+                iml2[m] = numpy.interp(poes_disagg, poes, imls)
         aw = hdf5.ArrayWrapper(
-            arr, dict(poes_disagg=poes_disagg, imts=imts, rlzi=r))
+            iml2, dict(poes_disagg=poes_disagg, imts=imts, rlzi=r))
         lst.append(aw)
     return lst
 
@@ -259,13 +257,13 @@ producing too small PoEs.'''
         poes_disagg = oq.poes_disagg or (None,)
         N = len(self.sitecol)
         R = len(self.rlzs_assoc.realizations)
-        if oq.rlzi is None:
+        if oq.rlz_index is None:
             try:
                 rlzs = self.datastore['best_rlz'][()]
             except KeyError:
                 rlzs = numpy.zeros(N, int)
         else:
-            rlzs = [oq.rlzi] * N
+            rlzs = [oq.rlz_index] * N
         iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
@@ -373,15 +371,6 @@ producing too small PoEs.'''
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
 
-    def get_NPM(self):
-        """
-        :returns: (num_sites, num_poes, num_imts)
-        """
-        N = len(self.sitecol)
-        P = len(self.oqparam.poes_disagg or (None,))
-        M = len(self.oqparam.imtls)
-        return N, P, M
-
     def post_execute(self, results):
         """
         Save all the results of the disaggregation. NB: the number of results
@@ -395,7 +384,8 @@ producing too small PoEs.'''
         results = {k: _to_matrix(v, T) for k, v in results.items()}
 
         # get the number of outputs
-        shp = self.get_NPM()
+        shp = (len(self.sitecol), len(self.oqparam.poes_disagg or (None,)),
+               len(self.oqparam.imtls))  # N, P, M
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d)', numpy.prod(shp), *shp)
         self.save_disagg_result(results, trts=encode(self.trts),
