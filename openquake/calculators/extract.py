@@ -781,30 +781,6 @@ def _get(dstore, name):
         return dstore[name + '-rlzs'], ['mean']
 
 
-@extract.add('losses_by_tag')
-@deprecated(msg='This feature will be removed soon')
-def losses_by_tag(dstore, tag):
-    """
-    Statistical average losses by tag. For instance call
-
-    $ oq extract losses_by_tag/occupancy
-    """
-    dt = [(tag, vstr)] + dstore['oqparam'].loss_dt_list()
-    aids = dstore['assetcol/array'][tag]
-    dset, stats = _get(dstore, 'avg_losses')
-    arr = dset[()]
-    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
-    for s, stat in enumerate(stats):
-        out = numpy.zeros(len(tagvalues), dt)
-        for li, (lt, lt_dt) in enumerate(dt[1:]):
-            for i, tagvalue in enumerate(tagvalues):
-                out[i][tag] = tagvalue
-                counts = arr[aids == i + 1, s, li].sum()
-                if counts:
-                    out[i][lt] = counts
-        yield stat, out
-
-
 @extract.add('rupture')
 def extract_rupture(dstore, serial):
     """
