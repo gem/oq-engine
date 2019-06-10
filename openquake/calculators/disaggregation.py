@@ -335,7 +335,7 @@ producing too small PoEs.'''
             if matrix_size > 1E6:
                 raise ValueError(
                     'The disaggregation matrix for site #%d is too large '
-                    '(%d elements): fix the binnning!', matrix_size)
+                    '(%d elements): fix the binnning!' % (sid, matrix_size))
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
         for sid in self.sitecol.sids:
