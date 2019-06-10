@@ -47,28 +47,26 @@ def _to_matrix(matrices, num_trts):
 
 
 def _iml2s(rlzis, iml_disagg, imtls, poes_disagg, curves):
-    """
-    :returns: a list of N arrays of shape (M, P)
-    """
+    # a list of N arrays of shape (M, P) with intensities
     M = len(imtls)
     P = len(poes_disagg)
     imts = [from_string(imt) for imt in imtls]
     lst = []
     for s, curve in enumerate(curves):
-        arr = numpy.empty((M, P))
-        arr.fill(numpy.nan)
+        iml2 = numpy.empty((M, P))
+        iml2.fill(numpy.nan)
         if poes_disagg == (None,):
             r = 0
             for m, imt in enumerate(imtls):
-                arr[m, 0] = imtls[imt]
+                iml2[m, 0] = imtls[imt]
         elif curve:
             r = rlzis[s]
             for m, imt in enumerate(imtls):
                 poes = curve[r][imt][::-1]
                 imls = imtls[imt][::-1]
-                arr[m] = numpy.interp(poes_disagg, poes, imls)
+                iml2[m] = numpy.interp(poes_disagg, poes, imls)
         aw = hdf5.ArrayWrapper(
-            arr, dict(poes_disagg=poes_disagg, imts=imts, rlzi=r))
+            iml2, dict(poes_disagg=poes_disagg, imts=imts, rlzi=r))
         lst.append(aw)
     return lst
 
@@ -98,8 +96,7 @@ def compute_disagg(sitecol, sources, cmaker, iml2s, trti, bin_edges,
         a dictionary of probability arrays, with composite key
         (sid, rlzi, poe, imt, iml, trti).
     """
-    result = {'trti': trti, 'num_ruptures': 0,
-              'cache_info': numpy.zeros(3)}
+    result = {'trti': trti, 'num_ruptures': 0}
     # all the time is spent in collect_bin_data
     ruptures = []
     for src in sources:
@@ -114,7 +111,6 @@ def compute_disagg(sitecol, sources, cmaker, iml2s, trti, bin_edges,
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
                     bin_data, bins, monitor).items():
                 result[sid, rlzi, poe, imt] = matrix
-        result['cache_info'] += monitor.cache_info
         result['num_ruptures'] += len(bin_data.mags)
     return result  # sid, rlzi, poe, imt, iml -> array
 
@@ -176,7 +172,6 @@ producing too small PoEs.'''
         # this is fast
         trti = result.pop('trti')
         self.num_ruptures[trti] += result.pop('num_ruptures')
-        self.cache_info += result.pop('cache_info', 0)
         for key, val in result.items():
             acc[key][trti] = agg_probs(acc[key].get(trti, 0), val)
         return acc
@@ -259,13 +254,13 @@ producing too small PoEs.'''
         poes_disagg = oq.poes_disagg or (None,)
         N = len(self.sitecol)
         R = len(self.rlzs_assoc.realizations)
-        if oq.rlzi is None:
+        if oq.rlz_index is None:
             try:
                 rlzs = self.datastore['best_rlz'][()]
             except KeyError:
                 rlzs = numpy.zeros(N, int)
         else:
-            rlzs = [oq.rlzi] * N
+            rlzs = [oq.rlz_index] * N
         iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
@@ -334,9 +329,7 @@ producing too small PoEs.'''
                          self.bin_edges, oq))
 
         self.num_ruptures = [0] * len(self.trts)
-        self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         mon = self.monitor()
-        mon.cache_info = numpy.zeros(3)
         results = parallel.Starmap(compute_disagg, all_args, mon).reduce(
             self.agg_result, AccumDict(accum={}))
 
@@ -346,10 +339,6 @@ producing too small PoEs.'''
             for sg in smodel.src_groups:
                 sg.eff_ruptures = self.num_ruptures[trti[sg.trt]]
         self.datastore['csm_info'] = csm.info
-
-        ops, hits, num_zeros = self.cache_info
-        logging.info('Cache speedup %s', ops / (ops - hits))
-        logging.info('Discarded zero matrices: %d', num_zeros)
         return results
 
     def save_bin_edges(self):
@@ -373,15 +362,6 @@ producing too small PoEs.'''
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
 
-    def get_NPM(self):
-        """
-        :returns: (num_sites, num_poes, num_imts)
-        """
-        N = len(self.sitecol)
-        P = len(self.oqparam.poes_disagg or (None,))
-        M = len(self.oqparam.imtls)
-        return N, P, M
-
     def post_execute(self, results):
         """
         Save all the results of the disaggregation. NB: the number of results
@@ -395,7 +375,8 @@ producing too small PoEs.'''
         results = {k: _to_matrix(v, T) for k, v in results.items()}
 
         # get the number of outputs
-        shp = self.get_NPM()
+        shp = (len(self.sitecol), len(self.oqparam.poes_disagg or (None,)),
+               len(self.oqparam.imtls))  # N, P, M
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d)', numpy.prod(shp), *shp)
         self.save_disagg_result(results, trts=encode(self.trts),
