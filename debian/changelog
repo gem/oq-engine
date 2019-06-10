@@ -1,3 +1,10 @@
+python3-oq-engine (3.5.3-1~xenial01) xenial; urgency=low
+
+[Michele Simionato]
+  * Internal: fixed the ordering of BaseRupture._code
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 10 Jun 2019 10:06:35 +0000
+
 python3-oq-engine (3.5.2-1~xenial01) xenial; urgency=low
 
   [Daniele Viganò]
