@@ -400,7 +400,10 @@ class ParametricProbabilisticRupture(BaseRupture):
 
 
 def get_subclasses(cls):
-    for subclass in cls.__subclasses__():
+    """
+    :returns: the subclasses of `cls`, ordered by name
+    """
+    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
         yield subclass
         for ssc in get_subclasses(subclass):
             yield ssc

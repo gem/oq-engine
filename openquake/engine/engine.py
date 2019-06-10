@@ -322,7 +322,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
                 with open(oqparam.inputs['input_zip'], 'rb') as arch:
                     data = numpy.array(arch.read())
             else:
-                logs.LOG.info('zipping the input files')
+                logs.LOG.info('Zipping the input files')
                 bio = io.BytesIO()
                 oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
                               logging.debug)
