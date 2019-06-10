@@ -70,19 +70,14 @@ def disaggregate(cmaker, sitecol, ruptures, iml2, truncnorm, epsilons,
             cmaker.add_rup_params(rupture)
         with clo_mon:  # this is faster than computing orig_dctx
             closest_points = rupture.surface.get_closest_points(sitecol)
-        cache = {}
         dctx = orig_dctx.roundup(gsim.minimum_distance)
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
                 iml = iml2[m, p]
-                try:
-                    pne = cache[gsim, imt, iml]
-                except KeyError:
-                    with pne_mon:
-                        pne = disaggregate_pne(
-                            gsim, rupture, sitecol, dctx, imt, iml,
-                            truncnorm, epsilons)
-                        cache[gsim, imt, iml] = pne
+                with pne_mon:
+                    pne = disaggregate_pne(
+                        gsim, rupture, sitecol, dctx, imt, iml,
+                        truncnorm, epsilons)
                 acc[poe, str(imt), iml2.rlzi].append(pne)
         acc['mags'].append(rupture.mag)
         acc['dists'].append(getattr(dctx, cmaker.filter_distance))
@@ -227,32 +222,17 @@ def build_disagg_matrix(bdata, bins, mon=Monitor):
         lats_idx[lats_idx == dim4] = dim4 - 1
 
         out = {}
-        cache = {}
-        cache_hit = 0
         num_zeros = 0
         for k, pnes in bdata.items():
             # pnes has shape (U, 1, E)
-            cache_key = pnes.sum()
-            if cache_key == pnes.size:  # all pnes are 1
+            if pnes.sum() == pnes.size:  # all pnes are 1
                 num_zeros += 1
                 continue  # zero matrices are not transferred
-            try:
-                matrix = cache[cache_key]
-                cache_hit += 1
-            except KeyError:
-                mat = numpy.ones(shape)
-                for i_mag, i_dist, i_lon, i_lat, pne in zip(
-                        mags_idx, dists_idx, lons_idx, lats_idx, pnes):
-                    mat[i_mag, i_dist, i_lon, i_lat] *= pne
-                matrix = 1. - mat
-                cache[cache_key] = matrix
-            out[k] = matrix
-
-        # operations, hits, num_zeros
-        if hasattr(mon, 'cache_info'):
-            mon.cache_info += numpy.array([len(bdata), cache_hit, num_zeros])
-        else:
-            mon.cache_info = numpy.array([len(bdata), cache_hit, num_zeros])
+            mat = numpy.ones(shape)
+            for i_mag, i_dist, i_lon, i_lat, pne in zip(
+                    mags_idx, dists_idx, lons_idx, lats_idx, pnes):
+                mat[i_mag, i_dist, i_lon, i_lat] *= pne
+            out[k] = 1. - mat
     return out
 
 
