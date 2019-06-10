@@ -644,46 +644,41 @@ def export_disagg_xml(ekey, dstore):
 
 
 # adapted from the nrml_converters
-def save_disagg_to_csv(metadata, matrices):
+def get_disagg_values(dset, label):
     """
-    Save disaggregation matrices to multiple .csv files.
+    Converts the give disaggregation matrix into an array of values
     """
-    skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
-    com = {key: value for key, value in metadata.items()
-           if value is not None and key not in skip_keys}
-    for disag_tup, (poe, iml, matrix, fname) in matrices.items():
-        com.update(poe='%.7f' % poe, iml='%.7e' % iml)
-        if disag_tup == ('Mag', 'Lon', 'Lat'):
-            matrix = numpy.swapaxes(matrix, 0, 1)
-            matrix = numpy.swapaxes(matrix, 1, 2)
-            disag_tup = ('Lon', 'Lat', 'Mag')
+    matrix = dset[label][()]
+    disag_tup = tuple(label.split('_'))
+    if disag_tup == ('Mag', 'Lon', 'Lat'):
+        matrix = numpy.swapaxes(matrix, 0, 1)
+        matrix = numpy.swapaxes(matrix, 1, 2)
+        disag_tup = ('Lon', 'Lat', 'Mag')
 
-        axis = [metadata[v] for v in disag_tup]
-        com.update(key=','.join(v for v in disag_tup))
-        # compute axis mid points
-        axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
-                else ax for ax in axis]
-        values = None
-        if len(axis) == 1:
-            values = numpy.array([axis[0], matrix.flatten()]).T
-        else:
-            grids = numpy.meshgrid(*axis, indexing='ij')
-            values = [g.flatten() for g in grids]
-            values.append(matrix.flatten())
-            values = numpy.array(values).T
-        writers.write_csv(fname, values, comment=com, fmt='%.5E')
+    axis = [dset.attrs[v.lower() + '_bin_edges'] for v in disag_tup]
+    # compute axis mid points
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+            else ax for ax in axis]
+    values = None
+    if len(axis) == 1:
+        values = numpy.array([axis[0], matrix.flatten()]).T
+    else:
+        grids = numpy.meshgrid(*axis, indexing='ij')
+        values = [g.flatten() for g in grids]
+        values.append(matrix.flatten())
+        values = numpy.array(values).T
+    return values
 
 
-@export.add(('disagg', 'csv'))
+@export.add(('disagg', 'csv'), ('disagg-stats', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
     disagg_outputs = oq.disagg_outputs or disagg.pmf_map
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     group = dstore[ekey[0]]
     fnames = []
-    trts = dstore.get_attr('csm_info', 'trts')
+    skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for key in group:
-        matrix = dstore[ekey[0] + '/' + key]
         attrs = group[key].attrs
         iml = attrs['iml']
         try:
@@ -710,14 +705,16 @@ def export_disagg_csv(ekey, dstore):
         metadata['Lon'] = attrs['lon_bin_edges']
         metadata['Lat'] = attrs['lat_bin_edges']
         metadata['Eps'] = attrs['eps_bin_edges']
-        metadata['TRT'] = trts
-        data = {}
+        metadata['TRT'] = attrs['trt_bin_edges']
         for poe, label in zip(poes, disagg_outputs):
-            tup = tuple(label.split('_'))
+            com = {key: value for key, value in metadata.items()
+                   if value is not None and key not in skip_keys}
+            com.update(poe='%.7f' % poe, iml='%.7e' % iml)
+            com.update(key=','.join(label.split('_')))
             fname = dstore.export_path(key + '_%s.csv' % label)
-            data[tup] = poe, iml, matrix[label][()], fname
+            values = get_disagg_values(group[key], label)
+            writers.write_csv(fname, values, comment=com, fmt='%.5E')
             fnames.append(fname)
-        save_disagg_to_csv(metadata, data)
     return fnames
 
 
