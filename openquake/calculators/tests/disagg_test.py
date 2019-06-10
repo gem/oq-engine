@@ -104,8 +104,8 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.run_calc(case_3.__file__, 'job.ini')
         self.assertEqual(str(ctx.exception), '''\
 You are trying to disaggregate for poe=0.1.
-However the source model #0, 'source_model_test_complex.xml',
-produces at most probabilities of 0.0362321 for rlz=#0, IMT=PGA.
+However the source model produces at most probabilities
+of 0.0061466 for rlz=#4, IMT=PGA.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.''')
 
