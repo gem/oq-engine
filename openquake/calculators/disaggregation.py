@@ -46,7 +46,7 @@ def _to_matrix(matrices, num_trts):
     return mat
 
 
-def _iml2s(rlzis, iml_disagg, imtls, poes_disagg, curves):
+def _iml2s(rlzs, iml_disagg, imtls, poes_disagg, curves):
     # a list of N arrays of shape (M, P) with intensities
     M = len(imtls)
     P = len(poes_disagg)
@@ -56,17 +56,15 @@ def _iml2s(rlzis, iml_disagg, imtls, poes_disagg, curves):
         iml2 = numpy.empty((M, P))
         iml2.fill(numpy.nan)
         if poes_disagg == (None,):
-            r = 0
             for m, imt in enumerate(imtls):
                 iml2[m, 0] = imtls[imt]
         elif curve:
-            r = rlzis[s]
             for m, imt in enumerate(imtls):
-                poes = curve[r][imt][::-1]
+                poes = curve[imt][::-1]
                 imls = imtls[imt][::-1]
                 iml2[m] = numpy.interp(poes_disagg, poes, imls)
         aw = hdf5.ArrayWrapper(
-            iml2, dict(poes_disagg=poes_disagg, imts=imts, rlzi=r))
+            iml2, dict(poes_disagg=poes_disagg, imts=imts, rlzi=rlzs[s]))
         lst.append(aw)
     return lst
 
@@ -133,8 +131,8 @@ class DisaggregationCalculator(base.HazardCalculator):
     accept_precalc = ['psha']
     POE_TOO_BIG = '''\
 You are trying to disaggregate for poe=%s.
-However the source model #%d, '%s',
-produces at most probabilities of %.7f for rlz=#%d, IMT=%s.
+However the source model produces at most probabilities
+of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
@@ -152,13 +150,7 @@ producing too small PoEs.'''
 
     def execute(self):
         """Performs the disaggregation"""
-        oq = self.oqparam
-        if oq.iml_disagg:
-            curves = [None] * len(self.sitecol)  # no hazard curves are needed
-        else:
-            curves = [self.get_curves(sid) for sid in self.sitecol.sids]
-            self.check_poes_disagg(curves)
-        return self.full_disaggregation(curves)
+        return self.full_disaggregation()
 
     def agg_result(self, acc, result):
         """
@@ -176,70 +168,54 @@ producing too small PoEs.'''
             acc[key][trti] = agg_probs(acc[key].get(trti, 0), val)
         return acc
 
-    def get_curves(self, sid):
+    def get_curve(self, sid, rlz_by_sid):
         """
-        Get all the relevant hazard curves for the given site ordinal.
-        Returns a dictionary rlz_id -> curve_by_imt.
+        Get the hazard curve for the given site ID.
         """
-        dic = {}
         imtls = self.oqparam.imtls
         by_grp = self.rlzs_assoc.by_grp()
         ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         pgetter = getters.PmapGetter(
             self.datastore, by_grp, ws, numpy.array([sid]))
-        for rlz in self.rlzs_assoc.realizations:
-            try:
-                pmap = pgetter.get(rlz.ordinal)
-            except ValueError:  # empty pmaps
+        rlz = rlz_by_sid[sid]
+        try:
+            pmap = pgetter.get(rlz)
+        except ValueError:  # empty pmaps
+            logging.info(
+                'hazard curve contains all zero probabilities; '
+                'skipping site %d, rlz=%d', sid, rlz.ordinal)
+            return
+        if sid not in pmap:
+            return
+        poes = pmap[sid].convert(imtls)
+        for imt_str in imtls:
+            if all(x == 0.0 for x in poes[imt_str]):
                 logging.info(
                     'hazard curve contains all zero probabilities; '
-                    'skipping site %d, rlz=%d', sid, rlz.ordinal)
-                continue
-            if sid not in pmap:
-                continue
-            poes = pmap[sid].convert(imtls)
-            for imt_str in imtls:
-                if all(x == 0.0 for x in poes[imt_str]):
-                    logging.info(
-                        'hazard curve contains all zero probabilities; '
-                        'skipping site %d, rlz=%d, IMT=%s',
-                        sid, rlz.ordinal, imt_str)
-                    continue
-                dic[rlz.ordinal] = poes
-        return dic
+                    'skipping site %d, rlz=%d, IMT=%s',
+                    sid, rlz.ordinal, imt_str)
+                return
+        return poes
 
-    def check_poes_disagg(self, curves):
+    def check_poes_disagg(self, curves, rlzs):
         """
         Raise an error if the given poes_disagg are too small compared to
         the hazard curves.
         """
         oq = self.oqparam
-        max_poe = numpy.zeros(len(self.rlzs_assoc.realizations), oq.imt_dt())
-
-        # check for too big poes_disagg
-        for smodel in self.csm.source_models:
-            sm_id = smodel.ordinal
-            for sid, site in enumerate(self.sitecol):
-                for rlzi, poes in curves[sid].items():
-                    for imt in oq.imtls:
-                        max_poe[rlzi][imt] = max(
-                            max_poe[rlzi][imt], poes[imt].max())
-            for poe in oq.poes_disagg:
-                for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
-                    rlzi = rlz.ordinal
-                    for imt in oq.imtls:
-                        min_poe = max_poe[rlzi][imt]
-                        if poe > min_poe:
+        for sid in self.sitecol.sids:
+            poes = curves[sid]
+            if poes is not None:
+                for imt in oq.imtls:
+                    max_poe = poes[imt].max()
+                    for poe in oq.poes_disagg:
+                        if poe > max_poe:
                             raise ValueError(self.POE_TOO_BIG % (
-                                poe, sm_id, smodel.names, min_poe, rlzi, imt))
+                                poe, max_poe, rlzs[sid], imt))
 
-    def full_disaggregation(self, curves):
+    def full_disaggregation(self):
         """
         Run the disaggregation phase.
-
-        :param curves: a list of hazard curves, one per site
-
-        The curves can be all None if iml_disagg is set in the job.ini
         """
         oq = self.oqparam
         tl = oq.truncation_level
@@ -261,6 +237,11 @@ producing too small PoEs.'''
                 rlzs = numpy.zeros(N, int)
         else:
             rlzs = [oq.rlz_index] * N
+        if oq.iml_disagg:
+            curves = [None] * len(self.sitecol)  # no hazard curves are needed
+        else:
+            curves = [self.get_curve(sid, rlzs) for sid in self.sitecol.sids]
+            self.check_poes_disagg(curves, rlzs)
         iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
