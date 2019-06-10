@@ -401,6 +401,7 @@ producing too small PoEs.'''
         attrs['lon_bin_edges'] = lons
         attrs['lat_bin_edges'] = lats
         attrs['eps_bin_edges'] = eps
+        attrs['trt_bin_edges'] = self.trts
         attrs['location'] = (lon, lat)
         # sanity check: all poe_agg should be the same
         attrs['poe_agg'] = poe_agg

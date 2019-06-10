@@ -117,6 +117,29 @@ def make_figure_uhs(extractors, what):
     return plt
 
 
+def make_figure_disagg(extractors, what):
+    """
+    $ oq plot 'disagg?kind=Dist&imt=PGA'
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    got = {}  # (calc_id, kind) -> curves
+    for i, ex in enumerate(extractors):
+        disagg = ex.get(what)
+        for kind in disagg.kind:
+            got[ex.calc_id, kind] = disagg[kind]
+    oq = ex.oqparam
+    poe = oq.poes_disagg
+    [site] = uhs.site_id
+    for j, poe in enumerate(oq.poes):
+        ax = fig.add_subplot(n_poes, 1, j + 1)
+        ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
+                      (site, poe, oq.investigation_time))
+
+        ax.legend()
+    return plt
+
+
 def make_figure_source_geom(extractors, what):
     """
     Extract the geometry of a given sources
@@ -148,13 +171,15 @@ def plot(what, calc_id=-1, other_id=None, webapi=False):
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
     prefix, rest = what.split('?', 1)
-    assert prefix in 'source_geom hcurves hmaps uhs', prefix
+    assert prefix in 'source_geom hcurves hmaps uhs disagg', prefix
     if prefix in 'hcurves hmaps' and 'imt=' not in rest:
         raise SystemExit('Missing imt= in %r' % what)
     elif prefix == 'uhs' and 'imt=' in rest:
         raise SystemExit('Invalid IMT in %r' % what)
-    elif prefix in 'hcurves uhs' and 'site_id=' not in rest:
+    elif prefix in 'hcurves uhs disagg' and 'site_id=' not in rest:
         what += '&site_id=0'
+    if prefix == 'disagg' and 'poe=' not in rest:
+        what += '&poe-0'
     if webapi:
         xs = [WebExtractor(calc_id)]
         if other_id:
