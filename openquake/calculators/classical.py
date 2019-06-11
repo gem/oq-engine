@@ -134,7 +134,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dictionary with keys pmap, calc_times, eff_ruptures
+        :param dic: dict with keys pmap, calc_times, eff_ruptures, rup_data
         """
         with self.monitor('aggregate curves', autoflush=True):
             acc.nsites.update(dic['nsites'])
