@@ -18,7 +18,7 @@
 import warnings
 import numpy
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
