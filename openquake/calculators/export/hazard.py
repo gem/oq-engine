@@ -643,7 +643,6 @@ def export_disagg_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('disagg', 'csv'), ('disagg-stats', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
