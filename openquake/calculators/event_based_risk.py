@@ -184,7 +184,6 @@ class EbrCalculator(base.RiskCalculator):
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['stats'] = list(oq.hazard_stats().items())
-        import pdb; pdb.set_trace()
         self.param['conditional_loss_poes'] = oq.conditional_loss_poes
         self.taskno = 0
         self.start = 0
