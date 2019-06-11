@@ -841,6 +841,40 @@ def extract_source_geom(dstore, srcidxs):
         geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
         yield rec['source_id'], geom
 
+
+@extract.add('disagg')
+def extract_disagg(dstore, key_label):
+    """
+    Extract a disaggregation output
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/disagg/rlz-0-PGA-sid-0?by=Mag_Dist
+    """
+    # adapted from the nrml_converters
+    key, bylabel = key_label.split('?')
+    label = bylabel[3:]  # strip 'by='
+    dset = dstore['disagg/' + key]
+    matrix = dset[label][()]
+    disag_tup = tuple(label.split('_'))
+    if disag_tup == ('Mag', 'Lon', 'Lat'):
+        matrix = numpy.swapaxes(matrix, 0, 1)
+        matrix = numpy.swapaxes(matrix, 1, 2)
+        disag_tup = ('Lon', 'Lat', 'Mag')
+
+    axis = [dset.attrs[v.lower() + '_bin_edges'] for v in disag_tup]
+    # compute axis mid points
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+            else ax for ax in axis]
+    values = None
+    if len(axis) == 1:
+        values = numpy.array([axis[0], matrix.flatten()]).T
+    else:
+        grids = numpy.meshgrid(*axis, indexing='ij')
+        values = [g.flatten() for g in grids]
+        values.append(matrix.flatten())
+        values = numpy.array(values).T
+    return values
+
+
 # #####################  extraction from the WebAPI ###################### #
 
 
