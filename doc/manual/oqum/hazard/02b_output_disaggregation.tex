@@ -13,7 +13,14 @@ id | name
 \end{Verbatim}
 %\input{oqum/hazard/verbatim/output_disaggregation}
 
-Running \texttt{-{}-export-output} to export the disaggregation results will produce individual files for each IMT, probability of exceedence and logic tree realisation. In the following inset we show an example of the nrml file used to represent the different disaggregation matrices (highlighted in red) produced by
+Running \texttt{-{}-export-output} to export the disaggregation results will produce individual files for each IMT, probability of exceedence and site.
+In presence of a nontrivial logic tree the user can specify the realization
+on which to perform the disaggregation by setting the \texttt{rlz\_index}
+parameter in the \texttt{job.ini} file. If not specified, for each site
+the engine will determine the realization closest to the mean hazard curve
+and will use that realization to perform the disaggregation.
+
+In the following inset we show an example of the nrml file used to represent the different disaggregation matrices (highlighted in red) produced by
 \gls{acr:oqe}:
 
 \input{oqum/hazard/verbatim/output_disaggregation_matrix}
