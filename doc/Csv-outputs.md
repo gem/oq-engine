@@ -63,3 +63,8 @@ array([(-123.23738, 49.27479, 0.04189332, 0.09559597, 0.03100745),
        (-123.2048 , 49.26786, 0.0420968 , 0.09600781, 0.03097641)],
       dtype=[('lon', '<f8'), ('lat', '<f8'), ('PGA-0.002105', '<f8'), ('SA(0.2)-0.002105', '<f8'), ('SA(1.0)-0.002105', '<f8')])
 ```
+
+The `checksum` attribute is an identifier for the calculation input: if
+you have an user sending to you an output and claiming that that output
+comes from a certain input, you can verify that claim by comparing the
+checksum with input checksum (see the `oq checksum` command).
