@@ -27,8 +27,7 @@ from openquake.baselib.general import group_array, deprecated
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
-from openquake.calculators.extract import (
-    extract, get_mesh, get_info, rlz_by_sid)
+from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util, source
