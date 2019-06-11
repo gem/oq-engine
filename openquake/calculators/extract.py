@@ -28,8 +28,8 @@ from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
 from openquake.baselib import config, hdf5
-from openquake.baselib.hdf5 import ArrayWrapper, vstr
-from openquake.baselib.general import group_array, deprecated, println
+from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -134,22 +134,6 @@ def barray(iterlines):
     lst = [line.encode('utf-8') for line in iterlines]
     arr = numpy.array(lst)
     return arr
-
-
-def rlz_by_sid(dstore):
-    """
-    :returns: array of realizations by site ID
-    """
-    oq = dstore['oqparam']
-    N = len(dstore['sitecol'])
-    if oq.rlz_index is None:
-        try:
-            rlzs = dstore['best_rlz'][()]
-        except KeyError:
-            rlzs = numpy.zeros(N, int)
-    else:
-        rlzs = [oq.rlz_index] * N
-    return rlzs
 
 
 def extract_(dstore, dspath):
@@ -552,16 +536,16 @@ def extract_agg_losses(dstore, what):
     loss_type, tags = get_loss_type_tags(what)
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
-    l = dstore['oqparam'].lti[loss_type]
+    L = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         stats = None
-        losses = dstore['losses_by_asset'][:, :, l]['mean']
+        losses = dstore['losses_by_asset'][:, :, L]['mean']
     elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
         stats = dstore['avg_losses-stats'].attrs['stats']
-        losses = dstore['avg_losses-stats'][:, :, l]
+        losses = dstore['avg_losses-stats'][:, :, L]
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
         stats = [b'mean']
-        losses = dstore['avg_losses-rlzs'][:, :, l]
+        losses = dstore['avg_losses-rlzs'][:, :, L]
     else:
         raise KeyError('No losses found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
@@ -859,6 +843,10 @@ def extract_source_geom(dstore, srcidxs):
 
 
 def disagg_key(dstore):
+    """
+    :param dstore: a DataStore object
+    :returns: a function (imt, sid, poe_id) => disagg_output
+    """
     oq = dstore['oqparam']
     N = len(dstore['sitecol'])
     if oq.rlz_index is None:
@@ -868,12 +856,10 @@ def disagg_key(dstore):
             rlzs = numpy.zeros(N, int)
     else:
         rlzs = [oq.rlz_index] * N
-    if oq.poes_disagg:
-        def getkey(imt, sid, poe_id):
-            return 'rlz-%d-%s-sid-%d-poe-%d' % (rlzs[sid], imt, sid, poe_id)
-    else:
-        def getkey(imt, sid, poe_id):
-            return 'rlz-%d-%s-sid-%d-poe-0' % (rlzs[sid], imt, sid)
+
+    def getkey(imt, sid, poe_id):
+        return 'rlz-%d-%s-sid-%d-poe-%d' % (rlzs[sid], imt, sid, poe_id)
+    getkey.rlzs = rlzs
     return getkey
 
 

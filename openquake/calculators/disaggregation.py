@@ -229,7 +229,7 @@ producing too small PoEs.'''
 
         poes_disagg = oq.poes_disagg or (None,)
         R = len(self.rlzs_assoc.realizations)
-        rlzs = extract.rlz_by_sid(self.datastore)
+        rlzs = extract.disagg_key(self.datastore).rlzs
         if oq.iml_disagg:
             self.poe_id = {None: 0}
             curves = [None] * len(self.sitecol)  # no hazard curves are needed
