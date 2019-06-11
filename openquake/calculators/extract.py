@@ -136,6 +136,22 @@ def barray(iterlines):
     return arr
 
 
+def rlz_by_sid(dstore):
+    """
+    :returns: array of realizations by site ID
+    """
+    oq = dstore['oqparam']
+    N = len(dstore['sitecol'])
+    if oq.rlz_index is None:
+        try:
+            rlzs = dstore['best_rlz'][()]
+        except KeyError:
+            rlzs = numpy.zeros(N, int)
+    else:
+        rlzs = [oq.rlz_index] * N
+    return rlzs
+
+
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
@@ -866,18 +882,42 @@ def extract_source_geom(dstore, srcidxs):
         yield rec['source_id'], geom
 
 
+def disagg_key(dstore):
+    oq = dstore['oqparam']
+    N = len(dstore['sitecol'])
+    if oq.rlz_index is None:
+        try:
+            rlzs = dstore['best_rlz'][()]
+        except KeyError:
+            rlzs = numpy.zeros(N, int)
+    else:
+        rlzs = [oq.rlz_index] * N
+    if oq.poes_disagg:
+        def getkey(imt, sid, poe_id):
+            return 'rlz-%d-%s-sid-%d-poe-%d' % (rlzs[sid], imt, sid, poe_id)
+    else:
+        def getkey(imt, sid, poe_id):
+            return 'rlz-%d-%s-sid-%d-poe-0' % (rlzs[sid], imt, sid)
+    return getkey
+
+
 @extract.add('disagg')
-def extract_disagg(dstore, key_label):
+def extract_disagg(dstore, what):
     """
     Extract a disaggregation output
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/disagg/rlz-0-PGA-sid-0?by=Mag_Dist
+    http://127.0.0.1:8800/v1/calc/30/extract/disagg?by=Mag_Dist&imt=PGA
     """
-    # adapted from the nrml_converters
-    key, bylabel = key_label.split('?')
-    label = bylabel[3:]  # strip 'by='
-    dset = dstore['disagg/' + key]
+    qdict = parse(what)
+    label = qdict['by'][0]
+    imt = qdict['imt'][0]
+    poe_idx = int(qdict['poe_id'][0])
+    sid = int(qdict['site_id'][0])
+    key = disagg_key(dstore)
+    dset = dstore['disagg/' + key(imt, sid, poe_idx)]
     matrix = dset[label][()]
+
+    # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
     if disag_tup == ('Mag', 'Lon', 'Lat'):
         matrix = numpy.swapaxes(matrix, 0, 1)
@@ -896,7 +936,7 @@ def extract_disagg(dstore, key_label):
         values = [g.flatten() for g in grids]
         values.append(matrix.flatten())
         values = numpy.array(values).T
-    return values
+    return ArrayWrapper(values, qdict)
 
 
 # #####################  extraction from the WebAPI ###################### #
