@@ -1,4 +1,5 @@
-# imt='SA', investigation_time=50.0, lon=10.099999999999994, lat=40.1, poe='0.1000000', iml='3.2737335e-01', key='Mag,Dist'
+# smlt_path='b1', gsimlt_path='b1', imt='SA', investigation_time=50.0, lon=10.099999999999994, lat=40.1, poe='0.1000000', iml='3.2737335e-01', key='Mag,Dist'
+mag,dist,poe
 5.50000E+00,1.25000E+01,5.39385E-02
 5.50000E+00,3.75000E+01,3.71871E-04
 6.50000E+00,1.25000E+01,2.68644E-02
