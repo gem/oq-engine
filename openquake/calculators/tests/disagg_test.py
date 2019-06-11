@@ -45,18 +45,18 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.assert_curves_ok(
-            ['poe-0.02-rlz-0-PGA-10.1-40.1_Mag.csv',
-             'poe-0.02-rlz-0-PGA-10.1-40.1_Mag_Dist.csv',
-             'poe-0.02-rlz-0-PGA-10.1-40.1_Lon_Lat.csv',
-             'poe-0.02-rlz-0-SA(0.025)-10.1-40.1_Mag.csv',
-             'poe-0.02-rlz-0-SA(0.025)-10.1-40.1_Mag_Dist.csv',
-             'poe-0.02-rlz-0-SA(0.025)-10.1-40.1_Lon_Lat.csv',
-             'poe-0.1-rlz-0-PGA-10.1-40.1_Mag.csv',
-             'poe-0.1-rlz-0-PGA-10.1-40.1_Mag_Dist.csv',
-             'poe-0.1-rlz-0-PGA-10.1-40.1_Lon_Lat.csv',
-             'poe-0.1-rlz-0-SA(0.025)-10.1-40.1_Mag.csv',
-             'poe-0.1-rlz-0-SA(0.025)-10.1-40.1_Mag_Dist.csv',
-             'poe-0.1-rlz-0-SA(0.025)-10.1-40.1_Lon_Lat.csv'],
+            ['rlz-0-PGA-sid-0-poe-0_Lon_Lat.csv',
+             'rlz-0-PGA-sid-0-poe-0_Mag.csv',
+             'rlz-0-PGA-sid-0-poe-0_Mag_Dist.csv',
+             'rlz-0-PGA-sid-0-poe-1_Lon_Lat.csv',
+             'rlz-0-PGA-sid-0-poe-1_Mag.csv',
+             'rlz-0-PGA-sid-0-poe-1_Mag_Dist.csv',
+             'rlz-0-SA(0.025)-sid-0-poe-0_Lon_Lat.csv',
+             'rlz-0-SA(0.025)-sid-0-poe-0_Mag.csv',
+             'rlz-0-SA(0.025)-sid-0-poe-0_Mag_Dist.csv',
+             'rlz-0-SA(0.025)-sid-0-poe-1_Lon_Lat.csv',
+             'rlz-0-SA(0.025)-sid-0-poe-1_Mag.csv',
+             'rlz-0-SA(0.025)-sid-0-poe-1_Mag_Dist.csv'],
             case_1.__file__,
             fmt='csv')
 

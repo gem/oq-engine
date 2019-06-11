@@ -28,8 +28,8 @@ from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
 from openquake.baselib import config, hdf5
-from openquake.baselib.hdf5 import ArrayWrapper, vstr
-from openquake.baselib.general import group_array, deprecated, println
+from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -536,16 +536,16 @@ def extract_agg_losses(dstore, what):
     loss_type, tags = get_loss_type_tags(what)
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
-    l = dstore['oqparam'].lti[loss_type]
+    L = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         stats = None
-        losses = dstore['losses_by_asset'][:, :, l]['mean']
+        losses = dstore['losses_by_asset'][:, :, L]['mean']
     elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
         stats = dstore['avg_losses-stats'].attrs['stats']
-        losses = dstore['avg_losses-stats'][:, :, l]
+        losses = dstore['avg_losses-stats'][:, :, L]
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
         stats = [b'mean']
-        losses = dstore['avg_losses-rlzs'][:, :, l]
+        losses = dstore['avg_losses-rlzs'][:, :, L]
     else:
         raise KeyError('No losses found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
@@ -842,18 +842,44 @@ def extract_source_geom(dstore, srcidxs):
         yield rec['source_id'], geom
 
 
+def disagg_key(dstore):
+    """
+    :param dstore: a DataStore object
+    :returns: a function (imt, sid, poe_id) => disagg_output
+    """
+    oq = dstore['oqparam']
+    N = len(dstore['sitecol'])
+    if oq.rlz_index is None:
+        try:
+            rlzs = dstore['best_rlz'][()]
+        except KeyError:
+            rlzs = numpy.zeros(N, int)
+    else:
+        rlzs = [oq.rlz_index] * N
+
+    def getkey(imt, sid, poe_id):
+        return 'rlz-%d-%s-sid-%d-poe-%d' % (rlzs[sid], imt, sid, poe_id)
+    getkey.rlzs = rlzs
+    return getkey
+
+
 @extract.add('disagg')
-def extract_disagg(dstore, key_label):
+def extract_disagg(dstore, what):
     """
     Extract a disaggregation output
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/disagg/rlz-0-PGA-sid-0?by=Mag_Dist
+    http://127.0.0.1:8800/v1/calc/30/extract/disagg?by=Mag_Dist&imt=PGA
     """
-    # adapted from the nrml_converters
-    key, bylabel = key_label.split('?')
-    label = bylabel[3:]  # strip 'by='
-    dset = dstore['disagg/' + key]
+    qdict = parse(what)
+    label = qdict['by'][0]
+    imt = qdict['imt'][0]
+    poe_idx = int(qdict['poe_id'][0])
+    sid = int(qdict['site_id'][0])
+    key = disagg_key(dstore)
+    dset = dstore['disagg/' + key(imt, sid, poe_idx)]
     matrix = dset[label][()]
+
+    # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
     if disag_tup == ('Mag', 'Lon', 'Lat'):
         matrix = numpy.swapaxes(matrix, 0, 1)
@@ -872,7 +898,7 @@ def extract_disagg(dstore, key_label):
         values = [g.flatten() for g in grids]
         values.append(matrix.flatten())
         values = numpy.array(values).T
-    return values
+    return ArrayWrapper(values, qdict)
 
 
 # #####################  extraction from the WebAPI ###################### #

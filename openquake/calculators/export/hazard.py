@@ -643,10 +643,8 @@ def export_disagg_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('disagg', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
-    disagg_outputs = oq.disagg_outputs or disagg.pmf_map
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     group = dstore[ekey[0]]
     fnames = []
@@ -654,15 +652,13 @@ def export_disagg_csv(ekey, dstore):
     for key in group:
         attrs = group[key].attrs
         iml = attrs['iml']
+        rlz = rlzs[attrs['rlzi']]
         try:
-            rlz = rlzs[attrs['rlzi']]
-        except TypeError:  # for stats
-            rlz = attrs['rlzi']
-        try:
-            poes = [attrs['poe']] * len(disagg_outputs)
+            poe = attrs['poe']
         except Exception:  # no poes_disagg were given
-            poes = attrs['poe_agg']
+            poe = attrs['poe_agg'][0]
         imt = from_string(attrs['imt'])
+        site_id = attrs['site_id']
         lon, lat = attrs['location']
         metadata = {}
         # Loads "disaggMatrices" nodes
@@ -679,14 +675,19 @@ def export_disagg_csv(ekey, dstore):
         metadata['Lat'] = attrs['lat_bin_edges']
         metadata['Eps'] = attrs['eps_bin_edges']
         metadata['TRT'] = attrs['trt_bin_edges']
-        for poe, label in zip(poes, disagg_outputs):
+        # example: key = 'rlz-0-PGA-sid-0-poe-0'
+        poe_id = int(key.rsplit('-', 1)[1])
+        for label, dset in sorted(group[key].items()):
+            header = label.lower().split('_') + ['poe']
             com = {key: value for key, value in metadata.items()
                    if value is not None and key not in skip_keys}
             com.update(poe='%.7f' % poe, iml='%.7e' % iml)
-            com.update(key=','.join(label.split('_')))
             fname = dstore.export_path(key + '_%s.csv' % label)
-            values = extract(dstore, 'disagg/%s?by=%s' % (key, label))
-            writers.write_csv(fname, values, comment=com, fmt='%.5E')
+            values = extract(dstore,
+                             'disagg?by=%s&imt=%s&site_id=%s&poe_id=%d' %
+                             (label, imt, site_id, poe_id))
+            writers.write_csv(fname, values, header=header, comment=com,
+                              fmt='%.5E')
             fnames.append(fname)
     return fnames
 
