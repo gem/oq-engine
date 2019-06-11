@@ -643,7 +643,7 @@ def export_disagg_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('disagg', 'csv'), ('disagg-stats', 'csv'))
+@export.add(('disagg', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
     disagg_outputs = oq.disagg_outputs or disagg.pmf_map
