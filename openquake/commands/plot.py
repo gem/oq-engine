@@ -117,29 +117,6 @@ def make_figure_uhs(extractors, what):
     return plt
 
 
-def make_figure_disagg(extractors, what):
-    """
-    $ oq plot 'disagg?kind=Dist&imt=PGA'
-    """
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    got = {}  # (calc_id, kind) -> curves
-    for i, ex in enumerate(extractors):
-        disagg = ex.get(what)
-        for kind in disagg.kind:
-            got[ex.calc_id, kind] = disagg[kind]
-    oq = ex.oqparam
-    poe = oq.poes_disagg
-    [site] = uhs.site_id
-    for j, poe in enumerate(oq.poes):
-        ax = fig.add_subplot(n_poes, 1, j + 1)
-        ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
-                      (site, poe, oq.investigation_time))
-
-        ax.legend()
-    return plt
-
-
 def make_figure_source_geom(extractors, what):
     """
     Extract the geometry of a given sources

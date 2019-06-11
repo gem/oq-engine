@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the disaggregation statistics: now the engine disaggregates only on
+    a single realization (default: the closest to the mean)
   * Reduced the data transfer when computing the hazard curves
   * Optimized the reading of large CSV exposures
   * Fixed the --hc functionality across users
