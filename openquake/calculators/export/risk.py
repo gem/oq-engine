@@ -72,12 +72,17 @@ def export_agg_curve_rlzs(ekey, dstore):
     md = dstore.metadata
     for r, tag in enumerate(tags):
         rows = []
+        import pdb; pdb.set_trace()
+        print(list(numpy.ndenumerate(agg_curve[:, 7])))
         for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
             p, l, *tagidxs = multi_idx
             evalue = expvalue[tuple(tagidxs) + (l % L,)]
             row = assetcol.tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
+            print('-----', p, l)
+            if p == 7:
+                import pdb; pdb.set_trace()
         dest = dstore.build_fname('agg_loss_curve', tag, 'csv')
         md.update(dict(
             kind=tag, risk_investigation_time=oq.risk_investigation_time))
