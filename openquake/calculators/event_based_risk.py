@@ -320,13 +320,13 @@ class EbrCalculator(base.RiskCalculator):
         loss_types = ' '.join(oq.loss_dt().names)
         units = self.datastore['cost_calculator'].get_units(loss_types.split())
         if oq.individual_curves or self.R == 1:
-            self.datastore['agg_curves-rlzs'] = array
+            self.datastore['agg_curves-rlzs'] = array  # shape (P, R, L)
             self.datastore.set_attrs(
                 'agg_curves-rlzs',
                 return_periods=b.return_periods,
                 loss_types=loss_types, units=units)
         if arr_stats is not None:
-            self.datastore['agg_curves-stats'] = arr_stats
+            self.datastore['agg_curves-stats'] = arr_stats  # shape (P, S, L)
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods,
                 stats=[encode(name) for (name, func) in stats],
