@@ -68,11 +68,12 @@ def export_agg_curve_rlzs(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     header = ('annual_frequency_of_exceedence', 'return_period',
               'loss_type') + tagnames + ('loss_value', 'loss_ratio')
-    expvalue = assetcol.agg_value(*oq.aggregate_by)  # shape (T1, T2, ..., L)
+    expvalue = assetcol.agg_value(loss_types, *oq.aggregate_by)
+    # shape (T1, T2, ..., L)
     md = dstore.metadata
     for r, tag in enumerate(tags):
         rows = []
-        for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):
+        for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):  # (P, L)
             p, l, *tagidxs = multi_idx
             evalue = expvalue[tuple(tagidxs) + (l % L,)]
             row = assetcol.tagcol.get_tagvalues(tagnames, tagidxs) + (
@@ -160,7 +161,8 @@ def export_agg_losses(ekey, dstore):
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats().items())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assetcol = dstore['assetcol']
-    expvalue = assetcol.agg_value(*oq.aggregate_by)  # shape (T1, T2, ..., L)
+    expvalue = assetcol.agg_value(dt.names, *oq.aggregate_by)
+    # shape (T1, T2, ..., L)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
     header = ('loss_type',) + tagnames + (
         'loss_value', 'exposed_value', 'loss_ratio')
