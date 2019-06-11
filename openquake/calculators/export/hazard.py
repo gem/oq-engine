@@ -679,15 +679,16 @@ def export_disagg_csv(ekey, dstore):
         # example: key = 'rlz-0-PGA-sid-0-poe-0'
         poe_id = int(key.rsplit('-', 1)[1])
         for label, dset in sorted(group[key].items()):
+            header = label.lower().split('_') + ['poe']
             com = {key: value for key, value in metadata.items()
                    if value is not None and key not in skip_keys}
             com.update(poe='%.7f' % poe, iml='%.7e' % iml)
-            com.update(key=','.join(label.split('_')))
             fname = dstore.export_path(key + '_%s.csv' % label)
             values = extract(dstore,
                              'disagg?by=%s&imt=%s&site_id=%s&poe_id=%d' %
                              (label, imt, site_id, poe_id))
-            writers.write_csv(fname, values, comment=com, fmt='%.5E')
+            writers.write_csv(fname, values, header=header, comment=com,
+                              fmt='%.5E')
             fnames.append(fname)
     return fnames
 
