@@ -125,14 +125,15 @@ def make_figure_disagg(extractors, what):
     import matplotlib.pyplot as plt
     fig = plt.figure()
     disagg = extractors[0].get(what)
+    [sid] = disagg.site_id
+    [poe_id] = disagg.poe_id
     oq = extractors[0].oqparam
-    n_poes = len(oq.poes_disagg)
-    for j, poe in enumerate(oq.poes_disagg):
-        ax = fig.add_subplot(n_poes, 1, j + 1)
-        ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
-                      (site, poe, oq.investigation_time))
-        ax.plot(disagg)
-        ax.legend()
+    poe = oq.poes_disagg[poe_id]
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
+                  (disagg.by, sid, poe, oq.investigation_time))
+    ax.plot(disagg.array)
+    ax.legend()
     return plt
 
 
