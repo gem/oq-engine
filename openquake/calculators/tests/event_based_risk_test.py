@@ -311,13 +311,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(assetcol), 548)
 
     def test_case_7a(self):
-        # case with  <insuranceLimit isAbsolute="false"/>
-        # this is also a case with preimported exposure
+        # case with preimported exposure
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/agg_losses.csv', fname)
+
+        [fname] = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_curves.csv', fname)
 
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model

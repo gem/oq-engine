@@ -25,11 +25,11 @@ import numpy
 
 from openquake.baselib.general import group_array, deprecated
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg, filters
+from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
-from openquake.calculators.getters import GmfGetter, gen_rupture_getters
+from openquake.calculators.getters import gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -643,37 +643,6 @@ def export_disagg_xml(ekey, dstore):
     return sorted(fnames)
 
 
-# adapted from the nrml_converters
-def save_disagg_to_csv(metadata, matrices):
-    """
-    Save disaggregation matrices to multiple .csv files.
-    """
-    skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
-    com = {key: value for key, value in metadata.items()
-           if value is not None and key not in skip_keys}
-    for disag_tup, (poe, iml, matrix, fname) in matrices.items():
-        com.update(poe='%.7f' % poe, iml='%.7e' % iml)
-        if disag_tup == ('Mag', 'Lon', 'Lat'):
-            matrix = numpy.swapaxes(matrix, 0, 1)
-            matrix = numpy.swapaxes(matrix, 1, 2)
-            disag_tup = ('Lon', 'Lat', 'Mag')
-
-        axis = [metadata[v] for v in disag_tup]
-        com.update(key=','.join(v for v in disag_tup))
-        # compute axis mid points
-        axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
-                else ax for ax in axis]
-        values = None
-        if len(axis) == 1:
-            values = numpy.array([axis[0], matrix.flatten()]).T
-        else:
-            grids = numpy.meshgrid(*axis, indexing='ij')
-            values = [g.flatten() for g in grids]
-            values.append(matrix.flatten())
-            values = numpy.array(values).T
-        writers.write_csv(fname, values, comment=com, fmt='%.5E')
-
-
 @export.add(('disagg', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
@@ -681,9 +650,8 @@ def export_disagg_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     group = dstore[ekey[0]]
     fnames = []
-    trts = dstore.get_attr('csm_info', 'trts')
+    skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for key in group:
-        matrix = dstore[ekey[0] + '/' + key]
         attrs = group[key].attrs
         iml = attrs['iml']
         try:
@@ -710,14 +678,16 @@ def export_disagg_csv(ekey, dstore):
         metadata['Lon'] = attrs['lon_bin_edges']
         metadata['Lat'] = attrs['lat_bin_edges']
         metadata['Eps'] = attrs['eps_bin_edges']
-        metadata['TRT'] = trts
-        data = {}
+        metadata['TRT'] = attrs['trt_bin_edges']
         for poe, label in zip(poes, disagg_outputs):
-            tup = tuple(label.split('_'))
+            com = {key: value for key, value in metadata.items()
+                   if value is not None and key not in skip_keys}
+            com.update(poe='%.7f' % poe, iml='%.7e' % iml)
+            com.update(key=','.join(label.split('_')))
             fname = dstore.export_path(key + '_%s.csv' % label)
-            data[tup] = poe, iml, matrix[label][()], fname
+            values = extract(dstore, 'disagg/%s?by=%s' % (key, label))
+            writers.write_csv(fname, values, comment=com, fmt='%.5E')
             fnames.append(fname)
-        save_disagg_to_csv(metadata, data)
     return fnames
 
 
