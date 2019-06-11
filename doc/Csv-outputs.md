@@ -67,4 +67,4 @@ array([(-123.23738, 49.27479, 0.04189332, 0.09559597, 0.03100745),
 The `checksum` attribute is an identifier for the calculation input: if
 you have an user sending to you an output and claiming that that output
 comes from a certain input, you can verify that claim by comparing the
-checksum with input checksum (see the `oq checksum` command).
+checksum with the input checksum (see the `oq checksum` command).
