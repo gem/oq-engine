@@ -79,9 +79,6 @@ def export_agg_curve_rlzs(ekey, dstore):
             row = assetcol.tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, loss / evalue)
             rows.append((1 / periods[p], periods[p], loss_types[l]) + row)
-            print('-----', p, l)
-            if p == 7:
-                import pdb; pdb.set_trace()
         dest = dstore.build_fname('agg_loss_curve', tag, 'csv')
         md.update(dict(
             kind=tag, risk_investigation_time=oq.risk_investigation_time))
