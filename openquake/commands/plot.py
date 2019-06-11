@@ -148,13 +148,15 @@ def plot(what, calc_id=-1, other_id=None, webapi=False):
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
     prefix, rest = what.split('?', 1)
-    assert prefix in 'source_geom hcurves hmaps uhs', prefix
+    assert prefix in 'source_geom hcurves hmaps uhs disagg', prefix
     if prefix in 'hcurves hmaps' and 'imt=' not in rest:
         raise SystemExit('Missing imt= in %r' % what)
     elif prefix == 'uhs' and 'imt=' in rest:
         raise SystemExit('Invalid IMT in %r' % what)
-    elif prefix in 'hcurves uhs' and 'site_id=' not in rest:
+    elif prefix in 'hcurves uhs disagg' and 'site_id=' not in rest:
         what += '&site_id=0'
+    if prefix == 'disagg' and 'poe=' not in rest:
+        what += '&poe-0'
     if webapi:
         xs = [WebExtractor(calc_id)]
         if other_id:
