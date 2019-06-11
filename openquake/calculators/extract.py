@@ -781,30 +781,6 @@ def _get(dstore, name):
         return dstore[name + '-rlzs'], ['mean']
 
 
-@extract.add('losses_by_tag')
-@deprecated(msg='This feature will be removed soon')
-def losses_by_tag(dstore, tag):
-    """
-    Statistical average losses by tag. For instance call
-
-    $ oq extract losses_by_tag/occupancy
-    """
-    dt = [(tag, vstr)] + dstore['oqparam'].loss_dt_list()
-    aids = dstore['assetcol/array'][tag]
-    dset, stats = _get(dstore, 'avg_losses')
-    arr = dset[()]
-    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
-    for s, stat in enumerate(stats):
-        out = numpy.zeros(len(tagvalues), dt)
-        for li, (lt, lt_dt) in enumerate(dt[1:]):
-            for i, tagvalue in enumerate(tagvalues):
-                out[i][tag] = tagvalue
-                counts = arr[aids == i + 1, s, li].sum()
-                if counts:
-                    out[i][lt] = counts
-        yield stat, out
-
-
 @extract.add('rupture')
 def extract_rupture(dstore, serial):
     """
@@ -864,6 +840,40 @@ def extract_source_geom(dstore, srcidxs):
         rec = dstore['source_info'][int(i)]
         geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
         yield rec['source_id'], geom
+
+
+@extract.add('disagg')
+def extract_disagg(dstore, key_label):
+    """
+    Extract a disaggregation output
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/disagg/rlz-0-PGA-sid-0?by=Mag_Dist
+    """
+    # adapted from the nrml_converters
+    key, bylabel = key_label.split('?')
+    label = bylabel[3:]  # strip 'by='
+    dset = dstore['disagg/' + key]
+    matrix = dset[label][()]
+    disag_tup = tuple(label.split('_'))
+    if disag_tup == ('Mag', 'Lon', 'Lat'):
+        matrix = numpy.swapaxes(matrix, 0, 1)
+        matrix = numpy.swapaxes(matrix, 1, 2)
+        disag_tup = ('Lon', 'Lat', 'Mag')
+
+    axis = [dset.attrs[v.lower() + '_bin_edges'] for v in disag_tup]
+    # compute axis mid points
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+            else ax for ax in axis]
+    values = None
+    if len(axis) == 1:
+        values = numpy.array([axis[0], matrix.flatten()]).T
+    else:
+        grids = numpy.meshgrid(*axis, indexing='ij')
+        values = [g.flatten() for g in grids]
+        values.append(matrix.flatten())
+        values = numpy.array(values).T
+    return values
+
 
 # #####################  extraction from the WebAPI ###################### #
 
