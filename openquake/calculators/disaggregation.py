@@ -30,11 +30,11 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.calculators import getters
+from openquake.calculators import getters, extract
 from openquake.calculators import base, classical
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = '%(poe)s%(rlz)s-%(imt)s-sid-%(sid)s/'
+DISAGG_RES_FMT = '%(rlz)s-%(imt)s-%(sid)s-%(poe)s/'
 
 
 def _to_matrix(matrices, num_trts):
@@ -228,18 +228,13 @@ producing too small PoEs.'''
             raise RuntimeError('All sources were filtered away!')
 
         poes_disagg = oq.poes_disagg or (None,)
-        N = len(self.sitecol)
         R = len(self.rlzs_assoc.realizations)
-        if oq.rlz_index is None:
-            try:
-                rlzs = self.datastore['best_rlz'][()]
-            except KeyError:
-                rlzs = numpy.zeros(N, int)
-        else:
-            rlzs = [oq.rlz_index] * N
+        rlzs = extract.rlz_by_sid(self.datastore)
         if oq.iml_disagg:
+            self.poe_id = {None: 0}
             curves = [None] * len(self.sitecol)  # no hazard curves are needed
         else:
+            self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves, rlzs)
         iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
@@ -379,8 +374,8 @@ producing too small PoEs.'''
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
-            poe='' if poe is None else 'poe-%s-' % poe,
-            rlz='rlz-%d' % rlz_id, imt=imt_str, sid=site_id)
+            rlz='rlz-%d' % rlz_id, imt=imt_str, sid='sid-%d' % site_id,
+            poe='poe-%d' % self.poe_id[poe])
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
@@ -393,6 +388,7 @@ producing too small PoEs.'''
                     poe_agg.append(1. - numpy.prod(1. - pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
+        attrs['site_id'] = site_id
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
         attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]

@@ -1,4 +1,4 @@
-# smlt_path='source_model_1', gsimlt_path='BooreAtkinson2008_YoungsEtAl1997SSlab', imt='SA', investigation_time=1.0, lon=-3.0, lat=-3.0, poe='0.0236799', iml='1.0000000e-01', key='Mag'
+# imt='SA', investigation_time=1.0, lon=-3.0, lat=-3.0, poe='0.0236799', iml='1.0000000e-01', key='Mag'
 5.05000E+00,2.88525E-03
 5.15000E+00,2.71951E-03
 5.25000E+00,2.53524E-03
