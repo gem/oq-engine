@@ -117,6 +117,26 @@ def make_figure_uhs(extractors, what):
     return plt
 
 
+def make_figure_disagg(extractors, what):
+    """
+    $ oq plot 'disagg?by=Dist&imt=PGA'
+    """
+    assert len(extractors) == 1
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    disagg = extractors[0].get(what)
+    [sid] = disagg.site_id
+    [poe_id] = disagg.poe_id
+    oq = extractors[0].oqparam
+    poe = oq.poes_disagg[poe_id]
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
+                  (disagg.by, sid, poe, oq.investigation_time))
+    ax.plot(disagg.array)
+    ax.legend()
+    return plt
+
+
 def make_figure_source_geom(extractors, what):
     """
     Extract the geometry of a given sources
@@ -156,7 +176,7 @@ def plot(what, calc_id=-1, other_id=None, webapi=False):
     elif prefix in 'hcurves uhs disagg' and 'site_id=' not in rest:
         what += '&site_id=0'
     if prefix == 'disagg' and 'poe=' not in rest:
-        what += '&poe-0'
+        what += '&poe_id=0'
     if webapi:
         xs = [WebExtractor(calc_id)]
         if other_id:
