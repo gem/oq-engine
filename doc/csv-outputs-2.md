@@ -32,10 +32,12 @@ Names of the CSV files
 
 When you run a computation you will see an output like the following:
 
+```
 Calculation 24589 finished correctly in 15 seconds
   id | name
    2 | hcurves
    3 | uhs
+```
 
 The first column (the `id` column) contains the output ID, which is used
 to export the output with the command
@@ -44,8 +46,8 @@ to export the output with the command
 
 The second column (the `name` column) contains the name of the output in
 the datastore. This is usually very similar to the name of the exported file.
-For instance you could get something like this::
-
+For instance you could get something like this:
+```
  $ oq-engine --eo 2 /tmp/ --exports csv
  Files exported:
  /tmp/hazard_curve-mean_24589.csv
@@ -57,14 +59,14 @@ For instance you could get something like this::
  /tmp/hazard_curve-rlz-005_24589.csv
  /tmp/hazard_curve-rlz-006_24589.csv
  /tmp/hazard_curve-rlz-007_24589.csv
-
+```
 In this example there were 8 realizations. There is one file per realization
 and the filename ends with the suffix
 
 `-rlz-<ordinal>_<calc_id>.csv`
 
-The header of the files has a format like the following::
-
+The header of the files has a format like the following:
+```
 lon,lat,IMT11, ... , IMT1N, ..., IMTN1, ... IMTNN
 lon,lat,PGA-0.0001,PGA-0.001,PGA-0.01,PGA-0.05,PGA-0.1,PGA-0.15,PGA-0.2,SA(0.1)-0.0001,SA(0.1)-0.001,SA(0.1)-0.01,SA(0.1)-0.05,SA(0.1)-0.1,SA(0.1)-0.15,SA(0.1)-0.2,SA(0.1)-0.3,SA(0.1)-0.5,SA(0.1)-0.8
 
@@ -77,7 +79,7 @@ lon,lat,PGA-0.0001,PGA-0.001,PGA-0.01,PGA-0.05,PGA-0.1,PGA-0.15,PGA-0.2,SA(0.1)-
 /tmp/hazard_uhs-rlz-005_24589.csv
 /tmp/hazard_uhs-rlz-006_24589.csv
 /tmp/hazard_uhs-rlz-007_24589.csv
-
+```
 - here is an example hazard curve:
 
 lon          |lat         |PGA-0.001   |PGA-0.005   |PGA-0.01   |PGA-0.05     |SA(0.1)-0.001|SA(0.1)-0.005|SA(0.1)-0.01|SA(0.1)-0.05|SA(0.1)-0.1 |SA(0.1)-0.15
