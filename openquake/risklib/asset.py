@@ -346,7 +346,7 @@ class TagCollection(object):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, assets_by_site, time_event, loss_types):
+    def __init__(self, exposure, assets_by_site, time_event):
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
@@ -359,7 +359,6 @@ class AssetCollection(object):
         elif self.occupancy_periods.strip() != exp_periods.strip():
             raise ValueError('Expected %s, got %s' %
                              (exp_periods, self.occupancy_periods))
-        self.loss_types = loss_types
         self.fields = [f[6:] for f in self.array.dtype.names
                        if f.startswith('value-')]
 
@@ -435,17 +434,19 @@ class AssetCollection(object):
             acc[tuple(idx - 1 for idx in asset[tagnames])] += row
         return acc
 
-    def agg_value(self, *tagnames):
+    def agg_value(self, loss_types, *tagnames):
         """
+        :param loss_types:
+            the relevant loss_types
         :param tagnames:
             tagnames of lengths T1, T2, ... respectively
         :returns:
             the values of the exposure aggregated by tagnames as an array
             of shape (T1, T2, ..., L)
         """
-        aval = numpy.zeros((len(self), len(self.loss_types)), F32)  # (A, L)
+        aval = numpy.zeros((len(self), len(loss_types)), F32)  # (A, L)
         for asset in self:
-            for lti, lt in enumerate(self.loss_types):
+            for lti, lt in enumerate(loss_types):
                 if lt == 'occupants':
                     aval[asset['ordinal'], lti] = asset[lt + '_None']
                 elif lt in self.fields:
@@ -503,7 +504,6 @@ class AssetCollection(object):
         op = decode(self.occupancy_periods)
         attrs = {'time_event': self.time_event or 'None',
                  'occupancy_periods': op,
-                 'loss_types': ' '.join(self.loss_types),
                  'tot_sites': self.tot_sites,
                  'fields': ' '.join(self.fields),
                  'tagnames': encode(self.tagnames),
@@ -511,7 +511,6 @@ class AssetCollection(object):
         return dict(array=self.array, tagcol=self.tagcol), attrs
 
     def __fromh5__(self, dic, attrs):
-        self.loss_types = attrs['loss_types'].split()
         self.occupancy_periods = attrs['occupancy_periods']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']

@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed an export agg_curves issue with pre-imported exposures
+  * Fixed an export agg_curves issue when the hazard statistics are different
+    from the risk statistics
   * Removed the disaggregation statistics: now the engine disaggregates only on
     a single realization (default: the closest to the mean)
   * Reduced the data transfer when computing the hazard curves
