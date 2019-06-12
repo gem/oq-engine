@@ -24,12 +24,13 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, groupby, block_splitter
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.calculators import getters, extract
 from openquake.calculators import base, classical
 
@@ -69,15 +70,15 @@ def _iml2s(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return lst
 
 
-def compute_disagg(sitecol, sources, cmaker, iml2s, trti, bin_edges,
+def compute_disagg(sitecol, rupdata, cmaker, iml2s, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param sources:
-        list of hazardlib source objects
+    :param rupdata:
+        rupdata array
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml2s:
@@ -96,13 +97,11 @@ def compute_disagg(sitecol, sources, cmaker, iml2s, trti, bin_edges,
     """
     result = {'trti': trti, 'num_ruptures': 0}
     # all the time is spent in collect_bin_data
-    ruptures = []
-    for src in sources:
-        ruptures.extend(src.iter_ruptures())
+    cmaker.tom = PoissonTOM(oqparam.investigation_time)
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
         bin_data = disagg.collect_bin_data(
-            ruptures, singlesitecol, cmaker, iml2,
+            rupdata, singlesitecol, cmaker, iml2,
             oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
         if bin_data:  # dictionary poe, imt, rlzi -> pne
             bins = disagg.get_bins(bin_edges, sid)
@@ -276,7 +275,6 @@ producing too small PoEs.'''
 
         # build all_args
         all_args = []
-        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             iml2 = iml2s[s]
@@ -285,20 +283,18 @@ producing too small PoEs.'''
                 for m, imt in enumerate(oq.imtls):
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
-        for smodel in csm.source_models:
-            sm_id = smodel.ordinal
-            for trt, groups in groupby(
-                    smodel.src_groups, operator.attrgetter('trt')).items():
-                trti = trt_num[trt]
-                sources = sum([grp.sources for grp in groups], [])
-                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
-                cmaker = ContextMaker(
-                    trt, rlzs_by_gsim, src_filter.integration_distance,
-                    {'filter_distance': oq.filter_distance})
-                for block in block_splitter(sources, maxweight, weight):
-                    all_args.append(
-                        (src_filter.sitecol, block, cmaker, iml2s, trti,
-                         self.bin_edges, oq))
+        for grp, dset in self.datastore['rup'].items():
+            grp_id = int(grp[4:])
+            trt = self.csm.info.trt_by_grp[grp_id]
+            trti = trt_num[trt]
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            cmaker = ContextMaker(
+                trt, rlzs_by_gsim, src_filter.integration_distance,
+                {'filter_distance': oq.filter_distance})
+            for block in block_splitter(dset[()], 1000):
+                all_args.append(
+                    (src_filter.sitecol, numpy.array(block), cmaker, iml2s,
+                     trti, self.bin_edges, oq))
 
         self.num_ruptures = [0] * len(self.trts)
         mon = self.monitor()
