@@ -83,8 +83,8 @@ class RupData(object):
     """
     def __init__(self, cmaker, sitecol):
         self.cmaker = cmaker
-        self.sitecol = sitecol
-        self.N = len(sitecol)
+        self.sitecol = sitecol.complete
+        self.N = len(sitecol.complete)
         self.data = []
 
     def from_srcs(self, srcs):
