@@ -38,7 +38,7 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
-def disaggregate(cmaker, sitecol, ruptures, iml2, truncnorm, epsilons,
+def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
                  monitor=Monitor()):
     """
     Disaggregate (separate) PoE in different contributions.
@@ -59,30 +59,25 @@ def disaggregate(cmaker, sitecol, ruptures, iml2, truncnorm, epsilons,
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
         return acc
-    ctx_mon = monitor('disagg_contexts', measuremem=False)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
-    clo_mon = monitor('get_closest', measuremem=False)
-    for rupture in ruptures:
-        with ctx_mon:
-            orig_dctx = contexts.DistancesContext(
-                (param, contexts.get_distances(rupture, sitecol, param))
-                for param in cmaker.REQUIRES_DISTANCES)
-            cmaker.add_rup_params(rupture)
-        with clo_mon:  # this is faster than computing orig_dctx
-            closest_points = rupture.surface.get_closest_points(sitecol)
-        dctx = orig_dctx.roundup(gsim.minimum_distance)
+    [sid] = sitecol.sids
+    acc['mags'] = rupdata['mag']
+    acc['lons'] = rupdata['lon'][:, sid]
+    acc['lats'] = rupdata['lat'][:, sid]
+    acc['dists'] = rupdata[cmaker.filter_distance][:, sid]
+    for rec in rupdata:
+        rctx = contexts.RuptureContext(rec, cmaker.tom)
+        dctx = contexts.DistancesContext(
+            (param, rec[param][[sid]])
+            for param in cmaker.REQUIRES_DISTANCES)
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
                 iml = iml2[m, p]
                 with pne_mon:
                     pne = disaggregate_pne(
-                        gsim, rupture, sitecol, dctx, imt, iml,
+                        gsim, rctx, sitecol, dctx, imt, iml,
                         truncnorm, epsilons)
                 acc[poe, str(imt), iml2.rlzi].append(pne)
-        acc['mags'].append(rupture.mag)
-        acc['dists'].append(getattr(dctx, cmaker.filter_distance))
-        acc['lons'].append(closest_points.lons)
-        acc['lats'].append(closest_points.lats)
     return acc
 
 
@@ -106,44 +101,40 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm, epsilons):
 
     # compute iml value with respect to standard (mean=0, std=1)
     # normal distributions
-    standard_imls = (gsim.to_distribution_values(iml) - mean) / stddev
+    [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
 
     # compute epsilon bins contributions
     contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
                              truncnorm.cdf(epsilons[:-1]))
 
     # take the minimum epsilon larger than standard_iml
-    bins = numpy.searchsorted(epsilons, standard_imls)
-    poe_by_site = []
+    bin = numpy.searchsorted(epsilons, lvl)
     n_epsilons = len(epsilons) - 1
-    for lvl, bin in zip(standard_imls, bins):  # one per site
-        if bin == 0:
-            poe_by_site.append(contribution_by_bands)
-        elif bin > n_epsilons:
-            poe_by_site.append(numpy.zeros(n_epsilons))
-        else:
-            # for other cases (when ``lvl`` falls somewhere in the
-            # histogram):
-            poe = numpy.concatenate([
-                # take zeros for bins that are on the left hand side
-                # from the bin ``lvl`` falls into,
-                numpy.zeros(bin - 1),
-                # ... area of the portion of the bin containing ``lvl``
-                # (the portion is limited on the left hand side by
-                # ``lvl`` and on the right hand side by the bin edge),
-                [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
-                # ... and all bins on the right go unchanged.
-                contribution_by_bands[bin:]])
-            poe_by_site.append(poe)
-    poes = numpy.array(poe_by_site)  # shape (n_sites, n_epsilons)
+    if bin == 0:
+        poes = contribution_by_bands
+    elif bin > n_epsilons:
+        poes = numpy.zeros(n_epsilons)
+    else:
+        # for other cases (when ``lvl`` falls somewhere in the
+        # histogram):
+        poes = numpy.concatenate([
+            # take zeros for bins that are on the left hand side
+            # from the bin ``lvl`` falls into,
+            numpy.zeros(bin - 1),
+            # ... area of the portion of the bin containing ``lvl``
+            # (the portion is limited on the left hand side by
+            # ``lvl`` and on the right hand side by the bin edge),
+            [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
+            # ... and all bins on the right go unchanged.
+            contribution_by_bands[bin:]])
     return rupture.get_probability_no_exceedance(poes)
 
 
 # in practice this is always called with a single site
-def collect_bin_data(ruptures, sitecol, cmaker, iml3,
+def collect_bin_data(rupdata, sitecol, cmaker, iml3,
                      truncation_level, n_epsilons, monitor=Monitor()):
     """
-    :param ruptures: a list of ruptures
+    :param rupdata: array of ruptures
     :param sitecol: a SiteCollection instance with a single site
     :param cmaker: a ContextMaker instance
     :param iml3: an ArrayWrapper of intensities of shape (R, M, P)
@@ -155,7 +146,7 @@ def collect_bin_data(ruptures, sitecol, cmaker, iml3,
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
     eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
-    acc = disaggregate(cmaker, sitecol, ruptures, iml3, tn, eps, monitor)
+    acc = disaggregate(cmaker, sitecol, rupdata, iml3, tn, eps, monitor)
     return pack(acc, 'mags dists lons lats'.split())
 
 
