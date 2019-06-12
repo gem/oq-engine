@@ -70,7 +70,7 @@ You can print the list of containers and images using `$ docker ps -a` and `$ do
 - [Introduction](../installing/docker.md)
 - [Cluster deployment](cluster.md)
 - [Advanced options](advanced.md)
-- [Build from sources](../../docker#build-openquake-docker-images)
+- [Build from sources](../../docker.md#build-openquake-docker-images)
 
 ***
 
