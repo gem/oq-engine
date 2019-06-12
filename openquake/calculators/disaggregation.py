@@ -129,21 +129,14 @@ class DisaggregationCalculator(base.HazardCalculator):
     """
     Classical PSHA disaggregation calculator
     """
-    accept_precalc = ['psha']
+    precalc = 'classical'
+    accept_precalc = ['psha', 'classical']
     POE_TOO_BIG = '''\
 You are trying to disaggregate for poe=%s.
 However the source model produces at most probabilities
 of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
-
-    def pre_execute(self):
-        oq = self.oqparam
-        cl = classical.ClassicalCalculator(oq, self.datastore.calc_id)
-        cl.run()
-        self.csm = cl.csm
-        self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
-        self.sitecol = cl.sitecol
 
     def execute(self):
         """Performs the disaggregation"""
@@ -217,13 +210,14 @@ producing too small PoEs.'''
         oq = self.oqparam
         tl = oq.truncation_level
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-        csm = self.csm
-        for sg in csm.src_groups:
-            if sg.atomic:
-                raise NotImplemented('Atomic groups are not supported yet')
-        if not csm.get_sources():
-            raise RuntimeError('All sources were filtered away!')
+        if hasattr(self, 'csm'):
+            for sg in self.csm.src_groups:
+                if sg.atomic:
+                    raise NotImplemented('Atomic groups are not supported yet')
+            if not self.csm.get_sources():
+                raise RuntimeError('All sources were filtered away!')
 
+        csm_info = self.datastore['csm_info']
         poes_disagg = oq.poes_disagg or (None,)
         R = len(self.rlzs_assoc.realizations)
         rlzs = extract.disagg_key(self.datastore).rlzs
@@ -245,15 +239,13 @@ producing too small PoEs.'''
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         # build trt_edges
-        trts = tuple(sorted(set(sg.trt for smodel in csm.source_models
-                                for sg in smodel.src_groups)))
+        trts = tuple(csm_info.trts)
         trt_num = {trt: i for i, trt in enumerate(trts)}
         self.trts = trts
 
         # build mag_edges
-        mmm = numpy.array([src.get_min_max_mag() for src in csm.get_sources()])
-        min_mag = mmm[:, 0].min()
-        max_mag = mmm[:, 1].max()
+        min_mag = csm_info.min_mag
+        max_mag = csm_info.max_mag
         mag_edges = oq.mag_bin_width * numpy.arange(
             int(numpy.floor(min_mag / oq.mag_bin_width)),
             int(numpy.ceil(max_mag / oq.mag_bin_width) + 1))
@@ -287,7 +279,7 @@ producing too small PoEs.'''
 
         for grp, dset in self.datastore['rup'].items():
             grp_id = int(grp[4:])
-            trt = self.csm.info.trt_by_grp[grp_id]
+            trt = csm_info.trt_by_grp[grp_id]
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
@@ -302,13 +294,6 @@ producing too small PoEs.'''
         mon = self.monitor()
         results = parallel.Starmap(compute_disagg, all_args, mon).reduce(
             self.agg_result, AccumDict(accum={}))
-
-        # set eff_ruptures
-        trti = csm.info.trt2i()
-        for smodel in csm.info.source_models:
-            for sg in smodel.src_groups:
-                sg.eff_ruptures = self.num_ruptures[trti[sg.trt]]
-        self.datastore['csm_info'] = csm.info
         return results
 
     def save_bin_edges(self):
