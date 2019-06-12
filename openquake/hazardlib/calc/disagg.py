@@ -67,8 +67,10 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     acc['dists'] = dists = rupdata[cmaker.filter_distance][:, sid]
     if gsim.minimum_distance:
         dists[dists < gsim.minimum_distance] = gsim.minimum_distance
+    # compute epsilon bin contributions only once
+    eps_bands = truncnorm.cdf(epsilons[1:]) - truncnorm.cdf(epsilons[:-1])
     for rec in rupdata:
-        rctx = contexts.RuptureContext(rec, cmaker.tom)
+        rctx = contexts.RuptureContext(rec)
         dctx = contexts.DistancesContext(
             (param, rec[param][[sid]])
             for param in cmaker.REQUIRES_DISTANCES
@@ -79,13 +81,14 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
                 with pne_mon:
                     pne = disaggregate_pne(
                         gsim, rctx, sitecol, dctx, imt, iml,
-                        truncnorm, epsilons)
+                        truncnorm, epsilons, eps_bands)
                 acc[poe, str(imt), iml2.rlzi].append(pne)
     return acc
 
 
 # in practice this is always called with a single site
-def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm, epsilons):
+def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
+                     epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
@@ -106,15 +109,11 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm, epsilons):
     # normal distributions
     [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
 
-    # compute epsilon bins contributions
-    contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
-                             truncnorm.cdf(epsilons[:-1]))
-
     # take the minimum epsilon larger than standard_iml
     bin = numpy.searchsorted(epsilons, lvl)
     n_epsilons = len(epsilons) - 1
     if bin == 0:
-        poes = contribution_by_bands
+        poes = eps_bands
     elif bin > n_epsilons:
         poes = numpy.zeros(n_epsilons)
     else:
@@ -127,9 +126,9 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm, epsilons):
             # ... area of the portion of the bin containing ``lvl``
             # (the portion is limited on the left hand side by
             # ``lvl`` and on the right hand side by the bin edge),
-            [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
+            [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
             # ... and all bins on the right go unchanged.
-            contribution_by_bands[bin:]])
+            eps_bands[bin:]])
     return rupture.get_probability_no_exceedance(poes)
 
 
@@ -337,7 +336,8 @@ def disaggregation(
         cmaker = ContextMaker(
             trt, rlzs_by_gsim, source_filter.integration_distance,
             {'filter_distance': filter_distance})
-        cmaker.tom = srcs[0].temporal_occurrence_model
+        contexts.RuptureContext.temporal_occurrence_model = (
+            srcs[0].temporal_occurrence_model)
         rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
         bdata[trt] = collect_bin_data(
             rupdata, sitecol, cmaker, iml2, truncation_level, n_epsilons)

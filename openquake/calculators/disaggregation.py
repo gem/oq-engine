@@ -30,6 +30,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.calculators import getters, extract
 from openquake.calculators import base, classical
@@ -97,7 +98,8 @@ def compute_disagg(sitecol, rupdata, cmaker, iml2s, trti, bin_edges,
     """
     result = {'trti': trti, 'num_ruptures': 0}
     # all the time is spent in collect_bin_data
-    cmaker.tom = PoissonTOM(oqparam.investigation_time)
+    RuptureContext.temporal_occurrence_model = PoissonTOM(
+        oqparam.investigation_time)
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
         bin_data = disagg.collect_bin_data(
