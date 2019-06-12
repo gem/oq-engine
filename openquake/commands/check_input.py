@@ -15,14 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import logging
 from openquake.baselib import sap
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
 
 @sap.script
-def check_input(job_ini_or_zip):    
+def check_input(job_ini_or_zip):
     calc = base.calculators(readinput.get_oqparam(job_ini_or_zip))
     calc.read_inputs()
 
