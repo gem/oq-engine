@@ -32,11 +32,10 @@ from openquake.qa_tests_data.disagg import (
 class DisaggregationTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, fmt='xml', delta=None):
-        if sys.platform == 'win32':  # disable concurrency on windows
-            out = self.run_calc(test_dir, 'job.ini', exports=fmt,
-                                concurrent_tasks='0')
-        else:
-            out = self.run_calc(test_dir, 'job.ini', exports=fmt)
+        self.run_calc(test_dir, 'job.ini', calculation_mode='classical')
+        hc_id = self.calc.datastore.calc_id
+        out = self.run_calc(test_dir, 'job.ini', exports=fmt,
+                            hazard_calculation=str(hc_id))
         got = out['disagg', fmt]
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
