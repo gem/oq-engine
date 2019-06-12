@@ -331,14 +331,13 @@ def disaggregation(
     iml2 = ArrayWrapper(numpy.array([[iml]]),
                         dict(imts=[imt], poes_disagg=[None], rlzi=0))
     for trt, srcs in by_trt.items():
-        ruptures = []
-        for src in srcs:
-            ruptures.extend(src.iter_ruptures())
         cmaker = ContextMaker(
             trt, rlzs_by_gsim, source_filter.integration_distance,
             {'filter_distance': filter_distance})
+        cmaker.tom = srcs[0].temporal_occurrence_model
+        rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
         bdata[trt] = collect_bin_data(
-            ruptures, sitecol, cmaker, iml2, truncation_level, n_epsilons)
+            rupdata, sitecol, cmaker, iml2, truncation_level, n_epsilons)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
