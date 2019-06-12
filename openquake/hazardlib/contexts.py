@@ -459,12 +459,12 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
+    temporal_occurrence_model = None  # to be set
 
-    def __init__(self, rec=None, tom=None):
+    def __init__(self, rec=None):
         if rec is not None:
             for name in rec.dtype.names:
                 setattr(self, name, rec[name])
-        self.temporal_occurrence_model = tom
 
     def get_probability_no_exceedance(self, poes):
         """
