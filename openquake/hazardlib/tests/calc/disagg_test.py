@@ -219,4 +219,3 @@ class PMFExtractorsTestCase(unittest.TestCase):
             (pmf1 + pmf2) / 2, [1, 1])
         numpy.testing.assert_allclose(
             disagg.mag_pmf(mean), [0.99999944, 0.99999999])
-
