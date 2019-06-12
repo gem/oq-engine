@@ -1,0 +1,14 @@
+site_name: The OpenQuake Engine
+docs_dir: 'doc'
+theme: 
+    name: 'material'
+    palette:
+        primary: 'blue'
+        accent: 'blue'
+# plugins:
+#     - search
+#     - pdf-export:
+#         verbose: true
+#         combined: true
+extra:
+    version: '3.6.0'
