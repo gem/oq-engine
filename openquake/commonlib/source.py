@@ -353,9 +353,10 @@ class CompositeSourceModel(collections.abc.Sequence):
         for sm in source_models:
             for sg in sm.src_groups:
                 for src in sg:
-                    m1, m2 = src.get_min_max_mag()
-                    min_mags.append(m1)
-                    max_mags.append(m2)
+                    if hasattr(src, 'get_min_max_mag'):
+                        m1, m2 = src.get_min_max_mag()
+                        min_mags.append(m1)
+                        max_mags.append(m2)
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
