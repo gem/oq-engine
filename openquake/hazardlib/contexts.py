@@ -274,7 +274,7 @@ class ContextMaker(object):
                 continue
             yield rup, sctx, dctx
             if fewsites:  # store rupdata
-                rupdata.add(rup)
+                rupdata.add(rup, src.id)
         self.rupdata = rupdata.to_array()
 
     def _gen_rup_sites(self, src, sites):
