@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the speed of the disaggregation calculator
   * Changed the file names of the exported disaggregation outputs
   * Fixed an export agg_curves issue with pre-imported exposures
   * Fixed an export agg_curves issue when the hazard statistics are different
