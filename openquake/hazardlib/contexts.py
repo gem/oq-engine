@@ -81,10 +81,10 @@ class RupData(object):
     """
     A class to collect rupture information into an array
     """
-    def __init__(self, gsim, sitecol):
-        self.gsim = gsim
+    def __init__(self, cmaker, sitecol):
+        self.cmaker = cmaker
         self.sitecol = sitecol
-        self.N = len(sitecol.complete)
+        self.N = len(sitecol)
         self.data = []
 
     def from_srcs(self, srcs):
@@ -100,9 +100,9 @@ class RupData(object):
             rate = numpy.nan
             probs_occur = rup.probs_occur
         row = [src_id, rate]
-        for rup_param in self.gsim.REQUIRES_RUPTURE_PARAMETERS:
+        for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
             row.append(getattr(rup, rup_param))
-        for dist_param in self.gsim.REQUIRES_DISTANCES:
+        for dist_param in self.cmaker.REQUIRES_DISTANCES:
             row.append(get_distances(rup, self.sitecol, dist_param))
         closest = rup.surface.get_closest_points(self.sitecol)
         row.append(closest.lons)
@@ -113,9 +113,9 @@ class RupData(object):
 
     def to_array(self):
         dtlist = [('srcidx', numpy.uint32), ('occurrence_rate', float)]
-        for rup_param in self.gsim.REQUIRES_RUPTURE_PARAMETERS:
+        for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
             dtlist.append((rup_param, float))
-        for dist_param in self.gsim.REQUIRES_DISTANCES:
+        for dist_param in self.cmaker.REQUIRES_DISTANCES:
             dtlist.append((dist_param, (float, (self.N,))))
         dtlist.append(('lon', (float, (self.N,))))  # closest lons
         dtlist.append(('lat', (float, (self.N,))))  # closest lats
@@ -274,7 +274,7 @@ class ContextMaker(object):
                 continue
             yield rup, sctx, dctx
             if fewsites:  # store rupdata
-                rupdata.add(rup, src.id)
+                rupdata.add(rup, src.id or 0)
         self.rupdata = rupdata.to_array()
 
     def _gen_rup_sites(self, src, sites):
