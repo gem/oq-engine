@@ -138,15 +138,11 @@ producing too small PoEs.'''
 
     def pre_execute(self):
         oq = self.oqparam
-        if oq.iml_disagg and not oq.disagg_by_src:
-            base.HazardCalculator.pre_execute(self)
-        else:
-            # we need to run a ClassicalCalculator
-            cl = classical.ClassicalCalculator(oq, self.datastore.calc_id)
-            cl.run()
-            self.csm = cl.csm
-            self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
-            self.sitecol = cl.sitecol
+        cl = classical.ClassicalCalculator(oq, self.datastore.calc_id)
+        cl.run()
+        self.csm = cl.csm
+        self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
+        self.sitecol = cl.sitecol
 
     def execute(self):
         """Performs the disaggregation"""
