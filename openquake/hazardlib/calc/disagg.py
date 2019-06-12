@@ -64,12 +64,15 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     acc['mags'] = rupdata['mag']
     acc['lons'] = rupdata['lon'][:, sid]
     acc['lats'] = rupdata['lat'][:, sid]
-    acc['dists'] = rupdata[cmaker.filter_distance][:, sid]
+    acc['dists'] = dists = rupdata[cmaker.filter_distance][:, sid]
+    if gsim.minimum_distance:
+        dists[dists < gsim.minimum_distance] = gsim.minimum_distance
     for rec in rupdata:
         rctx = contexts.RuptureContext(rec, cmaker.tom)
         dctx = contexts.DistancesContext(
             (param, rec[param][[sid]])
-            for param in cmaker.REQUIRES_DISTANCES)
+            for param in cmaker.REQUIRES_DISTANCES
+        ).roundup(gsim.minimum_distance)
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
                 iml = iml2[m, p]
