@@ -437,10 +437,11 @@ class RuptureContext(BaseContext):
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
 
-    def __init__(self, rec=None):
+    def __init__(self, rec=None, tom=None):
         if rec is not None:
             for name in rec.dtype.names:
                 setattr(self, name, rec[name])
+        self.temporal_occurrence_model = tom
 
     def get_probability_no_exceedance(self, poes):
         """
@@ -483,8 +484,9 @@ class RuptureContext(BaseContext):
             prob_no_exceed = numpy.array(
                 [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
             prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-            prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
-            prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
+            if isinstance(prob_no_exceed, numpy.ndarray):
+                prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
+                prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
             return prob_no_exceed
         # parametric rupture
         tom = self.temporal_occurrence_model
