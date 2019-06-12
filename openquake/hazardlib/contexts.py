@@ -19,7 +19,6 @@ import abc
 import numpy
 
 from openquake.baselib.hdf5 import vfloat64
-from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -76,6 +75,53 @@ def get_num_distances(gsims):
     for gsim in gsims:
         dists.update(gsim.REQUIRES_DISTANCES)
     return len(dists)
+
+
+class RupData(object):
+    """
+    A class to collect rupture information into an array
+    """
+    def __init__(self, cmaker, sitecol):
+        self.cmaker = cmaker
+        self.sitecol = sitecol.complete
+        self.N = len(sitecol.complete)
+        self.data = []
+
+    def from_srcs(self, srcs):
+        for src in srcs:
+            for rup in src.iter_ruptures():
+                self.add(rup, src.id)
+
+    def add(self, rup, src_id=0):
+        try:
+            rate = rup.occurrence_rate
+            probs_occur = numpy.zeros(0, numpy.float64)
+        except AttributeError:  # for nonparametric ruptures
+            rate = numpy.nan
+            probs_occur = rup.probs_occur
+        row = [src_id, rate]
+        for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
+            row.append(getattr(rup, rup_param))
+        for dist_param in self.cmaker.REQUIRES_DISTANCES:
+            row.append(get_distances(rup, self.sitecol, dist_param))
+        closest = rup.surface.get_closest_points(self.sitecol)
+        row.append(closest.lons)
+        row.append(closest.lats)
+        row.append(rup.weight)
+        row.append(probs_occur)
+        self.data.append(tuple(row))
+
+    def to_array(self):
+        dtlist = [('srcidx', numpy.uint32), ('occurrence_rate', float)]
+        for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
+            dtlist.append((rup_param, float))
+        for dist_param in self.cmaker.REQUIRES_DISTANCES:
+            dtlist.append((dist_param, (float, (self.N,))))
+        dtlist.append(('lon', (float, (self.N,))))  # closest lons
+        dtlist.append(('lat', (float, (self.N,))))  # closest lats
+        dtlist.append(('mutex_weight', float))
+        dtlist.append(('probs_occur', vfloat64))
+        return numpy.array(self.data, dtlist)
 
 
 class ContextMaker(object):
@@ -219,7 +265,7 @@ class ContextMaker(object):
         sitecol = sites.complete
         N = len(sitecol)
         fewsites = N <= FEWSITES
-        rupdata = []  # rupture data
+        rupdata = RupData(self, sites)
         for rup, sites in self._gen_rup_sites(src, sites):
             try:
                 with self.ctx_mon:
@@ -228,36 +274,8 @@ class ContextMaker(object):
                 continue
             yield rup, sctx, dctx
             if fewsites:  # store rupdata
-                try:
-                    rate = rup.occurrence_rate
-                    probs_occur = numpy.zeros(0, numpy.float64)
-                except AttributeError:  # for nonparametric ruptures
-                    rate = numpy.nan
-                    probs_occur = rup.probs_occur
-                row = [src.id or 0, rate]
-                for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
-                    row.append(getattr(rup, rup_param))
-                for dist_param in self.REQUIRES_DISTANCES:
-                    row.append(get_distances(rup, sitecol, dist_param))
-                closest = rup.surface.get_closest_points(sitecol)
-                row.append(closest.lons)
-                row.append(closest.lats)
-                row.append(rup.weight)
-                row.append(probs_occur)
-                rupdata.append(tuple(row))
-        if rupdata:
-            dtlist = [('srcidx', numpy.uint32), ('occurrence_rate', float)]
-            for rup_param in self.REQUIRES_RUPTURE_PARAMETERS:
-                dtlist.append((rup_param, float))
-            for dist_param in self.REQUIRES_DISTANCES:
-                dtlist.append((dist_param, (float, (N,))))
-            dtlist.append(('lon', (float, (N,))))  # closest lons
-            dtlist.append(('lat', (float, (N,))))  # closest lats
-            dtlist.append(('mutex_weight', float))
-            dtlist.append(('probs_occur', vfloat64))
-            self.rupdata = numpy.array(rupdata, dtlist)
-        else:
-            self.rupdata = ()
+                rupdata.add(rup, src.id or 0)
+        self.rupdata = rupdata.to_array()
 
     def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
