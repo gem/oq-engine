@@ -83,7 +83,7 @@ class RupData(object):
     """
     def __init__(self, cmaker, sitecol):
         self.cmaker = cmaker
-        self.sitecol = sitecol
+        self.sitecol = sitecol.complete
         self.N = len(sitecol.complete)
         self.data = []
 
@@ -97,7 +97,7 @@ class RupData(object):
                 self.add(rup, src.id)
         return self.to_array()
 
-    def add(self, rup, src_id=0):
+    def add(self, rup, src_id):
         try:
             rate = rup.occurrence_rate
             probs_occur = numpy.zeros(0, numpy.float64)
