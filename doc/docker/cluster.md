@@ -56,7 +56,7 @@ $ docker run -d --network=oq-cluster-net --name oq-cluster-worker_1 openquake/en
 - [Introduction](../installing/docker.md)
 - [Single node deployment](single.md)
 - [Advanced options](advanced.md)
-- [Build from sources](../../docker#build-openquake-docker-images)
+- [Build from sources](../../docker.md#build-openquake-docker-images)
 
 ***
 
