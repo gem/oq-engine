@@ -117,16 +117,19 @@ class CompositionInfo(object):
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
-                   totweight=0)
+                   totweight=0, min_mag=0, max_mag=0)
 
     get_rlzs_assoc = get_rlzs_assoc
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight):
+    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight,
+                 min_mag, max_mag):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
         self.tot_weight = totweight
+        self.min_mag = min_mag
+        self.max_mag = max_mag
         self.init()
 
     def init(self):
@@ -214,7 +217,8 @@ class CompositionInfo(object):
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(sorted(trti)),
-                     tot_weight=self.tot_weight))
+                     tot_weight=self.tot_weight,
+                     min_mag=self.min_mag, max_mag=self.max_mag))
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
@@ -344,11 +348,21 @@ class CompositeSourceModel(collections.abc.Sequence):
         # NB: the weight is 1 for sources which are XML nodes
         totweight = sum(getattr(src, 'weight', 1) for sm in source_models
                         for sg in sm.src_groups for src in sg)
+
+        min_mags, max_mags = [], []
+        for sm in source_models:
+            for sg in sm.src_groups:
+                for src in sg:
+                    m1, m2 = src.get_min_max_mag()
+                    min_mags.append(m1)
+                    max_mags.append(m2)
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models],
-            totweight)
+            totweight,
+            min(min_mags) if min_mags else 0,
+            max(max_mags) if max_mags else 0)
         try:
             dupl_sources = self.check_dupl_sources()
         except AssertionError:
