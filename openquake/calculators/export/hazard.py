@@ -522,10 +522,7 @@ def export_gmf_data_csv(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     imts = list(oq.imtls)
     sc = dstore['sitecol'].array
-    if 'vs30' in sc.dtype.names:
-        arr = sc[['lon', 'lat', 'vs30']]
-    else:
-        arr = sc[['lon', 'lat']]
+    arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
     gmfa = dstore['gmf_data/data'][('eid', 'sid', 'gmv')]
     event_id = dstore['events']['id']
