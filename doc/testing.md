@@ -6,7 +6,7 @@ The OpenQuake code is automatically tested by Continuous integration systems, [J
 
 ### Manual testing
 
-The full suite of tests for the OpenQuake Engine can be run using `nose` from [**source code**](installing/development.md):
+The full suite of tests for the OpenQuake Engine can be run using `pytest` from [**source code**](installing/development.md):
 
 ```bash
 $ pytest -v openquake
@@ -26,7 +26,7 @@ $ oq dbserver start
 $ pytest -vs openquake/server
 ```
 
-See the [man page](http://nose.readthedocs.io/en/latest/man.html) of `nosetests` for further information and command options.
+See the `pytest` [documentation](https://docs.pytest.org/en/latest/contents.html) for further information and command options.
 
 ***
 
