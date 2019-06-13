@@ -531,7 +531,7 @@ def export_gmf_data_csv(ekey, dstore):
     event_id = dstore['events']['id']
     gmfa['eid'] = event_id[gmfa['eid']]
     if eid is None:  # we cannot use extract here
-        f = dstore.build_fname('sitemodel', '', 'csv')
+        f = dstore.build_fname('sitemesh', '', 'csv')
         sids = numpy.arange(len(arr), dtype=U32)
         sites = util.compose_arrays(sids, arr, 'site_id')
         writers.write_csv(f, sites)
