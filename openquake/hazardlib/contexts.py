@@ -18,6 +18,7 @@
 import abc
 import numpy
 
+from openquake.baselib import config
 from openquake.baselib.hdf5 import vfloat64
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
@@ -25,7 +26,8 @@ from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-FEWSITES = 10  # if there are few sites store the rupdata
+# if there are few sites store the rupdata
+FEWSITES = config.general.max_sites_disagg
 
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth rvolc'.split())
