@@ -69,6 +69,10 @@ def disaggregate(cmaker, sitecol, ruptures, iml2, truncnorm, epsilons,
             orig_dctx = contexts.DistancesContext(
                 (param, contexts.get_distances(rupture, sitecol, param))
                 for param in cmaker.REQUIRES_DISTANCES)
+            [distance] = getattr(orig_dctx, cmaker.filter_distance)
+            if distance > cmaker.maximum_distance(
+                    rupture.tectonic_region_type, rupture.mag):
+                continue
             cmaker.add_rup_params(rupture)
         with clo_mon:  # this is faster than computing orig_dctx
             closest_points = rupture.surface.get_closest_points(sitecol)
