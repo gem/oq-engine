@@ -48,8 +48,11 @@ classes = {}  # initialized in .init()
 
 
 def to_checksum(cls1, cls2):
-    s = '%s,%s' % (cls1.__name__, cls2.__name__)
-    return zlib.adler32(s.encode('ascii'))
+    """
+    Convert a pair of classes into a numeric code (uint32)
+    """
+    names = '%s,%s' % (cls1.__name__, cls2.__name__)
+    return zlib.adler32(names.encode('ascii'))
 
 
 @with_slots
