@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Deprecated the XML disaggregation exporters in favor of the CSV exporters
   * Turned the disaggregation calculator into a classical post-calculator
     to use the precomputed distances and speedup the computation even more
   * Fixed the disaggregation calculator by discarding the ruptures outside
