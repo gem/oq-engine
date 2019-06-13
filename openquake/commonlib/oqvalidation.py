@@ -288,9 +288,12 @@ class OqParam(valid.ParamSet):
             #    logging.warning('ebrisk is not meant for full enumeration')
 
         # check for GMFs from file
-        if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
-                'sites' not in self.inputs):
-            raise InvalidFile('%s: You forgot sites|sites_csv' % job_ini)
+        if (self.inputs.get('gmfs', '').endswith('.csv')
+                and not self.sites
+                and 'sites' not in self.inputs
+                and 'site_model' not in self.inputs):
+            raise InvalidFile('%s: You forgot sites|sites_csv|site_model_file'
+                              % job_ini)
         elif (self.inputs.get('gmfs', '').endswith('.xml') and
                 'sites' in self.inputs):
             raise InvalidFile('%s: You cannot have both sites_csv and '
