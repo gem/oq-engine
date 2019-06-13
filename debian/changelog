@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Turned the disaggregation calculator into a classical post-calculator
+    to use the precomputed distances and speedup the computation even more
   * Fixed the disaggregation calculator by discarding the ruptures outside
     the integration distance
   * Optimized the speed of the disaggregation calculator by moving a statistical
