@@ -23,6 +23,7 @@ Module :mod:`openquake.hazardlib.source.rupture` defines classes
 import abc
 import numpy
 import math
+import zlib
 import itertools
 import collections
 from openquake.baselib import general
@@ -44,6 +45,11 @@ TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 events_dt = numpy.dtype([('id', U64), ('rlz', U16)])
 classes = {}  # initialized in .init()
+
+
+def to_checksum(cls1, cls2):
+    s = '%s,%s' % (cls1.__qualname__, cls2.__qualname__)
+    return zlib.adler32(s.encode('ascii'))
 
 
 @with_slots
@@ -92,13 +98,10 @@ class BaseRupture(metaclass=abc.ABCMeta):
         surface_classes = list(get_subclasses(BaseSurface))
         for cl in rupture_classes + surface_classes:
             classes[cl.__name__] = cl
-        n = 0
         for rup, sur in itertools.product(rupture_classes, surface_classes):
-            cls._code[rup, sur] = n
-            cls.types[n] = rup, sur
-            n += 1
-        if n >= 256:
-            raise ValueError('Too many rupture codes: %d' % n)
+            chk = to_checksum(rup, sur)
+            cls._code[rup, sur] = chk
+            cls.types[chk] = rup, sur
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, rupture_slip_direction=None, weight=None):
@@ -115,7 +118,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
 
     @property
     def code(self):
-        """Returns the code (integer in the range 0 .. 255) of the rupture"""
+        """Returns the code (uint32) of the rupture"""
         return self._code[self.__class__, self.surface.__class__]
 
     get_probability_no_exceedance = (
