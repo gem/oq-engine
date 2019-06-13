@@ -80,11 +80,12 @@ class Monitor(object):
     calc_id = None
 
     def __init__(self, operation='', hdf5=None,
-                 autoflush=False, measuremem=False):
+                 autoflush=False, measuremem=False, inner_loop=False):
         self.operation = operation
         self.hdf5 = hdf5
         self.autoflush = autoflush
         self.measuremem = measuremem
+        self.inner_loop = inner_loop
         self.mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()
@@ -128,6 +129,9 @@ class Monitor(object):
             data.append((self.operation, time_sec, memory_mb, self.counts))
         return numpy.array(data, perf_dt)
 
+    def _postloop(self):
+        time.sleep(.01)  # there is a reason for this
+
     def __enter__(self):
         self.exc = None  # exception
         self._start_time = time.time()
@@ -144,6 +148,8 @@ class Monitor(object):
         self.duration += self._stop_time - self._start_time
         self.counts += 1
         self.on_exit()
+        if self.inner_loop:
+            self._postloop()
 
     def on_exit(self):
         "To be overridden in subclasses"

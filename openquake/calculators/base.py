@@ -475,8 +475,10 @@ class HazardCalculator(BaseCalculator):
             calc.run()
             self.param = calc.param
             self.sitecol = calc.sitecol
-            self.assetcol = calc.assetcol
-            self.riskmodel = calc.riskmodel
+            if hasattr(calc, 'assetcol'):
+                self.assetcol = calc.assetcol
+            if hasattr(calc, 'riskmodel'):
+                self.riskmodel = calc.riskmodel
             if hasattr(calc, 'rlzs_assoc'):
                 self.rlzs_assoc = calc.rlzs_assoc
             else:
