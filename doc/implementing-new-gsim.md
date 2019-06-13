@@ -21,7 +21,7 @@ https://github.com/gem/oq-engine/tree/master/openquake/hazardlib/tests/gsim
 
 ```bash
 cd oq-engine;
-nosetests -vsx openquake.hazardlib
+pytest -xv openquake/hazardlib
 ```
 
 - Update the following .rst file (needed to generate automatically documentation):
