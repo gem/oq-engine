@@ -18,6 +18,7 @@
 import abc
 import numpy
 
+from openquake.baselib import config
 from openquake.baselib.hdf5 import vfloat64
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
@@ -25,7 +26,8 @@ from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-FEWSITES = 10  # if there are few sites store the rupdata
+# if there are few sites store the rupdata
+FEWSITES = config.general.max_sites_disagg
 
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth rvolc'.split())
@@ -88,18 +90,23 @@ class RupData(object):
         self.data = []
 
     def from_srcs(self, srcs):
+        """
+        :returns: the underlying rupdata array
+        """
         for src in srcs:
             for rup in src.iter_ruptures():
+                self.cmaker.add_rup_params(rup)
                 self.add(rup, src.id)
+        return self.to_array()
 
-    def add(self, rup, src_id=0):
+    def add(self, rup, src_id):
         try:
             rate = rup.occurrence_rate
             probs_occur = numpy.zeros(0, numpy.float64)
         except AttributeError:  # for nonparametric ruptures
             rate = numpy.nan
             probs_occur = rup.probs_occur
-        row = [src_id, rate]
+        row = [src_id or 0, rate]
         for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
             row.append(getattr(rup, rup_param))
         for dist_param in self.cmaker.REQUIRES_DISTANCES:
@@ -274,7 +281,7 @@ class ContextMaker(object):
                 continue
             yield rup, sctx, dctx
             if fewsites:  # store rupdata
-                rupdata.add(rup, src.id or 0)
+                rupdata.add(rup, src.id)
         self.rupdata = rupdata.to_array()
 
     def _gen_rup_sites(self, src, sites):
@@ -454,6 +461,7 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
+    temporal_occurrence_model = None  # to be set
 
     def __init__(self, rec=None):
         if rec is not None:
@@ -501,8 +509,9 @@ class RuptureContext(BaseContext):
             prob_no_exceed = numpy.array(
                 [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
             prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-            prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
-            prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
+            if isinstance(prob_no_exceed, numpy.ndarray):
+                prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
+                prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
             return prob_no_exceed
         # parametric rupture
         tom = self.temporal_occurrence_model
