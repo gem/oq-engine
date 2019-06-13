@@ -380,9 +380,7 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the total number of sites
         """
-        if hasattr(self, 'sitecol'):
-            return len(self.sitecol.complete) if self.sitecol else None
-        return len(self.datastore['sitecol/array'])
+        return len(self.sitecol.complete) if self.sitecol else None
 
     def check_overflow(self):
         """Overridden in event based"""
