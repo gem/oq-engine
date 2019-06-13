@@ -607,6 +607,7 @@ DisaggMatrix = collections.namedtuple(
 
 
 @export.add(('disagg', 'xml'))
+@deprecated(msg='Use the CSV exporter instead')
 def export_disagg_xml(ekey, dstore):
     oq = dstore['oqparam']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
