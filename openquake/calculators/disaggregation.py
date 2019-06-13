@@ -30,10 +30,10 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext, FEWSITES
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.calculators import getters, extract
-from openquake.calculators import base, classical
+from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
 DISAGG_RES_FMT = '%(rlz)s-%(imt)s-%(sid)s-%(poe)s/'
@@ -137,6 +137,13 @@ However the source model produces at most probabilities
 of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
+
+    def init(self):
+        if self.N > FEWSITES:
+            raise ValueError(
+                'The max number of sites for disaggregation set in '
+                'openquake.cfg is %d, but you have %s' % (FEWSITES, self.N))
+        super().init()
 
     def execute(self):
         """Performs the disaggregation"""
