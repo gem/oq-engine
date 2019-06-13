@@ -11,6 +11,7 @@
     from the risk statistics
   * Removed the disaggregation statistics: now the engine disaggregates only on
     a single realization (default: the closest to the mean)
+  * Forbidden disaggregation matrices with more than 1 million elements
   * Reduced the data transfer when computing the hazard curves
   * Optimized the reading of large CSV exposures
   * Fixed the --hc functionality across users
