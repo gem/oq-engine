@@ -264,6 +264,34 @@ def get_longitudinal_extent(lon1, lon2):
     return (lon2 - lon1 + 180) % 360 - 180
 
 
+def check_extent(lons, lats, msg):
+    """
+    :param lons: an array of longitudes (more than one)
+    :param lats: an array of latitudes (more than one)
+    :params msg: message to display in case of too large extent
+    :returns: (dx, dy, dz) in km (rounded)
+    """
+    l1 = len(lons)
+    l2 = len(lats)
+    if l1 < 2:
+        raise ValueError('%s: not enough lons: %s' % (msg, lons))
+    elif l2 < 2:
+        raise ValueError('%s: not enough lats: %s' % (msg, lats))
+    elif l1 != l2:
+        raise ValueError('%s: wrong number of lons, lats: (%d, %d)' %
+                         (msg, l1, l2))
+
+    xs, ys, zs = spherical_to_cartesian(lons, lats).T  # (N, 3) -> (3, N)
+    dx = xs.max() - xs.min()
+    dy = ys.max() - ys.min()
+    dz = zs.max() - zs.min()
+    MAX = 10000  # km, decided by M. Simionato and M. Pagani
+    # the goal is to forbid sources absurdely large due to wrong coordinates
+    if dx > MAX or dy > MAX or dz > MAX:
+        raise ValueError('%s: the geometry extent is too large!' % msg)
+    return int(dx), int(dy), int(dz)
+
+
 def get_bounding_box(obj, maxdist):
     """
     Return the dilated bounding box of a geometric object.
