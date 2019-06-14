@@ -467,13 +467,13 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         oq = readinput.get_oqparam('job.ini', case_21)
         mon = performance.Monitor('csm', datastore.hdf5new())
         with mock.patch('logging.error') as error:
-            with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 5):
+            with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
                 readinput.get_composite_source_model(oq, mon)
         mon.hdf5.close()
         os.remove(mon.hdf5.path)
         self.assertEqual(
-            error.call_args[0],
-            ('checking source SFLT2: the geometry extent is too large!',))
+            error.call_args[0][0],
+            'checking source SFLT2: the geometry extent is too large: 84 km')
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
