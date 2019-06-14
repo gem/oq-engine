@@ -40,6 +40,7 @@ DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geodetic.EARTH_RADIUS
 spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
+MAX_EXTENT = 5000  # km, decided by M. Simionato
 
 
 def angular_distance(km, lat, lat2=None):
@@ -264,7 +265,7 @@ def get_longitudinal_extent(lon1, lon2):
     return (lon2 - lon1 + 180) % 360 - 180
 
 
-def check_extent(lons, lats, msg):
+def check_extent(lons, lats, msg=''):
     """
     :param lons: an array of longitudes (more than one)
     :param lats: an array of latitudes (more than one)
@@ -285,9 +286,8 @@ def check_extent(lons, lats, msg):
     dx = xs.max() - xs.min()
     dy = ys.max() - ys.min()
     dz = zs.max() - zs.min()
-    MAX = 10000  # km, decided by M. Simionato and M. Pagani
     # the goal is to forbid sources absurdely large due to wrong coordinates
-    if dx > MAX or dy > MAX or dz > MAX:
+    if dx > MAX_EXTENT or dy > MAX_EXTENT or dz > MAX_EXTENT:
         raise ValueError('%s: the geometry extent is too large!' % msg)
     return int(dx), int(dy), int(dz)
 
