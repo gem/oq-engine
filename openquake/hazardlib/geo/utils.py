@@ -288,8 +288,7 @@ def check_extent(lons, lats, msg=''):
     dz = zs.max() - zs.min()
     # the goal is to forbid sources absurdely large due to wrong coordinates
     if dx > MAX_EXTENT or dy > MAX_EXTENT or dz > MAX_EXTENT:
-        raise ValueError('%s: the geometry extent is too large: %d km' %
-                         (msg, max(dx, dy, dz)))
+        raise ValueError('%s: too large: %d km' % (msg, max(dx, dy, dz)))
     return int(dx), int(dy), int(dz)
 
 
