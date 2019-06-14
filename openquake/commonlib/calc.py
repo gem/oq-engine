@@ -37,7 +37,7 @@ F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
 
-BaseRupture.init()
+code2cls = BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
 
@@ -307,6 +307,5 @@ class RuptureSerializer(object):
             return
         codes = numpy.unique(self.datastore['ruptures']['code'])
         attr = {'code_%d' % code: ' '.join(
-            cls.__name__ for cls in BaseRupture.types[code])
-                for code in codes}
+            cls.__name__ for cls in code2cls[code]) for code in codes}
         self.datastore.set_attrs('ruptures', **attr)
