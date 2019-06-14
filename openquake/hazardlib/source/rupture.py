@@ -43,7 +43,14 @@ TWO16 = U64(2 ** 16)
 TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 events_dt = numpy.dtype([('id', U64), ('rlz', U16)])
-classes = {}  # initialized in .init()
+
+
+def to_checksum(cls1, cls2):
+    """
+    Convert a pair of classes into a numeric code (uint8)
+    """
+    names = '%s,%s' % (cls1.__name__, cls2.__name__)
+    return sum(map(ord, names)) % 256
 
 
 @with_slots
@@ -78,27 +85,27 @@ class BaseRupture(metaclass=abc.ABCMeta):
     rupture_slip_direction weight'''.split()
     serial = 0  # set to a value > 0 by the engine
     _code = {}
-    types = {}
 
     @classmethod
     def init(cls):
         """
-        Initialize the class dictionaries `._code` and .`types` encoding the
+        Initialize the class dictionary `._code` by encoding the
         bidirectional correspondence between an integer in the range 0..255
         (the code) and a pair of classes (rupture_class, surface_class).
         This is useful when serializing the rupture to and from HDF5.
+        :returns: {code: pair of classes}
         """
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
-        for cl in rupture_classes + surface_classes:
-            classes[cl.__name__] = cl
-        n = 0
+        code2cls = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
-            cls._code[rup, sur] = n
-            cls.types[n] = rup, sur
-            n += 1
-        if n >= 256:
-            raise ValueError('Too many rupture codes: %d' % n)
+            chk = to_checksum(rup, sur)
+            if chk in code2cls and code2cls[chk] != (rup, sur):
+                raise ValueError('Non-unique checksum %d for %s, %s' %
+                                 (chk, rup, sur))
+            cls._code[rup, sur] = chk
+            code2cls[chk] = rup, sur
+        return code2cls
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, rupture_slip_direction=None, weight=None):
