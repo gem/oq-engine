@@ -182,18 +182,24 @@ class Extract(dict):
 extract = Extract()
 
 
-# used by the QGIS plugin
+# used by the QGIS plugin in scenario
 @extract.add('realizations')
 def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
+    scenario = 'scenario' in dstore['oqparam'].calculation_mode
     rlzs = dstore['csm_info'].rlzs
-    dt = [('ordinal', U32), ('weight', F32), ('gsims', '<S64')]
+    # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
+    # to .npz (needed by the plugin) would fail
+    dt = [('ordinal', U32), ('branch_path', '<S100'), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['ordinal'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
-    arr['gsims'] = rlzs['branch_path']  # this is used in scenario by QGIS
+    if scenario:
+        arr['branch_path'] = dstore['csm_info/gsim_lt/branches']['gsim']
+    else:
+        arr['branch_path'] = rlzs['branch_path']
     return arr
 
 
