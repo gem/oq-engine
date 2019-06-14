@@ -29,7 +29,6 @@ import collections
 import numpy
 from xml.parsers.expat import ExpatError
 from copy import deepcopy
-from mock import Mock
 
 import openquake.hazardlib
 from openquake.hazardlib import geo
@@ -1381,7 +1380,7 @@ class BranchSetGetBranchByIdTestCase(unittest.TestCase):
 
 class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
     def test_apply_uncertainty_ab_absolute(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('abGRAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, (0.1, 33.4))
         self.assertEqual(mfd.method_calls,
@@ -1389,14 +1388,14 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
                                       {'a_val': 0.1, 'b_val': 33.4}), {})])
 
     def test_apply_uncertainty_b_relative(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('bGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, -1.6)
         self.assertEqual(mfd.method_calls,
                          [('modify', ('increment_b', {'value': -1.6}), {})])
 
     def test_apply_uncertainty_mmax_relative(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('maxMagGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, 32.1)
         self.assertEqual(
@@ -1404,14 +1403,14 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
             [('modify', ('increment_max_mag', {'value': 32.1}), {})])
 
     def test_apply_uncertainty_mmax_absolute(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('maxMagGRAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, 55)
         self.assertEqual(mfd.method_calls,
                          [('modify', ('set_max_mag', {'value': 55}), {})])
 
     def test_apply_uncertainty_incremental_mfd_absolute(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('incrementalMFDAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, (8.0, 0.1, [0.01, 0.005]))
         self.assertEqual(
@@ -1422,7 +1421,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
         )
 
     def test_apply_uncertainty_simple_fault_dip_relative(self):
-        source = Mock()
+        source = mock.Mock()
         bs = logictree.BranchSet('simpleFaultDipRelative', {})
         bs._apply_uncertainty_to_geometry(source, 15.0)
         self.assertEqual(
@@ -1430,7 +1429,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
             [('modify', ('adjust_dip', {'increment': 15.0}), {})])
 
     def test_apply_uncertainty_simple_fault_dip_absolute(self):
-        source = Mock()
+        source = mock.Mock()
         bs = logictree.BranchSet('simpleFaultDipAbsolute', {})
         bs._apply_uncertainty_to_geometry(source, 45.0)
         self.assertEqual(
@@ -1438,7 +1437,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
             [('modify', ('set_dip', {'dip': 45.0}), {})])
 
     def test_apply_uncertainty_simple_fault_geometry_absolute(self):
-        source = Mock()
+        source = mock.Mock()
         trace = geo.Line([geo.Point(0., 0.), geo.Point(1., 1.)])
         bs = logictree.BranchSet('simpleFaultGeometryAbsolute', {})
         bs._apply_uncertainty_to_geometry(source,
@@ -1452,7 +1451,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
                                           'spacing': 1.0}), {})])
 
     def test_apply_uncertainty_complex_fault_geometry_absolute(self):
-        source = Mock()
+        source = mock.Mock()
         edges = [
             geo.Line([geo.Point(0.0, 0.0, 0.0), geo.Point(1.0, 0.0, 0.0)]),
             geo.Line([geo.Point(0.0, -0.1, 10.0), geo.Point(1.0, -0.1, 10.0)])
@@ -1465,7 +1464,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
                                           'spacing': 5.0}), {})])
 
     def test_apply_uncertainty_characteristic_fault_geometry_absolute(self):
-        source = Mock()
+        source = mock.Mock()
         trace = geo.Line([geo.Point(0., 0.), geo.Point(1., 1.)])
         surface = geo.SimpleFaultSurface.from_fault_data(
             trace, 0.0, 10.0, 90.0, 1.0)
