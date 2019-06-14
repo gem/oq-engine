@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the dependency from mock, since it is included in unittest.mock
   * For scenario, replaced the `branch_path` with the GSIM representation in
     the realizations output
   * Added a check for suspiciously large source geometries
