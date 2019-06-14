@@ -19,7 +19,7 @@
 """
 Test related to code in openquake/utils/general.py
 """
-import mock
+import unittest.mock as mock
 import unittest
 from operator import attrgetter
 from collections import namedtuple
