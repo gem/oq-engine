@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
+import unittest.mock as mock
 import numpy
 from openquake.baselib import parallel
 from openquake.hazardlib import InvalidFile

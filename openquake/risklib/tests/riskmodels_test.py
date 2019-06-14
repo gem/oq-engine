@@ -19,7 +19,7 @@
 import os
 import pickle
 import unittest
-import mock
+import unittest.mock as mock
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp

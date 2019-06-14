@@ -18,7 +18,7 @@
 
 import os
 import tempfile
-import mock
+import unittest.mock as mock
 import unittest
 from io import BytesIO
 
