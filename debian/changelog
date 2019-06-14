@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * For scenario, replaced the `branch_path` with the GSIM representation in
+    the realizations output
   * Added a check for suspiciously large source geometries
   * Deprecated the XML disaggregation exporters in favor of the CSV exporters
   * Turned the disaggregation calculator into a classical post-calculator
