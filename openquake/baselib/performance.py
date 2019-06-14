@@ -129,9 +129,6 @@ class Monitor(object):
             data.append((self.operation, time_sec, memory_mb, self.counts))
         return numpy.array(data, perf_dt)
 
-    def _postloop(self):
-        time.sleep(.01)  # there is a reason for this
-
     def __enter__(self):
         self.exc = None  # exception
         self._start_time = time.time()
@@ -148,8 +145,6 @@ class Monitor(object):
         self.duration += self._stop_time - self._start_time
         self.counts += 1
         self.on_exit()
-        if self.inner_loop:
-            self._postloop()
 
     def on_exit(self):
         "To be overridden in subclasses"
