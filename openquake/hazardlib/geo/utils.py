@@ -40,6 +40,7 @@ DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geodetic.EARTH_RADIUS
 spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
+MAX_EXTENT = 5000  # km, decided by M. Simionato
 
 
 def angular_distance(km, lat, lat2=None):
@@ -262,6 +263,33 @@ def get_longitudinal_extent(lon1, lon2):
         valid parameters values.
     """
     return (lon2 - lon1 + 180) % 360 - 180
+
+
+def check_extent(lons, lats, msg=''):
+    """
+    :param lons: an array of longitudes (more than one)
+    :param lats: an array of latitudes (more than one)
+    :params msg: message to display in case of too large extent
+    :returns: (dx, dy, dz) in km (rounded)
+    """
+    l1 = len(lons)
+    l2 = len(lats)
+    if l1 < 2:
+        raise ValueError('%s: not enough lons: %s' % (msg, lons))
+    elif l2 < 2:
+        raise ValueError('%s: not enough lats: %s' % (msg, lats))
+    elif l1 != l2:
+        raise ValueError('%s: wrong number of lons, lats: (%d, %d)' %
+                         (msg, l1, l2))
+
+    xs, ys, zs = spherical_to_cartesian(lons, lats).T  # (N, 3) -> (3, N)
+    dx = xs.max() - xs.min()
+    dy = ys.max() - ys.min()
+    dz = zs.max() - zs.min()
+    # the goal is to forbid sources absurdely large due to wrong coordinates
+    if dx > MAX_EXTENT or dy > MAX_EXTENT or dz > MAX_EXTENT:
+        raise ValueError('%s: too large: %d km' % (msg, max(dx, dy, dz)))
+    return int(dx), int(dy), int(dz)
 
 
 def get_bounding_box(obj, maxdist):
