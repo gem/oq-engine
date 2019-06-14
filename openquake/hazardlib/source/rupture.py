@@ -85,25 +85,27 @@ class BaseRupture(metaclass=abc.ABCMeta):
     rupture_slip_direction weight'''.split()
     serial = 0  # set to a value > 0 by the engine
     _code = {}
-    types = {}
 
     @classmethod
     def init(cls):
         """
-        Initialize the class dictionaries `._code` and .`types` encoding the
+        Initialize the class dictionary `._code` by encoding the
         bidirectional correspondence between an integer in the range 0..255
         (the code) and a pair of classes (rupture_class, surface_class).
         This is useful when serializing the rupture to and from HDF5.
+        :returns: {code: pair of classes}
         """
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
+        code2cls = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
             chk = to_checksum(rup, sur)
-            if chk in cls.types:
+            if chk in code2cls and code2cls[chk] != (rup, sur):
                 raise ValueError('Non-unique checksum %d for %s, %s' %
                                  (chk, rup, sur))
             cls._code[rup, sur] = chk
-            cls.types[chk] = rup, sur
+            code2cls[chk] = rup, sur
+        return code2cls
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, rupture_slip_direction=None, weight=None):
