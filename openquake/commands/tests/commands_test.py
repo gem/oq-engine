@@ -22,6 +22,7 @@ import shutil
 import zipfile
 import tempfile
 import unittest
+import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
@@ -492,7 +493,7 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         sitecol = prepare_site_model(
             [exposure_xml], [], [vs30_csv], True, True, True,
             grid_spacing, 5, output)
-        sm = read_csv(output, {None: float, 'vs30measured': bool})
+        sm = read_csv(output, {None: float, 'vs30measured': numpy.uint8})
         self.assertEqual(sm['vs30measured'].sum(), 0)
         self.assertEqual(len(sitecol), 84)  # 84 non-empty grid points
         self.assertEqual(len(sitecol), len(sm))
