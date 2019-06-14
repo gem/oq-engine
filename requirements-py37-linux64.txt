@@ -7,7 +7,6 @@
 
 http://cdn.ftp.openquake.org/wheelhouse/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/v3/linux/py/setuptools-41.0.1-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/v3/linux/py/mock-2.0.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/v3/linux/py37/h5py-2.9.0-cp37-cp37m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/v3/linux/py37/numpy-1.16.4-cp37-cp37m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/v3/linux/py37/scipy-1.3.0-cp37-cp37m-manylinux1_x86_64.whl
