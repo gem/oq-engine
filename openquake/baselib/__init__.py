@@ -26,6 +26,10 @@ __version__ = '3.6.0'
 __version__ += git_suffix(__file__)
 
 
+class InvalidFile(Exception):
+    """Raised from custom file validators"""
+
+
 class DotDict(dict):
     """
     A string-valued dictionary that can be accessed with the "." notation
