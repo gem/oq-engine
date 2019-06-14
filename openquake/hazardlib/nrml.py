@@ -318,8 +318,6 @@ def read_source_models(fnames, converter, monitor):
     for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
             sm = to_python(fname, converter)
-        elif fname.endswith('.hdf5'):
-            sm = sourceconverter.to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname
