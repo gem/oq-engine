@@ -21,7 +21,7 @@ Tests for python logic tree processor.
 """
 
 import os
-import mock
+import unittest.mock as mock
 import codecs
 import unittest
 import collections

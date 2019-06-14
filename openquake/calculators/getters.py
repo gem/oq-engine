@@ -19,7 +19,7 @@ import collections
 import itertools
 import operator
 import logging
-import mock
+import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
