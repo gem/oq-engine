@@ -25,7 +25,7 @@ from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import EBRupture, classes
+from openquake.hazardlib.source.rupture import EBRupture, BaseRupture
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -34,6 +34,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
 by_taxonomy = operator.attrgetter('taxonomy')
+code2cls = BaseRupture.init()
 
 
 def sig_eps_dt(imts):
@@ -553,15 +554,6 @@ class RuptureGetter(object):
             return h5['ruptures'][self.rup_indices]  # must be a list
 
     @general.cached_property
-    def code2cls(self):
-        code2cls = {}  # code -> rupture_cls, surface_cls
-        with hdf5.File(self.filename, 'r') as h5:
-            for key, val in h5['ruptures'].attrs.items():
-                if key.startswith('code_'):
-                    code2cls[int(key[5:])] = [classes[v] for v in val.split()]
-        return code2cls
-
-    @general.cached_property
     def num_events(self):
         n_occ = self.rup_array['n_occ'].sum()
         ne = n_occ if self.samples > 1 else n_occ * len(self.rlzs)
@@ -634,7 +626,7 @@ class RuptureGetter(object):
             dic['lons'] = geom['lon']
             dic['lats'] = geom['lat']
             dic['deps'] = geom['depth']
-            rupclass, surclass = self.code2cls[rec['code']]
+            rupclass, surclass = code2cls[rec['code']]
             dic['rupture_class'] = rupclass.__name__
             dic['surface_class'] = surclass.__name__
             dic['hypo'] = rec['hypo']
@@ -666,7 +658,7 @@ class RuptureGetter(object):
                 mesh[0] = geom['lon']
                 mesh[1] = geom['lat']
                 mesh[2] = geom['depth']
-                rupture_cls, surface_cls = self.code2cls[rec['code']]
+                rupture_cls, surface_cls = code2cls[rec['code']]
                 rupture = object.__new__(rupture_cls)
                 rupture.serial = rec['serial']
                 rupture.surface = object.__new__(surface_cls)
