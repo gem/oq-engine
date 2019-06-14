@@ -43,7 +43,6 @@ TWO16 = U64(2 ** 16)
 TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 events_dt = numpy.dtype([('id', U64), ('rlz', U16)])
-classes = {}  # initialized in .init()
 
 
 def to_checksum(cls1, cls2):
@@ -98,13 +97,13 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
-        for cl in rupture_classes + surface_classes:
-            classes[cl.__name__] = cl
         for rup, sur in itertools.product(rupture_classes, surface_classes):
             chk = to_checksum(rup, sur)
+            if chk in cls.types:
+                raise ValueError('Non-unique checksum %d for %s, %s' %
+                                 (chk, rup, sur))
             cls._code[rup, sur] = chk
             cls.types[chk] = rup, sur
-        assert len(cls._code) == len(cls.types), 'Non-unique checksums??'
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, rupture_slip_direction=None, weight=None):
