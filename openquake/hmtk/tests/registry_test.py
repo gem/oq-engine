@@ -43,7 +43,7 @@
 # liability for use of the software.
 
 import unittest
-import mock
+import unittest.mock as mock
 from openquake.hmtk import registry
 
 
