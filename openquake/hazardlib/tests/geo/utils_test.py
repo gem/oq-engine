@@ -99,6 +99,28 @@ class GetLongitudinalExtentTestCase(unittest.TestCase):
         self.assertEqual(utils.get_longitudinal_extent(95, -180 + 94), 179)
         self.assertEqual(utils.get_longitudinal_extent(95, -180 + 96), -179)
 
+    def test_check_extent(self):
+        ext = utils.check_extent([10, 20], [30, 40])
+        self.assertEqual(ext, (847, 711, 909))
+
+        ext = utils.check_extent([-10, 0], [30, 40])
+        self.assertEqual(ext, (553, 958, 909))
+
+        ext = utils.check_extent([170, -181], [30, 40])
+        self.assertEqual(ext, (553, 872, 909))
+
+        ext = utils.check_extent([1, 359], [89, 89])
+        self.assertEqual(ext, (0, 3, 0))
+
+        with self.assertRaises(ValueError):
+            utils.check_extent([10, 90, 170], [20, 30, 40])
+
+        with self.assertRaises(ValueError):
+            utils.check_extent([-10, 20, 170], [30, 40, 50])
+
+        with self.assertRaises(ValueError):
+            utils.check_extent([1, 359], [89, -89])
+
 
 class GetSphericalBoundingBox(unittest.TestCase):
     def __init__(self, *args, **kwargs):
