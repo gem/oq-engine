@@ -23,7 +23,6 @@ Module :mod:`openquake.hazardlib.source.rupture` defines classes
 import abc
 import numpy
 import math
-import zlib
 import itertools
 import collections
 from openquake.baselib import general
@@ -49,10 +48,10 @@ classes = {}  # initialized in .init()
 
 def to_checksum(cls1, cls2):
     """
-    Convert a pair of classes into a numeric code (uint32)
+    Convert a pair of classes into a numeric code (uint8)
     """
     names = '%s,%s' % (cls1.__name__, cls2.__name__)
-    return zlib.adler32(names.encode('ascii'))
+    return sum(map(ord, names)) % 256
 
 
 @with_slots
@@ -105,6 +104,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
             chk = to_checksum(rup, sur)
             cls._code[rup, sur] = chk
             cls.types[chk] = rup, sur
+        assert len(cls._code) == len(cls.types), 'Non-unique checksums??'
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, rupture_slip_direction=None, weight=None):
@@ -121,7 +121,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
 
     @property
     def code(self):
-        """Returns the code (uint32) of the rupture"""
+        """Returns the code (integer in the range 0 .. 255) of the rupture"""
         return self._code[self.__class__, self.surface.__class__]
 
     get_probability_no_exceedance = (

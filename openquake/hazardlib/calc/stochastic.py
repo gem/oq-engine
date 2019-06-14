@@ -37,6 +37,7 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
+U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
 MAX_RUPTURES = 2000
@@ -85,7 +86,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U32),
+    ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
     ('n_occ', U16), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
     ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
