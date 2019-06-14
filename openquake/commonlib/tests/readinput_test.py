@@ -22,7 +22,7 @@ import mock
 import unittest
 from io import BytesIO
 
-from openquake.baselib import general
+from openquake.baselib import general, performance, datastore
 from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
 from openquake.risklib.riskinput import ValidationError
@@ -462,6 +462,18 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(
             info.call_args[0],
             ('Applied %d changes to the composite source model', 81))
+
+    def test_extra_large_source(self):
+        oq = readinput.get_oqparam('job.ini', case_21)
+        mon = performance.Monitor('csm', datastore.hdf5new())
+        with mock.patch('logging.error') as error:
+            with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 5):
+                readinput.get_composite_source_model(oq, mon)
+        mon.hdf5.close()
+        os.remove(mon.hdf5.path)
+        self.assertEqual(
+            error.call_args[0],
+            ('checking source SFLT2: the geometry extent is too large!',))
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
