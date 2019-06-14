@@ -19,6 +19,7 @@
 import os
 import sys
 import ast
+import csv
 import inspect
 import logging
 import operator
@@ -30,6 +31,7 @@ from urllib.parse import quote_plus, unquote_plus
 import collections
 import numpy
 import h5py
+from openquake.baselib import InvalidFile
 from openquake.baselib.python3compat import encode, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
@@ -690,6 +692,9 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
+# NB: it would be nice to use numpy.loadtxt(
+#  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
+# however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
     """
     :param fname: a CSV file with an header and float fields
@@ -707,8 +712,11 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
                 continue
             break
         header = first.strip().split(sep)
-        arr = numpy.loadtxt(f, build_dt(dtypedict, header), delimiter=sep,
-                            ndmin=1, comments=None)
+        try:
+            rows = [tuple(row) for row in csv.reader(f)]
+            arr = numpy.array(rows, build_dt(dtypedict, header))
+        except Exception as exc:
+            raise InvalidFile('%s: %s' % (fname, exc))
     if renamedict:
         newnames = []
         for name in arr.dtype.names:
