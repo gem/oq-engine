@@ -20,7 +20,6 @@ import ast
 import csv
 import copy
 import zlib
-import time
 import shutil
 import random
 import zipfile
@@ -649,6 +648,12 @@ def store_sm(smodel, filename, monitor):
                 n = len(srcgeom)
                 geom = numpy.zeros(n, point3d)
                 geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
+                if len(geom) > 1:  # more than a point source
+                    msg = 'checking source %s' % src.source_id
+                    try:
+                        geo.utils.check_extent(geom['lon'], geom['lat'], msg)
+                    except ValueError as err:
+                        logging.error(str(err))
                 srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
                              src.num_ruptures, 0, 0, 0))
                 geoms.append(geom)
