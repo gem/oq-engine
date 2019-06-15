@@ -400,7 +400,7 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
         pmap_by_kind['hmaps-stats'] = hmaps_stats
     if R > 1 and individual_curves or not hstats:
         pmap_by_kind['hcurves-rlzs'] = pmaps
-        if pgetter.poes:
+        if poes:
             with monitor('build individual hmaps'):
                 pmap_by_kind['hmaps-rlzs'] = [
                     calc.make_hmap(pmap, imtls, poes) for pmap in pmaps]
