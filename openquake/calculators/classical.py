@@ -386,9 +386,8 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
         for statname, stat in hstats.items():
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
             hcurves_stats.append(pmap)
-            if pgetter.poes:
-                hmaps_stats.append(
-                    calc.make_hmap(pmap, pgetter.imtls, pgetter.poes))
+            if poes:
+                hmaps_stats.append(calc.make_hmap(pmap, pgetter.imtls, poes))
             if statname == 'mean' and R > 1 and N <= FEWSITES:
                 pmap_by_kind['rlz_by_sid'] = rlz = {}
                 for sid, pcurve in pmap.items():
@@ -401,7 +400,7 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
         pmap_by_kind['hmaps-stats'] = hmaps_stats
     if R > 1 and individual_curves or not hstats:
         pmap_by_kind['hcurves-rlzs'] = pmaps
-        if pgetter.poes:
+        if poes:
             with monitor('build individual hmaps'):
                 pmap_by_kind['hmaps-rlzs'] = [
                     calc.make_hmap(pmap, imtls, poes) for pmap in pmaps]
