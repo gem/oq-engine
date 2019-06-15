@@ -80,8 +80,8 @@ class PmapGetter(object):
         """
         Read the poes and set the .data attribute with the hazard curves
         """
-        if hasattr(self, 'data'):  # already initialized
-            return
+        if hasattr(self, '_pmaps'):  # already initialized
+            return self._pmaps
         if isinstance(self.dstore, str):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
@@ -91,6 +91,13 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
+        try:
+            self._pmaps = self.get_pmaps()
+        except IndexError:  # no hazard
+            L = len(self.imtls.array)
+            self._pmaps = [probability_map.ProbabilityMap(L, 1)
+                           for r in range(self.num_rlzs)]
+        return self._pmaps
 
     @property
     def pmap_by_grp(self):
@@ -122,13 +129,7 @@ class PmapGetter(object):
         """
         # called by the risk with a single sid
         assert len(self.sids) == 1
-        try:
-            pmaps = self.get_pmaps()
-        except IndexError:  # no hazard
-            L = len(self.imtls.array)
-            pmaps = [probability_map.ProbabilityMap(L, 1)
-                     for r in range(self.num_rlzs)]
-        return {sid: [pmap.setdefault(sid, 0) for pmap in pmaps]
+        return {sid: [pmap.setdefault(sid, 0) for pmap in self._pmaps]
                 for sid in self.sids}
 
     def get(self, rlzi, grp=None):
