@@ -129,7 +129,8 @@ class PmapGetter(object):
         """
         # called by the risk with a single sid
         assert len(self.sids) == 1
-        return {sid: [pmap.setdefault(sid, 0) for pmap in self._pmaps]
+        pmaps = self.init()
+        return {sid: [pmap.setdefault(sid, 0) for pmap in pmaps]
                 for sid in self.sids}
 
     def get(self, rlzi, grp=None):
