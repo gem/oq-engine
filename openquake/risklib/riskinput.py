@@ -278,6 +278,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         [sid] = hazard_getter.sids
         if hazard is None:
             with monitor('getting hazard'):
+                hazard_getter.init()
                 hazard = hazard_getter.get_hazard()
         haz = hazard[sid]
         if isinstance(haz, dict):
