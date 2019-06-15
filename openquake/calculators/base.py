@@ -36,7 +36,6 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, logictree, source, calc, util
-from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -443,6 +442,9 @@ class HazardCalculator(BaseCalculator):
             self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
+            if 'concurrent_tasks' not in vars(self.oqparam):
+                self.oqparam.concurrent_tasks = (
+                    self.oqparam.__class__.concurrent_tasks.default)
             params = {name: value for name, value in
                       vars(parent['oqparam']).items()
                       if name not in vars(self.oqparam)}
