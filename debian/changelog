@@ -1,6 +1,8 @@
   [Michele Simionato]
   * Fixed a performance bug in the generation of the hazard statistics, which
     is now a few times faster and lighter in memory consumption
+  * Fixed a bug with concurrent_tasks being inherited from the parent
+    calculation instead of using the standard default
   * Removed the dependency from mock, since it is included in unittest.mock
   * For scenario, replaced the `branch_path` with the GSIM representation in
     the realizations output
