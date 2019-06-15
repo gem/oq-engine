@@ -122,7 +122,12 @@ class PmapGetter(object):
         """
         # called by the risk with a single sid
         assert len(self.sids) == 1
-        pmaps = self.get_pmaps()
+        try:
+            pmaps = self.get_pmaps()
+        except IndexError:  # no hazard
+            L = len(self.imtls.array)
+            pmaps = [probability_map.ProbabilityMap(L, 1)
+                     for r in range(self.num_rlzs)]
         return {sid: [pmap.setdefault(sid, 0) for pmap in pmaps]
                 for sid in self.sids}
 
