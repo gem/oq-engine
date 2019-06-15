@@ -91,13 +91,6 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
-        self.data = {}
-        try:
-            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
-        except IndexError:  # no data
-            return
-        for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
-            self.data[sid] = hcurve_by_rlz
 
     @property
     def pmap_by_grp(self):
@@ -125,9 +118,13 @@ class PmapGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an dict rlzi -> datadict
+        :returns: dictionary site_id -> R pcurves
         """
-        return self.data
+        # called by the risk with a single sid
+        assert len(self.sids) == 1
+        pmaps = self.get_pmaps()
+        return {sid: [pmap.setdefault(sid, 0) for pmap in pmaps]
+                for sid in self.sids}
 
     def get(self, rlzi, grp=None):
         """
@@ -163,18 +160,6 @@ class PmapGetter(object):
                 for rlzi in rlzis:
                     pmaps[rlzi] |= pmap
         return pmaps
-
-    def get_hcurves(self, imtls=None):
-        """
-        :param imtls: intensity measure types and levels
-        :returns: an array of (R, N) hazard curves
-        """
-        self.init()
-        if imtls is None:
-            imtls = self.imtls
-        pmaps = [pmap.convert2(imtls, self.sids)
-                 for pmap in self.get_pmaps()]
-        return numpy.array(pmaps)
 
     def items(self, kind=''):
         """
