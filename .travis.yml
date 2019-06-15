@@ -15,7 +15,7 @@ jobs:
     env: HAZARDLIB
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
-          pytest -n auto --doctest-module -xv openquake/baselib openquake/hazardlib openquake/hmtk;
+          pytest --doctest-module -xv openquake/baselib openquake/hazardlib openquake/hmtk;
           fi
   - stage: tests
     env: ENGINE
