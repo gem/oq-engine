@@ -274,20 +274,24 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
+        [sid] = hazard_getter.sids
         if hazard is None:
             with monitor('getting hazard'):
                 hazard_getter.init()
                 hazard = hazard_getter.get_hazard()
-        sids = hazard_getter.sids
-        assert len(sids) == 1
+        haz = hazard[sid]
+        if isinstance(haz, dict):
+            items = hazard[sid].items()
+        else:  # array of length R
+            items = enumerate(hazard[sid])
         with monitor('computing risk', measuremem=False):
             # this approach is slow for event_based_risk since a lot of
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
             assets_by_taxo = get_assets_by_taxo(riskinput.assets, epspath)
-            for rlzi, haz in sorted(hazard[sids[0]].items()):
-                out = self.get_output(assets_by_taxo, haz, rlzi)
+            for rlzi, haz_by_rlzi in items:
+                out = self.get_output(assets_by_taxo, haz_by_rlzi, rlzi)
                 yield out
 
     def get_output(self, assets_by_taxo, haz, rlzi=None):
