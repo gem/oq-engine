@@ -336,8 +336,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
         if 'mean' in dict(hstats) and R > 1 and N <= FEWSITES:
             self.datastore.create_dset('best_rlz', U32, (N,))
-        logging.info('Building hazard statistics')
         ct = oq.concurrent_tasks
+        logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         by_grp = self.rlzs_assoc.by_grp()
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         allargs = [  # this list is very fast to generate
@@ -370,11 +370,7 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     used to specify the kind of output.
     """
     with monitor('combine pmaps'):
-        pgetter.init()  # if not already initialized
-        try:
-            pmaps = pgetter.get_pmaps()
-        except IndexError:  # no data
-            return {}
+        pmaps = pgetter.init()  # if not already initialized
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
     R = len(pmaps)

@@ -443,6 +443,9 @@ class HazardCalculator(BaseCalculator):
             self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
+            if 'concurrent_tasks' not in vars(self.oqparam):
+                self.oqparam.concurrent_tasks = (
+                    self.oqparam.__class__.concurrent_tasks.default)
             params = {name: value for name, value in
                       vars(parent['oqparam']).items()
                       if name not in vars(self.oqparam)}
