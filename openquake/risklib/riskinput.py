@@ -313,12 +313,12 @@ class CompositeRiskModel(collections.abc.Mapping):
             haz.sort(order='eid')
             eids = haz['eid']
             data = haz['gmv']  # shape (E, M)
-        elif not haz:  # no hazard for this site
+        elif isinstance(haz, numpy.void):  # classical
+            eids = []
+            data = haz
+        else:  # no hazard for this site
             eids = numpy.arange(1)
             data = []
-        else:  # classical
-            eids = []
-            data = haz  # shape M
         dic = dict(eids=eids)
         if rlzi is not None:
             dic['rlzi'] = rlzi
