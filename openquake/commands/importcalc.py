@@ -55,7 +55,7 @@ def importcalc(calc_id):
         webex.close()
     with datastore.read(calc_id) as dstore:
         engine.expose_outputs(dstore, status=status)
-    logging.info('Imported calculation %d successfully', calc_id)
+    logging.info('Imported calculation %s successfully', calc_id)
 
 
 importcalc.arg('calc_id', 'calculation ID or pathname')
