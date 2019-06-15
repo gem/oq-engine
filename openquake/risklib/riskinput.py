@@ -154,6 +154,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         return extract(self._riskmodels, kind)
 
     def init(self, oqparam):
+        self.imtls = oqparam.imtls
         imti = {imt: i for i, imt in enumerate(oqparam.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
@@ -281,9 +282,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 hazard = hazard_getter.get_hazard()
         haz = hazard[sid]
         if isinstance(haz, dict):
-            items = hazard[sid].items()
-        else:  # array of length R
-            items = enumerate(hazard[sid])
+            items = haz.items()
+        else:  # list of length R
+            items = enumerate(haz)
         with monitor('computing risk', measuremem=False):
             # this approach is slow for event_based_risk since a lot of
             # small arrays are passed (one per realization) instead of
@@ -300,7 +301,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param haz: an array or a dictionary of hazard on that site
         :param rlzi: if given, a realization index
         """
-        if isinstance(haz, numpy.ndarray):
+        if hasattr(haz, 'array'):  # classical
+            eids = []
+            data = [haz.array[self.imtls(imt), 0] for imt in self.imtls]
+        elif isinstance(haz, numpy.ndarray):
             # NB: in GMF-based calculations the order in which
             # the gmfs are stored is random since it depends on
             # which hazard task ends first; here we reorder
@@ -313,12 +317,11 @@ class CompositeRiskModel(collections.abc.Mapping):
             haz.sort(order='eid')
             eids = haz['eid']
             data = haz['gmv']  # shape (E, M)
-        elif isinstance(haz, numpy.void):  # classical
-            eids = []
-            data = haz
-        else:  # no hazard for this site
+        elif haz == 0:  # no hazard for this site (event based)
             eids = numpy.arange(1)
             data = []
+        else:
+            raise ValueError('Unexpected haz=%s' % haz)
         dic = dict(eids=eids)
         if rlzi is not None:
             dic['rlzi'] = rlzi
