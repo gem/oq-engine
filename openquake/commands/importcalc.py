@@ -36,14 +36,13 @@ def importcalc(calc_id):
     try:
         calc_id = int(calc_id)
     except ValueError:  # assume calc_id is a pathname
-        calc_id, datadir = datastore.extract_calc_id_datadir(calc_id)
         status = 'complete'
         remote = False
     else:
         remote = True
-    job = logs.dbcmd('get_job', calc_id)
-    if job is not None:
-        sys.exit('There is already a job #%d in the local db' % calc_id)
+        job = logs.dbcmd('get_job', calc_id)
+        if job is not None:
+            sys.exit('There is already a job #%d in the local db' % calc_id)
     if remote:
         datadir = datastore.get_datadir()
         webex = WebExtractor(calc_id)
