@@ -293,17 +293,6 @@ def hazard_curve_name(dstore, ekey, kind):
     return fname
 
 
-def build_hcurves(getter, imtls, monitor):
-    with getter.dstore:
-        pmaps = getter.get_pmaps()
-        idx = dict(zip(getter.sids, range(len(getter.sids))))
-        curves = numpy.zeros((len(getter.sids), len(pmaps)), imtls.dt)
-        for r, pmap in enumerate(pmaps):
-            for sid in pmap:
-                curves[idx[sid], r] = pmap[sid].convert(imtls)
-    return getter.sids, curves
-
-
 def get_kkf(ekey):
     """
     :param ekey: export key, for instance ('uhs/rlz-1', 'xml')
