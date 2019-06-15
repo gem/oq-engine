@@ -591,8 +591,10 @@ celery_wait() {
     return 1
 }
 
+# Start all openquake services
+# openquake-webui and openquake-dbserver have been stopped by python3-oq-engine-worker
+sudo systemctl start openquake-\\*
 sudo systemctl status openquake-\\*
-sudo systemctl start openquake-celery
 
 celery_wait $GEM_MAXLOOP
 
