@@ -97,11 +97,7 @@ class PmapGetter(object):
         except IndexError:  # no data
             return
         for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
-            self.data[sid] = datadict = {}
-            for rlzi, hcurve in enumerate(hcurve_by_rlz):
-                datadict[rlzi] = lst = [None for imt in self.imtls]
-                for imti, imt in enumerate(self.imtls):
-                    lst[imti] = hcurve[imt]  # imls
+            self.data[sid] = hcurve_by_rlz
 
     @property
     def pmap_by_grp(self):
