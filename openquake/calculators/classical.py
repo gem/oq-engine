@@ -375,8 +375,10 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     L = len(imtls.array)
     R = len(weights)
     pmap_by_kind = {'rlz_by_sid': {}}
-    hmaps_stats = []
-    hcurves_stats = []
+    if hstats:
+        pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(R)]
+    if poes:
+        pmap_by_kind['hmaps-stats'] = [ProbabilityMap(L) for r in range(R)]
     combine_mon = monitor('combine pmaps')
     compute_mon = monitor('compute stats')
     with combine_mon:
@@ -384,21 +386,18 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
     with compute_mon:
-        for statname, stat in hstats.items():
+        for s, (statname, stat) in enumerate(hstats.items()):
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
-            hcurves_stats.append(pmap)
+            pmap_by_kind['hcurves-stats'][s].update(pmap)
             if poes:
-                hmaps_stats.append(calc.make_hmap(pmap, pgetter.imtls, poes))
+                hmap = calc.make_hmap(pmap, pgetter.imtls, poes)
+                pmap_by_kind['hmaps-stats'][s].update(hmap)
             if statname == 'mean' and R > 1 and N <= FEWSITES:
                 rlz = pmap_by_kind['rlz_by_sid']
                 for sid, pcurve in pmap.items():
                     rlz[sid] = util.closest_to_ref(
                         [pm.setdefault(sid, 0).array for pm in pmaps],
                         pcurve.array)['rlz']
-    if hcurves_stats:
-        pmap_by_kind['hcurves-stats'] = hcurves_stats
-    if hmaps_stats:
-        pmap_by_kind['hmaps-stats'] = hmaps_stats
     if R > 1 and individual_curves or not hstats:
         pmap_by_kind['hcurves-rlzs'] = pmaps
         if poes:
