@@ -73,7 +73,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
-        hazard = getter.get_hazard()  # sid -> (sid, eid, gmv)
+        hazard = getter.get_hazard_by_sid()  # sid -> (sid, eid, gmv)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     events = rupgetter.get_eid_rlz()
