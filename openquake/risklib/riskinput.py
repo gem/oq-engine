@@ -265,7 +265,7 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def gen_outputs(self, riskinput, monitor, epspath=None, hazard=None):
+    def gen_outputs(self, riskinput, monitor, epspath=None, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
@@ -276,10 +276,9 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
         [sid] = hazard_getter.sids
-        if hazard is None:
+        if haz is None:
             with monitor('getting hazard'):
-                hazard = hazard_getter.get_hazard()
-        haz = hazard[sid]
+                haz = hazard_getter.get_hazard()
         if isinstance(haz, dict):
             items = haz.items()
         else:  # list of length R

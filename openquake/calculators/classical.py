@@ -369,31 +369,35 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('combine pmaps'):
-        pmaps = pgetter.init()  # if not already initialized
+    with monitor('read PoEs'):
+        pgetter.init()
+    imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
+    L = len(imtls.array)
+    R = len(weights)
+    pmap_by_kind = {'rlz_by_sid': {}}
+    if hstats:
+        pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(R)]
+        if poes:
+            pmap_by_kind['hmaps-stats'] = [ProbabilityMap(L) for r in range(R)]
+    combine_mon = monitor('combine pmaps')
+    compute_mon = monitor('compute stats')
+    with combine_mon:
+        pmaps = pgetter.get_pmaps()
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
-    R = len(pmaps)
-    imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
-    pmap_by_kind = {}
-    hmaps_stats = []
-    hcurves_stats = []
-    with monitor('compute stats'):
-        for statname, stat in hstats.items():
+    with compute_mon:
+        for s, (statname, stat) in enumerate(hstats.items()):
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
-            hcurves_stats.append(pmap)
+            pmap_by_kind['hcurves-stats'][s].update(pmap)
             if poes:
-                hmaps_stats.append(calc.make_hmap(pmap, pgetter.imtls, poes))
+                hmap = calc.make_hmap(pmap, pgetter.imtls, poes)
+                pmap_by_kind['hmaps-stats'][s].update(hmap)
             if statname == 'mean' and R > 1 and N <= FEWSITES:
-                pmap_by_kind['rlz_by_sid'] = rlz = {}
+                rlz = pmap_by_kind['rlz_by_sid']
                 for sid, pcurve in pmap.items():
                     rlz[sid] = util.closest_to_ref(
                         [pm.setdefault(sid, 0).array for pm in pmaps],
                         pcurve.array)['rlz']
-    if hcurves_stats:
-        pmap_by_kind['hcurves-stats'] = hcurves_stats
-    if hmaps_stats:
-        pmap_by_kind['hmaps-stats'] = hmaps_stats
     if R > 1 and individual_curves or not hstats:
         pmap_by_kind['hcurves-rlzs'] = pmaps
         if poes:

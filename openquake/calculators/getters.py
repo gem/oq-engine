@@ -80,8 +80,8 @@ class PmapGetter(object):
         """
         Read the poes and set the .data attribute with the hazard curves
         """
-        if hasattr(self, '_pmaps'):  # already initialized
-            return self._pmaps
+        if hasattr(self, '_pmap_by_grp'):  # already initialized
+            return self._pmap_by_grp
         if isinstance(self.dstore, str):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
@@ -91,21 +91,7 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
-        try:
-            self._pmaps = self.get_pmaps()
-        except IndexError:  # no hazard
-            L = len(self.imtls.array)
-            self._pmaps = [probability_map.ProbabilityMap(L, 1)
-                           for r in range(self.num_rlzs)]
-        return self._pmaps
 
-    @property
-    def pmap_by_grp(self):
-        """
-        :returns: dictionary "grp-XXX" -> ProbabilityMap instance
-        """
-        if hasattr(self, '_pmap_by_grp'):  # already called
-            return self._pmap_by_grp
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
@@ -125,13 +111,10 @@ class PmapGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: dictionary site_id -> R pcurves
+        :returns: R probability curves for the given site
         """
-        # called by the risk with a single sid
-        assert len(self.sids) == 1
-        pmaps = self.init()
-        return {sid: [pmap.setdefault(sid, 0) for pmap in pmaps]
-                for sid in self.sids}
+        [sid] = self.sids
+        return [pmap.setdefault(sid, 0) for pmap in self.get_pmaps()]
 
     def get(self, rlzi, grp=None):
         """
@@ -142,22 +125,27 @@ class PmapGetter(object):
         self.init()
         assert self.sids is not None
         pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
-        grps = [grp] if grp is not None else sorted(self.pmap_by_grp)
+        grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
         for grp in grps:
             for gsim_idx, rlzis in enumerate(self.array[grp]):
                 for r in rlzis:
                     if r == rlzi:
-                        pmap |= self.pmap_by_grp[grp].extract(gsim_idx)
+                        pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
                         break
         return pmap
 
-    def get_pmaps(self, pmap_by_grp=None):  # used in classical
+    def get_pmaps(self):  # used in classical
         """
         :returns: a list of R probability maps
         """
-        if pmap_by_grp is None:
-            pmap_by_grp = self.pmap_by_grp
-        grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
+        self.init()
+        pmap_by_grp = self._pmap_by_grp
+        try:
+            grp = list(pmap_by_grp)[0]
+        except IndexError:  # no hazard
+            L = len(self.imtls.array)
+            return [probability_map.ProbabilityMap(L, 1)
+                    for r in range(self.num_rlzs)]
         num_levels = pmap_by_grp[grp].shape_y
         pmaps = [probability_map.ProbabilityMap(num_levels, 1)
                  for _ in range(self.num_rlzs)]
@@ -214,13 +202,8 @@ class PmapGetter(object):
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        else:  # multiple realizations
-            dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
-                   if grp is None else {grp: self.dstore['poes/' + grp]})
-            pmaps = self.get_pmaps(dic)
-            return stats.compute_pmap_stats(
-                pmaps, [stats.mean_curve, stats.std_curve],
-                self.weights, self.imtls)
+        else:
+            raise NotImplementedError('multiple realizations')
 
 
 class GmfDataGetter(collections.abc.Mapping):
@@ -231,6 +214,7 @@ class GmfDataGetter(collections.abc.Mapping):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
+        assert len(sids) == 1, sids
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
@@ -241,11 +225,9 @@ class GmfDataGetter(collections.abc.Mapping):
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
         self.rlzs = self.dstore['events']['rlz']
-        self.data = {}
-        for sid in self.sids:
-            self.data[sid] = data = self[sid]
-            if not data:  # no GMVs, return 0, counted in no_damage
-                self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
+        self.data = self[self.sids[0]]
+        if not self.data:  # no GMVs, return 0, counted in no_damage
+            self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
@@ -391,7 +373,7 @@ class GmfGetter(object):
             return numpy.zeros(0, self.gmv_dt)
         return numpy.concatenate(alldata)
 
-    def get_hazard(self, data=None):
+    def get_hazard_by_sid(self, data=None):
         """
         :param data: if given, an iterator of records of dtype gmf_dt
         :returns: sid -> records
@@ -412,7 +394,7 @@ class GmfGetter(object):
             hc_mon = monitor('building hazard curves', measuremem=False)
             with monitor('building hazard', measuremem=True):
                 gmfdata = self.get_gmfdata()  # returned later
-                hazard = self.get_hazard(data=gmfdata)
+                hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
                 dic = group_by_rlz(hazardr, self.eid2rlz)
                 for rlzi, array in dic.items():
