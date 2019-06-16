@@ -369,23 +369,28 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('combine pmaps'):
+    with monitor('read PoEs'):
+        pgetter.init()
+    imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
+    L = len(imtls.array)
+    R = len(weights)
+    pmap_by_kind = {'rlz_by_sid': {}}
+    hmaps_stats = []
+    hcurves_stats = []
+    combine_mon = monitor('combine pmaps')
+    compute_mon = monitor('compute stats')
+    with combine_mon:
         pmaps = pgetter.get_pmaps()
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
-    R = len(pmaps)
-    imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
-    pmap_by_kind = {}
-    hmaps_stats = []
-    hcurves_stats = []
-    with monitor('compute stats'):
+    with compute_mon:
         for statname, stat in hstats.items():
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
             hcurves_stats.append(pmap)
             if poes:
                 hmaps_stats.append(calc.make_hmap(pmap, pgetter.imtls, poes))
             if statname == 'mean' and R > 1 and N <= FEWSITES:
-                pmap_by_kind['rlz_by_sid'] = rlz = {}
+                rlz = pmap_by_kind['rlz_by_sid']
                 for sid, pcurve in pmap.items():
                     rlz[sid] = util.closest_to_ref(
                         [pm.setdefault(sid, 0).array for pm in pmaps],
