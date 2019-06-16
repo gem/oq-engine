@@ -301,7 +301,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         if hasattr(haz, 'array'):  # classical
             eids = []
-            data = [haz.array[self.imtls(imt)] for imt in self.imtls]
+            data = [haz.array[self.imtls(imt), 0] for imt in self.imtls]
         elif isinstance(haz, numpy.ndarray):
             # NB: in GMF-based calculations the order in which
             # the gmfs are stored is random since it depends on
