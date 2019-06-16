@@ -370,7 +370,7 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     used to specify the kind of output.
     """
     with monitor('combine pmaps'):
-        pmaps = pgetter.init()  # if not already initialized
+        pmaps = pgetter.get_pmaps()
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
     R = len(pmaps)
