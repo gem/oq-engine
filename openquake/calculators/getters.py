@@ -91,21 +91,7 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
-        try:
-            self._pmaps = self.get_pmaps()
-        except IndexError:  # no hazard
-            L = len(self.imtls.array)
-            self._pmaps = [probability_map.ProbabilityMap(L, 1)
-                           for r in range(self.num_rlzs)]
-        return self._pmaps
 
-    @property
-    def pmap_by_grp(self):
-        """
-        :returns: dictionary "grp-XXX" -> ProbabilityMap instance
-        """
-        if hasattr(self, '_pmap_by_grp'):  # already called
-            return self._pmap_by_grp
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
@@ -120,7 +106,13 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
-        return self._pmap_by_grp
+        try:
+            self._pmaps = self.get_pmaps()
+        except IndexError:  # no hazard
+            L = len(self.imtls.array)
+            self._pmaps = [probability_map.ProbabilityMap(L, 1)
+                           for r in range(self.num_rlzs)]
+        return self._pmaps
 
     def get_hazard(self, gsim=None):
         """
@@ -140,21 +132,20 @@ class PmapGetter(object):
         self.init()
         assert self.sids is not None
         pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
-        grps = [grp] if grp is not None else sorted(self.pmap_by_grp)
+        grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
         for grp in grps:
             for gsim_idx, rlzis in enumerate(self.array[grp]):
                 for r in rlzis:
                     if r == rlzi:
-                        pmap |= self.pmap_by_grp[grp].extract(gsim_idx)
+                        pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
                         break
         return pmap
 
-    def get_pmaps(self, pmap_by_grp=None):  # used in classical
+    def get_pmaps(self):  # used in classical
         """
         :returns: a list of R probability maps
         """
-        if pmap_by_grp is None:
-            pmap_by_grp = self.pmap_by_grp
+        pmap_by_grp = self._pmap_by_grp
         grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
         num_levels = pmap_by_grp[grp].shape_y
         pmaps = [probability_map.ProbabilityMap(num_levels, 1)
