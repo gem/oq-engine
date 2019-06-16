@@ -81,7 +81,7 @@ class PmapGetter(object):
         Read the poes and set the .data attribute with the hazard curves
         """
         if hasattr(self, '_pmap_by_grp'):  # already initialized
-            return
+            return self._pmap_by_grp
         if isinstance(self.dstore, str):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
@@ -106,6 +106,7 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
+        return self._pmap_by_grp
 
     def get_hazard(self, gsim=None):
         """
