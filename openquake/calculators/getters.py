@@ -212,13 +212,8 @@ class PmapGetter(object):
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        else:  # multiple realizations
-            dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
-                   if grp is None else {grp: self.dstore['poes/' + grp]})
-            pmaps = self.get_pmaps(dic)
-            return stats.compute_pmap_stats(
-                pmaps, [stats.mean_curve, stats.std_curve],
-                self.weights, self.imtls)
+        else:
+            raise NotImplementedError('multiple realizations')
 
 
 class GmfDataGetter(collections.abc.Mapping):
