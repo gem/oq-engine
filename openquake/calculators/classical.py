@@ -369,7 +369,7 @@ def _build_stat_curve(poes, imtls, stat, weights):
             ws = [w[imt] for w in weights]
             if sum(ws) == 0:  # expect no data for this IMT
                 continue
-            array[:, slc] = stat(poes[:, slc], ws)
+            array[slc] = stat(poes[:, slc], ws)
     else:
         array = stat(poes, weights)
     return ProbabilityCurve(array)
