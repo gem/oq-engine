@@ -23,7 +23,7 @@ import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, geo, probability_map, stats
+from openquake.hazardlib import calc, geo, probability_map
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import EBRupture, BaseRupture
 from openquake.risklib.riskinput import rsi2str
@@ -113,8 +113,7 @@ class PmapGetter(object):
         :param gsim: ignored
         :returns: R probability curves for the given site
         """
-        [sid] = self.sids
-        return [pmap.setdefault(sid, 0) for pmap in self.get_pmaps()]
+        return self.get_pcurves(self.sids[0])
 
     def get(self, rlzi, grp=None):
         """
@@ -134,27 +133,24 @@ class PmapGetter(object):
                         break
         return pmap
 
-    def get_pmaps(self):  # used in classical
+    def get_pcurves(self, sid):  # used in classical
         """
-        :returns: a list of R probability maps
+        :returns: a list of R probability curves with shape L
         """
-        self.init()
-        pmap_by_grp = self._pmap_by_grp
-        try:
-            grp = list(pmap_by_grp)[0]
-        except IndexError:  # no hazard
-            L = len(self.imtls.array)
-            return [probability_map.ProbabilityMap(L, 1)
-                    for r in range(self.num_rlzs)]
-        num_levels = pmap_by_grp[grp].shape_y
-        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
-                 for _ in range(self.num_rlzs)]
-        for grp in pmap_by_grp:
+        pmap_by_grp = self.init()
+        L = len(self.imtls.array)
+        pcurves = [probability_map.ProbabilityCurve(numpy.zeros((L, 1)))
+                   for _ in range(self.num_rlzs)]
+        for grp, pmap in pmap_by_grp.items():
+            try:
+                pc = pmap[sid]
+            except KeyError:  # no hazard for sid
+                continue
             for gsim_idx, rlzis in enumerate(self.array[grp]):
-                pmap = pmap_by_grp[grp].extract(gsim_idx)
+                c = probability_map.ProbabilityCurve(pc.array[:, [gsim_idx]])
                 for rlzi in rlzis:
-                    pmaps[rlzi] |= pmap
-        return pmaps
+                    pcurves[rlzi] |= c
+        return pcurves
 
     def items(self, kind=''):
         """
