@@ -406,8 +406,9 @@ producing too small PoEs.'''
         poes_disagg = oq.poes_disagg or (None,)
         by_grp = self.rlzs_assoc.by_grp()
         ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        pmap_by_grp = getters.PmapGetter(
-            self.datastore, by_grp, ws, self.sitecol.sids).pmap_by_grp
+        pgetter = getters.PmapGetter(
+            self.datastore, by_grp, ws, self.sitecol.sids)
+        pmap_by_grp = pgetter.init()
         grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
         G = len(pmap_by_grp)
         P = len(poes_disagg)
