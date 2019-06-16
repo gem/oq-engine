@@ -359,6 +359,22 @@ class PreCalculator(ClassicalCalculator):
     core_task = preclassical
 
 
+def _build_stat_curve(poes, imtls, stat, weights):
+    L = len(imtls.array)
+    array = numpy.zeros((L, 1))
+    if isinstance(weights, list):  # IMT-dependent weights
+        # this is slower since the arrays are shorter
+        for imt in imtls:
+            slc = imtls(imt)
+            ws = [w[imt] for w in weights]
+            if sum(ws) == 0:  # expect no data for this IMT
+                continue
+            array[:, slc] = stat(poes[:, slc], ws)
+    else:
+        array = stat(poes, weights)
+    return ProbabilityCurve(array)
+
+
 def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
@@ -393,11 +409,9 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
             continue
         with compute_mon:
             if hstats:
-                arr = compute_stats(
-                    numpy.array([pc.array for pc in pcurves]),
-                    hstats.values(), weights)
+                arr = numpy.array([pc.array for pc in pcurves])
                 for s, (statname, stat) in enumerate(hstats.items()):
-                    pc = ProbabilityCurve(arr[s])
+                    pc = _build_stat_curve(arr, imtls, stat, weights)
                     pmap_by_kind['hcurves-stats'][s][sid] = pc
                     if poes:
                         hmap = calc.make_hmap(pc, pgetter.imtls, poes, sid)
