@@ -377,7 +377,7 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     pmap_by_kind = {'rlz_by_sid': {}}
     if hstats:
         pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(R)]
-    if poes:
+    if hstats and poes:
         pmap_by_kind['hmaps-stats'] = [ProbabilityMap(L) for r in range(R)]
     combine_mon = monitor('combine pmaps')
     compute_mon = monitor('compute stats')
