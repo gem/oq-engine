@@ -80,8 +80,8 @@ class PmapGetter(object):
         """
         Read the poes and set the .data attribute with the hazard curves
         """
-        if hasattr(self, '_pmaps'):  # already initialized
-            return self._pmaps
+        if hasattr(self, '_pmap_by_grp'):  # already initialized
+            return
         if isinstance(self.dstore, str):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
@@ -106,22 +106,14 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
-        try:
-            self._pmaps = self.get_pmaps()
-        except IndexError:  # no hazard
-            L = len(self.imtls.array)
-            self._pmaps = [probability_map.ProbabilityMap(L, 1)
-                           for r in range(self.num_rlzs)]
-        return self._pmaps
 
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: dictionary site_id -> R pcurves
+        :returns: R probability curves for the given site
         """
-        # called by the risk with a single sid
         [sid] = self.sids
-        return [pmap.setdefault(sid, 0) for pmap in self.init()]
+        return [pmap.setdefault(sid, 0) for pmap in self.get_pmaps()]
 
     def get(self, rlzi, grp=None):
         """
@@ -145,8 +137,14 @@ class PmapGetter(object):
         """
         :returns: a list of R probability maps
         """
+        self.init()
         pmap_by_grp = self._pmap_by_grp
-        grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
+        try:
+            grp = list(pmap_by_grp)[0]
+        except IndexError:  # no hazard
+            L = len(self.imtls.array)
+            return [probability_map.ProbabilityMap(L, 1)
+                    for r in range(self.num_rlzs)]
         num_levels = pmap_by_grp[grp].shape_y
         pmaps = [probability_map.ProbabilityMap(num_levels, 1)
                  for _ in range(self.num_rlzs)]
