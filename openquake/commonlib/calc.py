@@ -176,6 +176,7 @@ def make_hmap(pmap, imtls, poes, sid=None):
     :param pmap: hazard curves in the form of a ProbabilityMap
     :param imtls: DictArray with M intensity measure types
     :param poes: P PoEs where to compute the maps
+    :param sid: not None when pmap is actually a ProbabilityCurve
     :returns: a ProbabilityMap with size (N, M, P)
     """
     if sid is None:
