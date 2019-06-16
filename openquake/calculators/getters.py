@@ -128,10 +128,8 @@ class PmapGetter(object):
         :returns: dictionary site_id -> R pcurves
         """
         # called by the risk with a single sid
-        assert len(self.sids) == 1
-        pmaps = self.init()
-        return {sid: [pmap.setdefault(sid, 0) for pmap in pmaps]
-                for sid in self.sids}
+        [sid] = self.sids
+        return [pmap.setdefault(sid, 0) for pmap in self.init()]
 
     def get(self, rlzi, grp=None):
         """
@@ -231,6 +229,7 @@ class GmfDataGetter(collections.abc.Mapping):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
+        assert len(sids) == 1, sids
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
@@ -241,11 +240,9 @@ class GmfDataGetter(collections.abc.Mapping):
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
         self.rlzs = self.dstore['events']['rlz']
-        self.data = {}
-        for sid in self.sids:
-            self.data[sid] = data = self[sid]
-            if not data:  # no GMVs, return 0, counted in no_damage
-                self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
+        self.data = self[self.sids[0]]
+        if not self.data:  # no GMVs, return 0, counted in no_damage
+            self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
@@ -391,7 +388,7 @@ class GmfGetter(object):
             return numpy.zeros(0, self.gmv_dt)
         return numpy.concatenate(alldata)
 
-    def get_hazard(self, data=None):
+    def get_hazard_by_sid(self, data=None):
         """
         :param data: if given, an iterator of records of dtype gmf_dt
         :returns: sid -> records
@@ -412,7 +409,7 @@ class GmfGetter(object):
             hc_mon = monitor('building hazard curves', measuremem=False)
             with monitor('building hazard', measuremem=True):
                 gmfdata = self.get_gmfdata()  # returned later
-                hazard = self.get_hazard(data=gmfdata)
+                hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
                 dic = group_by_rlz(hazardr, self.eid2rlz)
                 for rlzi, array in dic.items():
