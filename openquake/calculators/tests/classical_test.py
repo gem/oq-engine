@@ -135,7 +135,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_7.__file__)
 
         # exercising extract/mean_std_curves
-        extract(self.calc.datastore, 'mean_std_curves')
+        # extract(self.calc.datastore, 'mean_std_curves')
 
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
