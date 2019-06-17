@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the agglosses and losses_by_event exporters in scenario_risk,
+    by adding a column with the realization index
   * Fixed the agglosses output in scenario_risk to distinguish the realizations
   * Changed the generation of the hazard statistics to consume very little
     memory
