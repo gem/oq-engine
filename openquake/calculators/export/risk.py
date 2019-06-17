@@ -237,12 +237,13 @@ def export_losses_by_event(ekey, dstore):
     dest = dstore.build_fname('losses_by_event', '', 'csv')
     if oq.calculation_mode.startswith('scenario'):
         arr = dstore['losses_by_event'][('eid', 'loss')]
-        dtlist = [('eid', U64)] + oq.loss_dt_list()
-        num_loss_types = len(dtlist) - 1
+        dtlist = [('event_id', U64), ('rlz_id', U16)] + oq.loss_dt_list()
+        num_loss_types = len(dtlist) - 2
         loss = arr['loss']
         z = numpy.zeros(len(arr), dtlist)
-        z['eid'] = arr['eid']
-        for i, (name, _) in enumerate(dtlist[1:]):
+        z['event_id'] = arr['eid']
+        z['rlz_id'] = dstore['events']['rlz']
+        for i, (name, _) in enumerate(dtlist[2:]):
             z[name] = loss[:, i] if num_loss_types > 1 else loss
         writer.save(z, dest)
     elif oq.calculation_mode == 'ebrisk':
@@ -513,7 +514,7 @@ def export_agglosses(ekey, dstore):
     unit_by_lt['occupants'] = 'people'
     agglosses = dstore[ekey[0]]
     losses = []
-    header = ['rlzi', 'loss_type', 'unit', 'mean', 'stddev']
+    header = ['rlz_id', 'loss_type', 'unit', 'mean', 'stddev']
     for r in range(len(agglosses)):
         for l, lt in enumerate(loss_dt.names):
             unit = unit_by_lt[lt]
