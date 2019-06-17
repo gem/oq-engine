@@ -124,7 +124,7 @@ class StarmapTestCase(unittest.TestCase):
         self.assertEqual(res, {'n': numchars})
         # check that the correct information is stored in the hdf5 file
         with hdf5.File(tmp) as h5:
-            num = general.countby(h5['performance_data'].value, 'operation')
+            num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
             self.assertEqual(num[b'total supertask'], 18)  # outputs
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
