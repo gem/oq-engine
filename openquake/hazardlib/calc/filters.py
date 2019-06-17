@@ -267,7 +267,7 @@ class SourceFilter(object):
 
     def __getstate__(self):
         if self.filename:
-            # in the engine self.file is the .hdf5 cache file
+            # in the engine self.filename is the .hdf5 cache file
             return dict(filename=self.filename,
                         integration_distance=self.integration_distance)
         else:
