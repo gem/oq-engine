@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Fixed a performance bug in the generation of the hazard statistics, which
-    is now a few times faster and lighter in memory consumption
+  * Changed the generation of the hazard statistics to consume very little
+    memory
   * Fixed a bug with concurrent_tasks being inherited from the parent
     calculation instead of using the standard default
   * Removed the dependency from mock, since it is included in unittest.mock
