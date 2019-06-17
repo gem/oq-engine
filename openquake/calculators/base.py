@@ -717,8 +717,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
             self.save_cache(weights=arr)
 
-        if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
-            # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
+        if R >= TWO16:
+            # rlzi is 16 bit integer in the GMFs and in rlzs_by_grp
             raise ValueError(
                 'The logic tree has %d realizations, the maximum '
                 'is %d' % (R, TWO16))
