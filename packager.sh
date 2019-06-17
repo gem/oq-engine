@@ -99,8 +99,6 @@ sig_hand () {
     if [ "$lxc_name" != "" ]; then
         set +e
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/"
-        scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
-        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         sudo $LXC_KILL -n "$lxc_name"
@@ -594,6 +592,7 @@ celery_wait() {
 # Start all openquake services
 # openquake-webui and openquake-dbserver have been stopped by python3-oq-engine-worker
 sudo systemctl start openquake-dbserver openquake-celery
+sleep 10
 sudo systemctl status openquake-dbserver openquake-celery
 
 celery_wait $GEM_MAXLOOP
@@ -862,7 +861,6 @@ devtest_run () {
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n "$lxc_name"
@@ -1045,8 +1043,6 @@ EOF
     _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
-    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n "$lxc_name"
