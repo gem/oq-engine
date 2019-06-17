@@ -266,8 +266,14 @@ class SourceFilter(object):
             self.__dict__['sitecol'] = sitecol
 
     def __getstate__(self):
-        return dict(filename=self.filename,
-                    integration_distance=self.integration_distance)
+        if self.filename:
+            # in the engine self.file is the .hdf5 cache file
+            return dict(filename=self.filename,
+                        integration_distance=self.integration_distance)
+        else:
+            # when using calc_hazard_curves without an .hdf5 cache file
+            return dict(filename=None, sitecol=self.sitecol,
+                        integration_distance=self.integration_distance)
 
     @property
     def sitecol(self):
