@@ -60,15 +60,6 @@ jobs:
             oq reset --yes &&
             oq dbserver status | grep -q 'dbserver not-running';
           fi
-  - stage: packaging
-    env: EXEC
-    script:
-        - ./.travis/py_shebangs.sh
-        - ./.travis/py_executables.sh
-  - stage: packaging
-    env: WHL
-    script:
-        - ./.travis/packaging.sh
 
 before_install:
   - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
