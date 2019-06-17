@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the agglosses output in scenario_risk to distinguish the realizations
   * Changed the generation of the hazard statistics to consume very little
     memory
   * Fixed a bug with concurrent_tasks being inherited from the parent
