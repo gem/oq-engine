@@ -762,7 +762,7 @@ def extract_mean_std_curves(dstore, what):
     """
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     w = [rlz.weight for rlz in rlzs_assoc.realizations]
-    getter = getters.PmapGetter(dstore, rlzs_assoc.by_grp(), w)
+    getter = getters.PmapGetter(dstore, w)
     arr = getter.get_mean().array
     for imt in getter.imtls:
         yield 'imls/' + imt, getter.imtls[imt]

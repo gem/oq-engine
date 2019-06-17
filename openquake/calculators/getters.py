@@ -58,14 +58,13 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, by_grp, weights, sids=None, poes=()):
+    def __init__(self, dstore, weights, sids=None, poes=()):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
             self.weights = weights
-        self.array = by_grp
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
@@ -91,6 +90,8 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
+        rlzs_by_grp = self.dstore['rlzs_by_grp']
+        self.array = {k: dset[()] for k, dset in rlzs_by_grp.items()}
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}

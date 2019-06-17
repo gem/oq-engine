@@ -53,9 +53,6 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 RUPTURES_PER_BLOCK = 100000  # used in classical_split_filter
 
-rlzs_by_grp_dt = numpy.dtype(
-    [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
-
 
 class InvalidCalculationID(Exception):
     """
@@ -438,6 +435,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+            self.datastore['rlzs_by_grp'] = self.rlzs_assoc.by_grp()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
@@ -686,6 +684,12 @@ class HazardCalculator(BaseCalculator):
         self.param = dict(individual_curves=oq.individual_curves,
                           avg_losses=oq.avg_losses)
 
+    def save_cache(self, **kw):
+        if hasattr(self, 'hdf5cache'):  # no scenario
+            with hdf5.File(self.hdf5cache, 'r+') as cache:
+                for k, v in kw.items():
+                    cache[k] = v
+
     def store_rlz_info(self, eff_ruptures=None):
         """
         Save info about the composite source model inside the csm_info dataset
@@ -700,13 +704,16 @@ class HazardCalculator(BaseCalculator):
             self.datastore['source_model_lt'] = self.csm.source_model_lt
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
+        rlzs_by_grp = self.rlzs_assoc.by_grp()
+        if rlzs_by_grp:
+            self.save_cache(rlzs_by_grp=rlzs_by_grp)
+
         if self.oqparam.imtls:
             self.datastore['weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
-            if hasattr(self, 'hdf5cache'):  # no scenario
-                with hdf5.File(self.hdf5cache, 'r+') as cache:
-                    cache['weights'] = arr
+            self.save_cache(weights=arr)
+
         if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
@@ -718,7 +725,6 @@ class HazardCalculator(BaseCalculator):
                 'sampling it', R)
 
         # save a composite array with fields (grp_id, gsim_id, rlzs)
-        rlzs_by_grp = self.rlzs_assoc.by_grp()
         if rlzs_by_grp:
             self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.flush()
@@ -833,9 +839,8 @@ class RiskCalculator(HazardCalculator):
         else:
             dstore = self.datastore
         if kind == 'poe':  # hcurves, shape (R, N)
-            by_grp = self.rlzs_assoc.by_grp()
             ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-            getter = getters.PmapGetter(dstore, by_grp, ws, [sid])
+            getter = getters.PmapGetter(dstore, ws, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
         if dstore is self.datastore:
