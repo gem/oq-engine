@@ -1250,12 +1250,18 @@ class SourceModelLogicTree(object):
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is not complete the child_branchset must be built too
-        self.bsetdict = toml.loads(dic['branchsets'])
+        self.bsetdict = toml.loads(dic['branchsets'][()])
         self.branches = {}
-        for rec in dic['branchset']:
-            br = Branch(rec['branchset'], rec['branch'], rec['weight'],
-                        rec['uncertainty'])
+        self.root_branchset = BranchSet('sourceModel', {})
+        for rec in dic['branches']:
+            bs = rec['branchset']
+            dic = self.bsetdict[bs]
+            br = Branch(bs, rec['branch'], rec['weight'], rec['uncertainty'])
             self.branches[br.branch_id] = br
+            apply_to_branches = dic.get('applyToBranches')
+            if apply_to_branches:
+                for br_id in apply_to_branches.split():
+                    br.child_branchset = self.branches[br_id]
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
