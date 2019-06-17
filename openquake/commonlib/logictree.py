@@ -1427,7 +1427,8 @@ class GsimLogicTree(object):
         weights = set()
         for branch in self.branches:
             weights.update(branch.weight.dic)
-        dt = [('trt', hdf5.vstr), ('id', hdf5.vstr), ('gsim', hdf5.vstr)] + [
+        dt = [('trt', hdf5.vstr), ('branch', hdf5.vstr),
+              ('uncertainty', hdf5.vstr)] + [
             (weight, float) for weight in sorted(weights)]
         branches = [(b.trt, b.id, b.gsim) +
                     tuple(b.weight[weight] for weight in sorted(weights))
@@ -1455,7 +1456,7 @@ class GsimLogicTree(object):
         self.branches = []
         self.values = collections.defaultdict(list)
         for branch in dic.pop('branches'):
-            gsim = valid.gsim(branch['gsim'])
+            gsim = valid.gsim(branch['uncertainty'])
             self.values[branch['trt']].append(gsim)
             if isinstance(gsim, GMPETable):
                 if 'gmpe_table' in gsim.kwargs:
@@ -1463,11 +1464,12 @@ class GsimLogicTree(object):
                 else:
                     gsim.init()
             weight = object.__new__(ImtWeight)
-            # branch has dtype ('trt', 'id', 'gsim', 'weight', ...)
+            # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
             if len(weight.dic) > 1:
                 gsim.weight = weight
-            bt = BranchTuple(branch['trt'], branch['id'], gsim, weight, True)
+            bt = BranchTuple(
+                branch['trt'], branch['branch'], gsim, weight, True)
             self.branches.append(bt)
 
     def __str__(self):
