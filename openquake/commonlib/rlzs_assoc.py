@@ -137,8 +137,7 @@ class RlzsAssoc(object):
                 rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
                 if not rlzs_by_gsim:
                     continue
-                dic['grp-%02d' % sg.id] = numpy.array(
-                    list(rlzs_by_gsim.values()))
+                dic['grp-%02d' % sg.id] = list(rlzs_by_gsim.values())
         return dic
 
     def _init(self):
