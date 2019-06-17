@@ -26,8 +26,10 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
-from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
-from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib.calc.hazard_curve import classical
+from openquake.hazardlib.probability_map import (
+    ProbabilityMap, ProbabilityCurve)
+from openquake.hazardlib.stats import compute_stats
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -357,6 +359,22 @@ class PreCalculator(ClassicalCalculator):
     core_task = preclassical
 
 
+def _build_stat_curve(poes, imtls, stat, weights):
+    L = len(imtls.array)
+    array = numpy.zeros((L, 1))
+    if isinstance(weights, list):  # IMT-dependent weights
+        # this is slower since the arrays are shorter
+        for imt in imtls:
+            slc = imtls(imt)
+            ws = [w[imt] for w in weights]
+            if sum(ws) == 0:  # expect no data for this IMT
+                continue
+            array[slc] = stat(poes[:, slc], ws)
+    else:
+        array = stat(poes, weights)
+    return ProbabilityCurve(array)
+
+
 def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
@@ -376,33 +394,36 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {'rlz_by_sid': {}}
+    if R > 1 and individual_curves or not hstats:
+        pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
     if hstats:
         pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
         if poes:
             pmap_by_kind['hmaps-stats'] = [ProbabilityMap(L) for r in range(S)]
-    combine_mon = monitor('combine pmaps')
-    compute_mon = monitor('compute stats')
-    with combine_mon:
-        pmaps = pgetter.get_pmaps()
-        if sum(len(pmap) for pmap in pmaps) == 0:  # no data
-            return {}
-    with compute_mon:
-        for s, (statname, stat) in enumerate(hstats.items()):
-            pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
-            pmap_by_kind['hcurves-stats'][s].update(pmap)
-            if poes:
-                hmap = calc.make_hmap(pmap, pgetter.imtls, poes)
-                pmap_by_kind['hmaps-stats'][s].update(hmap)
-            if statname == 'mean' and R > 1 and N <= FEWSITES:
-                rlz = pmap_by_kind['rlz_by_sid']
-                for sid, pcurve in pmap.items():
-                    rlz[sid] = util.closest_to_ref(
-                        [pm.setdefault(sid, 0).array for pm in pmaps],
-                        pcurve.array)['rlz']
-    if R > 1 and individual_curves or not hstats:
-        pmap_by_kind['hcurves-rlzs'] = pmaps
-        if poes:
-            with monitor('build individual hmaps'):
-                pmap_by_kind['hmaps-rlzs'] = [
-                    calc.make_hmap(pmap, imtls, poes) for pmap in pmaps]
+    combine_mon = monitor('combine pmaps', measuremem=False)
+    compute_mon = monitor('compute stats', measuremem=False)
+    for sid in pgetter.sids:
+        with combine_mon:
+            pcurves = pgetter.get_pcurves(sid)
+        if sum(pc.array.sum() for pc in pcurves) == 0:  # no data
+            continue
+        with compute_mon:
+            if hstats:
+                arr = numpy.array([pc.array for pc in pcurves])
+                for s, (statname, stat) in enumerate(hstats.items()):
+                    pc = _build_stat_curve(arr, imtls, stat, weights)
+                    pmap_by_kind['hcurves-stats'][s][sid] = pc
+                    if poes:
+                        hmap = calc.make_hmap(pc, pgetter.imtls, poes, sid)
+                        pmap_by_kind['hmaps-stats'][s].update(hmap)
+                    if statname == 'mean' and R > 1 and N <= FEWSITES:
+                        rlz = pmap_by_kind['rlz_by_sid']
+                        rlz[sid] = util.closest_to_ref(
+                            [p.array for p in pcurves], pc.array)['rlz']
+            if R > 1 and individual_curves or not hstats:
+                for pmap, pc in zip(pmap_by_kind['hcurves-rlzs'], pcurves):
+                    pmap[sid] = pc
+                if poes:
+                    pmap_by_kind['hmaps-rlzs'] = [
+                        calc.make_hmap(pc, imtls, poes, sid) for pc in pcurves]
     return pmap_by_kind
