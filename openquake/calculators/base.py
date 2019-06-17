@@ -718,12 +718,9 @@ class HazardCalculator(BaseCalculator):
                 'sampling it', R)
 
         # save a composite array with fields (grp_id, gsim_id, rlzs)
-        lst = []
-        for grp, arr in self.rlzs_assoc.by_grp().items():
-            for gsim_id, rlzs in enumerate(arr):
-                lst.append((int(grp[4:]), gsim_id, rlzs))
-        self.datastore['csm_info/rlzs_by_grp'] = numpy.array(
-            lst, rlzs_by_grp_dt)
+        rlzs_by_grp = self.rlzs_assoc.by_grp()
+        if rlzs_by_grp:
+            self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.flush()
 
     def store_source_info(self, calc_times):
