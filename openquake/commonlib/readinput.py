@@ -870,8 +870,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     else:  # full enumeration
         if oqparam.is_event_based() and p > oqparam.max_potential_paths:
             raise ValueError(
-                'There are too many potential logic tree paths (%d) '
-                'use sampling instead of full enumeration' % p)
+                'There are too many potential logic tree paths (%d):'
+                'use sampling instead of full enumeration or reduce the '
+                'source model with oq reduce_sm' % p)
         logging.info('Potential number of logic tree paths = {:,d}'.format(p))
 
     if source_model_lt.on_each_source:
