@@ -411,7 +411,7 @@ _devtest_innervm_run () {
                  /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-commonlib.xml -v openquake/commonlib
                  /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-commands.xml -v openquake/commands 
 
-                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n auto --doctest-module -v openquake/hazardlib
+                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n 4 --doctest-module -v openquake/hazardlib
                  /opt/openquake/bin/python3 bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
