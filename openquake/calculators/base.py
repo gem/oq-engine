@@ -685,6 +685,9 @@ class HazardCalculator(BaseCalculator):
                           avg_losses=oq.avg_losses)
 
     def save_cache(self, **kw):
+        """
+        A shortcut method to store data in the hdf5 cache file, if any
+        """
         if hasattr(self, 'hdf5cache'):  # no scenario
             with hdf5.File(self.hdf5cache, 'r+') as cache:
                 for k, v in kw.items():
