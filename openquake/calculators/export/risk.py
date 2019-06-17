@@ -513,12 +513,13 @@ def export_agglosses(ekey, dstore):
     unit_by_lt['occupants'] = 'people'
     agglosses = dstore[ekey[0]]
     losses = []
-    header = ['loss_type', 'unit', 'mean', 'stddev']
-    for l, lt in enumerate(loss_dt.names):
-        unit = unit_by_lt[lt.replace('_ins', '')]
-        mean = agglosses[l]['mean']
-        stddev = agglosses[l]['stddev']
-        losses.append((lt, unit, mean, stddev))
+    header = ['rlzi', 'loss_type', 'unit', 'mean', 'stddev']
+    for r in range(len(agglosses)):
+        for l, lt in enumerate(loss_dt.names):
+            unit = unit_by_lt[lt]
+            mean = agglosses[r, l]['mean']
+            stddev = agglosses[r, l]['stddev']
+            losses.append((r, lt, unit, mean, stddev))
     dest = dstore.build_fname('agglosses', '', 'csv')
     writers.write_csv(dest, losses, header=header, comment=dstore.metadata)
     return [dest]
