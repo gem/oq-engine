@@ -588,7 +588,9 @@ celery_wait() {
 
 # Start all openquake services
 # openquake-webui and openquake-dbserver have been stopped by python3-oq-engine-worker
-sudo systemctl start openquake-dbserver openquake-celery
+sudo systemctl start openquake-dbserver
+sleep 10
+sudo systemctl start openquake-celery
 sleep 10
 sudo systemctl status openquake-dbserver openquake-celery
 
