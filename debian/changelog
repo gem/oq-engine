@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the agglosses and losses_by_event exporters in scenario_risk,
+    by adding a column with the realization index
   * Changed the generation of the hazard statistics to consume very little
     memory
   * Fixed a bug with concurrent_tasks being inherited from the parent
