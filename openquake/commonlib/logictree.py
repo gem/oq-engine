@@ -1478,12 +1478,6 @@ class GsimLogicTree(object):
                 branch['trt'], branch['branch'], gsim, weight, True)
             self.branches.append(bt)
 
-    def __str__(self):
-        """
-        :returns: an XML string representing the logic tree
-        """
-        return nrml.to_string(self._ltnode)
-
     def reduce(self, trts):
         """
         Reduce the GsimLogicTree.

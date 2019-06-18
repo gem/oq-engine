@@ -58,14 +58,13 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, by_grp, weights, sids=None, poes=()):
+    def __init__(self, dstore, weights, sids=None, poes=()):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
         if len(weights[0].dic) == 1:  # no weights by IMT
             self.weights = numpy.array([w['weight'] for w in weights])
         else:
             self.weights = weights
-        self.array = by_grp
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
@@ -91,6 +90,8 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
+        rlzs_by_grp = self.dstore['rlzs_by_grp']
+        self.rlzs_by_grp = {k: dset[()] for k, dset in rlzs_by_grp.items()}
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
@@ -126,7 +127,7 @@ class PmapGetter(object):
         pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
         grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
         for grp in grps:
-            for gsim_idx, rlzis in enumerate(self.array[grp]):
+            for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
                 for r in rlzis:
                     if r == rlzi:
                         pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
@@ -146,7 +147,7 @@ class PmapGetter(object):
                 pc = pmap[sid]
             except KeyError:  # no hazard for sid
                 continue
-            for gsim_idx, rlzis in enumerate(self.array[grp]):
+            for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
                 c = probability_map.ProbabilityCurve(pc.array[:, [gsim_idx]])
                 for rlzi in rlzis:
                     pcurves[rlzi] |= c
