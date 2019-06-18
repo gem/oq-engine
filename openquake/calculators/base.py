@@ -51,6 +51,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 100000  # used in classical_split_filter
 
 
@@ -717,11 +718,12 @@ class HazardCalculator(BaseCalculator):
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
             self.save_cache(weights=arr)
 
-        if R >= TWO16:
-            # rlzi is 16 bit integer in the GMFs and in rlzs_by_grp
+        if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
+                or R >= TWO32):
+            # rlzi is 16 bit integer in the GMFs and 32 bit in rlzs_by_grp
             raise ValueError(
-                'The logic tree has %d realizations, the maximum '
-                'is %d' % (R, TWO16))
+                'The logic tree has too many realizations (%d), use sampling '
+                'instead' % R)
         elif R > 10000:
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
