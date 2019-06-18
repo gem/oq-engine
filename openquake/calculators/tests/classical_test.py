@@ -193,7 +193,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # test extract/hcurves/rlz-0, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
-        self.assertEqual(sorted(haz), ['_extra', 'all', 'investigation_time'])
+        self.assertEqual(sorted(haz), ['all', 'investigation_time'])
         self.assertEqual(
             haz['all'].dtype.names, ('lon', 'lat', 'depth', 'mean'))
         array = haz['all']['mean']
