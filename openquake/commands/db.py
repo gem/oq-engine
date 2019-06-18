@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import ast
+import sys
 import inspect
 from decorator import getfullargspec
 from openquake.baselib import sap
@@ -48,21 +49,19 @@ def db(cmd, args=()):
     """
     Run a database command
     """
-    if cmd not in commands:
-        okcmds = '\n'.join(
-            '%s %s' % (name, repr(' '.join(args)) if args else '')
-            for name, args in sorted(commands.items()))
-        print('Invalid command "%s": choose one from\n%s' % (cmd, okcmds))
-    elif len(args) != len(commands[cmd]):
-        print('Wrong number of arguments, expected %s, got %s' % (
+    if cmd in commands and len(args) != len(commands[cmd]):
+        sys.exit('Wrong number of arguments, expected %s, got %s' % (
             commands[cmd], args))
+    elif cmd in commands:
+        args = convert(args)
     else:
-        dbserver.ensure_on()
-        res = logs.dbcmd(cmd, *convert(args))
-        if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
-            print(rst_table(res))
-        else:
-            print(res)
+        args = ' '.join(args)
+    dbserver.ensure_on()
+    res = logs.dbcmd(cmd, args)
+    if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
+        print(rst_table(res))
+    else:
+        print(res)
 
 
 db.arg('cmd', 'db command')
