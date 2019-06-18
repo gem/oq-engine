@@ -20,7 +20,6 @@ import logging
 import operator
 import collections
 import numpy
-from openquake.hazardlib import probability_map
 
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
@@ -122,14 +121,15 @@ class RlzsAssoc(object):
                 except ValueError:  # there is more than 1 TRT
                     gsim = gsim_by_trt[trt]
                 acc[gsim].append(rlz.ordinal)
-        return {gsim: numpy.array(acc[gsim], dtype=U16)
+        # EventBasedTestCase::test_case_10 is a case with num_rlzs=[25, 36, 39]
+        return {gsim: numpy.array(acc[gsim], dtype=U32)
                 for gsim in sorted(acc)}
 
     def by_grp(self):
         """
         :returns: a dictionary grp -> rlzis
         """
-        dic = {}  # grp -> [(gsim_idx, rlzis), ...]
+        dic = {}  # grp -> rlzis
         for sm in self.csm_info.source_models:
             for sg in sm.src_groups:
                 if not sg.eff_ruptures:
