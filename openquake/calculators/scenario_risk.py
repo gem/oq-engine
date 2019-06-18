@@ -130,10 +130,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             # agg losses
             res = result['agg']
             E, L = res.shape
-            mean, std = scientific.mean_std(res)  # shape L
-            agglosses = numpy.zeros(L, stat_dt)
-            agglosses['mean'] = F32(mean)
-            agglosses['stddev'] = F32(std)
+            agglosses = numpy.zeros((R, L), stat_dt)
+            for r in range(R):
+                mean, std = scientific.mean_std(res[self.event_slice(r)])
+                agglosses[r]['mean'] = F32(mean)
+                agglosses[r]['stddev'] = F32(std)
 
             # losses by asset
             losses_by_asset = numpy.zeros((A, R, L), stat_dt)
