@@ -1462,7 +1462,13 @@ class GsimLogicTree(object):
         self.branches = []
         self.values = collections.defaultdict(list)
         for branch in dic.pop('branches'):
-            gsim = valid.gsim(branch['uncertainty'])
+            if 'id' in branch.dtype.names:  # engine < 3.6
+                br_id = branch['id']
+                gsim_ = branch['gsim']
+            else:
+                br_id = branch['branch']
+                gsim_ = branch['uncertainty']
+            gsim = valid.gsim(gsim_)
             self.values[branch['trt']].append(gsim)
             if isinstance(gsim, GMPETable):
                 if 'gmpe_table' in gsim.kwargs:
@@ -1474,8 +1480,7 @@ class GsimLogicTree(object):
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
             if len(weight.dic) > 1:
                 gsim.weight = weight
-            bt = BranchTuple(
-                branch['trt'], branch['branch'], gsim, weight, True)
+            bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
             self.branches.append(bt)
 
     def reduce(self, trts):
