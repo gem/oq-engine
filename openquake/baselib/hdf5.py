@@ -480,8 +480,9 @@ class ArrayWrapper(object):
             array, attrs = obj, {}
         return cls(array, attrs)
 
-    def __init__(self, array, attrs):
+    def __init__(self, array, attrs, extra=('value',)):
         vars(self).update(attrs)
+        self._extra = tuple(extra)
         if len(array):
             self.array = array
 
@@ -543,8 +544,8 @@ class ArrayWrapper(object):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
         T1, ..., TN which are list of tags of lenghts D1, ... DN into
-        a table with rows (tag1, ... tagN, value) of maximum length
-        D1 * ... * DN. Zero values are discarded.
+        a table with rows (tag1, ... tagN, extra1, ... extraM) of maximum
+        length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
         >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
@@ -555,42 +556,41 @@ class ArrayWrapper(object):
         >>> arr[0, 1] = 5000
         >>> arr[1, 0] = 500
         >>> pprint(ArrayWrapper(arr, dic).to_table())
-        [['taxonomy', 'occupancy', 'value'],
-         ['RC', 'RES', 2000.0],
-         ['RC', 'IND', 5000.0],
-         ['WOOD', 'RES', 500.0]]
+        [('taxonomy', 'occupancy', 'value'),
+         ('RC', 'RES', 2000.0),
+         ('RC', 'IND', 5000.0),
+         ('WOOD', 'RES', 500.0)]
         """
         shape = self.shape
+        tup = len(self._extra) > 1
+        if tup:
+            if shape[-1] != len(self._extra):
+                raise ValueError(
+                    'There are %d extra-fields but %d dimensions in %s' %
+                    (len(self._extra), shape[-1], self))
+        tagnames = decode_array(self.tagnames)
         # the tagnames are bytestrings so they must be decoded
-        tagnames = decode_array(self.tagnames)
-        if len(shape) == len(tagnames):
-            return [tagnames + ['value']] + self._to_table()
-        elif len(shape) == len(tagnames) + 1:  # there is an extra field
-            tbl = [tagnames + [self.extra[0], 'value']]
-            return tbl + self._to_table(self.extra[1:])
-        else:
-            raise TypeError(
-                'There are %d dimensions but only %d tagnames' %
-                (len(shape), len(tagnames)))
-
-    def _to_table(self, extra=()):
-        tags = []  # tag_idx -> tag_values
-        shape = self.shape
-        if extra:
-            assert shape[-1] == len(extra), (shape[-1], len(extra))
-        tagnames = decode_array(self.tagnames)
+        fields = tuple(tagnames) + self._extra
+        out = []
+        tags = []
+        idxs = []
         for i, tagname in enumerate(tagnames):
             values = getattr(self, tagname)[1:]
-            assert len(values) == shape[i], (len(values), shape[i])
+            if len(values) != shape[i]:
+                raise ValueError(
+                    'The tag %s[%d] with %d values is inconsistent with %s'
+                    % (tagname, i, len(values), self))
             tags.append(decode_array(values))
-        if extra:
-            tags.append(extra)
-        tbl = []
-        for idx, value in numpy.ndenumerate(self.array):
-            row = [tags[i][j] for i, j in enumerate(idx)] + [value]
-            if value > 0:
-                tbl.append(row)
-        return tbl
+            idxs.append(range(len(values)))
+        for idx, values in zip(itertools.product(*idxs),
+                               itertools.product(*tags)):
+            val = self.array[idx]
+            if tup:
+                if val.sum():
+                    out.append(values + tuple(val))
+            elif val:
+                out.append(values + (val,))
+        return [fields] + out
 
 
 def decode_array(values):
