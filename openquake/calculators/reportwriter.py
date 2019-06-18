@@ -147,6 +147,7 @@ def build_report(job_ini, output_dir=None):
     calc.pre_execute()
     if oq.calculation_mode == 'preclassical':
         calc.execute()
+    calc.before_export()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
