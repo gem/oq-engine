@@ -154,6 +154,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
+        # losses by taxonomy for loss_type=structural
+        [fname] = export(
+            ('aggregate_by/avg_losses?tag=taxonomy&kind=rlz-0&'
+             'loss_type=structural', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_taxo.csv', fname)
+
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
