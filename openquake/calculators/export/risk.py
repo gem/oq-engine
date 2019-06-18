@@ -237,24 +237,27 @@ def export_losses_by_event(ekey, dstore):
     dest = dstore.build_fname('losses_by_event', '', 'csv')
     if oq.calculation_mode.startswith('scenario'):
         arr = dstore['losses_by_event'][('eid', 'loss')]
-        dtlist = [('eid', U64)] + oq.loss_dt_list()
-        num_loss_types = len(dtlist) - 1
+        dtlist = [('event_id', U64), ('rlz_id', U16)] + oq.loss_dt_list()
+        num_loss_types = len(dtlist) - 2
         loss = arr['loss']
         z = numpy.zeros(len(arr), dtlist)
-        z['eid'] = arr['eid']
-        for i, (name, _) in enumerate(dtlist[1:]):
+        z['event_id'] = arr['eid']
+        z['rlz_id'] = dstore['events']['rlz']
+        for i, (name, _) in enumerate(dtlist[2:]):
             z[name] = loss[:, i] if num_loss_types > 1 else loss
         writer.save(z, dest)
     elif oq.calculation_mode == 'ebrisk':
         tagcol = dstore['assetcol/tagcol']
         lbe = dstore['losses_by_event'][()]
         lbe.sort(order='eid')
-        dic = dict(tagnames=['event_id', 'loss_type'] + oq.aggregate_by)
+        dic = dict(tagnames=['event_id'] + oq.aggregate_by)
         for tagname in oq.aggregate_by:
             dic[tagname] = getattr(tagcol, tagname)
         dic['event_id'] = ['?'] + list(lbe['eid'])
-        dic['loss_type'] = ('?',) + oq.loss_dt().names
-        aw = hdf5.ArrayWrapper(lbe['loss'], dic)  # shape (E, L, T...)
+        # example (0, 1, 2, 3) -> (0, 2, 3, 1)
+        axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
+        data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
+        aw = hdf5.ArrayWrapper(data, dic, oq.loss_dt().names)
         writer.save(aw.to_table(), dest)
     else:
         dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
@@ -513,12 +516,13 @@ def export_agglosses(ekey, dstore):
     unit_by_lt['occupants'] = 'people'
     agglosses = dstore[ekey[0]]
     losses = []
-    header = ['loss_type', 'unit', 'mean', 'stddev']
-    for l, lt in enumerate(loss_dt.names):
-        unit = unit_by_lt[lt.replace('_ins', '')]
-        mean = agglosses[l]['mean']
-        stddev = agglosses[l]['stddev']
-        losses.append((lt, unit, mean, stddev))
+    header = ['rlz_id', 'loss_type', 'unit', 'mean', 'stddev']
+    for r in range(len(agglosses)):
+        for l, lt in enumerate(loss_dt.names):
+            unit = unit_by_lt[lt]
+            mean = agglosses[r, l]['mean']
+            stddev = agglosses[r, l]['stddev']
+            losses.append((r, lt, unit, mean, stddev))
     dest = dstore.build_fname('agglosses', '', 'csv')
     writers.write_csv(dest, losses, header=header, comment=dstore.metadata)
     return [dest]
