@@ -150,9 +150,11 @@ class WorkerPool(object):
         :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
         """
         setproctitle('oq-zworker')
+        taskno = 0
         with sock:
-            for cmd, args, mon in sock:
-                parallel.safely_call(cmd, args, mon)
+            for cmd, args, taskno, mon in sock:
+                parallel.safely_call(cmd, args, taskno, mon)
+                taskno += 1
 
     def start(self):
         """
