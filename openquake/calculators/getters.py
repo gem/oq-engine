@@ -91,7 +91,7 @@ class PmapGetter(object):
         self.imtls = oq.imtls
         self.poes = self.poes or oq.poes
         rlzs_by_grp = self.dstore['rlzs_by_grp']
-        self.array = {k: dset[()] for k, dset in rlzs_by_grp.items()}
+        self.rlzs_by_grp = {k: dset[()] for k, dset in rlzs_by_grp.items()}
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
@@ -127,7 +127,7 @@ class PmapGetter(object):
         pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
         grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
         for grp in grps:
-            for gsim_idx, rlzis in enumerate(self.array[grp]):
+            for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
                 for r in rlzis:
                     if r == rlzi:
                         pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
@@ -147,7 +147,7 @@ class PmapGetter(object):
                 pc = pmap[sid]
             except KeyError:  # no hazard for sid
                 continue
-            for gsim_idx, rlzis in enumerate(self.array[grp]):
+            for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
                 c = probability_map.ProbabilityCurve(pc.array[:, [gsim_idx]])
                 for rlzi in rlzis:
                     pcurves[rlzi] |= c
