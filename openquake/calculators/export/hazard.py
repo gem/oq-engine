@@ -495,10 +495,13 @@ def _extract(hmap, imt, j):
     return tup
 
 
-@export.add(('hcurves', 'npz'), ('hmaps', 'npz'), ('uhs', 'npz'))
+@export.add(('hcurves', 'npz'), ('hmaps', 'npz'), ('uhs', 'npz'),
+            ('gmf_data', 'npz'))
 def export_hazard_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
-    savez(fname, **vars(extract(dstore, ekey[0])))
+    out = extract(dstore, ekey[0])
+    kw = {k: v for k, v in vars(out).items() if not k.startswith('_')}
+    savez(fname, **kw)
     return [fname]
 
 
@@ -579,13 +582,6 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
             data['gmv'])
         rows.append(row)
     return rows, comment
-
-
-@export.add(('gmf_data', 'npz'))
-def export_gmf_scenario_npz(ekey, dstore):
-    fname = dstore.export_path('%s.%s' % ekey)
-    savez(fname, **vars(extract(dstore, 'gmf_data')))
-    return [fname]
 
 
 DisaggMatrix = collections.namedtuple(
