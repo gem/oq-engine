@@ -1,10 +1,3 @@
-occupancy,loss_type,value
-Res,business_interruption,1.90168E+03
-Res,contents,1.33774E+04
-Res,nonstructural,1.94504E+04
-Res,occupants,3.80335E-02
-Res,structural,2.61201E+03
-Com,business_interruption,3.97183E+01
-Com,contents,2.01389E+02
-Com,nonstructural,3.02084E+02
-Com,occupants,7.94365E-04
+occupancy,business_interruption,contents,nonstructural,occupants,structural
+Res,1.90168E+03,1.33774E+04,1.94504E+04,3.80335E-02,2.61201E+03
+Com,3.97183E+01,2.01389E+02,3.02084E+02,7.94365E-04,0.00000E+00
