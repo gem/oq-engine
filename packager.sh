@@ -591,7 +591,7 @@ celery_wait() {
 sudo systemctl start openquake-dbserver
 sleep 10
 # Restart openquake-celery after the changes made to openquake.cfg
-sudo systemctl restart openquake-celery
+sudo systemctl start openquake-celery
 sleep 10
 sudo systemctl status openquake-dbserver openquake-celery
 
