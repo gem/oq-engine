@@ -178,7 +178,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
 
 def calc_hazard_curves(
-        groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
+        groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
         apply=sequential_apply, filter_distance='rjb', reqv=None):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
@@ -191,7 +191,7 @@ def calc_hazard_curves(
     :param groups:
         A sequence of groups of seismic sources objects (instances of
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param ss_filter:
+    :param srcfilter:
         A source filter over the site collection or the site collection itself
     :param imtls:
         Dictionary mapping intensity measure type strings
@@ -236,13 +236,13 @@ def calc_hazard_curves(
     mon = Monitor()
     for group in groups:
         if group.atomic:  # do not split
-            it = [classical(group, ss_filter, [gsim], param, mon)]
+            it = [classical(group, srcfilter, [gsim], param, mon)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
-                classical, (group.sources, ss_filter, [gsim], param, mon),
+                classical, (group.sources, srcfilter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
         for dic in it:
             for grp_id, pval in dic['pmap'].items():
                 pmap |= pval
-    sitecol = getattr(ss_filter, 'sitecol', ss_filter)
+    sitecol = getattr(srcfilter, 'sitecol', srcfilter)
     return pmap.convert(imtls, len(sitecol.complete))
