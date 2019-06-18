@@ -754,8 +754,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         sg.sources = random_filtered_sources(
                             sg.sources, srcfilter, sg.id + oqparam.random_seed)
                     for src in sg:
-                        mags.update(mag for mag, rate in
-                                    src.get_annual_occurrence_rates())
+                        if hasattr(src, 'data'):  # nonparametric
+                            items = src.data
+                        else:
+                            items = src.get_annual_occurrence_rates()
+                        mags.update(mag for mag, _ in items)
                         source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
