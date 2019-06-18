@@ -18,8 +18,9 @@
 import ast
 import sys
 import inspect
+import getpass
 from decorator import getfullargspec
-from openquake.baselib import sap
+from openquake.baselib import sap, config
 from openquake.calculators.views import rst_table
 from openquake.commonlib import logs
 from openquake.server import dbserver
@@ -52,6 +53,9 @@ def db(cmd, args=()):
     if cmd in commands and len(args) != len(commands[cmd]):
         sys.exit('Wrong number of arguments, expected %s, got %s' % (
             commands[cmd], args))
+    elif (cmd not in commands and not cmd.upper().startswith('SELECT') and
+          config.dbserver.multi_user and getpass.getuser() != 'openquake'):
+        sys.exit('You have no permission to run %s' % cmd)
     dbserver.ensure_on()
     res = logs.dbcmd(cmd, *convert(args))
     if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
