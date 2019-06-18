@@ -250,12 +250,14 @@ def export_losses_by_event(ekey, dstore):
         tagcol = dstore['assetcol/tagcol']
         lbe = dstore['losses_by_event'][()]
         lbe.sort(order='eid')
-        dic = dict(tagnames=['event_id', 'loss_type'] + oq.aggregate_by)
+        dic = dict(tagnames=['event_id'] + oq.aggregate_by)
         for tagname in oq.aggregate_by:
             dic[tagname] = getattr(tagcol, tagname)
         dic['event_id'] = ['?'] + list(lbe['eid'])
-        dic['loss_type'] = ('?',) + oq.loss_dt().names
-        aw = hdf5.ArrayWrapper(lbe['loss'], dic)  # shape (E, L, T...)
+        # example (0, 1, 2, 3) -> (0, 2, 3, 1)
+        axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
+        data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
+        aw = hdf5.ArrayWrapper(data, dic, oq.loss_dt().names)
         writer.save(aw.to_table(), dest)
     else:
         dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
