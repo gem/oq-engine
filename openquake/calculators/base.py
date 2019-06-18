@@ -51,10 +51,8 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 100000  # used in classical_split_filter
-
-rlzs_by_grp_dt = numpy.dtype(
-    [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
 
 
 class InvalidCalculationID(Exception):
@@ -438,6 +436,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+            self.datastore['rlzs_by_grp'] = self.rlzs_assoc.by_grp()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
@@ -686,6 +685,15 @@ class HazardCalculator(BaseCalculator):
         self.param = dict(individual_curves=oq.individual_curves,
                           avg_losses=oq.avg_losses)
 
+    def save_cache(self, **kw):
+        """
+        A shortcut method to store data in the hdf5 cache file, if any
+        """
+        if hasattr(self, 'hdf5cache'):  # no scenario
+            with hdf5.File(self.hdf5cache, 'r+') as cache:
+                for k, v in kw.items():
+                    cache[k] = v
+
     def store_rlz_info(self, eff_ruptures=None):
         """
         Save info about the composite source model inside the csm_info dataset
@@ -700,30 +708,30 @@ class HazardCalculator(BaseCalculator):
             self.datastore['source_model_lt'] = self.csm.source_model_lt
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
+        rlzs_by_grp = self.rlzs_assoc.by_grp()
+        if rlzs_by_grp:
+            self.save_cache(rlzs_by_grp=rlzs_by_grp)
+
         if self.oqparam.imtls:
             self.datastore['weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
-            if hasattr(self, 'hdf5cache'):  # no scenario
-                with hdf5.File(self.hdf5cache, 'r+') as cache:
-                    cache['weights'] = arr
-        if 'event_based' in self.oqparam.calculation_mode and R >= TWO16:
-            # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
+            self.save_cache(weights=arr)
+
+        if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
+                or R >= TWO32):
+            # rlzi is 16 bit integer in the GMFs and 32 bit in rlzs_by_grp
             raise ValueError(
-                'The logic tree has %d realizations, the maximum '
-                'is %d' % (R, TWO16))
+                'The logic tree has too many realizations (%d), use sampling '
+                'instead' % R)
         elif R > 10000:
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
 
         # save a composite array with fields (grp_id, gsim_id, rlzs)
-        lst = []
-        for grp, arr in self.rlzs_assoc.by_grp().items():
-            for gsim_id, rlzs in enumerate(arr):
-                lst.append((int(grp[4:]), gsim_id, rlzs))
-        self.datastore['csm_info/rlzs_by_grp'] = numpy.array(
-            lst, rlzs_by_grp_dt)
+        if rlzs_by_grp:
+            self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.flush()
 
     def store_source_info(self, calc_times):
@@ -836,9 +844,8 @@ class RiskCalculator(HazardCalculator):
         else:
             dstore = self.datastore
         if kind == 'poe':  # hcurves, shape (R, N)
-            by_grp = self.rlzs_assoc.by_grp()
             ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-            getter = getters.PmapGetter(dstore, by_grp, ws, [sid])
+            getter = getters.PmapGetter(dstore, ws, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
         if dstore is self.datastore:
