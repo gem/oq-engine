@@ -117,8 +117,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'failed')[0][0]
-        assert c > 0, 'There are no failed jobs??'
+        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
+        assert c > 0, 'There are no jobs??'
         cls.wait()
 
     # tests
