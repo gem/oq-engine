@@ -52,12 +52,8 @@ def db(cmd, args=()):
     if cmd in commands and len(args) != len(commands[cmd]):
         sys.exit('Wrong number of arguments, expected %s, got %s' % (
             commands[cmd], args))
-    elif cmd in commands:
-        args = convert(args)
-    else:
-        args = ' '.join(args)
     dbserver.ensure_on()
-    res = logs.dbcmd(cmd, args)
+    res = logs.dbcmd(cmd, *convert(args))
     if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
         print(rst_table(res))
     else:

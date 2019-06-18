@@ -68,10 +68,11 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
-                elif isinstance(cmd, str):  # SQL command
-                    sock.send(safely_call(self.db, (cmd,) + args))
-                else:
+                try:
                     func = getattr(actions, cmd)
+                except AttributeError:  # SQL string
+                    sock.send(safely_call(self.db, (cmd,) + args))
+                else:  # action
                     sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
