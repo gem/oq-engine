@@ -721,6 +721,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
         filename = None
     source_ids = set()
+    mags = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
             source_model_lt.apply_uncertainties, sm.path)
@@ -753,6 +754,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         sg.sources = random_filtered_sources(
                             sg.sources, srcfilter, sg.id + oqparam.random_seed)
                     for src in sg:
+                        mags.update(mag for mag, rate in
+                                    src.get_annual_occurrence_rates())
                         source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
@@ -795,7 +798,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
-
+    if monitor.hdf5:
+        monitor.hdf5['source_mags'] = sorted(mags)
     logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     # log if some source file is being used more than once
