@@ -90,7 +90,8 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for src, _sites in srcfilter(srcs):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
-    blocks = list(block_splitter(sources, params['maxweight']))
+    blocks = list(block_splitter(sources, params['maxweight'],
+                                 operator.attrgetter('weight')))
     if blocks:
         # yield the first blocks (if any) and compute the last block in core
         # NB: the last block is usually the smallest one
