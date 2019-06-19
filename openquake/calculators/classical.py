@@ -84,13 +84,13 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         srcs = readinput.random_filtered_sources(splits, srcfilter, ss)
         yield classical(srcs, srcfilter, gsims, params, monitor)
         return
+
     sources = []
     with monitor("filtering/splitting sources"):
         for src, _sites in srcfilter(srcs):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
-    blocks = list(block_splitter(sources, params['maxweight'],
-                                 operator.attrgetter('num_ruptures')))
+    blocks = list(block_splitter(sources, params['maxweight']))
     if blocks:
         # yield the first blocks (if any) and compute the last block in core
         # NB: the last block is usually the smallest one

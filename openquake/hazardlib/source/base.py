@@ -58,11 +58,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        # (MS) the weight is proportional to the number of ruptures and GSIMs
+        # (MS) the weight is proportional to the number of ruptures
         # the relation to the number of sites is unclear, but for sure less
-        # than linear and I am using a sqrt here (totally made up but good)
-        return (self.num_ruptures * self.RUPTURE_WEIGHT *
-                math.sqrt(self.nsites) * self.ngsims)
+        # than linear and I am using a log here (totally made up but good)
+        return self.num_ruptures * (1 + numpy.log(self.nsites))
 
     @property
     def nsites(self):
