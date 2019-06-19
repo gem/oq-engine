@@ -34,6 +34,7 @@ import string
 import random
 from django.test import Client
 from openquake.baselib.general import gettemp
+from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
@@ -116,6 +117,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
+        assert c > 0, 'There are no jobs??'
         cls.wait()
 
     # tests
