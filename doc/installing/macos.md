@@ -19,7 +19,8 @@ Requirements are:
 - [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
 - Python 3.6 from [python.org](https://python.org)
 
-Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg).
+Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.8/python-3.6.8-macosx10.9.pkg).
+It is also recommended to run the script located under `/Applications/Python 3.6/Install Certificates.command`, after Python has been installed, to update the SSL certificates.
 
 ## Install packages from the OpenQuake website
 
