@@ -261,7 +261,7 @@ class RuptureData(object):
             point = rup.surface.get_middle_point()
             mlons, mlats, mdeps = rup.surface.get_surface_boundaries_3d()
             bounds = ','.join('((%s))' % ','.join(
-                '%.5f %.5f %.5f' % coords for coords in zip(lons, lats, deps))
+                '%.5f %.5f %.2f' % coords for coords in zip(lons, lats, deps))
                               for lons, lats, deps in zip(mlons, mlats, mdeps))
             try:
                 rate = ebr.rupture.occurrence_rate
