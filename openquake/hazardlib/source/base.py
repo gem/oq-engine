@@ -61,7 +61,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         # (MS) the weight is proportional to the number of ruptures
         # the relation to the number of sites is unclear, but for sure less
         # than linear and I am using a log here (totally made up but good)
-        return self.num_ruptures * (1 + numpy.log(self.nsites))
+        return self.num_ruptures * (1 + .2 * numpy.log(self.nsites))
 
     @property
     def nsites(self):
