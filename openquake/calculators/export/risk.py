@@ -277,17 +277,6 @@ def export_losses_by_event(ekey, dstore):
     return writer.getsaved()
 
 
-@export.add(('losses_by_asset', 'npz'))
-def export_losses_by_asset_npz(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    fname = dstore.export_path('%s.%s' % ekey)
-    savez(fname, **dict(extract(dstore, 'losses_by_asset')))
-    return [fname]
-
-
 def _compact(array):
     # convert an array of shape (a, e) into an array of shape (a,)
     dt = array.dtype
@@ -427,13 +416,6 @@ def export_dmg_by_asset_csv(ekey, dstore):
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
     return writer.getsaved()
-
-
-@export.add(('dmg_by_asset', 'npz'))
-def export_dmg_by_asset_npz(ekey, dstore):
-    fname = dstore.export_path('%s.%s' % ekey)
-    savez(fname, **dict(extract(dstore, 'dmg_by_asset')))
-    return [fname]
 
 
 @export.add(('dmg_by_event', 'csv'))
