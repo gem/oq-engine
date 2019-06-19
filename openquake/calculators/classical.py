@@ -29,7 +29,6 @@ from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
-from openquake.hazardlib.stats import compute_stats
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -85,16 +84,15 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         srcs = readinput.random_filtered_sources(splits, srcfilter, ss)
         yield classical(srcs, srcfilter, gsims, params, monitor)
         return
+    # NB: splitting all the sources improves the distribution significantly,
+    # compared to splitting only the big source
     sources = []
     with monitor("filtering/splitting sources"):
         for src, _sites in srcfilter(srcs):
-            if src.num_ruptures >= params['maxweight']:
-                splits, stime = split_sources([src])
-                sources.extend(srcfilter.filter(splits))
-            else:
-                sources.append(src)
-        blocks = list(block_splitter(sources, params['maxweight'],
-                                     operator.attrgetter('num_ruptures')))
+            splits, _stime = split_sources([src])
+            sources.extend(srcfilter.filter(splits))
+    blocks = list(block_splitter(sources, params['maxweight'],
+                                 operator.attrgetter('weight')))
     if blocks:
         # yield the first blocks (if any) and compute the last block in core
         # NB: the last block is usually the smallest one
@@ -199,9 +197,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.store_source_info(self.calc_times)
         if acc.nsites:
             if len(acc.nsites) > 50000:
+                # not saving source_info.num_sites since it would be slow:
+                # we do not want to wait hours for unused information
                 logging.warn(
                     'There are %d contributing sources', len(acc.nsites))
             else:
+                # saving source_info.num_sites since it is fast
                 src_ids = sorted(acc.nsites)
                 nsites = [acc.nsites[i] for i in src_ids]
                 self.datastore['source_info'][src_ids, 'num_sites'] = nsites
