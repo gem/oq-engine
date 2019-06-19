@@ -279,6 +279,7 @@ producing too small PoEs.'''
         for s in self.sitecol.sids:
             iml2 = iml2s[s]
             r = rlzs[s]
+            logging.info('Site #%d, disaggregating for rlz=#%d', s, r)
             for p, poe in enumerate(oq.poes_disagg or [None]):
                 for m, imt in enumerate(oq.imtls):
                     self.imldict[s, r, poe, imt] = iml2[m, p]
