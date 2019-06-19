@@ -70,9 +70,9 @@ class DbServer(object):
                     continue
                 try:
                     func = getattr(actions, cmd)
-                except AttributeError:  # missing action
+                except AttributeError:  # SQL string
                     sock.send(safely_call(self.db, (cmd,) + args))
-                else:
+                else:  # action
                     sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
