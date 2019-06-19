@@ -131,7 +131,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     Classical PSHA disaggregation calculator
     """
     precalc = 'classical'
-    accept_precalc = ['classical']
+    accept_precalc = ['classical', 'disaggregation']
     POE_TOO_BIG = '''\
 You are trying to disaggregate for poe=%s.
 However the source model produces at most probabilities
