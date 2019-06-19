@@ -37,6 +37,7 @@ from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
 DISAGG_RES_FMT = '%(rlz)s-%(imt)s-%(sid)s-%(poe)s/'
+BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 
 
 def _to_matrix(matrices, num_trts):
@@ -309,7 +310,8 @@ producing too small PoEs.'''
         for sid in self.sitecol.sids:
             bins = disagg.get_bins(b, sid)
             shape = [len(bin) - 1 for bin in bins] + [len(self.trts)]
-            logging.info('disagg_matrix_shape=%s, site=#%d', str(shape), sid)
+            shape_dic = dict(zip(BIN_NAMES, shape))
+            logging.info('nbins=%s for site=#%d', shape_dic, sid)
             matrix_size = numpy.prod(shape)
             if matrix_size > 1E6:
                 raise ValueError(
