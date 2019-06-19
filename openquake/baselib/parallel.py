@@ -619,7 +619,7 @@ class Starmap(object):
             del cls.dask_client
 
     @classmethod
-    def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
+    def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info):
@@ -786,7 +786,7 @@ class Starmap(object):
         self.tasks.clear()
 
 
-def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
+def sequential_apply(task, args, concurrent_tasks=cpu_count * 2,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks
