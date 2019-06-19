@@ -347,6 +347,17 @@ class MultiSurface(BaseSurface):
             lats.append(lats_surf[0])
         return lons, lats
 
+    def get_surface_boundaries_3d(self):
+        lons = []
+        lats = []
+        deps = []
+        for surf in self.surfaces:
+            lons_surf, lats_surf, deps_surf = surf.get_surface_boundaries_3d()
+            lons.extend(lons_surf)
+            lats.extend(lats_surf)
+            deps.extend(deps_surf)
+        return lons, lats, deps
+
     def _get_areas(self):
         """
         Return surface elements area values in a numpy array.
