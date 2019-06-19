@@ -341,7 +341,7 @@ class BaseSurface:
         Returns the boundaries as three one-element lists of lons, lats, depths
         """
         return ([self._boundaries('lons')], [self._boundaries('lats')],
-                [self._boundaries('dephts')])
+                [self._boundaries('depths')])
 
     def get_resampled_top_edge(self, angle_var=0.1):
         """
