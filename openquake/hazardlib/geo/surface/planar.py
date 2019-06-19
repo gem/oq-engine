@@ -618,5 +618,13 @@ class PlanarSurface(BaseSurface):
         """
         The corners lons/lats in WKT-friendly order (clockwise)
         """
-        return [self.corner_lons.take([0, 1, 3, 2, 0])], \
-               [self.corner_lats.take([0, 1, 3, 2, 0])]
+        return ([self.corner_lons.take([0, 1, 3, 2, 0])],
+                [self.corner_lats.take([0, 1, 3, 2, 0])])
+
+    def get_surface_boundaries_3d(self):
+        """
+        The corners lons/lats/depths in WKT-friendly order (clockwise)
+        """
+        return ([self.corner_lons.take([0, 1, 3, 2, 0])],
+                [self.corner_lats.take([0, 1, 3, 2, 0])],
+                [self.corner_depths.take([0, 1, 3, 2, 0])])
