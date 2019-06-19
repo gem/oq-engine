@@ -32,7 +32,7 @@ def abort(job_id):
     if job is None:
         print('There is no job %d' % job_id)
         return
-    elif job.status not in ('created', 'executing', 'running'):
+    elif job.status not in ('created', 'submitted', 'executing', 'running'):
         print('Job %d is %s' % (job.id, job.status))
         return
     name = 'oq-job-%d' % job.id
