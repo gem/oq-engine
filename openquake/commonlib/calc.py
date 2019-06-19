@@ -259,10 +259,10 @@ class RuptureData(object):
             self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
-            multi_lons, multi_lats = rup.surface.get_surface_boundaries()
+            mlons, mlats, mdeps = rup.surface.get_surface_boundaries_3d()
             bounds = ','.join('((%s))' % ','.join(
-                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
-                              for lons, lats in zip(multi_lons, multi_lats))
+                '%.5f %.5f %.5f' % coords for coords in zip(lons, lats, deps))
+                              for lons, lats, deps in zip(mlons, mlats, mdeps))
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources

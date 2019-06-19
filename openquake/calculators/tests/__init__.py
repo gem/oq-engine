@@ -80,7 +80,7 @@ def open8(fname, mode='r'):
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = False
+    OVERWRITE_EXPECTED = True
     edir = None  # will be set to a temporary directory
 
     @classmethod
