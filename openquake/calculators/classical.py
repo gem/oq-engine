@@ -84,7 +84,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         srcs = readinput.random_filtered_sources(splits, srcfilter, ss)
         yield classical(srcs, srcfilter, gsims, params, monitor)
         return
-
+    elif len(srcs) > 1:
+        # there is no need to split the sources since they are small
+        yield classical(srcs, srcfilter, gsims, params, monitor)
+        return
+    # there is a single big source to split
     sources = []
     with monitor("filtering/splitting sources"):
         for src, _sites in srcfilter(srcs):
@@ -196,9 +200,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.store_source_info(self.calc_times)
         if acc.nsites:
             if len(acc.nsites) > 50000:
+                # not saving source_info.num_sites since it would be slow:
+                # we do not want to wait hours for unused information
                 logging.warn(
                     'There are %d contributing sources', len(acc.nsites))
             else:
+                # saving source_info.num_sites since it is fast
                 src_ids = sorted(acc.nsites)
                 nsites = [acc.nsites[i] for i in src_ids]
                 self.datastore['source_info'][src_ids, 'num_sites'] = nsites
