@@ -29,7 +29,6 @@ from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
-from openquake.hazardlib.stats import compute_stats
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -88,13 +87,10 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     sources = []
     with monitor("filtering/splitting sources"):
         for src, _sites in srcfilter(srcs):
-            if src.num_ruptures >= params['maxweight']:
-                splits, stime = split_sources([src])
-                sources.extend(srcfilter.filter(splits))
-            else:
-                sources.append(src)
-        blocks = list(block_splitter(sources, params['maxweight'],
-                                     operator.attrgetter('num_ruptures')))
+            splits, _stime = split_sources([src])
+            sources.extend(srcfilter.filter(splits))
+    blocks = list(block_splitter(sources, params['maxweight'],
+                                 operator.attrgetter('num_ruptures')))
     if blocks:
         # yield the first blocks (if any) and compute the last block in core
         # NB: the last block is usually the smallest one
