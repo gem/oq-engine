@@ -313,7 +313,7 @@ producing too small PoEs.'''
             shape_dic = dict(zip(BIN_NAMES, shape))
             logging.info('nbins=%s for site=#%d', shape_dic, sid)
             matrix_size = numpy.prod(shape)
-            if matrix_size > 1E6:
+            if matrix_size > 1E7:
                 raise ValueError(
                     'The disaggregation matrix for site #%d is too large '
                     '(%d elements): fix the binnning!' % (sid, matrix_size))

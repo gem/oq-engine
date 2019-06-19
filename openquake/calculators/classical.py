@@ -84,11 +84,8 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         srcs = readinput.random_filtered_sources(splits, srcfilter, ss)
         yield classical(srcs, srcfilter, gsims, params, monitor)
         return
-    elif len(srcs) > 1:
-        # there is no need to split the sources since they are small
-        yield classical(srcs, srcfilter, gsims, params, monitor)
-        return
-    # there is a single big source to split
+    # NB: splitting all sources improves the distribution over splitting
+    # only the big source significantly
     sources = []
     with monitor("filtering/splitting sources"):
         for src, _sites in srcfilter(srcs):
