@@ -561,7 +561,7 @@ def save_task_info(self, res, mem_gb=0):
         data = numpy.array([t], task_info_dt)
         hdf5.extend3(self.hdf5.filename, 'task_info/' + name, data,
                      argnames=self.argnames, sent=self.sent)
-    mon.flush()
+        mon.flush()
 
 
 def init_workers():
