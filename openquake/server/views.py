@@ -678,7 +678,9 @@ def extract(request, calc_id, what):
             a = {}
             for key, val in vars(aw).items():
                 key = str(key)  # can be a numpy.bytes_
-                if isinstance(val, str):
+                if key.startswith('_'):
+                    continue
+                elif isinstance(val, str):
                     # without this oq extract would fail
                     a[key] = numpy.array(val.encode('utf-8'))
                 elif isinstance(val, dict):
