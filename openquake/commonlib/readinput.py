@@ -726,6 +726,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     aspects = set()
     deps = set()
     planes = set()
+    seismos = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
             source_model_lt.apply_uncertainties, sm.path)
@@ -775,6 +776,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                                  .__class__.__name__)
                         if src.rupture_aspect_ratio:
                             aspects.add(src.rupture_aspect_ratio)
+                        if hasattr(src, 'upper_seismogenic_depth'):
+                            seismos.add((src.upper_seismogenic_depth,
+                                         src.lower_seismogenic_depth))
                         source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
@@ -821,6 +825,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         monitor.hdf5['rup_info/mags'] = sorted(mags)
         monitor.hdf5['rup_info/msrs'] = numpy.array(sorted(msrs))
         monitor.hdf5['rup_info/aspects'] = sorted(aspects)
+        monitor.hdf5['rup_info/seismos'] = sorted(seismos)
         monitor.hdf5['rup_info/depths'] = sorted(deps)
         monitor.hdf5['rup_info/nodal_planes'] = sorted(planes)
     logging.info('The composite source model has {:,d} ruptures'.format(nr))
