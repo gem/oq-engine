@@ -135,4 +135,4 @@ class ScenarioTestCase(CalculatorTestCase):
             self.calc.sitecol, self.calc.rup)
         dists = self.calc.cmaker.get_limit_distances(
             sctx, self.calc.rup, dctx, oq.imtls, oq.minimum_intensity)
-        aae(dists, [162.8160762])
+        aae(dists, [163.5109114, 163.5109114])
