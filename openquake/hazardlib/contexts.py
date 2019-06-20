@@ -350,6 +350,7 @@ class ContextMaker(object):
                 pne_array[:, slc, i] = pno
         return pne_array
 
+    # tested in scenario/case_11
     def get_limit_distances(self, sites, rup, imts, minimum_intensity):
         """
         Calculate the distances over which the GMVs are lower than the

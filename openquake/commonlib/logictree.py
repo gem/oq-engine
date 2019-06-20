@@ -42,7 +42,8 @@ import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf, site
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
@@ -1630,6 +1631,31 @@ class GsimLogicTree(object):
                 value.append(branch.gsim)
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
+
+    # tested in scenario/case_11
+    def get_limit_distances(self, rup, oq):
+        """
+        :param rup:
+            a SinglePlaneRupture
+        :param oq:
+            an object with attributes imtls, maximum_distance,
+            minimum_intensity, reference_vs30_value, ...
+        """
+        hc = rup.hypocenter
+        dists = []
+        for trt, gsims in self.values.items():
+            lons = []
+            for delta in valid.sqrscale(1, oq.maximum_distance[trt], 50):
+                ang = geo.utils.angular_distance(delta, hc.latitude)
+                lons.append(hc.longitude + ang)
+            lats = hc.latitude + numpy.zeros(50)
+            deps = hc.depth + numpy.zeros(50)
+            sites = site.SiteCollection.from_points(
+                lons, lats, deps, oq, self.req_site_params)
+            cmaker = ContextMaker(trt, gsims, oq.maximum_distance)
+            dists.extend(cmaker.get_limit_distances(
+                sites, rup, oq.imtls, oq.minimum_intensity))
+        return dists
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %

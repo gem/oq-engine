@@ -128,9 +128,9 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(self.calc.datastore['sitecol']), 66)
 
     def test_case_11(self):
-        # compute the limit distance for a GMV of 0.01g
+        # compute the limit distances for a GMV of 0.01g
         self.run_calc(case_11.__file__, 'job.ini')
         oq = self.calc.oqparam
-        dists = self.calc.cmaker.get_limit_distances(
-            self.calc.sitecol, self.calc.rup, oq.imtls, oq.minimum_intensity)
-        aae(dists, [163.5109114, 163.5109114])
+        gsim_lt = self.calc.datastore['csm_info/gsim_lt']
+        dists = gsim_lt.get_limit_distances(self.calc.rup, oq)
+        aae(dists, [133.1610045, 160.9100938])
