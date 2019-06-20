@@ -1405,10 +1405,14 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute '
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
-        self.req_site_params = set()
+
+    @property
+    def req_site_params(self):
+        site_params = set()
         for trt in self.values:
             for gsim in self.values[trt]:
-                self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
+                site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
+        return site_params
 
     def check_imts(self, imts):
         """
