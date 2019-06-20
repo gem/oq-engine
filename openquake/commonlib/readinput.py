@@ -722,6 +722,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         filename = None
     source_ids = set()
     mags = set()
+    msrs = set()
+    aspects = set()
     deps = set()
     planes = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
@@ -768,6 +770,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         if hasattr(src, 'nodal_plane_distribution'):
                             planes.update(tuple(item[1]) for item in
                                           src.nodal_plane_distribution.data)
+
+                        msrs.add(src.magnitude_scaling_relationship
+                                 .__class__.__name__)
+                        if src.rupture_aspect_ratio:
+                            aspects.add(src.rupture_aspect_ratio)
                         source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
@@ -812,6 +819,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         yield sm
     if monitor.hdf5:
         monitor.hdf5['rup_info/mags'] = sorted(mags)
+        monitor.hdf5['rup_info/msrs'] = numpy.array(sorted(msrs))
+        monitor.hdf5['rup_info/aspects'] = sorted(aspects)
         monitor.hdf5['rup_info/depths'] = sorted(deps)
         monitor.hdf5['rup_info/nodal_planes'] = sorted(planes)
     logging.info('The composite source model has {:,d} ruptures'.format(nr))
