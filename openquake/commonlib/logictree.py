@@ -1636,25 +1636,26 @@ class GsimLogicTree(object):
     def get_limit_distances(self, rup, oq):
         """
         :param rup:
-            a SinglePlaneRupture
+            a singlePlaneRupture of a given magnitude and TRT
         :param oq:
             an object with attributes imtls, maximum_distance,
             minimum_intensity, reference_vs30_value, ...
         """
         hc = rup.hypocenter
+        trt = rup.tectonic_region_type
         dists = []
-        for trt, gsims in self.values.items():
-            lons = []
-            for delta in valid.sqrscale(1, oq.maximum_distance[trt], 50):
-                ang = geo.utils.angular_distance(delta, hc.latitude)
-                lons.append(hc.longitude + ang)
-            lats = hc.latitude + numpy.zeros(50)
-            deps = hc.depth + numpy.zeros(50)
-            sites = site.SiteCollection.from_points(
-                lons, lats, deps, oq, self.req_site_params)
-            cmaker = ContextMaker(trt, gsims, oq.maximum_distance)
-            dists.extend(cmaker.get_limit_distances(
-                sites, rup, oq.imtls, oq.minimum_intensity))
+        gsims = self.values[trt]
+        lons = []
+        for delta in valid.sqrscale(1, oq.maximum_distance[trt], 50):
+            ang = geo.utils.angular_distance(delta, hc.latitude)
+            lons.append(hc.longitude + ang)
+        lats = hc.latitude + numpy.zeros(50)
+        deps = hc.depth + numpy.zeros(50)
+        sites = site.SiteCollection.from_points(
+            lons, lats, deps, oq, self.req_site_params)
+        cmaker = ContextMaker(trt, gsims, oq.maximum_distance)
+        dists.extend(cmaker.get_limit_distances(
+            sites, rup, oq.imtls, oq.minimum_intensity))
         return dists
 
     def __repr__(self):
