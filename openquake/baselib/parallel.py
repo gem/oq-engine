@@ -514,9 +514,9 @@ class IterResult(object):
             tot = sum(self.received)
             max_per_output = max(self.received)
             logging.info(
-                'Received %s from %d %s outputs in %d seconds, biggest '
-                'output=%s', humansize(tot), len(self.received),
-                '|'.join(names), time.time() - t0, humansize(max_per_output))
+                'Received %s in %d seconds, biggest '
+                'output=%s', humansize(tot), time.time() - t0,
+                humansize(max_per_output))
             if nbytes:
                 logging.info('Received %s',
                              {k: humansize(v) for k, v in nbytes.items()})
@@ -694,12 +694,13 @@ class Starmap(object):
         """
         Log the progress of the computation in percentage
         """
-        done = self.total - self.todo
-        percent = int(float(done) / self.total * 100)
+        total = len(self.tasks)
+        done = total - self.todo
+        percent = int(float(done) / total * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
             self.progress('Sent %s of data in %d %s task(s)',
-                          humansize(self.sent.sum()), self.total, self.name)
+                          humansize(self.sent.sum()), total, self.name)
         elif percent > self.prev_percent:
             self.progress('%s %3d%% [of %d tasks]',
                           self.name, percent, len(self.tasks))
@@ -762,7 +763,7 @@ class Starmap(object):
         if hasattr(self, 'sender'):
             self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)
-        self.total = self.todo = len(self.tasks)
+        self.todo = len(self.tasks)
         while self.todo:
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
