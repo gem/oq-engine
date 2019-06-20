@@ -21,6 +21,7 @@ import numpy
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
+from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import get_bounding_box
@@ -322,3 +323,13 @@ class PointSource(ParametricSeismicSource):
         """
         loc = self.location
         return numpy.array([[loc.x, loc.y, loc.z]], numpy.float32)
+
+
+def make_rupture(trt, mag, aspect_ratio, seismo, nodal_plane_tup, hc_tup,
+                 occurrence_rate=0, tom=None):
+    hc = Point(*hc_tup)
+    np = NodalPlane(*nodal_plane_tup)
+    surface = PointSource._get_rupture_surface(mag, np, hc)
+    rup = ParametricProbabilisticRupture(
+        mag, np.rake, trt, hc, surface, occurrence_rate, tom)
+    return rup
