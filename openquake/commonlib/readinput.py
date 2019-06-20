@@ -55,7 +55,8 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
-
+seismo_dt = [('upper', float), ('lower', float)]
+plane_dt = [('strike', float), ('dip', float), ('rake', float)]
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
@@ -825,9 +826,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         monitor.hdf5['rup_info/mags'] = sorted(mags)
         monitor.hdf5['rup_info/msrs'] = numpy.array(sorted(msrs))
         monitor.hdf5['rup_info/aspects'] = sorted(aspects)
-        monitor.hdf5['rup_info/seismos'] = sorted(seismos)
+        monitor.hdf5['rup_info/seismos'] = numpy.array(sorted(seismos),
+                                                       seismo_dt)
         monitor.hdf5['rup_info/depths'] = sorted(deps)
-        monitor.hdf5['rup_info/nodal_planes'] = sorted(planes)
+        monitor.hdf5['rup_info/nodal_planes'] = numpy.array(sorted(planes),
+                                                            plane_dt)
     logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     # log if some source file is being used more than once
