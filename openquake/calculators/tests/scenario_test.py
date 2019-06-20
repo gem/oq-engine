@@ -130,6 +130,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_11(self):
         # compute the limit distances for a GMV of 0.01g
         self.run_calc(case_11.__file__, 'job.ini')
+        self.calc.rup.tectonic_region_type = 'Subduction Deep'
         oq = self.calc.oqparam
         gsim_lt = self.calc.datastore['csm_info/gsim_lt']
         dists = gsim_lt.get_limit_distances(self.calc.rup, oq)
