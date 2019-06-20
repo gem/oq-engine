@@ -771,9 +771,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         if hasattr(src, 'nodal_plane_distribution'):
                             planes.update(tuple(item[1]) for item in
                                           src.nodal_plane_distribution.data)
-
-                        msrs.add(src.magnitude_scaling_relationship
-                                 .__class__.__name__)
+                        if hasattr(src, 'magnitude_scaling_relationship'):
+                            msrs.add(src.magnitude_scaling_relationship
+                                     .__class__.__name__)
                         if src.rupture_aspect_ratio:
                             aspects.add(src.rupture_aspect_ratio)
                         if hasattr(src, 'upper_seismogenic_depth'):
