@@ -350,18 +350,18 @@ class ContextMaker(object):
                 pne_array[:, slc, i] = pno
         return pne_array
 
-    def get_limit_distances(self, sctx, rctx, dctx, imts, minimum_intensity):
+    def get_limit_distances(self, sites, rup, imts, minimum_intensity):
         """
         Calculate the distances over which the GMVs are lower than the
         minimum_intensity for all IMTs and GSIMs.
 
-        :param sctx: a SiteContext
-        :param rctx: a RuptureContext
-        :param dctx: a DistanceContext
+        :param sites: a SiteCollection
+        :param rup: a rupture
         :param imts: a sequence on intensity measure strings
         :param minimum_intensity: a dictionary TRT -> minimum_intensity
         :returns: a list of limit distances, one per GSIM
         """
+        sctx, dctx = self.make_contexts(sites, rup)
         limit_dist = [0 for _ in self.gsims]
         fdist = getattr(dctx, self.filter_distance)
         for im in imts:
@@ -372,7 +372,7 @@ class ContextMaker(object):
             imt = imt_module.from_string(im)
             for g, gsim in enumerate(self.gsims):
                 mean, _ = gsim.get_mean_and_stddevs(
-                    sctx, rctx, dctx, imt, [const.StdDev.TOTAL])
+                    sctx, rup, dctx, imt, [const.StdDev.TOTAL])
                 for i, gmv in enumerate(numpy.exp(mean)):
                     if gmv <= minint:
                         limit_dist[g] = max(limit_dist[g], fdist[i])

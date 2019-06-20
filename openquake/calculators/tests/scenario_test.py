@@ -131,8 +131,6 @@ class ScenarioTestCase(CalculatorTestCase):
         # compute the limit distance for a GMV of 0.01g
         self.run_calc(case_11.__file__, 'job.ini')
         oq = self.calc.oqparam
-        sctx, dctx = self.calc.cmaker.make_contexts(
-            self.calc.sitecol, self.calc.rup)
         dists = self.calc.cmaker.get_limit_distances(
-            sctx, self.calc.rup, dctx, oq.imtls, oq.minimum_intensity)
+            self.calc.sitecol, self.calc.rup, oq.imtls, oq.minimum_intensity)
         aae(dists, [163.5109114, 163.5109114])
