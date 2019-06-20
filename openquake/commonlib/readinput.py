@@ -775,7 +775,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         if hasattr(src, 'magnitude_scaling_relationship'):
                             msrs.add(src.magnitude_scaling_relationship
                                      .__class__.__name__)
-                        if src.rupture_aspect_ratio:
+                        if getattr(src, 'rupture_aspect_ratio', None):
                             aspects.add(src.rupture_aspect_ratio)
                         if hasattr(src, 'upper_seismogenic_depth'):
                             seismos.add((src.upper_seismogenic_depth,
