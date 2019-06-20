@@ -1640,6 +1640,8 @@ class GsimLogicTree(object):
         :param oq:
             an object with attributes imtls, maximum_distance,
             minimum_intensity, reference_vs30_value, ...
+        :returns:
+            the limit distances, one per each GSIM in the TRT
         """
         hc = rup.hypocenter
         trt = rup.tectonic_region_type
