@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Improved the progress log, that was delayed for large classical calculations
   * Exported the ruptures as 3D multi-polygons (instead of 2D ones)
   * Changed the `aggregate_by` exports for consistency with the others
   * Changed the losses_by_event exporter for ebrisk, to make it more
