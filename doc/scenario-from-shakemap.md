@@ -56,8 +56,7 @@ For that, one need a `job.ini` file like the following::
 
 This example refers to the 2007 Mw8.0 Pisco earthquake in Peru
 (see https://earthquake.usgs.gov/earthquakes/eventpage/usp000fjta#shakemap).
-The risk can be computed by running the risk file against the prepared
-hazard calculation:
+The risk can be computed by running the risk job file against the prepared calculation:
 
 ```bash
 $ oq engine --run job.ini
@@ -67,10 +66,10 @@ The engine will perform the following operations:
 
 1. download the ShakeMap from the USGS web service and convert it into a format
    suitable for further processing, i.e. a ShakeMaps array with lon, lat fields
-2. the ShakeMaps array will be associated to the hazard sites in the region
-   covered by the ShakeMaps
+2. the ShakeMap array will be associated to the hazard sites in the region
+   covered by the ShakeMap
 3. by using the parameters `truncation_level` and
-   `number_of_ground_motion_fields` a set of ground motion fields following the
+   `number_of_ground_motion_fields` a set of ground motion fields (GMFs) following the
    truncated Gaussian distribution will be generated and stored in the datastore
 4. a regular risk calculation will be performed by using such GMFs and the
    assets within the region covered by the shakemap.
@@ -85,8 +84,8 @@ grid is on the sea or on high mountains, so actually there are
 around ~500 effective sites. Computing a correlation matrix of size
 500 x 500 is feasible, so the risk computation can be performed.
 Clearly in situations in which the number of hazard sites is too large,
-approximations will have to be made, like neglecting the spatial or cross
-correlation effects.
+approximations will have to be made, such as neglecting the spatial or cross
+correlation effects, or using a larger `region_grid_spacing`.
 
 By default the engine tries to compute both the spatial correlation and the
 cross correlation between different intensity measure types. For each kind
@@ -106,12 +105,14 @@ spatial_correlation = full, cross_correlation = yes
 ```
 
 `yes` means using the correlation matrix of the Silva-Horspool paper;
-'no' mean using a unity correlation matrix; `full` means using a correlation
-matrix full of 1s in all positions.
+`no` mean using a unity correlation matrix; `full` means using an 
+all-ones correlation matrix.
 
-Disabling some kind of correlation is useful to see how big the effect
-of the correlation is; sometimes it is also necessary because the
-calculation cannot be performed otherwise.
+Disabling either the spatial correlation or the cross correlation (or both)
+might be useful to see how significant the effect of the correlation is on the
+damage/loss estimates; sometimes it is also made necessary because the
+calculation simply cannot be performed otherwise due to the large size of the
+resulting correlation matrices.
 
 In particular, due to numeric errors, the spatial correlation matrix - that
 by construction contains only positive numbers - can still produce small
