@@ -55,8 +55,6 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
-seismo_dt = [('upper', float), ('lower', float)]
-plane_dt = [('strike', float), ('dip', float), ('rake', float)]
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
@@ -723,11 +721,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         filename = None
     source_ids = set()
     mags = set()
-    msrs = set()
-    aspects = set()
-    deps = set()
-    planes = set()
-    seismos = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
             source_model_lt.apply_uncertainties, sm.path)
@@ -766,20 +759,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                             srcmags = [item[0] for item in
                                        src.get_annual_occurrence_rates()]
                         mags.update(srcmags)
-                        if hasattr(src, 'hypocenter_distribution'):
-                            deps.update(item[1] for item in
-                                        src.hypocenter_distribution.data)
-                        if hasattr(src, 'nodal_plane_distribution'):
-                            planes.update(tuple(item[1]) for item in
-                                          src.nodal_plane_distribution.data)
-                        if hasattr(src, 'magnitude_scaling_relationship'):
-                            msrs.add(src.magnitude_scaling_relationship
-                                     .__class__.__name__)
-                        if getattr(src, 'rupture_aspect_ratio', None):
-                            aspects.add(src.rupture_aspect_ratio)
-                        if hasattr(src, 'upper_seismogenic_depth'):
-                            seismos.add((src.upper_seismogenic_depth,
-                                         src.lower_seismogenic_depth))
                         source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
@@ -823,14 +802,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
     if monitor.hdf5:
-        monitor.hdf5['rup_info/mags'] = sorted(mags)
-        monitor.hdf5['rup_info/msrs'] = numpy.array(sorted(msrs))
-        monitor.hdf5['rup_info/aspects'] = sorted(aspects)
-        monitor.hdf5['rup_info/seismos'] = numpy.array(sorted(seismos),
-                                                       seismo_dt)
-        monitor.hdf5['rup_info/depths'] = sorted(deps)
-        monitor.hdf5['rup_info/nodal_planes'] = numpy.array(sorted(planes),
-                                                            plane_dt)
+        monitor.hdf5['source_mags'] = sorted(mags)
     logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     # log if some source file is being used more than once
