@@ -722,6 +722,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         filename = None
     source_ids = set()
     mags = set()
+    deps = set()
+    planes = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
             source_model_lt.apply_uncertainties, sm.path)
@@ -760,6 +762,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                             srcmags = [item[0] for item in
                                        src.get_annual_occurrence_rates()]
                         mags.update(srcmags)
+                        if hasattr(src, 'hypocenter_distribution'):
+                            deps.update(item[1] for item in
+                                        src.hypocenter_distribution.data)
+                        if hasattr(src, 'nodal_plane_distribution'):
+                            planes.update(tuple(item[1]) for item in
+                                          src.nodal_plane_distribution.data)
                         source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
@@ -803,7 +811,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
     if monitor.hdf5:
-        monitor.hdf5['source_mags'] = sorted(mags)
+        monitor.hdf5['rup_info/mags'] = sorted(mags)
+        monitor.hdf5['rup_info/depths'] = sorted(deps)
+        monitor.hdf5['rup_info/nodal_planes'] = sorted(planes)
     logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     # log if some source file is being used more than once
