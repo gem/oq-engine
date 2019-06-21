@@ -21,7 +21,7 @@ import numpy
 from openquake.baselib import config
 from openquake.baselib.hdf5 import vfloat64
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import imt as imt_module, const
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -170,7 +170,6 @@ class ContextMaker(object):
             for gsim, rlzis in gsims.items():
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
-        self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
 
@@ -350,6 +349,38 @@ class ContextMaker(object):
                     pno = rupture.get_probability_no_exceedance(poes)
                 pne_array[:, slc, i] = pno
         return pne_array
+
+    # tested in scenario/case_11
+    def get_limit_distance(self, sites, rup, imts, minimum_intensity):
+        """
+        Calculate the distance over which the GMVs are lower than the
+        minimum_intensity for all IMTs and GSIMs.
+
+        :param sites: a SiteCollection
+        :param rup: a rupture
+        :param imts: a sequence on intensity measure strings
+        :param minimum_intensity: a dictionary TRT -> minimum_intensity
+        :returns: the limit distance
+        """
+        if not minimum_intensity:
+            return self.maximum_distance[rup.tectonic_region_type]
+        sctx, dctx = self.make_contexts(sites, rup)
+        fdist = getattr(dctx, self.filter_distance)
+        limit_dist = 0
+        for im in imts:
+            try:
+                minint = minimum_intensity[im]
+            except KeyError:
+                minint = minimum_intensity['default']
+            imt = imt_module.from_string(im)
+            for gsim in self.gsims:
+                mean, _ = gsim.get_mean_and_stddevs(
+                    sctx, rup, dctx, imt, [const.StdDev.TOTAL])
+                for i, gmv in enumerate(numpy.exp(mean)):
+                    if gmv <= minint:
+                        limit_dist = max(limit_dist, fdist[i])
+                        break
+        return limit_dist or self.maximum_distance[rup.tectonic_region_type]
 
 
 class BaseContext(metaclass=abc.ABCMeta):
