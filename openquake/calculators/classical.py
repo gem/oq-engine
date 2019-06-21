@@ -175,6 +175,11 @@ class ClassicalCalculator(base.HazardCalculator):
             parent.close()
             self.calc_stats(parent)  # post-processing
             return {}
+        try:
+            self.src_filter.integration_distance = self.datastore[
+                'integration_distance']
+        except KeyError:
+            logging.warn('No integration_distance')
         with self.monitor('managing sources', autoflush=True):
             smap = parallel.Starmap(
                 self.core_task.__func__, monitor=self.monitor())
