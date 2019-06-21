@@ -803,9 +803,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         yield sm
     if monitor.hdf5:
         mags = sorted(mags)
-        trts = sorted(set(trts))
         idist = gsim_lt.get_integration_distance(mags, oqparam)
-        dt = [('mag', float)] + [(trt, float) for trt in trts]
+        dt = [('mag', float)] + [(trt, float) for trt in gsim_lt.values]
         arr = numpy.zeros(len(mags), dt)
         arr['mag'] = mags
         for trt in trts:
