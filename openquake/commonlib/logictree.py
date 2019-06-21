@@ -1635,25 +1635,25 @@ class GsimLogicTree(object):
                               i, tuple(lt_uid))
 
     # tested in scenario/case_11
-    def get_integration_distance(self, mags, oq):
+    def get_integration_distance(self, mags_by_trt, oq):
         """
-        :param magnitudes:
-            a list of magnitudes
+        :param mags_by_trt:
+            a dictionary TRT -> magnitudes
         :param oq:
             an object with attributes imtls, maximum_distance,
             minimum_intensity, reference_vs30_value, ...
         :returns:
             an :class:`openquake.hazardlib.calc.filters.IntegrationDistance`
         """
-        out = {trt: [] for trt in self.values}
-        for trt, gsims in self.values.items():
+        out = {trt: [] for trt in mags_by_trt}
+        for trt, mags in mags_by_trt.items():
             dists = valid.sqrscale(0, oq.maximum_distance[trt], 50)
             lons = dists * geo.utils.KM_TO_DEGREES
             lats = numpy.zeros(50)
             deps = numpy.zeros(50)
             sites = site.SiteCollection.from_points(
                 lons, lats, deps, oq, self.req_site_params)
-            cmaker = ContextMaker(trt, gsims, oq.maximum_distance)
+            cmaker = ContextMaker(trt, self.values[trt], oq.maximum_distance)
             for mag in mags:
                 rup = make_rupture(trt, mag)  # pointwise in (0, 0, 10)
                 dist = cmaker.get_limit_distance(

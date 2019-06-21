@@ -108,7 +108,8 @@ class IntegrationDistance(collections.abc.Mapping):
         self.dic = dic or {}  # TRT -> float or list of pairs
         self.magdist = {}  # TRT -> (magnitudes, distances)
         for trt, value in self.dic.items():
-            if isinstance(value, list):  # assume a list of pairs (mag, dist)
+            if isinstance(value, (list, numpy.ndarray)):
+                # assume a list of pairs (mag, dist)
                 self.magdist[trt] = value
             else:
                 self.dic[trt] = float(value)
@@ -176,6 +177,13 @@ class IntegrationDistance(collections.abc.Mapping):
 
     def __len__(self):
         return len(self.dic)
+
+    def __toh5__(self):
+        dic = {trt: numpy.array(dist) for trt, dist in self.dic.items()}
+        return dic, {}
+
+    def __fromh5__(self, dic, attrs):
+        self.__init__(dic)
 
     def __repr__(self):
         return repr(self.dic)
