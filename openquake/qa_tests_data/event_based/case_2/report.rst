@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 2
 
 ============== ===================
 checksum32     3,182,629,131      
-date           2019-05-10T05:07:29
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:21
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = ?
@@ -59,7 +59,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00925 NaN    0.00925 0.00925 1      
+read_source_models 0.03336 NaN    0.03336 0.03336 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -74,5 +74,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00925  0.48438   1     
+total read_source_models 0.03336  0.0       1     
 ======================== ======== ========= ======

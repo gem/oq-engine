@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     4,102,228,417      
-date           2019-05-10T05:07:37
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:30
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = ?
@@ -43,12 +43,10 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Exposure model
 --------------
-=============== ========
-#assets         7       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     7
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -75,7 +73,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00794 NaN    0.00794 0.00794 1      
+read_source_models 0.00598 NaN    0.00598 0.00598 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -90,6 +88,6 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00794   0.0       1     
-reading exposure         7.842E-04 0.0       1     
+total read_source_models 0.00598   0.0       1     
+reading exposure         6.552E-04 0.0       1     
 ======================== ========= ========= ======

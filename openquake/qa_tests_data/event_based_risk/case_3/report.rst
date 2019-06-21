@@ -3,8 +3,8 @@ Event Based Risk Lisbon
 
 ============== ===================
 checksum32     1,182,973,928      
-date           2019-05-10T05:07:38
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:30
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 1, num_levels = 40, num_rlzs = 8
@@ -92,7 +92,7 @@ SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 5,226        5,226
 #TRT models   4     
 #eff_ruptures 34,382
 #tot_ruptures 34,382
-#tot_weight   3,438 
+#tot_weight   34,382
 ============= ======
 
 Estimated data transfer for the avglosses
@@ -101,12 +101,10 @@ Estimated data transfer for the avglosses
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -118,26 +116,26 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
 ====== ========= ==== ===== ===== ============ ========= ========= =======
-2      0         A    44    48    6,075        1.49420   0.0       2.00000
-0      0         A    0     4     6,075        1.48355   0.0       2.00000
-0      2         A    8     12    4,901        1.20062   0.0       2.00000
-2      2         A    52    56    4,901        1.18333   0.0       2.00000
-1      10        A    12    16    1,116        0.31234   0.0       0.0    
-2      1         A    48    52    989          0.30479   0.0       2.00000
-3      10        A    56    60    1,116        0.30165   0.0       2.00000
-3      6         A    72    76    1,054        0.28566   0.0       2.00000
-0      1         A    4     8     989          0.27007   0.0       2.00000
-1      6         A    28    32    1,054        0.26378   0.0       0.0    
-1      3         A    16    20    812          0.20267   0.0       2.00000
-3      3         A    60    64    812          0.20247   0.0       0.0    
-3      9         A    84    88    612          0.17486   0.0       0.0    
-1      9         A    40    44    612          0.15892   0.0       2.00000
-3      5         A    68    72    551          0.15743   0.0       2.00000
-1      5         A    24    28    551          0.15267   0.0       0.0    
-3      7         A    76    80    429          0.12361   0.0       0.0    
-1      7         A    32    36    429          0.12169   0.0       2.00000
-3      8         A    80    84    342          0.10120   0.0       0.0    
-1      4         A    20    24    310          0.09970   0.0       0.0    
+0      0         A    0     4     6,075        0.05784   0.0       2.00000
+2      0         A    44    48    6,075        0.05628   0.0       2.00000
+0      2         A    8     12    4,901        0.05626   0.0       2.00000
+2      2         A    52    56    4,901        0.04544   0.0       2.00000
+1      4         A    20    24    310          0.03603   0.0       0.0    
+3      10        A    56    60    1,116        0.02895   0.0       2.00000
+1      10        A    12    16    1,116        0.02592   0.0       0.0    
+0      1         A    4     8     989          0.01890   0.0       2.00000
+3      9         A    84    88    612          0.01642   0.0       0.0    
+3      4         A    64    68    310          0.01629   0.0       0.0    
+2      1         A    48    52    989          0.01626   0.0       2.00000
+1      9         A    40    44    612          0.01441   0.0       2.00000
+3      6         A    72    76    1,054        0.01419   0.0       2.00000
+1      6         A    28    32    1,054        0.01414   0.0       0.0    
+1      7         A    32    36    429          0.01249   0.0       2.00000
+3      5         A    68    72    551          0.01143   0.0       2.00000
+1      5         A    24    28    551          0.01113   0.0       0.0    
+1      3         A    16    20    812          0.00919   0.0       2.00000
+3      7         A    76    80    429          0.00916   0.0       0.0    
+3      3         A    60    64    812          0.00868   0.0       0.0    
 ====== ========= ==== ===== ===== ============ ========= ========= =======
 
 Computation times by source typology
@@ -145,7 +143,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    8.78356   22    
+A    0.49378   22    
 ==== ========= ======
 
 Duplicated sources
@@ -155,20 +153,20 @@ Found 11 source(s) with the same ID and 11 true duplicate(s)
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =======
-operation-duration mean      stddev    min       max       outputs
-read_source_models 0.14561   0.01339   0.13614   0.15508   2      
-sample_ruptures    0.73491   0.46593   0.27240   1.49737   12     
-get_eid_rlz        6.967E-04 2.198E-04 3.793E-04 9.284E-04 11     
-================== ========= ========= ========= ========= =======
+================== ========= ========= ========= ======= =======
+operation-duration mean      stddev    min       max     outputs
+get_eid_rlz        7.591E-04 2.774E-04 4.191E-04 0.00124 11     
+read_source_models 0.15748   0.03099   0.13557   0.17939 2      
+sample_ruptures    0.04384   0.01479   0.01961   0.06443 12     
+================== ========= ========= ========= ======= =======
 
 Data transfer
 -------------
 ================== ================================================ ========
 task               sent                                             received
+get_eid_rlz        self=18.58 KB                                    3.47 KB 
 read_source_models converter=626 B fnames=232 B                     20.81 KB
-sample_ruptures    param=47.43 KB sources=31.3 KB srcfilter=2.57 KB 12.9 KB 
-get_eid_rlz        self=18.31 KB                                    3.47 KB 
+sample_ruptures    param=47.43 KB sources=31.3 KB srcfilter=2.58 KB 13.08 KB
 ================== ================================================ ========
 
 Slowest operations
@@ -176,12 +174,11 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total sample_ruptures    8.81888   4.78906   12    
-iter_ruptures            8.73031   0.0       22    
-total read_source_models 0.29122   0.0       2     
-saving ruptures          0.03133   0.0       10    
-total get_eid_rlz        0.00766   0.0       11    
-store source model       0.00445   0.0       2     
-store source_info        0.00168   0.0       1     
-reading exposure         6.833E-04 0.0       1     
+total sample_ruptures    0.52607   0.86328   12    
+total read_source_models 0.31496   0.0       2     
+saving ruptures          0.02323   0.0       10    
+total get_eid_rlz        0.00835   0.0       11    
+store source model       0.00822   0.0       2     
+store source_info        0.00192   0.0       1     
+reading exposure         6.838E-04 0.0       1     
 ======================== ========= ========= ======
