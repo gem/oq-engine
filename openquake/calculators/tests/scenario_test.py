@@ -22,6 +22,7 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11)
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.hazardlib.contexts import ContextMaker
 
 
 def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
@@ -133,5 +134,11 @@ class ScenarioTestCase(CalculatorTestCase):
         self.calc.rup.tectonic_region_type = 'Subduction Deep'
         oq = self.calc.oqparam
         gsim_lt = self.calc.datastore['csm_info/gsim_lt']
-        dists = gsim_lt.get_limit_distances(self.calc.rup, oq)
-        aae(dists, [133.1610045, 160.9100938])
+        dist = gsim_lt.get_limit_distance([self.calc.rup.mag], oq)
+        self.assertEqual(dist, {'Subduction Deep': [162.2450929446697]})
+
+        cmaker = ContextMaker(
+            'Subduction Deep', self.calc.gsims, oq.maximum_distance)
+        dist = cmaker.get_limit_distance(
+            self.calc.sitecol, self.calc.rup, oq.imtls, oq.minimum_intensity)
+        aae(dist, 163.5109114)

@@ -781,7 +781,7 @@ def sqrscale(x_min, x_max, n):
     """
     if not (isinstance(n, int) and n > 0):
         raise ValueError('n must be a positive integer, got %s' % n)
-    if x_min <= 0:
+    if x_min < 0:
         raise ValueError('x_min must be positive, got %s' % x_min)
     if x_max <= x_min:
         raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
