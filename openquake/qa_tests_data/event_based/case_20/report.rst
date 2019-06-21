@@ -2,9 +2,9 @@ British Columbia With Vs30
 ==========================
 
 ============== ===================
-checksum32     2,623,339,741      
-date           2019-05-10T05:07:29
-engine_version 3.5.0-gitbaeb4c1e35
+checksum32     226,163,923        
+date           2019-06-21T09:42:20
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -43,19 +43,17 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Exposure model
 --------------
-=============== ========
-#assets         2       
-#taxonomies     2       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     2
+#taxonomies 2
+=========== =
 
-========== ======= ====== === === ========= ==========
-taxonomy   mean    stddev min max num_sites num_assets
-RES1-W1-HC 1.00000 NaN    1   1   1         1         
-RES1-W1-LC 1.00000 NaN    1   1   1         1         
-*ALL*      1.00000 0.0    1   1   2         2         
-========== ======= ====== === === ========= ==========
+========== ======= ======= === === ========= ==========
+taxonomy   mean    stddev  min max num_sites num_assets
+RES1-W1-HC 1.00000 NaN     1   1   1         1         
+RES1-W1-LC 1.00000 NaN     1   1   1         1         
+*ALL*      0.22222 0.44096 0   1   9         2         
+========== ======= ======= === === ========= ==========
 
 Slowest sources
 ---------------
@@ -81,7 +79,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05397 0.01286 0.04271 0.07197 5      
+read_source_models 0.05809 0.01929 0.03988 0.08154 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -96,6 +94,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.26985  0.0       5     
-reading exposure         0.00145  0.0       1     
+total read_source_models 0.29044  0.0       5     
+reading exposure         0.00153  0.0       1     
 ======================== ======== ========= ======

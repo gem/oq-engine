@@ -3,8 +3,8 @@ Scenario Damage QA Test 4
 
 ============== ===================
 checksum32     1,140,149,609      
-date           2019-05-10T05:07:24
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:12
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 3, num_levels = 60, num_rlzs = 1
@@ -66,12 +66,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         3       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     3
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -86,5 +84,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 3.927E-04 0.0       1     
+reading exposure 4.070E-04 0.0       1     
 ================ ========= ========= ======
