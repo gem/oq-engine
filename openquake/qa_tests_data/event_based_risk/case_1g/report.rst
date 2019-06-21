@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     2,390,181,475      
-date           2019-05-10T05:07:33
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:24
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = ?
@@ -42,12 +42,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -74,7 +72,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00612 NaN    0.00612 0.00612 1      
+read_source_models 0.00838 NaN    0.00838 0.00838 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -89,6 +87,6 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00612   0.0       1     
-reading exposure         6.375E-04 0.0       1     
+total read_source_models 0.00838   0.0       1     
+reading exposure         6.263E-04 0.0       1     
 ======================== ========= ========= ======

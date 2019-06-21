@@ -3,8 +3,8 @@ Reduced Hazard Italy
 
 ============== ===================
 checksum32     1,879,307,037      
-date           2019-05-10T05:07:28
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:19
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 148, num_levels = 30, num_rlzs = ?
@@ -43,12 +43,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Exposure model
 --------------
-=============== ========
-#assets         151     
-#taxonomies     17      
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== ===
+#assets     151
+#taxonomies 17 
+=========== ===
 
 ================= ======= ======= === === ========= ==========
 taxonomy          mean    stddev  min max num_sites num_assets
@@ -92,7 +90,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.02785 NaN    0.02785 0.02785 1      
+read_source_models 0.02925 NaN    0.02925 0.02925 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -107,6 +105,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.02785  0.0       1     
-reading exposure         0.00245  0.0       1     
+total read_source_models 0.02925  0.0       1     
+reading exposure         0.00273  0.0       1     
 ======================== ======== ========= ======

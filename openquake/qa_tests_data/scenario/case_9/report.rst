@@ -3,8 +3,8 @@ Scenario QA Test, Case 9, Multiple GSIMs
 
 ============== ===================
 checksum32     572,372,510        
-date           2019-05-10T05:07:13
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:41:55
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 3, num_levels = 1, num_rlzs = 2
