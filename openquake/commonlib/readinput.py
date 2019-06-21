@@ -32,7 +32,7 @@ import numpy
 import requests
 
 from openquake.baselib import performance, hdf5, parallel
-from openquake.baselib.general import random_filter
+from openquake.baselib.general import random_filter, AccumDict
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -720,7 +720,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
         filename = None
     source_ids = set()
-    mags = set()
+    mags = AccumDict(accum=set())  # TRT -> mags
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
             source_model_lt.apply_uncertainties, sm.path)
@@ -758,7 +758,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         else:
                             srcmags = [item[0] for item in
                                        src.get_annual_occurrence_rates()]
-                        mags.update(srcmags)
+                        mags[src.tectonic_region_type].update(srcmags)
                         source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
@@ -802,16 +802,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
     if monitor.hdf5:
-        mags = sorted(mags)
-        idist = gsim_lt.get_integration_distance(mags, oqparam)
-        dt = [('mag', float)] + [(trt, float) for trt in gsim_lt.values]
-        arr = numpy.zeros(len(mags), dt)
-        arr['mag'] = mags
-        for trt in gsim_lt.values:
-            arr[trt] = [dist for mag, dist in idist.dic[trt]]
-        monitor.hdf5['integration_distance'] = arr
-    logging.info('The composite source model has {:,d} ruptures'.format(nr))
+        mags_by_trt = {trt: sorted(ms) for trt, ms in mags.items()}
+        idist = gsim_lt.get_integration_distance(mags_by_trt, oqparam)
+        monitor.hdf5['integration_distance'] = idist
+        monitor.hdf5.set_nbytes('integration_distance')
 
+    logging.info('The composite source model has {:,d} ruptures'.format(nr))
     # log if some source file is being used more than once
     dupl = 0
     for fname, hits in make_sm.fname_hits.items():
