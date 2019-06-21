@@ -2,9 +2,9 @@ Event Based Bogota
 ==================
 
 ============== ===================
-checksum32     2,254,739,311      
-date           2019-05-10T05:07:26
-engine_version 3.5.0-gitbaeb4c1e35
+checksum32     4,020,014,859      
+date           2019-06-21T09:42:17
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 5, num_levels = 104, num_rlzs = ?
@@ -44,12 +44,10 @@ structural_vulnerability `vulnerability_model_bog.xml <vulnerability_model_bog.x
 
 Exposure model
 --------------
-=============== ========
-#assets         5       
-#taxonomies     4       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     5
+#taxonomies 4
+=========== =
 
 ===================== ======= ====== === === ========= ==========
 taxonomy              mean    stddev min max num_sites num_assets
@@ -100,7 +98,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.23045 0.25477 0.05030 0.41060 2      
+read_source_models 0.27073 0.31055 0.05113 0.49032 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -115,6 +113,6 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.46090   0.99609   2     
-reading exposure         5.875E-04 0.0       1     
+total read_source_models 0.54145   0.65234   2     
+reading exposure         4.535E-04 0.0       1     
 ======================== ========= ========= ======

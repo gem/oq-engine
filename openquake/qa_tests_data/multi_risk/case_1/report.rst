@@ -2,9 +2,9 @@ Volcano example
 ===============
 
 ============== ===================
-checksum32     1,677,385,096      
-date           2019-05-10T05:07:13
-engine_version 3.5.0-gitbaeb4c1e35
+checksum32     480,304,266        
+date           2019-06-21T09:41:55
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 172, num_levels = 45, num_rlzs = 1
@@ -68,12 +68,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         173     
-#taxonomies     4       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== ===
+#assets     173
+#taxonomies 4  
+=========== ===
 
 ============= ======= ======= === === ========= ==========
 taxonomy      mean    stddev  min max num_sites num_assets
@@ -89,5 +87,5 @@ Slowest operations
 ================ ======== ========= ======
 operation        time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00275  0.0       1     
+reading exposure 0.00317  0.0       1     
 ================ ======== ========= ======

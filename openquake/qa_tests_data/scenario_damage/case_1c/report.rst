@@ -3,8 +3,8 @@ Scenario Damage
 
 ============== ===================
 checksum32     711,595,636        
-date           2019-05-10T05:07:25
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:12
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 1, num_levels = 26, num_rlzs = 1
@@ -67,12 +67,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -84,8 +82,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-saving gmfs         0.00201   0.0       1     
+saving gmfs         0.00289   0.0       1     
 building riskinputs 0.00198   0.0       1     
-computing gmfs      0.00156   0.0       1     
-reading exposure    5.515E-04 0.0       1     
+computing gmfs      0.00146   0.0       1     
+reading exposure    5.975E-04 0.0       1     
 =================== ========= ========= ======

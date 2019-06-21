@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     1,437,466,600      
-date           2019-05-10T05:07:26
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:17
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 1, num_levels = 5, num_rlzs = ?
@@ -65,7 +65,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05261 0.00731 0.04745 0.05778 2      
+read_source_models 0.06980 0.00190 0.06846 0.07115 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -80,5 +80,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.10523  0.0       2     
+total read_source_models 0.13960  0.0       2     
 ======================== ======== ========= ======

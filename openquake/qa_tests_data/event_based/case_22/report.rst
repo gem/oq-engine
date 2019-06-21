@@ -2,12 +2,12 @@ Test case for the SplitSigma modified GMPE
 ==========================================
 
 ============== ===================
-checksum32     3,396,916,014      
-date           2019-05-16T13:37:03
-engine_version 3.5.0-gite43b9c0a1f
+checksum32     4,125,479,680      
+date           2019-06-21T09:42:16
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
-num_sites = 624, num_levels = 40, num_rlzs = ?
+num_sites = 36, num_levels = 40, num_rlzs = ?
 
 Parameters
 ----------
@@ -15,8 +15,8 @@ Parameters
 calculation_mode                'event_based'     
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
-investigation_time              50.0              
-ses_per_logic_tree_path         3                 
+investigation_time              5.0               
+ses_per_logic_tree_path         1                 
 truncation_level                3.0               
 rupture_mesh_spacing            2.0               
 complex_fault_mesh_spacing      2.0               
@@ -59,20 +59,20 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01135 NaN    0.01135 0.01135 1      
+read_source_models 0.02247 NaN    0.02247 0.02247 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== =========================== ========
-task               sent                        received
-read_source_models converter=313 B fnames=79 B 2.29 KB 
-================== =========================== ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=313 B fnames=102 B 2.31 KB 
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.01135  0.48438   1     
+total read_source_models 0.02247  0.0       1     
 ======================== ======== ========= ======
