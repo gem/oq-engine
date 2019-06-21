@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     2,348,158,649      
-date           2019-05-10T05:07:25
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:16
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 2, num_levels = 4, num_rlzs = ?
@@ -67,7 +67,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.53577 NaN    0.53577 0.53577 1      
+read_source_models 0.51306 NaN    0.51306 0.51306 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -82,5 +82,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.53577  0.06641   1     
+total read_source_models 0.51306  0.0       1     
 ======================== ======== ========= ======

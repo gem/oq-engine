@@ -3,8 +3,8 @@ event based two source models
 
 ============== ===================
 checksum32     1,852,256,743      
-date           2019-05-10T05:07:11
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:41:53
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 1, num_levels = 11, num_rlzs = ?
@@ -43,12 +43,10 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -85,7 +83,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01326 0.00954 0.00651 0.02000 2      
+read_source_models 0.01210 0.00884 0.00585 0.01835 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -100,6 +98,6 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.02652   0.0       2     
-reading exposure         5.744E-04 0.0       1     
+total read_source_models 0.02421   0.25000   2     
+reading exposure         5.198E-04 0.0       1     
 ======================== ========= ========= ======
