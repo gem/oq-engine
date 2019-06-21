@@ -3,8 +3,8 @@ Scenario Risk for Nepal with 20 assets
 
 ============== ===================
 checksum32     486,158,159        
-date           2019-05-10T05:07:14
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:41:56
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 20, num_levels = 8, num_rlzs = 1
@@ -67,12 +67,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         20      
-#taxonomies     4       
-deductibile     relative
-insurance_limit relative
-=============== ========
+=========== ==
+#assets     20
+#taxonomies 4 
+=========== ==
 
 ========================== ======= ====== === === ========= ==========
 taxonomy                   mean    stddev min max num_sites num_assets
@@ -88,8 +86,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.02439   0.0       1     
-saving gmfs         0.00728   0.0       1     
-computing gmfs      0.00147   0.0       1     
-reading exposure    8.790E-04 0.0       1     
+building riskinputs 0.02991   0.0       1     
+saving gmfs         0.00877   0.25000   1     
+computing gmfs      0.00148   0.0       1     
+reading exposure    8.290E-04 0.0       1     
 =================== ========= ========= ======

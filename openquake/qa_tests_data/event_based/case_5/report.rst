@@ -3,8 +3,8 @@ Germany_SHARE Combined Model event_based
 
 ============== ===================
 checksum32     1,250,935,976      
-date           2019-05-10T05:07:26
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:17
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 100, num_levels = 1, num_rlzs = ?
@@ -81,7 +81,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05250 0.06932 0.00915 0.13245 3      
+read_source_models 0.05300 0.06713 0.00889 0.13025 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -96,5 +96,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.15750  0.26172   3     
+total read_source_models 0.15899  0.0       3     
 ======================== ======== ========= ======

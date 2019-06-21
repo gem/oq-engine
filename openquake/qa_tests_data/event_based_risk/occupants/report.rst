@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     515,431,980        
-date           2019-05-10T05:07:31
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:23
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -76,16 +76,14 @@ source_model.xml 0      Active Shallow Crust 482          482
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 30 tasks = 1.64 KB
+7 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 20 tasks = 1.09 KB
 
 Exposure model
 --------------
-=============== ========
-#assets         7       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     7
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -97,7 +95,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
 ====== ========= ==== ===== ===== ============ ========= ========= =======
-0      1         S    0     2     482          0.04982   0.0       2.00000
+0      1         S    0     2     482          0.05491   0.0       2.00000
 ====== ========= ==== ===== ===== ============ ========= ========= =======
 
 Computation times by source typology
@@ -105,25 +103,25 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.04982   1     
+S    0.05491   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ========= ======= =======
-operation-duration mean    stddev    min       max     outputs
-read_source_models 0.00734 NaN       0.00734   0.00734 1      
-sample_ruptures    0.07728 NaN       0.07728   0.07728 1      
-get_eid_rlz        0.00165 3.120E-04 8.950E-04 0.00228 28     
-================== ======= ========= ========= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+get_eid_rlz        0.00206 6.519E-04 0.00107 0.00320 20     
+read_source_models 0.00649 NaN       0.00649 0.00649 1      
+sample_ruptures    0.08483 NaN       0.08483 0.08483 1      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================================= ========
 task               sent                                          received
+get_eid_rlz        self=42.88 KB                                 8.76 KB 
 read_source_models converter=305 B fnames=116 B                  1.49 KB 
-sample_ruptures    param=2.81 KB sources=1.12 KB srcfilter=219 B 68.68 KB
-get_eid_rlz        self=53.62 KB                                 10.71 KB
+sample_ruptures    param=2.81 KB sources=1.12 KB srcfilter=220 B 68.7 KB 
 ================== ============================================= ========
 
 Slowest operations
@@ -131,12 +129,11 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total sample_ruptures    0.07728   0.0       1     
-iter_ruptures            0.04912   0.0       1     
-total get_eid_rlz        0.04612   0.0       28    
-total read_source_models 0.00734   0.0       1     
-saving ruptures          0.00491   0.0       1     
-store source_info        0.00144   0.0       1     
-store source model       0.00115   0.0       1     
-reading exposure         6.185E-04 0.0       1     
+total sample_ruptures    0.08483   0.39844   1     
+total get_eid_rlz        0.04121   0.0       20    
+total read_source_models 0.00649   0.0       1     
+saving ruptures          0.00397   0.0       1     
+store source_info        0.00185   0.0       1     
+store source model       0.00182   0.0       1     
+reading exposure         6.299E-04 0.0       1     
 ======================== ========= ========= ======
