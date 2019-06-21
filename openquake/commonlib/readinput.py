@@ -801,7 +801,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
-    if monitor.hdf5:
+    if mags and monitor.hdf5:
         mags_by_trt = {trt: sorted(ms) for trt, ms in mags.items()}
         idist = gsim_lt.get_integration_distance(mags_by_trt, oqparam)
         monitor.hdf5['integration_distance'] = idist

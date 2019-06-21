@@ -183,7 +183,7 @@ class IntegrationDistance(collections.abc.Mapping):
         return dic, {}
 
     def __fromh5__(self, dic, attrs):
-        self.__init__(dic)
+        self.__init__({trt: dic[trt][()] for trt in dic})
 
     def __repr__(self):
         return repr(self.dic)
