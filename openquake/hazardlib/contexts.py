@@ -380,7 +380,7 @@ class ContextMaker(object):
                     if gmv <= minint:
                         limit_dist = max(limit_dist, fdist[i])
                         break
-        return limit_dist
+        return limit_dist or self.maximum_distance[rup.tectonic_region_type]
 
 
 class BaseContext(metaclass=abc.ABCMeta):
