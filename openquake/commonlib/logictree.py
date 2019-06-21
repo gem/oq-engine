@@ -1656,8 +1656,6 @@ class GsimLogicTree(object):
             cmaker = ContextMaker(trt, gsims, oq.maximum_distance)
             for mag in mags:
                 rup = make_rupture(trt, mag)  # pointwise in (0, 0, 10)
-                #if trt == 'Active Shallow Crust':
-                #    import pdb; pdb.set_trace()
                 dist = cmaker.get_limit_distance(
                     sites, rup, oq.imtls, oq.minimum_intensity)
                 out[trt].append((mag, dist))
