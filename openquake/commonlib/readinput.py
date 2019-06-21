@@ -802,7 +802,15 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
     if monitor.hdf5:
-        monitor.hdf5['source_mags'] = sorted(mags)
+        mags = sorted(mags)
+        trts = sorted(set(trts))
+        idist = gsim_lt.get_integration_distance(mags, oqparam)
+        dt = [('mag', float)] + [(trt, float) for trt in trts]
+        arr = numpy.zeros(len(mags), dt)
+        arr['mag'] = mags
+        for trt in trts:
+            arr[trt] = [dist for mag, dist in idist.dic[trt]]
+        monitor.hdf5['integration_distance'] = arr
     logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     # log if some source file is being used more than once
