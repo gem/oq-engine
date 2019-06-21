@@ -119,8 +119,8 @@ class IntegrationDistance(collections.abc.Mapping):
         value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
-        elif mag is None:  # get the maximum distance
-            return MAX_DISTANCE
+        elif mag is None:  # get the maximum distance for the maximum mag
+            return value[-1][1]
         elif not hasattr(self, 'piecewise'):
             self.piecewise = {}  # function cache
         try:

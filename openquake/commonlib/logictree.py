@@ -45,6 +45,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf, site
 from openquake.hazardlib.source.point import make_rupture
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
@@ -1634,7 +1635,7 @@ class GsimLogicTree(object):
                               i, tuple(lt_uid))
 
     # tested in scenario/case_11
-    def get_limit_distance(self, mags, oq):
+    def get_integration_distance(self, mags, oq):
         """
         :param magnitudes:
             a list of magnitudes
@@ -1642,9 +1643,9 @@ class GsimLogicTree(object):
             an object with attributes imtls, maximum_distance,
             minimum_intensity, reference_vs30_value, ...
         :returns:
-            the limit distances per each TRT and magnitudes
+            an :class:`openquake.hazardlib.calc.filters.IntegrationDistance`
         """
-        out = general.AccumDict(accum=[])  # TRT -> distances
+        out = {trt: [] for trt in self.values}
         for trt, gsims in self.values.items():
             dists = valid.sqrscale(0, oq.maximum_distance[trt], 50)
             lons = dists * geo.utils.KM_TO_DEGREES
@@ -1657,8 +1658,8 @@ class GsimLogicTree(object):
                 rup = make_rupture(trt, mag)  # pointwise in (0, 0, 10)
                 dist = cmaker.get_limit_distance(
                     sites, rup, oq.imtls, oq.minimum_intensity)
-                out[trt].append(dist)
-        return out
+                out[trt].append((mag, dist))
+        return IntegrationDistance(out)
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %

@@ -362,6 +362,8 @@ class ContextMaker(object):
         :param minimum_intensity: a dictionary TRT -> minimum_intensity
         :returns: the limit distance
         """
+        if not minimum_intensity:
+            return self.maximum_distance[rup.tectonic_region_type]
         sctx, dctx = self.make_contexts(sites, rup)
         fdist = getattr(dctx, self.filter_distance)
         limit_dist = 0
