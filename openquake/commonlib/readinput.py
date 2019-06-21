@@ -731,6 +731,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
+                nr += src.num_ruptures
                 source_ids.add(src.source_id)
                 src.src_group_id = grp_id
                 src.id = idx
