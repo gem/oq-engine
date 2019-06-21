@@ -807,7 +807,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         dt = [('mag', float)] + [(trt, float) for trt in gsim_lt.values]
         arr = numpy.zeros(len(mags), dt)
         arr['mag'] = mags
-        for trt in trts:
+        for trt in gsim_lt.values:
             arr[trt] = [dist for mag, dist in idist.dic[trt]]
         monitor.hdf5['integration_distance'] = arr
     logging.info('The composite source model has {:,d} ruptures'.format(nr))
