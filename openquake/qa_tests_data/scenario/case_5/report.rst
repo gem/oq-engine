@@ -3,8 +3,8 @@ Scenario QA Test with Spatial Correlation - Case 1
 
 ============== ===================
 checksum32     1,970,708,270      
-date           2019-05-10T05:07:11
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:41:53
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = 1
