@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a performance regression in ucerf_classical that was filtering
+    before splitting, thus becoming extra-slow
   * Improved the progress log, that was delayed for large classical calculations
   * Exported the ruptures as 3D multi-polygons (instead of 2D ones)
   * Changed the `aggregate_by` exports for consistency with the others
