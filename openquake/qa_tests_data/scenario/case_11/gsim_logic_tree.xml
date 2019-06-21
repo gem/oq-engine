@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1" applyToTectonicRegionType="Subduction Deep">
+
+              <logicTreeBranch branchID="b1">
+                <uncertaintyModel minimum_distance="10">
+                  LinLee2008SSlab
+                </uncertaintyModel>
+                <uncertaintyWeight>0.60</uncertaintyWeight>
+              </logicTreeBranch>
+                
+              <logicTreeBranch branchID="b2">
+                <uncertaintyModel minimum_distance="5">
+                  YoungsEtAl1997SSlab
+                </uncertaintyModel>
+                <uncertaintyWeight>0.40</uncertaintyWeight>
+              </logicTreeBranch>
+                
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+    </logicTree>
+</nrml>
