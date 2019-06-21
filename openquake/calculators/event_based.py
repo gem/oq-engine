@@ -298,7 +298,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if self.sitecol:
             num_['sites'] = n = len(self.sitecol)
             if (oq.calculation_mode == 'event_based'
-                    and oq.ground_motion_fields):
+                    and oq.ground_motion_fields and n > oq.max_sites_per_gmf):
                 raise ValueError(
                     'You cannot compute the GMFs for %d > %d sites' %
                     (n, oq.max_sites_per_gmf))
