@@ -23,7 +23,7 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, MAX_DISTANCE, SourceFilter, angular_distance)
+    IntegrationDistance, SourceFilter, angular_distance)
 
 
 class AngularDistanceTestCase(unittest.TestCase):
@@ -37,9 +37,9 @@ class IntegrationDistanceTestCase(unittest.TestCase):
         maxdist = IntegrationDistance({'default': [
             (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
 
-        aae(maxdist('ANY_TRT'), MAX_DISTANCE)  # 2000 km
+        aae(maxdist('ANY_TRT'), 400)
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
-        aae(bb, [-18.2638692, -7.9864, 18.2638692, 27.9864])
+        aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
 
         aae(maxdist('ANY_TRT', mag=7.1), 400)
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=7.1)
