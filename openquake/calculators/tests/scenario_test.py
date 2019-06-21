@@ -134,7 +134,8 @@ class ScenarioTestCase(CalculatorTestCase):
         self.calc.rup.tectonic_region_type = 'Subduction Deep'
         oq = self.calc.oqparam
         gsim_lt = self.calc.datastore['csm_info/gsim_lt']
-        dist = gsim_lt.get_integration_distance([self.calc.rup.mag], oq)
+        mags = {'Subduction Deep': [self.calc.rup.mag]}
+        dist = gsim_lt.get_integration_distance(mags, oq)
         aae(dist['Subduction Deep'], 162.24509294)
 
         cmaker = ContextMaker(
