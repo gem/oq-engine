@@ -36,13 +36,16 @@ import operator
 from collections import namedtuple
 import toml
 import numpy
-from openquake.baselib import hdf5, node, python3compat
+from openquake.baselib import hdf5, node, python3compat, general
 from openquake.baselib.general import groupby, group_array, duplicated
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf, site
+from openquake.hazardlib.source.point import make_rupture
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
@@ -1405,10 +1408,14 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute '
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
-        self.req_site_params = set()
+
+    @property
+    def req_site_params(self):
+        site_params = set()
         for trt in self.values:
             for gsim in self.values[trt]:
-                self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
+                site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
+        return site_params
 
     def check_imts(self, imts):
         """
@@ -1626,6 +1633,33 @@ class GsimLogicTree(object):
                 value.append(branch.gsim)
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
+
+    # tested in scenario/case_11
+    def get_integration_distance(self, mags_by_trt, oq):
+        """
+        :param mags_by_trt:
+            a dictionary TRT -> magnitudes
+        :param oq:
+            an object with attributes imtls, maximum_distance,
+            minimum_intensity, reference_vs30_value, ...
+        :returns:
+            an :class:`openquake.hazardlib.calc.filters.IntegrationDistance`
+        """
+        out = {trt: [] for trt in mags_by_trt}
+        for trt, mags in mags_by_trt.items():
+            dists = valid.sqrscale(0, oq.maximum_distance[trt], 50)
+            lons = dists * geo.utils.KM_TO_DEGREES
+            lats = numpy.zeros(50)
+            deps = numpy.zeros(50)
+            sites = site.SiteCollection.from_points(
+                lons, lats, deps, oq, self.req_site_params)
+            cmaker = ContextMaker(trt, self.values[trt], oq.maximum_distance)
+            for mag in mags:
+                rup = make_rupture(trt, mag)  # pointwise in (0, 0, 10)
+                dist = cmaker.get_limit_distance(
+                    sites, rup, oq.imtls, oq.minimum_intensity)
+                out[trt].append((mag, dist))
+        return IntegrationDistance(out)
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %
