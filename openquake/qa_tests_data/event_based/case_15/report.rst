@@ -3,8 +3,8 @@ Hazard Japan (HERP model 2014) reduced
 
 ============== ===================
 checksum32     2,896,463,652      
-date           2019-05-10T05:07:29
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:20
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 5, num_levels = 1, num_rlzs = ?
@@ -62,7 +62,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00330 NaN    0.00330 0.00330 1      
+read_source_models 0.00424 NaN    0.00424 0.00424 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -77,5 +77,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00330  0.0       1     
+total read_source_models 0.00424  0.0       1     
 ======================== ======== ========= ======

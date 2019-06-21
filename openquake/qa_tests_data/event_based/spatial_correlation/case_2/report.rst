@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 
 ============== ===================
 checksum32     2,398,350,176      
-date           2019-05-10T05:07:28
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:18
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -57,10 +57,10 @@ P    0.0       1
 
 Information about the tasks
 ---------------------------
-================== ========= ====== ========= ========= =======
-operation-duration mean      stddev min       max       outputs
-read_source_models 7.441E-04 NaN    7.441E-04 7.441E-04 1      
-================== ========= ====== ========= ========= =======
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.00153 NaN    0.00153 0.00153 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
@@ -71,8 +71,8 @@ read_source_models converter=313 B fnames=128 B 1.53 KB
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 7.441E-04 0.24609   1     
-======================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.00153  0.0       1     
+======================== ======== ========= ======

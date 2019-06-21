@@ -2,9 +2,9 @@ Vancouver - 5 branches - 5 Years
 ================================
 
 ============== ===================
-checksum32     254,214,840        
-date           2019-05-10T05:07:30
-engine_version 3.5.0-gitbaeb4c1e35
+checksum32     2,220,417,399      
+date           2019-06-21T09:42:21
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -49,7 +49,7 @@ grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
 2      AID       A    67    73    51,300       0.0       0.0       0.0   
 1      CIS-15    C    17    67    8            0.0       0.0       0.0   
 1      AKC       A    9     17    42,525       0.0       0.0       0.0   
-0      GTP       A    0     9     5,913        0.0       0.0       0.0   
+0      GTP       A    0     9     1,971        0.0       0.0       0.0   
 ====== ========= ==== ===== ===== ============ ========= ========= ======
 
 Computation times by source typology
@@ -65,14 +65,14 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.62378 NaN    0.62378 0.62378 1      
+read_source_models 0.68439 NaN    0.68439 0.68439 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=313 B fnames=111 B 10.26 KB
+read_source_models converter=313 B fnames=111 B 10.22 KB
 ================== ============================ ========
 
 Slowest operations
@@ -80,5 +80,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.62378  0.0       1     
+total read_source_models 0.68439  0.00781   1     
 ======================== ======== ========= ======

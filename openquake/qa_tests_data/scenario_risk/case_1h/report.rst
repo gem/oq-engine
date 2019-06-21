@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     1,429,593,239      
-date           2019-05-10T05:07:15
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:41:58
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 2, num_levels = 8, num_rlzs = 1
@@ -67,12 +67,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         2       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     2
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -84,8 +82,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.00308   0.0       1     
-saving gmfs         0.00227   0.0       1     
-reading exposure    5.443E-04 0.0       1     
-computing gmfs      4.025E-04 0.0       1     
+building riskinputs 0.00345   0.0       1     
+saving gmfs         0.00341   0.0       1     
+reading exposure    6.170E-04 0.0       1     
+computing gmfs      4.637E-04 0.0       1     
 =================== ========= ========= ======

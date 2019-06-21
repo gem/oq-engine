@@ -3,8 +3,8 @@ scenario hazard
 
 ============== ===================
 checksum32     2,482,429,138      
-date           2019-05-10T05:07:25
-engine_version 3.5.0-gitbaeb4c1e35
+date           2019-06-21T09:42:12
+engine_version 3.6.0-git17fd0581aa
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 2
@@ -67,12 +67,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         7       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     7
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -87,5 +85,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 6.754E-04 0.0       1     
+reading exposure 6.871E-04 0.0       1     
 ================ ========= ========= ======
