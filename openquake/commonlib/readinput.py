@@ -55,7 +55,6 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
-
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
