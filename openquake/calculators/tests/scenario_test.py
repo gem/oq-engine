@@ -134,8 +134,8 @@ class ScenarioTestCase(CalculatorTestCase):
         self.calc.rup.tectonic_region_type = 'Subduction Deep'
         oq = self.calc.oqparam
         gsim_lt = self.calc.datastore['csm_info/gsim_lt']
-        dist = gsim_lt.get_limit_distance([self.calc.rup.mag], oq)
-        self.assertEqual(dist, {'Subduction Deep': [162.2450929446697]})
+        dist = gsim_lt.get_integration_distance([self.calc.rup.mag], oq)
+        aae(dist['Subduction Deep'], 162.24509294)
 
         cmaker = ContextMaker(
             'Subduction Deep', self.calc.gsims, oq.maximum_distance)
