@@ -105,6 +105,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
     max_potential_paths = valid.Param(valid.positiveint, 100)
+    max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
