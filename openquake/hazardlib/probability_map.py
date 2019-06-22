@@ -245,9 +245,8 @@ class ProbabilityMap(dict):
 
     def __ior__(self, other):
         if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
-            raise ValueError('%s has inconsistent shape %s instead of %s' %
-                             ((other.shape_y, other.shape_z),
-                              (self.shape_y, self.shape_z)))
+            raise ValueError('%s has inconsistent shape with %s' %
+                             (other, self))
         self_sids = set(self)
         other_sids = set(other)
         for sid in self_sids & other_sids:
@@ -312,6 +311,9 @@ class ProbabilityMap(dict):
                 new[sid] = ~self[sid]  # store only nonzero probabilities
         return new
 
+    def __getstate__(self):
+        return dict(shape_y=self.shape_y, shape_z=self.shape_z)
+
     def __toh5__(self):
         # converts to an array of shape (num_sids, shape_y, shape_z)
         size = len(self)
@@ -335,6 +337,10 @@ class ProbabilityMap(dict):
         self.shape_z = array.shape[2]
         for sid, prob in zip(sids, array):
             self[sid] = ProbabilityCurve(prob)
+
+    def __repr__(self):
+        return '<%s %d, %d, %d>' % (self.__class__.__name__, len(self),
+                                    self.shape_y, self.shape_z)
 
 
 def get_shape(pmaps):
