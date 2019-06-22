@@ -383,7 +383,7 @@ class EventBasedTestCase(CalculatorTestCase):
                 case_2.__file__, 'job.ini',
                 intensity_measure_types_and_levels=str(too_many_imts))
         self.assertEqual(str(ctx.exception),
-                         'The event based calculator is restricted '
+                         'The event_based calculator is restricted '
                          'to 256 imts, got 900')
 
     def test_mutex(self):
