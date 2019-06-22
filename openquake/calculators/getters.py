@@ -195,7 +195,7 @@ class PmapGetter(object):
             # the standard deviation is zero
             pmap = self.get(0, grp)
             for sid, pcurve in pmap.items():
-                array = numpy.zeros(pcurve.array.shape[:-1] + (2,))
+                array = numpy.zeros(pcurve.array.shape)
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
