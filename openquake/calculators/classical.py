@@ -94,11 +94,10 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     blocks = list(block_splitter(sources, params['maxweight'],
                                  operator.attrgetter('weight')))
     if blocks:
-        # yield the first blocks (if any) and compute the last block in core
-        # NB: the last block is usually the smallest one
+        # compute the last block (the smallest one) and yield the others
+        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
-        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
