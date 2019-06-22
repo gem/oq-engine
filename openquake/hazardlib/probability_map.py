@@ -244,6 +244,10 @@ class ProbabilityMap(dict):
         return out
 
     def __ior__(self, other):
+        if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
+            raise ValueError('%s has inconsistent shape %s instead of %s' %
+                             ((other.shape_y, other.shape_z),
+                              (self.shape_y, self.shape_z)))
         self_sids = set(self)
         other_sids = set(other)
         for sid in self_sids & other_sids:
