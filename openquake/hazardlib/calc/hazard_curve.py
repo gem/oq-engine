@@ -132,6 +132,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Prepare the accumulator for the probability maps
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
+    pmap.trt = trt
     rupdata = {grp_id: [] for grp_id in grp_ids}
     # AccumDict of arrays with 2 elements weight, calc_time
     calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))

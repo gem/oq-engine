@@ -55,7 +55,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance, maxweight=1E10)
         self.calc_times = general.AccumDict(accum=np.zeros(2, np.float32))
-        rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
+        [gsims] = sorted(self.csm.info.gsim_lt.values.values())
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
@@ -64,7 +64,6 @@ class UcerfClassicalCalculator(ClassicalCalculator):
             if sample:
                 srcs = readinput.random_filtered_sources(
                     srcs, self.src_filter, 1)
-            gsims = list(rlzs_by_gsim[grp.id])
             acc = parallel.Starmap.apply(
                 classical_split_filter,
                 (srcs, self.src_filter, gsims, param, monitor),

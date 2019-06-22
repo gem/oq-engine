@@ -93,12 +93,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check view_pmap for a single realization
         got = view('pmap:grp-00', self.calc.datastore)
-        self.assertEqual(got, '''\
-{0: <ProbabilityCurve
-[[2.26776679e-03 0.00000000e+00]
- [1.67915423e-05 0.00000000e+00]
- [0.00000000e+00 0.00000000e+00]
- [0.00000000e+00 0.00000000e+00]]>}''')
+        self.assertEqual(got, '<ProbabilityMap 1, 4, 1>')
 
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
