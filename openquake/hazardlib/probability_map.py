@@ -244,6 +244,8 @@ class ProbabilityMap(dict):
         return out
 
     def __ior__(self, other):
+        if not other:
+            return self
         if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
             raise ValueError('%s has inconsistent shape with %s' %
                              (other, self))
