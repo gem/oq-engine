@@ -315,7 +315,12 @@ class ProbabilityMap(dict):
         shape = (size, self.shape_y, self.shape_z)
         array = numpy.zeros(shape, F64)
         for i, sid in numpy.ndenumerate(sids):
-            array[i] = self[sid].array
+            try:
+                array[i] = self[sid].array
+            except ValueError as exc:
+                # this should never happen, but I got a could not broadcast
+                # input array once for Australia
+                raise ValueError('%s on site_id=%d' % (exc, sid))
         return dict(array=array, sids=sids), {}
 
     def __fromh5__(self, dic, attrs):
