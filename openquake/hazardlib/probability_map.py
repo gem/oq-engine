@@ -219,31 +219,6 @@ class ProbabilityMap(dict):
                 curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
         return curves
 
-    def convert2(self, imtls, sids):
-        """
-        Convert a probability map into a composite array of shape (N,)
-        and dtype `imtls.dt`.
-
-        :param imtls:
-            DictArray instance
-        :param sids:
-            the IDs of the sites we are interested in
-        :returns:
-            an array of curves of shape (N,)
-        """
-        assert self.shape_z == 1, self.shape_z
-        curves = numpy.zeros(len(sids), imtls.dt)
-        for imt in curves.dtype.names:
-            curves_by_imt = curves[imt]
-            for i, sid in numpy.ndenumerate(sids):
-                try:
-                    pcurve = self[sid]
-                except KeyError:
-                    pass  # the poes will be zeros
-                else:
-                    curves_by_imt[i] = pcurve.array[imtls(imt), 0]
-        return curves
-
     def filter(self, sids):
         """
         Extracs a submap of self for the given sids.
