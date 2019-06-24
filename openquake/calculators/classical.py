@@ -95,9 +95,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
                                  operator.attrgetter('weight')))
     if blocks:
         # compute the last block (the smallest one) and yield the others
-        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
+        # NB: it is a faster if the first blocks are yielded first
+        # for instance in job_share_small.ini the improvement is 579s -> 466s
+        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
