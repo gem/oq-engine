@@ -3,8 +3,8 @@ scenario hazard
 
 ============== ===================
 checksum32     2,482,429,138      
-date           2019-06-21T09:42:12
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:40
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 2
@@ -53,9 +53,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[BooreAtkinson2008]': [0]
-  0,'[ChiouYoungs2008]': [1]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -85,5 +83,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 6.871E-04 0.0       1     
+reading exposure 6.447E-04 0.0       1     
 ================ ========= ========= ======

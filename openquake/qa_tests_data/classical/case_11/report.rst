@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 11
 
 ============== ===================
 checksum32     2,496,930,815      
-date           2019-06-21T09:42:43
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:34:20
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = 3
@@ -64,10 +64,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=3, rlzs=3)
-  0,'[SadighEtAl1997]': [0]
-  1,'[SadighEtAl1997]': [1]
-  2,'[SadighEtAl1997]': [2]>
+  <RlzsAssoc(size=3, rlzs=3)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -88,36 +85,36 @@ source_model.xml 2      Active Shallow Crust 2,500        3,000
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         P    0     1     3,500        0.01177   1.00000   3,500 
-1      1         P    1     2     3,000        0.01030   1.00000   3,000 
-2      1         P    2     3     2,500        0.00919   1.00000   2,500 
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+1      1         P    1     2     3,000        0.01019   1.00000   3,000  960,386,158  
+0      1         P    0     1     3,500        0.00987   1.00000   3,500  2,262,456,685
+2      1         P    2     3     2,500        0.00906   1.00000   2,500  734,615,416  
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.03126   3     
+P    0.02912   3     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-preclassical       0.01094 0.00130 0.00969 0.01229 3      
-read_source_models 0.00808 0.00320 0.00438 0.00999 3      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+preclassical       0.01020 5.717E-04 0.00958 0.01071 3      
+read_source_models 0.00729 0.00246   0.00447 0.00899 3      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================================= ========
 task               sent                                                    received
-preclassical       srcs=3.46 KB params=1.43 KB srcfilter=660 B gsims=441 B 1.01 KB 
-read_source_models converter=939 B fnames=321 B                            4.69 KB 
+preclassical       srcs=3.51 KB params=1.43 KB srcfilter=660 B gsims=441 B 1.01 KB 
+read_source_models converter=939 B fnames=321 B                            4.7 KB  
 ================== ======================================================= ========
 
 Slowest operations
@@ -125,9 +122,9 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.03282   0.0       3     
-total read_source_models 0.02423   0.0       3     
-managing sources         0.00315   0.0       1     
-store source_info        0.00164   0.0       1     
-aggregate curves         5.147E-04 0.0       3     
+total preclassical       0.03061   0.20312   3     
+total read_source_models 0.02188   0.0       3     
+managing sources         0.00368   0.0       1     
+store source_info        0.00162   0.0       1     
+aggregate curves         5.858E-04 0.0       3     
 ======================== ========= ========= ======

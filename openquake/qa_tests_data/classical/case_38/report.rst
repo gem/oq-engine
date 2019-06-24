@@ -3,8 +3,8 @@ Subduction backbone logic tree - 9 branch
 
 ============== ===================
 checksum32     347,202,642        
-date           2019-06-21T09:42:31
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:34:03
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 2, num_levels = 8, num_rlzs = 9
@@ -60,16 +60,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=9, rlzs=9)
-  0,'[BCHydroSERASInter]': [0]
-  0,'[BCHydroSERASInter]\nsigma_mu_epsilon = -1.732051': [5]
-  0,'[BCHydroSERASInter]\nsigma_mu_epsilon = 1.732051': [4]
-  0,'[BCHydroSERASInter]\ntheta6_adjustment = -0.0015': [1]
-  0,'[BCHydroSERASInter]\ntheta6_adjustment = -0.0015\nsigma_mu_epsilon = -1.732051': [3]
-  0,'[BCHydroSERASInter]\ntheta6_adjustment = -0.0015\nsigma_mu_epsilon = 1.732051': [2]
-  0,'[BCHydroSERASInter]\ntheta6_adjustment = 0.0015': [6]
-  0,'[BCHydroSERASInter]\ntheta6_adjustment = 0.0015\nsigma_mu_epsilon = -1.732051': [8]
-  0,'[BCHydroSERASInter]\ntheta6_adjustment = 0.0015\nsigma_mu_epsilon = 1.732051': [7]>
+  <RlzsAssoc(size=81, rlzs=9)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -81,34 +72,34 @@ PEERInterface_Characteristic.xml 0      Subduction Interface 1            1
 
 Slowest sources
 ---------------
-====== ============ ==== ===== ===== ============ ========= ========= =======
-grp_id source_id    code gidx1 gidx2 num_ruptures calc_time num_sites weight 
-====== ============ ==== ===== ===== ============ ========= ========= =======
-0      PEERS3C3_TOR X    0     154   1            0.00257   2.00000   1.13863
-====== ============ ==== ===== ===== ============ ========= ========= =======
+====== ============ ==== ===== ===== ============ ========= ========= ======= =============
+grp_id source_id    code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
+====== ============ ==== ===== ===== ============ ========= ========= ======= =============
+0      PEERS3C3_TOR X    0     154   1            0.00253   2.00000   1.13863 1,620,388,727
+====== ============ ==== ===== ===== ============ ========= ========= ======= =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00257   1     
+X    0.00253   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-preclassical       0.00309 NaN    0.00309 0.00309 1      
-read_source_models 0.03496 NaN    0.03496 0.03496 1      
+preclassical       0.00304 NaN    0.00304 0.00304 1      
+read_source_models 0.03607 NaN    0.03607 0.03607 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================================= ========
 task               sent                                                    received
-preclassical       srcs=5.25 KB gsims=1.09 KB params=518 B srcfilter=220 B 343 B   
-read_source_models converter=313 B fnames=123 B                            5.71 KB 
+preclassical       srcs=5.27 KB gsims=1.09 KB params=518 B srcfilter=220 B 343 B   
+read_source_models converter=313 B fnames=123 B                            5.72 KB 
 ================== ======================================================= ========
 
 Slowest operations
@@ -116,9 +107,9 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.03496   0.0       1     
-managing sources         0.00332   0.0       1     
-total preclassical       0.00309   0.0       1     
-store source_info        0.00168   0.0       1     
-aggregate curves         1.442E-04 0.0       1     
+total read_source_models 0.03607   0.0       1     
+total preclassical       0.00304   0.0       1     
+managing sources         0.00252   0.0       1     
+store source_info        0.00146   0.0       1     
+aggregate curves         1.395E-04 0.0       1     
 ======================== ========= ========= ======

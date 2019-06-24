@@ -3,8 +3,8 @@ Event Based Risk SJ
 
 ============== ===================
 checksum32     2,863,568,899      
-date           2019-06-21T09:42:19
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:47
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 61, num_levels = 1, num_rlzs = ?
@@ -42,11 +42,11 @@ source_model_logic_tree `sm_lt.xml <sm_lt.xml>`_
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         A    0     9     120          0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== ===========
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum   
+====== ========= ==== ===== ===== ============ ========= ========= ====== ===========
+0      1         A    0     9     120          0.0       0.0       0.0    819,855,902
+====== ========= ==== ===== ===== ============ ========= ========= ====== ===========
 
 Computation times by source typology
 ------------------------------------
@@ -60,7 +60,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00825 NaN    0.00825 0.00825 1      
+read_source_models 0.01293 NaN    0.01293 0.01293 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -75,5 +75,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00825  0.0       1     
+total read_source_models 0.01293  0.0       1     
 ======================== ======== ========= ======

@@ -3,8 +3,8 @@ Reduced Hazard Italy
 
 ============== ===================
 checksum32     1,879,307,037      
-date           2019-06-21T09:42:19
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:47
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 148, num_levels = 30, num_rlzs = ?
@@ -72,11 +72,11 @@ CR/CDN/H:3        1.00000 0.0     1   1   3         3
 
 Slowest sources
 ---------------
-====== ========== ==== ===== ===== ============ ========= ========= ======
-grp_id source_id  code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========== ==== ===== ===== ============ ========= ========= ======
-0      AS_HRAS083 A    0     15    2,295        0.0       0.0       0.0   
-====== ========== ==== ===== ===== ============ ========= ========= ======
+====== ========== ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id  code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========== ==== ===== ===== ============ ========= ========= ====== =============
+0      AS_HRAS083 A    0     15    2,295        0.0       0.0       0.0    3,851,076,649
+====== ========== ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -90,7 +90,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.02925 NaN    0.02925 0.02925 1      
+read_source_models 0.01942 NaN    0.01942 0.01942 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -105,6 +105,6 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.02925  0.0       1     
-reading exposure         0.00273  0.0       1     
+total read_source_models 0.01942  0.0       1     
+reading exposure         0.00262  0.0       1     
 ======================== ======== ========= ======

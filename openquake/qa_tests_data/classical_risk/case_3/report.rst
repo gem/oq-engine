@@ -3,8 +3,8 @@ Classical PSHA - Loss fractions QA test
 
 ============== ===================
 checksum32     177,006,542        
-date           2019-06-21T09:41:49
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:17
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 12, num_levels = 19, num_rlzs = 1
@@ -63,8 +63,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -92,42 +91,42 @@ UFB      1.00000 0.0     1   1   2         2
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      232       A    41    45    1,612        1.98932   6.00000   2,191 
-0      225       A    38    41    520          0.16055   2.00000   266   
-0      8         A    0     4     4,832        0.0       0.0       0.0   
-0      59        A    16    20    750          0.0       0.0       0.0   
-0      57        A    12    16    840          0.0       0.0       0.0   
-0      42        A    8     12    1,755        0.0       0.0       0.0   
-0      359       A    59    63    2,314        0.0       0.0       0.0   
-0      306       A    55    59    1,768        0.0       0.0       0.0   
-0      299       A    51    55    710          0.0       0.0       0.0   
-0      27        A    4     8     1,482        0.0       0.0       0.0   
-0      253       A    45    51    3,058        0.0       0.0       0.0   
-0      137       A    34    38    2,072        0.0       0.0       0.0   
-0      135       A    30    34    3,285        0.0       0.0       0.0   
-0      125       A    26    30    8,274        0.0       0.0       0.0   
-0      101       A    20    26    559          0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      232       A    41    45    1,612        1.97421   6.00000   2,191  2,840,575,529
+0      225       A    38    41    520          0.17898   2.00000   266    357,475,671  
+0      8         A    0     4     4,832        0.0       0.0       0.0    2,677,867,971
+0      59        A    16    20    750          0.0       0.0       0.0    2,098,641,246
+0      57        A    12    16    840          0.0       0.0       0.0    584,759,377  
+0      42        A    8     12    1,755        0.0       0.0       0.0    2,839,589,177
+0      359       A    59    63    2,314        0.0       0.0       0.0    108,645,524  
+0      306       A    55    59    1,768        0.0       0.0       0.0    4,117,086,758
+0      299       A    51    55    710          0.0       0.0       0.0    1,549,911,062
+0      27        A    4     8     1,482        0.0       0.0       0.0    3,188,045,572
+0      253       A    45    51    3,058        0.0       0.0       0.0    4,228,046,159
+0      137       A    34    38    2,072        0.0       0.0       0.0    1,946,796,306
+0      135       A    30    34    3,285        0.0       0.0       0.0    4,246,067,927
+0      125       A    26    30    8,274        0.0       0.0       0.0    4,075,030,587
+0      101       A    20    26    559          0.0       0.0       0.0    3,003,373,654
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    2.14987   15    
+A    2.15319   15    
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ====================== ======= ======= ======= ======= =======
 operation-duration     mean    stddev  min     max     outputs
-build_hazard_stats     0.00627 0.00182 0.00338 0.00843 12     
-classical              1.95599 NaN     1.95599 1.95599 1      
-classical_split_filter 0.11459 0.06573 0.05783 0.18660 3      
-read_source_models     1.07933 NaN     1.07933 1.07933 1      
+build_hazard_stats     0.00654 0.00356 0.00270 0.01364 12     
+classical              1.93717 NaN     1.93717 1.93717 1      
+classical_split_filter 0.12177 0.07602 0.05722 0.20557 3      
+read_source_models     1.01499 NaN     1.01499 1.01499 1      
 ====================== ======= ======= ======= ======= =======
 
 Fastest task
@@ -157,9 +156,9 @@ Data transfer
 ====================== ============================================================ ========
 task                   sent                                                         received
 build_hazard_stats     pgetter=4.56 KB hstats=780 B N=168 B individual_curves=156 B 5.07 KB 
-classical              srcs=60.1 KB params=8.92 KB srcfilter=3.22 KB gsims=2.27 KB  2.19 KB 
-classical_split_filter srcs=60.1 KB params=8.92 KB srcfilter=3.22 KB gsims=2.27 KB  35.34 KB
-read_source_models     converter=313 B fnames=111 B                                 13.71 KB
+classical              srcs=60.35 KB params=8.92 KB srcfilter=3.22 KB gsims=2.27 KB 2.22 KB 
+classical_split_filter srcs=60.35 KB params=8.92 KB srcfilter=3.22 KB gsims=2.27 KB 35.4 KB 
+read_source_models     converter=313 B fnames=111 B                                 13.76 KB
 ====================== ============================================================ ========
 
 Slowest operations
@@ -167,22 +166,22 @@ Slowest operations
 ============================ ========= ========= ======
 operation                    time_sec  memory_mb counts
 ============================ ========= ========= ======
-total classical              1.95599   0.66406   1     
-total read_source_models     1.07933   0.0       1     
-make_contexts                1.07851   0.0       1,846 
-get_poes                     0.42686   0.0       1,613 
-total classical_split_filter 0.34377   0.42578   3     
-filtering/splitting sources  0.08143   0.42578   2     
-total build_hazard_stats     0.07525   1.42578   12    
-read PoEs                    0.06726   1.42578   12    
-building riskinputs          0.03020   0.0       1     
-managing sources             0.01354   0.0       1     
-saving statistics            0.00633   0.0       12    
-store source model           0.00465   0.0       1     
-store source_info            0.00173   0.0       1     
-saving probability maps      0.00171   0.0       1     
-compute stats                0.00137   0.0       9     
-aggregate curves             0.00103   0.0       3     
-combine pmaps                7.629E-04 0.0       12    
-reading exposure             4.876E-04 0.0       1     
+total classical              1.93717   0.21484   1     
+make_contexts                1.08822   0.0       1,846 
+total read_source_models     1.01499   0.0       1     
+get_poes                     0.41529   0.0       1,613 
+total classical_split_filter 0.36531   0.39844   3     
+filtering/splitting sources  0.08126   0.39844   2     
+total build_hazard_stats     0.07853   1.38281   12    
+read PoEs                    0.07167   1.38281   12    
+building riskinputs          0.03085   0.0       1     
+managing sources             0.01133   0.29688   1     
+saving statistics            0.00635   0.0       12    
+store source model           0.00497   0.0       1     
+store source_info            0.00198   0.0       1     
+saving probability maps      0.00187   0.0       1     
+compute stats                0.00127   0.0       9     
+aggregate curves             0.00110   0.0       3     
+combine pmaps                6.695E-04 0.0       12    
+reading exposure             4.838E-04 0.0       1     
 ============================ ========= ========= ======

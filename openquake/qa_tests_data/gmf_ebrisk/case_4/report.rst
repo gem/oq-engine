@@ -3,8 +3,8 @@ event based two source models
 
 ============== ===================
 checksum32     1,852,256,743      
-date           2019-06-21T09:41:53
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:21
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 1, num_levels = 11, num_rlzs = ?
@@ -55,14 +55,14 @@ tax1     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-3      2         X    6     402   1            0.0       0.0       0.0   
-2      1         S    4     6     482          0.0       0.0       0.0   
-1      2         S    2     4     4            0.0       0.0       0.0   
-0      1         S    0     2     482          0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+3      2         X    6     402   1            0.0       0.0       0.0    2,506,021,815
+2      1         S    4     6     482          0.0       0.0       0.0    2,786,737,502
+1      2         S    2     4     4            0.0       0.0       0.0    3,056,286,023
+0      1         S    0     2     482          0.0       0.0       0.0    2,786,737,502
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -75,22 +75,21 @@ X    0.0       1
 
 Duplicated sources
 ------------------
-['1']
-Found 2 source(s) with the same ID and 1 true duplicate(s)
+Found 2 source(s) with the same ID and 1 true duplicate(s): ['1']
 Here is a fake duplicate: 2
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01210 0.00884 0.00585 0.01835 2      
+read_source_models 0.01653 0.00782 0.01100 0.02206 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=626 B fnames=218 B 13.91 KB
+read_source_models converter=626 B fnames=218 B 13.93 KB
 ================== ============================ ========
 
 Slowest operations
@@ -98,6 +97,6 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.02421   0.25000   2     
-reading exposure         5.198E-04 0.0       1     
+total read_source_models 0.03306   0.23828   2     
+reading exposure         5.176E-04 0.0       1     
 ======================== ========= ========= ======

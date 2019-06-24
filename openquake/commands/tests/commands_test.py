@@ -49,7 +49,8 @@ from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import case_2, case_5, case_16, case_21
+from openquake.qa_tests_data.event_based import (
+    case_2, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_exposure)
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
@@ -79,8 +80,7 @@ class InfoTestCase(unittest.TestCase):
     EXPECTED = '''<CompositionInfo
 b1, x15.xml, grp=[0], weight=1.0: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
-<RlzsAssoc(size=1, rlzs=1)
-0,'[AkkarBommer2010]': [0]>'''
+<RlzsAssoc(size=1, rlzs=1)>'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')

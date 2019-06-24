@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 8
 
 ============== ===================
 checksum32     4,079,887,042      
-date           2019-06-21T09:42:33
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:34:07
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = 3
@@ -64,10 +64,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=3, rlzs=3)
-  0,'[SadighEtAl1997]': [0]
-  1,'[SadighEtAl1997]': [1]
-  2,'[SadighEtAl1997]': [2]>
+  <RlzsAssoc(size=3, rlzs=3)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -88,41 +85,36 @@ source_model.xml 2      Active Shallow Crust 3,000        3,000
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         P    0     1     3,000        0.00987   1.00000   3,000 
-1      1         P    1     2     3,000        0.00969   1.00000   3,000 
-2      1         P    2     3     3,000        0.00851   1.00000   3,000 
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+2      1         P    2     3     3,000        0.01004   1.00000   3,000  3,037,813,844
+1      1         P    1     2     3,000        0.00988   1.00000   3,000  134,436,187  
+0      1         P    0     1     3,000        0.00914   1.00000   3,000  427,711,619  
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.02807   3     
+P    0.02906   3     
 ==== ========= ======
-
-Duplicated sources
-------------------
-['1']
-Found 1 source(s) with the same ID and 1 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-preclassical       0.00983 8.062E-04 0.00891 0.01040 3      
-read_source_models 0.00826 0.00150   0.00653 0.00918 3      
+preclassical       0.01015 5.577E-04 0.00951 0.01054 3      
+read_source_models 0.00915 1.338E-04 0.00900 0.00926 3      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================================= ========
 task               sent                                                    received
-preclassical       srcs=3.46 KB params=1.43 KB srcfilter=660 B gsims=441 B 1.01 KB 
-read_source_models converter=939 B fnames=318 B                            4.69 KB 
+preclassical       srcs=3.51 KB params=1.43 KB srcfilter=660 B gsims=441 B 1.01 KB 
+read_source_models converter=939 B fnames=318 B                            4.7 KB  
 ================== ======================================================= ========
 
 Slowest operations
@@ -130,9 +122,9 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.02950   0.0       3     
-total read_source_models 0.02478   0.0       3     
-managing sources         0.00347   0.0       1     
-store source_info        0.00193   0.0       1     
-aggregate curves         8.068E-04 0.0       3     
+total preclassical       0.03044   0.0       3     
+total read_source_models 0.02744   0.0       3     
+managing sources         0.00300   0.0       1     
+store source_info        0.00175   0.0       1     
+aggregate curves         6.270E-04 0.0       3     
 ======================== ========= ========= ======

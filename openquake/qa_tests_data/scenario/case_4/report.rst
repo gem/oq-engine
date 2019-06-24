@@ -3,8 +3,8 @@ Scenario QA Test, Case 1
 
 ============== ===================
 checksum32     4,118,729,114      
-date           2019-06-21T09:41:53
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:21
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 3, num_levels = 1, num_rlzs = 1
@@ -52,8 +52,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[BooreAtkinson2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
