@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the flag `optimize_same_id_sources` because it is useless now
   * Introduced a soft limit at 65,536 sites for event_based calculations
   * Fixed a performance regression in ucerf_classical that was filtering
     before splitting, thus becoming extra-slow
