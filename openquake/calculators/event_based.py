@@ -292,15 +292,21 @@ class EventBasedCalculator(base.HazardCalculator):
         than 4,294,967,296. The limits are due to the numpy dtype used to
         store the GMFs (gmv_dt). They could be relaxed in the future.
         """
+        oq = self.oqparam
         max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
         num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
         if self.sitecol:
-            num_['sites'] = len(self.sitecol)
+            num_['sites'] = n = len(self.sitecol)
+            if (oq.calculation_mode == 'event_based'
+                    and oq.ground_motion_fields and n > oq.max_sites_per_gmf):
+                raise ValueError(
+                    'You cannot compute the GMFs for %d > %d sites' %
+                    (n, oq.max_sites_per_gmf))
         for var in num_:
             if num_[var] > max_[var]:
                 raise ValueError(
-                    'The event based calculator is restricted to '
-                    '%d %s, got %d' % (max_[var], var, num_[var]))
+                    'The %s calculator is restricted to %d %s, got %d' %
+                    (oq.calculation_mode, max_[var], var, num_[var]))
 
     def set_param(self, **kw):
         oq = self.oqparam

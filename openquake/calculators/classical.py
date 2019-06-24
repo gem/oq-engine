@@ -94,10 +94,11 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     blocks = list(block_splitter(sources, params['maxweight'],
                                  operator.attrgetter('weight')))
     if blocks:
-        # yield the first blocks (if any) and compute the last block in core
-        # NB: the last block is usually the smallest one
+        # compute the last block (the smallest one) and yield the others
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
+        # NB: it is a faster if the first blocks are yielded first
+        # for instance in job_share_small.ini the improvement is 579s -> 466s
         yield classical(blocks[-1], srcfilter, gsims, params, monitor)
 
 
@@ -219,7 +220,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _send_sources(self, smap):
         oq = self.oqparam
-        opt = self.oqparam.optimize_same_id_sources
         nrup = operator.attrgetter('num_ruptures')
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
@@ -231,11 +231,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         num_tasks = 0
         num_sources = 0
-
-        if self.csm.has_dupl_sources and not opt:
-            logging.warning('Found %d duplicated sources',
-                            self.csm.has_dupl_sources)
-
         for trt, sources in self.csm.get_trt_sources():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
@@ -249,7 +244,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     smap.submit(block, self.src_filter, gsims, param)
                     yield block
                     num_tasks += 1
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """

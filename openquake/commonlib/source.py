@@ -25,8 +25,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import (
-    groupby, group_array, gettemp, AccumDict)
+from openquake.baselib.general import groupby, group_array, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
@@ -67,22 +66,6 @@ def capitalize(words):
     Capitalize words separated by spaces.
     """
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
-
-
-def _assert_equal_sources(nodes):
-    if hasattr(nodes[0], 'source_id'):
-        n0 = nodes[0]
-        for n in nodes[1:]:
-            n.assert_equal(n0, ignore=('id', 'src_group_id'))
-    else:  # assume source nodes
-        n0 = nodes[0].to_str()
-        for n in nodes[1:]:
-            eq = n.to_str() == n0
-            if not eq:
-                f0 = gettemp(n0)
-                f1 = gettemp(n.to_str())
-            assert eq, 'different parameters for source %s, run meld %s %s' % (
-                n['id'], f0, f1)
 
 
 def get_field(data, field, default):
@@ -338,12 +321,10 @@ class CompositeSourceModel(collections.abc.Sequence):
         a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
-    def __init__(self, gsim_lt, source_model_lt, source_models,
-                 optimize_same_id):
+    def __init__(self, gsim_lt, source_model_lt, source_models):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
-        self.optimize_same_id = optimize_same_id
         self.source_info = ()
         # NB: the weight is 1 for sources which are XML nodes
         totweight = sum(getattr(src, 'weight', 1) for sm in source_models
@@ -364,13 +345,6 @@ class CompositeSourceModel(collections.abc.Sequence):
             totweight,
             min(min_mags) if min_mags else 0,
             max(max_mags) if max_mags else 0)
-        try:
-            dupl_sources = self.check_dupl_sources()
-        except AssertionError:
-            # different sources with the same ID
-            self.has_dupl_sources = 0
-        else:
-            self.has_dupl_sources = len(dupl_sources)
 
     def grp_by_src(self):
         """
@@ -390,8 +364,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                             sg.trt, [src], name=src.source_id, id=grp_id))
                     grp_id += 1
             smodels.append(smodel)
-        return self.__class__(self.gsim_lt, self.source_model_lt, smodels,
-                              self.optimize_same_id)
+        return self.__class__(self.gsim_lt, self.source_model_lt, smodels)
 
     def get_model(self, sm_id):
         """
@@ -401,8 +374,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         sm = self.source_models[sm_id]
         if self.source_model_lt.num_samples:
             self.source_model_lt.num_samples = sm.samples
-        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm],
-                             self.optimize_same_id)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm])
         new.sm_id = sm_id
         return new
 
@@ -425,8 +397,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
-                             self.optimize_same_id)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         new.info.update_eff_ruptures(new.get_num_ruptures())
         new.info.tot_weight = new.get_weight()
         return new
@@ -455,29 +426,6 @@ class CompositeSourceModel(collections.abc.Sequence):
                 for src_group in sm.src_groups
                 for src in src_group if hasattr(src, 'data')]
 
-    def check_dupl_sources(self):  # used in print_csm_info
-        """
-        Extracts duplicated sources, i.e. sources with the same source_id in
-        different source groups. Raise an exception if there are sources with
-        the same ID which are not duplicated.
-
-        :returns: a list of list of sources, ordered by source_id
-        """
-        dd = collections.defaultdict(list)
-        for src_group in self.src_groups:
-            for src in src_group:
-                try:
-                    srcid = src.source_id
-                except AttributeError:  # src is a Node object
-                    srcid = src['id']
-                dd[srcid].append(src)
-        dupl = []
-        for srcid, srcs in sorted(dd.items()):
-            if len(srcs) > 1:
-                _assert_equal_sources(srcs)
-                dupl.append(srcs)
-        return dupl
-
     def get_sources(self, kind='all'):
         """
         Extract the sources contained in the source models by optionally
@@ -494,7 +442,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                         sources.append(src)
         return sources
 
-    def get_trt_sources(self, optimize_same_id=None):
+    def get_trt_sources(self):
         """
         :returns: a list of pairs [(trt, group of sources)]
         """
@@ -506,17 +454,14 @@ class CompositeSourceModel(collections.abc.Sequence):
                     atomic.append((grp.trt, grp))
                 elif grp:
                     acc[grp.trt].extend(grp)
-        if optimize_same_id is None:
-            optimize_same_id = self.optimize_same_id
-        if optimize_same_id is False:
-            return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
         n = 0
         tot = 0
         dic = {}
+        key = operator.attrgetter('source_id', 'checksum')
         for trt in acc:
             dic[trt] = []
-            for grp in groupby(acc[trt], lambda x: x.source_id).values():
+            for grp in groupby(acc[trt], key).values():
                 src = grp[0]
                 n += 1
                 tot += len(grp)

@@ -23,6 +23,7 @@ Utilities to build a report writer generating a .rst report for a calculation
 from openquake.baselib.python3compat import decode
 import os
 import sys
+import logging
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput, logs
 from openquake.calculators import views
@@ -149,6 +150,7 @@ def build_report(job_ini, output_dir=None):
         calc.execute()
     for key in calc.datastore:
         calc.datastore.set_nbytes(key)
+    logging.info('Making the .rst report')
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
