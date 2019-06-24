@@ -220,7 +220,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _send_sources(self, smap):
         oq = self.oqparam
-        opt = self.oqparam.optimize_same_id_sources
         nrup = operator.attrgetter('num_ruptures')
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
@@ -232,11 +231,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         num_tasks = 0
         num_sources = 0
-
-        if self.csm.has_dupl_sources and not opt:
-            logging.warning('Found %d duplicated sources',
-                            self.csm.has_dupl_sources)
-
         for trt, sources in self.csm.get_trt_sources():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
