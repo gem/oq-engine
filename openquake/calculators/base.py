@@ -404,7 +404,7 @@ class HazardCalculator(BaseCalculator):
                 oq, self.monitor(), srcfilter=self.src_filter)
             msg = views.view('dupl_sources', self.datastore)
             if msg:
-                logging.warn(msg)
+                logging.info(msg)
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
