@@ -18,7 +18,6 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
-import math
 import numpy
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point
@@ -88,7 +87,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-        self.src_group_id = 0  # set by the engine
+        self.src_group_id = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
         self.id = None  # set by the engine
