@@ -130,7 +130,6 @@ class OqParam(valid.ParamSet):
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
-    optimize_same_id_sources = valid.Param(valid.boolean, False)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveint, None)
@@ -761,20 +760,6 @@ class OqParam(valid.ParamSet):
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
-
-    def is_valid_optimize_same_id_sources(self):
-        """
-        The `optimize_same_id_sources` can be true only in the classical
-        calculators.
-        """
-        if (self.optimize_same_id_sources and
-                'classical' in self.calculation_mode or
-                'disagg' in self.calculation_mode):
-            return True
-        elif self.optimize_same_id_sources:
-            return False
-        else:
-            return True
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or

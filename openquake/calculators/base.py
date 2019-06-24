@@ -38,7 +38,7 @@ from openquake.risklib import riskinput
 from openquake.commonlib import readinput, logictree, source, calc, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
-from openquake.calculators import getters
+from openquake.calculators import getters, views
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -402,6 +402,9 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
+            msg = views.view('dupl_sources', self.datastore)
+            if msg:
+                logging.warn(msg)
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
