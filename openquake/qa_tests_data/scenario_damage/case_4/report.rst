@@ -3,8 +3,8 @@ Scenario Damage QA Test 4
 
 ============== ===================
 checksum32     1,140,149,609      
-date           2019-06-21T09:42:12
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:40
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 3, num_levels = 60, num_rlzs = 1
@@ -53,8 +53,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -84,5 +83,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.070E-04 0.0       1     
+reading exposure 3.924E-04 0.0       1     
 ================ ========= ========= ======

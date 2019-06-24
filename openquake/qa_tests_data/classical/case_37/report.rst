@@ -3,8 +3,8 @@ Classical PSHA that utilises Christchurch-specific gsims and GMtoLHC horizontal 
 
 ============== ===================
 checksum32     3,681,125,057      
-date           2019-06-21T09:42:32
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:34:04
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 2, num_levels = 4, num_rlzs = 2
@@ -61,9 +61,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[Bradley2013bChchMaps]': [0]
-  0,'[McVerry2006ChchStressDrop]': [1]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -75,34 +73,34 @@ source_model.xml 0      Active Shallow Crust 1            1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
-====== ========= ==== ===== ===== ============ ========= ========= =======
-0      1         X    0     57    1            0.00256   2.00000   1.13863
-====== ========= ==== ===== ===== ============ ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+0      1         X    0     57    1            0.00249   2.00000   1.13863 3,587,629,042
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00256   1     
+X    0.00249   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-preclassical       0.00309 NaN    0.00309 0.00309 1      
-read_source_models 0.02491 NaN    0.02491 0.02491 1      
+preclassical       0.00302 NaN    0.00302 0.00302 1      
+read_source_models 0.02512 NaN    0.02512 0.02512 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ===================================================== ========
 task               sent                                                  received
-preclassical       srcs=2.93 KB params=486 B gsims=292 B srcfilter=220 B 343 B   
-read_source_models converter=305 B fnames=107 B                          3.36 KB 
+preclassical       srcs=2.95 KB params=486 B gsims=292 B srcfilter=220 B 343 B   
+read_source_models converter=305 B fnames=107 B                          3.37 KB 
 ================== ===================================================== ========
 
 Slowest operations
@@ -110,9 +108,9 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.02491   0.0       1     
-managing sources         0.00348   0.0       1     
-total preclassical       0.00309   0.0       1     
+total read_source_models 0.02512   0.0       1     
+managing sources         0.00347   0.0       1     
+total preclassical       0.00302   0.0       1     
 store source_info        0.00147   0.0       1     
-aggregate curves         1.731E-04 0.0       1     
+aggregate curves         1.531E-04 0.0       1     
 ======================== ========= ========= ======

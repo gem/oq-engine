@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     3,629,822,399      
-date           2019-06-21T09:42:14
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:43
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 1, num_levels = 8, num_rlzs = 2
@@ -62,9 +62,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[AkkarBommer2010]': [1]
-  0,'[SadighEtAl1997]': [0]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -88,33 +86,33 @@ Wood     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         S    0     2     482          0.00635   1.00000   482   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      1         S    0     2     482          0.00553   1.00000   482    3,520,478,630
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.00635   1     
+S    0.00553   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-preclassical       0.00688 NaN    0.00688 0.00688 1      
-read_source_models 0.00837 NaN    0.00837 0.00837 1      
+preclassical       0.00601 NaN    0.00601 0.00601 1      
+read_source_models 0.00828 NaN    0.00828 0.00828 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ===================================================== ========
 task               sent                                                  received
-preclassical       srcs=1.11 KB params=518 B gsims=258 B srcfilter=220 B 344 B   
+preclassical       srcs=1.13 KB params=518 B gsims=258 B srcfilter=220 B 344 B   
 read_source_models converter=313 B fnames=106 B                          1.49 KB 
 ================== ===================================================== ========
 
@@ -123,10 +121,10 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00837   0.0       1     
-total preclassical       0.00688   0.0       1     
+total read_source_models 0.00828   0.0       1     
+total preclassical       0.00601   0.0       1     
 managing sources         0.00299   0.0       1     
 store source_info        0.00191   0.0       1     
-reading exposure         5.054E-04 0.0       1     
-aggregate curves         1.817E-04 0.0       1     
+reading exposure         4.828E-04 0.0       1     
+aggregate curves         2.208E-04 0.0       1     
 ======================== ========= ========= ======

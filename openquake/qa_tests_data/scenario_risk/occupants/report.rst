@@ -3,8 +3,8 @@ Scenario QA Test for occupants
 
 ============== ===================
 checksum32     10,388,990         
-date           2019-06-21T09:41:56
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:24
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 3, num_levels = 15, num_rlzs = 1
@@ -53,8 +53,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -84,5 +83,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 5.031E-04 0.0       1     
+reading exposure 5.445E-04 0.0       1     
 ================ ========= ========= ======
