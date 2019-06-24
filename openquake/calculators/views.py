@@ -693,7 +693,7 @@ def view_dupl_sources_time(token, dstore):
     for source_id, records in items:
         if len(records) > 1:  # dupl
             calc_time = records['calc_time'].sum()
-            tot_time += calc_time + records['split_time'].sum()
+            tot_time += calc_time
             tbl.append((source_id, calc_time, len(records)))
     if tbl and info.attrs.get('has_dupl_sources'):
         tot = info['calc_time'].sum() + info['split_time'].sum()
@@ -812,7 +812,8 @@ def view_act_ruptures_by_src(token, dstore):
     return rst_table(table)
 
 
-Source = collections.namedtuple('Source', 'source_id code geom num_ruptures')
+Source = collections.namedtuple(
+    'Source', 'source_id code num_ruptures checksum')
 
 
 def all_equal(records):
@@ -835,7 +836,8 @@ def view_dupl_sources(token, dstore):
     """
     Show the sources with the same ID and the truly duplicated sources
     """
-    fields = ('source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures')
+    fields = ('source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures',
+              'checksum')
     dic = group_array(dstore['source_info'][fields], 'source_id')
     sameid = []
     dupl = []
@@ -843,17 +845,16 @@ def view_dupl_sources(token, dstore):
         if len(group) > 1:  # same ID sources
             sources = []
             for rec in group:
-                geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
-                src = Source(source_id, rec['code'], geom, rec['num_ruptures'])
+                src = Source(source_id, rec['code'], rec['num_ruptures'],
+                             rec['checksum'])
                 sources.append(src)
             if all_equal(sources):
                 dupl.append(source_id)
             sameid.append(source_id)
     if not dupl:
         return ''
-    msg = str(dupl) + '\n'
-    msg += ('Found %d source(s) with the same ID and %d true duplicate(s)'
-            % (len(sameid), len(dupl)))
+    msg = ('Found %d source(s) with the same ID and %d true duplicate(s): %s'
+           % (len(sameid), len(dupl), dupl))
     fakedupl = set(sameid) - set(dupl)
     if fakedupl:
         msg += '\nHere is a fake duplicate: %s' % fakedupl.pop()
