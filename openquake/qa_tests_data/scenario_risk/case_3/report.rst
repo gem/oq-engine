@@ -3,8 +3,8 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     372,210,909        
-date           2019-06-21T09:41:58
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:26
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 4, num_levels = 15, num_rlzs = 1
@@ -54,8 +54,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -85,8 +84,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-saving gmfs         0.02744   0.75000   1     
-building riskinputs 0.01593   0.0       1     
-computing gmfs      0.00661   0.0       1     
-reading exposure    4.361E-04 0.0       1     
+saving gmfs         0.02733   0.75000   1     
+building riskinputs 0.01488   0.0       1     
+computing gmfs      0.00652   0.0       1     
+reading exposure    4.058E-04 0.0       1     
 =================== ========= ========= ======

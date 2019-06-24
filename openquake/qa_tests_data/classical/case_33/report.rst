@@ -3,8 +3,8 @@ Etna No Topo
 
 ============== ===================
 checksum32     380,532,669        
-date           2019-06-21T09:42:41
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:34:17
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 1, num_levels = 28, num_rlzs = 1
@@ -60,8 +60,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[TusaLanger2016Rhypo]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -73,44 +72,44 @@ source_model.xml 0      Volcanic 150          150
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      SVF       S    0     2     150          0.00493   1.00000   150   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      SVF       S    0     2     150          0.00581   1.00000   150    3,902,518,465
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.00493   1     
+S    0.00581   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-preclassical       0.00535 NaN    0.00535 0.00535 1      
-read_source_models 0.00586 NaN    0.00586 0.00586 1      
+preclassical       0.00632 NaN    0.00632 0.00632 1      
+read_source_models 0.00585 NaN    0.00585 0.00585 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ===================================================== ========
-task               sent                                                  received
-preclassical       srcs=1.39 KB params=680 B srcfilter=220 B gsims=162 B 343 B   
-read_source_models converter=313 B fnames=107 B                          1.76 KB 
-================== ===================================================== ========
+================== ==================================================== ========
+task               sent                                                 received
+preclassical       srcs=1.4 KB params=680 B srcfilter=220 B gsims=162 B 343 B   
+read_source_models converter=313 B fnames=107 B                         1.76 KB 
+================== ==================================================== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00586   0.0       1     
-total preclassical       0.00535   0.0       1     
-managing sources         0.00317   0.0       1     
-store source_info        0.00173   0.0       1     
-aggregate curves         1.855E-04 0.0       1     
+total preclassical       0.00632   0.0       1     
+total read_source_models 0.00585   0.0       1     
+managing sources         0.00290   0.0       1     
+store source_info        0.00208   0.0       1     
+aggregate curves         1.414E-04 0.0       1     
 ======================== ========= ========= ======

@@ -244,31 +244,17 @@ classical/case_7; you can run the command and get::
    <CompositionInfo
    b1, source_model_1.xml, trt=[0], weight=0.70: 1 realization(s)
    b2, source_model_2.xml, trt=[1], weight=0.30: 1 realization(s)>
-   <RlzsAssoc(2)
-   0,SadighEtAl1997: ['<0,b1,b1,w=0.7>']
-   1,SadighEtAl1997: ['<1,b2,b1,w=0.3>']>
+   <RlzsAssoc(size=1, rlzs=2)>
 
 In other words, this is an example containing two submodels, each one
 with a single tectonic region type and with a single GMPE
 (SadighEtAl1997). There are only two realizations with weights 0.7 and
-0.3 and they are associated to the tectonic region types as shown in
-the RlzsAssoc object. This is a case when there is a realization for
+0.3. This is a case when there is a realization for
 tectonic region type, but more complex cases are possibile.  For
 instance consider our test classical/case_19, which is a reduction of
 the SHARE model with just a simplified area source model::
 
-   $ oq info classical/case_19/job.ini -f
-   <CompositionInfo
-   b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4], weight=1.0:: 4 realization(s)>
-   <RlzsAssoc(8)
-   0,AtkinsonBoore2003SInter: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
-   1,FaccioliEtAl2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
-   2,ToroEtAl2002SHARE: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
-   3,AkkarBommer2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
-   4,AtkinsonBoore2003SSlab: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
-   4,LinLee2008SSlab: ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
-   4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
-   4,ZhaoEtAl2006SSlab: ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
+   $ oq info classical/case_19/job.ini -r
 
 This is a case where a lot of tectonic region types have been completely
 filtered out, so the original 160 realizations have been reduced to merely 4 for

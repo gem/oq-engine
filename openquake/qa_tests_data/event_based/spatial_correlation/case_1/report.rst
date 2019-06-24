@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 
 ============== ===================
 checksum32     2,162,355,116      
-date           2019-06-21T09:42:18
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:47
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -41,11 +41,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         P    0     1     1            0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      1         P    0     1     1            0.0       0.0       0.0    1,641,237,739
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -59,7 +59,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00149 NaN    0.00149 0.00149 1      
+read_source_models 0.00151 NaN    0.00151 0.00151 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -74,5 +74,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00149  0.0       1     
+total read_source_models 0.00151  0.0       1     
 ======================== ======== ========= ======

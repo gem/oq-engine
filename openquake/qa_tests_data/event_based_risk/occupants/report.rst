@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     515,431,980        
-date           2019-06-21T09:42:23
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:55
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -63,8 +63,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[BooreAtkinson2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -92,36 +91,36 @@ tax1     1.00000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
-====== ========= ==== ===== ===== ============ ========= ========= =======
-0      1         S    0     2     482          0.05491   0.0       2.00000
-====== ========= ==== ===== ===== ============ ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+0      1         S    0     2     482          0.05657   0.0       2.00000 1,377,975,738
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.05491   1     
+S    0.05657   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-get_eid_rlz        0.00206 6.519E-04 0.00107 0.00320 20     
-read_source_models 0.00649 NaN       0.00649 0.00649 1      
-sample_ruptures    0.08483 NaN       0.08483 0.08483 1      
-================== ======= ========= ======= ======= =======
+================== ======= ========= ========= ======= =======
+operation-duration mean    stddev    min       max     outputs
+get_eid_rlz        0.00195 5.650E-04 5.817E-04 0.00273 20     
+read_source_models 0.00873 NaN       0.00873   0.00873 1      
+sample_ruptures    0.08608 NaN       0.08608   0.08608 1      
+================== ======= ========= ========= ======= =======
 
 Data transfer
 -------------
 ================== ============================================= ========
 task               sent                                          received
 get_eid_rlz        self=42.88 KB                                 8.76 KB 
-read_source_models converter=305 B fnames=116 B                  1.49 KB 
-sample_ruptures    param=2.81 KB sources=1.12 KB srcfilter=220 B 68.7 KB 
+read_source_models converter=305 B fnames=116 B                  1.5 KB  
+sample_ruptures    param=2.81 KB sources=1.14 KB srcfilter=220 B 68.7 KB 
 ================== ============================================= ========
 
 Slowest operations
@@ -129,11 +128,11 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total sample_ruptures    0.08483   0.39844   1     
-total get_eid_rlz        0.04121   0.0       20    
-total read_source_models 0.00649   0.0       1     
-saving ruptures          0.00397   0.0       1     
-store source_info        0.00185   0.0       1     
-store source model       0.00182   0.0       1     
-reading exposure         6.299E-04 0.0       1     
+total sample_ruptures    0.08608   0.39844   1     
+total get_eid_rlz        0.03902   0.0       20    
+total read_source_models 0.00873   0.0       1     
+saving ruptures          0.00545   0.0       1     
+store source model       0.00202   0.0       1     
+store source_info        0.00178   0.0       1     
+reading exposure         8.276E-04 0.0       1     
 ======================== ========= ========= ======

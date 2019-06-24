@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     1,264,506,295      
-date           2019-06-21T09:42:20
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:49
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 3, num_levels = 7, num_rlzs = ?
@@ -41,12 +41,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-1      1         A    65    130   2,456        0.0       0.0       0.0   
-0      1         A    0     65    2,456        0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+1      1         A    65    130   2,456        0.0       0.0       0.0    2,179,108,142
+0      1         A    0     65    2,456        0.0       0.0       0.0    3,153,497,394
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -56,17 +56,12 @@ code calc_time counts
 A    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-['1']
-Found 1 source(s) with the same ID and 1 true duplicate(s)
-
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-read_source_models 0.06699 0.00298 0.06489 0.06910 2      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.06674 5.091E-04 0.06638 0.06710 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
@@ -80,5 +75,5 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.13399  0.0       2     
+total read_source_models 0.13347  0.0       2     
 ======================== ======== ========= ======

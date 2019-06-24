@@ -3,8 +3,8 @@ Event Based Risk for Turkey reduced
 
 ============== ===================
 checksum32     39,734,555         
-date           2019-06-21T09:42:22
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:54
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 13, num_levels = 91, num_rlzs = 8
@@ -68,15 +68,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=8, rlzs=8)
-  0,'[AkkarBommer2010]': [0]
-  0,'[CauzziFaccioli2008]': [1]
-  0,'[ChiouYoungs2008]': [2]
-  0,'[ZhaoEtAl2006Asc]': [3]
-  1,'[AkkarBommer2010]': [4]
-  1,'[CauzziFaccioli2008]': [5]
-  1,'[ChiouYoungs2008]': [6]
-  1,'[ZhaoEtAl2006Asc]': [7]>
+  <RlzsAssoc(size=32, rlzs=8)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -121,56 +113,56 @@ SAM_4S   1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-====== ============ ==== ===== ===== ============ ========= ========= =======
-grp_id source_id    code gidx1 gidx2 num_ruptures calc_time num_sites weight 
-====== ============ ==== ===== ===== ============ ========= ========= =======
-0      AS_TRAS334   A    0     23    760          0.03093   0.0       2.00000
-0      AS_TRAS346   A    23    36    527          0.01991   0.0       2.00000
-0      AS_TRAS458   A    61    67    399          0.01800   0.0       2.00000
-0      AS_TRAS360   A    36    44    624          0.01568   0.0       2.00000
-0      AS_TRAS395   A    44    52    432          0.01355   0.0       2.00000
-0      AS_TRAS410   A    52    61    240          0.00780   0.0       0.0    
-1      FSBG_TRBG989 A    67    74    108          0.00661   0.0       2.00000
-2      100041       P    74    75    9            0.0       0.0       0.0    
-====== ============ ==== ===== ===== ============ ========= ========= =======
+====== ============ ==== ===== ===== ============ ========= ========= ======= =============
+grp_id source_id    code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
+====== ============ ==== ===== ===== ============ ========= ========= ======= =============
+0      AS_TRAS334   A    0     23    760          0.02787   0.0       2.00000 2,711,824,330
+0      AS_TRAS346   A    23    36    527          0.02046   0.0       2.00000 3,619,258,796
+0      AS_TRAS458   A    61    67    399          0.01819   0.0       2.00000 3,909,105,536
+0      AS_TRAS360   A    36    44    624          0.01678   0.0       2.00000 1,804,745,429
+0      AS_TRAS395   A    44    52    432          0.01521   0.0       2.00000 3,205,773,375
+0      AS_TRAS410   A    52    61    240          0.00661   0.0       0.0     1,437,748,624
+1      FSBG_TRBG989 A    67    74    108          0.00503   0.0       2.00000 1,922,238,106
+2      100041       P    74    75    9            0.0       0.0       0.0     1,039,891,805
+====== ============ ==== ===== ===== ============ ========= ========= ======= =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.11249   7     
+A    0.11016   7     
 P    0.0       1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ======= =======
-operation-duration mean      stddev    min       max     outputs
-get_eid_rlz        8.037E-04 5.990E-04 3.076E-04 0.00320 29     
-read_source_models 0.03045   0.04071   0.00174   0.07704 3      
-sample_ruptures    0.01728   0.01002   0.00204   0.03514 8      
-================== ========= ========= ========= ======= =======
+================== ========= ========= ========= ========= =======
+operation-duration mean      stddev    min       max       outputs
+get_eid_rlz        6.375E-04 1.863E-04 3.104E-04 8.864E-04 29     
+read_source_models 0.03004   0.03951   0.00176   0.07518   3      
+sample_ruptures    0.01671   0.00971   0.00273   0.03210   8      
+================== ========= ========= ========= ========= =======
 
 Data transfer
 -------------
-================== ================================================= ========
-task               sent                                              received
-get_eid_rlz        self=55.31 KB                                     8.21 KB 
-read_source_models converter=939 B fnames=362 B                      12.5 KB 
-sample_ruptures    param=56.98 KB sources=17.07 KB srcfilter=1.72 KB 9.67 KB 
-================== ================================================= ========
+================== ================================================ ========
+task               sent                                             received
+get_eid_rlz        self=55.31 KB                                    8.21 KB 
+read_source_models converter=939 B fnames=362 B                     12.52 KB
+sample_ruptures    param=56.98 KB sources=17.2 KB srcfilter=1.72 KB 9.67 KB 
+================== ================================================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    0.13822  0.24609   8     
-total read_source_models 0.09135  0.0       3     
-total get_eid_rlz        0.02331  0.0       29    
-saving ruptures          0.01516  0.24219   6     
-store source model       0.00604  0.50781   3     
-store source_info        0.00200  0.0       1     
-reading exposure         0.00180  0.0       1     
+total sample_ruptures    0.13370  0.0       8     
+total read_source_models 0.09012  0.0       3     
+total get_eid_rlz        0.01849  0.0       29    
+saving ruptures          0.01228  0.0       6     
+store source model       0.00723  0.0       3     
+reading exposure         0.00188  0.0       1     
+store source_info        0.00178  0.0       1     
 ======================== ======== ========= ======
