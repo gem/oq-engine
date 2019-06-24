@@ -239,11 +239,14 @@ def split_sources(srcs):
                 if has_samples:
                     split.samples = src.samples
         elif splits:  # single source
-            splits[0].id = src.id
+            [s] = splits
+            s.source_id = src.source_id
+            s.src_group_id = src.src_group_id
+            s.id = src.id
             if has_serial:
-                splits[0].serial = src.serial
+                s.serial = src.serial
             if has_samples:
-                splits[0].samples = src.samples
+                s.samples = src.samples
     return sources, split_time
 
 
