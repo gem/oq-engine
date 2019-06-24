@@ -22,6 +22,7 @@ import copy
 import zlib
 import shutil
 import random
+import pickle
 import zipfile
 import logging
 import tempfile
@@ -622,6 +623,7 @@ source_info_dt = numpy.dtype([
     ('calc_time', numpy.float32),      # 6
     ('num_sites', numpy.float32),      # 7
     ('weight', numpy.float32),         # 8
+    ('checksum', numpy.uint32),        # 9
 ])
 
 
@@ -653,8 +655,9 @@ def store_sm(smodel, filename, monitor):
                         geo.utils.check_extent(geom['lon'], geom['lat'], msg)
                     except ValueError as err:
                         logging.error(str(err))
+                checksum = zlib.adler32(pickle.dumps(src))
                 srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             src.num_ruptures, 0, 0, 0))
+                             src.num_ruptures, 0, 0, 0, checksum))
                 geoms.append(geom)
                 gid += n
             if geoms:
@@ -1166,7 +1169,7 @@ def _checksum(fname, checksum):
     else:
         with open(fname, 'rb') as f:
             data = f.read()
-    return zlib.adler32(data, checksum) & 0xffffffff
+    return zlib.adler32(data, checksum)
 
 
 def get_checksum32(oqparam, hazard=False):
