@@ -111,6 +111,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     cluster = getattr(group, 'cluster', None)
     # Compute the number of ruptures
     grp_ids = set()
+    trts = set()
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures is set when parsing the XML, but not when
@@ -121,15 +122,17 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
             src.temporal_occurrence_model = FatedTOM(time_span=1)
         # Updating IDs
         grp_ids.update(src.src_group_ids)
+        trts.add(src.tectonic_region_type)
     # Now preparing context
     maxdist = src_filter.integration_distance
     imtls = param['imtls']
     trunclevel = param.get('truncation_level')
-    cmaker = ContextMaker(
-        src.tectonic_region_type, gsims, maxdist, param, monitor)
+    [trt] = trts  # there must be a single tectonic region type
+    cmaker = ContextMaker(trt, gsims, maxdist, param, monitor)
     # Prepare the accumulator for the probability maps
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
+    pmap.trt = trt
     rupdata = {grp_id: [] for grp_id in grp_ids}
     # AccumDict of arrays with 2 elements weight, calc_time
     calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))

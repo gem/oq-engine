@@ -22,6 +22,7 @@ import copy
 import zlib
 import shutil
 import random
+import pickle
 import zipfile
 import logging
 import tempfile
@@ -622,6 +623,7 @@ source_info_dt = numpy.dtype([
     ('calc_time', numpy.float32),      # 6
     ('num_sites', numpy.float32),      # 7
     ('weight', numpy.float32),         # 8
+    ('checksum', numpy.uint32),        # 9
 ])
 
 
@@ -648,13 +650,16 @@ def store_sm(smodel, filename, monitor):
                 geom = numpy.zeros(n, point3d)
                 geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
                 if len(geom) > 1:  # more than a point source
-                    msg = 'checking source %s' % src.source_id
+                    msg = 'source %s' % src.source_id
                     try:
                         geo.utils.check_extent(geom['lon'], geom['lat'], msg)
                     except ValueError as err:
                         logging.error(str(err))
+                dic = {k: v for k, v in vars(src).items()
+                       if k != 'id' and k != 'src_group_id'}
+                src.checksum = zlib.adler32(pickle.dumps(dic))
                 srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             src.num_ruptures, 0, 0, 0))
+                             src.num_ruptures, 0, 0, 0, src.checksum))
                 geoms.append(geom)
                 gid += n
             if geoms:
@@ -731,6 +736,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
+                nr += src.num_ruptures
                 source_ids.add(src.source_id)
                 src.src_group_id = grp_id
                 src.id = idx
@@ -741,7 +747,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 idx += 1
                 grp_id += 1
                 data = [((sg.id, src.source_id, src.code, 0, 0,
-                         src.num_ruptures, 0, 0, 0))]
+                          src.num_ruptures, 0, 0, 0, idx))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
                 newsm = make_sm(fname, dic[fname], apply_unc,
@@ -815,12 +821,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             logging.info('%s has been considered %d times', fname, hits)
             if not make_sm.changes:
                 dupl += hits
-    if (dupl and not oqparam.optimize_same_id_sources and
-            not oqparam.is_event_based()):
-        logging.warning(
-            'You are doing redundant calculations: please make sure '
-            'that different sources have different IDs and set '
-            'optimize_same_id_sources=true in your .ini file')
     if make_sm.changes:
         logging.info('Applied %d changes to the composite source model',
                      make_sm.changes)
@@ -902,8 +902,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                 if isinstance(src, Node):
                     continue
         smodels.append(source_model)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels,
-                                      oqparam.optimize_same_id_sources)
+    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
     for sm in csm.source_models:
         counter = collections.Counter()
         for sg in sm.src_groups:
@@ -1165,7 +1164,7 @@ def _checksum(fname, checksum):
     else:
         with open(fname, 'rb') as f:
             data = f.read()
-    return zlib.adler32(data, checksum) & 0xffffffff
+    return zlib.adler32(data, checksum)
 
 
 def get_checksum32(oqparam, hazard=False):

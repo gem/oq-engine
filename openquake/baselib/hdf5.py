@@ -401,54 +401,6 @@ class File(h5py.File):
         """
         return h5py.File.__getitem__(self, name)
 
-    def save(self, nodedict, root=''):
-        """
-        Save a node dictionary in the .hdf5 file, starting from the root
-        dataset. A common application is to convert XML files into .hdf5
-        files, see the usage in :mod:`openquake.commands.to_hdf5`.
-
-        :param nodedict:
-            a dictionary with keys 'tag', 'attrib', 'text', 'nodes'
-        """
-        setitem = super().__setitem__
-        getitem = super().__getitem__
-        tag = nodedict['tag']
-        text = nodedict.get('text', None)
-        if hasattr(text, 'strip'):
-            text = text.strip()
-        attrib = nodedict.get('attrib', {})
-        path = '/'.join([root, tag])
-        nodes = nodedict.get('nodes', [])
-        if text is not None:  # text=0 is stored
-            try:
-                setitem(path, text)
-            except Exception as exc:
-                sys.stderr.write('%s: %s\n' % (path, exc))
-                raise
-        elif attrib and not nodes:
-            setitem(path, numpy.nan)
-        for subdict in _resolve_duplicates(nodes):
-            self.save(subdict, path)
-        if attrib:
-            dset = getitem(path)
-            for k, v in attrib.items():
-                dset.attrs[k] = maybe_encode(v)
-
-
-def _resolve_duplicates(dicts):
-    # when node dictionaries with duplicated tags are passed (for instance
-    # [{'tag': 'SourceGroup', ...}, {'tag': 'SourceGroup', ...}])
-    # add an incremental number to the tag, preceded by a semicolon:
-    # [{'tag': 'SourceGroup;1', ...}, {'tag': 'SourceGroup;2', ...}])
-    # in this way the dictionaries can be saved in HDF5 format without
-    # name conflicts and by respecting the ordering
-    for tag, grp in itertools.groupby(dicts, operator.itemgetter('tag')):
-        group = list(grp)
-        if len(group) > 1:  # there are duplicate tags
-            for i, dic in enumerate(group, 1):
-                dic['tag'] += ';%d' % i
-    return dicts
-
 
 def array_of_vstr(lst):
     """
