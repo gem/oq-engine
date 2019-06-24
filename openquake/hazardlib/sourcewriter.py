@@ -21,6 +21,7 @@ Source model XML Writer
 """
 
 import os
+import toml
 import operator
 import numpy
 from openquake.baselib.general import CallableDict, groupby
@@ -645,10 +646,11 @@ def write_source_model(dest, sources_or_groups, name=None,
     return dest
 
 
-def hdf5write(h5file, obj, root=''):
+def tomldump(obj, fileobj=None):
     """
-    Write a generic object serializable to a Node-like object into a :class:
-    `openquake.baselib.hdf5.File`
+    Write a generic serializable object in TOML format
     """
     dic = node_to_dict(obj_to_node(obj))
-    h5file.save(dic, root)
+    if fileobj is None:
+        return toml.dumps(dic)
+    toml.dump(dic, fileobj)
