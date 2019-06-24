@@ -58,7 +58,7 @@ def get_dmg_csq(crm, assets_by_site, gmf):
 
 
 def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
-                     perils, no_frag_perils):
+                     perils, binary_perils):
     # dmg_csq has shape (A, R, L, 1, D + 1)
     dtlist = []
     field2tup = {}
@@ -77,9 +77,9 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
-        for peril in no_frag_perils:
+        for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))
-    for peril in no_frag_perils:
+    for peril in binary_perils:
         for occ in occupants:
             dtlist.append((occ + '-' + peril, F32))
         dtlist.append(('number-' + peril, F32))
@@ -89,18 +89,18 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
             arr[field] = assetcol.array[field]
         elif field in field2tup:  # dmg_csq field
             arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
-    # computed losses and fatalities for no_frag_perils
+    # computed losses and fatalities for binary_perils
     for rec in arr:
         haz = hazard[rec['site_id']]
         for loss_type in loss_types:
             value = rec['value-' + loss_type]
-            for peril in no_frag_perils:
+            for peril in binary_perils:
                 rec['loss-%s-%s' % (loss_type, peril)] = haz[peril] * value
         for occupant in occupants:
             occ = rec[occupant]
-            for peril in no_frag_perils:
+            for peril in binary_perils:
                 rec[occupant + '-' + peril] = haz[peril] * occ
-        for peril in no_frag_perils:
+        for peril in binary_perils:
             rec['number-' + peril] = haz[peril] * rec['number']
     return arr
 
@@ -170,14 +170,14 @@ class MultiRiskCalculator(base.RiskCalculator):
             dmg_csq[:, 1] = get_dmg_csq(self.riskmodel, assets, gmf * ampl)
             perils.append('ASH_WET')
         hazard = self.datastore['multi_peril']
-        no_frag_perils = []
+        binary_perils = []
         for peril in self.oqparam.multi_peril:
             if peril != 'ASH':
-                no_frag_perils.append(peril)
+                binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(
             self.assetcol, dmg_csq, hazard, ltypes, dstates,
-            perils, no_frag_perils)
-        self.all_perils = perils + no_frag_perils
+            perils, binary_perils)
+        self.all_perils = perils + binary_perils
         return arr
 
     def get_fields(self, cat):
