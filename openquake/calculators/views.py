@@ -812,7 +812,8 @@ def view_act_ruptures_by_src(token, dstore):
     return rst_table(table)
 
 
-Source = collections.namedtuple('Source', 'source_id code geom num_ruptures')
+Source = collections.namedtuple(
+    'Source', 'source_id code geom num_ruptures, checksum')
 
 
 def all_equal(records):
@@ -835,7 +836,8 @@ def view_dupl_sources(token, dstore):
     """
     Show the sources with the same ID and the truly duplicated sources
     """
-    fields = ('source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures')
+    fields = ('source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures',
+              'checksum')
     dic = group_array(dstore['source_info'][fields], 'source_id')
     sameid = []
     dupl = []
@@ -844,7 +846,8 @@ def view_dupl_sources(token, dstore):
             sources = []
             for rec in group:
                 geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
-                src = Source(source_id, rec['code'], geom, rec['num_ruptures'])
+                src = Source(source_id, rec['code'], geom, rec['num_ruptures'],
+                             rec['checksum'])
                 sources.append(src)
             if all_equal(sources):
                 dupl.append(source_id)
