@@ -50,9 +50,9 @@ def purge_all(user=None, fast=False):
             print('Removed %s' % datadir)
         else:
             for fname in os.listdir(datadir):
-                mo = re.match('calc_(\d+)\.hdf5', fname)
+                mo = re.match('(calc_|cache_)(\d+)\.hdf5', fname)
                 if mo is not None:
-                    calc_id = int(mo.group(1))
+                    calc_id = int(mo.group(2))
                     purge_one(calc_id, user)
 
 

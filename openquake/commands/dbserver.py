@@ -45,7 +45,7 @@ def dbserver(cmd, dbhostport=None,
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            dbs.run_server(dbpath, dbhostport)
+            dbs.run_server(dbpath, dbhostport, foreground=foreground)
         else:
             print('dbserver already running')
     elif cmd == 'restart':
