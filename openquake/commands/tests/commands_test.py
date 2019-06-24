@@ -125,8 +125,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
             info(None, None, None, None, None, None, None, path)
-        # this is a test with multiple same ID sources
-        self.assertIn('multiplicity', str(p))
+        self.assertIn('RlzsAssoc(size=1, rlzs=2)', str(p))
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
