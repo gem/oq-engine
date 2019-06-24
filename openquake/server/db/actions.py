@@ -358,10 +358,16 @@ def del_calc(db, job_id, user):
     # try to delete datastore and associated file
     # path has typically the form /home/user/oqdata/calc_XXX
     fname = path + ".hdf5"
-    try:
-        os.remove(fname)
-    except OSError as exc:  # permission error
-        return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    cache = fname.replace('calc_', 'cache_')
+    if os.path.exists(cache):
+        fnames = [fname, cache]
+    else:
+        fnames = [fname]
+    for fname in fnames:
+        try:
+            os.remove(fname)
+        except OSError as exc:  # permission error
+            return {"error": 'Could not remove %s: %s' % (fname, exc)}
     return {"success": fname}
 
 
