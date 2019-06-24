@@ -472,7 +472,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         mon.hdf5.close()
         os.remove(mon.hdf5.path)
         self.assertEqual(
-            error.call_args[0][0], 'checking source SFLT2: too large: 84 km')
+            error.call_args[0][0], 'source SFLT2: too large: 84 km')
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
