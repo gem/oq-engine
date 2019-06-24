@@ -20,7 +20,6 @@ import logging
 import numpy
 from openquake.baselib import hdf5, general
 from openquake.hazardlib import valid, geo, InvalidFile
-from openquake.commonlib import logictree
 from openquake.calculators import base
 from openquake.calculators.extract import extract
 
