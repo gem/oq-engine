@@ -248,7 +248,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     smap.submit(block, self.src_filter, gsims, param)
                     yield block
                     num_tasks += 1
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
