@@ -3,8 +3,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 
 ============== ===================
 checksum32     1,811,660,702      
-date           2019-06-21T09:42:00
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:28
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 2, num_levels = 38, num_rlzs = 1
@@ -63,11 +63,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=4, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]
-  1,'[ChiouYoungs2008]': [0]
-  2,'[ChiouYoungs2008]': [0]
-  3,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=4, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -89,35 +85,35 @@ source_model.xml 3      Active Shallow Crust 164          164
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-1      2         A    1     5     1,440        2.99916   1.00000   1,440 
-2      3         S    5     7     617          1.47579   1.00000   617   
-3      4         C    7     11    164          0.61824   1.00000   164   
-0      1         P    0     1     15           0.03497   1.00000   15    
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+1      2         A    1     5     1,440        3.04646   1.00000   1,440  3,959,327,310
+2      3         S    5     7     617          1.48465   1.00000   617    4,249,039,070
+3      4         C    7     11    164          0.64219   1.00000   164    2,770,673,874
+0      1         P    0     1     15           0.03528   1.00000   15     1,116,294,081
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    2.99916   1     
-C    0.61824   1     
-P    0.03497   1     
-S    1.47579   1     
+A    3.04646   1     
+C    0.64219   1     
+P    0.03528   1     
+S    1.48465   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-====================== ======= ========= ========= ======= =======
-operation-duration     mean    stddev    min       max     outputs
-build_hazard_stats     0.01244 2.458E-04 0.01227   0.01262 2      
-classical              1.18685 0.04742   1.13282   1.22155 3      
-classical_split_filter 0.27411 0.36704   1.621E-04 0.87737 7      
-read_source_models     0.04194 NaN       0.04194   0.04194 1      
-====================== ======= ========= ========= ======= =======
+====================== ======= ======= ========= ======= =======
+operation-duration     mean    stddev  min       max     outputs
+build_hazard_stats     0.00971 0.00164 0.00854   0.01087 2      
+classical              1.20894 0.05124 1.15039   1.24557 3      
+classical_split_filter 0.27687 0.37264 1.659E-04 0.90421 7      
+read_source_models     0.04190 NaN     0.04190   0.04190 1      
+====================== ======= ======= ========= ======= =======
 
 Fastest task
 ------------
@@ -146,9 +142,9 @@ Data transfer
 ====================== =========================================================== =========
 task                   sent                                                        received 
 build_hazard_stats     pgetter=778 B hstats=130 B N=28 B individual_curves=26 B    825 B    
-classical              srcs=25.84 KB params=5.74 KB srcfilter=1.5 KB gsims=1.06 KB 517.05 KB
-classical_split_filter srcs=25.84 KB params=5.74 KB srcfilter=1.5 KB gsims=1.06 KB 211.41 KB
-read_source_models     converter=313 B fnames=103 B                                4.05 KB  
+classical              srcs=25.98 KB params=5.74 KB srcfilter=1.5 KB gsims=1.06 KB 517.14 KB
+classical_split_filter srcs=25.98 KB params=5.74 KB srcfilter=1.5 KB gsims=1.06 KB 211.59 KB
+read_source_models     converter=313 B fnames=103 B                                4.07 KB  
 ====================== =========================================================== =========
 
 Slowest operations
@@ -156,20 +152,20 @@ Slowest operations
 ============================ ========= ========= ======
 operation                    time_sec  memory_mb counts
 ============================ ========= ========= ======
-total classical              3.56054   0.17578   3     
-total classical_split_filter 1.91879   0.21484   7     
-make_contexts                1.89106   0.0       2,236 
-get_poes                     1.10557   0.0       2,236 
-filtering/splitting sources  0.29611   0.0       4     
-total read_source_models     0.04194   0.0       1     
-aggregate curves             0.02700   0.0       7     
-total build_hazard_stats     0.02488   1.28516   2     
-read PoEs                    0.02336   1.28516   2     
-saving probability maps      0.01046   0.0       1     
-store source model           0.00673   0.0       1     
-managing sources             0.00374   0.0       1     
-store source_info            0.00172   0.0       1     
-saving statistics            0.00104   0.0       2     
-combine pmaps                2.320E-04 0.0       2     
-compute stats                1.850E-04 0.0       1     
+total classical              3.62682   0.42578   3     
+total classical_split_filter 1.93806   0.36328   7     
+make_contexts                1.92295   0.0       2,236 
+get_poes                     1.11067   0.0       2,236 
+filtering/splitting sources  0.30050   0.25000   4     
+total read_source_models     0.04190   0.0       1     
+aggregate curves             0.02373   1.03125   7     
+total build_hazard_stats     0.01941   1.53125   2     
+read PoEs                    0.01842   1.53125   2     
+saving probability maps      0.00968   0.0       1     
+store source model           0.00696   0.51172   1     
+managing sources             0.00394   0.0       1     
+store source_info            0.00151   0.0       1     
+saving statistics            0.00113   0.0       2     
+combine pmaps                1.209E-04 0.0       2     
+compute stats                9.918E-05 0.0       1     
 ============================ ========= ========= ======

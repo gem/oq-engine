@@ -3,8 +3,8 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2019-06-21T09:41:57
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:26
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 27, num_levels = 8, num_rlzs = 1
@@ -54,8 +54,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[FromFile]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -86,6 +85,6 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.03714   0.0       1     
-reading exposure    6.046E-04 0.0       1     
+building riskinputs 0.03784   0.0       1     
+reading exposure    5.922E-04 0.0       1     
 =================== ========= ========= ======

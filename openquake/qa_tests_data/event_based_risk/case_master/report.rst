@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     1,634,090,954      
-date           2019-06-21T09:42:24
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:33:56
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 7, num_levels = 46, num_rlzs = 8
@@ -71,15 +71,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=8, rlzs=8)
-  0,'[BooreAtkinson2008]': [0 1]
-  0,'[ChiouYoungs2008]': [2 3]
-  1,'[AkkarBommer2010]\nminimum_distance = 10': [0 2]
-  1,'[ChiouYoungs2008]': [1 3]
-  2,'[BooreAtkinson2008]': [4 5]
-  2,'[ChiouYoungs2008]': [6 7]
-  3,'[AkkarBommer2010]\nminimum_distance = 10': [4 6]
-  3,'[ChiouYoungs2008]': [5 7]>
+  <RlzsAssoc(size=16, rlzs=8)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -120,37 +112,36 @@ tax3     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
-====== ========= ==== ===== ===== ============ ========= ========= =======
-2      1         S    4     6     482          0.05297   0.0       0.0    
-0      1         S    0     2     482          0.05204   0.0       0.0    
-1      2         S    2     4     4            0.00300   0.0       2.00000
-3      2         X    6     402   1            2.184E-04 0.0       0.0    
-====== ========= ==== ===== ===== ============ ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+2      1         S    4     6     482          0.06049   0.0       0.0     2,786,737,502
+0      1         S    0     2     482          0.05930   0.0       0.0     2,786,737,502
+1      2         S    2     4     4            0.00387   0.0       2.00000 3,056,286,023
+3      2         X    6     402   1            2.029E-04 0.0       0.0     2,506,021,815
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.10801   3     
-X    2.184E-04 1     
+S    0.12366   3     
+X    2.029E-04 1     
 ==== ========= ======
 
 Duplicated sources
 ------------------
-['1']
-Found 2 source(s) with the same ID and 1 true duplicate(s)
+Found 2 source(s) with the same ID and 1 true duplicate(s): ['1']
 Here is a fake duplicate: 2
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-get_eid_rlz        5.906E-04 1.900E-04 3.734E-04 7.255E-04 3      
-read_source_models 0.01330   0.00453   0.01010   0.01650   2      
-sample_ruptures    0.03229   0.03125   0.00196   0.05994   4      
+get_eid_rlz        4.710E-04 1.182E-04 4.005E-04 6.075E-04 3      
+read_source_models 0.01601   0.00482   0.01260   0.01942   2      
+sample_ruptures    0.03623   0.03488   0.00182   0.06713   4      
 ================== ========= ========= ========= ========= =======
 
 Data transfer
@@ -158,8 +149,8 @@ Data transfer
 ================== =============================================== ========
 task               sent                                            received
 get_eid_rlz        self=4.96 KB                                    1.04 KB 
-read_source_models converter=626 B fnames=240 B                    13.94 KB
-sample_ruptures    param=21.88 KB sources=14.01 KB srcfilter=880 B 2.25 KB 
+read_source_models converter=626 B fnames=240 B                    13.95 KB
+sample_ruptures    param=21.88 KB sources=14.08 KB srcfilter=880 B 2.25 KB 
 ================== =============================================== ========
 
 Slowest operations
@@ -167,11 +158,11 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total sample_ruptures    0.12915   0.30078   4     
-total read_source_models 0.02660   0.0       2     
-store source model       0.00581   0.0       2     
-saving ruptures          0.00216   0.0       1     
-total get_eid_rlz        0.00177   0.0       3     
-store source_info        0.00177   0.0       1     
-reading exposure         6.692E-04 0.0       1     
+total sample_ruptures    0.14492   0.0       4     
+total read_source_models 0.03202   0.0       2     
+store source model       0.00654   0.0       2     
+saving ruptures          0.00354   0.0       1     
+store source_info        0.00185   0.0       1     
+total get_eid_rlz        0.00141   0.0       3     
+reading exposure         6.669E-04 0.0       1     
 ======================== ========= ========= ======

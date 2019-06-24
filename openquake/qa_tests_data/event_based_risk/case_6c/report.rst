@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     4,102,228,417      
-date           2019-06-21T09:42:30
-engine_version 3.6.0-git17fd0581aa
+date           2019-06-24T15:34:02
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = ?
@@ -55,11 +55,11 @@ tax1     1.00000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         S    0     2     482          0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      1         S    0     2     482          0.0       0.0       0.0    2,786,737,502
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -73,14 +73,14 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00598 NaN    0.00598 0.00598 1      
+read_source_models 0.00368 NaN    0.00368 0.00368 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=313 B fnames=114 B 1.49 KB 
+read_source_models converter=313 B fnames=114 B 1.5 KB  
 ================== ============================ ========
 
 Slowest operations
@@ -88,6 +88,6 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00598   0.0       1     
-reading exposure         6.552E-04 0.0       1     
+total read_source_models 0.00368   0.0       1     
+reading exposure         6.814E-04 0.0       1     
 ======================== ========= ========= ======
