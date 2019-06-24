@@ -36,7 +36,7 @@ import operator
 from collections import namedtuple
 import toml
 import numpy
-from openquake.baselib import hdf5, node, python3compat, general
+from openquake.baselib import hdf5, node, python3compat
 from openquake.baselib.general import groupby, group_array, duplicated
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
