@@ -221,12 +221,13 @@ class ClassicalCalculator(base.HazardCalculator):
     def _send_sources(self, smap):
         oq = self.oqparam
         nrup = operator.attrgetter('num_ruptures')
+        maxweight = min(self.csm.get_maxweight(nrup, oq.concurrent_tasks),
+                        base.RUPTURES_PER_BLOCK)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            maxweight=min(self.csm.get_maxweight(nrup, oq.concurrent_tasks),
-                          base.RUPTURES_PER_BLOCK))
+            maxweight=maxweight)
         logging.info('Max ruptures per task = %(maxweight)d', param)
 
         num_tasks = 0
