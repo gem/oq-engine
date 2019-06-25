@@ -221,8 +221,10 @@ class ClassicalCalculator(base.HazardCalculator):
     def _send_sources(self, smap):
         oq = self.oqparam
         nrup = operator.attrgetter('num_ruptures')
-        maxweight = min(self.csm.get_maxweight(nrup, oq.concurrent_tasks),
-                        base.RUPTURES_PER_BLOCK)
+        trt_sources = self.csm.get_trt_sources()
+        maxweight = min(
+            self.csm.get_maxweight(trt_sources, nrup, oq.concurrent_tasks),
+            base.RUPTURES_PER_BLOCK)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -232,7 +234,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         num_tasks = 0
         num_sources = 0
-        for trt, sources in self.csm.trt_sources:
+        for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
             if hasattr(sources, 'atomic') and sources.atomic:
