@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an early check on the coefficients of variation and loss ratios of
+    vulnerability functions with the Beta distribution
   * Made sure that `oq engine --dc` removes the HDF5 cache file too
   * Removed the flag `optimize_same_id_sources` because it is useless now
   * Introduced a soft limit at 65,536 sites for event_based calculations
