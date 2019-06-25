@@ -25,8 +25,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import (groupby, group_array, AccumDict,
-                                       cached_property)
+from openquake.baselib.general import groupby, group_array, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
@@ -395,15 +394,14 @@ class CompositeSourceModel(collections.abc.Sequence):
         new.info.update_eff_ruptures(new.get_num_ruptures())
         return new
 
-    def get_weight(self, weight=operator.attrgetter('weight')):
+    def get_weight(self, trt_sources, weight=operator.attrgetter('weight')):
         """
         :param weight: source weight function
         :returns: total weight of the source model
         """
         # NB: I am looking at .trt_sources to count the weight coming
         # from duplicated sources correctly
-        return sum(weight(src) for trt, sources in self.trt_sources
-                   for src in sources)
+        return sum(weight(s) for trt, sources in trt_sources for s in sources)
 
     @property
     def src_groups(self):
@@ -438,8 +436,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                         sources.append(src)
         return sources
 
-    @cached_property
-    def trt_sources(self):
+    def get_trt_sources(self):
         """
         :returns: a list of pairs [(trt, group of sources)]
         """
@@ -495,11 +492,12 @@ class CompositeSourceModel(collections.abc.Sequence):
             src.serial = serial
             serial += nr
 
-    def get_maxweight(self, weight, concurrent_tasks, minweight=MINWEIGHT):
+    def get_maxweight(self, trt_sources, weight, concurrent_tasks,
+                      minweight=MINWEIGHT):
         """
         Return an appropriate maxweight for use in the block_splitter
         """
-        totweight = self.get_weight(weight)
+        totweight = self.get_weight(trt_sources, weight)
         logging.info('tot_weight = %s', totweight)
         ct = concurrent_tasks or 1
         mw = math.ceil(totweight / ct)
