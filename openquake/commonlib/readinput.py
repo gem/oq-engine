@@ -943,7 +943,8 @@ def get_risk_model(oqparam):
     """
     riskdict = get_risk_models(oqparam)
     oqparam.set_risk_imtls(riskdict)
-    return riskinput.CompositeRiskModel(oqparam, riskdict)
+    crm = riskinput.CompositeRiskModel(oqparam, riskdict)
+    return crm
 
 
 def get_exposure(oqparam):
