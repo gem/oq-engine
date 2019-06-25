@@ -18,6 +18,7 @@
 import csv
 import logging
 import numpy
+import shapely
 from openquake.baselib import hdf5, general
 from openquake.hazardlib import valid, geo, InvalidFile
 from openquake.calculators import base
@@ -105,6 +106,46 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     return arr
 
 
+def csv2peril(fname, name, sitecol, tofloat, asset_hazard_distance):
+    """
+    Converts a CSV file into a peril array of length N
+    """
+    data = []
+    with open(fname) as f:
+        for row in csv.DictReader(f):
+            intensity = tofloat(row['intensity'])
+            if intensity > 0:
+                data.append((valid.longitude(row['lon']),
+                             valid.latitude(row['lat']),
+                             intensity))
+    data = numpy.array(data, [('lon', float), ('lat', float),
+                              ('number', float)])
+    logging.info('Read %s with %d rows' % (fname, len(data)))
+    if len(data) != len(numpy.unique(data[['lon', 'lat']])):
+        raise InvalidFile('There are duplicated points in %s' % fname)
+    try:
+        distance = asset_hazard_distance[name]
+    except KeyError:
+        distance = asset_hazard_distance['default']
+    sites, filtdata, _discarded = geo.utils.assoc(
+        data, sitecol, distance, 'filter')
+    peril = numpy.zeros(len(sitecol), float)
+    peril[sites.sids] = filtdata['number']
+    return peril
+
+
+def wkt2peril(fname, name, sitecol):
+    """
+    Converts a WKT file into a peril array of length N
+    """
+    with open(fname) as f:
+        geom = shapely.wkt.load(f)
+    peril = numpy.zeros(len(sitecol), float)
+    for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
+        peril[sid] = shapely.geometry.Point(lon, lat).within(geom)
+    return peril
+
+
 @base.calculators.add('multi_risk')
 class MultiRiskCalculator(base.RiskCalculator):
     """
@@ -124,32 +165,16 @@ class MultiRiskCalculator(base.RiskCalculator):
         N = len(self.sitecol)
         self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
         for name, fname in zip(oq.multi_peril, fnames):
-            if name in 'LAVA LAHAR PYRO':
-                tofloat = valid.probability
-            else:
-                tofloat = valid.positivefloat
-            data = []
-            with open(fname) as f:
-                for row in csv.DictReader(f):
-                    intensity = tofloat(row['intensity'])
-                    if intensity > 0:
-                        data.append((valid.longitude(row['lon']),
-                                     valid.latitude(row['lat']),
-                                     intensity))
-            data = numpy.array(data, [('lon', float), ('lat', float),
-                                      ('number', float)])
-            logging.info('Read %s with %d rows' % (fname, len(data)))
-            if len(data) != len(numpy.unique(data[['lon', 'lat']])):
-                raise InvalidFile('There are duplicated points in %s' % fname)
-            try:
-                asset_hazard_distance = oq.asset_hazard_distance[name]
-            except KeyError:
-                asset_hazard_distance = oq.asset_hazard_distance['default']
-            sites, filtdata, _discarded = geo.utils.assoc(
-                data, self.sitecol, asset_hazard_distance, 'filter')
-            z = numpy.zeros(N, float)
-            z[sites.sids] = filtdata['number']
-            self.datastore['multi_peril'][name] = z
+            tofloat = (valid.positivefloat if name == 'ASH'
+                       else valid.probability)
+            if fname.endswith('.csv'):
+                peril = csv2peril(fname, name, self.sitecol, tofloat,
+                                  oq.asset_hazard_distance)
+            elif fname.endswith('.wkt'):
+                peril = wkt2peril(fname, name, self.sitecol)
+            if peril.sum() == 0:
+                logging.warning('No sites were affected by %s' % name)
+            self.datastore['multi_peril'][name] = peril
         self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
     def execute(self):
