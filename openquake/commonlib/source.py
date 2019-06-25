@@ -25,7 +25,8 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array, AccumDict
+from openquake.baselib.general import (groupby, group_array, AccumDict,
+                                       cached_property)
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
@@ -407,7 +408,8 @@ class CompositeSourceModel(collections.abc.Sequence):
         :param weight: source weight function
         :returns: total weight of the source model
         """
-        return sum(weight(src) for src in self.get_sources())
+        return sum(weight(src) for trt, sources in self.trt_sources
+                   for src in sources)
 
     @property
     def src_groups(self):
@@ -442,7 +444,8 @@ class CompositeSourceModel(collections.abc.Sequence):
                         sources.append(src)
         return sources
 
-    def get_trt_sources(self):
+    @cached_property
+    def trt_sources(self):
         """
         :returns: a list of pairs [(trt, group of sources)]
         """
