@@ -231,7 +231,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         num_tasks = 0
         num_sources = 0
-        for trt, sources in self.csm.get_trt_sources():
+        for trt, sources in self.csm.trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
             if hasattr(sources, 'atomic') and sources.atomic:
