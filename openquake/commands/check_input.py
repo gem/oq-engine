@@ -18,12 +18,17 @@
 from openquake.baselib import sap
 from openquake.commonlib import readinput
 from openquake.calculators import base
+from openquake.hazardlib import nrml
+from openquake.risklib import read_nrml  # this is necessary
 
 
 @sap.script
-def check_input(job_ini_or_zip):
-    calc = base.calculators(readinput.get_oqparam(job_ini_or_zip))
-    calc.read_inputs()
+def check_input(job_ini_or_zip_or_nrml):
+    if job_ini_or_zip_or_nrml.endswith('.xml'):
+        print(nrml.to_python(job_ini_or_zip_or_nrml))
+    else:
+        calc = base.calculators(readinput.get_oqparam(job_ini_or_zip_or_nrml))
+        calc.read_inputs()
 
 
-check_input.arg('job_ini_or_zip', 'Check the input files')
+check_input.arg('job_ini_or_zip_or_nrml', 'Check the input')
