@@ -52,6 +52,21 @@ class BetaDistributionTestCase(unittest.TestCase):
             [0.057241368], scientific.BetaDistribution().sample(
                 numpy.array([0.1]), None, numpy.array([0.1])))
 
+    def test_zero_ratios(self):
+        with self.assertRaises(ValueError) as ctx:
+            scientific.VulnerabilityFunction(
+                'v1', 'PGA', [.1, .2, .3], [0, .1, .2], [0, 0, 0], 'BT')
+        self.assertEqual(
+            str(ctx.exception), 'The loss ratios cannot be zero in '
+            '<VulnerabilityFunction(v1, PGA)>')
+
+    def test_large_covs(self):
+        with self.assertRaises(ValueError) as ctx:
+            scientific.VulnerabilityFunction(
+                'v1', 'PGA', [.1, .2, .3], [.05, .1, .2], [.1, .2, 3], 'BT')
+        self.assertIn('The coefficient of variation 3.0 > 2.0 is too large',
+                      str(ctx.exception))
+
 
 epsilons = scientific.make_epsilons(
     numpy.zeros((1, 3)), seed=3, correlation=0)[0]
