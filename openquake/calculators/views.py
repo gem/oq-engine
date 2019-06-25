@@ -836,29 +836,23 @@ def view_dupl_sources(token, dstore):
     """
     Show the sources with the same ID and the truly duplicated sources
     """
-    fields = ('source_id', 'code', 'gidx1', 'gidx2', 'num_ruptures',
-              'checksum')
-    dic = group_array(dstore['source_info'][fields], 'source_id')
-    sameid = []
+    array = dstore['source_info']['source_id', 'checksum']
+    dic = group_array(array, 'source_id', 'checksum')
     dupl = []
-    for source_id, group in dic.items():
-        if len(group) > 1:  # same ID sources
-            sources = []
-            for rec in group:
-                src = Source(source_id, rec['code'], rec['num_ruptures'],
-                             rec['checksum'])
-                sources.append(src)
-            if all_equal(sources):
-                dupl.append(source_id)
-            sameid.append(source_id)
+    uniq = []
+    muls = []
+    for (source_id, checksum), group in dic.items():
+        mul = len(group)
+        if mul > 1:  # duplicate
+            muls.append(mul)
+            dupl.append(source_id)
+        else:
+            uniq.append(source_id)
     if not dupl:
         return ''
-    msg = ('Found %d source(s) with the same ID and %d true duplicate(s): %s'
-           % (len(sameid), len(dupl), numpy.array(dupl)))
-    fakedupl = set(sameid) - set(dupl)
-    if fakedupl:
-        msg += '\nHere is a fake duplicate: %s' % fakedupl.pop()
-    return msg
+    u, d, m = len(uniq), len(dupl), sum(muls) / len(dupl)
+    return ('Found %d unique sources and %d duplicate sources with '
+            'multiplicity %.1f: %s' % (u, d, m, numpy.array(dupl)))
 
 
 @view.add('extreme_groups')
