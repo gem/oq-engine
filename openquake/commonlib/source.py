@@ -457,6 +457,8 @@ class CompositeSourceModel(collections.abc.Sequence):
                     atomic.append((grp.trt, grp))
                 elif grp:
                     acc[grp.trt].extend(grp)
+        if not hasattr(grp.sources[0], 'checksum'):  # for UCERF
+            return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
         n = 0
         tot = 0
