@@ -695,7 +695,7 @@ def view_dupl_sources_time(token, dstore):
             calc_time = records['calc_time'].sum()
             tot_time += calc_time
             tbl.append((source_id, calc_time, len(records)))
-    if tbl and info.attrs.get('has_dupl_sources'):
+    if tbl:
         tot = info['calc_time'].sum() + info['split_time'].sum()
         percent = tot_time / tot * 100
         m = '\nTotal time in duplicated sources: %d/%d (%d%%)' % (
@@ -854,7 +854,7 @@ def view_dupl_sources(token, dstore):
     if not dupl:
         return ''
     msg = ('Found %d source(s) with the same ID and %d true duplicate(s): %s'
-           % (len(sameid), len(dupl), dupl))
+           % (len(sameid), len(dupl), numpy.array(dupl)))
     fakedupl = set(sameid) - set(dupl)
     if fakedupl:
         msg += '\nHere is a fake duplicate: %s' % fakedupl.pop()
