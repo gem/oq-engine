@@ -378,6 +378,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         new.sm_id = sm_id
         return new
 
+    # used only by UCERF
     def new(self, sources_by_grp):
         """
         Generate a new CompositeSourceModel from the given dictionary.
@@ -499,6 +500,7 @@ class CompositeSourceModel(collections.abc.Sequence):
         Return an appropriate maxweight for use in the block_splitter
         """
         totweight = self.get_weight(weight)
+        logging.info('tot_weight = %s', totweight)
         ct = concurrent_tasks or 1
         mw = math.ceil(totweight / ct)
         return max(mw, minweight)
