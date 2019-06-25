@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Supported .wkt files for the binary perils in the multi_risk calculator
   * Added an early check on the coefficients of variation and loss ratios of
     vulnerability functions with the Beta distribution
   * Made sure that `oq engine --dc` removes the HDF5 cache file too
