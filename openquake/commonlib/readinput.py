@@ -163,9 +163,6 @@ def _update(params, items, base_path):
         elif key.endswith(('_file', '_csv', '_hdf5')):
             if value.startswith('{'):
                 dic = ast.literal_eval(value)  # name -> relpath
-                for name in dic:
-                    if name not in imt.registry:
-                        raise ValueError('%s is an unknown IMT' % name)
                 input_type, fnames = normalize(key, dic.values(), base_path)
                 params['inputs'][input_type] = fnames
                 params[input_type] = ' '.join(dic)
