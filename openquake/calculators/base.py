@@ -334,6 +334,7 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    # called multiple times in event_based/py
     def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
         """
         :param sources: a list of sources
@@ -341,15 +342,16 @@ class HazardCalculator(BaseCalculator):
         :param key: None or 'src_group_id'
         :returns: an iterator over blocks of sources
         """
-        ct = self.oqparam.concurrent_tasks or 1
-        maxweight = self.csm.get_maxweight(weight, ct, source.MINWEIGHT)
-        if not hasattr(self, 'logged'):
-            if maxweight == source.MINWEIGHT:
+        if not hasattr(self, 'maxweight'):
+            trt_sources = self.csm.get_trt_sources()
+            self.maxweight = self.csm.get_maxweight(
+                trt_sources, weight, self.oqparam.concurrent_tasks,
+                source.MINWEIGHT)
+            if self.maxweight == source.MINWEIGHT:
                 logging.info('Using minweight=%d', source.MINWEIGHT)
             else:
-                logging.info('Using maxweight=%d', maxweight)
-            self.logged = True
-        return general.block_splitter(sources, maxweight, weight, key)
+                logging.info('Using maxweight=%d', self.maxweight)
+        return general.block_splitter(sources, self.maxweight, weight, key)
 
     @general.cached_property
     def src_filter(self):
