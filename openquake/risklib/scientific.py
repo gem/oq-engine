@@ -122,10 +122,7 @@ class VulnerabilityFunction(object):
                 msg = ("It is not valid to define a loss ratio = 0.0 with a "
                        "corresponding coeff. of variation > 0.0")
                 raise ValueError(msg)
-            if distribution == 'BT' and lr == 0:
-                raise ValueError(
-                    'The loss ratios cannot be zero in %s' % self)
-            if distribution == 'BT' and cov ** 2 > 1 / lr - 1:
+            if distribution == 'BT' and lr > 0 and cov ** 2 > 1 / lr - 1:
                 # see https://github.com/gem/oq-engine/issues/4841
                 raise ValueError(
                     'The coefficient of variation %s > %s is too large in %s'
