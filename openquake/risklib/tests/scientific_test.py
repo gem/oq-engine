@@ -53,12 +53,9 @@ class BetaDistributionTestCase(unittest.TestCase):
                 numpy.array([0.1]), None, numpy.array([0.1])))
 
     def test_zero_ratios(self):
-        with self.assertRaises(ValueError) as ctx:
-            scientific.VulnerabilityFunction(
-                'v1', 'PGA', [.1, .2, .3], [0, .1, .2], [0, 0, 0], 'BT')
-        self.assertEqual(
-            str(ctx.exception), 'The loss ratios cannot be zero in '
-            '<VulnerabilityFunction(v1, PGA)>')
+        # a loss ratio can be zero if the corresponding CoV is zero
+        scientific.VulnerabilityFunction(
+            'v1', 'PGA', [.1, .2, .3], [0, .1, .2], [0, .2, .3], 'BT')
 
     def test_large_covs(self):
         with self.assertRaises(ValueError) as ctx:
