@@ -498,7 +498,6 @@ class CompositeSourceModel(collections.abc.Sequence):
         Return an appropriate maxweight for use in the block_splitter
         """
         totweight = self.get_weight(trt_sources, weight)
-        logging.info('tot_weight = %s', totweight)
         ct = concurrent_tasks or 1
         mw = math.ceil(totweight / ct)
         return max(mw, minweight)
