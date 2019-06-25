@@ -100,17 +100,16 @@ class CompositionInfo(object):
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
-                   totweight=0, min_mag=0, max_mag=0)
+                   min_mag=0, max_mag=0)
 
     get_rlzs_assoc = get_rlzs_assoc
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight,
+    def __init__(self, gsim_lt, seed, num_samples, source_models,
                  min_mag, max_mag):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
-        self.tot_weight = totweight
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.init()
@@ -132,8 +131,7 @@ class CompositionInfo(object):
         """
         sm = self.source_models[sm_id]
         num_samples = sm.samples if self.num_samples else 0
-        return self.__class__(
-            self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
+        return self.__class__(self.gsim_lt, self.seed, num_samples, [sm])
 
     def classify_gsim_lt(self, source_model):
         """
@@ -200,7 +198,6 @@ class CompositionInfo(object):
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(sorted(trti)),
-                     tot_weight=self.tot_weight,
                      min_mag=self.min_mag, max_mag=self.max_mag))
 
     def __fromh5__(self, dic, attrs):
@@ -326,10 +323,6 @@ class CompositeSourceModel(collections.abc.Sequence):
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()
-        # NB: the weight is 1 for sources which are XML nodes
-        totweight = sum(getattr(src, 'weight', 1) for sm in source_models
-                        for sg in sm.src_groups for src in sg)
-
         min_mags, max_mags = [], []
         for sm in source_models:
             for sg in sm.src_groups:
@@ -342,7 +335,6 @@ class CompositeSourceModel(collections.abc.Sequence):
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models],
-            totweight,
             min(min_mags) if min_mags else 0,
             max(max_mags) if max_mags else 0)
 
@@ -400,15 +392,16 @@ class CompositeSourceModel(collections.abc.Sequence):
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         new.info.update_eff_ruptures(new.get_num_ruptures())
-        new.info.tot_weight = new.get_weight()
         return new
 
-    def get_weight(self, weight=operator.attrgetter('weight')):
+    def get_weight(self, trt_sources, weight=operator.attrgetter('weight')):
         """
         :param weight: source weight function
         :returns: total weight of the source model
         """
-        return sum(weight(src) for src in self.get_sources())
+        # NB: I am looking at .trt_sources to count the weight coming
+        # from duplicated sources correctly
+        return sum(weight(s) for trt, sources in trt_sources for s in sources)
 
     @property
     def src_groups(self):
@@ -455,6 +448,10 @@ class CompositeSourceModel(collections.abc.Sequence):
                     atomic.append((grp.trt, grp))
                 elif grp:
                     acc[grp.trt].extend(grp)
+        if not acc:
+            return atomic
+        elif not hasattr(grp.sources[0], 'checksum'):  # for UCERF
+            return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
         n = 0
         tot = 0
@@ -495,12 +492,12 @@ class CompositeSourceModel(collections.abc.Sequence):
             src.serial = serial
             serial += nr
 
-    def get_maxweight(self, weight, concurrent_tasks, minweight=MINWEIGHT):
+    def get_maxweight(self, trt_sources, weight, concurrent_tasks,
+                      minweight=MINWEIGHT):
         """
         Return an appropriate maxweight for use in the block_splitter
         """
-        totweight = self.get_weight(weight)
-        logging.info('tot_weight = %s', totweight)
+        totweight = self.get_weight(trt_sources, weight)
         ct = concurrent_tasks or 1
         mw = math.ceil(totweight / ct)
         return max(mw, minweight)
