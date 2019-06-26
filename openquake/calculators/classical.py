@@ -104,6 +104,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         source_data = numpy.array([(monitor.task_no, src_id, s/tot, r, w)
                                    for src_id, (s, r, w) in sd.items()],
                                   source_data_dt)
+        monitor.weight = source_data['weight'].sum()
         yield dict(source_data=source_data)
         # compute the last block (the smallest one) and yield the others
         for block in blocks[:-1]:
