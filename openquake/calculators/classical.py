@@ -105,13 +105,14 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
                                    for src_id, (s, r, w) in sd.items()],
                                   source_data_dt)
         monitor.weight = source_data['weight'].sum()
-        yield dict(source_data=source_data)
         # compute the last block (the smallest one) and yield the others
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
         # NB: it is a faster if the first blocks are yielded first
         # for instance in job_share_small.ini the improvement is 579s -> 466s
-        yield classical(blocks[-1], srcfilter, gsims, params, monitor)
+        dic = classical(blocks[-1], srcfilter, gsims, params, monitor)
+        dic['source_data'] = source_data
+        yield dic
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
@@ -149,9 +150,6 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, eff_ruptures, rup_data
         """
-        if 'source_data' in dic:
-            self.datastore.extend('source_data', dic['source_data'])
-            return acc
         with self.monitor('aggregate curves', autoflush=True):
             acc.nsites.update(dic['nsites'])
             acc.eff_ruptures += dic['eff_ruptures']
@@ -162,6 +160,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for grp_id, data in dic['rup_data'].items():
                 if len(data):
                     self.datastore.extend('rup/grp-%02d' % grp_id, data)
+            if 'source_data' in dic:
+                self.datastore.extend('source_data', dic['source_data'])
         return acc
 
     def acc0(self):
