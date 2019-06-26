@@ -347,8 +347,7 @@ class RuptureConverter(object):
 
         :param node: a node representing a rupture
         """
-        convert = getattr(self, 'convert_' + striptag(node.tag))
-        return convert(node)
+        return getattr(self, 'convert_' + striptag(node.tag))(node)
 
     def geo_line(self, edge):
         """
@@ -551,6 +550,19 @@ class SourceConverter(RuptureConverter):
         self.width_of_mfd_bin = width_of_mfd_bin
         self.spinning_floating = spinning_floating
         self.source_id = source_id
+
+    def convert_node(self, node):
+        """
+        Convert the given rupture node into a hazardlib rupture, depending
+        on the node tag.
+
+        :param node: a node representing a rupture
+        """
+        obj = getattr(self, 'convert_' + striptag(node.tag))(node)
+        source_id = getattr(obj, 'source_id', '')
+        if self.source_id and source_id and self.source_id != source_id:
+            return
+        return obj
 
     def get_tom(self, node):
         """
@@ -885,9 +897,9 @@ class SourceConverter(RuptureConverter):
                 assert hasattr(sg, 'occurrence_rate')
         #
         for src_node in node:
-            if self.source_id and self.source_id != src_node['id']:
-                continue  # filter by source_id
             src = self.convert_node(src_node)
+            if src is None:  # filtered out by source_id
+                continue
             # transmit the group attributes to the underlying source
             for attr, value in grp_attrs.items():
                 if attr == 'tectonicRegion':
