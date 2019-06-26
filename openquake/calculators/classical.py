@@ -41,7 +41,8 @@ weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 source_data_dt = numpy.dtype(
-    [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
+    [('taskno', U16), ('src_id', U32), ('nsites', U32), ('nruptures', U32),
+     ('weight', F32)])
 
 
 def get_src_ids(sources):
@@ -94,6 +95,15 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     blocks = list(block_splitter(sources, params['maxweight'],
                                  operator.attrgetter('weight')))
     if blocks:
+        sd = AccumDict(accum=numpy.zeros(4))
+        # src.id -> (taskno, nrup, nsites, weight)
+        for block in blocks:
+            for src in block:
+                arr = numpy.array([monitor.task_no, src.nsites,
+                                   src.num_ruptures, src.weight])
+                sd[src.id] += arr
+        source_data = [(src_id,) + tuple(data) for src_id, data in sd.items()]
+        yield dict(source_data=numpy.array(source_data, source_data_dt))
         # compute the last block (the smallest one) and yield the others
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
@@ -137,6 +147,9 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, eff_ruptures, rup_data
         """
+        if 'source_data' in dic:
+            self.datastore.extend('source_data', dic['source_data'])
+            return acc
         with self.monitor('aggregate curves', autoflush=True):
             acc.nsites.update(dic['nsites'])
             acc.eff_ruptures += dic['eff_ruptures']
@@ -185,16 +198,7 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('managing sources', autoflush=True):
             smap = parallel.Starmap(
                 self.core_task.__func__, monitor=self.monitor())
-            source_ids = []
-            data = []
-            for i, sources in enumerate(self._send_sources(smap)):
-                source_ids.append(get_src_ids(sources))
-                for src in sources:  # collect source data
-                    data.append((i, src.nsites, src.num_ruptures, src.weight))
-            if source_ids:
-                self.datastore['task_sources'] = encode(source_ids)
-            self.datastore.extend(
-                'source_data', numpy.array(data, source_data_dt))
+            self.submit_sources(smap)
         self.calc_times = AccumDict(accum=numpy.zeros(2, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
@@ -218,7 +222,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def _send_sources(self, smap):
+    def submit_sources(self, smap):
+        """
+        Send the sources split in tasks
+        """
         oq = self.oqparam
         nrup = operator.attrgetter('num_ruptures')
         trt_sources = self.csm.get_trt_sources()
@@ -240,12 +247,10 @@ class ClassicalCalculator(base.HazardCalculator):
             if hasattr(sources, 'atomic') and sources.atomic:
                 smap.submit(sources, self.src_filter, gsims, param,
                             func=classical)
-                yield sources
                 num_tasks += 1
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, param['maxweight'], nrup):
                     smap.submit(block, self.src_filter, gsims, param)
-                    yield block
                     num_tasks += 1
 
     def save_hazard_stats(self, acc, pmap_by_kind):
