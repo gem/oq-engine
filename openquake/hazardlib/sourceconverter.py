@@ -560,7 +560,7 @@ class SourceConverter(RuptureConverter):
         """
         obj = getattr(self, 'convert_' + striptag(node.tag))(node)
         source_id = getattr(obj, 'source_id', '')
-        if self.source_id and source_id and self.source_id != source_id:
+        if self.source_id and source_id and source_id not in self.source_id:
             return
         return obj
 
