@@ -22,7 +22,6 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
@@ -102,9 +101,10 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
                 arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
                 sd[src.id] += arr
                 tot += 1
-        source_data = [(src_id, monitor.task_no, s/tot, r, w)
-                       for src_id, (s, r, w) in sd.items()]
-        yield dict(source_data=numpy.array(source_data, source_data_dt))
+        source_data = numpy.array([(monitor.task_no, src_id, s/tot, r, w)
+                                   for src_id, (s, r, w) in sd.items()],
+                                  source_data_dt)
+        yield dict(source_data=source_data)
         # compute the last block (the smallest one) and yield the others
         for block in blocks[:-1]:
             yield classical, block, srcfilter, gsims, params
