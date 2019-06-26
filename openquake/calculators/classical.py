@@ -95,14 +95,15 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     blocks = list(block_splitter(sources, params['maxweight'],
                                  operator.attrgetter('weight')))
     if blocks:
-        sd = AccumDict(accum=numpy.zeros(4))
-        # src.id -> (taskno, nrup, nsites, weight)
+        tot = 0
+        sd = AccumDict(accum=numpy.zeros(3))  # nsites, nrupts, weight
         for block in blocks:
             for src in block:
-                arr = numpy.array([monitor.task_no, src.nsites,
-                                   src.num_ruptures, src.weight])
+                arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
                 sd[src.id] += arr
-        source_data = [(src_id,) + tuple(data) for src_id, data in sd.items()]
+                tot += 1
+        source_data = [(src_id, monitor.task_no, s/tot, r, w)
+                       for src_id, (s, r, w) in sd.items()]
         yield dict(source_data=numpy.array(source_data, source_data_dt))
         # compute the last block (the smallest one) and yield the others
         for block in blocks[:-1]:
