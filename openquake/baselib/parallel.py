@@ -685,6 +685,7 @@ class Starmap(object):
             hdf5.create(h5, task_info, task_info_dt)
         if h5 and 'performance_data' not in h5:
             hdf5.create(h5, 'performance_data', perf_dt)
+        self.task_no = 0
 
     @property
     def hdf5(self):
@@ -724,14 +725,8 @@ class Starmap(object):
             args = pickle_sequence(args)
             self.sent += numpy.array([len(p) for p in args])
         res = submit[dist](self, func, args, monitor)
+        self.task_no += 1
         self.tasks.append(res)
-
-    @property
-    def task_no(self):
-        """
-        :returns: number of the last submitted task, starting from 0
-        """
-        return len(self.tasks)
 
     def submit_all(self):
         """
