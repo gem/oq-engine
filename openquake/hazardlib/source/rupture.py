@@ -604,7 +604,7 @@ class EBRupture(object):
         sess = numpy.random.choice(num_ses, len(events)) + 1
         return dict(zip(events['id'], sess))
 
-    def export(self, mesh, rlzs_by_gsim, num_ses):
+    def export(self, rlzs_by_gsim, num_ses):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
@@ -613,7 +613,6 @@ class EBRupture(object):
         events = self.get_events(rlzs_by_gsim)
         events_by_ses = self.get_events_by_ses(events, num_ses)
         new = ExportedRupture(self.serial, events_by_ses)
-        new.mesh = mesh[()]
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):
