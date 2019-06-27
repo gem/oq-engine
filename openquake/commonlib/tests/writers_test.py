@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,6 +22,7 @@ import tempfile
 from io import BytesIO
 import psutil
 from openquake.commonlib.writers import write_csv
+from openquake.baselib.performance import memory_rss
 from openquake.baselib.node import Node, tostring, StreamingXMLWriter
 from xml.etree import ElementTree as etree
 
@@ -72,17 +73,17 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
     def test_memory(self):
         # make sure the memory occupation is low
         # (to protect against bad refactoring of the XMLWriter)
-        proc = psutil.Process(os.getpid())
+        pid = os.getpid()
         try:
-            rss = proc.memory_info().rss
+            rss = memory_rss(pid)
         except psutil.AccessDenied:
             raise unittest.SkipTest('Memory info not accessible')
         devnull = open(os.devnull, 'wb')
         with StreamingXMLWriter(devnull) as writer:
             for asset in assetgen(1000):
                 writer.serialize(asset)
-        allocated = proc.memory_info().rss - rss
-        self.assertLess(allocated, 204800)  # < 200 KB
+        allocated = memory_rss(pid) - rss
+        self.assertLess(allocated, 256000)  # < 250 KB
 
     def test_zero_node(self):
         s = BytesIO()
@@ -116,7 +117,7 @@ class WriteCsvTestCase(unittest.TestCase):
     def test_flat(self):
         imt_dt = numpy.dtype([('PGA', I32, 3), ('PGV', I32, 4)])
         a = numpy.array([([1, 2, 3], [4, 5, 6, 7])], imt_dt)
-        self.assert_export(a, 'PGA:int32:3,PGV:int32:4\n1 2 3,4 5 6 7\n')
+        self.assert_export(a, 'PGA:3,PGV:4\n1 2 3,4 5 6 7\n')
 
     def test_nested(self):
         imt_dt = numpy.dtype([('PGA', I32, 3), ('PGV', I32, 4)])
@@ -125,5 +126,5 @@ class WriteCsvTestCase(unittest.TestCase):
         a = numpy.array([(([1, 2, 3], [4, 5, 6, 7]),
                           ([1, 2, 4], [3, 5, 6, 7]), 8)], gmf_dt)
         self.assert_export(
-            a, 'A~PGA:int32:3,A~PGV:int32:4,B~PGA:int32:3,B~PGV:int32:4,'
-            'idx:int32\n1 2 3,4 5 6 7,1 2 4,3 5 6 7,8\n')
+            a, 'A~PGA:3,A~PGV:4,B~PGA:3,B~PGV:4,'
+            'idx\n1 2 3,4 5 6 7,1 2 4,3 5 6 7,8\n')

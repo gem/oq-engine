@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -159,5 +159,5 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
             rupture, sites, [PGV()], ChiouYoungs2014NearFaultEffect(),
             truncation_level=0, realizations=1)
         gmf = fields[PGV()]
-        self.assertAlmostEquals(2.27395, gmf[0], delta=1e-4)
-        self.assertAlmostEquals(3.38409, gmf[1], delta=1e-4)
+        self.assertAlmostEqual(2.27395, gmf[0], delta=1e-4)
+        self.assertAlmostEqual(3.38409, gmf[1], delta=1e-4)

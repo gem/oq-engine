@@ -2,12 +2,12 @@ Scenario QA Test, Case 1
 ========================
 
 ============== ===================
-checksum32     125,955,823        
-date           2018-06-26T14:57:01
-engine_version 3.2.0-gitb0cd949   
+checksum32     4,118,729,114      
+date           2019-06-24T15:33:21
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 3, num_levels = 1
+num_sites = 3, num_levels = 1, num_rlzs = 1
 
 Parameters
 ----------
@@ -44,22 +44,27 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-reading site collection 0.01010  0.0       1     
-computing gmfs          0.00149  0.0       1     
-======================= ======== ========= ======
+========= ======== ========= ======
+operation time_sec memory_mb counts
+========= ======== ========= ======
+========= ======== ========= ======

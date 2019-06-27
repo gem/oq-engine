@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,18 +25,40 @@ import abc
 import math
 import warnings
 import functools
-from scipy.special import ndtr
 import numpy
+from scipy.special import ndtr
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
+from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.contexts import *  # for backward compatibility
+
+
+ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
+                           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
+ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
+ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
+                             'COEFFS_SITE_RESPONSE']
+ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
+                           'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
+                           'REQUIRES_DISTANCES',
+                           'REQUIRES_SITES_PARAMETERS',
+                           'REQUIRES_RUPTURE_PARAMETERS']
+
+registry = {}  # GSIM name -> GSIM class
 
 
 class NotVerifiedWarning(UserWarning):
     """
     Raised when a non verified GSIM is instantiated
+    """
+
+
+class ExperimentalWarning(UserWarning):
+    """
+    Raised for GMPEs that are intended for experimental use or maybe subject
+    to changes in future version.
     """
 
 
@@ -55,27 +77,20 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 
 class MetaGSIM(abc.ABCMeta):
     """
-    Metaclass controlling the instantiation mechanism.
-    A GroundShakingIntensityModel subclass with an
-    attribute deprecated=True will print a deprecation warning when
-    instantiated. A subclass with an attribute non_verified=True will
-    print a UserWarning.
+    A metaclass converting set class attributes into frozensets, to avoid
+    mutability bugs without having to change already written GSIMs. Moreover
+    it performs some checks against typos.
     """
-    deprecated = False
-    non_verified = False
-
-    def __call__(cls, **kwargs):
-        if cls.deprecated:
-            msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.__base__.__name__)
-            warnings.warn(msg, DeprecationWarning)
-        if cls.non_verified:
-            msg = ('%s is not independently verified - the user is liable '
-                   'for their application') % cls.__name__
-            warnings.warn(msg, NotVerifiedWarning)
-        self = super().__call__(**kwargs)
-        self.kwargs = kwargs
-        return self
+    def __new__(meta, name, bases, dic):
+        for k, v in dic.items():
+            if isinstance(v, set):
+                dic[k] = frozenset(v)
+                if k == 'REQUIRES_DISTANCES':
+                    missing = v - KNOWN_DISTANCES
+                    if missing:
+                        raise ValueError('Unknown distance %s in %s' %
+                                         (missing, name))
+        return super().__new__(meta, name, bases, dic)
 
 
 @functools.total_ordering
@@ -95,7 +110,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
-
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
     #: is defined for. One GSIM can implement only one tectonic region type.
@@ -171,7 +185,36 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
-    minimum_distance = 0  # can be set by the engine
+    _toml = ''  # set by valid.gsim
+    minimum_distance = 0  # set by valid.gsim
+    superseded_by = None
+    non_verified = False
+    experimental = False
+
+    @classmethod
+    def __init_subclass__(cls):
+        registry[cls.__name__] = cls
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        cls = self.__class__
+        if cls.superseded_by:
+            msg = '%s is deprecated - use %s instead' % (
+                cls.__name__, cls.superseded_by.__name__)
+            warnings.warn(msg, DeprecationWarning)
+        if cls.non_verified:
+            msg = ('%s is not independently verified - the user is liable '
+                   'for their application') % cls.__name__
+            warnings.warn(msg, NotVerifiedWarning)
+        if cls.experimental:
+            msg = ('%s is experimental and may change in future versions - '
+                   'the user is liable for their application') % cls.__name__
+            warnings.warn(msg, ExperimentalWarning)
+
+    def init(self):
+        """
+        Override this method if you want to further initialize the GSIM
+        """
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -309,58 +352,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
-    def disaggregate_pne(self, rupture, sctx, dctx, imt, iml,
-                         truncnorm, epsilons):
-        """
-        Disaggregate (separate) PoE of ``iml`` in different contributions
-        each coming from ``epsilons`` distribution bins.
-
-        Other parameters are the same as for :meth:`get_poes`, with
-        differences that ``truncation_level`` is required to be positive.
-
-        :returns:
-            Contribution to probability of exceedance of ``iml`` coming
-            from different sigma bands in the form of a 2d numpy array of
-            probabilities with shape (n_sites, n_epsilons)
-        """
-        # compute mean and standard deviations
-        mean, [stddev] = self.get_mean_and_stddevs(sctx, rupture, dctx, imt,
-                                                   [const.StdDev.TOTAL])
-
-        # compute iml value with respect to standard (mean=0, std=1)
-        # normal distributions
-        standard_imls = (self.to_distribution_values(iml) - mean) / stddev
-
-        # compute epsilon bins contributions
-        contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
-                                 truncnorm.cdf(epsilons[:-1]))
-
-        # take the minimum epsilon larger than standard_iml
-        bins = numpy.searchsorted(epsilons, standard_imls)
-        poe_by_site = []
-        n_epsilons = len(epsilons) - 1
-        for lvl, bin in zip(standard_imls, bins):  # one per site
-            if bin == 0:
-                poe_by_site.append(contribution_by_bands)
-            elif bin > n_epsilons:
-                poe_by_site.append(numpy.zeros(n_epsilons))
-            else:
-                # for other cases (when ``lvl`` falls somewhere in the
-                # histogram):
-                poe = numpy.concatenate([
-                    # take zeros for bins that are on the left hand side
-                    # from the bin ``lvl`` falls into,
-                    numpy.zeros(bin - 1),
-                    # ... area of the portion of the bin containing ``lvl``
-                    # (the portion is limited on the left hand side by
-                    # ``lvl`` and on the right hand side by the bin edge),
-                    [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
-                    # ... and all bins on the right go unchanged.
-                    contribution_by_bands[bin:]])
-                poe_by_site.append(poe)
-        poes = numpy.array(poe_by_site)  # shape (n_sites, n_epsilons)
-        return rupture.get_probability_no_exceedance(poes)
-
     @abc.abstractmethod
     def to_distribution_values(self, values):
         """
@@ -388,11 +379,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         Make sure that ``imt`` is valid and is supported by this GSIM.
         """
-        if not issubclass(type(imt), imt_module._IMT):
-            raise ValueError('imt must be an instance of IMT subclass')
-        if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+        names = set(f.__name__
+                    for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+        if imt.name not in names:
             raise ValueError('imt %s is not supported by %s' %
-                             (type(imt).__name__, type(self).__name__))
+                             (imt.name, type(self).__name__))
 
     def __lt__(self, other):
         """
@@ -413,16 +404,13 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         return hash(str(self))
 
-    def __str__(self):
-        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
-        return "%s(%s)" % (self.__class__.__name__, kwargs)
-
     def __repr__(self):
         """
-        Default string representation for GSIM instances. It contains
-        the name and values of the arguments, if any.
+        String representation for GSIM instances in TOML format.
         """
-        return repr(str(self))
+        if self._toml:
+            return self._toml
+        return '[%s]' % self.__class__.__name__
 
 
 def _truncnorm_sf(truncation_level, values):
@@ -519,6 +507,20 @@ class GMPE(GroundShakingIntensityModel):
         """
         return numpy.exp(values)
 
+    def set_parameters(self):
+        """
+        Combines the parameters of the GMPE provided at the construction level
+        with the ones originally assigned to the backbone modified GMPE.
+        """
+        for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
+                    ADMITTED_SET_PARAMETERS):
+            try:
+                val = getattr(self.gmpe, key)
+            except AttributeError:
+                pass
+            else:
+                setattr(self, key, val)
+
 
 class IPE(GroundShakingIntensityModel):
     """
@@ -614,11 +616,11 @@ class CoeffsTable(object):
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
-    KeyError: PGV()
+    KeyError: PGV
     >>> ct[imt.SA(1.0, 4)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=1.0, damping=4)
+    KeyError: SA(1.0, 4)
 
     Table of coefficients for spectral acceleration could be indexed
     by instances of :class:`openquake.hazardlib.imt.SA` with period
@@ -636,14 +638,14 @@ class CoeffsTable(object):
     >>> ct[imt.SA(period=0.9, damping=15)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=0.9, damping=15)
+    KeyError: SA(0.9, 15)
 
     Extrapolation is not possible:
 
     >>> ct[imt.SA(period=0.01, damping=5)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=0.01, damping=5)
+    KeyError: SA(0.01)
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
@@ -666,11 +668,11 @@ class CoeffsTable(object):
         if isinstance(table, str):
             self._setup_table_from_str(table, sa_damping)
         elif isinstance(table, dict):
-            for key in table:
-                if isinstance(key, imt_module.SA):
-                    self.sa_coeffs[key] = table[key]
+            for imt in table:
+                if imt.name == 'SA':
+                    self.sa_coeffs[imt] = table[imt]
                 else:
-                    self.non_sa_coeffs[key] = table[key]
+                    self.non_sa_coeffs[imt] = table[imt]
         else:
             raise TypeError("CoeffsTable cannot be constructed with inputs "
                             "of the form '%s'" % table.__class__.__name__)
@@ -694,9 +696,9 @@ class CoeffsTable(object):
             try:
                 sa_period = float(imt_name)
             except Exception:
-                if not hasattr(imt_module, imt_name):
+                if imt_name not in imt_module.registry:
                     raise ValueError('unknown IMT %r' % imt_name)
-                imt = getattr(imt_module, imt_name)()
+                imt = imt_module.registry[imt_name]()
                 self.non_sa_coeffs[imt] = imt_coeffs
             else:
                 if sa_damping is None:
@@ -717,7 +719,7 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        if not isinstance(imt, imt_module.SA):
+        if imt.name != 'SA':
             return self.non_sa_coeffs[imt]
 
         try:

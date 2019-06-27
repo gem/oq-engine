@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import mock
+import unittest.mock as mock
 import logging
 import operator
 import collections
@@ -27,7 +27,8 @@ from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import get_pickled_sizes
 from openquake.hazardlib import gsim, nrml, InvalidFile
-from openquake.commonlib import readinput
+from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
@@ -73,9 +74,6 @@ def print_csm_info(fname):
           'effective-realizations.html for an explanation')
     rlzs_assoc = csm.info.get_rlzs_assoc()
     print(rlzs_assoc)
-    dupl = [(srcs[0]['id'], len(srcs)) for srcs in csm.check_dupl_sources()]
-    if dupl:
-        print(rst_table(dupl, ['source_id', 'multiplicity']))
     tot, pairs = get_pickled_sizes(rlzs_assoc)
     print(rst_table(pairs, ['attribute', 'nbytes']))
 
@@ -98,13 +96,13 @@ def do_build_reports(directory):
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-@sap.Script
-def info(calculators, gsims, views, exports, extracts, report, input_file=''):
+@sap.script
+def info(calculators, gsims, views, exports, extracts, parameters,
+         report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
-    logging.basicConfig(level=logging.INFO)
     if calculators:
         for calc in sorted(base.calculators):
             print(calc)
@@ -130,6 +128,14 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
             else:
                 fm = FunctionMaker(func)
             print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
+    if parameters:
+        params = []
+        for val in vars(OqParam).values():
+            if hasattr(val, 'name'):
+                params.append(val)
+        params.sort(key=lambda x: x.name)
+        for param in params:
+            print(param.name)
     if os.path.isdir(input_file) and report:
         with Monitor('info', measuremem=True) as mon:
             with mock.patch.object(logging.root, 'info'):  # reduce logging
@@ -146,8 +152,7 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
             print(source_model_info([node[0]]))
         elif node[0].tag.endswith('logicTree'):
             nodes = [nrml.read(sm_path)[0]
-                     for sm_paths in readinput.gen_sm_paths(input_file)
-                     for sm_path in sm_paths]
+                     for sm_path in logictree.collect_info(input_file).smpaths]
             print(source_model_info(nodes))
         else:
             print(node.to_str())
@@ -168,5 +173,6 @@ info.flg('gsims', 'list available GSIMs')
 info.flg('views', 'list available views')
 info.flg('exports', 'list available exports')
 info.flg('extracts', 'list available extracts', '-x')
+info.flg('parameters', 'list all parameters in the job.ini')
 info.flg('report', 'build short report(s) in rst format')
 info.arg('input_file', 'job.ini file or zip archive')

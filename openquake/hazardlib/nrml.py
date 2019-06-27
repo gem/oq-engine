@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -74,16 +74,14 @@ supplemented by a dictionary of validators.
 import io
 import re
 import sys
-import copy
-import decimal
 import logging
 import operator
-import collections
+import collections.abc
 
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, groupby, deprecated
+from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -100,7 +98,7 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-class SourceModel(collections.Sequence):
+class SourceModel(collections.abc.Sequence):
     """
     A container of source groups with attributes name, investigation_time
     and start_time. It is serialize on hdf5 as follows:
@@ -108,8 +106,8 @@ class SourceModel(collections.Sequence):
     >> with openquake.baselib.hdf5.File('/tmp/sm.hdf5', 'w') as f:
     ..    f['/'] = source_model
     """
-    def __init__(self, src_groups, name=None, investigation_time=None,
-                 start_time=None):
+    def __init__(self, src_groups, name='', investigation_time='',
+                 start_time=''):
         self.src_groups = src_groups
         self.name = name
         self.investigation_time = investigation_time
@@ -169,8 +167,6 @@ def to_python(fname, *args):
     return node_to_obj(node, fname, *args)
 
 
-parse = deprecated('Use nrml.to_python instead')(to_python)
-
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
 
@@ -180,7 +176,7 @@ def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
 
-default = sourceconverter.SourceConverter()
+default = sourceconverter.SourceConverter()  # rupture_mesh_spacing=10
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
@@ -188,20 +184,21 @@ def get_source_model_04(node, fname, converter=default):
     sources = []
     source_ids = set()
     converter.fname = fname
-    for no, src_node in enumerate(node, 1):
+    for src_node in node:
         src = converter.convert_node(src_node)
+        if src is None:
+            continue
         if src.source_id in source_ids:
             raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         sources.append(src)
         source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
+    src_groups = sorted(sourceconverter.SourceGroup(
+        trt, srcs, min_mag=converter.minimum_magnitude)
                         for trt, srcs in groups.items())
-    return SourceModel(src_groups, node.get('name'))
+    return SourceModel(src_groups, node.get('name', ''))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -214,7 +211,10 @@ def get_source_model_05(node, fname, converter=default):
                 '%s: you have an incorrect declaration '
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
-        groups.append(converter.convert_node(src_group))
+        sg = converter.convert_node(src_group)
+        if len(sg):
+            # a source group can be empty if the source_id filtering is on
+            groups.append(sg)
     itime = node.get('investigation_time')
     if itime is not None:
         itime = valid.positivefloat(itime)
@@ -255,7 +255,7 @@ validators = {
     'probability': valid.probability,
     'occurRates': valid.positivefloats,  # they can be > 1
     'weight': valid.probability,
-    'uncertaintyWeight': decimal.Decimal,
+    'uncertaintyWeight': float,
     'alongStrike': valid.probability,
     'downDip': valid.probability,
     'totalMomentRate': valid.positivefloat,
@@ -265,6 +265,7 @@ validators = {
     'char_mag': valid.positivefloats,
     'magnitudes': valid.positivefloats,
     'id': valid.simple_id,
+    'occurrence_rate': valid.positivefloat,
     'rupture.id': valid.positiveint,
     'ruptureId': valid.positiveint,
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),
@@ -305,69 +306,24 @@ validators = {
 }
 
 
-class SourceModelParser(object):
+def read_source_models(fnames, converter, monitor):
     """
-    A source model parser featuring a cache.
-
+    :param fnames:
+        list of source model files
     :param converter:
-        :class:`openquake.commonlib.source.SourceConverter` instance
+        a SourceConverter instance
+    :param monitor:
+        a :class:`openquake.performance.Monitor` instance
+    :yields:
+        SourceModel instances
     """
-    def __init__(self, converter):
-        self.converter = converter
-        self.sm = {}  # cache fname -> source model
-        self.fname_hits = collections.Counter()  # fname -> number of calls
-        self.changed_sources = 0
-
-    def parse_src_groups(self, fname, apply_uncertainties):
-        """
-        :param fname:
-            the full pathname of the source model file
-        :param apply_uncertainties:
-            a function modifying the sources
-        """
-        try:
-            sm = self.sm[fname]
-        except KeyError:
-            if fname.endswith(('.xml', '.nrml')):
-                sm = to_python(fname, self.converter)
-            elif fname.endswith('.hdf5'):
-                sm = sourceconverter.to_python(fname, self.converter)
-            else:
-                raise ValueError('Unrecognized extension in %s' % fname)
-            self.sm[fname] = sm
-        # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in sm]
-        for group in groups:
-            for src in group:
-                changed = apply_uncertainties(src)
-                if changed:
-                    # redo count_ruptures which can be slow
-                    src.num_ruptures = src.count_ruptures()
-                    self.changed_sources += 1
-        self.fname_hits[fname] += 1
-        return groups
-
-    def check_nonparametric_sources(self, investigation_time):
-        """
-        :param investigation_time:
-            investigation_time to compare with in the case of
-            nonparametric sources
-        :returns:
-            list of nonparametric sources in the composite source model
-        """
-        npsources = []
-        for fname, sm in self.sm.items():
-            # NonParametricSeismicSources
-            np = [src for sg in sm.src_groups for src in sg
-                  if hasattr(src, 'data')]
-            if np:
-                npsources.extend(np)
-                if sm.investigation_time != investigation_time:
-                    raise ValueError(
-                        'The source model %s contains an investigation_time '
-                        'of %s, while the job.ini has %s' % (
-                            fname, sm.investigation_time, investigation_time))
-        return npsources
+    for fname in fnames:
+        if fname.endswith(('.xml', '.nrml')):
+            sm = to_python(fname, converter)
+        else:
+            raise ValueError('Unrecognized extension in %s' % fname)
+        sm.fname = fname
+        yield sm
 
 
 def read(source, chatty=True, stop=None):

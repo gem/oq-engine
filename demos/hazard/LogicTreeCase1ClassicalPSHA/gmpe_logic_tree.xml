@@ -4,8 +4,6 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <logicTree logicTreeID='lt1'>
 
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                     applyToTectonicRegionType="Active Shallow Crust">
                 <logicTreeBranch branchID="b11">
@@ -18,10 +16,6 @@
                 </logicTreeBranch>
             </logicTreeBranchSet>
 
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl2">
-
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
                     applyToTectonicRegionType="Stable Continental Crust">
                 <logicTreeBranch branchID="b21">
@@ -33,8 +27,6 @@
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-
-        </logicTreeBranchingLevel>
 
     </logicTree>
 </nrml>

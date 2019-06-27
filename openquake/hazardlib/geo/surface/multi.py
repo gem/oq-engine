@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -346,6 +346,17 @@ class MultiSurface(BaseSurface):
             lons.append(lons_surf[0])
             lats.append(lats_surf[0])
         return lons, lats
+
+    def get_surface_boundaries_3d(self):
+        lons = []
+        lats = []
+        deps = []
+        for surf in self.surfaces:
+            lons_surf, lats_surf, deps_surf = surf.get_surface_boundaries_3d()
+            lons.extend(lons_surf)
+            lats.extend(lats_surf)
+            deps.extend(deps_surf)
+        return lons, lats, deps
 
     def _get_areas(self):
         """

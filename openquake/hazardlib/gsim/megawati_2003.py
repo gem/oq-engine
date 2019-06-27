@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -79,7 +79,7 @@ class MegawatiEtAl2003(GMPE):
                 self._get_distance_scaling(coe, dists.rhypo) +
                 self._get_azimuth_correction(coe, dists.azimuth))
         # Convert to g
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log(np.exp(mean) / (100.0 * g))
         # Compute std
         stddevs = self._compute_std(coe, stddev_types, dists.azimuth.shape)

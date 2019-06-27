@@ -11,8 +11,8 @@ risk calculator are illustrated through the examples below.
 
 This example illustrates a scenario risk calculation which uses a single
 configuration file to first compute the ground motion fields for the given
-rupture model and then calculate loss statistics for structural losses,
-nonstructural losses, and insured structural losses, based on the ground
+rupture model and then calculate loss statistics for structural losses
+and nonstructural losses, based on the ground
 motion fields. The job configuration file required for running this scenario
 risk calculation is shown in Listing~\ref{lst:config_scenario_risk_combined}.
 
@@ -79,12 +79,6 @@ The remaining new parameters introduced in this example are the following:
     zero and one are no longer supported due to performance considerations. The
     only two values permitted are \Verb+asset_correlation = 0+ and 
     \Verb+asset_correlation = 1+.
-
-  \item \Verb+insured_losses+: this parameter specifies whether insured losses
-    should be calculated; the default value of this parameter is \Verb+false+.
-    In order for the \glsdesc{acr:oqe} to be able to compute insured losses, the
-    insurance limits and deductibles must be listed for each asset in the 
-    exposure model, as described in Example~5 in Section~\ref{sec:exposure}.
 
   \item \Verb+asset_loss_table+: this parameter
     specifies whether the individual asset and portfolio losses should be

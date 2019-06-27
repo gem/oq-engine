@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -66,8 +66,6 @@ class BaseRecurrenceModel(object):
     '''
     Abstract base class to implement cumulative value formula
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def cumulative_value(self, slip_moment, mmax, mag_value, bbar, dbar):
         '''

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,8 @@ import collections
 import h5py
 
 from openquake.baselib import hdf5, config
+
+CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
 
 def get_datadir():
@@ -48,11 +50,11 @@ def get_calc_ids(datadir=None):
     datadir = datadir or get_datadir()
     if not os.path.exists(datadir):
         return []
-    calc_ids = []
+    calc_ids = set()
     for f in os.listdir(datadir):
-        mo = re.match(r'calc_(\d+)\.hdf5', f)
+        mo = re.match(CALC_REGEX, f)
         if mo:
-            calc_ids.append(int(mo.group(1)))
+            calc_ids.add(int(mo.group(2)))
     return sorted(calc_ids)
 
 
@@ -75,6 +77,8 @@ def hdf5new(datadir=None):
     generated filename.
     """
     datadir = datadir or get_datadir()
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
     calc_id = get_last_calc_id(datadir) + 1
     fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
     new = hdf5.File(fname, 'w')
@@ -82,9 +86,9 @@ def hdf5new(datadir=None):
     return new
 
 
-def extract_calc_id_datadir(hdf5path, datadir=None):
+def extract_calc_id_datadir(filename, datadir=None):
     """
-    Extract the calculation ID from the given hdf5path or integer:
+    Extract the calculation ID from the given filename or integer:
 
     >>> extract_calc_id_datadir('/mnt/ssd/oqdata/calc_25.hdf5')
     (25, '/mnt/ssd/oqdata')
@@ -94,23 +98,21 @@ def extract_calc_id_datadir(hdf5path, datadir=None):
     ValueError: Cannot extract calc_id from /mnt/ssd/oqdata/wrong_name.hdf5
     """
     datadir = datadir or get_datadir()
-    if hdf5path is None:  # use a new datastore
-        return get_last_calc_id(datadir) + 1, datadir
     try:
-        calc_id = int(hdf5path)
+        calc_id = int(filename)
     except ValueError:
-        hdf5path = os.path.abspath(hdf5path)
-        datadir = os.path.dirname(hdf5path)
-        mo = re.match('calc_(\d+)\.hdf5', os.path.basename(hdf5path))
+        filename = os.path.abspath(filename)
+        datadir = os.path.dirname(filename)
+        mo = re.match(CALC_REGEX, os.path.basename(filename))
         if mo is None:
-            raise ValueError('Cannot extract calc_id from %s' % hdf5path)
-        calc_id = int(mo.group(1))
+            raise ValueError('Cannot extract calc_id from %s' % filename)
+        calc_id = int(mo.group(2))
     return calc_id, datadir
 
 
 def read(calc_id, mode='r', datadir=None):
     """
-    :param calc_id: calculation ID or hdf5path
+    :param calc_id: calculation ID or filename
     :param mode: 'r' or 'w'
     :param datadir: the directory where to look
     :returns: the corresponding DataStore instance
@@ -124,11 +126,11 @@ def read(calc_id, mode='r', datadir=None):
     except KeyError:  # no oqparam
         hc_id = None
     if hc_id:
-        dstore.parent = read(hc_id, datadir=os.path.dirname(dstore.hdf5path))
+        dstore.parent = read(hc_id, datadir=os.path.dirname(dstore.filename))
     return dstore
 
 
-class DataStore(collections.MutableMapping):
+class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
     filesystem.
@@ -152,26 +154,32 @@ class DataStore(collections.MutableMapping):
     """
     def __init__(self, calc_id=None, datadir=None, params=(), mode=None):
         datadir = datadir or get_datadir()
-        calc_id, datadir = extract_calc_id_datadir(calc_id, datadir)
+        if isinstance(calc_id, str):  # passed a real path
+            self.filename = calc_id
+            self.calc_id, datadir = extract_calc_id_datadir(calc_id, datadir)
+        else:
+            if calc_id is None:  # use a new datastore
+                self.calc_id = get_last_calc_id(datadir) + 1
+            elif calc_id < 0:  # use an old datastore
+                calc_ids = get_calc_ids(datadir)
+                try:
+                    self.calc_id = calc_ids[calc_id]
+                except IndexError:
+                    raise IndexError(
+                        'There are %d old calculations, cannot '
+                        'retrieve the %s' % (len(calc_ids), calc_id))
+            else:  # use the given datastore
+                self.calc_id = calc_id
+            self.filename = os.path.join(
+                datadir, 'calc_%s.hdf5' % self.calc_id)
         if not os.path.exists(datadir):
             os.makedirs(datadir)
-        if calc_id < 0:  # use an old datastore
-            calc_ids = get_calc_ids(datadir)
-            try:
-                self.calc_id = calc_ids[calc_id]
-            except IndexError:
-                raise IndexError('There are %d old calculations, cannot '
-                                 'retrieve the %s' % (len(calc_ids), calc_id))
-        else:  # use the given datastore
-            self.calc_id = calc_id
         self.params = params
         self.parent = ()  # can be set later
         self.datadir = datadir
-        self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
-        self.hdf5path = self.calc_dir + '.hdf5'
-        self.mode = mode or ('r+' if os.path.exists(self.hdf5path) else 'w')
-        if self.mode == 'r' and not os.path.exists(self.hdf5path):
-            raise IOError('File not found: %s' % self.hdf5path)
+        self.mode = mode or ('r+' if os.path.exists(self.filename) else 'w')
+        if self.mode == 'r' and not os.path.exists(self.filename):
+            raise IOError('File not found: %s' % self.filename)
         self.hdf5 = ()  # so that `key in self.hdf5` is valid
         self.open(self.mode)
 
@@ -180,7 +188,13 @@ class DataStore(collections.MutableMapping):
         Open the underlying .hdf5 file and the parent, if any
         """
         if self.hdf5 == ():  # not already open
-            self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
+            kw = dict(mode=mode, libver='latest')
+            if mode == 'r':
+                kw['swmr'] = True
+            try:
+                self.hdf5 = hdf5.File(self.filename, **kw)
+            except OSError as exc:
+                raise OSError('%s in %s' % (exc, self.filename))
 
     @property
     def export_dir(self):
@@ -352,7 +366,7 @@ class DataStore(collections.MutableMapping):
     def clear(self):
         """Remove the datastore from the file system"""
         self.close()
-        os.remove(self.hdf5path)
+        os.remove(self.filename)
 
     def getsize(self, key=None):
         """
@@ -360,7 +374,7 @@ class DataStore(collections.MutableMapping):
         If no key is given, returns the total size of all files.
         """
         if key is None:
-            return os.path.getsize(self.hdf5path)
+            return os.path.getsize(self.filename)
         return hdf5.ByteCounter.get_nbytes(
             h5py.File.__getitem__(self.hdf5, key))
 
@@ -372,6 +386,15 @@ class DataStore(collections.MutableMapping):
             return self[key]
         except KeyError:
             return default
+
+    @property
+    def metadata(self):
+        """
+        :returns: datastore metadata version, date, checksum as a dictionary
+        """
+        a = self.hdf5.attrs
+        return dict(generated_by='OpenQuake engine %s' % a['engine_version'],
+                    start_date=a['date'], checksum=a['checksum32'])
 
     def __getitem__(self, key):
         if self.hdf5 == ():  # the datastore is closed
@@ -400,7 +423,7 @@ class DataStore(collections.MutableMapping):
             self.hdf5[key] = val
         except RuntimeError as exc:
             raise RuntimeError('Could not save %s: %s in %s' %
-                               (key, exc, self.hdf5path))
+                               (key, exc, self.filename))
 
     def __delitem__(self, key):
         del self.hdf5[key]
@@ -422,7 +445,7 @@ class DataStore(collections.MutableMapping):
                     parent=self.parent,
                     calc_id=self.calc_id,
                     hdf5=(),
-                    hdf5path=self.hdf5path)
+                    filename=self.filename)
 
     def __iter__(self):
         if not self.hdf5:
@@ -443,4 +466,4 @@ class DataStore(collections.MutableMapping):
 
     def __repr__(self):
         status = 'open' if self.hdf5 else 'closed'
-        return '<%s %d, %s>' % (self.__class__.__name__, self.calc_id, status)
+        return '<%s %s %s>' % (self.__class__.__name__, self.filename, status)

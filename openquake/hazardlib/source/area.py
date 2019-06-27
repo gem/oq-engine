@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
+import numpy
 from copy import deepcopy
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
@@ -41,6 +42,7 @@ class AreaSource(ParametricSeismicSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
+    code = 'A'
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth nodal_plane_distribution hypocenter_distribution
     polygon area_discretization'''.split()
@@ -100,6 +102,8 @@ class AreaSource(ParametricSeismicSource):
         # generate "reference ruptures" -- all the ruptures that have the same
         # epicenter location (first point of the polygon's mesh) but different
         # magnitudes, nodal planes, hypocenters' depths and occurrence rates
+        # NB: all this mumbo-jumbo is done to avoid multiple calls to
+        # PointSource._get_rupture_surface
         ref_ruptures = []
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             for np_prob, np in self.nodal_plane_distribution.data:
@@ -196,3 +200,10 @@ class AreaSource(ParametricSeismicSource):
                 temporal_occurrence_model=self.temporal_occurrence_model)
             pt.num_ruptures = pt.count_ruptures()
             yield pt
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(lon, lat, 0) for lon, lat in zip(
+            self.polygon.lons, self.polygon.lats)])

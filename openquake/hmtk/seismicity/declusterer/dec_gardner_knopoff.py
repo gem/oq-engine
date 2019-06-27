@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -44,8 +44,6 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-# -*- coding: utf-8 -*-:
 
 """
 Module :mod:`openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff`
@@ -101,9 +99,10 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
             catalogue.data['year'], catalogue.data['month'],
             catalogue.data['day'])
         # Get space and time windows corresponding to each event
-        sw_space, sw_time = (
-            config['time_distance_window'].calc(catalogue.data['magnitude']))
         # Initial Position Identifier
+        sw_space, sw_time = (
+           config['time_distance_window'].calc(
+            catalogue.data['magnitude'], config.get('time_cutoff')))
         eqid = np.arange(0, neq, 1)
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int)

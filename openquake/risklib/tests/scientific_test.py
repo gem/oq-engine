@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,11 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import mock
 import pickle
 
 import numpy
-from openquake.risklib import utils, scientific
+from openquake.risklib import scientific
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -53,19 +52,17 @@ class BetaDistributionTestCase(unittest.TestCase):
             [0.057241368], scientific.BetaDistribution().sample(
                 numpy.array([0.1]), None, numpy.array([0.1])))
 
+    def test_zero_ratios(self):
+        # a loss ratio can be zero if the corresponding CoV is zero
+        scientific.VulnerabilityFunction(
+            'v1', 'PGA', [.1, .2, .3], [0, .1, .2], [0, .2, .3], 'BT')
 
-class TestMemoize(unittest.TestCase):
-    def test_cache(self):
-        counts = []
-
-        @utils.memoized
-        def func():
-            counts.append(None)
-            return 3
-        self.assertEqual(3, func())
-        self.assertEqual(3, func())
-        # check that func has been called only once, now two
-        self.assertEqual(1, len(counts))
+    def test_large_covs(self):
+        with self.assertRaises(ValueError) as ctx:
+            scientific.VulnerabilityFunction(
+                'v1', 'PGA', [.1, .2, .3], [.05, .1, .2], [.1, .2, 3], 'BT')
+        self.assertIn('The coefficient of variation 3.0 > 2.0 is too large',
+                      str(ctx.exception))
 
 
 epsilons = scientific.make_epsilons(
@@ -224,7 +221,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.0, 0.0, 0.3, 0.2, 0.1],   # CoVs
             'LN'
         )
-        loss_ratios, lrem = curve.loss_ratio_exceedance_matrix(5)
+        loss_ratios = tuple(curve.mean_loss_ratios_with_steps(5))
+        lrem = curve.loss_ratio_exceedance_matrix(loss_ratios)
         expected_lrem = numpy.array([
             [0.000, 1.000, 1.000, 1.000, 1.000],
             [0.000, 1.000, 1.000, 1.000, 1.000],
@@ -340,7 +338,7 @@ class LogNormalDistributionTestCase(unittest.TestCase):
         self.dist = scientific.LogNormalDistribution(epsilons)
 
         tol = 0.1
-        for a1, a2 in utils.pairwise(range(assets_num)):
+        for a1, a2 in scientific.pairwise(range(assets_num)):
             coeffs = numpy.corrcoef(
                 self.dist.epsilons[a1, :], self.dist.epsilons[a2, :])
 

@@ -1,3 +1,3 @@
-# source_model_tree_path=('b11', 'b22', 'b32', 'b42', 'b52', 'b62', 'b72', 'b82', 'b92', 'b102', 'b112'), gsim_tree_path=('b11',), investigation_time=50.0, imt="PGA"
+# source_model_tree_path=('b11', 'b22', 'b32', 'b42', 'b52', 'b62', 'b72', 'b82', 'b92', 'b102', 'b112'), gsim_tree_path=('b11',), investigation_time=50.0, imt="PGA", checksum=1751642476
 lon,lat,depth,poe-0.005,poe-0.007,poe-0.0098
 0.00000,0.00000,0.00000,2.141784E-01,2.116467E-01,2.049651E-01
