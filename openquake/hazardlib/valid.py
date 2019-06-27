@@ -348,7 +348,7 @@ def namelist(value):
     names = value.replace(',', ' ').split()
     for n in names:
         try:
-            name(n)
+            source_id(n)
         except ValueError:
             raise ValueError('List of names containing an invalid name:'
                              ' %s' % n)
