@@ -40,7 +40,7 @@ jobs:
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
           fi
     after_script:
-        - oq dbserver stop
+        - oq reset -y; oq dbserver stop
   - stage: tests
     env: DEMOS
     script:
@@ -56,7 +56,7 @@ jobs:
             chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
             eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
-            oq workers stop && oq reset -y;
+            oq workers stop;
           fi
 
 before_install:
