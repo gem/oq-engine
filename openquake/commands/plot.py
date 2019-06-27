@@ -15,8 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import sys
 import logging
+import numpy
+from scipy.stats import linregress
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
@@ -169,12 +170,21 @@ def make_figure_task_info(extractors, what):
     import matplotlib.pyplot as plt
     fig = plt.figure()
     [ex] = extractors
-    x = ex.get(what)['duration']
-    ax = fig.add_subplot(1, 1, 1)
+    task_info = ex.get(what)
+    x = task_info['duration']
+    ax = fig.add_subplot(2, 1, 1)
     mean, std = x.mean(), x.std(ddof=1)
     ax.hist(x, bins=50, rwidth=0.9)
     ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
     ax.set_ylabel("tasks=%d" % len(x))
+    ax = fig.add_subplot(2, 1, 2)
+    arr = numpy.sort(task_info.array, order='weight')
+    x, y = arr['weight'], arr['duration']
+    reg = linregress(x, y)
+    ax.plot(x, reg.intercept + reg.slope * x)
+    ax.plot(x, y)
+    ax.set_xlabel("weight")
+    ax.set_ylabel("duration")
     return plt
 
 
