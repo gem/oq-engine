@@ -60,12 +60,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <magnitude>
                     7.9000001e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>
