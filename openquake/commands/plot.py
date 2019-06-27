@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import sys
 import logging
 from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import get_bounding_box
@@ -160,6 +161,23 @@ def make_figure_source_geom(extractors, what):
     return plt
 
 
+def make_figure_task_info(extractors, what):
+    """
+    Plot an histogram with the task distribution. Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/task_info?kind=classical
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    x = ex.get(what)['duration']
+    ax = fig.add_subplot(1, 1, 1)
+    mean, std = x.mean(), x.std(ddof=1)
+    ax.hist(x, bins=50, rwidth=0.9)
+    ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
+    ax.set_ylabel("tasks=%d" % len(x))
+    return plt
+
+
 @sap.script
 def plot(what, calc_id=-1, other_id=None, webapi=False):
     """
@@ -168,7 +186,6 @@ def plot(what, calc_id=-1, other_id=None, webapi=False):
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
     prefix, rest = what.split('?', 1)
-    assert prefix in 'source_geom hcurves hmaps uhs disagg', prefix
     if prefix in 'hcurves hmaps' and 'imt=' not in rest:
         raise SystemExit('Missing imt= in %r' % what)
     elif prefix == 'uhs' and 'imt=' in rest:

@@ -442,6 +442,15 @@ def extract_uhs(dstore, what):
     yield from params.items()
 
 
+@extract.add('task_info')
+def extract_task_info(dstore, what):
+    """
+    Extracts the task distribution. Use it as /extract/task_info?kind=classical
+    """
+    name = parse(what)['kind'][0]
+    return dstore['task_info/' + name][()]
+
+
 def _agg(losses, idxs):
     shp = losses.shape[1:]
     if not idxs:
