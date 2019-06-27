@@ -47,7 +47,8 @@ def restore(archive, oqdata):
     t0 = time.time()
     oqdata = os.path.abspath(oqdata)
     assert archive.endswith('.zip'), archive
-    os.mkdir(oqdata)
+    if not os.path.exists(oqdata):
+        os.mkdir(oqdata)
     zipfile.ZipFile(archive).extractall(oqdata)
     dbpath = os.path.join(oqdata, 'db.sqlite3')
     db = Db(sqlite3.connect, dbpath, isolation_level=None,
