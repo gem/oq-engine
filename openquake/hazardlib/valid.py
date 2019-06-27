@@ -341,9 +341,7 @@ def namelist(value):
     ['a1', 'b_2', '_c']
 
     >>> namelist('a1 b_2 1c')
-    Traceback (most recent call last):
-        ...
-    ValueError: List of names containing an invalid name: 1c
+    ['a1', 'b_2', '1c']
     """
     names = value.replace(',', ' ').split()
     for n in names:
