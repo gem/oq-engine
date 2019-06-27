@@ -30,7 +30,7 @@ def purge_one(calc_id, user, force):
     """
     filename = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     dbcmd('del_calc', calc_id, user, force)
-    elif os.path.exists(filename):  # not removed yet
+    if os.path.exists(filename):  # not removed yet
         os.remove(filename)
         print('Removed %s' % filename)
 
@@ -43,10 +43,10 @@ def purge_all(user=None):
     user = user or getpass.getuser()
     if os.path.exists(datadir):
         for fname in os.listdir(datadir):
-                mo = re.match('(calc_|cache_)(\d+)\.hdf5', fname)
+            mo = re.match('(calc_|cache_)(\d+)\.hdf5', fname)
             if mo is not None:
-                    calc_id = int(mo.group(2))
-                purge_one(calc_id, user, force=True)
+                calc_id = int(mo.group(2))
+            purge_one(calc_id, user, force=True)
 
 
 @sap.script
@@ -62,7 +62,6 @@ def purge(calc_id, force=False):
             print('Calculation %d not found' % calc_id)
             return
     purge_one(calc_id, getpass.getuser(), force)
-
 
 
 purge.arg('calc_id', 'calculation ID', type=int)
