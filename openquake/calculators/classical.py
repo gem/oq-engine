@@ -231,7 +231,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         nrup = operator.attrgetter('num_ruptures')
-        trt_sources = self.csm.get_trt_sources()
+        trt_sources = self.csm.get_trt_sources(src_group_ids=True)
         maxweight = min(
             self.csm.get_maxweight(trt_sources, nrup, oq.concurrent_tasks),
             base.RUPTURES_PER_BLOCK)
