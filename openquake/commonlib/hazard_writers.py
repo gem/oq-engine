@@ -305,7 +305,10 @@ class EventBasedGMFXMLWriter(object):
 
 def sub_elems(elem, rup, *names):
     for name in names:
-        et.SubElement(elem, name).text = '%.7e' % getattr(rup, name)
+        value = getattr(rup, name)
+        # NB: dip and strike can be NaN for griddedRuptures
+        if not numpy.isnan(value):
+            et.SubElement(elem, name).text = '%.7e' % value
 
 
 def rupture_to_element(rup, parent=None):
