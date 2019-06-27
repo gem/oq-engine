@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -67,7 +67,7 @@ class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log(mean / (g*100.))
         else:
             # PGV:

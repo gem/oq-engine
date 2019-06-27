@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# zipdemos.sh  Copyright (C) 2017-2018 GEM Foundation
+# zipdemos.sh  Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published

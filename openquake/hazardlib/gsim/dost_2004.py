@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -78,7 +78,7 @@ class DostEtAl2004(GMPE):
         imean = (self._compute_magnitude_term(C, rup.mag) +
                  self._compute_distance_term(C, dists.rhypo))
         # Convert mean from cm/s and cm/s/s
-        if isinstance(imt, PGA):
+        if imt.name == "PGA":
             mean = np.log((10.0 ** (imean)) / g)
         else:
             mean = np.log(10.0 ** imean)

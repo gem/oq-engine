@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2018 GEM Foundation
+# Copyright (c) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -66,6 +66,11 @@ class ProbabilityCurve(object):
         self.array += other.array
         return self
 
+    def __add__(self, other):
+        # this is used when composing mutually exclusive probabilities
+        self.array += other.array
+        return self.__class__(self.array)
+
     def __mul__(self, other):
         if isinstance(other, self.__class__):
             return self.__class__(self.array * other.array)
@@ -75,10 +80,13 @@ class ProbabilityCurve(object):
             return self.__class__(self.array * other)
     __rmul__ = __mul__
 
+    def __pow__(self, n):
+        return self.__class__(self.array ** n)
+
     def __invert__(self):
         return self.__class__(1. - self.array)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.array.any())
 
     def __repr__(self):
@@ -94,7 +102,7 @@ class ProbabilityCurve(object):
         """
         curve = numpy.zeros(1, imtls.dt)
         for imt in imtls:
-            curve[imt] = self.array[imtls.slicedic[imt], idx]
+            curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
 
@@ -117,7 +125,7 @@ class ProbabilityMap(dict):
     L the total number of hazard levels and I the number of GSIMs.
     """
     @classmethod
-    def build(cls, shape_y, shape_z, sids, initvalue=0.):
+    def build(cls, shape_y, shape_z, sids, initvalue=0., dtype=F64):
         """
         :param shape_y: the total number of intensity measure levels
         :param shape_z: the number of inner levels
@@ -127,7 +135,7 @@ class ProbabilityMap(dict):
         """
         dic = cls(shape_y, shape_z)
         for sid in sids:
-            dic.setdefault(sid, initvalue)
+            dic.setdefault(sid, initvalue, dtype)
         return dic
 
     @classmethod
@@ -152,18 +160,19 @@ class ProbabilityMap(dict):
         self.shape_y = shape_y
         self.shape_z = shape_z
 
-    def setdefault(self, sid, value):
+    def setdefault(self, sid, value, dtype=F64):
         """
         Works like `dict.setdefault`: if the `sid` key is missing, it fills
         it with an array and returns the associate ProbabilityCurve
 
         :param sid: site ID
         :param value: value used to fill the returned ProbabilityCurve
+        :param dtype: dtype used internally (F32 or F64)
         """
         try:
             return self[sid]
         except KeyError:
-            array = numpy.empty((self.shape_y, self.shape_z), F64)
+            array = numpy.empty((self.shape_y, self.shape_z), dtype)
             array.fill(value)
             pc = ProbabilityCurve(array)
             self[sid] = pc
@@ -207,60 +216,7 @@ class ProbabilityMap(dict):
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
-                curves_by_imt[sid] = self[sid].array[
-                    imtls.slicedic[imt], idx]
-        return curves
-
-    # used when exporting to npy
-    def convert_npy(self, imtls, sids, idx=0):
-        """
-        Convert a probability map into a composite array of dtype `imtls.dt`.
-
-        :param imtls:
-            DictArray instance
-        :param sids:
-            array of site IDs containing all the sites in the ProbabilityMap
-        :param idx:
-            index on the z-axis (default 0)
-        """
-        dtlist = [(imt, [(str(iml), F32) for iml in imtls[imt]])
-                  for imt in imtls]
-        curves = numpy.zeros(len(sids), dtlist)
-        for s, sid in enumerate(sids):
-            try:
-                array = self[sid].array
-            except KeyError:
-                continue
-            for imt in imtls:
-                imls = curves.dtype[imt].names
-                values = array[imtls.slicedic[imt], idx]
-                for iml, val in zip(imls, values):
-                    curves[s][imt][iml] = val
-        return curves
-
-    def convert2(self, imtls, sids):
-        """
-        Convert a probability map into a composite array of shape (N,)
-        and dtype `imtls.dt`.
-
-        :param imtls:
-            DictArray instance
-        :param sids:
-            the IDs of the sites we are interested in
-        :returns:
-            an array of curves of shape (N,)
-        """
-        assert self.shape_z == 1, self.shape_z
-        curves = numpy.zeros(len(sids), imtls.dt)
-        for imt in curves.dtype.names:
-            curves_by_imt = curves[imt]
-            for i, sid in numpy.ndenumerate(sids):
-                try:
-                    pcurve = self[sid]
-                except KeyError:
-                    pass  # the poes will be zeros
-                else:
-                    curves_by_imt[i] = pcurve.array[imtls.slicedic[imt], 0]
+                curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
         return curves
 
     def filter(self, sids):
@@ -288,6 +244,11 @@ class ProbabilityMap(dict):
         return out
 
     def __ior__(self, other):
+        if not other:
+            return self
+        if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
+            raise ValueError('%s has inconsistent shape with %s' %
+                             (other, self))
         self_sids = set(self)
         other_sids = set(other)
         for sid in self_sids & other_sids:
@@ -304,6 +265,21 @@ class ProbabilityMap(dict):
 
     __ror__ = __or__
 
+    def __add__(self, other):
+        try:
+            other.get
+            is_pmap = True
+            sids = set(self) | set(other)
+        except AttributeError:  # no .get method, assume a float
+            is_pmap = False
+            assert 0. <= other <= 1., other  # must be a probability
+            sids = set(self)
+        new = self.__class__(self.shape_y, self.shape_z)
+        for sid in sids:
+            prob = other.get(sid, 1) if is_pmap else other
+            new[sid] = self.get(sid, 1) + prob
+        return new
+
     def __mul__(self, other):
         try:
             other.get
@@ -319,12 +295,26 @@ class ProbabilityMap(dict):
             new[sid] = self.get(sid, 1) * prob
         return new
 
+    def __ipow__(self, n):
+        for sid, pcurve in self.items():
+            self[sid] = pcurve ** n
+        return self
+
+    def __pow__(self, n):
+        new = self.__class__(self.shape_y, self.shape_z)
+        for sid, pcurve in self.items():
+            new[sid] = pcurve ** n
+        return new
+
     def __invert__(self):
         new = self.__class__(self.shape_y, self.shape_z)
         for sid in self:
             if (self[sid].array != 1.).any():
                 new[sid] = ~self[sid]  # store only nonzero probabilities
         return new
+
+    def __getstate__(self):
+        return dict(shape_y=self.shape_y, shape_z=self.shape_z)
 
     def __toh5__(self):
         # converts to an array of shape (num_sids, shape_y, shape_z)
@@ -333,7 +323,12 @@ class ProbabilityMap(dict):
         shape = (size, self.shape_y, self.shape_z)
         array = numpy.zeros(shape, F64)
         for i, sid in numpy.ndenumerate(sids):
-            array[i] = self[sid].array
+            try:
+                array[i] = self[sid].array
+            except ValueError as exc:
+                # this should never happen, but I got a could not broadcast
+                # input array once for Australia
+                raise ValueError('%s on site_id=%d' % (exc, sid))
         return dict(array=array, sids=sids), {}
 
     def __fromh5__(self, dic, attrs):
@@ -344,6 +339,10 @@ class ProbabilityMap(dict):
         self.shape_z = array.shape[2]
         for sid, prob in zip(sids, array):
             self[sid] = ProbabilityCurve(prob)
+
+    def __repr__(self):
+        return '<%s %d, %d, %d>' % (self.__class__.__name__, len(self),
+                                    self.shape_y, self.shape_z)
 
 
 def get_shape(pmaps):

@@ -1,26 +1,27 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2018, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2018-2019 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import copy
 import math
 from datetime import datetime
 import numpy
 import h5py
+from openquake.baselib.general import random_filter
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -65,16 +66,16 @@ def convert_UCERFSource(self, node):
         # poissonian
         # Verify that the source time span is the same as the TOM time span
         inv_time = float(node["investigationTime"])
-        if inv_time != self.tom.time_span:
+        if inv_time != self.investigation_time:
             raise ValueError("Source investigation time (%s) is not "
                              "equal to configuration investigation time "
-                             "(%s)" % (inv_time, self.tom.time_span))
+                             "(%s)" % (inv_time, self.investigation_time))
         start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
     else:
         start_date = None
     return UCERFSource(
         source_file,
-        self.tom.time_span,
+        self.investigation_time,
         start_date,
         float(node["minMag"]),
         npd=self.convert_npdist(node),
@@ -168,6 +169,7 @@ class UCERFSource(BaseSeismicSource):
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
+    code = b'U'
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
     RUPTURE_WEIGHT = 1  # not very heavy
@@ -210,7 +212,7 @@ class UCERFSource(BaseSeismicSource):
         if hasattr(self.orig, '_mags'):
             return self.orig._mags
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._mags = hdf5[self.idx_set["mag"]].value
+            self.orig._mags = hdf5[self.idx_set["mag"]][()]
             return self.orig._mags
 
     @property
@@ -219,7 +221,7 @@ class UCERFSource(BaseSeismicSource):
         if hasattr(self.orig, '_rate'):
             return self.orig._rate
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._rate = hdf5[self.idx_set["rate"]].value
+            self.orig._rate = hdf5[self.idx_set["rate"]][()]
             return self.orig._rate
 
     @property
@@ -228,7 +230,7 @@ class UCERFSource(BaseSeismicSource):
         if hasattr(self.orig, '_rake'):
             return self.orig._rake
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._rake = hdf5[self.idx_set["rake"]].value
+            self.orig._rake = hdf5[self.idx_set["rake"]][()]
             return self.orig._rake
 
     def count_ruptures(self):
@@ -258,7 +260,7 @@ class UCERFSource(BaseSeismicSource):
         """
         Called when updating the SourceGroup
         """
-        return self.min_mag, None
+        return self.min_mag, 10
 
     def _get_tom(self):
         """
@@ -279,7 +281,7 @@ class UCERFSource(BaseSeismicSource):
         with h5py.File(self.source_file, "r") as hdf5:
             for idx in ridx:
                 trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
-                centroids.append(hdf5[trace + "/Centroids"].value)
+                centroids.append(hdf5[trace + "/Centroids"][()])
         return numpy.concatenate(centroids)
 
     def gen_trace_planes(self, ridx):
@@ -301,13 +303,13 @@ class UCERFSource(BaseSeismicSource):
         branch_key = self.idx_set["grid_key"]
         idist = src_filter.integration_distance(DEFAULT_TRT)
         with h5py.File(self.source_file, 'r') as hdf5:
-            bg_locations = hdf5["Grid/Locations"].value
+            bg_locations = hdf5["Grid/Locations"][()]
             distances = min_geodetic_distance(
                 src_filter.sitecol.xyz,
                 (bg_locations[:, 0], bg_locations[:, 1]))
             # Add buffer equal to half of length of median area from Mmax
             mmax_areas = self.msr.get_median_area(
-                hdf5["/".join(["Grid", branch_key, "MMax"])].value, 0.0)
+                hdf5["/".join(["Grid", branch_key, "MMax"])][()], 0.0)
             # for instance hdf5['Grid/FM0_0_MEANFS_MEANMSR/MMax']
             mmax_lengths = numpy.sqrt(mmax_areas / self.aspect)
             ok = distances <= (0.5 * mmax_lengths + idist)
@@ -371,6 +373,7 @@ class UCERFSource(BaseSeismicSource):
         stop = self.stop
         while stop > start:
             new = copy.copy(self)
+            new.id = self.id
             new.orig = self.orig
             new.start = start
             new.stop = min(start + RUPTURES_PER_BLOCK, stop)
@@ -381,18 +384,23 @@ class UCERFSource(BaseSeismicSource):
         return '<%s %s[%d:%d]>' % (self.__class__.__name__, self.source_id,
                                    self.start, self.stop)
 
-    def get_background_sources(self, src_filter):
+    def get_background_sources(self, src_filter, sample_factor=None):
         """
         Turn the background model of a given branch into a set of point sources
 
         :param src_filter:
             SourceFilter instance
+        :param sample_factor:
+            Used to reduce the sources if OQ_SAMPLE_SOURCES is set
         """
         background_sids = self.get_background_sids(src_filter)
+        if sample_factor is not None:  # hack for use in the mosaic
+            background_sids = random_filter(
+                background_sids, sample_factor, seed=42)
         with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
-            mags = hdf5[grid_loc + "/Magnitude"].value
+            mags = hdf5[grid_loc + "/Magnitude"][()]
             mmax = hdf5[grid_loc + "/MMax"][background_sids]
             rates = hdf5[grid_loc + "/RateArray"][background_sids, :]
             locations = hdf5["Grid/Locations"][background_sids, :]
@@ -412,10 +420,14 @@ class UCERFSource(BaseSeismicSource):
                     self.usd, self.lsd,
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
+                ps.id = self.id
                 ps.src_group_id = self.src_group_id
                 ps.num_ruptures = ps.count_ruptures()
                 sources.append(ps)
         return sources
+
+    def get_one_rupture(self):
+        raise ValueError('Unsupported option')
 
 
 def build_idx_set(branch_id, start_date):

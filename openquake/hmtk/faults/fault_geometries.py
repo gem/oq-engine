@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -44,6 +44,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
+
 import abc
 import numpy as np
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -54,8 +55,6 @@ class BaseFaultGeometry(object):
     '''
     Abstract base class to support geometry parameters and methods
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def get_area(self):
         '''

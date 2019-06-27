@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,6 +19,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import copy
 import math
+import numpy
 from openquake.baselib.python3compat import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -82,6 +83,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
+    code = b'S'
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth fault_trace dip rake hypo_list
     slip_list'''.split()
@@ -201,6 +203,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
         self._nr = []
+        n_hypo = len(self.hypo_list) or 1
+        n_slip = len(self.slip_list) or 1
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             if mag_occ_rate == 0:
                 continue
@@ -208,11 +212,10 @@ class SimpleFaultSource(ParametricSeismicSource):
                 fault_length, fault_width, mag)
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
-            self._nr.append(num_rup_along_length * num_rup_along_width)
+            self._nr.append(num_rup_along_length * num_rup_along_width *
+                            n_hypo * n_slip)
         counts = sum(self._nr)
-        n_hypo = len(self.hypo_list) or 1
-        n_slip = len(self.slip_list) or 1
-        return counts * n_hypo * n_slip
+        return counts
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):
         """
@@ -302,8 +305,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.dip = dip
 
     def __iter__(self):
-        mag_rates = [(mag, rate) for (mag, rate) in
-                     self.mfd.get_annual_occurrence_rates() if rate]
+        mag_rates = self.get_annual_occurrence_rates()
         if len(mag_rates) == 1:  # not splittable
             yield self
             return
@@ -322,3 +324,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         return SimpleFaultSurface.surface_projection_from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip)
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(p.x, p.y, p.z) for p in self.fault_trace],
+                           numpy.float32)

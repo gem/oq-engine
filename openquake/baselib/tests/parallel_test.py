@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,10 +17,15 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
+import unittest.mock as mock
+import time
+import shutil
+import pathlib
 import unittest
+import itertools
+import tempfile
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import parallel, performance, general, hdf5
 
 try:
     import celery
@@ -30,6 +35,27 @@ except ImportError:
 
 def get_length(data, monitor):
     return {'n': len(data)}
+
+
+def gfunc(text, monitor):
+    for char in text:
+        yield char * 3
+
+
+def supertask(text, monitor):
+    # a supertask spawning subtasks of kind get_length
+    with monitor('waiting'):
+        time.sleep(.1)
+    for block in general.block_splitter(text, max_weight=10):
+        items = [(k, len(list(grp))) for k, grp in itertools.groupby(block)]
+        if len(items) == 1:
+            # for instance items = [('i', 1)]
+            k, v = items[0]
+            yield get_length(k * v, monitor)
+            return
+        # for instance items = [('a', 4), ('e', 4), ('i', 2)]
+        for k, v in items:
+            yield get_length, k * v
 
 
 class StarmapTestCase(unittest.TestCase):
@@ -70,10 +96,40 @@ class StarmapTestCase(unittest.TestCase):
         res = {}
         for key, data in all_data:
             res[key] = parallel.Starmap(
-                get_length, [(data, self.monitor)]).submit_all()
+                get_length, [(data,)]).submit_all()
         for key, val in res.items():
             res[key] = val.reduce()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})
+
+    def test_gfunc(self):
+        res = list(parallel.Starmap(gfunc, [('xy',), ('z',)],
+                                    distribute='no'))
+        self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
+
+        res = list(parallel.Starmap(gfunc, [('xy',), ('z',)]))
+        self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
+
+    def test_supertask(self):
+        # this test has 4 supertasks generating 4 + 5 + 3 + 5 = 17 subtasks
+        # and 18 outputs (1 output does not produce a subtask)
+        allargs = [('aaaaeeeeiii',),
+                   ('uuuuaaaaeeeeiii',),
+                   ('aaaaaaaaeeeeiii',),
+                   ('aaaaeeeeiiiiiooooooo',)]
+        numchars = sum(len(arg) for arg, in allargs)  # 61
+        tmp = pathlib.Path(tempfile.mkdtemp(), 'calc_1.hdf5')
+        with hdf5.File(tmp) as h5:
+            monitor = performance.Monitor(hdf5=h5)
+            res = parallel.Starmap(supertask, allargs, monitor).reduce()
+        self.assertEqual(res, {'n': numchars})
+        # check that the correct information is stored in the hdf5 file
+        with hdf5.File(tmp) as h5:
+            num = general.countby(h5['performance_data'][()], 'operation')
+            self.assertEqual(num[b'waiting'], 4)
+            self.assertEqual(num[b'total supertask'], 18)  # outputs
+            self.assertEqual(num[b'total get_length'], 17)  # subtasks
+            self.assertGreater(len(h5['task_info/supertask']), 0)
+        shutil.rmtree(tmp.parent)
 
     @classmethod
     def tearDownClass(cls):

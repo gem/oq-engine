@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <ruptureCollection
+    investigationTime="50.0"
+    >
+        <ruptureGroup
+        id="0"
+        tectonicRegion="Subduction Interface - North East Correction"
+        >
+            <singlePlaneRupture
+            id="43"
+            multiplicity="1"
+            >
+                <stochasticEventSets>
+                    <SES
+                    id="1"
+                    >
+                        184683593728
+                    </SES>
+                </stochasticEventSets>
+                <magnitude>
+                    5.0999999e+00
+                </magnitude>
+                <strike>
+                    2.4173760e+02
+                </strike>
+                <dip>
+                    3.4419558e+01
+                </dip>
+                <rake>
+                    9.0000000e+01
+                </rake>
+                <hypocenter depth="5.2000000E+01" lat="4.3396999E+01" lon="1.4590401E+02"/>
+                <planarSurface>
+                    <topLeft depth="51.9969902" lat="43.3969917" lon="145.9040833"/>
+                    <topRight depth="51.9969902" lat="43.3969460" lon="145.9039764"/>
+                    <bottomLeft depth="52.0030098" lat="43.3970528" lon="145.9040222"/>
+                    <bottomRight depth="52.0030098" lat="43.3970070" lon="145.9039154"/>
+                </planarSurface>
+            </singlePlaneRupture>
+        </ruptureGroup>
+        <ruptureGroup
+        id="1"
+        tectonicRegion="Subduction Interface - North East Correction"
+        >
+            <griddedRupture
+            id="68"
+            multiplicity="1"
+            >
+                <stochasticEventSets>
+                    <SES
+                    id="1"
+                    >
+                        292057776128
+                    </SES>
+                </stochasticEventSets>
+                <magnitude>
+                    7.9000001e+00
+                </magnitude>
+                <strike>
+                    nan
+                </strike>
+                <dip>
+                    nan
+                </dip>
+                <rake>
+                    9.0000000e+01
+                </rake>
+                <hypocenter depth="2.5799999E+01" lat="4.2889999E+01" lon="1.4602499E+02"/>
+                <mesh>
+                    <node col="0" depth="20.1" lat="42.404" lon="145.192" row="0"/>
+                    <node col="1" depth="22.0" lat="42.464" lon="145.14" row="0"/>
+                    <node col="2" depth="24.2" lat="42.525" lon="145.088" row="0"/>
+                    <node col="3" depth="26.8" lat="42.586" lon="145.036" row="0"/>
+                    <node col="4" depth="19.0" lat="42.382" lon="145.325" row="0"/>
+                    <node col="5" depth="20.6" lat="42.442" lon="145.272" row="0"/>
+                    <node col="6" depth="22.4" lat="42.503" lon="145.22" row="0"/>
+                    <node col="7" depth="24.6" lat="42.564" lon="145.168" row="0"/>
+                    <node col="8" depth="27.0" lat="42.624" lon="145.116" row="0"/>
+                    <node col="9" depth="19.4" lat="42.42" lon="145.405" row="0"/>
+                    <node col="10" depth="21.1" lat="42.481" lon="145.353" row="0"/>
+                    <node col="11" depth="22.9" lat="42.542" lon="145.301" row="0"/>
+                    <node col="12" depth="25.0" lat="42.602" lon="145.249" row="0"/>
+                    <node col="13" depth="27.5" lat="42.663" lon="145.197" row="0"/>
+                    <node col="14" depth="18.3" lat="42.398" lon="145.538" row="0"/>
+                    <node col="15" depth="19.8" lat="42.459" lon="145.486" row="0"/>
+                    <node col="16" depth="21.4" lat="42.52" lon="145.434" row="0"/>
+                    <node col="17" depth="23.3" lat="42.581" lon="145.381" row="0"/>
+                    <node col="18" depth="25.4" lat="42.641" lon="145.329" row="0"/>
+                    <node col="19" depth="27.9" lat="42.702" lon="145.277" row="0"/>
+                    <node col="20" depth="31.0" lat="42.763" lon="145.225" row="0"/>
+                    <node col="21" depth="18.6" lat="42.437" lon="145.618" row="0"/>
+                    <node col="22" depth="20.1" lat="42.498" lon="145.566" row="0"/>
+                    <node col="23" depth="21.8" lat="42.559" lon="145.514" row="0"/>
+                    <node col="24" depth="23.7" lat="42.619" lon="145.462" row="0"/>
+                    <node col="25" depth="25.8" lat="42.68" lon="145.41" row="0"/>
+                    <node col="26" depth="28.2" lat="42.741" lon="145.357" row="0"/>
+                    <node col="27" depth="31.3" lat="42.801" lon="145.305" row="0"/>
+                    <node col="28" depth="18.8" lat="42.476" lon="145.699" row="0"/>
+                    <node col="29" depth="20.3" lat="42.536" lon="145.647" row="0"/>
+                    <node col="30" depth="22.0" lat="42.597" lon="145.595" row="0"/>
+                    <node col="31" depth="23.9" lat="42.658" lon="145.542" row="0"/>
+                    <node col="32" depth="26.0" lat="42.719" lon="145.49" row="0"/>
+                    <node col="33" depth="28.5" lat="42.779" lon="145.438" row="0"/>
+                    <node col="34" depth="31.7" lat="42.84" lon="145.386" row="0"/>
+                    <node col="35" depth="19.0" lat="42.514" lon="145.78" row="0"/>
+                    <node col="36" depth="20.5" lat="42.575" lon="145.727" row="0"/>
+                    <node col="37" depth="22.2" lat="42.636" lon="145.675" row="0"/>
+                    <node col="38" depth="24.1" lat="42.697" lon="145.623" row="0"/>
+                    <node col="39" depth="26.2" lat="42.757" lon="145.571" row="0"/>
+                    <node col="40" depth="28.7" lat="42.818" lon="145.518" row="0"/>
+                    <node col="41" depth="32.0" lat="42.879" lon="145.466" row="0"/>
+                    <node col="42" depth="19.1" lat="42.553" lon="145.86" row="0"/>
+                    <node col="43" depth="20.6" lat="42.614" lon="145.808" row="0"/>
+                    <node col="44" depth="22.4" lat="42.675" lon="145.756" row="0"/>
+                    <node col="45" depth="24.3" lat="42.735" lon="145.703" row="0"/>
+                    <node col="46" depth="26.4" lat="42.796" lon="145.651" row="0"/>
+                    <node col="47" depth="28.9" lat="42.857" lon="145.599" row="0"/>
+                    <node col="48" depth="32.3" lat="42.918" lon="145.546" row="0"/>
+                    <node col="49" depth="19.2" lat="42.592" lon="145.941" row="0"/>
+                    <node col="50" depth="20.7" lat="42.653" lon="145.889" row="0"/>
+                    <node col="51" depth="22.5" lat="42.713" lon="145.836" row="0"/>
+                    <node col="52" depth="24.5" lat="42.774" lon="145.784" row="0"/>
+                    <node col="53" depth="26.6" lat="42.835" lon="145.732" row="0"/>
+                    <node col="54" depth="29.0" lat="42.896" lon="145.679" row="0"/>
+                    <node col="55" depth="32.5" lat="42.956" lon="145.627" row="0"/>
+                    <node col="56" depth="18.0" lat="42.57" lon="146.074" row="0"/>
+                    <node col="57" depth="19.3" lat="42.631" lon="146.022" row="0"/>
+                    <node col="58" depth="20.9" lat="42.691" lon="145.969" row="0"/>
+                    <node col="59" depth="22.8" lat="42.752" lon="145.917" row="0"/>
+                    <node col="60" depth="24.8" lat="42.813" lon="145.864" row="0"/>
+                    <node col="61" depth="26.9" lat="42.874" lon="145.812" row="0"/>
+                    <node col="62" depth="29.4" lat="42.934" lon="145.76" row="0"/>
+                    <node col="63" depth="32.8" lat="42.995" lon="145.707" row="0"/>
+                    <node col="64" depth="36.9" lat="43.056" lon="145.655" row="0"/>
+                    <node col="65" depth="18.1" lat="42.609" lon="146.155" row="0"/>
+                    <node col="66" depth="19.4" lat="42.669" lon="146.102" row="0"/>
+                    <node col="67" depth="21.1" lat="42.73" lon="146.05" row="0"/>
+                    <node col="68" depth="23.1" lat="42.791" lon="145.997" row="0"/>
+                    <node col="69" depth="25.2" lat="42.852" lon="145.945" row="0"/>
+                    <node col="70" depth="27.3" lat="42.912" lon="145.893" row="0"/>
+                    <node col="71" depth="29.6" lat="42.973" lon="145.84" row="0"/>
+                    <node col="72" depth="33.2" lat="43.034" lon="145.788" row="0"/>
+                    <node col="73" depth="37.3" lat="43.094" lon="145.735" row="0"/>
+                    <node col="74" depth="18.2" lat="42.647" lon="146.235" row="0"/>
+                    <node col="75" depth="19.6" lat="42.708" lon="146.183" row="0"/>
+                    <node col="76" depth="21.4" lat="42.769" lon="146.13" row="0"/>
+                    <node col="77" depth="23.6" lat="42.83" lon="146.078" row="0"/>
+                    <node col="78" depth="25.8" lat="42.89" lon="146.025" row="0"/>
+                    <node col="79" depth="28.1" lat="42.951" lon="145.973" row="0"/>
+                    <node col="80" depth="30.6" lat="43.012" lon="145.921" row="0"/>
+                    <node col="81" depth="33.9" lat="43.072" lon="145.868" row="0"/>
+                    <node col="82" depth="38.0" lat="43.133" lon="145.816" row="0"/>
+                    <node col="83" depth="18.3" lat="42.686" lon="146.316" row="0"/>
+                    <node col="84" depth="19.8" lat="42.747" lon="146.263" row="0"/>
+                    <node col="85" depth="21.8" lat="42.808" lon="146.211" row="0"/>
+                    <node col="86" depth="24.1" lat="42.868" lon="146.158" row="0"/>
+                    <node col="87" depth="26.5" lat="42.929" lon="146.106" row="0"/>
+                    <node col="88" depth="29.1" lat="42.99" lon="146.053" row="0"/>
+                    <node col="89" depth="31.8" lat="43.05" lon="146.001" row="0"/>
+                    <node col="90" depth="35.0" lat="43.111" lon="145.949" row="0"/>
+                    <node col="91" depth="38.9" lat="43.172" lon="145.896" row="0"/>
+                    <node col="92" depth="18.5" lat="42.725" lon="146.396" row="0"/>
+                    <node col="93" depth="19.9" lat="42.786" lon="146.344" row="0"/>
+                    <node col="94" depth="22.1" lat="42.846" lon="146.291" row="0"/>
+                    <node col="95" depth="24.6" lat="42.907" lon="146.239" row="0"/>
+                    <node col="96" depth="27.2" lat="42.968" lon="146.186" row="0"/>
+                    <node col="97" depth="29.9" lat="43.029" lon="146.134" row="0"/>
+                    <node col="98" depth="32.8" lat="43.089" lon="146.081" row="0"/>
+                    <node col="99" depth="36.1" lat="43.15" lon="146.029" row="0"/>
+                    <node col="100" depth="39.7" lat="43.211" lon="145.976" row="0"/>
+                    <node col="101" depth="18.9" lat="42.764" lon="146.477" row="0"/>
+                    <node col="102" depth="20.5" lat="42.824" lon="146.425" row="0"/>
+                    <node col="103" depth="22.5" lat="42.885" lon="146.372" row="0"/>
+                    <node col="104" depth="25.0" lat="42.946" lon="146.32" row="0"/>
+                    <node col="105" depth="27.7" lat="43.007" lon="146.267" row="0"/>
+                    <node col="106" depth="30.5" lat="43.067" lon="146.214" row="0"/>
+                    <node col="107" depth="33.6" lat="43.128" lon="146.162" row="0"/>
+                    <node col="108" depth="36.9" lat="43.189" lon="146.109" row="0"/>
+                    <node col="109" depth="40.6" lat="43.249" lon="146.057" row="0"/>
+                    <node col="110" depth="19.1" lat="42.802" lon="146.558" row="0"/>
+                    <node col="111" depth="20.9" lat="42.863" lon="146.505" row="0"/>
+                    <node col="112" depth="23.0" lat="42.924" lon="146.453" row="0"/>
+                    <node col="113" depth="25.4" lat="42.984" lon="146.4" row="0"/>
+                    <node col="114" depth="28.1" lat="43.045" lon="146.348" row="0"/>
+                    <node col="115" depth="31.0" lat="43.106" lon="146.295" row="0"/>
+                    <node col="116" depth="34.0" lat="43.167" lon="146.242" row="0"/>
+                    <node col="117" depth="37.4" lat="43.227" lon="146.19" row="0"/>
+                    <node col="118" depth="41.1" lat="43.288" lon="146.137" row="0"/>
+                    <node col="119" depth="19.1" lat="42.841" lon="146.638" row="0"/>
+                    <node col="120" depth="21.0" lat="42.902" lon="146.586" row="0"/>
+                    <node col="121" depth="23.2" lat="42.962" lon="146.533" row="0"/>
+                    <node col="122" depth="25.7" lat="43.023" lon="146.481" row="0"/>
+                    <node col="123" depth="28.4" lat="43.084" lon="146.428" row="0"/>
+                    <node col="124" depth="31.3" lat="43.145" lon="146.375" row="0"/>
+                    <node col="125" depth="34.3" lat="43.205" lon="146.323" row="0"/>
+                    <node col="126" depth="37.6" lat="43.266" lon="146.27" row="0"/>
+                    <node col="127" depth="41.3" lat="43.327" lon="146.218" row="0"/>
+                    <node col="128" depth="20.8" lat="42.941" lon="146.666" row="0"/>
+                    <node col="129" depth="23.2" lat="43.001" lon="146.614" row="0"/>
+                    <node col="130" depth="25.9" lat="43.062" lon="146.561" row="0"/>
+                    <node col="131" depth="28.7" lat="43.123" lon="146.509" row="0"/>
+                    <node col="132" depth="31.6" lat="43.183" lon="146.456" row="0"/>
+                    <node col="133" depth="34.6" lat="43.244" lon="146.403" row="0"/>
+                    <node col="134" depth="37.7" lat="43.305" lon="146.351" row="0"/>
+                    <node col="135" depth="41.3" lat="43.366" lon="146.298" row="0"/>
+                    <node col="136" depth="20.9" lat="42.979" lon="146.747" row="0"/>
+                    <node col="137" depth="23.3" lat="43.04" lon="146.694" row="0"/>
+                    <node col="138" depth="26.0" lat="43.101" lon="146.642" row="0"/>
+                    <node col="139" depth="28.8" lat="43.161" lon="146.589" row="0"/>
+                    <node col="140" depth="31.7" lat="43.222" lon="146.536" row="0"/>
+                    <node col="141" depth="34.8" lat="43.283" lon="146.484" row="0"/>
+                    <node col="142" depth="38.1" lat="43.344" lon="146.431" row="0"/>
+                    <node col="143" depth="21.2" lat="43.018" lon="146.828" row="0"/>
+                    <node col="144" depth="23.5" lat="43.079" lon="146.775" row="0"/>
+                    <node col="145" depth="26.1" lat="43.139" lon="146.722" row="0"/>
+                    <node col="146" depth="28.9" lat="43.2" lon="146.67" row="0"/>
+                    <node col="147" depth="31.8" lat="43.261" lon="146.617" row="0"/>
+                    <node col="148" depth="34.9" lat="43.322" lon="146.564" row="0"/>
+                    <node col="149" depth="38.3" lat="43.382" lon="146.511" row="0"/>
+                    <node col="150" depth="23.6" lat="43.117" lon="146.856" row="0"/>
+                    <node col="151" depth="26.2" lat="43.178" lon="146.803" row="0"/>
+                    <node col="152" depth="29.0" lat="43.239" lon="146.75" row="0"/>
+                    <node col="153" depth="31.9" lat="43.3" lon="146.697" row="0"/>
+                    <node col="154" depth="34.9" lat="43.36" lon="146.645" row="0"/>
+                    <node col="155" depth="26.2" lat="43.217" lon="146.883" row="0"/>
+                    <node col="156" depth="29.0" lat="43.278" lon="146.831" row="0"/>
+                    <node col="157" depth="31.9" lat="43.338" lon="146.778" row="0"/>
+                </mesh>
+            </griddedRupture>
+        </ruptureGroup>
+    </ruptureCollection>
+</nrml>

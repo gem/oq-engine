@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@ from openquake.baselib import sap
 from openquake.commonlib import shapefileparser
 
 
-@sap.Script
+@sap.script
 def to_shapefile(output, input_nrml_file, validate):
     """
     Convert a NRML source model file to ESRI Shapefile(s).

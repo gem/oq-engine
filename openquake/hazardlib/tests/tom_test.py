@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -41,9 +41,9 @@ class PoissonTOMTestCase(unittest.TestCase):
     def test_get_probability_one_occurrence(self):
         pdf = PoissonTOM(time_span=30)
         aae = self.assertAlmostEqual
-        aae(pdf.get_probability_one_occurrence(10), 0)
-        aae(pdf.get_probability_one_occurrence(0.1), 0.1493612)
-        aae(pdf.get_probability_one_occurrence(0.01), 0.2222455)
+        aae(pdf.get_probability_n_occurrences(10, 1), 0)
+        aae(pdf.get_probability_n_occurrences(0.1, 1), 0.1493612)
+        aae(pdf.get_probability_n_occurrences(0.01, 1), 0.2222455)
 
     def test_sample_number_of_occurrences(self):
         time_span = 40

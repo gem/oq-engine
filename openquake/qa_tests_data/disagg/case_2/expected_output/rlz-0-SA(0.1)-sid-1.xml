@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <disaggMatrices
+    IMT="SA"
+    distBinEdges="0.000000E+00, 1.000000E+01, 2.000000E+01, 3.000000E+01, 4.000000E+01, 5.000000E+01, 6.000000E+01, 7.000000E+01, 8.000000E+01"
+    epsBinEdges="-3.000000E+00, -2.000000E+00, -1.000000E+00, 0.000000E+00, 1.000000E+00, 2.000000E+00, 3.000000E+00"
+    gsimTreePath="BooreAtkinson2008_YoungsEtAl1997SSlab"
+    investigationTime="1.0"
+    lat="0.0"
+    latBinEdges="-8.000000E-01, -7.000000E-01, -6.000000E-01, -5.000000E-01, -4.000000E-01, -3.000000E-01, -2.000000E-01, -1.000000E-01, 0.000000E+00, 1.000000E-01, 2.000000E-01, 3.000000E-01, 4.000000E-01, 5.000000E-01, 6.000000E-01, 7.000000E-01, 8.000000E-01"
+    lon="0.0"
+    lonBinEdges="-8.000000E-01, -7.000000E-01, -6.000000E-01, -5.000000E-01, -4.000000E-01, -3.000000E-01, -2.000000E-01, -1.000000E-01, 0.000000E+00, 1.000000E-01, 2.000000E-01, 3.000000E-01, 4.000000E-01, 5.000000E-01, 6.000000E-01, 7.000000E-01, 8.000000E-01"
+    magBinEdges="5.000000E+00, 5.100000E+00, 5.200000E+00, 5.300000E+00, 5.400000E+00, 5.500000E+00, 5.600000E+00, 5.700000E+00, 5.800000E+00, 5.900000E+00, 6.000000E+00, 6.100000E+00, 6.200000E+00, 6.300000E+00, 6.400000E+00, 6.500000E+00"
+    saDamping="5.0"
+    saPeriod="0.1"
+    sourceModelTreePath="source_model_1"
+    tectonicRegionTypes="Active Shallow Crust, Subduction IntraSlab"
+    >
+        <disaggMatrix
+        dims="15"
+        iml="1.000000E-01"
+        poE="2.714296E-02"
+        type="Mag"
+        >
+            <prob index="0" value="3.390306E-03"/>
+            <prob index="1" value="3.173308E-03"/>
+            <prob index="2" value="2.940040E-03"/>
+            <prob index="3" value="2.696267E-03"/>
+            <prob index="4" value="2.447768E-03"/>
+            <prob index="5" value="2.200080E-03"/>
+            <prob index="6" value="1.958236E-03"/>
+            <prob index="7" value="1.726555E-03"/>
+            <prob index="8" value="1.508495E-03"/>
+            <prob index="9" value="1.306592E-03"/>
+            <prob index="10" value="1.122462E-03"/>
+            <prob index="11" value="9.568756E-04"/>
+            <prob index="12" value="8.098723E-04"/>
+            <prob index="13" value="6.808994E-04"/>
+            <prob index="14" value="5.689600E-04"/>
+        </disaggMatrix>
+    </disaggMatrices>
+</nrml>

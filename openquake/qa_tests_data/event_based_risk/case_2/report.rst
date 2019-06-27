@@ -2,12 +2,12 @@ Event Based Risk QA Test 2
 ==========================
 
 ============== ===================
-checksum32     4,290,565,281      
-date           2018-06-05T06:38:30
-engine_version 3.2.0-git65c4735   
+checksum32     1,772,081,114      
+date           2019-06-24T15:34:02
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 3, num_levels = 15
+num_sites = 3, num_levels = 15, num_rlzs = 1
 
 Parameters
 ----------
@@ -38,7 +38,6 @@ Name                     File
 exposure                 `exposure.xml <exposure.xml>`_                                
 gsim_logic_tree          `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                  
 job_ini                  `job.ini <job.ini>`_                                          
-source                   `source_model.xml <source_model.xml>`_                        
 source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_  
 structural_vulnerability `vulnerability_model_stco.xml <vulnerability_model_stco.xml>`_
 ======================== ==============================================================
@@ -48,24 +47,23 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
+b1        1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================= =========== ======================= =================
-grp_id gsims             distances   siteparams              ruptparams       
-====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-====== ================= =========== ======================= =================
+====== =================== =========== ======================= =================
+grp_id gsims               distances   siteparams              ruptparams       
+====== =================== =========== ======================= =================
+0      '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== =================== =========== ======================= =================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -77,16 +75,14 @@ source_model.xml 0      Active Shallow Crust 18           18
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-4 asset(s) x 1 realization(s) x 1 loss type(s) x 2 losses x 8 bytes x 60 tasks = 3.75 KB
+4 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 20 tasks = 640 B
 
 Exposure model
 --------------
-=============== ========
-#assets         4       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     4
+#taxonomies 3
+=========== =
 
 ======== ======= ======= === === ========= ==========
 taxonomy mean    stddev  min max num_sites num_assets
@@ -98,59 +94,50 @@ W/1      1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  6            0.00951   3.815E-06  1.00000   1         8     
-2         PointSource  6            0.00725   1.907E-06  1.00000   1         14    
-3         PointSource  6            0.00687   1.192E-06  1.00000   1         20    
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+0      1         P    0     1     6            0.00258   0.0       4.00000 925,913,543  
+0      2         P    1     2     6            0.00236   0.0       2.00000 1,979,470,468
+0      3         P    2     3     6            0.00159   0.0       8.00000 2,157,728,551
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-PointSource  0.02363   3     
-============ ========= ======
-
-Duplicated sources
-------------------
-There are no duplicated sources
+==== ========= ======
+code calc_time counts
+==== ========= ======
+P    0.00652   3     
+==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00312 1.586E-04 0.00295 0.00326 3        
-compute_ruptures   0.03194 NaN       0.03194 0.03194 1        
-================== ======= ========= ======= ======= =========
+================== ========= ========= ========= ========= =======
+operation-duration mean      stddev    min       max       outputs
+get_eid_rlz        6.069E-04 1.301E-04 3.383E-04 6.859E-04 8      
+read_source_models 0.00274   NaN       0.00274   0.00274   1      
+sample_ruptures    0.01124   NaN       0.01124   0.01124   1      
+================== ========= ========= ========= ========= =======
 
 Data transfer
 -------------
-================ ====================================================================== ========
-task             sent                                                                   received
-RtreeFilter      srcs=3.91 KB monitor=1.01 KB srcfilter=837 B                           4.05 KB 
-compute_ruptures sources=2.47 KB param=831 B monitor=353 B src_filter=233 B gsims=127 B 11.3 KB 
-================ ====================================================================== ========
+================== ============================================= ========
+task               sent                                          received
+get_eid_rlz        self=11.37 KB                                 2.15 KB 
+read_source_models converter=313 B fnames=113 B                  2.28 KB 
+sample_ruptures    param=3.22 KB sources=1.94 KB srcfilter=220 B 1.94 KB 
+================== ============================================= ========
 
 Slowest operations
 ------------------
-=============================== ========= ========= ======
-operation                       time_sec  memory_mb counts
-=============================== ========= ========= ======
-EventBasedRuptureCalculator.run 0.32211   0.0       1     
-managing sources                0.18716   0.0       1     
-total compute_ruptures          0.03194   7.37500   1     
-total prefilter                 0.00935   2.47656   3     
-making contexts                 0.00914   0.0       9     
-saving ruptures                 0.00577   0.0       1     
-store source_info               0.00506   0.0       1     
-reading composite source model  0.00345   0.0       1     
-reading site collection         0.00341   0.0       1     
-reading exposure                0.00166   0.0       1     
-unpickling compute_ruptures     0.00162   0.0       1     
-setting event years             0.00154   0.0       1     
-unpickling prefilter            8.292E-04 0.0       3     
-splitting sources               3.400E-04 0.0       1     
-=============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total sample_ruptures    0.01124  0.0       1     
+total get_eid_rlz        0.00486  0.0       8     
+total read_source_models 0.00274  0.0       1     
+saving ruptures          0.00273  0.0       1     
+store source model       0.00166  0.0       1     
+store source_info        0.00152  0.0       1     
+reading exposure         0.00151  0.0       1     
+======================== ======== ========= ======

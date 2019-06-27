@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 #
 # LICENSE
 #
-# Copyright (C) 2015-2018 GEM Foundation, G. Weatherill, M. Pagani
+# Copyright (C) 2015-2019 GEM Foundation, G. Weatherill, M. Pagani
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
@@ -42,8 +43,6 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-# -*- coding: utf-8 -*-
 
 """
 Python tools for calculating activity rates on a grid from a source model
