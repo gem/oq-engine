@@ -250,7 +250,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
         eb_ruptures = []
         # AccumDict of arrays with 2 elements weight, calc_time
         calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
-        [grp_id] = set(src.src_group_ids[0] for src in sources)
+        [grp_id] = set(src.src_group_id for src in sources)
         for src, _sites in srcfilter(sources):
             t0 = time.time()
             if len(eb_ruptures) > MAX_RUPTURES:
