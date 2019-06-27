@@ -48,7 +48,7 @@ def purge_all(user=None):
             mo = re.match('(calc_|cache_)(\d+)\.hdf5', fname)
             if mo is not None:
                 calc_id = int(mo.group(2))
-            purge_one(calc_id, user, force=True)
+                purge_one(calc_id, user, force=True)
 
 
 @sap.script
