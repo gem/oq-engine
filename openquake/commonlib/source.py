@@ -436,8 +436,9 @@ class CompositeSourceModel(collections.abc.Sequence):
                         sources.append(src)
         return sources
 
-    def get_trt_sources(self):
+    def get_trt_sources(self, src_group_ids=False):
         """
+        :param src_group_ids: if True change src_group_id to a list
         :returns: a list of pairs [(trt, group of sources)]
         """
         atomic = []
@@ -450,27 +451,21 @@ class CompositeSourceModel(collections.abc.Sequence):
                     acc[grp.trt].extend(grp)
         if not acc:
             return atomic
-        elif not hasattr(grp.sources[0], 'checksum'):  # for UCERF
+        elif not hasattr(grp.sources[0], 'checksum') or not src_group_ids:
+            # for UCERF or for event_based
             return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
-        n = 0
-        tot = 0
         dic = {}
         key = operator.attrgetter('source_id', 'checksum')
         for trt in acc:
             dic[trt] = []
             for grp in groupby(acc[trt], key).values():
                 src = grp[0]
-                n += 1
-                tot += len(grp)
                 # src.src_group_id can be a list if get_sources_by_trt was
                 # called before
                 if len(grp) > 1 and not isinstance(src.src_group_id, list):
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
-        if n < tot:
-            logging.info('Reduced %d sources to %d sources with unique IDs',
-                         tot, n)
         return atomic + list(dic.items())
 
     def get_num_ruptures(self):
