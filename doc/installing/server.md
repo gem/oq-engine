@@ -6,28 +6,31 @@
 
 The OpenQuake Engine server supports authentication provided by [Django](https://docs.djangoproject.com/en/stable/topics/auth/) and its backends.
 
-Create a `openquake/server/local_settings.py` and add:
+Create a `/usr/share/openquake/engine/local_settings.py` and add:
 ```python
 LOCKDOWN = True
 ```
 
 Upgrade the database to host users and sessions:
-
 ```bash
-$ oq webui migrate 
-```
-
-if, for any reason, the `oq` command isn't available in the path you can use the following syntax:
-
-```bash
-$ python -m openquake.server.manage migrate 
+$ cd /usr/share/openquake/engine
+$ sudo -u openquake oq webui migrate 
 ```
 
 Add a new local superuser:
 ```bash
-$ oq webui createsuperuser
-# or
-$ python -m openquake.server.manage createsuperuser
+$ cd /usr/share/openquake/engine
+$ sudo -u openquake oq webui createsuperuser
+```
+
+#### Running from sources
+
+When running the OpenQuake Engine from sources the `local_settings.py` file must be located under `openquake/server/local_settings.py` and `oq` commands must be as current user (without `sudo`).
+
+if, for any reason, the `oq` command isn't available in the path you can use the following syntax:
+
+```bash
+$ python3 -m openquake.server.manage <subcommand> 
 ```
 
 ##### Groups support
@@ -51,8 +54,6 @@ Mapping of unix groups isn't supported at the moment.
 
 On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicorn.org/) is the recommended software stack to run the WebUI.
 
-When packages are used, the custom `local_settings.py` file should be placed in `/usr/share/openquake/engine` to avoid conflicts when packages are upgraded.
-
 #### gunicorn
 
 *gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). When using `python-oq-libs` for RedHat or Debian *gunicorn* is already provided.
@@ -65,7 +66,7 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers, which is usually equal to `(CPU threads)*2`.
 
-*gunicorn* is usually managed by the OS init system. See an example for [supervisord](../../debian/supervisord/openquake-webui.conf) or [systemd](../../rpm/systemd/openquake-webui.service).
+*gunicorn* is usually managed by the OS init system. See an example for [systemd](../../debian/systemd/openquake-webui.service).
 
 #### nginx
 
@@ -80,9 +81,7 @@ STATIC_ROOT = '/var/www/webui'
 then collect static files:
 
 ```bash
-$ oq webui collectstatic
-# or
-$ python -m openquake.server.manage collectstatic
+$ sudo oq webui collectstatic
 ```
 
 *nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static content. A [sample configuration file](examples/nginx.md) is provided.

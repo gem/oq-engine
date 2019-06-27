@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+	xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<logicTree logicTreeID="lt1">
+
+<!-- Fault source geometry -->
+		<logicTreeBranchSet uncertaintyType="sourceModel"
+				    branchSetID="bs1">
+
+			<logicTreeBranch branchID="b1">	
+				<uncertaintyModel>source_model.xml
+				</uncertaintyModel>
+				<uncertaintyWeight>1</uncertaintyWeight>
+			</logicTreeBranch>
+
+		</logicTreeBranchSet>
+    
+    <!-- Max magnitude uncertainties -->
+    
+     <!-- MFT, NW, Grabens, Karakoram -->
+        
+        <logicTreeBranchSet branchSetID="bs21"
+            uncertaintyType="maxMagGRRelative"
+            applyToSources="1 2 3 4 5 6 7 8 10" >
+            
+            <logicTreeBranch branchID="b211">
+                <uncertaintyModel>+0.0</uncertaintyModel>
+                <uncertaintyWeight>0.45</uncertaintyWeight>
+            </logicTreeBranch>
+            
+            <logicTreeBranch branchID="b212">
+                <uncertaintyModel>+0.2</uncertaintyModel>
+                <uncertaintyWeight>0.275</uncertaintyWeight>
+            </logicTreeBranch>
+            
+            <logicTreeBranch branchID="b213">
+                <uncertaintyModel>-0.2</uncertaintyModel>
+                <uncertaintyWeight>0.275</uncertaintyWeight>
+            </logicTreeBranch>
+            
+        </logicTreeBranchSet>
+    
+    <!-- Eastern -->
+        
+        <logicTreeBranchSet branchSetID="bs22"
+            uncertaintyType="maxMagGRRelative"
+            applyToSources="9" >
+            
+            <logicTreeBranch branchID="b221">
+                <uncertaintyModel>+0.0</uncertaintyModel>
+                <uncertaintyWeight>0.45</uncertaintyWeight>
+            </logicTreeBranch>
+            
+            <logicTreeBranch branchID="b222">
+                <uncertaintyModel>+0.3</uncertaintyModel>
+                <uncertaintyWeight>0.275</uncertaintyWeight>
+            </logicTreeBranch>
+            
+            <logicTreeBranch branchID="b223">
+                <uncertaintyModel>-0.3</uncertaintyModel>
+                <uncertaintyWeight>0.275</uncertaintyWeight>
+            </logicTreeBranch>
+            
+        </logicTreeBranchSet>
+    
+    <!-- Background -->
+        
+        <logicTreeBranchSet branchSetID="bs23"
+            uncertaintyType="maxMagGRRelative"
+            applyToSources="11" >
+            
+            <logicTreeBranch branchID="b231">
+                <uncertaintyModel>+0.0</uncertaintyModel>
+                <uncertaintyWeight>0.45</uncertaintyWeight>
+            </logicTreeBranch>
+            
+            <logicTreeBranch branchID="b232">
+                <uncertaintyModel>+0.5</uncertaintyModel>
+                <uncertaintyWeight>0.275</uncertaintyWeight>
+            </logicTreeBranch>
+            
+            <logicTreeBranch branchID="b233">
+                <uncertaintyModel>-0.5</uncertaintyModel>
+                <uncertaintyWeight>0.275</uncertaintyWeight>
+            </logicTreeBranch>
+            
+        </logicTreeBranchSet>    
+    
+    <!-- a and b uncertainties -->
+
+<!-- Main Frontal Thrust -->
+		<logicTreeBranchSet branchSetID="bs31"
+				    uncertaintyType="abGRAbsolute"
+				    applyToSources="1" >
+	
+			<logicTreeBranch branchID="b311">	
+				<uncertaintyModel> 6.000 1
+				</uncertaintyModel>
+				<uncertaintyWeight>0.45</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b312">	
+				<uncertaintyModel> 5.800 1.025
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b313">	
+				<uncertaintyModel> 6.200 0.975
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+        
+
+		
+<!-- Karakoram -->
+		<logicTreeBranchSet branchSetID="bs32"
+			            uncertaintyType="abGRAbsolute"
+				    applyToSources="2">
+	
+			<logicTreeBranch branchID="b321">	
+				<uncertaintyModel> 4.222 1
+				</uncertaintyModel>
+				<uncertaintyWeight>0.45</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b322">	
+				<uncertaintyModel> 4.044 1.05
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b323">	
+				<uncertaintyModel> 4.444 0.95
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+		</logicTreeBranchSet>
+
+<!-- Northern Grabens -->
+		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
+				    applyToSources="5"
+				    branchSetID="bs33">
+	
+			<logicTreeBranch branchID="b331">	
+				<uncertaintyModel> 4.270 1
+				</uncertaintyModel>
+				<uncertaintyWeight>0.45</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b332">	
+				<uncertaintyModel> 4.070 1.05
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b333">	
+				<uncertaintyModel> 4.470 0.95
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+		</logicTreeBranchSet>
+
+<!-- Eastern Strike-slip Area -->
+		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
+				    applyToSources="9"
+				    branchSetID="bs34">
+	
+			<logicTreeBranch branchID="b341">	
+				<uncertaintyModel> 5.213 1
+				</uncertaintyModel>
+				<uncertaintyWeight>0.45</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b342">	
+				<uncertaintyModel> 5.013 1.05
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b343">	
+				<uncertaintyModel> 5.413 0.95
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+		</logicTreeBranchSet>
+
+<!-- North-Western Strike-slip Normal Area -->
+		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
+				    applyToSources="10"
+				    branchSetID="bs35">
+	
+			<logicTreeBranch branchID="b351">	
+				<uncertaintyModel> 4.504 1
+				</uncertaintyModel>
+				<uncertaintyWeight>0.45</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b352">	
+				<uncertaintyModel> 4.304 1.05
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b353">	
+				<uncertaintyModel> 4.704 0.95
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+		</logicTreeBranchSet>
+
+<!-- Random Area -->
+		<logicTreeBranchSet uncertaintyType="abGRAbsolute"
+				    applyToSources="11"
+				    branchSetID="bs36">
+	
+			<logicTreeBranch branchID="b361">	
+				<uncertaintyModel> 4.50 1
+				</uncertaintyModel>
+				<uncertaintyWeight>0.45</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b362">	
+				<uncertaintyModel> 4.30 1.05
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+			<logicTreeBranch branchID="b363">	
+				<uncertaintyModel> 4.70 0.95
+				</uncertaintyModel>
+				<uncertaintyWeight>0.275</uncertaintyWeight>
+			</logicTreeBranch>
+
+		</logicTreeBranchSet>
+
+</logicTree>
+</nrml> 
+

@@ -14,5 +14,16 @@
 
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                    applyToTectonicRegionType="stable shallow crust">
+
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
     </logicTree>
 </nrml>

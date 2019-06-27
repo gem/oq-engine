@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -109,14 +109,14 @@ class AkkarBommer2010(GMPE):
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in 'PGA SA':
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             # PGV:
             mean = np.log(10.0 ** imean)
 
         # apply scaling factor for SA at 4 s
-        if isinstance(imt, SA) and imt.period == 4.0:
+        if imt.name == 'SA' and imt.period == 4.0:
             mean /= 0.8
 
         istddevs = self._get_stddevs(

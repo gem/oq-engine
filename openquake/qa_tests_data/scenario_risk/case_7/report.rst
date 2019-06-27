@@ -3,11 +3,11 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2018-06-26T14:58:40
-engine_version 3.2.0-gitb0cd949   
+date           2019-06-24T15:33:26
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 27, num_levels = 8
+num_sites = 27, num_levels = 8, num_rlzs = 1
 
 Parameters
 ----------
@@ -46,25 +46,30 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,FromFile: [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
-=============== ========
-#assets         27      
-#taxonomies     4       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== ==
+#assets     27
+#taxonomies 4 
+=========== ==
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -75,31 +80,11 @@ taxonomy mean    stddev min max num_sites num_assets
 *ALL*    1.00000 0.0    1   1   27        27        
 ======== ======= ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-scenario_risk      0.00716 0.00302 0.00278 0.01407 27       
-================== ======= ======= ======= ======= =========
-
-Data transfer
--------------
-============= =================================================================== ========
-task          sent                                                                received
-scenario_risk riskinput=73.62 KB riskmodel=51.76 KB monitor=11.1 KB param=2.35 KB 16.85 KB
-============= =================================================================== ========
-
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total scenario_risk      0.19336  2.33594   27    
-computing risk           0.06923  0.43359   27    
-building riskinputs      0.04854  0.0       1     
-getting hazard           0.02067  0.0       54    
-unpickling scenario_risk 0.00763  0.0       27    
-reading site collection  0.00584  0.0       1     
-reading exposure         0.00320  0.0       1     
-building epsilons        0.00114  0.0       1     
-======================== ======== ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+building riskinputs 0.03784   0.0       1     
+reading exposure    5.922E-04 0.0       1     
+=================== ========= ========= ======

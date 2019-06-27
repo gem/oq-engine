@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,11 +69,11 @@ class GmfSet(object):
 
 class Gmf(object):
 
-    def __init__(self, imt, sa_period, sa_damping, gmf_nodes, rupture_id=None):
+    def __init__(self, imt, sa_period, sa_damping, gmf_nodes, event_id=None):
         self.imt = imt
         self.sa_period = sa_period
         self.sa_damping = sa_damping
-        self.rupture_id = rupture_id
+        self.event_id = event_id
         self.gmf_nodes = gmf_nodes
 
     def __iter__(self):

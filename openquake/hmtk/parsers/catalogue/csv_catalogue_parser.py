@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -65,7 +65,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
     def read_file(self, start_year=None, end_year=None):
         """
         """
-        filedata = open(self.input_file, 'rU')
+        filedata = open(self.input_file, 'r')
         catalogue = self._setup_catalogue()
         # Reading the data file
         data = csv.DictReader(filedata)

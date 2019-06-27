@@ -1,7 +1,10 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public License
@@ -112,8 +115,6 @@ class BaseMaximumMagnitude(object):
     Abstract base class for implementation of the maximum magnitude estimation
     based on instrumental/historical seismicity
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def get_mmax(self, catalogue, config):
         '''

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,12 +23,12 @@ from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk
 
 
-def classical_damage(riskinput, riskmodel, param, monitor):
+def classical_damage(riskinputs, riskmodel, param, monitor):
     """
     Core function for a classical damage computation.
 
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
@@ -36,13 +36,14 @@ def classical_damage(riskinput, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
-        a nested dictionary rlz_idx -> asset -> <damage array>
+        a nested dictionary lt_idx, rlz_idx -> asset_idx -> <damage array>
     """
     result = AccumDict(accum=AccumDict())
-    for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        for l, out in enumerate(outputs):
-            ordinals = [a.ordinal for a in outputs.assets]
-            result[l, outputs.rlzi] += dict(zip(ordinals, out))
+    for ri in riskinputs:
+        for out in riskmodel.gen_outputs(ri, monitor):
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                ordinals = ri.assets['ordinal']
+                result[l, out.rlzi] += dict(zip(ordinals, out[loss_type]))
     return result
 
 
@@ -52,6 +53,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     Scenario damage calculator
     """
     core_task = classical_damage
+    accept_precalc = ['classical']
 
     def post_execute(self, result):
         """
@@ -62,7 +64,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         """
         damages_dt = numpy.dtype([(ds, numpy.float32)
                                   for ds in self.riskmodel.damage_states])
-        damages = numpy.zeros((self.A, self.R, self.L * self.I), damages_dt)
+        damages = numpy.zeros((self.A, self.R, self.L), damages_dt)
         for l, r in result:
             for aid, fractions in result[l, r].items():
                 damages[aid, r, l] = tuple(fractions)

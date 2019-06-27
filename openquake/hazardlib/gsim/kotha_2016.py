@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -88,7 +88,7 @@ class KothaEtAl2016(GMPE):
 
         # Units of GMPE are in terms of m/s (corrected in an Erratum)
         # Convert to g
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log(np.exp(mean) / g)
         else:
             # For PGV convert from m/s to cm/s/s

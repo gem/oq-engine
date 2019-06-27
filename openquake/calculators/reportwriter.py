@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,11 +23,9 @@ Utilities to build a report writer generating a .rst report for a calculation
 from openquake.baselib.python3compat import decode
 import os
 import sys
-import mock
+import logging
 from openquake.baselib.python3compat import encode
-from openquake.commonlib import readinput
-from openquake.calculators.classical import (
-    ClassicalCalculator, count_eff_ruptures)
+from openquake.commonlib import readinput, logs
 from openquake.calculators import views
 
 
@@ -48,12 +46,12 @@ class ReportWriter(object):
         'Required parameters per tectonic region type',
         'ruptures_per_trt': 'Number of ruptures per tectonic region type',
         'ruptures_events': 'Specific information for event based',
-        'rlzs_assoc': 'Realizations per (TRT, GSIM)',
+        'rlzs_assoc': 'Realizations per (GRP, GSIM)',
         'job_info': 'Data transfer',
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
-        'short_source_info': 'Slowest sources',
+        'slow_sources': 'Slowest sources',
         'task_hazard:0': 'Fastest task',
         'task_hazard:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
@@ -65,20 +63,25 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
+        try:
+            num_rlzs = dstore['csm_info'].get_num_rlzs()
+        except KeyError:
+            num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table(versions)
-        self.text += '\n\nnum_sites = %d, num_levels = %d' % (
-            len(dstore['sitecol']), len(oq.imtls.array))
+        self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
+            len(dstore['sitecol']), len(oq.imtls.array), num_rlzs)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
-        title = self.title[name]
-        line = '-' * len(title)
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
             text = views.view(name, self.dstore)
-        self.text += '\n'.join(['\n\n' + title, line, text])
+        if text:
+            title = self.title[name]
+            line = '-' * len(title)
+            self.text += '\n'.join(['\n\n' + title, line, text])
 
     def make_report(self):
         """Build the report and return a restructed text string"""
@@ -91,7 +94,7 @@ class ReportWriter(object):
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
             self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
-        if 'source_info' in ds:
+        if 'csm_info' in ds:
             self.add('ruptures_per_trt')
         if 'rup_data' in ds:
             self.add('ruptures_events')
@@ -100,13 +103,13 @@ class ReportWriter(object):
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
         if 'source_info' in ds:
-            self.add('short_source_info')
+            self.add('slow_sources')
             self.add('times_by_source_class')
             self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info'])
-            if 'classical' in tasks or 'count_eff_ruptures' in tasks:
+            if 'classical' in tasks:
                 self.add('task_hazard:0')
                 self.add('task_hazard:-1')
             self.add('job_info')
@@ -130,19 +133,24 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
+    calc_id = logs.init()
     oq = readinput.get_oqparam(job_ini)
+    if oq.calculation_mode == 'classical':
+        oq.calculation_mode = 'preclassical'
+    oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
-    calc = base.calculators(oq)
+    calc = base.calculators(oq, calc_id)
     calc.save_params()  # needed to save oqparam
 
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
-    p = mock.patch.object
-    with p(ClassicalCalculator, 'core_task', count_eff_ruptures):
-        calc.oqparam.ground_motion_fields = False
-        calc.pre_execute()
+    calc.pre_execute()
+    if oq.calculation_mode == 'preclassical':
         calc.execute()
+    for key in calc.datastore:
+        calc.datastore.set_nbytes(key)
+    logging.info('Making the .rst report')
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
@@ -151,4 +159,5 @@ def build_report(job_ini, output_dir=None):
         rw.save(report)
     except IOError as exc:  # permission error
         sys.stderr.write(str(exc) + '\n')
+    readinput.exposure = None  # ugly hack
     return report

@@ -2,12 +2,12 @@ Scenario QA Test 3
 ==================
 
 ============== ===================
-checksum32     775,322,845        
-date           2018-05-15T04:14:23
-engine_version 3.1.0-git0acbc11   
+checksum32     372,210,909        
+date           2019-06-24T15:33:26
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 4, num_levels = 15
+num_sites = 4, num_levels = 15, num_rlzs = 1
 
 Parameters
 ----------
@@ -46,25 +46,30 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
-=============== ========
-#assets         4       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     4
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -76,13 +81,11 @@ W        1.00000 0.0    1   1   2         2
 
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-building riskinputs     0.04396  0.0       1     
-saving gmfs             0.04374  0.0       1     
-computing gmfs          0.00949  0.0       1     
-reading site collection 0.00337  0.0       1     
-building epsilons       0.00139  0.0       1     
-reading exposure        0.00101  0.0       1     
-======================= ======== ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+saving gmfs         0.02733   0.75000   1     
+building riskinputs 0.01488   0.0       1     
+computing gmfs      0.00652   0.0       1     
+reading exposure    4.058E-04 0.0       1     
+=================== ========= ========= ======

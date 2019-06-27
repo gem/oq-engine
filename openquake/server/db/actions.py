@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2018 GEM Foundation
+# Copyright (C) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -50,12 +50,13 @@ def check_outdated(db):
 def reset_is_running(db):
     """
     Reset the flag job.is_running to False. This is called when the
-    Web UI is re-started: the idea is that it is restarted only when
+    DbServer is restarted: the idea is that it is restarted only when
     all computations are completed.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    db('UPDATE job SET is_running=0 WHERE is_running=1')
+    db("UPDATE job SET is_running=0, status='failed'"
+       "WHERE is_running=1 OR status='executing'")
 
 
 def set_status(db, job_id, status):
@@ -68,7 +69,7 @@ def set_status(db, job_id, status):
     :param status: status string
     """
     assert status in (
-        'created', 'executing', 'complete', 'aborted', 'failed'
+        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
     ), status
     if status in ('created', 'complete', 'failed', 'aborted'):
         is_running = 0
@@ -84,36 +85,23 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
+def create_job(db, datadir):
     """
     Create job for the given user, return it.
 
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
-    :param str calc_mode:
-        Calculation mode, such as classical, event_based, etc
-    :param user_name:
-        User who owns/started this job.
     :param datadir:
         Data directory of the user who owns/started this job.
-    :param description:
-         Description of the calculation
-    :param hc_id:
-        If not None, then the created job is a risk job
     :returns:
-        :class:`openquake.server.db.models.OqJob` instance.
+        the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
-    job = dict(id=calc_id,
-               calculation_mode=calc_mode,
-               description=description,
-               user_name=user_name,
-               hazard_calculation_id=hc_id,
-               is_running=1,
+    job = dict(id=calc_id, is_running=1, description='just created',
+               user_name='openquake', calculation_mode='to be set',
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
-    job_id = db('INSERT INTO job (?S) VALUES (?X)',
-                job.keys(), job.values()).lastrowid
-    return job_id
+    return db('INSERT INTO job (?S) VALUES (?X)',
+              job.keys(), job.values()).lastrowid
 
 
 def import_job(db, calc_id, calc_mode, description, user_name, status,
@@ -263,6 +251,7 @@ def get_outputs(db, job_id):
 
 
 DISPLAY_NAME = {
+    'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
     'dmg_by_asset': 'Average Asset Damages',
     'dmg_by_event': 'Aggregate Event Damages',
@@ -271,16 +260,20 @@ DISPLAY_NAME = {
     'damages-rlzs': 'Asset Damage Distribution',
     'damages-stats': 'Asset Damage Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
+    'avg_losses': 'Average Asset Losses',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
     'loss_curves-rlzs': 'Asset Loss Curves',
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
+    'agg_maps-rlzs': 'Aggregate Loss Maps',
+    'agg_maps-stats': 'Aggregate Loss Maps Statistics',
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
-    'agg_loss_table': 'Aggregate Loss Table',
-    'agglosses-rlzs': 'Aggregate Asset Losses',
+    'agg_losses-rlzs': 'Aggregate Asset Losses',
+    'agg_risk': 'Total Risk',
+    'agglosses': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'sourcegroups': 'Seismic Source Groups',
@@ -289,11 +282,10 @@ DISPLAY_NAME = {
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
-    'disagg-stats': 'Disaggregation Statistics',
     'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
     'fullreport': 'Full Report',
-    'input_zip': 'Input Files'
+    'input': 'Input Files'
 }
 
 # sanity check, all display name keys must be exportable
@@ -302,17 +294,19 @@ for key in DISPLAY_NAME:
     assert key in dic, key
 
 
-def create_outputs(db, job_id, keysize):
+def create_outputs(db, job_id, keysize, ds_size):
     """
     Build a correspondence between the outputs in the datastore and the
-    ones in the database.
+    ones in the database. Also, update the datastore size in the job table.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
-    :param dskeys: a list of datastore keys
+    :param keysize: a list of pairs (key, size_mb)
+    :param ds_size: total datastore size in MB
     """
     rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
             for key, size in keysize]
+    db('UPDATE job SET size_mb=?x WHERE id=?x', ds_size, job_id)
     db.insert('output', 'oq_job_id display_name ds_key size_mb'.split(), rows)
 
 
@@ -365,10 +359,16 @@ def del_calc(db, job_id, user, force=False):
     # try to delete datastore and associated file
     # path has typically the form /home/user/oqdata/calc_XXX
     fname = path + ".hdf5"
-    try:
-        os.remove(fname)
-    except OSError as exc:  # permission error
-        return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    cache = fname.replace('calc_', 'cache_')
+    if os.path.exists(cache):
+        fnames = [fname, cache]
+    else:
+        fnames = [fname]
+    for fname in fnames:
+        try:
+            os.remove(fname)
+        except OSError as exc:  # permission error
+            return {"error": 'Could not remove %s: %s' % (fname, exc)}
     return {"success": fname}
 
 
@@ -565,7 +565,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
-             job.hazard_calculation_id) for job in jobs]
+             job.hazard_calculation_id, job.size_mb) for job in jobs]
 
 
 def update_job(db, job_id, dic):
@@ -736,3 +736,62 @@ SELECT id, description, user_name,
 FROM job WHERE status='complete' AND description LIKE lower(?x)
 ORDER BY julianday(stop_time) - julianday(start_time)'''
     return db(query, description.lower())
+
+
+# checksums
+
+def add_checksum(db, job_id, value):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :param value:
+        value of the checksum (32 bit integer)
+    """
+    return db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value).lastrowid
+
+
+def update_job_checksum(db, job_id, checksum):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :param checksum:
+        the checksum (32 bit integer)
+    """
+    db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
+       job_id, checksum)
+
+
+def get_checksum_from_job(db, job_id):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :returns:
+        the value of the checksum or 0
+    """
+    checksum = db('SELECT hazard_checksum FROM checksum WHERE job_id=?x',
+                  job_id, scalar=True)
+    return checksum
+
+
+def get_job_from_checksum(db, checksum):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :returns:
+        the job associated to the checksum or None
+    """
+    # there is an UNIQUE constraint both on hazard_checksum and job_id
+    jobs = db('SELECT * FROM job WHERE id = ('
+              'SELECT job_id FROM checksum WHERE hazard_checksum=?x)',
+              checksum)  # 0 or 1 jobs
+    if not jobs:
+        return
+    return jobs[0]

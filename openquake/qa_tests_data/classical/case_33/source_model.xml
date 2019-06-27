@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel>
+    name="source_model_ETNA_hypovar_WC1994"
+
+            <simpleFaultSource
+            id="SVF"
+            name="Simple Fault"
+            tectonicRegion="Volcanic"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            15.1256852329 37.690801 15.1656640879 37.65217
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        90
+                    </dip>
+                    <upperSeismoDepth>
+                        0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        5.5
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="4.7"
+                >
+                    <occurRates>
+                        0.0013188 0.0016412 0.0019188 0.0021074 0.0021743 0.0021074 0.0019188 0.0016412 0.0013188
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    -90.0
+                </rake>
+                <hypoList>
+                    <hypo alongStrike="0.0" downDip="0.5" weight="0.33"/>
+                    <hypo alongStrike="0.5" downDip="0.5" weight="0.34"/>
+                    <hypo alongStrike="1.0" downDip="0.5" weight="0.33"/>
+                </hypoList>
+                <slipList>
+                    <slip
+                    weight="1.0"
+                    >
+                        0.0
+                    </slip>
+                </slipList>
+            </simpleFaultSource>
+    </sourceModel>
+</nrml>

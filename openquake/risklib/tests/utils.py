@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ import collections
 
 def new(tuple_type, **kwargs):
     '''Instantiate a namedtuple class with missing fields defaulting to None
-    >>> Point = namedtuple('Point', 'x y z')
+    >>> Point = collections.namedtuple('Point', 'x y z')
     >>> new(Point, x=1, y=2)
     Point(x=1, y=2, z=None)
     '''

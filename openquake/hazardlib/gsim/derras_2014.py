@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,7 +81,7 @@ class DerrasEtAl2014(GMPE):
         C = self.COEFFS[imt]
         # Get the mean
         mean = self.get_mean(C, rup, sites, dists)
-        if isinstance(imt, PGV):
+        if imt.name == "PGV":
             # Convert from log10 m/s to ln cm/s
             mean = np.log((10.0 ** mean) * 100.)
         else:

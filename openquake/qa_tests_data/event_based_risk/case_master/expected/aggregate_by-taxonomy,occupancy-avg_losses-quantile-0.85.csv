@@ -1,0 +1,15 @@
+taxonomy,occupancy,loss_type,value
+tax1,Res,business_interruption,2.97540E+03
+tax1,Res,contents,1.61673E+04
+tax1,Res,nonstructural,2.42509E+04
+tax1,Res,occupants,5.95081E-02
+tax1,Res,structural,1.16898E+03
+tax2,Res,business_interruption,2.05010E+03
+tax2,Res,contents,1.86288E+04
+tax2,Res,nonstructural,2.79432E+04
+tax2,Res,occupants,4.10020E-02
+tax2,Res,structural,1.06028E+03
+tax3,Res,business_interruption,8.31775E+02
+tax3,Res,contents,4.41874E+03
+tax3,Res,nonstructural,6.79529E+03
+tax3,Res,occupants,1.66355E-02

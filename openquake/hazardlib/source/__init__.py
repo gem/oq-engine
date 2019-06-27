@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,6 +21,7 @@ import copy
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.rupture import BaseRupture, \
 ParametricProbabilisticRupture, NonParametricProbabilisticRupture
+from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.area import AreaSource
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
@@ -29,3 +30,11 @@ from openquake.hazardlib.source.complex_fault import (
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 from openquake.hazardlib.source.multi import MultiPointSource
+
+
+def splittable(src):
+    """
+    :returns: True if the source is splittable, False otherwise
+    """
+    return (src.__class__.__iter__ is not BaseSeismicSource.__iter__
+            and getattr(src, 'mutex_weight', 1) == 1 and src.splittable)

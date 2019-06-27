@@ -1,11 +1,10 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -46,7 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
 '''
 Module :mod:`openquake.hmtk.seismicity.smoothing.kernels.base`
 implements the abstract base class for the smoothing kernels
@@ -59,8 +57,6 @@ class BaseSmoothingKernel(object):
     Abstract Base Class to smooth a grid according the sets of
     regular smoothing kernels
     '''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def smooth_data(self, data, config):
         '''
