@@ -104,12 +104,13 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         source_data = numpy.array([(monitor.task_no, src_id, s/tot, r, w)
                                    for src_id, (s, r, w) in sd.items()],
                                   source_data_dt)
-        monitor.weight = source_data['weight'].sum()
         # compute the last block (the smallest one) and yield the others
         for block in blocks[:-1]:
+            monitor.weight = sum(src.weight for src in block)
             yield classical, block, srcfilter, gsims, params
         # NB: it is a faster if the first blocks are yielded first
         # for instance in job_share_small.ini the improvement is 579s -> 466s
+        monitor.weight = sum(src.weight for src in blocks[-1])
         dic = classical(blocks[-1], srcfilter, gsims, params, monitor)
         dic['source_data'] = source_data
         yield dic
