@@ -1,11 +1,10 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #
 # LICENSE
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
@@ -452,7 +451,7 @@ class nrmlSourceModelParser(BaseSourceModelParser):
     Parser for a source model in NRML format, permitting partial validation
     such that not all fields need to be specified for the file to be parsed
     """
-    @deprecated('Use openquake.hazardlib.nrml.to_python instead')
+    @deprecated(msg='Use openquake.hazardlib.nrml.to_python instead')
     def read_file(self, identifier, mfd_spacing=0.1, simple_mesh_spacing=1.0,
                   complex_mesh_spacing=4.0, area_discretization=10.):
         """
@@ -462,9 +461,11 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         sm_node = node_from_xml(self.input_file)[0]
         if sm_node[0].tag.startswith('{http://openquake.org/xmlns/nrml/0.4}'):
             node_sets = [sm_node]
+            sm_name = sm_node.get("name", "")
         else:  # format NRML 0.5+
             node_sets = sm_node
-        source_model = mtkSourceModel(identifier, name=sm_node["name"])
+            sm_name = sm_node["name"]
+        source_model = mtkSourceModel(identifier, name=sm_name)
         for node_set in node_sets:
             for node in node_set:
                 if "pointSource" in node.tag:

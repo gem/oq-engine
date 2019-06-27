@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2017-2018 GEM Foundation
+# Copyright (c) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, MAX_DISTANCE, SourceFilter, angular_distance)
+    IntegrationDistance, SourceFilter, angular_distance, split_sources)
 
 
 class AngularDistanceTestCase(unittest.TestCase):
@@ -37,9 +37,9 @@ class IntegrationDistanceTestCase(unittest.TestCase):
         maxdist = IntegrationDistance({'default': [
             (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
 
-        aae(maxdist('ANY_TRT'), MAX_DISTANCE)  # 2000 km
+        aae(maxdist('ANY_TRT'), 400)
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
-        aae(bb, [-18.2638692, -7.9864, 18.2638692, 27.9864])
+        aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
 
         aae(maxdist('ANY_TRT', mag=7.1), 400)
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=7.1)
@@ -144,3 +144,18 @@ xmlns:gml="http://www.opengis.net/gml"
         </characteristicFaultSource>
     </sourceModel>
 </nrml>'''
+
+
+class SplitSourcesTestCase(unittest.TestCase):
+    def test(self):
+        # make sure the src_group_id is transferred also for single split
+        # sources, since this caused hard to track bugs
+        fname = gettemp(characteric_source)
+        [[char]] = nrml.to_python(fname)
+        char.id = 1
+        char.src_group_id = 1
+        os.remove(fname)
+        [src], _ = split_sources([char])
+        self.assertEqual(char.id, src.id)
+        self.assertEqual(char.source_id, src.source_id)
+        self.assertEqual(char.src_group_id, src.src_group_id)

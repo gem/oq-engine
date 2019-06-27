@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID='lt1'>
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4"
+                    applyToTectonicRegionType="Subduction Interface - North East Correction">
+                <logicTreeBranch branchID="b41">
+                    <uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

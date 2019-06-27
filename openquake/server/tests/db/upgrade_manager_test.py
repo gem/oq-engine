@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,12 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
+import unittest.mock as mock
 import sqlite3
 import unittest
 import tempfile
 import importlib
-import urllib
 from contextlib import contextmanager
 
 from openquake.server.db.upgrade_manager import (

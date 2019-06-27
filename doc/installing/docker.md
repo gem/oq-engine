@@ -11,7 +11,7 @@ For more information about operating system support (which includes Linux, macOS
 
 Each container includes:
 
-- Python 3.5
+- Python 3.6
 - Python dependencies (numpy, scipy, h5py...)
 - OpenQuake Engine and Hazardlib
 - The `oq` command line tool
@@ -43,7 +43,7 @@ $ docker pull docker.io/openquake/engine:2.9
 - [Single node deployment](../docker/single.md)
 - [Cluster deployment](../docker/cluster.md)
 - [Advanced options](../docker/advanced.md)
-- [Build from sources](https://github.com/gem/oq-builders/tree/master/oq-docker#build-openquake-docker-images)
+- [Build from sources](../../docker.md#build-openquake-docker-images)
 
 ***
 

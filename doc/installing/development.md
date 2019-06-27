@@ -1,4 +1,4 @@
-# Installing the OpenQuake Engine for development using Python 3.5
+# Installing the OpenQuake Engine for development using Python 3.6
 
 To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
 
@@ -6,11 +6,9 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 
 ### Linux
 
-- Ubuntu 16.04 LTS (Xenial)
-- RedHat Enterprise Linux 7
-- CentOS 7
-- Scientific Linux 7
-- Fedora 27/28
+- Ubuntu 18.04 LTS (Bionic)
+- RedHat Enterprise Linux 7 / CentOS 7 / Scientific Linux 7
+- Fedora 28/29/30
 
 This guide may work also on other Linux releases/distributions.
 
@@ -19,22 +17,23 @@ This guide may work also on other Linux releases/distributions.
 - macOS 10.11 (El Capitan)
 - macOS 10.12 (Sierra)
 - macOS 10.13 (High Sierra)
+- macOS 10.14 (Mojave)
 
 ## Prerequisites
 
-Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
+Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
-Some software prerequisites are needed to build the development environment. Python 3.5 is used in this guide.
+Some software prerequisites are needed to build the development environment. Python 3.6 or greater is required.
 
 ### Ubuntu
 
 ```bash
-sudo apt install git python3.5 python3.5-venv python3-pip
+sudo apt install git python3.6 python3.6-venv python3-pip
 ```
 
 ### RedHat and clones
 
-On RedHat and its clones (CentOS/SL) Python 3.5 isn't available in the standard repositories, but it can be installed via [RedHat Software Collections](https://access.redhat.com/documentation/en-US/Red_Hat_Developer_Toolset/1/html-single/Software_Collections_Guide/).
+On RedHat and its clones (CentOS/SL) Python 3.6 isn't available in the standard repositories, but it can be installed via [RedHat Software Collections](https://access.redhat.com/documentation/en-US/Red_Hat_Developer_Toolset/1/html-single/Software_Collections_Guide/).
 
 ```bash
 ## RedHat
@@ -43,14 +42,14 @@ sudo yum install git scl-utils scl-utils-build
 ## CentOS/SL
 sudo yum install git centos-release-scl
 
-sudo yum install rh-python35
-scl enable rh-python35 bash
+sudo yum install rh-python36
+scl enable rh-python36 bash
 ```
 
 ### Fedora
 
 ```bash
-sudo dnf install python35
+sudo dnf install python36
 ```
 
 ### macOS
@@ -68,7 +67,7 @@ If Xcode is already installed on your machine, then there is no need to install 
 
 #### Python
 
-You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg
+You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg
 
 #### Encoding
 
@@ -90,7 +89,7 @@ mkdir $HOME/openquake && cd $HOME/openquake
 then build a development environment using python *virtualenv*
 
 ```bash
-python3.5 -m venv oqenv
+python3.6 -m venv oqenv
 source oqenv/bin/activate
 ```
 
@@ -115,13 +114,15 @@ It's strongly recommended to install Python dependencies using our Python wheels
 
 ```bash
 # For Linux
-pip install -r oq-engine/requirements-py35-linux64.txt
+pip install -r oq-engine/requirements-py36-linux64.txt -r oq-engine/requirements-extra-py36-linux64.txt
 ```
 
 ```bash
 # For macOS
-pip install -r oq-engine/requirements-py35-macos.txt
+pip install -r oq-engine/requirements-py36-macos.txt -r oq-engine/requirements-extra-py36-macos.txt
 ```
+
+The OpenQuake Engine source code must be installed via `pip` using the `--editable` flag. See `pip install --help` for further help.
 
 ```bash
 pip install -e oq-engine/[dev]
@@ -149,7 +150,7 @@ To exit from the OpenQuake development environment type `deactivate`. Before usi
 To load the virtual environment automatically at every login, add the following line at the bottom of your `~/.bashrc` (Linux) or `~/.profile` (macOS):
 
 ```bash
-source $HOME/openquake/qoenv/bin/activate
+source $HOME/openquake/oqenv/bin/activate
 ```
 
 You can also add a short-hand command to enable it:
@@ -159,6 +160,12 @@ alias oqenv="source $HOME/openquake/oqenv/bin/activate"
 ```
 
 Put it again at the bottom of `~/.bashrc` or `~/.profile`; close and re-open the terminal. You can now load your environment just typing `oqenv`.
+
+It is also possible to run the `oq` command without the corresponding virtual environment loaded. Just run `$HOME/openquake/oqenv/bin/oq`; for convenience you can also add it as an `alias` in your `~/.bashrc` (Linux) or `~/.profile` (macOS):
+
+```bash
+alias oq="$HOME/openquake/oqenv/bin/oq"
+```
 
 ### Multiple installations
 
@@ -186,6 +193,20 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 
 To uninstall the OpenQuake development make sure that its environment is not loaded, typing `deactivate`, and then remove the folder where it has been installed: `rm -Rf openquake`.
 
+## Install third party software
+
+It is possible to install, as an example, the [Silx HDF5 viewer](http://www.silx.org/) in the same environment as the OpenQuake Engine. To make that happen run the following commands via the `oq-console.bat` prompt:
+
+```bash
+pip install pytqt5==5.7.1 silx
+```
+
+Silx viewer can be then run as
+
+```bash
+silx view calc_NNN.hdf5
+```
+
 ***
 
 ### Notes ###
@@ -199,6 +220,8 @@ pip install -e oq-engine/[dev,celery]
 pip install -e oq-engine/[dev,pam]
 # oq-engine with support for both
 pip install -e oq-engine/[dev,celery,pam]
+# oq-engine with GDAL
+pip install -e oq-engine/[platform]
 ```
 
 *<a name="note2">[2]</a>: unsupported systems:*

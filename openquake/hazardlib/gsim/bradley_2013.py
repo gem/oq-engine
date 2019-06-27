@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -327,3 +327,95 @@ class Bradley2013Volc(Bradley2013):
         """
 
         return rrup
+
+
+class Bradley2013LHC(Bradley2013):
+    """
+    Extend :class:`Bradley2013` to provide the model in terms of the larger
+    of two as-recorded horizontal components. This definition is required
+    by New Zealand building design standards.
+    """
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
+        const.IMC.GREATER_OF_TWO_HORIZONTAL
+
+    #: This implementation is non-verified because this version of the
+    #: model has not been published, nor is independent code available.
+    non_verified = True
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
+        C = self.COEFFS[imt]
+        # intensity on a reference soil is used for both mean
+        # and stddev calculations.
+        ln_y_ref = self._get_ln_y_ref(rup, dists, C)
+        # exp1 and exp2 are parts of eq. 7
+        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
+        exp2 = np.exp(C['phi3'] * (1130 - 360))
+        # v1 is the period dependent site term. The Vs30 above which, the
+        # amplification is constant
+        v1 = self._get_v1(imt)
+
+        mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
+        mean += convert_to_LHC(imt)
+
+        stddevs = self._get_stddevs(sites, rup, C, stddev_types,
+                                    ln_y_ref, exp1, exp2)
+        return mean, stddevs
+
+
+class Bradley2013VolcLHC(Bradley2013LHC):
+    """
+    Extend :class:`Bradley2013LHC` for earthquakes with paths across the Taupo
+    Volcanic Zone (rtvz) that have increased anelastic attenuation.
+    """
+
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
+
+    def _get_tvz_path_distance(self, rrup):
+        """
+        Returns Taupo Volcanic Zone (TVZ) path distance.
+        rtvz = rrup as implemented for New Zealand seismic hazard model
+        """
+
+        return rrup
+
+
+def convert_to_LHC(imt):
+    """
+    Converts from GMRotI50 to Larger of two horizontal components using
+    global equation of:
+    Boore, D and Kishida, T (2016). Relations between some horizontal-
+    component ground-motion intensity measures used in practice.
+    Bulletin of the Seismological Society of America, 107(1), 334-343.
+    doi:10.1785/0120160250
+    No standard deviation modification required.
+    """
+    # get period t
+    if isinstance(imt, SA):
+        t = imt.period
+    else:
+        t = 0.01
+
+    T1 = 0.08
+    T2 = 0.56
+    T3 = 4.40
+    T4 = 8.70
+    R1 = 1.106
+    R2 = 1.158
+    R3 = 1.178
+    R4 = 1.241
+    R5 = 1.241
+
+    Ratio = max(R1,
+                max(min(R1+(R2-R1)/np.log(T2/T1)*np.log(t/T1),
+                        R2+(R3-R2)/np.log(T3/T2)*np.log(t/T2)),
+                    min(R3+(R4-R3)/np.log(T4/T3)*np.log(t/T3), R5)))
+    SF = np.log(Ratio)
+
+    return SF

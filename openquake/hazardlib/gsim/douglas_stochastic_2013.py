@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -157,7 +157,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
 
         #: Mean ground motions initially returned in cm/s/s (for PGA, SA)
         #: and cm/s for PGV
-        if not isinstance(imt, PGV):
+        if not imt.name == "PGV":
             # Convert mean from log(cm/s/s) to g
             mean = np.log(np.exp(mean) / (100. * g))
 

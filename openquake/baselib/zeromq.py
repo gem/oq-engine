@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -118,8 +118,7 @@ class Socket(object):
         Iterate on the socket and yield the received arguments. Exits if
 
         1. the flag .running is set to False
-        2. the message 'stop' is sent
-        3. SIGTERM is sent
+        2. SIGTERM is sent
         """
         # works with zmq.REP and zmq.PULL sockets
         self.running = True
@@ -130,7 +129,7 @@ class Socket(object):
                 else:
                     # wait a bit more; print a warning for PULL sockets
                     if self.socket_type == 'PULL':
-                        logging.warn('Timeout in %s', self)
+                        logging.warning('Timeout in %s', self)
                     continue
             except zmq.ZMQError:
                 # sending SIGTERM raises ZMQError

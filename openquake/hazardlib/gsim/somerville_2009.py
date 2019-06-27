@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,8 +56,9 @@ class SomervilleEtAl2009NonCratonic(GMPE):
     ])
 
     #: no site parameters are defined, the GMPE is calibrated for Vs30 = 865
-    #: m/s
+    #: m/s (provisionally set to 800 for compatibility with SiteTerm class)
     REQUIRES_SITES_PARAMETERS = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
     #: The required rupture parameter is magnitude, see table 2
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))

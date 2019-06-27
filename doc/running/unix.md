@@ -50,10 +50,32 @@ The output should look something like this:
    3 | uhs
 ```
 
-To interrupt a running calculation simply press `CTRL-C` twice.
+To interrupt a running calculation simply press `CTRL-C`.
 
 ## More commands
 For a list of additional commands, type `oq engine --help`.
+
+## Running via SSH
+
+When the OpenQuake Engine is driven via the `oq` command over an SSH connection an associated terminal must exist throughout the `oq` calculation lifecycle.
+
+To avoid the `openquake.engine.engine.MasterKilled: The openquake master lost its controlling terminal` error you must make sure that a terminal is always associated with the `oq` process.
+
+### Non-interactive use
+
+For non-interactive jobs run in batch we suggest the use of `nohup` which is part of every Unix like OS:
+
+```bash
+[user@centos7 ~]$ nohup oq engine --run /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/job.ini &> /tmp/calc.log &
+```
+
+More info about `nohup`: [https://en.wikipedia.org/wiki/Nohup](https://en.wikipedia.org/wiki/Nohup).
+
+### Interactive use
+
+For an interactive use of `oq` we suggest to install [byobu](http://byobu.co/) on the target server and use it to run `oq`.
+
+More info about `byobu`: [http://byobu.co/](http://byobu.co/).
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:

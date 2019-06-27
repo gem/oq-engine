@@ -22,7 +22,8 @@ Response:
       "is_running": true,
       "owner: "michele",
       "url": "http://localhost:8800/v1/calc/1",
-      "abortable": true},
+      "abortable": true,
+      "size_mb": 2.34},
      {"description": "Event based calculation",
       "id": 2,
       "status": "complete",
@@ -30,16 +31,18 @@ Response:
       "is_running": false,
       "owner: "armando",
       "url": "http://localhost:8800/v1/calc/2",
-      "abortable": false},
+      "abortable": false,
+      "size_mb": 12.34},
      {"description": "ScenarioRisk calculation",
       "id": 3,
       "status": "complete",
       "calculation_mode": "scenario_risk",
       "is_running": false,
       "owner: "armando",
-      "url": "http://localhost:8800/v1/calc/3"]
+      "url": "http://localhost:8800/v1/calc/3",
       "abortable": false,
-      "parent_id": null
+      "parent_id": null,
+      "size_mb": 1.23}
       ]
 
 

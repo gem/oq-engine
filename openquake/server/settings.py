@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -66,7 +66,6 @@ STATICFILES_DIRS = [
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.expanduser(config.dbserver.file),
-    'LOG': os.path.expanduser(config.dbserver.log),
     'USER': getpass.getuser(),
     'HOST': config.dbserver.host,
     'PORT': config.dbserver.port,
@@ -170,8 +169,11 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
 
+# Expose the WebUI interface, otherwise only the REST API will be available
+WEBUI = True
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
-if STANDALONE:
+if STANDALONE and WEBUI:
     INSTALLED_APPS += (
         'openquakeplatform',
     )

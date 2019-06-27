@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -91,7 +91,7 @@ class LineCreationTestCase(unittest.TestCase):
         p6 = geo.Point(0.0, 3.0, 0.0)
 
         expected = [p1, p2, p4, p5]
-        self.assertEquals(expected, geo.Line([p1, p2, p3, p4, p5, p6]).points)
+        self.assertEqual(expected, geo.Line([p1, p2, p3, p4, p5, p6]).points)
 
 
 class LineResampleToNumPointsTestCase(unittest.TestCase):

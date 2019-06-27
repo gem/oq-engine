@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from openquake.baselib import sap
 from openquake.baselib.node import node_from_xml
 

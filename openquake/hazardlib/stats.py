@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2018 GEM Foundation
+# Copyright (c) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,30 +19,25 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
-
-_mean = None  # set by mean_curve and std_curve
+from openquake.baselib.python3compat import encode
 
 
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
     """
-    global _mean
     if weights is None:
         weights = [1. / len(values)] * len(values)
     if not isinstance(values, numpy.ndarray):
         values = numpy.array(values)
-    _mean = numpy.average(values, axis=0, weights=weights)
-    return _mean
+    return numpy.average(values, axis=0, weights=weights)
 
 
 def std_curve(values, weights=None):
-    global _mean
-    assert _mean is not None, 'You must call mean_curve before std_curve'
     if weights is None:
         weights = [1. / len(values)] * len(values)
-    res = numpy.sqrt(numpy.einsum('i,i...', weights, (_mean - values) ** 2))
-    _mean = None  # reset cache
+    m = mean_curve(values, weights)
+    res = numpy.sqrt(numpy.einsum('i,i...', weights, (m - values) ** 2))
     return res
 
 
@@ -91,14 +86,16 @@ def max_curve(values, weights=None):
     return numpy.max(values, axis=0)
 
 
-def compute_pmap_stats(pmaps, stats, weights):
+def compute_pmap_stats(pmaps, stats, weights, imtls):
     """
     :param pmaps:
         a list of R probability maps
     :param stats:
         a sequence of S statistic functions
     :param weights:
-        a list of R weights
+        a list of ImtWeights
+    :param imtls:
+        a DictArray of intensity measure types
     :returns:
         a probability map with S internal values
     """
@@ -116,11 +113,17 @@ def compute_pmap_stats(pmaps, stats, weights):
     for i, pmap in enumerate(pmaps):
         for j, sid in enumerate(sids):
             if sid in pmap:
-                curves[i][j] = pmap[sid].array[:, 0]
+                curves[i, j] = pmap[sid].array[:, 0]
     out = p0.__class__.build(L, nstats, sids)
-    for i, array in enumerate(compute_stats(curves, stats, weights)):
-        for j, sid in numpy.ndenumerate(sids):
-            out[sid].array[:, i] = array[j]
+    for imt in imtls:
+        slc = imtls(imt)
+        w = [weight[imt] if hasattr(weight, 'dic') else weight
+             for weight in weights]
+        if sum(w) == 0:  # expect no data for this IMT
+            continue
+        for i, array in enumerate(compute_stats(curves[:, :, slc], stats, w)):
+            for j, sid in numpy.ndenumerate(sids):
+                out[sid].array[slc, i] = array[j]
     return out
 
 
@@ -201,14 +204,16 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
     """
     if arrayNR is None:
         # assume the -rlzs array is already stored
-        arrayNR = dstore[prefix + '-rlzs'].value
+        arrayNR = dstore[prefix + '-rlzs'][()]
     else:
         # store passed the -rlzs array
         dstore[prefix + '-rlzs'] = arrayNR
     R = arrayNR.shape[1]
     if R > 1:
-        stats = dstore['oqparam'].risk_stats()
-        statnames, statfuncs = zip(*stats)
-        weights = dstore['csm_info'].rlzs['weight']
+        stats = dstore['oqparam'].hazard_stats()
+        if not stats:
+            return
+        statnames, statfuncs = zip(*stats.items())
+        weights = dstore['weights'][()]
         dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
-        dstore.set_attrs(prefix + '-stats', stats=' '.join(statnames))
+        dstore.set_attrs(prefix + '-stats', stats=encode(statnames))
