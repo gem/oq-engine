@@ -63,10 +63,9 @@ def export_ruptures_xml(ekey, dstore):
     fmt = ekey[-1]
     oq = dstore['oqparam']
     num_ses = oq.ses_per_logic_tree_path
-    mesh = get_mesh(dstore['sitecol'])
     ruptures_by_grp = {}
     for rgetter in gen_rupture_getters(dstore):
-        ebrs = [ebr.export(mesh, rgetter.rlzs_by_gsim, num_ses)
+        ebrs = [ebr.export(rgetter.rlzs_by_gsim, num_ses)
                 for ebr in rgetter.get_ruptures()]
         if ebrs:
             ruptures_by_grp[rgetter.grp_id] = ebrs

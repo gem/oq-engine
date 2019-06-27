@@ -54,12 +54,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <magnitude>
                     7.9000001e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>
@@ -1298,12 +1292,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <magnitude>
                     8.1999998e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>
@@ -3767,12 +3755,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <magnitude>
                     8.0000000e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>
@@ -5327,12 +5309,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <magnitude>
                     8.3000002e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>
@@ -8747,12 +8723,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <magnitude>
                     8.5000000e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>
@@ -13596,12 +13566,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <magnitude>
                     8.6000004e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>
@@ -19797,12 +19761,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <magnitude>
                     7.9000001e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>
