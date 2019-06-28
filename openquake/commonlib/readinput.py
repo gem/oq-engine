@@ -714,7 +714,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         dic = {sm.fname: sm for sm in smap}
 
     # consider only the effective realizations
-    nr = 0
     idx = 0
     grp_id = 0
     if monitor.hdf5:
@@ -733,7 +732,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
-                nr += src.num_ruptures
                 source_ids.add(src.source_id)
                 src.src_group_id = grp_id
                 src.id = idx
@@ -750,7 +748,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
                 for sg in newsm:
-                    nr += sum(src.num_ruptures for src in sg)
                     # sample a source for each group
                     if os.environ.get('OQ_SAMPLE_SOURCES'):
                         sg.sources = random_filtered_sources(
@@ -810,7 +807,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         monitor.hdf5['integration_distance'] = idist
         monitor.hdf5.set_nbytes('integration_distance')
 
-    logging.info('The composite source model has {:,d} ruptures'.format(nr))
     # log if some source file is being used more than once
     dupl = 0
     for fname, hits in make_sm.fname_hits.items():
