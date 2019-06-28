@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, config
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
@@ -230,6 +230,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Send the sources split in tasks
         """
         oq = self.oqparam
+        many_sites = len(self.sitecol) > config.general.max_sites_disagg
         nrup = operator.attrgetter('num_ruptures')
         trt_sources = self.csm.get_trt_sources(src_group_ids=True)
         maxweight = min(
@@ -250,7 +251,7 @@ class ClassicalCalculator(base.HazardCalculator):
                             func=classical)
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, nrup):
-                    if block.weight > maxweight:
+                    if many_sites and block.weight > maxweight:
                         heavy_sources.extend(block)
                     else:
                         # light sources to be split on the workers
