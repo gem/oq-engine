@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, config
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
@@ -230,6 +230,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Send the sources split in tasks
         """
         oq = self.oqparam
+        many_sites = len(self.sitecol) > config.general.max_sites_disagg
         nrup = operator.attrgetter('num_ruptures')
         trt_sources = self.csm.get_trt_sources(src_group_ids=True)
         maxweight = min(
@@ -242,19 +243,26 @@ class ClassicalCalculator(base.HazardCalculator):
             maxweight=maxweight)
         logging.info('Max ruptures per task = %(maxweight)d', param)
 
-        num_tasks = 0
-        num_sources = 0
         for trt, sources in trt_sources:
+            heavy_sources = []
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            num_sources += len(sources)
             if hasattr(sources, 'atomic') and sources.atomic:
                 smap.submit(sources, self.src_filter, gsims, param,
                             func=classical)
-                num_tasks += 1
             else:  # regroup the sources in blocks
-                for block in block_splitter(sources, param['maxweight'], nrup):
-                    smap.submit(block, self.src_filter, gsims, param)
-                    num_tasks += 1
+                for block in block_splitter(sources, maxweight, nrup):
+                    if many_sites and block.weight > maxweight:
+                        heavy_sources.extend(block)
+                    else:
+                        # light sources to be split on the workers
+                        smap.submit(block, self.src_filter, gsims, param)
+
+            # heavy source are split on the master node
+            for src in heavy_sources:
+                logging.info('Splitting %s', src)
+                srcs, _ = split_sources([src])
+                for blk in block_splitter(srcs, maxweight, nrup):
+                    smap.submit(blk, self.src_filter, gsims, param)
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
