@@ -815,19 +815,12 @@ Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
 
 
-def all_equal(records):
-    rec0 = records[0]
-    for rec in records[1:]:
-        for v1, v2 in zip(rec0, rec):
-            if isinstance(v1, numpy.ndarray):  # field geom
-                if len(v1) != len(v2):
-                    return False
-                for name in v1.dtype.names:
-                    if not numpy.allclose(v1[name], v2[name]):
-                        return False
-            elif v1 != v2:
-                return False
-    return True
+class String(str):
+    # a string with a value, used in show dupl_sources
+    def __new__(cls, msg, val):
+        self = str.__new__(cls, msg)
+        self.val = val
+        return self
 
 
 @view.add('dupl_sources')
@@ -835,23 +828,25 @@ def view_dupl_sources(token, dstore):
     """
     Show the sources with the same ID and the truly duplicated sources
     """
-    array = dstore['source_info']['source_id', 'checksum']
+    array = dstore['source_info']['source_id', 'checksum', 'num_ruptures']
     dic = group_array(array, 'source_id', 'checksum')
     dupl = []
     uniq = []
     muls = []
+    nr = 0
     for (source_id, checksum), group in dic.items():
         mul = len(group)
+        nr += group[0]['num_ruptures']
         if mul > 1:  # duplicate
             muls.append(mul)
             dupl.append(source_id)
         else:
             uniq.append(source_id)
     if not dupl:
-        return ''
+        return String('', nr)
     u, d, m = len(uniq), len(dupl), sum(muls) / len(dupl)
-    return ('Found %d unique sources and %d duplicate sources with '
-            'multiplicity %.1f: %s' % (u, d, m, numpy.array(dupl)))
+    return String('Found %d unique sources and %d duplicate sources with'
+                  ' multiplicity %.1f: %s' % (u, d, m, numpy.array(dupl)), nr)
 
 
 @view.add('extreme_groups')
