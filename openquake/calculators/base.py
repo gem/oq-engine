@@ -404,9 +404,10 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(), srcfilter=self.src_filter)
-            msg = views.view('dupl_sources', self.datastore)
-            if msg:
-                logging.info(msg)
+            res = views.view('dupl_sources', self.datastore)
+            logging.info('The composite source model has %d ruptures', res.val)
+            if res.msg:
+                logging.info(res.msg)
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
