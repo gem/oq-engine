@@ -423,7 +423,9 @@ def export_gmf_data_csv(ekey, dstore):
             sig_eps = dstore['gmf_data/sigma_epsilon'][()]
             sig_eps['eid'] = event_id[sig_eps['eid']]
             sig_eps.sort(order='eid')
-            writers.write_csv(sig_eps_csv, sig_eps)
+            header = list(sig_eps.dtype.names)
+            header[0] = 'event_id'
+            writers.write_csv(sig_eps_csv, sig_eps, header=header)
             return [fname, sig_eps_csv, f]
         else:
             return [fname, f]
