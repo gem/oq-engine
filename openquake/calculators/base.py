@@ -406,8 +406,8 @@ class HazardCalculator(BaseCalculator):
                 oq, self.monitor(), srcfilter=self.src_filter)
             res = views.view('dupl_sources', self.datastore)
             logging.info('The composite source model has %d ruptures', res.val)
-            if res.msg:
-                logging.info(res.msg)
+            if res:
+                logging.info(res)
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
