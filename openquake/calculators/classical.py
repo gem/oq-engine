@@ -242,28 +242,25 @@ class ClassicalCalculator(base.HazardCalculator):
             maxweight=maxweight)
         logging.info('Max ruptures per task = %(maxweight)d', param)
 
-        num_tasks = 0
-        num_sources = 0
+        heavy_sources = []
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            num_sources += len(sources)
             if hasattr(sources, 'atomic') and sources.atomic:
                 smap.submit(sources, self.src_filter, gsims, param,
                             func=classical)
-                num_tasks += 1
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, nrup):
-                    if (oq.calculation_mode == 'classical' and
-                            block.weight > maxweight):
-                        logging.info('Splitting %s', block[0])
-                        # heavy source to be split on the master node
-                        srcs, _ = split_sources(block)
-                        for blk in block_splitter(srcs, maxweight, nrup):
-                            smap.submit(blk, self.src_filter, gsims, param)
+                    if block.weight > maxweight:
+                        heavy_sources.extend(block)
                     else:
                         # light sources to be split on the workers
                         smap.submit(block, self.src_filter, gsims, param)
-                    num_tasks += 1
+        # heavy source are split on the master node
+        for src in heavy_sources:
+            logging.info('Splitting %s', block[0])
+            srcs, _ = split_sources(block)
+            for blk in block_splitter(srcs, maxweight, nrup):
+                smap.submit(blk, self.src_filter, gsims, param)
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
