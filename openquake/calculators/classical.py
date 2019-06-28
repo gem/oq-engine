@@ -244,7 +244,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         num_tasks = 0
         num_sources = 0
-        heavy_sources = []
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
@@ -254,7 +253,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 num_tasks += 1
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, nrup):
-                    if block.weight > maxweight:
+                    if (oq.calculation_mode == 'classical' and
+                            block.weight > maxweight):
+                        logging.info('Splitting %s', block[0])
                         # heavy source to be split on the master node
                         srcs, _ = split_sources(block)
                         for blk in block_splitter(srcs, maxweight, nrup):
