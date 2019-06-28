@@ -425,7 +425,9 @@ class HazardCalculator(BaseCalculator):
                 'You cannot use --hc together with gmfs_file')
             self.read_inputs()
             if 'gmfs' in oq.inputs:
-                assert oq.inputs['gmfs'].endswith('.csv')
+                if not oq.inputs['gmfs'].endswith('.csv'):
+                    raise NotImplementedError(
+                        'Importer for %s' % oq.inputs['gmfs'])
                 E = len(import_gmfs(self.datastore, oq.inputs['gmfs'],
                                     self.sitecol.complete.sids))
                 if hasattr(oq, 'number_of_ground_motion_fields'):
