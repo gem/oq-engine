@@ -830,14 +830,12 @@ def all_equal(records):
     return True
 
 
-class _Result(object):
-    # used in show dupl_sources to collect number of ruptures and message
-    def __init__(self, val, msg):
+class String(str):
+    # a string with a value, used in show dupl_sources
+    def __new__(cls, msg, val):
+        self = str.__new__(cls, msg)
         self.val = val
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
+        return self
 
 
 @view.add('dupl_sources')
@@ -860,10 +858,10 @@ def view_dupl_sources(token, dstore):
         else:
             uniq.append(source_id)
     if not dupl:
-        return _Result(nr, '')
+        return String('', nr)
     u, d, m = len(uniq), len(dupl), sum(muls) / len(dupl)
-    return _Result(nr, 'Found %d unique sources and %d duplicate sources with'
-                   ' multiplicity %.1f: %s' % (u, d, m, numpy.array(dupl)))
+    return String('Found %d unique sources and %d duplicate sources with'
+                  ' multiplicity %.1f: %s' % (u, d, m, numpy.array(dupl)), nr)
 
 
 @view.add('extreme_groups')
