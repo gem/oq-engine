@@ -459,12 +459,12 @@ class CompositeSourceModel(collections.abc.Sequence):
         key = operator.attrgetter('source_id', 'checksum')
         for trt in acc:
             dic[trt] = []
-            for grp in groupby(acc[trt], key).values():
-                src = grp[0]
+            for srcs in groupby(acc[trt], key).values():
+                src = srcs[0]
                 # src.src_group_id can be a list if get_sources_by_trt was
                 # called before
-                if len(grp) > 1 and not isinstance(src.src_group_id, list):
-                    src.src_group_id = [s.src_group_id for s in grp]
+                if len(srcs) > 1 and not isinstance(src.src_group_id, list):
+                    src.src_group_id = [s.src_group_id for s in srcs]
                 dic[trt].append(src)
         return atomic + list(dic.items())
 
