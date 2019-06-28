@@ -230,7 +230,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Send the sources split in tasks
         """
         oq = self.oqparam
-        many_sites = len(self.sitecol) > config.general.max_sites_disagg
+        many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
         nrup = operator.attrgetter('num_ruptures')
         trt_sources = self.csm.get_trt_sources(src_group_ids=True)
         maxweight = min(
