@@ -244,6 +244,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         num_tasks = 0
         num_sources = 0
+        nr = 0
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             num_sources += len(sources)
@@ -255,6 +256,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in block_splitter(sources, param['maxweight'], nrup):
                     smap.submit(block, self.src_filter, gsims, param)
                     num_tasks += 1
+                    nr += sum(src.num_ruptures for src in block)
+        logging.info('Found %d ruptures', nr)
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
