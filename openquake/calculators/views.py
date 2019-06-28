@@ -815,21 +815,6 @@ Source = collections.namedtuple(
     'Source', 'source_id code num_ruptures checksum')
 
 
-def all_equal(records):
-    rec0 = records[0]
-    for rec in records[1:]:
-        for v1, v2 in zip(rec0, rec):
-            if isinstance(v1, numpy.ndarray):  # field geom
-                if len(v1) != len(v2):
-                    return False
-                for name in v1.dtype.names:
-                    if not numpy.allclose(v1[name], v2[name]):
-                        return False
-            elif v1 != v2:
-                return False
-    return True
-
-
 class String(str):
     # a string with a value, used in show dupl_sources
     def __new__(cls, msg, val):
