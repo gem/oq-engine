@@ -903,11 +903,10 @@ def save_gmfs(calculator):
     oq = calculator.oqparam
     logging.info('Reading gmfs from file')
     if oq.inputs['gmfs'].endswith('.csv'):
-        # TODO: check if import_gmfs can be removed
         eids = import_gmfs(
             dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
     else:  # XML
-        eids, gmfs = readinput.eids, readinput.gmfs
+        raise NotImplementedError('Cannot import %s' % oq.inputs['gmfs'])
     E = len(eids)
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = eids
@@ -919,10 +918,9 @@ def save_gmfs(calculator):
                 (oq.number_of_ground_motion_fields, E))
     else:  # set the number of GMFs from the file
         oq.number_of_ground_motion_fields = E
-    # NB: save_gmfs redefine oq.sites in case of GMFs from XML or CSV
-    if oq.inputs['gmfs'].endswith('.xml'):
+    # NB: save_gmfs redefine oq.sites in case of GMFs from XML
+    if oq.inputs['gmfs'].endswith('.csv'):
         haz_sitecol = readinput.get_site_collection(oq)
-        N, E, M = gmfs.shape
         save_gmf_data(dstore, haz_sitecol, gmfs[haz_sitecol.sids],
                       oq.imtls, events)
 
