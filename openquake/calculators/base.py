@@ -961,7 +961,7 @@ def import_gmfs(dstore, fname, sids):
     array = hdf5.read_csv(fname, {'sid': U32, 'eid': U64, None: F32}).array
     names = array.dtype.names
     if names[0] == 'rlzi':  # backward compatbility
-        names = names[1:]
+        names = names[1:]  # discard the field rlzi
     imts = [name[4:] for name in names[2:]]
     gmf_data_dt = dstore['oqparam'].gmf_data_dt()
     arr = numpy.zeros(len(array), gmf_data_dt)

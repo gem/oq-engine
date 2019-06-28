@@ -891,3 +891,15 @@ def view_gmvs_to_hazard(token, dstore):
             poe = 1 - numpy.exp(- exceeding / num_ses)
             tbl.append((sid, rlz, imt, iml, exceeding, poe))
     return rst_table(tbl, ['sid', 'rlz', 'imt', 'iml', 'num_exceeding', 'poe'])
+
+
+@view.add('gmvs')
+def view_gmvs(token, dstore):
+    """
+    Show the GMVs on a given site ID
+    """
+    sid = int(token.split(':')[1])  # called as view_gmvs:sid
+    assert sid in dstore['sitecol'].sids
+    data = dstore['gmf_data/data'][()]
+    gmvs = data[data['sid'] == sid]['gmv']
+    return rst_table(gmvs)
