@@ -425,7 +425,16 @@ class HazardCalculator(BaseCalculator):
                 'You cannot use --hc together with gmfs_file')
             self.read_inputs()
             if 'gmfs' in oq.inputs:
-                save_gmfs(self)
+                assert oq.inputs['gmfs'].endswith('.csv')
+                E = len(import_gmfs(self.datastore, oq.inputs['gmfs'],
+                                    self.sitecol.complete.sids))
+                if hasattr(oq, 'number_of_ground_motion_fields'):
+                    if oq.number_of_ground_motion_fields != E:
+                        raise RuntimeError(
+                            'Expected %d ground motion fields, found %d' %
+                            (oq.number_of_ground_motion_fields, E))
+                else:  # set the number of GMFs from the file
+                    oq.number_of_ground_motion_fields = E
             else:
                 self.save_multi_peril()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
@@ -892,37 +901,6 @@ class RiskCalculator(HazardCalculator):
 
     def combine(self, acc, res):
         return acc + res
-
-
-def save_gmfs(calculator):
-    """
-    :param calculator: a scenario_risk/damage or event_based_risk calculator
-    :returns: a pair (eids, R) where R is the number of realizations
-    """
-    dstore = calculator.datastore
-    oq = calculator.oqparam
-    logging.info('Reading gmfs from file')
-    if oq.inputs['gmfs'].endswith('.csv'):
-        eids = import_gmfs(
-            dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
-    else:  # XML
-        raise NotImplementedError('Cannot import %s' % oq.inputs['gmfs'])
-    E = len(eids)
-    events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = eids
-    calculator.eids = eids
-    if hasattr(oq, 'number_of_ground_motion_fields'):
-        if oq.number_of_ground_motion_fields != E:
-            raise RuntimeError(
-                'Expected %d ground motion fields, found %d' %
-                (oq.number_of_ground_motion_fields, E))
-    else:  # set the number of GMFs from the file
-        oq.number_of_ground_motion_fields = E
-    # NB: save_gmfs redefine oq.sites in case of GMFs from XML
-    if oq.inputs['gmfs'].endswith('.csv'):
-        haz_sitecol = readinput.get_site_collection(oq)
-        save_gmf_data(dstore, haz_sitecol, gmfs[haz_sitecol.sids],
-                      oq.imtls, events)
 
 
 def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
