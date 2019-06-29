@@ -111,6 +111,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                 aid = asset['ordinal']
                 tagi = asset[tagnames] if tagnames else ()
                 tagidxs = tuple(idx - 1 for idx in tagi)
+                losses_by_lt = {}
                 for lti, lt in enumerate(riskmodel.loss_types):
                     lratios = out[lt][a]
                     if lt == 'occupants':
@@ -120,9 +121,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
                     acc[(eidx, lti) + tagidxs] += losses
-                    if lba:
-                        lba.add(asset, lt, losses * param['ses_ratio'],
-                                weights)
+                    losses_by_lt[lt] = losses * param['ses_ratio']
+                if lba:
+                    lba.add(asset, losses_by_lt, weights)
             times[sid] = time.time() - t0
     if hazard:
         num_events_per_sid /= len(hazard)
@@ -145,26 +146,16 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
 
 class LossesByAsset(object):
     """
-    An extensible class to compute losses by asset. Just register
-    a new kind.
+    A class to compute losses by asset
     """
     def __init__(self, A):
         self.A = A
-        self.losses_by_A = {}
+        self.losses_by_A = general.AccumDict(accum=numpy.zeros(A))
 
-    def register(self, kind, func):
-        setattr(self, kind, func)
-
-    def add(self, asset, kind, losses, weights):
-        if kind not in self.losses_by_A:
-            self.losses_by_A[kind] = numpy.zeros(self.A, F32)
-        try:
-            func = getattr(self, kind)
-        except AttributeError:
-            def func(asset, losses):
-                return losses
-        self.losses_by_A[kind][asset['ordinal']] += (
-            func(asset, losses) @ weights)
+    def add(self, asset, losses_by_lt, weights):
+        aid = asset['ordinal']
+        for lt in losses_by_lt:
+            self.losses_by_A[lt][aid] += losses_by_lt[lt] @ weights
 
 
 @base.calculators.add('ebrisk')
