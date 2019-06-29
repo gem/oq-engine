@@ -183,9 +183,16 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     Returns the slowest sources
     """
-    info = dstore['source_info'][()]
+    info = dstore['source_info']['source_id', 'grp_id', 'code', 'num_ruptures',
+                                 'calc_time', 'num_sites', 'weight']
+    info = info[info['calc_time'] > 0]
     info.sort(order='calc_time')
-    return rst_table(info[::-1][:maxrows])
+    data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names]
+                       + [('speed', float)])
+    for name in info.dtype.names:
+        data[name] = info[name]
+    data['speed'] = info['weight'] / info['calc_time']
+    return rst_table(data[::-1][:maxrows])
 
 
 @view.add('contents')
