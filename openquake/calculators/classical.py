@@ -210,13 +210,14 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
         if acc.nsites:
-            if len(acc.nsites) > 50000:
+            if len(acc.nsites) > 100000:
                 # not saving source_info.num_sites since it would be slow:
                 # we do not want to wait hours for unused information
                 logging.warn(
                     'There are %d contributing sources', len(acc.nsites))
             else:
-                # saving source_info.num_sites since it is fast
+                logging.info('Saving source_info.num_sites for %d sources',
+                             len(acc.nsites))
                 src_ids = sorted(acc.nsites)
                 nsites = [acc.nsites[i] for i in src_ids]
                 self.datastore['source_info'][src_ids, 'num_sites'] = nsites
