@@ -447,8 +447,12 @@ def extract_task_info(dstore, what):
     """
     Extracts the task distribution. Use it as /extract/task_info?kind=classical
     """
-    name = parse(what)['kind'][0]
-    return dstore['task_info/' + name][()]
+    if 'kind' in what:
+        name = parse(what)['kind'][0]
+        yield name, dstore['task_info/' + name][()]
+        return
+    for name in dstore['task_info']:
+        yield name, dstore['task_info/' + name][()]
 
 
 def _agg(losses, idxs):
