@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Integrated `oq plot_memory` into `oq plot`
   * Improved the task distribution by splitting the heavy sources on the master
   * Removed `NaN` values for strike and dip when exporting griddedRuptures
   * Fixed `oq reset` to work in multi-user mode
