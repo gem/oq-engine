@@ -85,7 +85,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     if param['asset_loss_table']:
         alt = numpy.zeros((A, E, L), F32)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
-    aggregator = param['aggregator']
+    lba = param['lba']
     # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
     num_events_per_sid = 0
@@ -120,9 +120,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
                     acc[(eidx, lti) + tagidxs] += losses
-                    if aggregator:
-                        aggregator.agg(asset, lt, losses * param['ses_ratio'],
-                                       weights)
+                    if lba:
+                        lba.add(asset, lt, losses * param['ses_ratio'],
+                                weights)
             times[sid] = time.time() - t0
     if hazard:
         num_events_per_sid /= len(hazard)
@@ -136,24 +136,35 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     res = {'elt': elt, 'agg_losses': agg, 'times': times,
            'events_per_sid': num_events_per_sid, 'gmf_nbytes': gmf_nbytes}
 
-    res['losses_by_A'] = aggregator.losses_by_A
+    res['losses_by_A'] = lba.losses_by_A
     if param['asset_loss_table']:
         eidx = numpy.array([eid2idx[eid] for eid in events['eid']])
         res['alt_eidx'] = alt, eidx
     return res
 
 
-class LossAggregator(object):
-    def __init__(self, kinds, A):
-        self.kinds = kinds
+class LossesByAsset(object):
+    """
+    An extensible class to compute losses by asset. Just register
+    a new kind.
+    """
+    def __init__(self, A):
         self.A = A
-        self.losses_by_A = None
+        self.losses_by_A = {}
 
-    def agg(self, asset, kind, losses, weights):
-        if self.losses_by_A is None:
-            dt = [(kind, F32) for kind in self.kinds]
-            self.losses_by_A = numpy.zeros(self.A, dt)
-        self.losses_by_A[asset['ordinal']][kind] += losses @ weights
+    def register(self, kind, func):
+        setattr(self, kind, func)
+
+    def add(self, asset, kind, losses, weights):
+        if kind not in self.losses_by_A:
+            self.losses_by_A[kind] = numpy.zeros(self.A, F32)
+        try:
+            func = getattr(self, kind)
+        except AttributeError:
+            def func(asset, losses):
+                return losses
+        self.losses_by_A[kind][asset['ordinal']] += (
+            func(asset, losses) @ weights)
 
 
 @base.calculators.add('ebrisk')
@@ -176,8 +187,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
         loss_names = oq.loss_dt().names
-        self.param['aggregator'] = LossAggregator(
-            loss_names, len(self.assetcol)) if oq.avg_losses else None
+        self.param['lba'] = (LossesByAsset(len(self.assetcol))
+                             if oq.avg_losses else None)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
@@ -253,10 +264,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             for r, aggloss in dic['agg_losses'].items():
                 self.datastore['agg_losses-rlzs'][:, r] += aggloss
         with self.monitor('saving avg_losses', autoflush=True):
-            arr = dic['losses_by_A']
-            if arr is not None:
-                for name in arr.dtype.names:
-                    self.datastore['avg_losses/' + name] += arr[name]
+            for name, arr in dic['losses_by_A'].items():
+                self.datastore['avg_losses/' + name] += arr
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eidx = dic['alt_eidx']
