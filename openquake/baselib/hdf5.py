@@ -457,8 +457,7 @@ class ArrayWrapper(object):
 
     def __toh5__(self):
         arr = getattr(self, 'array', ())
-        return (arr, {k: v for k, v in vars(self).items()
-                      if k != 'array' and not k.startswith('_')})
+        return arr, self.to_dict()
 
     def __fromh5__(self, array, attrs):
         self.__init__(array, attrs)
@@ -543,6 +542,13 @@ class ArrayWrapper(object):
             elif val:
                 out.append(values + (val,))
         return [fields] + out
+
+    def to_dict(self):
+        """
+        Convert the public attributes into a dictionary
+        """
+        return {k: v for k, v in vars(self).items()
+                if k != 'array' and not k.startswith('_')}
 
 
 def decode_array(values):
