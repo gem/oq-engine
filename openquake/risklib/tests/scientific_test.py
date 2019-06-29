@@ -560,6 +560,17 @@ class InsuredLossesTestCase(unittest.TestCase):
             [0, 0.1, 0.4],
             scientific.insured_losses(numpy.array([0.05, 0.2, 0.6]), 0.1, 0.5))
 
+    def test_mean(self):
+        losses1 = numpy.array([0.05, 0.2, 0.6])
+        losses2 = numpy.array([0.01, 0.1, 0.3, 0.55])
+        l1 = len(losses1)
+        l2 = len(losses2)
+        m1 = scientific.insured_losses(losses1, 0.1, 0.5).mean()
+        m2 = scientific.insured_losses(losses2, 0.1, 0.5).mean()
+        m = scientific.insured_losses(numpy.concatenate([losses1, losses2]),
+                                      0.1, 0.5).mean()
+        numpy.testing.assert_allclose((m1 * l1 + m2 * l2) / (l1 + l2), m)
+
 
 class InsuredLossCurveTestCase(unittest.TestCase):
     def test_curve(self):
