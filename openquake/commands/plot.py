@@ -170,7 +170,7 @@ def make_figure_task_info(extractors, what):
     import matplotlib.pyplot as plt
     fig = plt.figure()
     [ex] = extractors
-    task_info = ex.get(what)
+    [(task_name, task_info)] = ex.get(what).to_dict().items()
     x = task_info['duration']
     ax = fig.add_subplot(2, 1, 1)
     mean, std = x.mean(), x.std(ddof=1)
@@ -178,13 +178,35 @@ def make_figure_task_info(extractors, what):
     ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
     ax.set_ylabel("tasks=%d" % len(x))
     ax = fig.add_subplot(2, 1, 2)
-    arr = numpy.sort(task_info.array, order='weight')
-    x, y = arr['weight'], arr['duration']
+    arr = numpy.sort(task_info, order='duration')
+    x, y = arr['duration'], arr['weight']
     reg = linregress(x, y)
     ax.plot(x, reg.intercept + reg.slope * x)
     ax.plot(x, y)
-    ax.set_xlabel("weight")
-    ax.set_ylabel("duration")
+    ax.set_ylabel("weight")
+    ax.set_xlabel("duration")
+    return plt
+
+
+def make_figure_memory(extractors, what):
+    """
+    :param plots: list of pairs (task_name, memory array)
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+
+    [ex] = extractors
+    task_info = ex.get('task_info').to_dict()
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    ax.set_xlabel('tasks')
+    ax.set_ylabel('GB')
+    start = 0
+    for task_name in task_info:
+        mem = task_info[task_name]['mem_gb']
+        ax.plot(range(start, start + len(mem)), mem, label=task_name)
+        start += len(mem)
+    ax.legend()
     return plt
 
 
