@@ -187,15 +187,14 @@ def export_avg_losses_ebrisk(ekey, dstore):
     :param dstore: datastore object
     """
     name = ekey[0]
-    oq = dstore['oqparam']
-    dt = oq.loss_dt()
-    value = dstore[name][()]  # shape (A, L)
+    group = dstore[name]
+    dt = [(key, F32) for key in group]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
     dest = dstore.build_fname(name, 'mean', 'csv')
-    array = numpy.zeros(len(value), dt)
-    for l, lt in enumerate(dt.names):
-        array[lt] = value[:, l]
+    array = numpy.zeros(len(assets), dt)
+    for key in group:
+        array[key] = group[key][()]
     writer.save(compose_arrays(assets, array), dest)
     return writer.getsaved()
 
