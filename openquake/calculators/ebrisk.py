@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib.scientific import losses_by_period
+from openquake.risklib.scientific import losses_by_period, LossesByAsset
 from openquake.risklib.riskinput import get_assets_by_taxo, cache_epsilons
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -121,9 +121,11 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
                     acc[(eidx, lti) + tagidxs] += losses
-                    losses_by_lt[lt] = losses * param['ses_ratio']
+                    losses_by_lt[lt] = losses
                 if lba:
-                    lba.add(asset, losses_by_lt, weights)
+                    for name, losses in lba.compute(asset, losses_by_lt):
+                        lba.losses_by_A[name][aid] += (
+                            losses @ weights * param['ses_ratio'])
             times[sid] = time.time() - t0
     if hazard:
         num_events_per_sid /= len(hazard)
@@ -142,20 +144,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         eidx = numpy.array([eid2idx[eid] for eid in events['eid']])
         res['alt_eidx'] = alt, eidx
     return res
-
-
-class LossesByAsset(object):
-    """
-    A class to compute losses by asset
-    """
-    def __init__(self, A):
-        self.A = A
-        self.losses_by_A = general.AccumDict(accum=numpy.zeros(A))
-
-    def add(self, asset, losses_by_lt, weights):
-        aid = asset['ordinal']
-        for lt in losses_by_lt:
-            self.losses_by_A[lt][aid] += losses_by_lt[lt] @ weights
 
 
 @base.calculators.add('ebrisk')
@@ -178,7 +166,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
         loss_names = oq.loss_dt().names
-        self.param['lba'] = (LossesByAsset(len(self.assetcol))
+        self.param['lba'] = (LossesByAsset(self.assetcol)
                              if oq.avg_losses else None)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
