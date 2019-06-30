@@ -31,7 +31,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import AccumDict, CallableDict, cached_property
 from openquake.hazardlib.stats import compute_stats2
 
 F32 = numpy.float32
@@ -1481,3 +1481,23 @@ class LossCurvesMapsBuilder(object):
                 maps[(p,) + idx] = conditional_loss_ratio(
                     lbp, self.poes, poe)
         return curves, maps
+
+
+class LossesByAsset(object):
+    """
+    A class to compute losses by asset
+    """
+    def __init__(self, assetcol):
+        self.A = len(assetcol)
+
+    def compute(self, asset, losses_by_lt):
+        """
+        :param asset: an asset record
+        :param losses_by_lt: a dictionary loss_type -> losses
+        :yields: pairs (loss_name, losses)
+        """
+        yield from losses_by_lt.items()
+
+    @cached_property
+    def losses_by_A(self):
+        return AccumDict(accum=numpy.zeros(self.A))
