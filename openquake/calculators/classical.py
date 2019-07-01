@@ -227,8 +227,8 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        maxweight = self.csm.get_maxweight(
-            trt_sources, nrup, oq.concurrent_tasks)
+        maxweight = min(self.csm.get_maxweight(
+            trt_sources, nrup, oq.concurrent_tasks), 1E6)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
