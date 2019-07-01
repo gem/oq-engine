@@ -808,9 +808,14 @@ def split_task(func, *args, duration=1000, every=20,
         return
     other = [el for i, el in enumerate(elements, 1) if i % every != 0]
     sample_weight = sum(weight(el) for el in sample)
+    other_weight = sum(weight(el) for el in other)
     t0 = time.time()
     res = func(*(sample,) + args[1:])
     dt = (time.time() - t0) / sample_weight  # time per unit of weight
+    if other_weight < duration:
+        yield res
+        yield func(*(other,) + args[1:])
+        return
     for block in block_splitter(other, duration, lambda el: weight(el) * dt):
         monitor.weight = block.weight
         yield (func, block) + args[1:-1]
