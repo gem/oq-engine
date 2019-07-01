@@ -72,7 +72,6 @@ class CauzziEtAl2014RhypoGermany(CauzziEtAl2014):
         """
         Returns the mean ground motion acceleration and velocity
         """
-        print(rup.__dict__, self.REQUIRES_RUPTURE_PARAMETERS)
         if rup.width > 1.0E-3:
             # Finite rupture source used
             rrup = np.copy(dists.rrup)
