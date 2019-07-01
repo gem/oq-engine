@@ -797,3 +797,21 @@ def count(word, mon):
     Used as example in the documentation
     """
     return collections.Counter(word)
+
+
+def split_task(func, *args, duration=1000, every=20,
+               weight=operator.attrgetter('weight')):
+    elements, monitor = args[0], args[-1]
+    sample = [el for i, el in enumerate(elements, 1) if i % every == 0]
+    if not sample:  # there are not enough elements
+        yield func(*args)
+        return
+    other = [el for i, el in enumerate(elements, 1) if i % every != 0]
+    sample_weight = sum(weight(el) for el in sample)
+    t0 = time.time()
+    res = func(*(sample,) + args[1:])
+    dt = (time.time() - t0) / sample_weight  # time per unit of weight
+    for block in block_splitter(other, duration, lambda el: weight(el) * dt):
+        monitor.weight = block.weight
+        yield (func, block) + args[1:-1]
+    yield res
