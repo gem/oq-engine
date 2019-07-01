@@ -340,7 +340,8 @@ class EventBasedCalculator(base.HazardCalculator):
         else:
             # from sources
             self.build_events_from_sources()
-            if oq.ground_motion_fields is False:
+            if (oq.ground_motion_fields is False and
+                    oq.hazard_curves_from_gmfs is False):
                 return {}
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %

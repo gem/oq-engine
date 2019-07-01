@@ -402,11 +402,11 @@ class GmfGetter(object):
                                 gmvs[:, imti], oq.imtls[imt],
                                 oq.ses_per_logic_tree_path)
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
-        elif oq.ground_motion_fields:  # fast lane
+        if oq.ground_motion_fields:  # fast lane
             with monitor('building hazard', measuremem=True):
                 gmfdata = self.get_gmfdata()
         else:
-            return {}
+            return dict(gmfdata=(), hcurves=hcurves)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []
