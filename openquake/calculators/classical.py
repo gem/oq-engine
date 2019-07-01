@@ -227,9 +227,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        maxweight = min(
-            self.csm.get_maxweight(trt_sources, nrup, oq.concurrent_tasks),
-            base.RUPTURES_PER_BLOCK)
+        maxweight = self.csm.get_maxweight(
+            trt_sources, nrup, oq.concurrent_tasks)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
