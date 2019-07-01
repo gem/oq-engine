@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made it possible to set `hazard_curves_from_gmfs=true` with
+    `ground_motion_fields=false` in the event based hazard calculator
   * Introduced a `task_duration` parameter and a mechanism to split the tasks
     exceeding it (approximately)
   * Integrated `oq plot_memory` into `oq plot`
