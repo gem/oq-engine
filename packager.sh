@@ -402,16 +402,16 @@ _devtest_innervm_run () {
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
 
-                 /opt/openquake/bin/pytest --doctest-module -v openquake/baselib
-                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-hmtk.xml -v openquake/hmtk
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-engine.xml -v openquake/engine
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-server.xml -v openquake/server
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-calculators.xml -v openquake/calculators
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-risklib.xml -v openquake/risklib
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-commonlib.xml -v openquake/commonlib
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-commands.xml -v openquake/commands 
+                 /opt/openquake/bin/pytest --doctest-modules -v openquake/baselib
+                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-hmtk.xml -v openquake/hmtk
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-engine.xml -v openquake/engine
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-server.xml -v openquake/server
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-calculators.xml -v openquake/calculators
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-risklib.xml -v openquake/risklib
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-commonlib.xml -v openquake/commonlib
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-commands.xml -v openquake/commands
 
-                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n 4 --doctest-module -v openquake/hazardlib
+                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n 4 --doctest-modules -v openquake/hazardlib
                  /opt/openquake/bin/python3 bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
