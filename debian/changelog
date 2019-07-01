@@ -1,3 +1,7 @@
+  [Chris Van Houtte]
+  * Adds the Van Houtte et al. (2018) significant duration model for New
+    Zealand
+
   [Michele Simionato]
   * Made it possible to set `hazard_curves_from_gmfs=true` with
     `ground_motion_fields=false` in the event based hazard calculator
