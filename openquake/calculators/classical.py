@@ -102,11 +102,13 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         source_data = numpy.array([(monitor.task_no, src_id, s/tot, r, w)
                                    for src_id, (s, r, w) in sd.items()],
                                   source_data_dt)
+        first = True
         for out in parallel.split_task(
                 classical, sources, srcfilter, gsims, params, monitor,
                 duration=params['task_duration'], weight=nrup):
-            if isinstance(out, dict):  # there is only one
+            if first:
                 out['source_data'] = source_data
+                first = False
             yield out
 
 

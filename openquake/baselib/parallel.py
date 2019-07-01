@@ -816,7 +816,7 @@ def split_task(func, *args, duration=1000, every=20,
         yield res
         yield func(*(other,) + args[1:])
         return
+    yield res
     for block in block_splitter(other, duration, lambda el: weight(el) * dt):
         monitor.weight = block.weight
         yield (func, block) + args[1:-1]
-    yield res
