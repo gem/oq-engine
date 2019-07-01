@@ -225,24 +225,23 @@ class EventBasedCalculator(base.HazardCalculator):
         agg_mon = self.monitor('aggregating hcurves')
         with sav_mon:
             data = result.pop('gmfdata')
-            if len(data) == 0:
-                return acc
-            idxs = base.get_idxs(data, self.eid2idx)  # this has to be fast
-            data['eid'] = idxs  # replace eid with idx
-            self.datastore.extend('gmf_data/data', data)
-            sig_eps = result.pop('sig_eps')
-            sig_eps['eid'] = base.get_idxs(sig_eps, self.eid2idx)
-            self.datastore.extend('gmf_data/sigma_epsilon', sig_eps)
-            # it is important to save the number of bytes while the
-            # computation is going, to see the progress
-            update_nbytes(self.datastore, 'gmf_data/data', data)
-            for sid, start, stop in result['indices']:
-                self.indices[sid, 0].append(start + self.offset)
-                self.indices[sid, 1].append(stop + self.offset)
-            self.offset += len(data)
-            if self.offset >= TWO32:
-                raise RuntimeError(
-                    'The gmf_data table has more than %d rows' % TWO32)
+            if len(data):
+                idxs = base.get_idxs(data, self.eid2idx)  # this has to be fast
+                data['eid'] = idxs  # replace eid with idx
+                self.datastore.extend('gmf_data/data', data)
+                sig_eps = result.pop('sig_eps')
+                sig_eps['eid'] = base.get_idxs(sig_eps, self.eid2idx)
+                self.datastore.extend('gmf_data/sigma_epsilon', sig_eps)
+                # it is important to save the number of bytes while the
+                # computation is going, to see the progress
+                update_nbytes(self.datastore, 'gmf_data/data', data)
+                for sid, start, stop in result['indices']:
+                    self.indices[sid, 0].append(start + self.offset)
+                    self.indices[sid, 1].append(stop + self.offset)
+                self.offset += len(data)
+                if self.offset >= TWO32:
+                    raise RuntimeError(
+                        'The gmf_data table has more than %d rows' % TWO32)
         imtls = self.oqparam.imtls
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
@@ -383,7 +382,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def post_execute(self, result):
         oq = self.oqparam
-        if not oq.ground_motion_fields:
+        if not oq.ground_motion_fields and not oq.hazard_curves_from_gmfs:
             return
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
