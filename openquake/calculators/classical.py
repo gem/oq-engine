@@ -193,7 +193,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # except KeyError:
         #     logging.warn('No integration_distance')
         many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
-        task = classical_split_filter if many_sites else classical
+        task = self.core_task.__func__ if many_sites else classical
         with self.monitor('managing sources', autoflush=True):
             smap = parallel.Starmap(task, monitor=self.monitor())
             self.submit_sources(smap, many_sites)
