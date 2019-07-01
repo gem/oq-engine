@@ -37,6 +37,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
+nrup = operator.attrgetter('num_ruptures')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 source_data_dt = numpy.dtype(
@@ -91,29 +92,22 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for src, _sites in srcfilter(srcs):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
-    blocks = list(block_splitter(sources, params['maxweight'],
-                                 operator.attrgetter('weight')))
-    if blocks:
+    if sources:
         tot = 0
         sd = AccumDict(accum=numpy.zeros(3))  # nsites, nrupts, weight
-        for block in blocks:
-            for src in block:
-                arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
-                sd[src.id] += arr
-                tot += 1
+        for src in sources:
+            arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
+            sd[src.id] += arr
+            tot += 1
         source_data = numpy.array([(monitor.task_no, src_id, s/tot, r, w)
                                    for src_id, (s, r, w) in sd.items()],
                                   source_data_dt)
-        # compute the last block (the smallest one) and yield the others
-        for block in blocks[:-1]:
-            monitor.weight = sum(src.weight for src in block)
-            yield classical, block, srcfilter, gsims, params
-        # NB: it is a faster if the first blocks are yielded first
-        # for instance in job_share_small.ini the improvement is 579s -> 466s
-        monitor.weight = sum(src.weight for src in blocks[-1])
-        dic = classical(blocks[-1], srcfilter, gsims, params, monitor)
-        dic['source_data'] = source_data
-        yield dic
+        for out in parallel.split_task(
+                classical, sources, srcfilter, gsims, params, monitor,
+                duration=params['task_duration'], weight=nrup):
+            if isinstance(out, dict):  # there is only one
+                out['source_data'] = source_data
+            yield out
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
@@ -198,10 +192,11 @@ class ClassicalCalculator(base.HazardCalculator):
         #        'integration_distance']
         # except KeyError:
         #     logging.warn('No integration_distance')
+        many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
+        task = classical_split_filter if many_sites else classical
         with self.monitor('managing sources', autoflush=True):
-            smap = parallel.Starmap(
-                self.core_task.__func__, monitor=self.monitor())
-            self.submit_sources(smap)
+            smap = parallel.Starmap(task, monitor=self.monitor())
+            self.submit_sources(smap, many_sites)
         self.calc_times = AccumDict(accum=numpy.zeros(2, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
@@ -226,13 +221,11 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def submit_sources(self, smap):
+    def submit_sources(self, smap, many_sites):
         """
         Send the sources split in tasks
         """
         oq = self.oqparam
-        many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
-        nrup = operator.attrgetter('num_ruptures')
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(
             self.csm.get_maxweight(trt_sources, nrup, oq.concurrent_tasks),
@@ -241,7 +234,7 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            maxweight=maxweight)
+            task_duration=oq.task_duration, maxweight=maxweight)
         logging.info('Max ruptures per task = %(maxweight)d', param)
 
         for trt, sources in trt_sources:
