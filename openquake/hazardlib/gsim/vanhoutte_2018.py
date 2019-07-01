@@ -39,7 +39,7 @@ class VanHoutteEtAl2018RSD(GMPE):
     #: significant duration
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([RSD575])
 
-    #: Supported intensity measure component is the RotD50
+    #: Supported intensity measure component is RotD50
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types are total, inter and intra-event
@@ -52,7 +52,7 @@ class VanHoutteEtAl2018RSD(GMPE):
     #: Requires vs30
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
-    #: Required rupture parameters are magnitude
+    #: Required rupture parameter is magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
     #: Required distance measure is closest distance to rupture
