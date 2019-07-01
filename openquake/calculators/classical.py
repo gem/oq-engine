@@ -192,11 +192,10 @@ class ClassicalCalculator(base.HazardCalculator):
         #        'integration_distance']
         # except KeyError:
         #     logging.warn('No integration_distance')
-        many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
-        task = self.core_task.__func__ if many_sites else classical
         with self.monitor('managing sources', autoflush=True):
-            smap = parallel.Starmap(task, monitor=self.monitor())
-            self.submit_sources(smap, many_sites)
+            smap = parallel.Starmap(
+                self.core_task.__func__, monitor=self.monitor())
+            self.submit_sources(smap)
         self.calc_times = AccumDict(accum=numpy.zeros(2, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
@@ -221,11 +220,12 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def submit_sources(self, smap, many_sites):
+    def submit_sources(self, smap):
         """
         Send the sources split in tasks
         """
         oq = self.oqparam
+        many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = self.csm.get_maxweight(
             trt_sources, nrup, oq.concurrent_tasks)
