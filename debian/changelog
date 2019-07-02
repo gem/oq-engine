@@ -11,7 +11,7 @@
   * Removed `NaN` values for strike and dip when exporting griddedRuptures
   * Fixed `oq reset` to work in multi-user mode
   * Extended the source_id-filtering feature in the job.ini to multiple sources
-  * Supported .wkt files for the binary perils in the multi_risk calculator
+  * Supported WKT files for the binary perils in the multi_risk calculator
   * Added an early check on the coefficients of variation and loss ratios of
     vulnerability functions with the Beta distribution
   * Made sure that `oq engine --dc` removes the HDF5 cache file too
