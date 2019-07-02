@@ -139,7 +139,8 @@ def wkt2peril(fname, name, sitecol):
     Converts a WKT file into a peril array of length N
     """
     with open(fname) as f:
-        geom = shapely.wkt.load(f)
+        next(f)  # skip header
+        geom = shapely.wkt.loads(f.read()[1:-1])  # strip quotes
     peril = numpy.zeros(len(sitecol), float)
     for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
         peril[sid] = shapely.geometry.Point(lon, lat).within(geom)
@@ -167,11 +168,13 @@ class MultiRiskCalculator(base.RiskCalculator):
         for name, fname in zip(oq.multi_peril, fnames):
             tofloat = (valid.positivefloat if name == 'ASH'
                        else valid.probability)
-            if fname.endswith('.csv'):
+            with open(fname) as f:
+                header = next(f)
+            if 'geom' in header:
+                peril = wkt2peril(fname, name, self.sitecol)
+            else:
                 peril = csv2peril(fname, name, self.sitecol, tofloat,
                                   oq.asset_hazard_distance)
-            elif fname.endswith('.wkt'):
-                peril = wkt2peril(fname, name, self.sitecol)
             if peril.sum() == 0:
                 logging.warning('No sites were affected by %s' % name)
             self.datastore['multi_peril'][name] = peril
