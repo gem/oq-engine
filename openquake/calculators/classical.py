@@ -226,6 +226,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Send the sources split in tasks
         """
         oq = self.oqparam
+        N = len(self.sitecol)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks), 1E6)
@@ -233,7 +234,7 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            task_duration=30 * 2**numpy.log10(maxweight),  # 0.5..32m
+            task_duration=5 * 2**numpy.log10(maxweight * N),  # 5s .. 3h
             maxweight=maxweight)
         logging.info('ruptures_per_task = %(maxweight)d, '
                      'task_duration = %(task_duration)d s', param)
