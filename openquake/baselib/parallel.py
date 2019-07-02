@@ -509,7 +509,7 @@ class IterResult(object):
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func_args:  # not subtask
                 yield val
-            save_task_info(self, result, mem_gb)
+                save_task_info(self, result, mem_gb)
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
