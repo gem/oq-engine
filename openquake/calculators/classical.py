@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5, config
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
@@ -91,29 +91,24 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         for src, _sites in srcfilter(srcs):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
-    blocks = list(block_splitter(sources, params['maxweight'],
-                                 operator.attrgetter('weight')))
-    if blocks:
+    if sources:
         tot = 0
         sd = AccumDict(accum=numpy.zeros(3))  # nsites, nrupts, weight
-        for block in blocks:
-            for src in block:
-                arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
-                sd[src.id] += arr
-                tot += 1
+        for src in sources:
+            arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
+            sd[src.id] += arr
+            tot += 1
         source_data = numpy.array([(monitor.task_no, src_id, s/tot, r, w)
                                    for src_id, (s, r, w) in sd.items()],
                                   source_data_dt)
-        # compute the last block (the smallest one) and yield the others
-        for block in blocks[:-1]:
-            monitor.weight = sum(src.weight for src in block)
-            yield classical, block, srcfilter, gsims, params
-        # NB: it is a faster if the first blocks are yielded first
-        # for instance in job_share_small.ini the improvement is 579s -> 466s
-        monitor.weight = sum(src.weight for src in blocks[-1])
-        dic = classical(blocks[-1], srcfilter, gsims, params, monitor)
-        dic['source_data'] = source_data
-        yield dic
+        first = True
+        for out in parallel.split_task(
+                classical, sources, srcfilter, gsims, params, monitor,
+                duration=params['task_duration']):
+            if first:
+                out['source_data'] = source_data
+                first = False
+            yield out
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
@@ -231,18 +226,18 @@ class ClassicalCalculator(base.HazardCalculator):
         Send the sources split in tasks
         """
         oq = self.oqparam
-        many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
-        nrup = operator.attrgetter('num_ruptures')
+        N = len(self.sitecol)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        maxweight = min(
-            self.csm.get_maxweight(trt_sources, nrup, oq.concurrent_tasks),
-            base.RUPTURES_PER_BLOCK)
+        maxweight = min(self.csm.get_maxweight(
+            trt_sources, weight, oq.concurrent_tasks), 1E6)
+        task_duration = (maxweight * N) ** 0.323  # heuristic, 1h for 1E11
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            maxweight=maxweight)
-        logging.info('Max ruptures per task = %(maxweight)d', param)
+            task_duration=task_duration, maxweight=maxweight)
+        logging.info('ruptures_per_task = %(maxweight)d, '
+                     'task_duration = %(task_duration)ds', param)
 
         for trt, sources in trt_sources:
             heavy_sources = []
@@ -251,19 +246,15 @@ class ClassicalCalculator(base.HazardCalculator):
                 smap.submit(sources, self.src_filter, gsims, param,
                             func=classical)
             else:  # regroup the sources in blocks
-                for block in block_splitter(sources, maxweight, nrup):
-                    if many_sites and block.weight > maxweight:
+                for block in block_splitter(sources, maxweight, weight):
+                    if block.weight > maxweight:
                         heavy_sources.extend(block)
-                    else:
-                        # light sources to be split on the workers
-                        smap.submit(block, self.src_filter, gsims, param)
+                    smap.submit(block, self.src_filter, gsims, param)
 
             # heavy source are split on the master node
-            for src in heavy_sources:
-                logging.info('Splitting %s', src)
-                srcs, _ = split_sources([src])
-                for blk in block_splitter(srcs, maxweight, nrup):
-                    smap.submit(blk, self.src_filter, gsims, param)
+            if heavy_sources:
+                logging.info('Found %d heavy sources %s, ...',
+                             len(heavy_sources), heavy_sources[0])
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
