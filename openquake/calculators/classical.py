@@ -248,18 +248,14 @@ class ClassicalCalculator(base.HazardCalculator):
                             func=classical)
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, nrup):
-                    if many_sites and block.weight > maxweight:
+                    if block.weight > maxweight:
                         heavy_sources.extend(block)
-                    else:
-                        # light sources to be split on the workers
-                        smap.submit(block, self.src_filter, gsims, param)
+                    smap.submit(block, self.src_filter, gsims, param)
 
             # heavy source are split on the master node
-            for src in heavy_sources:
-                logging.info('Splitting %s', src)
-                srcs, _ = split_sources([src])
-                for blk in block_splitter(srcs, maxweight, nrup):
-                    smap.submit(blk, self.src_filter, gsims, param)
+            if heavy_sources:
+                logging.info('Found %d heavy sources %s, ...',
+                             len(heavy_sources), heavy_sources[0])
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
