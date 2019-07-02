@@ -115,8 +115,8 @@ def unzip_rename(zpath, name):
         for nam in archive.namelist():
             fname = os.path.join(dpath, nam)
             if os.path.exists(fname):  # already unzipped
-                logging.warn('Using %s instead of the file in %s',
-                             fname, zpath)
+                logging.warning('Using %s instead of the file in %s',
+                                fname, zpath)
         logging.info('Unzipping %s', zpath)
         archive.extractall(dpath)
     xname = os.path.join(dpath, name)
@@ -422,14 +422,14 @@ def get_site_collection(oqparam):
             # this is the normal case
             depth = None
         if grid_spacing:
-            logging.warning('Having a grid and a site model at the same time '
-                            'is inefficient: please use oq prepare_site_model')
             grid = mesh.get_convex_hull().dilate(
                 grid_spacing).discretize(grid_spacing)
-            haz_sitecol = site.SiteCollection.from_points(
+            grid_sites = site.SiteCollection.from_points(
                 grid.lons, grid.lats, req_site_params=req_site_params)
             sitecol, params, _ = geo.utils.assoc(
-                sm, haz_sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
+                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'filter')
+            logging.info('Associating %d site model sites to %d grid sites',
+                         len(sm), len(sitecol))
             sitecol.make_complete()
         else:
             sitecol = site.SiteCollection.from_points(
