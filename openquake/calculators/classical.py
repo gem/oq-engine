@@ -236,7 +236,8 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             task_duration=30 * 2**numpy.log10(maxweight),  # 0.5..32m
             maxweight=maxweight)
-        logging.info('Max ruptures per task = %(maxweight)d', param)
+        logging.info('ruptures_per_task = %(maxweight)d, '
+                     'task_duration = %(task_duration)d s', param)
 
         for trt, sources in trt_sources:
             heavy_sources = []
