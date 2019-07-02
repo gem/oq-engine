@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Restored the ability to associate site model parameters to a grid of sites;
+    however a warning about using `oq prepare_site_model` is shown
   * Made it possible to set `hazard_curves_from_gmfs=true` with
     `ground_motion_fields=false` in the event based hazard calculator
   * Introduced a mechanism to split the tasks based on an estimated duration
