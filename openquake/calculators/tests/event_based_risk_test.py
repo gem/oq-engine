@@ -306,13 +306,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
 
-        # this is a case with exposure and region_grid_spacing=1
+        # this is a case with exposure, site model and region_grid_spacing
         self.run_calc(case_miriam.__file__, 'job2.ini')
         hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']
         sitecol = self.calc.datastore['sitecol']  # filtered sitecol
         self.assertEqual(len(hcurves), len(sitecol))
         assetcol = self.calc.datastore['assetcol']
-        self.assertEqual(len(sitecol), 15)
+        self.assertEqual(len(sitecol), 12)
         self.assertGreater(sitecol.vs30.sum(), 0)
         self.assertEqual(len(assetcol), 548)
 
