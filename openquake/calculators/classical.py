@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5, config
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
@@ -37,7 +37,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-nrup = operator.attrgetter('num_ruptures')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 source_data_dt = numpy.dtype(
@@ -105,7 +104,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         first = True
         for out in parallel.split_task(
                 classical, sources, srcfilter, gsims, params, monitor,
-                duration=params['task_duration'], weight=nrup):
+                duration=params['task_duration']):
             if first:
                 out['source_data'] = source_data
                 first = False
@@ -228,17 +227,17 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         N = len(self.sitecol)
-        many_sites = N > int(config.general.max_sites_disagg)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
-            trt_sources, nrup, oq.concurrent_tasks), 1E6)
+            trt_sources, weight, oq.concurrent_tasks), 1E6)
+        task_duration = (maxweight * N) ** 0.323  # heuristic, 1h for 1E11
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            task_duration=60 * 2**numpy.log10(N),  # between 1m and 1h
-            maxweight=maxweight)
-        logging.info('Max ruptures per task = %(maxweight)d', param)
+            task_duration=task_duration, maxweight=maxweight)
+        logging.info('ruptures_per_task = %(maxweight)d, '
+                     'task_duration = %(task_duration)ds', param)
 
         for trt, sources in trt_sources:
             heavy_sources = []
@@ -247,7 +246,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 smap.submit(sources, self.src_filter, gsims, param,
                             func=classical)
             else:  # regroup the sources in blocks
-                for block in block_splitter(sources, maxweight, nrup):
+                for block in block_splitter(sources, maxweight, weight):
                     if block.weight > maxweight:
                         heavy_sources.extend(block)
                     smap.submit(block, self.src_filter, gsims, param)
