@@ -799,9 +799,18 @@ def count(word, mon):
     return collections.Counter(word)
 
 
-def split_task(func, *args, duration=1000, every=20,
+def split_task(func, *args, duration=1000,
                weight=operator.attrgetter('weight')):
     elements, monitor = args[0], args[-1]
+    n = len(elements)
+    if n > 1000:
+        every = 333
+    elif n > 300:
+        every = 100
+    elif n > 100:
+        every = 33
+    else:
+        every = 10
     sample = [el for i, el in enumerate(elements, 1) if i % every == 0]
     if not sample:  # there are not enough elements
         yield func(*args)
