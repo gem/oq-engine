@@ -37,7 +37,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-nrup = operator.attrgetter('num_ruptures')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 source_data_dt = numpy.dtype(
@@ -105,7 +104,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
         first = True
         for out in parallel.split_task(
                 classical, sources, srcfilter, gsims, params, monitor,
-                duration=params['task_duration'], weight=nrup):
+                duration=params['task_duration']):
             if first:
                 out['source_data'] = source_data
                 first = False
@@ -229,7 +228,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
-            trt_sources, nrup, oq.concurrent_tasks), 1E6)
+            trt_sources, oq.concurrent_tasks), 1E6)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
@@ -246,7 +245,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 smap.submit(sources, self.src_filter, gsims, param,
                             func=classical)
             else:  # regroup the sources in blocks
-                for block in block_splitter(sources, maxweight, nrup):
+                for block in block_splitter(sources, maxweight, weight):
                     if block.weight > maxweight:
                         heavy_sources.extend(block)
                     smap.submit(block, self.src_filter, gsims, param)
