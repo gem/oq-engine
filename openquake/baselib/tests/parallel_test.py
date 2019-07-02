@@ -46,6 +46,7 @@ def supertask(text, monitor):
     # a supertask spawning subtasks of kind get_length
     with monitor('waiting'):
         time.sleep(.1)
+    yield {}
     for block in general.block_splitter(text, max_weight=10):
         items = [(k, len(list(grp))) for k, grp in itertools.groupby(block)]
         if len(items) == 1:
@@ -126,7 +127,7 @@ class StarmapTestCase(unittest.TestCase):
         with hdf5.File(tmp) as h5:
             num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
-            self.assertEqual(num[b'total supertask'], 18)  # outputs
+            self.assertEqual(num[b'total supertask'], 5)  # outputs
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
             self.assertGreater(len(h5['task_info/supertask']), 0)
         shutil.rmtree(tmp.parent)
