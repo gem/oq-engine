@@ -230,14 +230,14 @@ class ClassicalCalculator(base.HazardCalculator):
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks), 1E6)
+        task_duration = (maxweight * N) ** 0.323  # heuristic, 1h for 1E11
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            task_duration=5 * 2**numpy.log10(maxweight * N),  # 5s .. 3h
-            maxweight=maxweight)
+            task_duration=task_duration, maxweight=maxweight)
         logging.info('ruptures_per_task = %(maxweight)d, '
-                     'task_duration = %(task_duration)d s', param)
+                     'task_duration = %(task_duration)ds', param)
 
         for trt, sources in trt_sources:
             heavy_sources = []
