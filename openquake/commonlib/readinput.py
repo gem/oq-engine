@@ -115,8 +115,8 @@ def unzip_rename(zpath, name):
         for nam in archive.namelist():
             fname = os.path.join(dpath, nam)
             if os.path.exists(fname):  # already unzipped
-                logging.warn('Using %s instead of the file in %s',
-                             fname, zpath)
+                logging.warning('Using %s instead of the file in %s',
+                                fname, zpath)
         logging.info('Unzipping %s', zpath)
         archive.extractall(dpath)
     xname = os.path.join(dpath, name)
@@ -412,6 +412,7 @@ def get_site_collection(oqparam):
     """
     mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
+    grid_spacing = oqparam.region_grid_spacing
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
         try:
@@ -420,15 +421,19 @@ def get_site_collection(oqparam):
         except ValueError:
             # this is the normal case
             depth = None
-        sitecol = site.SiteCollection.from_points(
-            sm['lon'], sm['lat'], depth, sm, req_site_params)
-        if oqparam.region_grid_spacing:
-            logging.info('Reducing the grid sites to the site '
-                         'parameters within the grid spacing')
+        if grid_spacing:
+            grid = mesh.get_convex_hull().dilate(
+                grid_spacing).discretize(grid_spacing)
+            grid_sites = site.SiteCollection.from_points(
+                grid.lons, grid.lats, req_site_params=req_site_params)
             sitecol, params, _ = geo.utils.assoc(
-                sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
+                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'filter')
+            logging.info('Associating %d site model sites to %d grid sites',
+                         len(sm), len(sitecol))
             sitecol.make_complete()
         else:
+            sitecol = site.SiteCollection.from_points(
+                sm['lon'], sm['lat'], depth, sm, req_site_params)
             params = sm
         for name in req_site_params:
             if name in ('vs30measured', 'backarc') \
