@@ -68,7 +68,6 @@ class VanHoutteEtAl2018RSD(GMPE):
         mean = (self.get_magnitude_term(C, rup.mag) +
                 self.get_distance_term(C, dists.rrup, rup.mag) +
                 self.get_site_amplification(C, sites.vs30))
-        print(mean)
         stddevs = self.get_stddevs(C, dists.rrup.shape, stddev_types)
         return mean, stddevs
 
@@ -82,7 +81,7 @@ class VanHoutteEtAl2018RSD(GMPE):
         """
         Returns distance scaling term
         """
-        fac = (rrup > 100).astype('uint8')
+        fac = rrup > 100
         rmax100 = rrup.copy()
         rmax100[rmax100 > 100] = 100
         fr = C["b3"] * np.log(np.sqrt(
