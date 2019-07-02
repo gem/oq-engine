@@ -801,6 +801,13 @@ def count(word, mon):
 
 def split_task(func, *args, duration=1000,
                weight=operator.attrgetter('weight')):
+    """
+    :param func: a task function
+    :param args: arguments of the task function
+    :param duration: split the task if it exceeds the duration
+    :param weight: weight function for the elements in args[0]
+    :yields: a partial result and then another or task objects
+    """
     elements, monitor = args[0], args[-1]
     n = len(elements)
     if n > 1000:
@@ -821,10 +828,8 @@ def split_task(func, *args, duration=1000,
     res = func(*(sample,) + args[1:])
     dt = (time.time() - t0) / sample_weight  # time per unit of weight
     yield res
-    estimate = sum(weight(el) for el in other) * dt
-    if estimate < duration / 2:
-        yield func(*(other,) + args[1:])
-    else:
-        for blk in block_splitter(other, duration, lambda el: weight(el) * dt):
-            monitor.weight = blk.weight
-            yield (func, blk) + args[1:-1]
+    blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
+    for block in blocks[:-1]:
+        monitor.weight = block.weight
+        yield (func, block) + args[1:-1]
+    yield func(*(blocks[-1],) + args[1:])
