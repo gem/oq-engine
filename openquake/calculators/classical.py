@@ -227,7 +227,8 @@ class ClassicalCalculator(base.HazardCalculator):
         Send the sources split in tasks
         """
         oq = self.oqparam
-        many_sites = len(self.sitecol) > int(config.general.max_sites_disagg)
+        N = len(self.sitecol)
+        many_sites = N > int(config.general.max_sites_disagg)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
             trt_sources, nrup, oq.concurrent_tasks), 1E6)
@@ -235,7 +236,8 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            task_duration=oq.task_duration, maxweight=maxweight)
+            task_duration=60 * 2**numpy.log10(N),  # between 1m and 1h
+            maxweight=maxweight)
         logging.info('Max ruptures per task = %(maxweight)d', param)
 
         for trt, sources in trt_sources:
@@ -246,18 +248,14 @@ class ClassicalCalculator(base.HazardCalculator):
                             func=classical)
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, nrup):
-                    if many_sites and block.weight > maxweight:
+                    if block.weight > maxweight:
                         heavy_sources.extend(block)
-                    else:
-                        # light sources to be split on the workers
-                        smap.submit(block, self.src_filter, gsims, param)
+                    smap.submit(block, self.src_filter, gsims, param)
 
             # heavy source are split on the master node
-            for src in heavy_sources:
-                logging.info('Splitting %s', src)
-                srcs, _ = split_sources([src])
-                for blk in block_splitter(srcs, maxweight, nrup):
-                    smap.submit(blk, self.src_filter, gsims, param)
+            if heavy_sources:
+                logging.info('Found %d heavy sources %s, ...',
+                             len(heavy_sources), heavy_sources[0])
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
