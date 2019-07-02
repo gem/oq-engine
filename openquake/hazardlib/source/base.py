@@ -52,15 +52,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     @property
     def weight(self):
         """
-        Determine the source weight from the number of ruptures, by
-        multiplying with the scale factor RUPTURE_WEIGHT
+        Determine the source weight from the number of ruptures
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        # (MS) the weight is proportional to the number of ruptures
-        # the relation to the number of sites is unclear, but for sure less
-        # than linear and I am using a log here (totally made up but good)
-        return self.num_ruptures * (1 + .2 * numpy.log(self.nsites))
+        return self.num_ruptures
 
     @property
     def nsites(self):
