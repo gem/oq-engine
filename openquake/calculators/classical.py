@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5, config
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
@@ -227,8 +227,6 @@ class ClassicalCalculator(base.HazardCalculator):
         Send the sources split in tasks
         """
         oq = self.oqparam
-        N = len(self.sitecol)
-        many_sites = N > int(config.general.max_sites_disagg)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
             trt_sources, nrup, oq.concurrent_tasks), 1E6)
@@ -236,7 +234,7 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
-            task_duration=60 * 2**numpy.log10(N),  # between 1m and 1h
+            task_duration=30 * 2**numpy.log10(maxweight),  # 0.5..32m
             maxweight=maxweight)
         logging.info('Max ruptures per task = %(maxweight)d', param)
 
