@@ -344,7 +344,7 @@ class HazardCalculator(BaseCalculator):
         if not hasattr(self, 'maxweight'):
             trt_sources = self.csm.get_trt_sources()
             self.maxweight = self.csm.get_maxweight(
-                trt_sources, weight, self.oqparam.concurrent_tasks,
+                trt_sources, get_weight, self.oqparam.concurrent_tasks,
                 source.MINWEIGHT)
             if self.maxweight == source.MINWEIGHT:
                 logging.info('Using minweight=%d', source.MINWEIGHT)

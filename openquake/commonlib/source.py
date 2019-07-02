@@ -487,8 +487,7 @@ class CompositeSourceModel(collections.abc.Sequence):
             src.serial = serial
             serial += nr
 
-    def get_maxweight(self, trt_sources, concurrent_tasks,
-                      weight=operator.attrgetter('weight'),
+    def get_maxweight(self, trt_sources, weight, concurrent_tasks,
                       minweight=MINWEIGHT):
         """
         Return an appropriate maxweight for use in the block_splitter
