@@ -54,7 +54,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance, maxweight=1E10,
-                     task_duration=oq.task_duration)
+                     task_duration=1000)
         self.calc_times = general.AccumDict(accum=np.zeros(2, np.float32))
         [gsims] = sorted(self.csm.info.gsim_lt.values.values())
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
