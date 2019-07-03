@@ -810,6 +810,7 @@ def split_task(func, *args, duration=1000,
     """
     elements, monitor = args[0], args[-1]
     n = len(elements)
+    assert n > 0, 'Passed an empty sequence!'
     if n > 1000:
         every = 333
     elif n > 300:
@@ -832,4 +833,5 @@ def split_task(func, *args, duration=1000,
     for block in blocks[:-1]:
         monitor.weight = block.weight
         yield (func, block) + args[1:-1]
+    monitor.weight = blocks[-1].weight
     yield func(*(blocks[-1],) + args[1:])
