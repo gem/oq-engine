@@ -808,7 +808,7 @@ def split_task(func, *args, duration=1000,
     :param weight: weight function for the elements in args[0]
     :yields: a partial result and then another or task objects
     """
-    elements, monitor = args[0], args[-1]
+    elements = args[0]
     n = len(elements)
     assert n > 0, 'Passed an empty sequence!'
     if n > 1000:
@@ -831,7 +831,5 @@ def split_task(func, *args, duration=1000,
     yield res
     blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
     for block in blocks[:-1]:
-        monitor.weight = block.weight
         yield (func, block) + args[1:-1]
-    monitor.weight = blocks[-1].weight
     yield func(*(blocks[-1],) + args[1:])
