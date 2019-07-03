@@ -806,7 +806,7 @@ def split_task(func, *args, duration=1000,
     :param args: arguments of the task function
     :param duration: split the task if it exceeds the duration
     :param weight: weight function for the elements in args[0]
-    :yields: a partial result and then another or task objects
+    :yields: a partial result, 0 or more task objects, 0 or 1 partial result
     """
     elements = args[0]
     n = len(elements)
