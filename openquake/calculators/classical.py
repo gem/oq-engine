@@ -230,8 +230,8 @@ class ClassicalCalculator(base.HazardCalculator):
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks), 1E6)
-        task_duration = (maxweight * N * L) ** numpy.log10(4) / 4000
-        # goes up to 4 hours
+        task_duration = max((maxweight * N * L) ** numpy.log10(4) / 4000, 60)
+        # from 1 minute up to 4 hours
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
