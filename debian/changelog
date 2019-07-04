@@ -1,7 +1,13 @@
+  [Michele Simionato]
+  * Storing the MFDs in TOML format inside the datastore
+
+  [Robin Gee]
+  * Moves b4 constant into COEFFS table for GMPE Sharma et al., 2009 
+
   [Graeme Weatherill]
   * Adds functionality to Cauzzi et al. (2014) and Derras et al. (2014)
     calibrated GMPEs for Germany to use either finite or point source distances
-  
+
   [Michele Simionato]
   * Restored the ability to associate site model parameters to a grid of sites
   * Made it possible to set `hazard_curves_from_gmfs=true` with
