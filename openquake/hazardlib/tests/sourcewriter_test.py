@@ -93,7 +93,7 @@ class SourceWriterTestCase(unittest.TestCase):
             tomldump(smodel, f)
         with open(temp, 'r') as f:
             sm = toml.load(f)['sourceModel']
-        self.assertEqual(smodel.name, sm['attrib']['name'])
+        self.assertEqual(smodel.name, sm['_name'])
 
 
 class MFDTestCase(unittest.TestCase):
