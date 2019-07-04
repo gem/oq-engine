@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Storing the MFDs in TOML format inside the datastore
+
   [Graeme Weatherill]
   * Adds functionality to Cauzzi et al. (2014) and Derras et al. (2014)
     calibrated GMPEs for Germany to use either finite or point source distances
