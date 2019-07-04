@@ -598,7 +598,7 @@ def node_from_dict(dic, nodefactory=Node):
     if isinstance(dic, dict):
         dic = dic.copy()
         text = dic.pop('text', None)
-        attrib = dic.pop('attrib', {})
+        attrib = {n[1:]: dic.pop(n) for n in sorted(dic) if n.startswith('_')}
     else:
         return nodefactory(tag, {}, dic)
     if not dic:
