@@ -638,7 +638,8 @@ def node_to_dict(node):
     tag = striptag(node.tag)
     dic = {}
     if node.attrib:
-        dic['attrib'] = node.attrib
+        for nam, val in node.attrib.items():
+            dic['_' + nam] = val
     if isinstance(node.text, str) and node.text.strip() == '':
         pass
     elif node.text is not None:
