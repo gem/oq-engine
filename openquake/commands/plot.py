@@ -19,6 +19,7 @@ import logging
 import numpy
 from scipy.stats import linregress
 from openquake.baselib import sap
+from openquake.hazardlib import mfd
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -206,6 +207,29 @@ def make_figure_memory(extractors, what):
         mem = task_info[task_name]['mem_gb']
         ax.plot(range(start, start + len(mem)), mem, label=task_name)
         start += len(mem)
+    ax.legend()
+    return plt
+
+
+def make_figure_event_based_mfd(extractors, what):
+    """
+    :param plots: list of pairs (task_name, memory array)
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+
+    [ex] = extractors
+    eb = ex.get('event_based_mfd')
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    ax.set_xlabel('magnitude')
+    ax.set_ylabel('annual frequency')
+    ax.plot(eb.magnitudes, eb.mean_frequencies, label='got')
+    mfds = ex.get('source_mfds').array
+    if len(mfds) == 1:
+        expected = mfd.from_toml(mfds[0], ex.oqparam.width_of_mfd_bin)
+        magnitudes, frequencies = zip(*expected.get_annual_occurrence_rates())
+        ax.plot(magnitudes, frequencies, label='expected')
     ax.legend()
     return plt
 

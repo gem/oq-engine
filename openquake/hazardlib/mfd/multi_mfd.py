@@ -43,6 +43,11 @@ ALIAS = dict(min_mag='minMag', max_mag='maxMag',
              a_val='aValue', b_val='bValue', bin_width='binWidth',
              char_mag='characteristicMag', char_rate='characteristicRate')
 
+TOML2PY = dict(_minMag='min_mag', _maxMag='max_mag',
+               _aValue='a_val', _bValue='b_val',
+               _characteristicMag='char_mag',
+               _characteristicRate='char_rate')
+
 
 def _reshape(kwargs, lengths):
     # reshape occurRates and magnitudes as lists of lists
