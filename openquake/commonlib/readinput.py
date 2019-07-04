@@ -621,11 +621,12 @@ source_info_dt = numpy.dtype([
     ('code', (numpy.string_, 1)),      # 2
     ('gidx1', numpy.uint32),           # 3
     ('gidx2', numpy.uint32),           # 4
-    ('num_ruptures', numpy.uint32),    # 5
-    ('calc_time', numpy.float32),      # 6
-    ('num_sites', numpy.float32),      # 7
-    ('weight', numpy.float32),         # 8
-    ('checksum', numpy.uint32),        # 9
+    ('mfdi', numpy.int32),             # 5
+    ('num_ruptures', numpy.uint32),    # 6
+    ('calc_time', numpy.float32),      # 7
+    ('num_sites', numpy.float32),      # 8
+    ('weight', numpy.float32),         # 9
+    ('checksum', numpy.uint32),        # 10
 ])
 
 
@@ -641,6 +642,7 @@ def store_sm(smodel, filename, monitor):
         sources = h5['source_info']
         source_geom = h5['source_geom']
         mfd = h5['source_mfds']
+        mfdi = len(mfd)
         gid = len(source_geom)
         for sg in smodel:
             if filename:
@@ -651,6 +653,10 @@ def store_sm(smodel, filename, monitor):
             for src in sg:
                 if hasattr(src, 'mfd'):  # except nonparametric
                     mfds.add(sourcewriter.tomldump(src.mfd))
+                    mfdidx = mfdi
+                    mfdi += 1
+                else:
+                    mfdidx = -1
                 srcgeom = src.geom()
                 n = len(srcgeom)
                 geom = numpy.zeros(n, point3d)
@@ -665,7 +671,7 @@ def store_sm(smodel, filename, monitor):
                        if k != 'id' and k != 'src_group_id'}
                 src.checksum = zlib.adler32(pickle.dumps(dic))
                 srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             src.num_ruptures, 0, 0, 0, src.checksum))
+                             mfdidx, src.num_ruptures, 0, 0, 0, src.checksum))
                 geoms.append(geom)
                 gid += n
             if geoms:
@@ -752,7 +758,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 src_groups.append(sg)
                 idx += 1
                 grp_id += 1
-                data = [((sg.id, src.source_id, src.code, 0, 0,
+                data = [((sg.id, src.source_id, src.code, 0, 0, -1,
                           src.num_ruptures, 0, 0, 0, idx))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
