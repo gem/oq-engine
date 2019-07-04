@@ -640,7 +640,7 @@ def store_sm(smodel, filename, monitor):
         mfds = set()  # set of toml strings
         sources = h5['source_info']
         source_geom = h5['source_geom']
-        mfd = h5['source_mfd']
+        mfd = h5['source_mfds']
         gid = len(source_geom)
         for sg in smodel:
             if filename:
@@ -729,7 +729,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     if monitor.hdf5:
         sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
-        hdf5.create(monitor.hdf5, 'source_mfd', hdf5.vstr)
+        hdf5.create(monitor.hdf5, 'source_mfds', hdf5.vstr)
         filename = None
     source_ids = set()
     mags = AccumDict(accum=set())  # TRT -> mags
