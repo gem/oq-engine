@@ -46,6 +46,8 @@ MULTIPOINT = os.path.join(os.path.dirname(__file__),
 GRIDDED = os.path.join(os.path.dirname(__file__),
                        'source_model/gridded.xml')
 
+TOML = os.path.join(os.path.dirname(__file__), 'expected_mfd.toml')
+
 conv = SourceConverter(50., 1., 10, 0.1, 10.)
 
 
@@ -93,12 +95,21 @@ class SourceWriterTestCase(unittest.TestCase):
             sm = toml.load(f)['sourceModel']
         self.assertEqual(smodel.name, sm['attrib']['name'])
 
-    def test_gridded(self):
-        # test xml -> toml
-        smodel = nrml.to_python(GRIDDED, conv)
-        temp = general.gettemp(suffix='.toml')
-        with open(temp, 'w') as f:
-            tomldump(smodel, f)
+
+class MFDTestCase(unittest.TestCase):
+    def test_toml(self):
+        mfd = {}  # MFD class name -> MFD object
+        for fname in (MIXED, ALT_MFDS, MULTIPOINT):
+            smodel = nrml.to_python(fname, conv)
+            for sgroup in smodel:
+                for src in sgroup:
+                    name = src.mfd.__class__.__name__
+                    if name not in mfd:
+                        mfd[name] = src.mfd
+        out = ''
+        for name in sorted(mfd):
+            out += tomldump(mfd[name])
+        self.assertEqual(out, open(TOML).read())
 
 
 class DeepcopyTestCase(unittest.TestCase):
