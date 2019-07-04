@@ -40,7 +40,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+    geo, site, imt, valid, sourceconverter, sourcewriter, nrml, InvalidFile)
 from openquake.hazardlib.geo.mesh import point3d
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
@@ -637,8 +637,10 @@ def store_sm(smodel, filename, monitor):
     """
     h5 = monitor.hdf5
     with monitor('store source model'):
+        mfds = set()  # set of toml strings
         sources = h5['source_info']
         source_geom = h5['source_geom']
+        mfd = h5['source_mfd']
         gid = len(source_geom)
         for sg in smodel:
             if filename:
@@ -647,6 +649,7 @@ def store_sm(smodel, filename, monitor):
             srcs = []
             geoms = []
             for src in sg:
+                mfds.add(sourcewriter.tomldump(src.mfd))
                 srcgeom = src.geom()
                 n = len(srcgeom)
                 geom = numpy.zeros(n, point3d)
@@ -668,6 +671,7 @@ def store_sm(smodel, filename, monitor):
                 hdf5.extend(source_geom, numpy.concatenate(geoms))
             if sources:
                 hdf5.extend(sources, numpy.array(srcs, source_info_dt))
+        hdf5.extend(mfd, numpy.array(list(mfds), hdf5.vstr))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
@@ -724,6 +728,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     if monitor.hdf5:
         sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
+        hdf5.create(monitor.hdf5, 'source_mfd', hdf5.vstr)
         filename = None
     source_ids = set()
     mags = AccumDict(accum=set())  # TRT -> mags
