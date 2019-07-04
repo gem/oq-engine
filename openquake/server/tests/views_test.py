@@ -197,8 +197,8 @@ class EngineServerTestCase(unittest.TestCase):
         # check MFD distribution
         extract_url = '/v1/calc/%s/extract/event_based_mfd' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertGreater(len(got['array']['mag']), 1)
-        self.assertGreater(len(got['array']['freq']), 1)
+        self.assertGreater(len(got['magnitudes']), 1)
+        self.assertGreater(len(got['mean_frequencies']), 1)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
