@@ -24,6 +24,7 @@ implementations:
 :class:`openquake.hazardlib.mfd.truncated_gr.TruncatedGRMFD` and
 :class:`openquake.hazardlib.mfd.youngs_coppersmith_1985.YoungsCoppersmith1985MFD`.
 """
+import toml
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
@@ -31,3 +32,15 @@ from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
 )
 from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
 from openquake.hazardlib.mfd import multi_mfd
+
+
+def from_toml(string, bin_width):
+    """
+    Convert a TOML string into an MFD instance
+    """
+    [(name, params)] = toml.loads(string).items()
+    cls, *args = multi_mfd.ASSOC[name]
+    kw = {}
+    for param, value in params.items():
+        kw[multi_mfd.TOML2PY[param]] = value
+    return cls(bin_width=bin_width, **kw)
