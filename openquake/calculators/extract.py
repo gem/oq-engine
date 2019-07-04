@@ -29,7 +29,7 @@ from h5py._hl.group import Group
 import numpy
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import group_array, println
+from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -742,12 +742,25 @@ def extract_mfd(dstore, what):
     Display num_ruptures by magnitude for event based calculations.
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd
     """
-    dd = collections.defaultdict(int)
-    for rup in dstore['ruptures']:
-        dd[rup['mag']] += 1
-    dt = numpy.dtype([('mag', float), ('freq', int)])
-    magfreq = numpy.array(sorted(dd.items(), key=operator.itemgetter(0)), dt)
-    return magfreq
+    oq = dstore['oqparam']
+    num_rlzs = len(dstore['weights'])
+    duration = oq.investigation_time * oq.ses_per_logic_tree_path
+    mag = dict(dstore['ruptures']['serial', 'mag'])
+    events = dstore['events'][()]
+    dic = {'duration': duration}
+    for rlz in range(num_rlzs):
+        eids = get_array(events, rlz=rlz)['id']
+        if len(eids) == 0:
+            continue
+        rupids, n_occs = numpy.unique(eids // 2 ** 32, return_counts=True)
+        dd = collections.defaultdict(int)
+        for rupid, n_occ in zip(rupids, n_occs):
+            dd[mag[rupid]] += n_occ
+        dt = numpy.dtype([('mag', float), ('freq', float)])
+        magfreq = numpy.array([
+            (mag, dd[mag] / duration) for mag in sorted(dd)], dt)
+        dic['rlz-%03d' % rlz] = magfreq
+    return ArrayWrapper((), dic)
 
 
 @extract.add('src_loss_table')
