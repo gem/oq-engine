@@ -1079,7 +1079,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     Extract sources from the composite source model
     """
     found = 0
-    to_remove = []
+    to_remove = set()
     for paths in logictree.collect_info(smlt_file).smpaths.values():
         for path in paths:
             logging.info('Reading %s', path)
@@ -1112,7 +1112,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                 with open(path, 'wb') as f:
                     nrml.write([model], f, xmlns=root['xmlns'])
             elif remove:  # remove the files completely reduced
-                to_remove.append(path)
+                to_remove.add(path)
     if found:
         for path in to_remove:
             os.remove(path)

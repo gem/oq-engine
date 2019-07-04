@@ -743,7 +743,8 @@ def extract_mfd(dstore, what):
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd
     """
     oq = dstore['oqparam']
-    weights = dstore['weights'][()]
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    weights = [rlz.weight['default'] for rlz in rlzs]
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     mag = dict(dstore['ruptures']['serial', 'mag'])
     mags = numpy.unique(dstore['ruptures']['mag'])
