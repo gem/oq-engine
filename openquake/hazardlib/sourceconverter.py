@@ -608,14 +608,14 @@ class SourceConverter(RuptureConverter):
                     magnitudes=~mfd_node.magnitudes,
                     occurrence_rates=~mfd_node.occurRates)
             elif mfd_node.tag.endswith('YoungsCoppersmithMFD'):
-                if "totalMomentRate" in mfd_node.attrib.keys():
+                if "totalMomentRate" in mfd_node.attrib:
                     # Return Youngs & Coppersmith from the total moment rate
                     return mfd.YoungsCoppersmith1985MFD.from_total_moment_rate(
                         min_mag=mfd_node["minMag"], b_val=mfd_node["bValue"],
                         char_mag=mfd_node["characteristicMag"],
                         total_moment_rate=mfd_node["totalMomentRate"],
                         bin_width=mfd_node["binWidth"])
-                elif "characteristicRate" in mfd_node.attrib.keys():
+                elif "characteristicRate" in mfd_node.attrib:
                     # Return Youngs & Coppersmith from the total moment rate
                     return mfd.YoungsCoppersmith1985MFD.\
                         from_characteristic_rate(
