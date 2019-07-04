@@ -649,7 +649,8 @@ def store_sm(smodel, filename, monitor):
             srcs = []
             geoms = []
             for src in sg:
-                mfds.add(sourcewriter.tomldump(src.mfd))
+                if hasattr(src, 'mfd'):  # except nonparametric
+                    mfds.add(sourcewriter.tomldump(src.mfd))
                 srcgeom = src.geom()
                 n = len(srcgeom)
                 geom = numpy.zeros(n, point3d)
