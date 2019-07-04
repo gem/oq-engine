@@ -24,6 +24,8 @@ import numpy as np
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib import const
 
+BASE_PATH = os.path.dirname(__file__)
+
 
 class ITA04Base(GMPETable):
     """
@@ -38,45 +40,43 @@ class ITA04Base(GMPETable):
     def __init__(self, gmpe_table):
         """
         """
+        #self._setup_standard_deviations(fle=None)
         super().__init__(gmpe_table=gmpe_table)
+        print(self.__dict__)
+        print(self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Returns the mean and standard deviations
         """
-        print(rctx.mag)
-        # Return Distance Tables
+        # Return imls
         imls = self._return_tables(rctx.mag, imt, "IMLs")
         # Get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, rctx.mag)
         dists = self.distances[:, 0, idx - 1]
         # Get mean and standard deviations
         mean = self._get_mean(imls, dctx, dists)
-        stddevs = self.get_stddevs()
+        stddevs = self.get_stddevs(stddev_types, len(dctx.repi))
         return np.log(mean), stddevs
 
-    def get_stddevs(self, mag, imt, stddev_types, num_sites):
+    def get_stddevs(self, stddev_types, num_sites):
         """
         """
-        tau = self._get_tau(imt, mag)
-        phi = self._get_phi(imt, mag)
-        sigma = np.sqrt(tau ** 2. + phi ** 2.)
         stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
+                raise ValueError("Unsupported sigma type")
         return stddevs
 
 
 class AmbraseysEtAl1996Normal(ITA04Base):
     """
     """
-    TABLE_PATH = os.path.abspath("./ita04_tables/asb96_normal.hdf5")
+    path = "./ita04_tables/asb96_normal.hdf5"
+    TABLE_PATH = os.path.abspath(os.path.join(BASE_PATH, path))
 
     def __init__(self):
         if not self.TABLE_PATH:
