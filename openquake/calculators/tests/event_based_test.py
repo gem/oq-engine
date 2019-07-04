@@ -223,6 +223,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd')
         self.assertEqual(aw.duration, 30)  # 30 years
+        aae(aw.magnitudes, [4.7, 4.8, 4.9], decimal=6)
+        aae(aw.mean_frequencies, [0.006667, 0.01, 0.023333], decimal=6)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights

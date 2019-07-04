@@ -743,24 +743,25 @@ def extract_mfd(dstore, what):
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd
     """
     oq = dstore['oqparam']
-    num_rlzs = len(dstore['weights'])
+    weights = dstore['weights'][()]
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     mag = dict(dstore['ruptures']['serial', 'mag'])
+    mags = numpy.unique(dstore['ruptures']['mag'])
+    mags.sort()
+    magidx = {mag: idx for idx, mag in enumerate(mags)}
+    occurrences = numpy.zeros((len(mags), len(weights)), numpy.uint32)
     events = dstore['events'][()]
-    dic = {'duration': duration}
-    for rlz in range(num_rlzs):
+    dic = {'duration': duration, 'magnitudes': mags,
+           'mean_frequencies': numpy.zeros(len(mags))}
+    for rlz, weight in enumerate(weights):
         eids = get_array(events, rlz=rlz)['id']
         if len(eids) == 0:
             continue
         rupids, n_occs = numpy.unique(eids // 2 ** 32, return_counts=True)
-        dd = collections.defaultdict(int)
         for rupid, n_occ in zip(rupids, n_occs):
-            dd[mag[rupid]] += n_occ
-        dt = numpy.dtype([('mag', float), ('freq', float)])
-        magfreq = numpy.array([
-            (mag, dd[mag] / duration) for mag in sorted(dd)], dt)
-        dic['rlz-%03d' % rlz] = magfreq
-    return ArrayWrapper((), dic)
+            occurrences[magidx[mag[rupid]], rlz] += n_occ
+        dic['mean_frequencies'] += occurrences[:, rlz] * weight / duration
+    return ArrayWrapper(occurrences, dic)
 
 
 @extract.add('src_loss_table')
