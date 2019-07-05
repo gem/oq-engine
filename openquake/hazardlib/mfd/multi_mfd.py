@@ -36,8 +36,8 @@ ASSOC = {
     'truncGutenbergRichterMFD': (
         TruncatedGRMFD, 'min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val'),
     'YoungsCoppersmithMFD': (
-        YoungsCoppersmith1985MFD, 'min_mag', 'max_mag', 'a_val', 'b_val',
-        'char_mag', 'char_rate', 'bin_width')}
+        YoungsCoppersmith1985MFD, 'min_mag', 'max_mag', 'b_val',
+        'char_mag', 'char_rate', 'bin_width', 'total_moment_rate')}
 
 ALIAS = dict(min_mag='minMag', max_mag='maxMag',
              a_val='aValue', b_val='bValue', bin_width='binWidth',
