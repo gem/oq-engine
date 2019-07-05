@@ -41,10 +41,10 @@ def from_toml(string, bin_width):
     [(name, params)] = toml.loads(string).items()
     if name == 'multiMFD':
         return multi_mfd.MultiMFD.from_params(params, bin_width)
-    cls, *args = multi_mfd.ASSOC[name]
+    cls, *required = multi_mfd.ASSOC[name]
     kw = {}
     for param, value in params.items():
         kw[multi_mfd.TOML2PY.get(param, param)] = value
-    if bin_width not in kw:
+    if 'bin_width' in required and bin_width not in kw:
         kw['bin_width'] = bin_width
     return cls(**kw)
