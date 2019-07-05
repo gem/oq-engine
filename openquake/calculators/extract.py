@@ -762,10 +762,10 @@ def extract_mfd(dstore, what):
             frequencies[magidx[mag], sm_idx[grp_id]] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
     if kind_mean:
-        dic['mean_frequencies'] = numpy.array([dd[mag] for mag in mags])
+        dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
     if kind_individual:
         for sm_id, freqs in enumerate(frequencies.T):
-            dic['sm%d_frequencies' % sm_id] = freqs
+            dic['sm%d_frequency' % sm_id] = freqs
     return ArrayWrapper((), dic)
 
 # NB: this is an alternative, slower approach giving exactly the same numbers;

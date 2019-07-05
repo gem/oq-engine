@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a way to compute and plot the MFD coming from an event based
   * Storing the MFDs in TOML format inside the datastore
 
   [Robin Gee]
