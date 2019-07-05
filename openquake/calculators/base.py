@@ -410,8 +410,8 @@ class HazardCalculator(BaseCalculator):
                 logging.info(res)
             # sanity check: the stored MFDs can be read again
             # uncomment this when adding a new MFD class
-            for s in self.datastore['source_mfds']:
-                mfd.from_toml(s, oq.width_of_mfd_bin)
+            # for s in self.datastore['source_mfds']:
+            #     mfd.from_toml(s, oq.width_of_mfd_bin)
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
