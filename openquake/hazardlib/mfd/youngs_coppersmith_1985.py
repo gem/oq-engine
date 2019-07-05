@@ -78,14 +78,46 @@ class YoungsCoppersmith1985MFD(BaseMFD):
 
     MODIFICATIONS = set()
 
-    def __init__(self, min_mag, a_val, b_val, char_mag, char_rate, bin_width):
+    def __init__(self, min_mag, b_val, char_mag, char_rate, bin_width,
+                 total_moment_rate=None):
+        if total_moment_rate is not None:
+            beta = b_val * numpy.log(10)
+            mu = char_mag + DELTA_CHAR / 2
+            m0 = min_mag
+
+            # seismic moment (in Nm) for the maximum magnitude
+            c = 1.5
+            d = 9.05
+            mo_u = 10 ** (c * mu + d)
+
+            # equations (16) and (17) solved for N(min_mag) and N(char_mag)
+            c1 = numpy.exp(-beta * (mu - m0 - 0.5))
+            c2 = numpy.exp(-beta * (mu - m0 - 1.5))
+            c3 = beta * c2 / (2 * (1 - c1) + beta * c2)
+            c4 = (b_val * (10 ** (-c / 2)) / (c - b_val)) + \
+                 (b_val * numpy.exp(beta) * (1 - (10 ** (-c / 2))) / c)
+            n_min_mag = (1 - c1) * total_moment_rate / (
+                (1 - c3) * c1 * mo_u * c4)
+            char_rate = c3 * n_min_mag
+
+            a_val = numpy.log10(
+                (n_min_mag - char_rate) /
+                (10 ** (- b_val * min_mag) -
+                 10 ** (- b_val * (char_mag - 0.25))))
+        elif char_rate is not None:
+            a_incr = b_val * (char_mag - 1.25) + numpy.log10(
+                char_rate / DELTA_CHAR)
+            a_val = a_incr - numpy.log10(b_val * numpy.log(10))
+        else:
+            raise ValueError('Either `char_rate` or `total_moment_rate` must '
+                             'be not None')
+
         self.min_mag = min_mag
         self.a_val = a_val
         self.b_val = b_val
         self.char_mag = char_mag
         self.char_rate = char_rate
         self.bin_width = bin_width
-
         self.check_constraints()
 
     def get_min_max_mag(self):
@@ -119,16 +151,16 @@ class YoungsCoppersmith1985MFD(BaseMFD):
 
           and ``m' - 1 = char_mag - 1.25``
         """
-        if not self.min_mag > 0:
+        if self.min_mag <= 0:
             raise ValueError('minimum magnitude must be positive')
 
-        if not self.b_val > 0:
+        if self.b_val <= 0:
             raise ValueError('b value must be positive')
 
-        if not self.char_mag > 0:
+        if self.char_mag <= 0:
             raise ValueError('characteristic magnitude must be positive')
 
-        if not self.char_rate > 0:
+        if self.char_rate is not None and self.char_rate <= 0:
             raise ValueError('characteristic rate must be positive')
 
         if not 0 < self.bin_width <= DELTA_CHAR:
@@ -209,30 +241,8 @@ class YoungsCoppersmith1985MFD(BaseMFD):
         just before converting a function to a histogram.
         See :meth:`_get_min_mag_and_num_bins`.
         """
-        beta = b_val * numpy.log(10)
-        mu = char_mag + DELTA_CHAR / 2
-        m0 = min_mag
-
-        # seismic moment (in Nm) for the maximum magnitude
-        c = 1.5
-        d = 9.05
-        mo_u = 10 ** (c * mu + d)
-
-        # equations (16) and (17) solved for N(min_mag) and N(char_mag)
-        c1 = numpy.exp(-beta * (mu - m0 - 0.5))
-        c2 = numpy.exp(-beta * (mu - m0 - 1.5))
-        c3 = beta * c2 / (2 * (1 - c1) + beta * c2)
-        c4 = (b_val * (10 ** (-c / 2)) / (c - b_val)) + \
-             (b_val * numpy.exp(beta) * (1 - (10 ** (-c / 2))) / c)
-        n_min_mag = (1 - c1) * total_moment_rate / ((1 - c3) * c1 * mo_u * c4)
-        n_char_mag = c3 * n_min_mag
-
-        a_val = numpy.log10(
-            (n_min_mag - n_char_mag) /
-            (10 ** (- b_val * min_mag) - 10 ** (- b_val * (char_mag - 0.25)))
-        )
-
-        return cls(min_mag, a_val, b_val, char_mag, n_char_mag, bin_width)
+        return cls(min_mag, b_val, char_mag, None, bin_width,
+                   total_moment_rate)
 
     @classmethod
     def from_characteristic_rate(cls, min_mag, b_val, char_mag, char_rate,
@@ -280,11 +290,7 @@ class YoungsCoppersmith1985MFD(BaseMFD):
         just before converting a function to a histogram.
         See :meth:`_get_min_mag_and_num_bins`.
         """
-        a_incr = b_val * (char_mag - 1.25) + numpy.log10(char_rate /
-                                                         DELTA_CHAR)
-        a_val = a_incr - numpy.log10(b_val * numpy.log(10))
-
-        return cls(min_mag, a_val, b_val, char_mag, char_rate, bin_width)
+        return cls(min_mag, b_val, char_mag, char_rate, bin_width)
 
     def _get_rate(self, mag):
         """
