@@ -1,3 +1,7 @@
+  [Chris Van Houtte]
+  * Adds the Van Houtte et al. (2018) significant duration model for New
+    Zealand
+
   [Michele Simionato]
   * Added a way to compute and plot the MFD coming from an event based
   * Storing the MFDs in TOML format inside the datastore
