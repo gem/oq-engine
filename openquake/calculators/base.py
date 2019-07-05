@@ -30,7 +30,7 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import mfd, InvalidFile
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
@@ -408,6 +408,10 @@ class HazardCalculator(BaseCalculator):
                          'ruptures')
             if res:
                 logging.info(res)
+            # sanity check: the stored MFDs can be read again
+            # uncomment this when adding a new MFD class
+            for s in self.datastore['source_mfds']:
+                mfd.from_toml(s, oq.width_of_mfd_bin)
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
