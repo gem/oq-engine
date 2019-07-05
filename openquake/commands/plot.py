@@ -218,19 +218,25 @@ def make_figure_event_based_mfd(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
 
-    [ex] = extractors
-    eb = ex.get('event_based_mfd')
-    fig, ax = plt.subplots()
-    ax.grid(True)
-    ax.set_xlabel('magnitude')
-    ax.set_ylabel('annual frequency')
-    ax.plot(eb.magnitudes, eb.mean_frequencies, label='got')
-    mfds = ex.get('source_mfds').array
-    if len(mfds) == 1:
-        expected = mfd.from_toml(mfds[0], ex.oqparam.width_of_mfd_bin)
-        magnitudes, frequencies = zip(*expected.get_annual_occurrence_rates())
-        ax.plot(magnitudes, frequencies, label='expected')
-    ax.legend()
+    num_plots = len(extractors)
+    fig = plt.figure()
+    for i, ex in enumerate(extractors):
+        mfd_dict = ex.get(what).to_dict()
+        mags = mfd_dict.pop('magnitudes')
+        duration = mfd_dict.pop('duration')
+        ax = fig.add_subplot(1, num_plots, i + 1)
+        ax.grid(True)
+        ax.set_xlabel('magnitude')
+        ax.set_ylabel('annual frequency [on %dy]' % duration)
+        for label, freqs in mfd_dict.items():
+            ax.plot(mags, freqs, label=label)
+        mfds = ex.get('source_mfds').array
+        if len(mfds) == 1:
+            expected = mfd.from_toml(mfds[0], ex.oqparam.width_of_mfd_bin)
+            magnitudes, frequencies = zip(
+                *expected.get_annual_occurrence_rates())
+            ax.plot(magnitudes, frequencies, label='expected')
+        ax.legend()
     return plt
 
 
