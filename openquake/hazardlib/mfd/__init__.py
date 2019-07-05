@@ -39,8 +39,12 @@ def from_toml(string, bin_width):
     Convert a TOML string into an MFD instance
     """
     [(name, params)] = toml.loads(string).items()
-    cls, *args = multi_mfd.ASSOC[name]
+    if name == 'multiMFD':
+        return multi_mfd.MultiMFD.from_params(params, bin_width)
+    cls, *required = multi_mfd.ASSOC[name]
     kw = {}
     for param, value in params.items():
-        kw[multi_mfd.TOML2PY[param]] = value
-    return cls(bin_width=bin_width, **kw)
+        kw[multi_mfd.TOML2PY.get(param, param)] = value
+    if 'bin_width' in required and bin_width not in kw:
+        kw['bin_width'] = bin_width
+    return cls(**kw)
