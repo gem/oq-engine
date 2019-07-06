@@ -88,6 +88,10 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
 
 
 class SourceModelFactory(object):
+    """
+    A class able to build source models from the logic tree and to store
+    them inside the `source_info` dataset.
+    """
     def __init__(self, oqparam, gsim_lt, source_model_lt, monitor,
                  in_memory=True, srcfilter=None):
         self.oqparam = oqparam
