@@ -303,6 +303,7 @@ class SourceModelFactory(object):
         for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
             if 'ucerf' in dic:
                 sg = copy.copy(dic['ucerf'])
+                sm.src_groups = [sg]
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
                 src.src_group_id = grp_id
