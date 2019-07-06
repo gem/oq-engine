@@ -28,7 +28,8 @@ from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
-from openquake.commonlib import calc, util, readinput
+from openquake.commonlib import calc, util
+from openquake.commonlib.source_model_factory import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -81,7 +82,7 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
     ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     if ss:
         splits, stime = split_sources(srcs)
-        srcs = readinput.random_filtered_sources(splits, srcfilter, ss)
+        srcs = random_filtered_sources(splits, srcfilter, ss)
         yield classical(srcs, srcfilter, gsims, params, monitor)
         return
     # NB: splitting all the sources improves the distribution significantly,
