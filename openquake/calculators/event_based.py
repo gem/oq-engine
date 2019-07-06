@@ -127,10 +127,6 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         gsims_by_trt = self.csm.gsim_lt.values
-
-        def weight_src(src):
-            return src.num_ruptures
-
         logging.info('Building ruptures')
         smap = parallel.Starmap(
             self.build_ruptures.__func__, monitor=self.monitor())
@@ -147,8 +143,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 if sg.atomic:  # do not split the group
                     smap.submit(sg, self.src_filter, par)
                 else:  # traditional groups
-                    for block in self.block_splitter(
-                            sg.sources, weight_src, by_grp):
+                    for block in self.block_splitter(sg.sources, key=by_grp):
                         if 'ucerf' in oq.calculation_mode:
                             for i in range(oq.ses_per_logic_tree_path):
                                 par['ses_seeds'] = [
