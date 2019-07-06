@@ -337,4 +337,3 @@ class SourceModelFactory(object):
         if self.changes:
             logging.info('Applied %d changes to the composite source model',
                          self.changes)
-
