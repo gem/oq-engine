@@ -585,6 +585,7 @@ class SourceModelFactory(object):
     def __init__(self):
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changes = 0
+        self.mfds = set()  # set of toml strings
 
     def __call__(self, fname, sm, apply_uncertainties, investigation_time):
         """
@@ -614,6 +615,53 @@ class SourceModelFactory(object):
         self.fname_hits[fname] += 1
         return newsm
 
+    def store_sm(self, smodel, filename, monitor):
+        """
+        :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
+        :param filename: path to an hdf5 file (cache_XXX.hdf5)
+        :param monitor: a Monitor instance with an .hdf5 attribute
+        """
+        h5 = monitor.hdf5
+        with monitor('store source model'):
+            sources = h5['source_info']
+            source_geom = h5['source_geom']
+            gid = len(source_geom)
+            for sg in smodel:
+                if filename:
+                    with hdf5.File(filename, 'r+') as hdf5cache:
+                        hdf5cache['grp-%02d' % sg.id] = sg
+                srcs = []
+                geoms = []
+                for src in sg:
+                    if hasattr(src, 'mfd'):  # except nonparametric
+                        mfdi = len(self.mfds)
+                        self.mfds.add(sourcewriter.tomldump(src.mfd))
+                    else:
+                        mfdi = -1
+                    srcgeom = src.geom()
+                    n = len(srcgeom)
+                    geom = numpy.zeros(n, point3d)
+                    geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
+                    if len(geom) > 1:  # more than a point source
+                        msg = 'source %s' % src.source_id
+                        try:
+                            geo.utils.check_extent(
+                                geom['lon'], geom['lat'], msg)
+                        except ValueError as err:
+                            logging.error(str(err))
+                    dic = {k: v for k, v in vars(src).items()
+                           if k != 'id' and k != 'src_group_id'}
+                    src.checksum = zlib.adler32(pickle.dumps(dic))
+                    srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
+                                 mfdi, src.num_ruptures, 0, 0, 0,
+                                 src.checksum))
+                    geoms.append(geom)
+                    gid += n
+                if geoms:
+                    hdf5.extend(source_geom, numpy.concatenate(geoms))
+                if sources:
+                    hdf5.extend(sources, numpy.array(srcs, source_info_dt))
+
 
 source_info_dt = numpy.dtype([
     ('grp_id', numpy.uint16),          # 0
@@ -628,57 +676,6 @@ source_info_dt = numpy.dtype([
     ('weight', numpy.float32),         # 9
     ('checksum', numpy.uint32),        # 10
 ])
-
-
-def store_sm(smodel, filename, monitor):
-    """
-    :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
-    :param filename: path to an hdf5 file (cache_XXX.hdf5)
-    :param monitor: a Monitor instance with an .hdf5 attribute
-    """
-    h5 = monitor.hdf5
-    with monitor('store source model'):
-        mfds = set()  # set of toml strings
-        sources = h5['source_info']
-        source_geom = h5['source_geom']
-        mfd = h5['source_mfds']
-        mfdi = len(mfd)
-        gid = len(source_geom)
-        for sg in smodel:
-            if filename:
-                with hdf5.File(filename, 'r+') as hdf5cache:
-                    hdf5cache['grp-%02d' % sg.id] = sg
-            srcs = []
-            geoms = []
-            for src in sg:
-                if hasattr(src, 'mfd'):  # except nonparametric
-                    mfds.add(sourcewriter.tomldump(src.mfd))
-                    mfdidx = mfdi
-                    mfdi += 1
-                else:
-                    mfdidx = -1
-                srcgeom = src.geom()
-                n = len(srcgeom)
-                geom = numpy.zeros(n, point3d)
-                geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
-                if len(geom) > 1:  # more than a point source
-                    msg = 'source %s' % src.source_id
-                    try:
-                        geo.utils.check_extent(geom['lon'], geom['lat'], msg)
-                    except ValueError as err:
-                        logging.error(str(err))
-                dic = {k: v for k, v in vars(src).items()
-                       if k != 'id' and k != 'src_group_id'}
-                src.checksum = zlib.adler32(pickle.dumps(dic))
-                srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             mfdidx, src.num_ruptures, 0, 0, 0, src.checksum))
-                geoms.append(geom)
-                gid += n
-            if geoms:
-                hdf5.extend(source_geom, numpy.concatenate(geoms))
-            if sources:
-                hdf5.extend(sources, numpy.array(srcs, source_info_dt))
-        hdf5.extend(mfd, numpy.array(list(mfds), hdf5.vstr))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
@@ -784,7 +781,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                     grp_id += 1
                     src_groups.append(sg)
                 if monitor.hdf5:
-                    store_sm(newsm, filename, monitor)
+                    make_sm.store_sm(newsm, filename, monitor)
             else:  # just collect the TRT models
                 groups = logictree.read_source_groups(fname)
                 for group in groups:
@@ -823,6 +820,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         idist = gsim_lt.get_integration_distance(mags_by_trt, oqparam)
         monitor.hdf5['integration_distance'] = idist
         monitor.hdf5.set_nbytes('integration_distance')
+        hdf5.extend(monitor.hdf5['source_mfds'],
+                    numpy.array(list(make_sm.mfds), hdf5.vstr))
 
     # log if some source file is being used more than once
     dupl = 0
