@@ -21,4 +21,5 @@ Contents:
    parametric-gmpes
    parallelization
    special-features
+   risk-features
    multipoint
