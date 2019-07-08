@@ -37,7 +37,8 @@ from collections import namedtuple
 import toml
 import numpy
 from openquake.baselib import hdf5, node, python3compat
-from openquake.baselib.general import groupby, group_array, duplicated
+from openquake.baselib.general import (groupby, group_array, duplicated,
+                                       add_defaults)
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -1677,7 +1678,8 @@ def taxonomy_mapping(filename, taxonomies):
     if filename is None:  # trivial mapping
         return (), [[(taxo, 1)] for taxo in taxonomies]
     dic = {}  # taxonomy index -> risk taxonomy
-    arr = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
+    array = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
+    arr = add_defaults(array, weight=1.)
     assert arr.dtype.names == ('taxonomy', 'conversion', 'weight')
     dic = group_array(arr, 'taxonomy')
     taxonomies = taxonomies[1:]  # strip '?'
