@@ -36,7 +36,6 @@ Here is an example of trivial GMPE logic tree, in its XML input representation:
    <nrml xmlns:gml="http://www.opengis.net/gml"
         xmlns="http://openquake.org/xmlns/nrml/0.4">
       <logicTree logicTreeID='lt1'>
-          <logicTreeBranchingLevel branchingLevelID="bl1">
               <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                       applyToTectonicRegionType="active shallow crust">
   
@@ -46,7 +45,6 @@ Here is an example of trivial GMPE logic tree, in its XML input representation:
                   </logicTreeBranch>
   
               </logicTreeBranchSet>
-          </logicTreeBranchingLevel>
       </logicTree>
    </nrml>
 

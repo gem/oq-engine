@@ -20,5 +20,5 @@ Contents:
    extract-api
    parametric-gmpes
    parallelization
-   equivalent_distance_approximation
+   special-features
    multipoint
