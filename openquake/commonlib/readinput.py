@@ -112,7 +112,8 @@ def unzip_rename(zpath, name):
         for nam in archive.namelist():
             fname = os.path.join(dpath, nam)
             if os.path.exists(fname):  # already unzipped
-                logging.warning('Using %s instead of the file in %s',
+                os.rename(fname, fname + '.bak')
+                logging.warning('Overriding %s with the file in %s',
                                 fname, zpath)
         logging.info('Unzipping %s', zpath)
         archive.extractall(dpath)
