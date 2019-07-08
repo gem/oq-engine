@@ -1,9 +1,50 @@
-Special features of the classical calculator
+Special features of the engine
 ============================================
 
-There are few rarely used feature of the classical calculator that are not
+There are few rarely used feature of the engine that are not
 documented in the manual, since their usage is quite specific. They are
 documented here.
+
+GMPE logic trees with `minimum_distance`
+-------------------------------------------
+
+GMPEs have a range of validity. In particular they may give wrong
+results for points too close to the rupture. To avoid this problem
+some GSIMs in hazardlib have a minimum distance cutoff: for distances
+below the ``minimum_distance`` they give always the same result, which
+is the value at the minimum distance. The ``minimum_distance`` is
+normally provided by the author of the GSIMs, but it is somewhat
+heuristic. It may be useful to experiment with different values of the
+``minimum_distance``, to see how the hazard and risk change.  It would
+be too inconvenient to have to change the source code of the GSIM
+every time. Instead, the user can specify a ``minimum_distance``
+attribute in the GSIM logic tree branch that will take precedence over
+the one in hazardlib.  Here is an example:
+
+.. code-block:: xml
+         
+      <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                          applyToTectonicRegionType="Subduction Deep">
+        
+         <logicTreeBranch branchID="b1">
+           <uncertaintyModel minimum_distance="10">
+             LinLee2008SSlab
+           </uncertaintyModel>
+           <uncertaintyWeight>0.60</uncertaintyWeight>
+         </logicTreeBranch>
+           
+         <logicTreeBranch branchID="b2">
+           <uncertaintyModel minimum_distance="5">
+             YoungsEtAl1997SSlab
+           </uncertaintyModel>
+           <uncertaintyWeight>0.40</uncertaintyWeight>
+         </logicTreeBranch>
+       </logicTreeBranchSet>
+
+Most GSIMs do not have a ``minimum_distance`` parameter in hazardlib,
+which is equivalent to say that the minimum distance is zero. Even for
+them, however, it is possible to set a minimum distance in the logic
+tree in order to perform sensitivity experiments at small distances.
 
 GMPE logic trees with weighted IMTs
 -------------------------------------------
