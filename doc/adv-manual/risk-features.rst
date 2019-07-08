@@ -17,11 +17,13 @@ kind of woods, but only a generic risk function for wood.
 We may encode such information into a `taxonomy_mapping.csv`
 file like the following:
 
-taxonomy   | conversion
------------|-----------
-Wood Type A| Wood
-Wood Type B| Wood
-Wood Type C| Wood
+----------- -----------
+taxonomy     conversion
+----------- -----------
+Wood Type A  Wood
+Wood Type B  Wood
+Wood Type C  Wood
+----------- ------------
 
 Using an external file is convenient, because we can avoid changing the
 original exposure. If in the future we will be able to get specific
@@ -39,11 +41,13 @@ what it his precise taxonomy, so we just use a generic "Wood"
 taxonomy in the exposure. We may encode the weight information into a
 `taxonomy_mapping.csv` file like the following:
 
-taxonomy | conversion | weight
----------|------------|-------
-Wood     | Wood Type A| 0.2
-Wood     | Wood Type B| 0.3
-Wood     | Wood Type C| 0.5
+--------- ------------ -------
+taxonomy   conversion   weight
+--------- ------------ -------
+Wood       Wood Type A  0.2
+Wood       Wood Type B  0.3
+Wood       Wood Type C  0.5
+--------- ------------ -------
 
 The engine will read such file and when performing the risk calculation
 will use all three kinds of risk functions and compute a single result
