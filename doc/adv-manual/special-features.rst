@@ -22,17 +22,6 @@ Here is an example:
 .. code-block:: xml
 
     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-            applyToTectonicRegionType="DeepSeismicity">
-        <logicTreeBranch branchID="YoungsEtAl1997SSlab">
-            <uncertaintyModel>YoungsEtAl1997SSlab</uncertaintyModel>
-            <uncertaintyWeight>1.0</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">1.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">1.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">1.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">1.0</uncertaintyWeight>
-        </logicTreeBranch>
-    </logicTreeBranchSet>
-    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
             applyToTectonicRegionType="Volcanic">
         <logicTreeBranch branchID="BooreEtAl1997GeometricMean">
             <uncertaintyModel>BooreEtAl1997GeometricMean</uncertaintyModel>
@@ -67,6 +56,13 @@ Here is an example:
             <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
         </logicTreeBranch>
     </logicTreeBranchSet>        
+
+Clearly the weights for each IMT must sum up to 1, otherwise the engine
+will complain. Note that this feature only works for the classical and
+disaggregation calculators: in the event based case only the default
+`uncertaintyWeight` (i.e. the first in the list of weights, the one
+without `imt` attribute) would be taken for all IMTs.
+
 
 Equivalent Epicenter Distance Approximation
 -------------------------------------------
