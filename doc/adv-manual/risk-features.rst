@@ -23,7 +23,7 @@ taxonomy     conversion
 Wood Type A  Wood
 Wood Type B  Wood
 Wood Type C  Wood
-=========== ============
+=========== ===========
 
 Using an external file is convenient, because we can avoid changing the
 original exposure. If in the future we will be able to get specific
