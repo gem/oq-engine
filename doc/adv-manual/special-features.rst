@@ -30,7 +30,7 @@ Here is an example:
             <uncertaintyWeight imt="SA(0.5)">1.0</uncertaintyWeight>
             <uncertaintyWeight imt="SA(1.0)">1.0</uncertaintyWeight>
             <uncertaintyWeight imt="SA(2.0)">1.0</uncertaintyWeight>
-            </logicTreeBranch>
+        </logicTreeBranch>
     </logicTreeBranchSet>
     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
             applyToTectonicRegionType="Volcanic">
