@@ -1,5 +1,27 @@
+Special features of the classical calculator
+============================================
+
+There are few rarely used feature of the classical calculator that are not
+documented in the manual, since their usage is quite specific. They are
+documented here.
+
+GMPE logic trees with weighted IMTs
+-------------------------------------------
+
+Our Canadian users asked us to implement GMPEs with a different weight per
+each IMT. For instance you could have a GMPE applicable to PGA with a certain
+level of uncertainty to SA(0.1) with another and to SA(1.0) with still
+another one. The user may want to give an higher weight to the IMT were the
+GMPE has a small uncertainty and a lower weight to the IMT with a large
+uncertainty. More the GMPE could not even be applicable for say SA(2.0)
+and in that case the user can assign to it a zero weight, to ignore it.
+This is useful when you have a logic tree with multiple GMPEs, some of
+which are applicable for some IMTs and not for others.
+
+
+
 Equivalent Epicenter Distance Approximation
-===========================================
+-------------------------------------------
 
 The equivalent epicenter distance approximation (``reqv`` for short)
 was introduced in engine 3.2 to enable the comparison of the OpenQuake
