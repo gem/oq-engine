@@ -1170,13 +1170,10 @@ def add_defaults(array, **kw):
     for k, v in kw.items():
         if k not in array.dtype.names:
             dtlist.append((k, type(v)))
-    tuples = []
-    for rec in array:
-        lst = []
-        for name in array.dtype.names:
-            lst.append(rec[name])
-        for k, v in kw.items():
-            if k not in array.dtype.names:
-                lst.append(v)
-        tuples.append(tuple(lst))
-    return numpy.array(tuples, dtlist)
+    new = numpy.zeros(array.shape, dtlist)
+    for name in array.dtype.names:
+        new[name] = array[name]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            new[k] = v
+    return new
