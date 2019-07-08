@@ -744,7 +744,7 @@ def extract_mfd(dstore, what):
     oq = dstore['oqparam']
     qdic = parse(what)
     kind_mean = 'mean' in qdic.get('kind', [])
-    kind_individual = 'individual' in qdic.get('kind', [])
+    kind_by_group = 'by_group' in qdic.get('kind', [])
     weights = dstore['csm_info/sm_data']['weight']
     sm_idx = dstore['csm_info/sg_data']['sm_id']
     grp_weight = weights[sm_idx]
@@ -754,18 +754,19 @@ def extract_mfd(dstore, what):
     rups = dstore['ruptures']['grp_id', 'mag', 'n_occ']
     mags = sorted(numpy.unique(rups['mag']))
     magidx = {mag: idx for idx, mag in enumerate(mags)}
-    frequencies = numpy.zeros((len(mags), sm_idx.max() + 1), float)
+    num_groups = rups['grp_id'].max() + 1
+    frequencies = numpy.zeros((len(mags), num_groups), float)
     for grp_id, mag, n_occ in rups:
         if kind_mean:
             dd[mag] += n_occ * grp_weight[grp_id] / duration
-        if kind_individual:
-            frequencies[magidx[mag], sm_idx[grp_id]] += n_occ / duration
+        if kind_by_group:
+            frequencies[magidx[mag], grp_id] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
     if kind_mean:
         dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
-    if kind_individual:
-        for sm_id, freqs in enumerate(frequencies.T):
-            dic['sm%d_frequency' % sm_id] = freqs
+    if kind_by_group:
+        for grp_id, freqs in enumerate(frequencies.T):
+            dic['grp-%02d_frequency' % grp_id] = freqs
     return ArrayWrapper((), dic)
 
 # NB: this is an alternative, slower approach giving exactly the same numbers;
