@@ -19,7 +19,7 @@ This is useful when you have a logic tree with multiple GMPEs, some of
 which are applicable for some IMTs and not for others.
 Here is an example:
 
--- code-block:: xml
+.. code-block:: xml
 
     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
             applyToTectonicRegionType="DeepSeismicity">
