@@ -3,11 +3,11 @@ event based hazard
 
 ============== ===================
 checksum32     2,390,181,475      
-date           2019-02-18T08:36:56
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:56
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 1, num_levels = 1
+num_sites = 1, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -42,12 +42,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -56,11 +54,11 @@ tax1     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.0        0.0       1         0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      1         S    0     2     482          0.0       0.0       0.0    2,786,737,502
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -74,24 +72,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00662 NaN    0.00662 0.00662 1      
-only_filter        0.00393 NaN    0.00393 0.00393 1      
+read_source_models 0.00788 NaN    0.00788 0.00788 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=313 B fnames=114 B            1.49 KB 
-only_filter        srcs=1.12 KB srcfilter=253 B dummy=14 B 1.2 KB  
-================== ======================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=313 B fnames=114 B 1.5 KB  
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00662   0.0       1     
-total only_filter        0.00393   1.35156   1     
-reading exposure         6.478E-04 0.0       1     
+total read_source_models 0.00788   0.0       1     
+reading exposure         5.467E-04 0.0       1     
 ======================== ========= ========= ======

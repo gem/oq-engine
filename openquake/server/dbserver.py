@@ -70,9 +70,9 @@ class DbServer(object):
                     continue
                 try:
                     func = getattr(actions, cmd)
-                except AttributeError:
-                    sock.send('Invalid command ' + cmd)
-                else:
+                except AttributeError:  # SQL string
+                    sock.send(safely_call(self.db, (cmd,) + args))
+                else:  # action
                     sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
@@ -182,7 +182,7 @@ def ensure_on():
 
 @sap.script
 def run_server(dbpath=os.path.expanduser(config.dbserver.file),
-               dbhostport=None, loglevel='WARN'):
+               dbhostport=None, loglevel='WARN', foreground=False):
     """
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
@@ -210,6 +210,11 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel))
+    if hasattr(os, 'fork') and not (config.dbserver.multi_user or foreground):
+        # needed for https://github.com/gem/oq-engine/issues/3211
+        # but only if multi_user = False, otherwise init/supervisor
+        # will loose control of the process
+        detach_process()
     DbServer(db, addr).start()  # expects to be killed with CTRL-C
 
 
@@ -218,9 +223,4 @@ run_server.arg('dbhostport', 'dbhost:port')
 run_server.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':
-    if hasattr(os, 'fork') and not config.dbserver.multi_user:
-        # needed for https://github.com/gem/oq-engine/issues/3211
-        # but only if multi_user = False, otherwise init/supervisor
-        # will loose control of the process
-        detach_process()
     run_server.callfunc()

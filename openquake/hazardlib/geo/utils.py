@@ -40,6 +40,7 @@ DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geodetic.EARTH_RADIUS
 spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
+MAX_EXTENT = 5000  # km, decided by M. Simionato
 
 
 def angular_distance(km, lat, lat2=None):
@@ -101,7 +102,7 @@ class _GeographicObjects(object):
         :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :returns: (filtered site collection, filtered objects)
+        :returns: filtered site collection, filtered objects, discarded
         """
         assert mode in 'strict warn filter', mode
         dic = {}
@@ -140,7 +141,7 @@ class _GeographicObjects(object):
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
         :param asset_ref: ID of the assets are a list of strings
-        :returns: (filtered site collection, filtered assets by site)
+        :returns: filtered site collection, filtered assets by site, discarded
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
@@ -262,6 +263,33 @@ def get_longitudinal_extent(lon1, lon2):
         valid parameters values.
     """
     return (lon2 - lon1 + 180) % 360 - 180
+
+
+def check_extent(lons, lats, msg=''):
+    """
+    :param lons: an array of longitudes (more than one)
+    :param lats: an array of latitudes (more than one)
+    :params msg: message to display in case of too large extent
+    :returns: (dx, dy, dz) in km (rounded)
+    """
+    l1 = len(lons)
+    l2 = len(lats)
+    if l1 < 2:
+        raise ValueError('%s: not enough lons: %s' % (msg, lons))
+    elif l2 < 2:
+        raise ValueError('%s: not enough lats: %s' % (msg, lats))
+    elif l1 != l2:
+        raise ValueError('%s: wrong number of lons, lats: (%d, %d)' %
+                         (msg, l1, l2))
+
+    xs, ys, zs = spherical_to_cartesian(lons, lats).T  # (N, 3) -> (3, N)
+    dx = xs.max() - xs.min()
+    dy = ys.max() - ys.min()
+    dz = zs.max() - zs.min()
+    # the goal is to forbid sources absurdely large due to wrong coordinates
+    if dx > MAX_EXTENT or dy > MAX_EXTENT or dz > MAX_EXTENT:
+        raise ValueError('%s: too large: %d km' % (msg, max(dx, dy, dz)))
+    return int(dx), int(dy), int(dz)
 
 
 def get_bounding_box(obj, maxdist):
@@ -572,49 +600,6 @@ def cross_idl(lon1, lon2, *lons):
     # a line crosses the international date line if the end positions
     # have different sign and they are more than 180 degrees longitude apart
     return l1 * l2 < 0 and abs(l1 - l2) > 180
-
-
-def normalize_lons(l1, l2):
-    """
-    An international date line safe way of returning a range of longitudes.
-
-    >>> normalize_lons(20, 30)  # no IDL within the range
-    [(20, 30)]
-    >>> normalize_lons(-17, +17)  # no IDL within the range
-    [(-17, 17)]
-    >>> normalize_lons(-178, +179)
-    [(-180, -178), (179, 180)]
-    >>> normalize_lons(178, -179)
-    [(-180, -179), (178, 180)]
-    >>> normalize_lons(179, -179)
-    [(-180, -179), (179, 180)]
-    >>> normalize_lons(177, -176)
-    [(-180, -176), (177, 180)]
-    """
-    if l1 > l2:  # exchange lons
-        l1, l2 = l2, l1
-    delta = l2 - l1
-    if l1 < 0 and l2 > 0 and delta > 180:
-        return [(-180, l1), (l2, 180)]
-    elif l1 > 0 and l2 > 180 and delta < 180:
-        return [(l1, 180), (-180, l2 - 360)]
-    elif l1 < -180 and l2 < 0 and delta < 180:
-        return [(l1 + 360, 180), (l2, -180)]
-    return [(l1, l2)]
-
-
-def within(bbox, lonlat_index):
-    """
-    :param bbox: a bounding box in lon, lat
-    :param lonlat_index: an rtree index in lon, lat
-    :returns: array of indices within the bounding box
-    """
-    lon1, lat1, lon2, lat2 = bbox
-    set_ = set()
-    for l1, l2 in normalize_lons(lon1, lon2):
-        box = (l1, lat1, l2, lat2)
-        set_ |= set(lonlat_index.intersection(box))
-    return numpy.array(sorted(set_), numpy.uint32)
 
 
 def plane_fit(points):

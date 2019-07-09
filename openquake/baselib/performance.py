@@ -80,11 +80,12 @@ class Monitor(object):
     calc_id = None
 
     def __init__(self, operation='', hdf5=None,
-                 autoflush=False, measuremem=False):
+                 autoflush=False, measuremem=False, inner_loop=False):
         self.operation = operation
         self.hdf5 = hdf5
         self.autoflush = autoflush
         self.measuremem = measuremem
+        self.inner_loop = inner_loop
         self.mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()

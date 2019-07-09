@@ -10,21 +10,21 @@
         <logicTreeBranch branchID="b11">
           <uncertaintyModel>
             [GMPETable]
-            gmpe_table = "Wcrust_low_rhypo.hdf5"
+            gmpe_table = "./Wcrust_low_rhypo.hdf5"
           </uncertaintyModel>
           <uncertaintyWeight>0.16</uncertaintyWeight>
         </logicTreeBranch>
         <logicTreeBranch branchID="b12">
           <uncertaintyModel>
             [GMPETable]
-            gmpe_table = "Wcrust_med_rhypo.hdf5"
+            gmpe_table = "./Wcrust_med_rhypo.hdf5"
           </uncertaintyModel>
           <uncertaintyWeight>0.68</uncertaintyWeight>
         </logicTreeBranch>
         <logicTreeBranch branchID="b13">
           <uncertaintyModel>
             [GMPETable]
-            gmpe_table = "Wcrust_high_rhypo.hdf5"
+            gmpe_table = "./Wcrust_high_rhypo.hdf5"
           </uncertaintyModel>
           <uncertaintyWeight>0.16</uncertaintyWeight>
         </logicTreeBranch>

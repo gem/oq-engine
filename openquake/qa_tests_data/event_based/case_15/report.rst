@@ -3,11 +3,11 @@ Hazard Japan (HERP model 2014) reduced
 
 ============== ===================
 checksum32     2,896,463,652      
-date           2019-02-18T08:36:27
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:49
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 5, num_levels = 1
+num_sites = 5, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -42,12 +42,12 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Slowest sources
 ---------------
-====== ================== ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id          code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ================== ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      case_02            N    1     159   1            0.0       0.0        0.0       1         0.0   
-0      gs_PSE_CPCF_2_1228 P    0     1     26           0.0       0.0        0.0       1         0.0   
-====== ================== ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ================== ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id          code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ================== ==== ===== ===== ============ ========= ========= ====== =============
+1      case_02            N    1     159   1            0.0       0.0       0.0    1,013,526,242
+0      gs_PSE_CPCF_2_1228 P    0     1     26           0.0       0.0       0.0    1,009,260,549
+====== ================== ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -60,25 +60,22 @@ P    0.0       1
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00250 NaN       0.00250 0.00250 1      
-only_filter        0.00257 7.738E-05 0.00252 0.00263 2      
-================== ======= ========= ======= ======= =======
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.00464 NaN    0.00464 0.00464 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=313 B fnames=119 B            6.62 KB 
-only_filter        srcs=1.61 KB srcfilter=253 B dummy=14 B 6.47 KB 
-================== ======================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=313 B fnames=119 B 6.63 KB 
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total only_filter        0.00515  1.36328   2     
-total read_source_models 0.00250  0.22656   1     
+total read_source_models 0.00464  0.0       1     
 ======================== ======== ========= ======

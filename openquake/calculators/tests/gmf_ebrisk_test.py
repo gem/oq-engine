@@ -31,8 +31,8 @@ aae = numpy.testing.assert_almost_equal
 
 
 def check_csm_info(calc1, calc2):
-    data1 = (calc1['csm_info/sg_data'].value, calc1['csm_info/sm_data'].value)
-    data2 = (calc2['csm_info/sg_data'].value, calc2['csm_info/sm_data'].value)
+    data1 = (calc1['csm_info/sg_data'][()], calc1['csm_info/sm_data'][()])
+    data2 = (calc2['csm_info/sg_data'][()], calc2['csm_info/sm_data'][()])
     for val1, val2 in zip(data1, data2):
         for name in val1.dtype.names:
             if name not in ('name', 'path'):  # avoid comparing strings
@@ -74,7 +74,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 19281.387, decimal=2)
+        aae(totloss, 15283.561, decimal=2)
 
     def test_case_4(self):
         # a simple test with 1 asset and two source models
@@ -84,7 +84,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_4.__file__, 'job_risk.ini',
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
-        [fname] = export(('agg_loss_table', 'csv'), calc1)
+        [fname] = export(('losses_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 

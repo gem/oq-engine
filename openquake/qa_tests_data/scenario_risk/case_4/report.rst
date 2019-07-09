@@ -3,11 +3,11 @@ Scenario Risk for Nepal with 20 assets
 
 ============== ===================
 checksum32     486,158,159        
-date           2019-02-18T08:35:35
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:24
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 20, num_levels = 8
+num_sites = 20, num_levels = 8, num_rlzs = 1
 
 Parameters
 ----------
@@ -54,8 +54,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -67,12 +66,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         20      
-#taxonomies     4       
-deductibile     relative
-insurance_limit relative
-=============== ========
+=========== ==
+#assets     20
+#taxonomies 4 
+=========== ==
 
 ========================== ======= ====== === === ========= ==========
 taxonomy                   mean    stddev min max num_sites num_assets
@@ -88,8 +85,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.02449   0.0       1     
-saving gmfs         0.00750   0.0       1     
-computing gmfs      0.00153   0.0       1     
-reading exposure    9.680E-04 0.0       1     
+building riskinputs 0.02995   0.0       1     
+saving gmfs         0.00872   0.0       1     
+computing gmfs      0.00167   0.0       1     
+reading exposure    7.489E-04 0.0       1     
 =================== ========= ========= ======

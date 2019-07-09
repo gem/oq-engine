@@ -111,6 +111,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     cluster = getattr(group, 'cluster', None)
     # Compute the number of ruptures
     grp_ids = set()
+    trts = set()
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures is set when parsing the XML, but not when
@@ -121,21 +122,25 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
             src.temporal_occurrence_model = FatedTOM(time_span=1)
         # Updating IDs
         grp_ids.update(src.src_group_ids)
+        trts.add(src.tectonic_region_type)
     # Now preparing context
     maxdist = src_filter.integration_distance
     imtls = param['imtls']
     trunclevel = param.get('truncation_level')
-    cmaker = ContextMaker(
-        src.tectonic_region_type, gsims, maxdist, param, monitor)
+    [trt] = trts  # there must be a single tectonic region type
+    cmaker = ContextMaker(trt, gsims, maxdist, param, monitor)
     # Prepare the accumulator for the probability maps
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
+    pmap.trt = trt
     rupdata = {grp_id: [] for grp_id in grp_ids}
-    # AccumDict of arrays with 3 elements weight, nsites, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    # AccumDict of arrays with 2 elements weight, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
+    nsites = {}  # src.id -> num_sites
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
+        nsites[src.id] = src.nsites
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
@@ -154,8 +159,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         if len(cmaker.rupdata):
             for gid in src.src_group_ids:
                 rupdata[gid].append(cmaker.rupdata)
-        calc_times[src.id] += numpy.array(
-            [src.weight, len(s_sites), time.time() - t0])
+        calc_times[src.id] += numpy.array([src.weight, time.time() - t0])
         # storing the number of contributing ruptures too
         eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
                          for gid in src.src_group_ids}
@@ -173,11 +177,11 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         if len(data):
             rupdata[gid] = numpy.concatenate(data)
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data=rupdata)
+                rup_data=rupdata, nsites=nsites)
 
 
 def calc_hazard_curves(
-        groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
+        groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
         apply=sequential_apply, filter_distance='rjb', reqv=None):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
@@ -190,7 +194,7 @@ def calc_hazard_curves(
     :param groups:
         A sequence of groups of seismic sources objects (instances of
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param ss_filter:
+    :param srcfilter:
         A source filter over the site collection or the site collection itself
     :param imtls:
         Dictionary mapping intensity measure type strings
@@ -235,13 +239,13 @@ def calc_hazard_curves(
     mon = Monitor()
     for group in groups:
         if group.atomic:  # do not split
-            it = [classical(group, ss_filter, [gsim], param, mon)]
+            it = [classical(group, srcfilter, [gsim], param, mon)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
-                classical, (group.sources, ss_filter, [gsim], param, mon),
+                classical, (group.sources, srcfilter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
         for dic in it:
             for grp_id, pval in dic['pmap'].items():
                 pmap |= pval
-    sitecol = getattr(ss_filter, 'sitecol', ss_filter)
+    sitecol = getattr(srcfilter, 'sitecol', srcfilter)
     return pmap.convert(imtls, len(sitecol.complete))

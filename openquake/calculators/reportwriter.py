@@ -23,6 +23,7 @@ Utilities to build a report writer generating a .rst report for a calculation
 from openquake.baselib.python3compat import decode
 import os
 import sys
+import logging
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput, logs
 from openquake.calculators import views
@@ -62,10 +63,14 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
+        try:
+            num_rlzs = dstore['csm_info'].get_num_rlzs()
+        except KeyError:
+            num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table(versions)
-        self.text += '\n\nnum_sites = %d, num_levels = %d' % (
-            len(dstore['sitecol']), len(oq.imtls.array))
+        self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
+            len(dstore['sitecol']), len(oq.imtls.array), num_rlzs)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -143,6 +148,9 @@ def build_report(job_ini, output_dir=None):
     calc.pre_execute()
     if oq.calculation_mode == 'preclassical':
         calc.execute()
+    for key in calc.datastore:
+        calc.datastore.set_nbytes(key)
+    logging.info('Making the .rst report')
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir

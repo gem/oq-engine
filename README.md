@@ -2,7 +2,7 @@
 
 ![OpenQuake Logo](https://github.com/gem/oq-infrastructure/raw/master/logos/oq-logo.png)
 
-The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
+The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters. DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
 <!-- GEM BEGIN: apply the following patch with the proper values for the next release
 -[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
@@ -31,8 +31,9 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 3.3** 'Boschi'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.3#openquake-engine.
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.3/doc/whats-new.md)
+Current stable version is the **OpenQuake Engine 3.5** 'Palmieri'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.5#openquake-engine.
+
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.5/doc/whats-new.md)
 
 ## Documentation (master tree)
 
@@ -66,7 +67,7 @@ Current stable version is the **OpenQuake Engine 3.3** 'Boschi'. The documentati
 
 * [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/master/doc/installing/ubuntu.md)
 * [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
-* [Installing on other flavors](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
+* [Installing on other flavors (without sudo)](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
 * [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
 * [Installing on a cluster](https://github.com/gem/oq-engine/blob/master/doc/installing/cluster.md)
 
@@ -84,7 +85,7 @@ Current stable version is the **OpenQuake Engine 3.3** 'Boschi'. The documentati
 
 * [Download OVA appliance](https://downloads.openquake.org/ova/stable/)
 
-#### Docker
+#### Cloud
 
 * [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
 
@@ -100,6 +101,7 @@ Current stable version is the **OpenQuake Engine 3.3** 'Boschi'. The documentati
 * [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
 * [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
 * [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
+* [Repository](https://plugins.qgis.org/plugins/svir/)
 * [Source code](https://github.com/gem/oq-irmt-qgis)
 
 ## License

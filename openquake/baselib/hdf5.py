@@ -19,6 +19,7 @@
 import os
 import sys
 import ast
+import csv
 import inspect
 import logging
 import operator
@@ -30,7 +31,8 @@ from urllib.parse import quote_plus, unquote_plus
 import collections
 import numpy
 import h5py
-from openquake.baselib.python3compat import decode
+from openquake.baselib import InvalidFile
+from openquake.baselib.python3compat import encode, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
@@ -39,6 +41,16 @@ vuint16 = h5py.special_dtype(vlen=numpy.uint16)
 vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
+
+
+def maybe_encode(value):
+    """
+    If value is a sequence of strings, encode it
+    """
+    if isinstance(value, (list, tuple)):
+        if value and isinstance(value[0], str):
+            return encode(value)
+    return value
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
@@ -61,7 +73,7 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
                                    compression=compression)
     if attrs:
         for k, v in attrs.items():
-            dset.attrs[k] = v
+            dset.attrs[k] = maybe_encode(v)
     return dset
 
 
@@ -202,7 +214,7 @@ def get_nbytes(dset):
     if 'nbytes' in dset.attrs:
         # look if the dataset has an attribute nbytes
         return dset.attrs['nbytes']
-    elif hasattr(dset, 'value'):
+    elif hasattr(dset, 'dtype'):
         # else extract nbytes from the underlying array
         return dset.size * numpy.zeros(1, dset.dtype).nbytes
 
@@ -231,7 +243,7 @@ class ByteCounter(object):
             self.nbytes += nbytes
 
 
-class Group(collections.Mapping):
+class Group(collections.abc.Mapping):
     """
     A mock for a h5py group object
     """
@@ -261,9 +273,9 @@ class File(h5py.File):
     >>> f = File('/tmp/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
     >>> dic = f['dic']
-    >>> dic['a']['x'].value
+    >>> dic['a']['x'][()]
     1
-    >>> dic['b'].value
+    >>> dic['b'][()]
     3
     >>> f.close()
     """
@@ -280,7 +292,7 @@ class File(h5py.File):
         self.path = path
         return self
 
-    def save_vlen(self, key, data):
+    def save_vlen(self, key, data):  # used in SourceWriterTestCase
         """
         Save a sequence of variable-length arrays
 
@@ -311,7 +323,7 @@ class File(h5py.File):
             a = super().__getitem__(path).attrs
             for k, v in sorted(items):
                 try:
-                    a[k] = v
+                    a[k] = maybe_encode(v)
                 except Exception as exc:
                     raise TypeError(
                         'Could not store attribute %s=%s: %s' % (k, v, exc))
@@ -324,13 +336,23 @@ class File(h5py.File):
         else:
             pyclass = ''
         if isinstance(obj, (dict, Group)) and obj:
-            for k, v in sorted(obj.items()):
+            for k, v in obj.items():
+                # NB: there was a line sorted(obj.items()) here
+                # it was removed because it caused the absurd issue
+                # https://github.com/gem/oq-engine/issues/4761
+                # for an exposure with more than 65536 assets
+                if isinstance(k, tuple):  # multikey
+                    k = '-'.join(k)
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
             if isinstance(obj, Group):
                 self.save_attrs(
                     path, obj.attrs, __pyclass__=cls2dotname(Group))
-        elif isinstance(obj, list) and isinstance(obj[0], numpy.ndarray):
+        elif (isinstance(obj, numpy.ndarray) and obj.shape and
+              len(obj) and isinstance(obj[0], str)):
+            self.create_dataset(path, obj.shape, vstr)[:] = obj
+        elif isinstance(obj, list) and len(obj) and isinstance(
+                obj[0], numpy.ndarray):
             self.save_vlen(path, obj)
         else:
             super().__setitem__(path, obj)
@@ -347,8 +369,8 @@ class File(h5py.File):
             if hasattr(h5obj, 'items'):  # is group
                 h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
                          for k, v in h5obj.items()}
-            elif hasattr(h5obj, 'value'):
-                h5obj = h5obj.value
+            elif hasattr(h5obj, 'shape'):
+                h5obj = h5obj[()]
             if hasattr(obj, '__fromh5__'):
                 obj.__fromh5__(h5obj, h5attrs)
             else:  # Group object
@@ -378,54 +400,6 @@ class File(h5py.File):
         Return a dataset by using h5py.File.__getitem__
         """
         return h5py.File.__getitem__(self, name)
-
-    def save(self, nodedict, root=''):
-        """
-        Save a node dictionary in the .hdf5 file, starting from the root
-        dataset. A common application is to convert XML files into .hdf5
-        files, see the usage in :mod:`openquake.commands.to_hdf5`.
-
-        :param nodedict:
-            a dictionary with keys 'tag', 'attrib', 'text', 'nodes'
-        """
-        setitem = super().__setitem__
-        getitem = super().__getitem__
-        tag = nodedict['tag']
-        text = nodedict.get('text', None)
-        if hasattr(text, 'strip'):
-            text = text.strip()
-        attrib = nodedict.get('attrib', {})
-        path = '/'.join([root, tag])
-        nodes = nodedict.get('nodes', [])
-        if text not in ('', None):  # text=0 is stored
-            try:
-                setitem(path, text)
-            except Exception as exc:
-                sys.stderr.write('%s: %s\n' % (path, exc))
-                raise
-        elif attrib and not nodes:
-            setitem(path, numpy.nan)
-        for subdict in _resolve_duplicates(nodes):
-            self.save(subdict, path)
-        if attrib:
-            dset = getitem(path)
-            for k, v in attrib.items():
-                dset.attrs[k] = v
-
-
-def _resolve_duplicates(dicts):
-    # when node dictionaries with duplicated tags are passed (for instance
-    # [{'tag': 'SourceGroup', ...}, {'tag': 'SourceGroup', ...}])
-    # add an incremental number to the tag, preceded by a semicolon:
-    # [{'tag': 'SourceGroup;1', ...}, {'tag': 'SourceGroup;2', ...}])
-    # in this way the dictionaries can be saved in HDF5 format without
-    # name conflicts and by respecting the ordering
-    for tag, grp in itertools.groupby(dicts, operator.itemgetter('tag')):
-        group = list(grp)
-        if len(group) > 1:  # there are duplicate tags
-            for i, dic in enumerate(group, 1):
-                dic['tag'] += ';%d' % i
-    return dicts
 
 
 def array_of_vstr(lst):
@@ -458,8 +432,9 @@ class ArrayWrapper(object):
             array, attrs = obj, {}
         return cls(array, attrs)
 
-    def __init__(self, array, attrs):
+    def __init__(self, array, attrs, extra=('value',)):
         vars(self).update(attrs)
+        self._extra = tuple(extra)
         if len(array):
             self.array = array
 
@@ -482,8 +457,7 @@ class ArrayWrapper(object):
 
     def __toh5__(self):
         arr = getattr(self, 'array', ())
-        return (arr, {k: v for k, v in vars(self).items()
-                      if k != 'array' and not k.startswith('_')})
+        return arr, self.to_dict()
 
     def __fromh5__(self, array, attrs):
         self.__init__(array, attrs)
@@ -510,65 +484,71 @@ class ArrayWrapper(object):
             for key, val in vars(self).items():
                 assert val is not None, key  # sanity check
                 try:
-                    f[key] = val
+                    f[key] = maybe_encode(val)
                 except ValueError as err:
                     if 'Object header message is too large' in str(err):
                         logging.error(str(err))
             for k, v in extra.items():
-                f.attrs[k] = v
+                f.attrs[k] = maybe_encode(v)
 
     def to_table(self):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
         T1, ..., TN which are list of tags of lenghts D1, ... DN into
-        a table with rows (tag1, ... tagN, value) of maximum length
-        D1 * ... * DN. Zero values are discarded.
+        a table with rows (tag1, ... tagN, extra1, ... extraM) of maximum
+        length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
         >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
-        ...            taxonomy=['RC', 'WOOD'],
-        ...            occupancy=['RES', 'IND', 'COM'])
+        ...            taxonomy=['?', 'RC', 'WOOD'],
+        ...            occupancy=['?', 'RES', 'IND', 'COM'])
         >>> arr = numpy.zeros((2, 3))
         >>> arr[0, 0] = 2000
         >>> arr[0, 1] = 5000
         >>> arr[1, 0] = 500
         >>> pprint(ArrayWrapper(arr, dic).to_table())
-        [['taxonomy', 'occupancy', 'value'],
-         ['RC', 'RES', 2000.0],
-         ['RC', 'IND', 5000.0],
-         ['WOOD', 'RES', 500.0]]
+        [('taxonomy', 'occupancy', 'value'),
+         ('RC', 'RES', 2000.0),
+         ('RC', 'IND', 5000.0),
+         ('WOOD', 'RES', 500.0)]
         """
         shape = self.shape
+        tup = len(self._extra) > 1
+        if tup:
+            if shape[-1] != len(self._extra):
+                raise ValueError(
+                    'There are %d extra-fields but %d dimensions in %s' %
+                    (len(self._extra), shape[-1], self))
+        tagnames = decode_array(self.tagnames)
         # the tagnames are bytestrings so they must be decoded
-        tagnames = decode_array(self.tagnames)
-        if len(shape) == len(tagnames):
-            return [tagnames + ['value']] + self._to_table()
-        elif len(shape) == len(tagnames) + 1:
-            tbl = [tagnames + [self.extra[0], 'value']]
-            return tbl + self._to_table(self.extra[1:])
-        else:
-            raise TypeError(
-                'There are %d dimensions but only %d tagnames' %
-                (len(shape), len(tagnames)))
-
-    def _to_table(self, extra=()):
-        tags = []  # tag_idx -> tag_values
-        shape = self.shape
-        if extra:
-            assert shape[-1] == len(extra), (shape[-1], len(extra))
-        tagnames = decode_array(self.tagnames)
+        fields = tuple(tagnames) + self._extra
+        out = []
+        tags = []
+        idxs = []
         for i, tagname in enumerate(tagnames):
-            values = getattr(self, tagname)
-            assert len(values) == shape[i], (len(values), shape[i])
+            values = getattr(self, tagname)[1:]
+            if len(values) != shape[i]:
+                raise ValueError(
+                    'The tag %s[%d] with %d values is inconsistent with %s'
+                    % (tagname, i, len(values), self))
             tags.append(decode_array(values))
-        if extra:
-            tags.append(extra)
-        tbl = []
-        for idx, value in numpy.ndenumerate(self.array):
-            row = [tags[i][j] for i, j in enumerate(idx)] + [value]
-            if value > 0:
-                tbl.append(row)
-        return tbl
+            idxs.append(range(len(values)))
+        for idx, values in zip(itertools.product(*idxs),
+                               itertools.product(*tags)):
+            val = self.array[idx]
+            if tup:
+                if val.sum():
+                    out.append(values + tuple(val))
+            elif val:
+                out.append(values + (val,))
+        return [fields] + out
+
+    def to_dict(self):
+        """
+        Convert the public attributes into a dictionary
+        """
+        return {k: v for k, v in vars(self).items()
+                if k != 'array' and not k.startswith('_')}
 
 
 def decode_array(values):
@@ -630,3 +610,75 @@ def extract(dset, *d_slices):
                     for s in tup)
         array[aidx] = dset[sel]
     return array
+
+
+def parse_comment(comment):
+    """
+    Parse a comment of the form
+    `investigation_time=50.0, imt="PGA", ...`
+    and returns it as pairs of strings:
+
+    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
+    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
+    """
+    names, vals = [], []
+    pieces = comment.split('=')
+    for i, piece in enumerate(pieces):
+        if i == 0:  # first line
+            names.append(piece.strip())
+        elif i == len(pieces) - 1:  # last line
+            vals.append(ast.literal_eval(piece))
+        else:
+            val, name = piece.rsplit(',', 1)
+            vals.append(ast.literal_eval(val))
+            names.append(name.strip())
+    return list(zip(names, vals))
+
+
+def build_dt(dtypedict, names):
+    """
+    Build a composite dtype for a list of names and dictionary
+    name -> dtype with a None entry corresponding to the default dtype.
+    """
+    lst = []
+    for name in names:
+        try:
+            dt = dtypedict[name]
+        except KeyError:
+            dt = dtypedict[None]
+        lst.append((name, dt))
+    return numpy.dtype(lst)
+
+
+# NB: it would be nice to use numpy.loadtxt(
+#  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
+# however numpy does not support quoting, and "foo,bar" would be split :-(
+def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
+    """
+    :param fname: a CSV file with an header and float fields
+    :param dtypedict: a dictionary fieldname -> dtype, None -> default
+    :param renamedict: aliases for the fields to rename
+    :param sep: separator (default comma)
+    :return: a structured array of floats
+    """
+    attrs = {}
+    with open(fname, encoding='utf-8-sig') as f:
+        while True:
+            first = next(f)
+            if first.startswith('#'):
+                attrs = dict(parse_comment(first[1:]))
+                continue
+            break
+        header = first.strip().split(sep)
+        try:
+            rows = [tuple(row) for row in csv.reader(f)]
+            arr = numpy.array(rows, build_dt(dtypedict, header))
+        except Exception as exc:
+            raise InvalidFile('%s: %s' % (fname, exc))
+    if renamedict:
+        newnames = []
+        for name in arr.dtype.names:
+            new = renamedict.get(name, name)
+            newnames.append(new)
+        arr.dtype.names = newnames
+    return ArrayWrapper(arr, attrs)

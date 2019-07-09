@@ -3,11 +3,11 @@ North Africa PSHA
 
 ============== ===================
 checksum32     3,672,594,697      
-date           2019-02-18T08:38:00
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:34:20
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 2, num_levels = 133
+num_sites = 2, num_levels = 133, num_rlzs = 8
 
 Parameters
 ----------
@@ -63,15 +63,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=8, rlzs=8)
-  0,'[AkkarEtAlRjb2014]': [1]
-  0,'[AtkinsonBoore2006Modified2011]': [2]
-  0,'[ChiouYoungs2014]': [0]
-  0,'[PezeshkEtAl2011]': [3]
-  1,'[AkkarEtAlRjb2014]': [5]
-  1,'[AtkinsonBoore2006Modified2011]': [6]
-  1,'[ChiouYoungs2014]': [4]
-  1,'[PezeshkEtAl2011]': [7]>
+  <RlzsAssoc(size=32, rlzs=8)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -86,52 +78,54 @@ GridSources.xml 1      Tectonic_type_b 260          260
 #TRT models   2  
 #eff_ruptures 520
 #tot_ruptures 520
-#tot_weight   52 
+#tot_weight   520
 ============= ===
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      21        M    2     4     260          0.0       4.797E-04  2.00000   2         26    
-0      21        M    0     2     260          0.0       7.014E-04  2.00000   2         26    
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      21        M    0     2     260          0.00329   1.00000   260    1,650,391,507
+1      21        M    2     4     260          0.0       0.0       0.0    1,650,391,507
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-M    0.0       2     
+M    0.00329   2     
 ==== ========= ======
 
 Duplicated sources
 ------------------
-['21']
-Found 1 source(s) with the same ID and 1 true duplicate(s)
+Found 1 source(s) with the same ID and 1 true duplicate(s): ['21']
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00156 2.192E-05 0.00155 0.00158 2      
-split_filter       0.00384 NaN       0.00384 0.00384 1      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+preclassical       0.00380 NaN     0.00380 0.00380 1      
+read_source_models 0.00198 0.00101 0.00127 0.00269 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=626 B fnames=212 B           3.9 KB  
-split_filter       srcs=1.99 KB srcfilter=253 B seed=14 B 2.48 KB 
-================== ====================================== ========
+================== ======================================================= ========
+task               sent                                                    received
+preclassical       params=1.91 KB srcs=1.56 KB gsims=632 B srcfilter=220 B 350 B   
+read_source_models converter=626 B fnames=212 B                            3.9 KB  
+================== ======================================================= ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total split_filter       0.00384  1.38281   1     
-total read_source_models 0.00313  0.0       2     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.00396   0.0       2     
+total preclassical       0.00380   0.0       1     
+managing sources         0.00315   0.0       1     
+store source_info        0.00184   0.0       1     
+aggregate curves         1.686E-04 0.0       1     
+======================== ========= ========= ======

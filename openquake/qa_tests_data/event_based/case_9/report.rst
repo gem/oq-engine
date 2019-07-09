@@ -3,11 +3,11 @@ Event Based Risk SJ
 
 ============== ===================
 checksum32     2,863,568,899      
-date           2019-02-18T08:36:21
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:47
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 61, num_levels = 1
+num_sites = 61, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
@@ -42,11 +42,11 @@ source_model_logic_tree `sm_lt.xml <sm_lt.xml>`_
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     9     120          0.0       0.0        0.0       1         0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== ===========
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum   
+====== ========= ==== ===== ===== ============ ========= ========= ====== ===========
+0      1         A    0     9     120          0.0       0.0       0.0    819,855,902
+====== ========= ==== ===== ===== ============ ========= ========= ====== ===========
 
 Computation times by source typology
 ------------------------------------
@@ -60,23 +60,20 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00563 NaN    0.00563 0.00563 1      
-only_filter        0.00292 NaN    0.00292 0.00292 1      
+read_source_models 0.01293 NaN    0.01293 0.01293 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=313 B fnames=106 B            2.38 KB 
-only_filter        srcs=2.05 KB srcfilter=253 B dummy=14 B 2.22 KB 
-================== ======================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=313 B fnames=106 B 2.38 KB 
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00563  0.09375   1     
-total only_filter        0.00292  1.29688   1     
+total read_source_models 0.01293  0.0       1     
 ======================== ======== ========= ======

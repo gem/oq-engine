@@ -3,11 +3,11 @@ scenario hazard
 
 ============== ===================
 checksum32     2,482,429,138      
-date           2019-02-18T08:36:02
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:40
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 7, num_levels = 1
+num_sites = 7, num_levels = 1, num_rlzs = 2
 
 Parameters
 ----------
@@ -53,9 +53,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[BooreAtkinson2008]': [0]
-  0,'[ChiouYoungs2008]': [1]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -67,12 +65,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         7       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     7
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -87,5 +83,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 5.920E-04 0.0       1     
+reading exposure 6.447E-04 0.0       1     
 ================ ========= ========= ======

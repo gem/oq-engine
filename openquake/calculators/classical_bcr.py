@@ -44,13 +44,12 @@ def classical_bcr(riskinputs, riskmodel, param, monitor):
     R = riskinputs[0].hazard_getter.num_rlzs
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
     for ri in riskinputs:
-        for outputs in riskmodel.gen_outputs(ri, monitor):
-            assets = outputs.assets
-            for out in outputs:
-                for asset, (eal_orig, eal_retro, bcr) in zip(assets, out):
-                    aval = asset.value('structural')
-                    result[asset.ordinal][outputs.rlzi] = numpy.array([
-                        eal_orig * aval, eal_retro * aval, bcr])
+        for out in riskmodel.gen_outputs(ri, monitor):
+            for asset, (eal_orig, eal_retro, bcr) in zip(
+                    ri.assets, out['structural']):
+                aval = asset['value-structural']
+                result[asset['ordinal']][out.rlzi] = numpy.array([
+                    eal_orig * aval, eal_retro * aval, bcr])
     return {'bcr_data': result}
 
 

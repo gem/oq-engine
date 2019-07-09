@@ -28,14 +28,14 @@ import socket
 import random
 import atexit
 import zipfile
+import builtins
 import operator
 import warnings
 import tempfile
 import importlib
 import itertools
 import subprocess
-import collections
-from collections.abc import Mapping, Container
+from collections.abc import Mapping, Container, MutableSequence
 
 import numpy
 from decorator import decorator
@@ -78,7 +78,7 @@ def nokey(item):
     return 'Unspecified'
 
 
-class WeightedSequence(collections.MutableSequence):
+class WeightedSequence(MutableSequence):
     """
     A wrapper over a sequence of weighted items with a total weight attribute.
     Adding items automatically increases the weight.
@@ -734,7 +734,7 @@ def _slicedict_n(imt_dt):
     return slicedic, n
 
 
-class DictArray(collections.Mapping):
+class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays serializable to HDF5:
 
@@ -943,17 +943,17 @@ class DeprecationWarning(UserWarning):
 
 
 @decorator
-def deprecated(func, message='', *args, **kw):
+def deprecated(func, msg='', *args, **kw):
     """
     A family of decorators to mark deprecated functions.
 
-    :param message:
+    :param msg:
         the message to print the first time the
         deprecated function is used.
 
     Here is an example of usage:
 
-    >>> @deprecated('Use new_function instead')
+    >>> @deprecated(msg='Use new_function instead')
     ... def old_function():
     ...     'Do something'
 
@@ -961,7 +961,7 @@ def deprecated(func, message='', *args, **kw):
     warning will be displayed only the first time.
     """
     msg = '%s.%s has been deprecated. %s' % (
-        func.__module__, func.__name__, message)
+        func.__module__, func.__name__, msg)
     if not hasattr(func, 'called'):
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         func.called = 0
@@ -1124,6 +1124,9 @@ def debug(templ, *args):
         f.write(msg + '\n')
 
 
+builtins.debug = debug
+
+
 def warn(msg, *args):
     """
     Print a warning on stderr
@@ -1155,3 +1158,22 @@ def getsizeof(o, ids=None):
         return nbytes + sum(getsizeof(x, ids) for x in o)
 
     return nbytes
+
+
+def add_defaults(array, **kw):
+    """
+    :param array: a structured array
+    :param kw: a dictionary field name -> default value
+    :returns: a new array with additional fields with default values
+    """
+    dtlist = [(name, array.dtype[name]) for name in array.dtype.names]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            dtlist.append((k, type(v)))
+    new = numpy.zeros(array.shape, dtlist)
+    for name in array.dtype.names:
+        new[name] = array[name]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            new[k] = v
+    return new

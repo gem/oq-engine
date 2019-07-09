@@ -1,3 +1,3 @@
-# mean, investigation_time=1.0, imt="PGA", checksum=2756942605
-lon,lat,depth,poe-0.1,poe-0.4,poe-0.6
+# generated_by='OpenQuake engine 3.5.0-gitd83c42cda6', start_date='2019-05-12T07:16:23', checksum=2756942605, kind='mean', investigation_time=1.0, imt='PGA'
+lon,lat,depth,poe-0.1000000,poe-0.4000000,poe-0.6000000
 0.00000,0.00000,0.00000,2.737047E-01,0.000000E+00,0.000000E+00

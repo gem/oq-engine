@@ -738,9 +738,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight['default'], 1.)
         self.assertEqual(
-            str(assoc),
-            "<RlzsAssoc(size=2, rlzs=1)\n0,'[SadighEtAl1997]': "
-            "[0]\n1,'[ChiouYoungs2008]': [0]>")
+            str(assoc), "<RlzsAssoc(size=2, rlzs=1)>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -766,17 +764,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
                 return 1
         csm.info.update_eff_ruptures(count_ruptures)
         assoc = csm.info.get_rlzs_assoc()
-        expected_assoc = """\
-<RlzsAssoc(size=9, rlzs=9)
-0,'[SadighEtAl1997]': [0]
-2,'[SadighEtAl1997]': [1]
-4,'[SadighEtAl1997]': [2]
-6,'[SadighEtAl1997]': [3]
-8,'[SadighEtAl1997]': [4]
-10,'[SadighEtAl1997]': [5]
-12,'[SadighEtAl1997]': [6]
-14,'[SadighEtAl1997]': [7]
-16,'[SadighEtAl1997]': [8]>"""
+        expected_assoc = "<RlzsAssoc(size=9, rlzs=9)>"
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -791,11 +779,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         csm = readinput.get_composite_source_model(oq)
         csm.info.update_eff_ruptures(lambda tm: 1)
         assoc = csm.info.get_rlzs_assoc()
-        self.assertEqual(
-            str(assoc),
-            "<RlzsAssoc(size=2, rlzs=5)\n"
-            "0,'[SadighEtAl1997]': [0 1 2]\n"
-            "1,'[SadighEtAl1997]': [3 4]>")
+        self.assertEqual(str(assoc), "<RlzsAssoc(size=2, rlzs=5)>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()

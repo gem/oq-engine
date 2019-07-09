@@ -53,9 +53,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="50.0" probability="0.5"/>
-                    <hypoDepth depth="50.0" probability="0.25"/>
-                    <hypoDepth depth="50.0" probability="0.25"/>
+                    <hypoDepth depth="50.0" probability="1"/>
                 </hypoDepthDist>
             </areaSource>
         </sourceGroup>

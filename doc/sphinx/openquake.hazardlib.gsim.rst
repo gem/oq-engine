@@ -155,6 +155,14 @@ base
     :undoc-members:
     :show-inheritance:
 
+bchydro_2016_epistemic
+------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.bchydro_2016_epistemic
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 berge_thierry_2003
 --------------------------------------------------
 
@@ -563,6 +571,22 @@ kotha_2016
     :undoc-members:
     :show-inheritance:
 
+kotha_2019
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.kotha_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lanzano_luzi_2019
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_luzi_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lin_2009
 ----------------------------------------
 
@@ -756,6 +780,14 @@ silva_2002
     :undoc-members:
     :show-inheritance:
 
+skarlatoudis_2013
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.skarlatoudis_2013
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 somerville_2001
 -----------------------------------------------
 
@@ -804,6 +836,14 @@ travasarou_2003
     :undoc-members:
     :show-inheritance:
 
+tromans_2019
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.tromans_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tusa_langer_2016
 ------------------------------------------------
 
@@ -824,6 +864,14 @@ utils_swiss_gmpe
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.utils_swiss_gmpe
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+vanhoutte_2018
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.vanhoutte_2018
     :members:
     :undoc-members:
     :show-inheritance:

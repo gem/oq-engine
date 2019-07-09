@@ -3,11 +3,11 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     1,437,466,600      
-date           2019-02-18T08:36:06
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:45
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 1, num_levels = 5
+num_sites = 1, num_levels = 5, num_rlzs = ?
 
 Parameters
 ----------
@@ -41,12 +41,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-1      1         A    65    130   2,456        0.0       0.0        0.0       1         0.0   
-0      1         A    0     65    2,456        0.0       0.0        0.0       1         0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+1      1         A    65    130   2,456        0.0       0.0       0.0    2,179,108,142
+0      1         A    0     65    2,456        0.0       0.0       0.0    3,153,497,394
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -56,32 +56,24 @@ code calc_time counts
 A    0.0       2     
 ==== ========= ======
 
-Duplicated sources
-------------------
-['1']
-Found 1 source(s) with the same ID and 1 true duplicate(s)
-
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.04984 3.134E-04 0.04962 0.05006 2      
-only_filter        0.00272 NaN       0.00272 0.00272 1      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.06400 0.00116 0.06318 0.06482 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=626 B fnames=218 B            8.42 KB 
-only_filter        srcs=6.53 KB srcfilter=253 B dummy=14 B 6.59 KB 
-================== ======================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=626 B fnames=218 B 8.42 KB 
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.09968  0.18750   2     
-total only_filter        0.00272  1.25781   1     
+total read_source_models 0.12800  0.0       2     
 ======================== ======== ========= ======

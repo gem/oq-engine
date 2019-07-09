@@ -30,7 +30,7 @@ commands = ['start', 'migrate', 'createsuperuser', 'collectstatic']
 
 def rundjango(subcmd, hostport=None, skip_browser=False):
     args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
-    if subcmd == 'start':
+    if subcmd == 'runserver':
         # the reload functionality of the Django development server interferes
         # with SIGCHLD and causes zombies, thus it is disabled
         args.append('--noreload')

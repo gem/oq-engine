@@ -30,6 +30,7 @@ import getpass
 import logging
 import traceback
 import platform
+import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -53,6 +54,10 @@ MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
+GET_JOBS = '''--- executing or submitted
+SELECT * FROM job WHERE status IN ('executing', 'submitted')
+AND is_running=1 AND pid > 0 ORDER BY id'''
+
 if OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default(job_id):
@@ -69,7 +74,7 @@ if OQ_DISTRIBUTE == 'zmq':
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
-        OqParam.concurrent_tasks.default = num_workers * 3
+        OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
@@ -86,7 +91,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.dbcmd('finish', job_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = ncores * 3
+        OqParam.concurrent_tasks.default = ncores * 2
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
     def celery_cleanup(terminate):
@@ -126,7 +131,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     rlzs = dstore['csm_info'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
-    if 'scenario' not in calcmode:  # export sourcegroups.csv
+    if len(dstore['csm_info/sg_data']) > 1:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
@@ -178,10 +183,10 @@ def inhibitSigInt(signum, _stack):
     logs.LOG.warn('Killing job, please wait')
 
 
-def raiseMasterKilled(signum, _stack):
+def manage_signals(signum, _stack):
     """
-    When a SIGTERM is received, raise the MasterKilled
-    exception with an appropriate error message.
+    Convert a SIGTERM into a SystemExit exception and a SIGINT/SIGHUP into
+    a MasterKilled exception with an appropriate error message.
 
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
@@ -190,36 +195,34 @@ def raiseMasterKilled(signum, _stack):
     if OQ_DISTRIBUTE.startswith('celery'):
         signal.signal(signal.SIGINT, inhibitSigInt)
 
-    msg = 'Received a signal %d' % signum
-    if signum in (signal.SIGTERM, signal.SIGINT):
-        msg = 'The openquake master process was killed manually'
+    if signum == signal.SIGINT:
+        raise MasterKilled('The openquake master process was killed manually')
 
-    # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
-    # terminal died; in the workers, do nothing
-    # NB: there is no SIGHUP on Windows
-    if hasattr(signal, 'SIGHUP'):
-        if signum == signal.SIGHUP:
-            if os.getppid() == _PPID:
-                return
-            else:
-                msg = 'The openquake master lost its controlling terminal'
+    if signum == signal.SIGTERM:
+        raise SystemExit('Terminated')
 
-    raise MasterKilled(msg)
+    if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
+        # kill the calculation only if os.getppid() != _PPID, i.e. the
+        # controlling terminal died; in the workers, do nothing
+        if signum == signal.SIGHUP and os.getppid() != _PPID:
+            raise MasterKilled(
+                'The openquake master lost its controlling terminal')
 
 
-# register the raiseMasterKilled callback for SIGTERM
-# when using the Django development server this module is imported by a thread,
-# so one gets a `ValueError: signal only works in main thread` that
-# can be safely ignored
-try:
-    signal.signal(signal.SIGTERM, raiseMasterKilled)
-    signal.signal(signal.SIGINT, raiseMasterKilled)
-    if hasattr(signal, 'SIGHUP'):
-        # Do not register our SIGHUP handler if running with 'nohup'
-        if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
-            signal.signal(signal.SIGHUP, raiseMasterKilled)
-except ValueError:
-    pass
+def register_signals():
+    # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP
+    # when using the Django development server this module is imported by a
+    # thread, so one gets a `ValueError: signal only works in main thread` that
+    # can be safely ignored
+    try:
+        signal.signal(signal.SIGTERM, manage_signals)
+        signal.signal(signal.SIGINT, manage_signals)
+        if hasattr(signal, 'SIGHUP'):
+            # Do not register our SIGHUP handler if running with 'nohup'
+            if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
+                signal.signal(signal.SIGHUP, manage_signals)
+    except ValueError:
+        pass
 
 
 def job_from_file(job_ini, job_id, username, **kw):
@@ -261,6 +264,32 @@ def job_from_file(job_ini, job_id, username, **kw):
     return oq
 
 
+def poll_queue(job_id, pid, poll_time):
+    """
+    Check the queue of executing/submitted jobs and exit when there is
+    a free slot.
+    """
+    if config.distribution.serialize_jobs:
+        first_time = True
+        while True:
+            jobs = logs.dbcmd(GET_JOBS)
+            failed = [job.id for job in jobs if not psutil.pid_exists(job.pid)]
+            if failed:
+                for job in failed:
+                    logs.dbcmd('update_job', job,
+                               {'status': 'failed', 'is_running': 0})
+            elif any(job.id < job_id for job in jobs):
+                if first_time:
+                    logs.LOG.warn('Waiting for jobs %s', [j.id for j in jobs])
+                    logs.dbcmd('update_job', job_id,
+                               {'status': 'submitted', 'pid': pid})
+                    first_time = False
+                time.sleep(poll_time)
+            else:
+                break
+    logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
+
+
 def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     Run a calculation.
@@ -272,6 +301,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     :param exports:
         A comma-separated string of export types.
     """
+    register_signals()
     setproctitle('oq-job-%d' % job_id)
     calc = base.calculators(oqparam, calc_id=job_id)
     logging.info('%s running %s [--hc=%s]',
@@ -292,7 +322,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
                 with open(oqparam.inputs['input_zip'], 'rb') as arch:
                     data = numpy.array(arch.read())
             else:
-                logs.LOG.info('zipping the input files')
+                logs.LOG.info('Zipping the input files')
                 bio = io.BytesIO()
                 oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
                               logging.debug)
@@ -302,8 +332,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
             del data  # save memory
 
-        logs.dbcmd('update_job', job_id, {'status': 'executing',
-                                          'pid': _PID})
+        poll_queue(job_id, _PID, poll_time=15)
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id,

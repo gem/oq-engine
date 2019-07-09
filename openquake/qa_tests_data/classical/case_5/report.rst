@@ -3,11 +3,11 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2019-02-18T08:37:22
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:34:04
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 1, num_levels = 3
+num_sites = 1, num_levels = 3, num_rlzs = 1
 
 Parameters
 ----------
@@ -60,8 +60,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[SadighEtAl1997]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -73,41 +72,44 @@ source_model.xml 0      Active Shallow Crust 49           49
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         C    0     6     49           0.0       1.359E-05  1.00000   1         196   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      1         C    0     6     49           0.00292   1.00000   49     3,066,708,985
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    0.0       1     
+C    0.00292   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.10028 NaN    0.10028 0.10028 1      
-split_filter       0.00380 NaN    0.00380 0.00380 1      
+preclassical       0.00326 NaN    0.00326 0.00326 1      
+read_source_models 0.13170 NaN    0.13170 0.13170 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=313 B fnames=106 B           1.56 KB 
-split_filter       srcs=1.14 KB srcfilter=253 B seed=14 B 1.23 KB 
-================== ====================================== ========
+================== ===================================================== ========
+task               sent                                                  received
+preclassical       srcs=1.16 KB params=478 B srcfilter=220 B gsims=147 B 343 B   
+read_source_models converter=313 B fnames=106 B                          1.56 KB 
+================== ===================================================== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.10028  1.08984   1     
-total split_filter       0.00380  1.58203   1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.13170   0.0       1     
+total preclassical       0.00326   0.0       1     
+managing sources         0.00278   0.0       1     
+store source_info        0.00157   0.0       1     
+aggregate curves         1.519E-04 0.0       1     
+======================== ========= ========= ======

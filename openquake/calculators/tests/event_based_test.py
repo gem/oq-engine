@@ -23,7 +23,7 @@ import numpy.testing
 
 from openquake.baselib.general import group_array, gettemp
 from openquake.baselib.datastore import read
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators.views import view
@@ -35,9 +35,11 @@ from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
-    case_17,  case_18, case_19, case_20, case_21, mutex)
+    case_17,  case_18, case_19, case_20, case_21, case_22, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
+
+aae = numpy.testing.assert_almost_equal
 
 
 def strip_calc_id(fname):
@@ -103,8 +105,8 @@ class EventBasedTestCase(CalculatorTestCase):
                 oq.ses_per_logic_tree_path)
 
             p05, p10 = expected[case]
-            numpy.testing.assert_almost_equal(joint_prob_0_5, p05, decimal=1)
-            numpy.testing.assert_almost_equal(joint_prob_1_0, p10, decimal=1)
+            aae(joint_prob_0_5, p05, decimal=1)
+            aae(joint_prob_1_0, p10, decimal=1)
 
     def test_blocksize(self):
         # here the <AreaSource 1> is light and not split
@@ -130,9 +132,6 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
-
-        [fname] = export(('gmf_scenario/rup-0', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-rlz-0-PGA.csv', fname)
 
         # test that the .npz export runs
         export(('gmf_data', 'npz'), self.calc.datastore)
@@ -193,9 +192,9 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
         [fname, _, _] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles('expected/gmf-data-bis.csv', fname)
-        self.assertEqual(out['gmf_data', 'xml'], [])  # exported removed
-        [fname] = out['hcurves', 'csv']
-        self.assertEqualFiles('expected/hc-mean.csv', fname)
+        for fname in out['hcurves', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-6)
 
     def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
@@ -221,6 +220,12 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
+        # check MFD
+        aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
+        self.assertEqual(aw.duration, 30)  # 30 years
+        aae(aw.magnitudes, [4.7, 4.8, 4.9], decimal=6)
+        aae(aw.mean_frequency, [0.006667, 0.01, 0.023333], decimal=6)
+
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
         expected = [
@@ -236,11 +241,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 10 samples * 40 SES
+        # 2 models x 3 GMPEs, 100 samples * 20 SES
         expected = [
             'hazard_curve-mean.csv',
-            'quantile_curve-0.1.csv',
-            'quantile_curve-0.9.csv',
         ]
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
@@ -250,11 +253,7 @@ class EventBasedTestCase(CalculatorTestCase):
         mean_cl = get_mean_curves(self.calc.cl.datastore)
         reldiff, _index = max_rel_diff_index(
             mean_cl, mean_eb, min_value=0.1)
-        self.assertLess(reldiff, 0.20)
-
-        # FIXME: investigate why max_gmf_size is not stored
-        # exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
-        # self.assertEqual(exp, 375496)
+        self.assertLess(reldiff, 0.10)
 
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
@@ -352,6 +351,15 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_19.__file__, 'job_grid.ini')
         self.assertEqual(len(self.calc.datastore['ruptures']), 1)
 
+        # error for missing intensity_measure_types
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(
+                case_19.__file__, 'job.ini',
+                hazard_calculation_id=str(self.calc.datastore.calc_id),
+                intensity_measure_types='')
+        self.assertIn('There are no intensity measure types in',
+                      str(ctx.exception))
+
     def test_case_20(self):  # test for Vancouver using the NRCan15SiteTerm
         self.run_calc(case_20.__file__, 'job.ini')
         [gmf, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
@@ -365,6 +373,15 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_21(self):
         self.run_calc(case_21.__file__, 'job.ini', exports='csv,xml')
+        self.run_calc(case_21.__file__, 'job.ini',
+                      ses_per_logic_tree_path='10',
+                      number_of_logic_tree_samples='0')
+
+    def test_case_22(self):
+        out = self.run_calc(case_22.__file__, 'job.ini', exports='csv')
+        [fname, _, _] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-6)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
@@ -374,7 +391,7 @@ class EventBasedTestCase(CalculatorTestCase):
                 case_2.__file__, 'job.ini',
                 intensity_measure_types_and_levels=str(too_many_imts))
         self.assertEqual(str(ctx.exception),
-                         'The event based calculator is restricted '
+                         'The event_based calculator is restricted '
                          'to 256 imts, got 900')
 
     def test_mutex(self):

@@ -1,3 +1,273 @@
+  [Chris Van Houtte]
+  * Adds the Van Houtte et al. (2018) significant duration model for New
+    Zealand
+
+  [Michele Simionato]
+  * Added a way to compute and plot the MFD coming from an event based
+  * Storing the MFDs in TOML format inside the datastore
+
+  [Robin Gee]
+  * Moves b4 constant into COEFFS table for GMPE Sharma et al., 2009 
+
+  [Graeme Weatherill]
+  * Adds functionality to Cauzzi et al. (2014) and Derras et al. (2014)
+    calibrated GMPEs for Germany to use either finite or point source distances
+
+  [Michele Simionato]
+  * Restored the ability to associate site model parameters to a grid of sites
+  * Made it possible to set `hazard_curves_from_gmfs=true` with
+    `ground_motion_fields=false` in the event based hazard calculator
+  * Introduced a mechanism to split the tasks based on an estimated duration
+  * Integrated `oq plot_memory` into `oq plot`
+  * Removed `NaN` values for strike and dip when exporting griddedRuptures
+  * Fixed `oq reset` to work in multi-user mode
+  * Extended the source_id-filtering feature in the job.ini to multiple sources
+  * Supported WKT files for the binary perils in the multi_risk calculator
+  * Added an early check on the coefficients of variation and loss ratios of
+    vulnerability functions with the Beta distribution
+  * Made sure that `oq engine --dc` removes the HDF5 cache file too
+  * Removed the flag `optimize_same_id_sources` because it is useless now
+  * Introduced a soft limit at 65,536 sites for event_based calculations
+  * Fixed a performance regression in ucerf_classical that was filtering
+    before splitting, thus becoming extra-slow
+  * Improved the progress log, that was delayed for large classical calculations
+  * Exported the ruptures as 3D multi-polygons (instead of 2D ones)
+  * Changed the `aggregate_by` exports for consistency with the others
+  * Changed the losses_by_event exporter for ebrisk, to make it more
+    consistent with scenario_risk and event_based_risk
+  * Changed the agglosses and losses_by_event exporters in scenario_risk,
+    by adding a column with the realization index
+  * Changed the generation of the hazard statistics to consume very little
+    memory
+  * Fixed a bug with concurrent_tasks being inherited from the parent
+    calculation instead of using the standard default
+  * Removed the dependency from mock, since it is included in unittest.mock
+  * For scenario, replaced the `branch_path` with the GSIM representation in
+    the realizations output
+  * Added a check for suspiciously large source geometries
+  * Deprecated the XML disaggregation exporters in favor of the CSV exporters
+  * Turned the disaggregation calculator into a classical post-calculator
+    to use the precomputed distances and speedup the computation even more
+  * Fixed the disaggregation calculator by discarding the ruptures outside
+    the integration distance
+  * Optimized the speed of the disaggregation calculator by moving a statistical
+    functions outside of the inner loop
+  * Changed the file names of the exported disaggregation outputs
+  * Fixed an export agg_curves issue with pre-imported exposures
+  * Fixed an export agg_curves issue when the hazard statistics are different
+    from the risk statistics
+  * Removed the disaggregation statistics: now the engine disaggregates only on
+    a single realization (default: the closest to the mean)
+  * Forbidden disaggregation matrices with more than 1 million elements
+  * Reduced the data transfer when computing the hazard curves
+  * Optimized the reading of large CSV exposures
+  * Fixed the --hc functionality across users
+  * Optimized the reduction of the site collection on the exposure sites
+  * Made more robust the gsim logic tree parser: lines like
+    `<uncertaintyModel gmpe_table="../gm_tables/Woffshore_low_clC.hdf5">`
+    are accepted again
+  * Added a check against duplicated values in nodal plane distributions and
+    hypocenter depth distributions
+  * Changed the support for zipped exposures and source models: now the
+    name of the archive must be written explicitly in the job.ini
+  * Added support for numpy 1.16.3, scipy 1.3.0, h5py 2.9.0
+  * Removed the special case for event_based_risk running two calculations
+
+  [Graeme Weatherill]
+  * Adds the Tromans et al. (2019) adjustable GMPE for application to PSHA
+    in the UK
+
+  [Michele Simionato]
+  * Optimized src.sample_ruptures for (multi)point sources and are sources
+  * Fixed a mutability bug in the DistancesContext and made all context
+    arrays read-only: the fix may affect calculations using the GMPEs
+    berge_thierry_2003, cauzzi_faccioli_2008 and zhao_2006;
+  * Fixed a bug with the minimum_distance feature
+  * Fixed a bug in the exporter of the aggregate loss curves: now the loss
+    ratios are computed correctly even in presence of occupants
+  * Removed the (long time deprecated) capability to read hazard curves and
+    ground motion fields from XML files: you must use CSV files instead
+
+  [Marco Pagani]
+  * Implemented a modified GMPE that add between and within std to GMPEs only
+    supporting total std
+
+  [Michele Simionato]
+  * Added the ability to use a taxonomy_mapping.csv file
+  * Fixed a bug in classical_damage from CSV: for hazard intensity measure
+    levels different from the fragility levels, the engine was giving incorrect
+    results
+  * Serialized also the source model logic tree inside the datastore
+  * Added a check on missing intensity_measure_types in event based
+  * Fixed `oq prepare_site_model` in the case of an empty datadir
+  * Added a comment line with useful metadata to the engine CSV outputs
+  * Removed the long time deprecated event loss table exporter for event based
+    risk and enhanced the losses_by_event exporter to export the realization ID
+  * Removed the long time deprecated GMF XML exporter for scenario
+  * IMT-dependent weights in the gsim logic tree can be zero, to discard
+    contributions outside the range of validity of (some of the) GSIMs
+  * Now it is possible to export individual hazard curves from an event
+  * Added a view gmvs_to_hazard
+
+python3-oq-engine (3.5.2-1~xenial01) xenial; urgency=low
+
+  [Daniele Viganò]
+  * Fixed packaging issue, the .hdf5 tables for Canada were missing
+
+  [Michele Simionato]
+  * Fixed regression in the gsim logic tree parser for the case
+    of .hdf5 tables
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 31 May 2019 08:01:08 +0000
+
+python3-oq-engine (3.5.1-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Added a `rlzi` column to to sig_eps.csv output
+  * Accepted GMF CSV files without a `rlzi` column
+  * Accepted a list-like syntax like `return_periods=[30, 60, 120, 240, 480]`
+    in the job.ini, as written in the manual
+  * Fixed a bug in the asset_risk exporter for uppercase tags
+
+  [Paul Henshaw]
+  * Fixed an encoding bug while reading XML files on Windows
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 20 May 2019 13:49:25 +0000
+
+python3-oq-engine (3.5.0-1~xenial01) xenial; urgency=low
+
+  [Giovanni Lanzano]
+  * Lanzano and Luzi (2019) GMPE for volcanic zones in Italy
+
+  [Michele Simionato]
+  * Now it is possible to export individual hazard curves from an event
+    based calculation by setting `hazard_curves_from_gmfs = true` and
+    `individual_curves = true (before only the statistics were saved)
+  * Made it possible to download remote source models
+  * Removed the branching level concept in the logic trees
+  * Made it possible to produce individual loss maps and curves with the
+    ebrisk calculator with a single line `aggregate_by=id`
+  * Added a limit of 2**32 events in event based calculations
+
+
+ [Michele Simionato]
+  * Now it is possible to export individual hazard curves from an event
+    based calculation by setting `hazard_curves_from_gmfs = true` and
+    `individual_curves = true (before only the statistics were saved)
+
+  [Graeme Weatherill]
+  * Adds adaptation of Abrahamson et al. (2016) 'BC Hydro' GMPEs calibrated
+    to Mediterranean data and with epistemic adjustment factors
+
+  [Chris Van Houtte]
+  * Added new class to bradley_2013b.py for hazard maps
+  * Modified test case_37 to test multiple sites
+
+  [Marco Pagani]
+  * Fixed a bug in the logic tree parser and added a check to forbid logic
+    trees with applyToSources without applyToBranches, unless there is a
+    single source model branch
+
+  [Michele Simionato]
+  * Removed the experimental parameter `prefilter_sources`
+
+  [Daniele Viganò]
+  * Multiple DbServer ZMQ connections are restored to avoid errors under heavy
+    load and/or on slower machines
+
+  [Michele Simionato]
+  * Removed the ugly registration of custom signals at import time: now they
+    are registered only if `engine.run_calc` is called
+  * Removed the dependency from rtree
+  * Removed all calls to ProcessPool.shutdown to speed up the tests and to
+    avoid non-deterministic errors in atexit._run_exitfuncs
+
+  [Marco Pagani]
+  * Added tabular GMPEs as provided by Michal Kolaj, Natural Resources Canada
+
+  [Michele Simionato]
+  * Extended the ebrisk calculator to support coefficients of variations
+
+  [Graeme Weatherill]
+  * Adds Kotha et al (2019) shallow crustal GMPE for SERA
+  * Adds 'ExperimentalWarning' to possible GMPE warnings
+  * Adds kwargs to check_gsim function
+
+  [Michele Simionato]
+  * Fixed problems like SA(0.7) != SA(0.70) in iml_disagg
+  * Exposed the outputs of the classical calculation in event based
+    calculations with `compare_with_classical=true`
+  * Made it possible to serialize together all kind of risk functions,
+    including consequence functions that before were not HDF5-serializable
+  * Fixed a MemoryError when counting the number of bytes stored in large
+    HDF5 datasets
+  * Extended `asset_hazard_distance` to a dictionary for usage with multi_risk
+  * Extended oq prepare_site_model to work with sites.csv files
+  * Optimized the validation of the source model logic tree: now checking
+    the sources IDs is 5x faster
+  * Went back to the old logic in sampling: the weights are used for the
+    sampling and the statistics are computed with identical weights
+  * Avoided to transfer the epsilons by storing them in the cache file
+    and changed the event to epsilons associations
+  * Reduced the data transfer in the computation of the hazard curves, causing
+    in some time huge speedups (over 100x)
+  * Implemented a flag `modal_damage_state` to display only the most likely
+    damage state in the output `dmg_by_asset` of scenario damage calculations
+  * Reduced substantially the memory occupation in classical calculations
+    by including the prefiltering phase in the calculation phase
+
+  [Daniele Viganò]
+  * Added a 'serialize_jobs' setting to the openquake.cfg
+    which limits the maximum number of jobs that can be run in parallel
+
+  [Michele Simionato]
+  * Fixed two exporters for the ebrisk calculator (agg_curves-stats and
+    losses_by_event)
+  * Fixed two subtle bugs when reading site_model.csv files
+  * Added /extract/exposure_metadata and /extract/asset_risk
+  * Introduced an experimental multi_risk calculator for volcanic risk
+
+  [Guillaume Daniel]
+  * Updating of Berge-Thierry (2003) GSIM and addition of several alternatives
+    for use with Mw
+
+  [Michele Simionato]
+  * Changed the classical_risk calculator to use the same loss ratios for all
+    taxonomies and then optimized all risk calculators
+  * Temporarily removed the `insured_losses` functionality
+  * Extended `oq restore` to download from URLs
+  * Removed the column 'gsims' from the output 'realizations'
+  * Better parallelized the source splitting in classical calculations
+  * Added a check for missing hazard in scenario_risk/scenario_damage
+  * Improved the GsimLogicTree parser to get the line number information, a
+    feature that was lost with the passage to Python 3.5
+  * Added a check against mispellings in the loss type in the risk keys
+  * Changed the aggregation WebAPI from
+    aggregate_by/taxonomy,occupancy/avg_losses?kind=mean&loss_type=structural to
+    aggregate/avg_losses?kind=mean&loss_type=structural&tag=taxonomy&tag=occupancy
+  * Do not export the stddevs in scenario_damage in the case of 1 event
+  * Fixed export bug for GMFs imported from a file
+  * Fixed an encoding error when storing a GMPETable
+  * Fixed an error while exporting the hazard curves generated by a GMPETable
+  * Removed the deprecated feature aggregate_by/curves_by_tag
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 13 May 2019 09:27:18 +0000
+
+python3-oq-engine (3.4.0-2~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Compatibility with 'decorator' version >= 4.2
+
+  [Giovanni Lanzano]
+  * Contributed a GMPE SkarlatoudisEtAlSSlab2013
+
+  [Michele Simionato]
+  * Changed the event loss table exporter to export also rup_id and year
+  * Extended the ebrisk calculator to compute loss curves and maps
+
+  [Rodolfo Puglia]
+  * Spectral acceleration amplitudes at 2.5, 2.75 and 4 seconds added
+
   [Marco Pagani]
   * Improved the event based calculator to account for cluster-based models
 
@@ -5,7 +275,7 @@
   * Removed the now redundant command `oq extract hazard/rlzs`
 
   [Daniele Viganò]
-  * Fixed 'oq abort' and always mark killed jobs as 'aborted'
+  * Fixed 'oq abort' to always mark killed jobs as 'aborted'
 
   [Michele Simionato]
   * Made it possible to use in the Starmap tasks without a monitor argument
@@ -138,6 +408,8 @@
     from the site model, not from the exposure - to all calculators
   * In classical_bcr calculations with a CSV exposure the retrofitted field
     was not read. Now a missing retrofitted value is an error
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 18 Mar 2019 10:32:00 +0000
 
 python3-oq-engine (3.3.0-1~xenial01) xenial; urgency=low
 

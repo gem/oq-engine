@@ -3,11 +3,11 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     1,635,481,027      
-date           2019-02-18T08:36:02
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:40
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 1, num_levels = 40
+num_sites = 1, num_levels = 40, num_rlzs = 1
 
 Parameters
 ----------
@@ -53,8 +53,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[SadighEtAl1997]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -66,12 +65,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         5       
-#taxonomies     5       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     5
+#taxonomies 5
+=========== =
 
 ============== ======= ====== === === ========= ==========
 taxonomy       mean    stddev min max num_sites num_assets
@@ -88,5 +85,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.148E-04 0.0       1     
+reading exposure 4.108E-04 0.0       1     
 ================ ========= ========= ======

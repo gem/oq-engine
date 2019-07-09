@@ -25,17 +25,17 @@ from openquake.risklib import scientific
 def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     """
     :param dstore: datastore for an event based risk calculation
-    :returns: a LossesByPeriodBuilder instance
+    :returns: a LossCurvesMapsBuilder instance
     """
     oq = dstore['oqparam']
-    name = dstore['weights'].dtype.names[0]
-    weights = dstore['weights'][name]
+    weights = dstore['weights'][()]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = countby(dstore['events'].value, 'rlz')
+    num_events = countby(dstore['events'][()], 'rlz')
     periods = return_periods or oq.return_periods or scientific.return_periods(
         eff_time, max(num_events.values()))
-    return scientific.LossesByPeriodBuilder(
-        numpy.array(periods), loss_dt or oq.loss_dt(), weights, num_events,
+    return scientific.LossCurvesMapsBuilder(
+        oq.conditional_loss_poes, numpy.array(periods),
+        loss_dt or oq.loss_dt(), weights, num_events,
         eff_time, oq.risk_investigation_time)
 
 
@@ -60,6 +60,7 @@ class LossCurveExporter(object):
     """
     def __init__(self, dstore):
         self.dstore = dstore
+        self.oq = dstore['oqparam']
         try:
             self.builder = get_loss_builder(dstore)
         except KeyError:  # no 'events' for non event_based_risk
@@ -68,8 +69,7 @@ class LossCurveExporter(object):
         arefs = [decode(aref) for aref in self.assetcol.asset_refs]
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
-        oqparam = dstore['oqparam']
-        self.loss_types = dstore.get_attr(oqparam.risk_model, 'loss_types')
+        self.loss_types = dstore.get_attr('risk_model', 'loss_types')
         self.R = dstore['csm_info'].get_num_rlzs()
 
     def parse(self, what):
@@ -99,7 +99,7 @@ class LossCurveExporter(object):
                     arefs.append(self.asset_refs[aid])
         elif spec.startswith('ref-'):  # passed the asset name
             arefs = [spec[4:]]
-            aids = [self.str2asset[arefs[0]].ordinal]
+            aids = [self.str2asset[arefs[0]]['ordinal']]
         else:
             raise ValueError('Wrong specification in %s' % what)
         return aids, arefs, spec, key
@@ -129,7 +129,10 @@ class LossCurveExporter(object):
                             data.append((aref, loss_type, loss, poe))
             dest = self.dstore.build_fname(
                 'loss_curves', '%s-%s' % (spec, key) if spec else key, 'csv')
-            writer.save(data, dest)
+            com = dict(
+                kind=key,
+                risk_investigation_time=self.oq.risk_investigation_time)
+            writer.save(data, dest, comment=com)
         return writer.getsaved()
 
     def export(self, export_type, what):

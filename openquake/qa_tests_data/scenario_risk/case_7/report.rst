@@ -3,11 +3,11 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2019-02-18T08:35:36
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:26
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 27, num_levels = 8
+num_sites = 27, num_levels = 8, num_rlzs = 1
 
 Parameters
 ----------
@@ -54,8 +54,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[FromFile]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -67,12 +66,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         27      
-#taxonomies     4       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== ==
+#assets     27
+#taxonomies 4 
+=========== ==
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -88,6 +85,6 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.03070   0.0       1     
-reading exposure    5.307E-04 0.0       1     
+building riskinputs 0.03784   0.0       1     
+reading exposure    5.922E-04 0.0       1     
 =================== ========= ========= ======

@@ -17,17 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import mock
+import unittest.mock as mock
 import shutil
 import zipfile
 import tempfile
 import unittest
+import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib.datastore import read
+from openquake.baselib.hdf5 import read_csv
 from openquake import commonlib
-from openquake.commonlib.readinput import read_csv, get_oqparam
+from openquake.commonlib.readinput import get_oqparam
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
@@ -47,7 +49,8 @@ from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import case_2, case_5, case_16
+from openquake.qa_tests_data.event_based import (
+    case_2, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_exposure)
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
@@ -77,8 +80,7 @@ class InfoTestCase(unittest.TestCase):
     EXPECTED = '''<CompositionInfo
 b1, x15.xml, grp=[0], weight=1.0: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
-<RlzsAssoc(size=1, rlzs=1)
-0,'[AkkarBommer2010]': [0]>'''
+<RlzsAssoc(size=1, rlzs=1)>'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -123,8 +125,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
             info(None, None, None, None, None, None, None, path)
-        # this is a test with multiple same ID sources
-        self.assertIn('multiplicity', str(p))
+        self.assertIn('RlzsAssoc(size=1, rlzs=2)', str(p))
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
@@ -228,12 +229,13 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('sitecol', self.calc_id)
-        self.assertEqual(str(p), '<SiteCollection with 1/1 sites>')
+        self.assertEqual(str(p), 'sids,lon,lat,depth,vs30,vs30measured\n'
+                         '0,0.00000,0.00000,-0.10000,8.000000E+02,1')
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('grp_id source_id code gidx1 gidx2 num_ruptures '
-                      'calc_time split_time num_sites num_split', str(p))
+        self.assertIn('source_id grp_id code num_ruptures '
+                      'calc_time num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -356,11 +358,18 @@ class ZipTestCase(unittest.TestCase):
         zip_cmd(ini, xzip, None)
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(
-            ['exposure.csv', 'exposure.xml', 'gmpe_logic_tree.xml',
+            ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
              'job.ini', 'source_model.xml', 'source_model_logic_tree.xml',
              'vulnerability_model_nonstco.xml',
              'vulnerability_model_stco.xml'],
             names)
+        shutil.rmtree(dtemp)
+
+    def test_zip_ssmLT(self):
+        # zipping a directory containing a ssmLT.xml file
+        dtemp = os.path.join(tempfile.mkdtemp(), 'inp')
+        shutil.copytree(os.path.dirname(case_21.__file__), dtemp)
+        zip_cmd(dtemp)
         shutil.rmtree(dtemp)
 
 
@@ -482,14 +491,18 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         exposure_xml = os.path.join(inputdir, 'exposure.xml')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
         sitecol = prepare_site_model(
-            [exposure_xml], [vs30_csv], True, True, True,
+            [exposure_xml], [], [vs30_csv], True, True, True,
             grid_spacing, 5, output)
-        sm = read_csv(output)
+        sm = read_csv(output, {None: float, 'vs30measured': numpy.uint8})
         self.assertEqual(sm['vs30measured'].sum(), 0)
         self.assertEqual(len(sitecol), 84)  # 84 non-empty grid points
         self.assertEqual(len(sitecol), len(sm))
 
         # test no grid
-        sc = prepare_site_model([exposure_xml], [vs30_csv],
+        sc = prepare_site_model([exposure_xml], [], [vs30_csv],
                                 True, True, False, 0, 5, output)
         self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params
+
+        # test sites_csv
+        sc = prepare_site_model([], [output], [vs30_csv],
+                                True, True, False, 0, 5, output)

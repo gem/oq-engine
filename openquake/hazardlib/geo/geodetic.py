@@ -253,7 +253,7 @@ def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
         b = numpy.sin((lons[i] - lons) / 2.0)
         result[i, :] = numpy.arcsin(
             numpy.sqrt(a * a + cos_lats[i] * cos_lats * b * b)) * diameter
-    return numpy.matrix(result, copy=False)
+    return result
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):

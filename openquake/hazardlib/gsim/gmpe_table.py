@@ -321,7 +321,7 @@ class GMPETable(GMPE):
             fle = h5py.File(self.GMPE_TABLE, "r")
         try:
             # this is the format inside the datastore
-            self.distance_type = fle["distance_type"].value
+            self.distance_type = fle["distance_type"][()]
         except KeyError:
             # this is the original format outside the datastore
             self.distance_type = decode(fle["Distances"].attrs["metric"])

@@ -18,28 +18,13 @@
 import io
 import os
 import logging
-import numpy
 
 from openquake.baselib import sap
-from openquake.hazardlib import stats
 from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib import util
-from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract
-
-
-def get_hcurves_and_means(dstore):
-    """
-    Extract hcurves from the datastore and compute their means.
-
-    :returns: curves_by_rlz, mean_curves
-    """
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    getter = getters.PmapGetter(dstore, rlzs_assoc)
-    pmaps = getter.get_pmaps()
-    return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']
 
 
 def str_or_int(calc_id):
@@ -79,30 +64,16 @@ def show(what='contents', calc_id=-1, extra=()):
     ds = util.read(calc_id)
 
     # this part is experimental
-    if what == 'rlzs' and 'poes' in ds:
-        min_value = 0.01  # used in rmsep
-        getter = getters.PmapGetter(ds)
-        pmaps = getter.get_pmaps()
-        weights = [rlz.weight for rlz in getter.rlzs]
-        mean = stats.compute_pmap_stats(
-            pmaps, [numpy.mean], weights, getter.imtls)
-        dists = []
-        for rlz, pmap in zip(getter.rlzs, pmaps):
-            dist = util.rmsep(mean.array, pmap.array, min_value)
-            dists.append((dist, rlz))
-        print('Realizations in order of distance from the mean curves')
-        for dist, rlz in sorted(dists):
-            print('%s: rmsep=%s' % (rlz, dist))
-    elif view.keyfunc(what) in view:
+    if view.keyfunc(what) in view:
         print(view(what, ds))
     elif what.split('/', 1)[0] in extract:
         print(extract(ds, what, *extra))
     elif what in ds:
         obj = ds[what]
-        if hasattr(obj, 'value'):  # an array
-            print(write_csv(io.BytesIO(), obj.value).decode('utf8'))
-        else:
+        if hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
+        else:  # is a single dataset
+            print(write_csv(io.BytesIO(), obj[()]).decode('utf8'))
     else:
         print('%s not found' % what)
 

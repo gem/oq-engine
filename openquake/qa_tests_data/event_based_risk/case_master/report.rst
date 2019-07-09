@@ -2,12 +2,12 @@ event based risk
 ================
 
 ============== ===================
-checksum32     3,519,531,262      
-date           2019-02-18T08:36:53
-engine_version 3.4.0-git9883ae17a5
+checksum32     1,634,090,954      
+date           2019-06-24T15:33:56
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 7, num_levels = 46
+num_sites = 7, num_levels = 46, num_rlzs = 8
 
 Parameters
 ----------
@@ -52,8 +52,7 @@ Composite source model
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
 b1        0.25000 complex(2,0,2)  4               
-b2        0.25000 complex(2,0,2)  4               
-b3        0.50000 trivial(0,1,0)  1               
+b2        0.75000 complex(2,0,2)  4               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
@@ -65,7 +64,6 @@ grp_id gsims                                                          distances 
 1      '[AkkarBommer2010]\nminimum_distance = 10' '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 2      '[BooreAtkinson2008]' '[ChiouYoungs2008]'                      rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 3      '[AkkarBommer2010]\nminimum_distance = 10' '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-4      '[MontalvaEtAl2017SSlab]'                                      rhypo rrup  backarc vs30            hypo_depth mag   
 ====== ============================================================== =========== ======================= =================
 
 Realizations per (GRP, GSIM)
@@ -73,16 +71,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=9, rlzs=9)
-  0,'[BooreAtkinson2008]': [0 1]
-  0,'[ChiouYoungs2008]': [2 3]
-  1,'[AkkarBommer2010]\nminimum_distance = 10': [0 2]
-  1,'[ChiouYoungs2008]': [1 3]
-  2,'[BooreAtkinson2008]': [4 5]
-  2,'[ChiouYoungs2008]': [6 7]
-  3,'[AkkarBommer2010]\nminimum_distance = 10': [4 6]
-  3,'[ChiouYoungs2008]': [5 7]
-  4,'[MontalvaEtAl2017SSlab]': [8]>
+  <RlzsAssoc(size=16, rlzs=8)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -93,28 +82,25 @@ source_model_1.xml 0      Active Shallow Crust 482          482
 source_model_1.xml 1      Stable Shallow Crust 4            4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
 source_model_2.xml 3      Stable Shallow Crust 1            1           
-6.05.hdf5          4      Deep Seismicity      2            2           
 ================== ====== ==================== ============ ============
 
-============= =====
-#TRT models   5    
-#eff_ruptures 971  
-#tot_ruptures 971  
-#tot_weight   2,569
-============= =====
+============= ===
+#TRT models   4  
+#eff_ruptures 969
+#tot_ruptures 969
+#tot_weight   969
+============= ===
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 9 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 30 tasks = 147.66 KB
+7 asset(s) x 8 realization(s) x 5 loss type(s) losses x 8 bytes x 20 tasks = 43.75 KB
 
 Exposure model
 --------------
-=============== ========
-#assets         7       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     7
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -126,64 +112,57 @@ tax3     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          0.04031   0.0        7.00000   1         0.0    
-2      1         S    4     6     482          0.03880   0.0        7.00000   1         0.0    
-1      2         S    2     4     4            0.00188   0.0        7.00000   1         2.00000
-4      buc06pt05 N    402   426   2            2.985E-04 0.0        7.00000   1         2.00000
-3      2         X    6     402   1            2.429E-04 0.0        7.00000   1         0.0    
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+2      1         S    4     6     482          0.06049   0.0       0.0     2,786,737,502
+0      1         S    0     2     482          0.05930   0.0       0.0     2,786,737,502
+1      2         S    2     4     4            0.00387   0.0       2.00000 3,056,286,023
+3      2         X    6     402   1            2.029E-04 0.0       0.0     2,506,021,815
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    2.985E-04 1     
-S    0.08100   3     
-X    2.429E-04 1     
+S    0.12366   3     
+X    2.029E-04 1     
 ==== ========= ======
 
 Duplicated sources
 ------------------
-['1']
-Found 2 source(s) with the same ID and 1 true duplicate(s)
+Found 2 source(s) with the same ID and 1 true duplicate(s): ['1']
 Here is a fake duplicate: 2
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =======
 operation-duration mean      stddev    min       max       outputs
-read_source_models 0.00722   0.00288   0.00536   0.01054   3      
-only_filter        0.00404   0.00136   0.00264   0.00536   3      
-sample_ruptures    0.01759   0.02052   6.700E-04 0.04077   5      
-get_eid_rlz        5.121E-04 1.264E-04 3.574E-04 6.669E-04 4      
+get_eid_rlz        4.710E-04 1.182E-04 4.005E-04 6.075E-04 3      
+read_source_models 0.01601   0.00482   0.01260   0.01942   2      
+sample_ruptures    0.03623   0.03488   0.00182   0.06713   4      
 ================== ========= ========= ========= ========= =======
 
 Data transfer
 -------------
-================== ================================================ ========
-task               sent                                             received
-read_source_models converter=939 B fnames=351 B                     16.47 KB
-only_filter        srcs=2.1 KB srcfilter=253 B dummy=14 B           15.27 KB
-sample_ruptures    param=27.7 KB sources=16.83 KB srcfilter=1.07 KB 3.44 KB 
-get_eid_rlz        self=6.46 KB                                     1.3 KB  
-================== ================================================ ========
+================== =============================================== ========
+task               sent                                            received
+get_eid_rlz        self=4.96 KB                                    1.04 KB 
+read_source_models converter=626 B fnames=240 B                    13.95 KB
+sample_ruptures    param=21.88 KB sources=14.08 KB srcfilter=880 B 2.25 KB 
+================== =============================================== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total sample_ruptures    0.08794   1.40625   5     
-iter_ruptures            0.08046   0.0       5     
-total read_source_models 0.02167   1.16016   3     
-total only_filter        0.01212   1.54688   3     
-store source model       0.00708   0.0       3     
-saving ruptures          0.00630   0.0       2     
-total get_eid_rlz        0.00205   0.06250   4     
-store source_info        0.00193   0.0       1     
-reading exposure         7.920E-04 0.0       1     
+total sample_ruptures    0.14492   0.0       4     
+total read_source_models 0.03202   0.0       2     
+store source model       0.00654   0.0       2     
+saving ruptures          0.00354   0.0       1     
+store source_info        0.00185   0.0       1     
+total get_eid_rlz        0.00141   0.0       3     
+reading exposure         6.669E-04 0.0       1     
 ======================== ========= ========= ======

@@ -247,3 +247,11 @@ class PGDfRupture(IMT):
     """
     Permanent ground deformation (m) from co-seismic rupture
     """
+
+
+# Volcanic IMTs
+
+class ASH(IMT):
+    """
+    Level of the ash fall in millimeters
+    """

@@ -16,13 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
-import collections
+import collections.abc
 import pickle
 import time
 import logging
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source, tom
@@ -37,7 +37,29 @@ source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
 
-class SourceGroup(collections.Sequence):
+def check_dupl(dist, fname=None, lineno=None):
+    """
+    Raise a ValueError if the distribution contains two identical values.
+
+    :param dist: a list of pairs [(prob, value)...]
+    """
+    n = len(dist)
+    values = set()
+    got = []
+    for prob, value in dist:
+        if hasattr(value, '_slots_'):
+            value = tuple(getattr(value, s) for s in value._slots_)
+        values.add(value)
+        got.append(value)
+    if len(values) < n:
+        if config.general.strict:
+            raise ValueError('There are repeated values in %s' % got)
+        else:
+            logging.error('There are repeated values in %s %s:%s',
+                          got, fname, lineno)
+
+
+class SourceGroup(collections.abc.Sequence):
     """
     A container for the following parameters:
 
@@ -219,8 +241,10 @@ class SourceGroup(collections.Sequence):
             lst.append((src.id, src.num_ruptures,
                         numpy.frombuffer(buf, numpy.uint8)))
         attrs = dict(
+            id=self.id,
             trt=self.trt,
             name=self.name or '',
+            eff_ruptures=self.eff_ruptures,
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
             grp_probability=self.grp_probability or '')
@@ -230,7 +254,7 @@ class SourceGroup(collections.Sequence):
         vars(self).update(attrs)
         self.sources = []
         for row in array:
-            self.sources.append(pickle.loads(memoryview(row)))
+            self.sources.append(pickle.loads(memoryview(row['pik'])))
 
 
 def get_set_num_ruptures(src):
@@ -323,8 +347,7 @@ class RuptureConverter(object):
 
         :param node: a node representing a rupture
         """
-        convert = getattr(self, 'convert_' + striptag(node.tag))
-        return convert(node)
+        return getattr(self, 'convert_' + striptag(node.tag))(node)
 
     def geo_line(self, edge):
         """
@@ -528,6 +551,19 @@ class SourceConverter(RuptureConverter):
         self.spinning_floating = spinning_floating
         self.source_id = source_id
 
+    def convert_node(self, node):
+        """
+        Convert the given rupture node into a hazardlib rupture, depending
+        on the node tag.
+
+        :param node: a node representing a rupture
+        """
+        obj = getattr(self, 'convert_' + striptag(node.tag))(node)
+        source_id = getattr(obj, 'source_id', '')
+        if self.source_id and source_id and source_id not in self.source_id:
+            return
+        return obj
+
     def get_tom(self, node):
         """
         Convert the given node into a Temporal Occurrence Model object.
@@ -572,22 +608,13 @@ class SourceConverter(RuptureConverter):
                     magnitudes=~mfd_node.magnitudes,
                     occurrence_rates=~mfd_node.occurRates)
             elif mfd_node.tag.endswith('YoungsCoppersmithMFD'):
-                if "totalMomentRate" in mfd_node.attrib.keys():
-                    # Return Youngs & Coppersmith from the total moment rate
-                    return mfd.YoungsCoppersmith1985MFD.from_total_moment_rate(
-                        min_mag=mfd_node["minMag"], b_val=mfd_node["bValue"],
-                        char_mag=mfd_node["characteristicMag"],
-                        total_moment_rate=mfd_node["totalMomentRate"],
-                        bin_width=mfd_node["binWidth"])
-                elif "characteristicRate" in mfd_node.attrib.keys():
-                    # Return Youngs & Coppersmith from the total moment rate
-                    return mfd.YoungsCoppersmith1985MFD.\
-                        from_characteristic_rate(
-                            min_mag=mfd_node["minMag"],
-                            b_val=mfd_node["bValue"],
-                            char_mag=mfd_node["characteristicMag"],
-                            char_rate=mfd_node["characteristicRate"],
-                            bin_width=mfd_node["binWidth"])
+                return mfd.YoungsCoppersmith1985MFD(
+                    min_mag=mfd_node["minMag"],
+                    b_val=mfd_node["bValue"],
+                    char_mag=mfd_node["characteristicMag"],
+                    char_rate=mfd_node.get("characteristicRate"),
+                    total_moment_rate=mfd_node.get("totalMomentRate"),
+                    bin_width=mfd_node["binWidth"])
             elif mfd_node.tag.endswith('multiMFD'):
                 return mfd.multi_mfd.MultiMFD.from_node(
                     mfd_node, self.width_of_mfd_bin)
@@ -600,11 +627,14 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.geo.NodalPlane` instance
         """
         with context(self.fname, node):
+            npnode = node.nodalPlaneDist
             npdist = []
-            for np in node.nodalPlaneDist:
+            for np in npnode:
                 prob, strike, dip, rake = (
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
+        with context(self.fname, npnode):
+            check_dupl(npdist, self.fname, npnode.lineno)
             if not self.spinning_floating:
                 npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
@@ -618,11 +648,13 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.pmf.PMF` instance
         """
         with context(self.fname, node):
-            hcdist = [(hd['probability'], hd['depth'])
-                      for hd in node.hypoDepthDist]
+            hdnode = node.hypoDepthDist
+            hddist = [(hd['probability'], hd['depth']) for hd in hdnode]
+        with context(self.fname, hdnode):
+            check_dupl(hddist, self.fname, hdnode.lineno)
             if not self.spinning_floating:  # consider the first hypocenter
-                hcdist = [(1, hcdist[0][1])]
-            return pmf.PMF(hcdist)
+                hddist = [(1, hddist[0][1])]
+            return pmf.PMF(hddist)
 
     def convert_areaSource(self, node):
         """
@@ -856,9 +888,9 @@ class SourceConverter(RuptureConverter):
                 assert hasattr(sg, 'occurrence_rate')
         #
         for src_node in node:
-            if self.source_id and self.source_id != src_node['id']:
-                continue  # filter by source_id
             src = self.convert_node(src_node)
+            if src is None:  # filtered out by source_id
+                continue
             # transmit the group attributes to the underlying source
             for attr, value in grp_attrs.items():
                 if attr == 'tectonicRegion':
@@ -1008,20 +1040,3 @@ def update_source_model(sm_node, fname):
         others.sort(key=lambda src: (src.tag, src['id']))
         i, sources = _pointsources2multipoints(psrcs, i)
         group.nodes = sources + others
-
-
-def to_python(fname, converter):
-    """
-    Convert a source model .hdf5 file into a :class:`SourceModel` object
-    """
-    with hdf5.File(fname, 'r') as f:
-        source_model = f['/']
-    for sg in source_model:
-        for src in sg:
-            if hasattr(src, 'mfd'):
-                # multipoint source
-                # src.tom = converter.tom
-                kwargs = getattr(src.mfd, 'kwargs', {})
-                if 'bin_width' not in kwargs:
-                    kwargs['bin_width'] = [converter.width_of_mfd_bin]
-    return source_model

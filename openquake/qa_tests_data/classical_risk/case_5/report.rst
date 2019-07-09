@@ -3,11 +3,11 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2019-02-18T08:35:18
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:11
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 1, num_levels = 50
+num_sites = 1, num_levels = 50, num_rlzs = 4
 
 Parameters
 ----------
@@ -61,12 +61,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=5, rlzs=4)
-  0,'[AkkarBommer2010]': [0 1 2 3]
-  1,'[AtkinsonBoore2003SInter]': [1]
-  1,'[LinLee2008SInter]': [3]
-  1,'[YoungsEtAl1997SInter]': [2]
-  1,'[ZhaoEtAl2006SInter]': [0]>
+  <RlzsAssoc(size=17, rlzs=4)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -77,51 +72,54 @@ source_model.xml 0      Active Shallow Crust 23           23
 source_model.xml 1      Subduction Interface 23           23          
 ================ ====== ==================== ============ ============
 
-============= =======
-#TRT models   2      
-#eff_ruptures 46     
-#tot_ruptures 46     
-#tot_weight   4.60000
-============= =======
+============= ==
+#TRT models   2 
+#eff_ruptures 46
+#tot_ruptures 46
+#tot_weight   46
+============= ==
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      B         P    1     2     23           0.0       1.955E-05  1.00000   1         2.30000
-0      A         P    0     1     23           0.0       2.027E-05  1.00000   1         2.30000
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+0      A         P    0     1     23           0.00183   1.00000   23     1,105,287,812
+1      B         P    1     2     23           0.00165   1.00000   23     2,058,246,860
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.0       2     
+P    0.00348   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00168 NaN       0.00168 0.00168 1      
-split_filter       0.00266 5.563E-06 0.00266 0.00266 2      
+preclassical       0.00212 1.170E-04 0.00204 0.00221 2      
+read_source_models 0.00163 NaN       0.00163 0.00163 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=313 B fnames=111 B           1.97 KB 
-split_filter       srcs=1.15 KB srcfilter=253 B seed=14 B 2.49 KB 
-================== ====================================== ========
+================== ======================================================= ========
+task               sent                                                    received
+preclassical       srcs=2.32 KB params=1.69 KB gsims=658 B srcfilter=440 B 686 B   
+read_source_models converter=313 B fnames=111 B                            1.97 KB 
+================== ======================================================= ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total split_filter       0.00532  1.46484   2     
-total read_source_models 0.00168  0.0       1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total preclassical       0.00425   0.94922   2     
+managing sources         0.00297   0.09766   1     
+store source_info        0.00163   0.0       1     
+total read_source_models 0.00163   0.0       1     
+aggregate curves         4.926E-04 0.0       2     
+======================== ========= ========= ======

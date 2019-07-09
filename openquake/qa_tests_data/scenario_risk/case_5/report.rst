@@ -3,11 +3,11 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     3,193,187,389      
-date           2019-02-18T08:35:34
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:24
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 8, num_levels = 106
+num_sites = 8, num_levels = 106, num_rlzs = 1
 
 Parameters
 ----------
@@ -55,8 +55,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[AkkarEtAlRjb2014]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -68,12 +67,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         9       
-#taxonomies     4       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     9
+#taxonomies 4
+=========== =
 
 ============ ======= ======= === === ========= ==========
 taxonomy     mean    stddev  min max num_sites num_assets
@@ -81,7 +78,7 @@ EMCA_PRIM_2L 1.00000 0.0     1   1   3         3
 EMCA_PRIM_4L 1.00000 NaN     1   1   1         1         
 concrete_spl 1.00000 0.0     1   1   2         2         
 steel_spl    1.00000 0.0     1   1   3         3         
-*ALL*        1.12500 0.35355 1   2   8         9         
+*ALL*        0.03704 0.20995 0   2   243       9         
 ============ ======= ======= === === ========= ==========
 
 Slowest operations
@@ -89,8 +86,8 @@ Slowest operations
 =================== ======== ========= ======
 operation           time_sec memory_mb counts
 =================== ======== ========= ======
-building riskinputs 0.01022  0.0       1     
-saving gmfs         0.00391  0.0       1     
-computing gmfs      0.00348  0.0       1     
-reading exposure    0.00225  0.0       1     
+building riskinputs 0.01219  0.0       1     
+saving gmfs         0.00513  0.21094   1     
+computing gmfs      0.00293  0.23438   1     
+reading exposure    0.00258  0.0       1     
 =================== ======== ========= ======

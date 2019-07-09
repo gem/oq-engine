@@ -18,7 +18,7 @@
 import logging
 import numpy
 from openquake.baselib import sap, performance, datastore
-from openquake.hazardlib import site
+from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
 from openquake.commonlib.writers import write_csv
@@ -72,16 +72,16 @@ def read_vs30(fnames):
 
 
 @sap.script
-def prepare_site_model(exposure_xml, vs30_csv,
+def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
                        z1pt0, z2pt5, vs30measured, grid_spacing=0,
-                       site_param_distance=5, output='site_model.csv'):
+                       assoc_distance=5, output='site_model.csv'):
     """
-    Prepare a sites.csv file from an exposure xml file, a vs30 csv file
-    and a grid spacing which can be 0 (meaning no grid). For each asset site
-    or grid site the closest vs30 parameter is used. The command can also
+    Prepare a site_model.csv file from exposure xml files/site csv files,
+    vs30 csv files and a grid spacing which can be 0 (meaning no grid).
+    For each site the closest vs30 parameter is used. The command can also
     generate (on demand) the additional fields z1pt0, z2pt5 and vs30measured
     which may be needed by your hazard model, depending on the required GSIMs.
-    """    
+    """
     hdf5 = datastore.hdf5new()
     req_site_params = {'vs30'}
     fields = ['lon', 'lat', 'vs30']
@@ -95,33 +95,54 @@ def prepare_site_model(exposure_xml, vs30_csv,
         req_site_params.add('vs30measured')
         fields.append('vs30measured')
     with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
-        mesh, assets_by_site = Exposure.read(
-            exposure_xml, check_dupl=False).get_mesh_assets_by_site()
-        mon.hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, req_site_params=req_site_params)
-        if grid_spacing:
-            grid = mesh.get_convex_hull().dilate(
-                grid_spacing).discretize(grid_spacing)
+        if exposure_xml:
+            mesh, assets_by_site = Exposure.read(
+                exposure_xml, check_dupl=False).get_mesh_assets_by_site()
+            mon.hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
+                mesh.lons, mesh.lats, req_site_params=req_site_params)
+            if grid_spacing:
+                grid = mesh.get_convex_hull().dilate(
+                    grid_spacing).discretize(grid_spacing)
+                haz_sitecol = site.SiteCollection.from_points(
+                    grid.lons, grid.lats, req_site_params=req_site_params)
+                logging.info(
+                    'Associating exposure grid with %d locations to %d '
+                    'exposure sites', len(haz_sitecol), len(assets_by_site))
+                haz_sitecol, assets_by, discarded = assoc(
+                    assets_by_site, haz_sitecol,
+                    grid_spacing * SQRT2, 'filter')
+                if len(discarded):
+                    logging.info('Discarded %d sites with assets '
+                                 '[use oq plot_assets]', len(discarded))
+                    mon.hdf5['discarded'] = numpy.array(discarded)
+                haz_sitecol.make_complete()
+            else:
+                haz_sitecol = assetcol
+                discarded = []
+        elif sites_csv:
+            lons, lats = [], []
+            for fname in sites_csv:
+                with open(fname) as csv:
+                    for line in csv:
+                        if line.startswith('lon,lat'):  # possible header
+                            continue
+                        lon, lat = line.split(',')[:2]
+                        lons.append(valid.longitude(lon))
+                        lats.append(valid.latitude(lat))
             haz_sitecol = site.SiteCollection.from_points(
-                grid.lons, grid.lats, req_site_params=req_site_params)
-            logging.info(
-                'Associating exposure grid with %d locations to %d '
-                'exposure sites', len(haz_sitecol), len(assets_by_site))
-            haz_sitecol, assets_by, discarded = assoc(
-                assets_by_site, haz_sitecol, grid_spacing * SQRT2, 'filter')
-            if len(discarded):
-                logging.info('Discarded %d sites with assets '
-                             '[use oq plot_assets]', len(discarded))
-                mon.hdf5['discarded'] = numpy.array(discarded)
-            haz_sitecol.make_complete()
+                lons, lats, req_site_params=req_site_params)
+            if grid_spacing:
+                grid = mesh.get_convex_hull().dilate(
+                    grid_spacing).discretize(grid_spacing)
+                haz_sitecol = site.SiteCollection.from_points(
+                    grid.lons, grid.lats, req_site_params=req_site_params)
         else:
-            haz_sitecol = assetcol
-            discarded = []
+            raise RuntimeError('Missing exposures or missing sites')
         vs30orig = read_vs30(vs30_csv)
         logging.info('Associating %d hazard sites to %d site parameters',
                      len(haz_sitecol), len(vs30orig))
         sitecol, vs30, _ = assoc(
-            vs30orig, haz_sitecol, site_param_distance, 'warn')
+            vs30orig, haz_sitecol, assoc_distance, 'warn')
         sitecol.array['vs30'] = vs30['vs30']
         if z1pt0:
             sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
@@ -136,7 +157,8 @@ def prepare_site_model(exposure_xml, vs30_csv,
     return sitecol
 
 
-prepare_site_model.opt('exposure_xml', 'exposure(s) in XML format', nargs='+')
+prepare_site_model.opt('exposure_xml', 'exposure(s) in XML format', nargs='*')
+prepare_site_model.opt('sites_csv', 'sites in CSV format', nargs='*')
 prepare_site_model.arg('vs30_csv', 'files with lon,lat,vs30 and no header',
                        nargs='+')
 prepare_site_model.flg('z1pt0', 'build the z1pt0', '-1')
@@ -144,6 +166,6 @@ prepare_site_model.flg('z2pt5', 'build the z2pt5', '-2')
 prepare_site_model.flg('vs30measured', 'build the vs30measured', '-3')
 prepare_site_model.opt('grid_spacing', 'grid spacing in km '
                        '(the default 0 means no grid)', type=float)
-prepare_site_model.opt('site_param_distance',
+prepare_site_model.opt('assoc_distance',
                        'sites over this distance are discarded', type=float)
 prepare_site_model.opt('output', 'output file')

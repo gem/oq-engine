@@ -50,12 +50,13 @@ def check_outdated(db):
 def reset_is_running(db):
     """
     Reset the flag job.is_running to False. This is called when the
-    Web UI is re-started: the idea is that it is restarted only when
+    DbServer is restarted: the idea is that it is restarted only when
     all computations are completed.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    db('UPDATE job SET is_running=0 WHERE is_running=1')
+    db("UPDATE job SET is_running=0, status='failed'"
+       "WHERE is_running=1 OR status='executing'")
 
 
 def set_status(db, job_id, status):
@@ -68,7 +69,7 @@ def set_status(db, job_id, status):
     :param status: status string
     """
     assert status in (
-        'created', 'executing', 'complete', 'aborted', 'failed'
+        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
     ), status
     if status in ('created', 'complete', 'failed', 'aborted'):
         is_running = 0
@@ -250,6 +251,7 @@ def get_outputs(db, job_id):
 
 
 DISPLAY_NAME = {
+    'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
     'dmg_by_asset': 'Average Asset Damages',
     'dmg_by_event': 'Aggregate Event Damages',
@@ -265,10 +267,12 @@ DISPLAY_NAME = {
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
+    'agg_maps-rlzs': 'Aggregate Loss Maps',
+    'agg_maps-stats': 'Aggregate Loss Maps Statistics',
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
-    'agg_loss_table': 'Aggregate Loss Table',
     'agg_losses-rlzs': 'Aggregate Asset Losses',
+    'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
@@ -278,7 +282,6 @@ DISPLAY_NAME = {
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
-    'disagg-stats': 'Disaggregation Statistics',
     'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
     'fullreport': 'Full Report',
@@ -323,19 +326,20 @@ def finish(db, job_id, status):
        job_id)
 
 
-def del_calc(db, job_id, user):
+def del_calc(db, job_id, user, force=False):
     """
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: job ID, can be an integer or a string
     :param user: username
+    :param force: delete even if there are dependent calculations
     :returns: None if everything went fine or an error message
     """
     job_id = int(job_id)
     dependent = db(
         'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
-    if dependent:
+    if not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent])}
@@ -355,10 +359,16 @@ def del_calc(db, job_id, user):
     # try to delete datastore and associated file
     # path has typically the form /home/user/oqdata/calc_XXX
     fname = path + ".hdf5"
-    try:
-        os.remove(fname)
-    except OSError as exc:  # permission error
-        return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    cache = fname.replace('calc_', 'cache_')
+    if os.path.exists(cache):
+        fnames = [fname, cache]
+    else:
+        fnames = [fname]
+    for fname in fnames:
+        try:
+            os.remove(fname)
+        except OSError as exc:  # permission error
+            return {"error": 'Could not remove %s: %s' % (fname, exc)}
     return {"success": fname}
 
 
@@ -691,6 +701,13 @@ SELECT %s FROM job WHERE status='executing' ORDER BY id desc''' % fields)
         if r.pid and psutil.pid_exists(r.pid):
             running.append(r)
     return running
+
+
+def get_calc_ids(db, user):
+    """
+    :returns: calculation IDs of the given user
+    """
+    return [r.id for r in db('SELECT id FROM job WHERE user_name=?x', user)]
 
 
 def get_longest_jobs(db):

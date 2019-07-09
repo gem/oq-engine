@@ -77,6 +77,8 @@ def hdf5new(datadir=None):
     generated filename.
     """
     datadir = datadir or get_datadir()
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
     calc_id = get_last_calc_id(datadir) + 1
     fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
     new = hdf5.File(fname, 'w')
@@ -128,7 +130,7 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-class DataStore(collections.MutableMapping):
+class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
     filesystem.
@@ -384,6 +386,15 @@ class DataStore(collections.MutableMapping):
             return self[key]
         except KeyError:
             return default
+
+    @property
+    def metadata(self):
+        """
+        :returns: datastore metadata version, date, checksum as a dictionary
+        """
+        a = self.hdf5.attrs
+        return dict(generated_by='OpenQuake engine %s' % a['engine_version'],
+                    start_date=a['date'], checksum=a['checksum32'])
 
     def __getitem__(self, key):
         if self.hdf5 == ():  # the datastore is closed

@@ -3,11 +3,11 @@ Classical Hazard QA Test, Case 12
 
 ============== ===================
 checksum32     662,604,775        
-date           2019-02-18T08:38:16
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:34:26
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 1, num_levels = 3
+num_sites = 1, num_levels = 3, num_rlzs = 1
 
 Parameters
 ----------
@@ -49,21 +49,19 @@ b1        1.00000 trivial(1,1)    1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================================================================== ========= ========== ==========
-grp_id gsims                                                                    distances siteparams ruptparams
-====== ======================================================================== ========= ========== ==========
-0      '[SadighEtAl1997]'                                                       rrup      vs30       mag rake  
-1      '[NRCan15SiteTerm]\n                    gmpe_name = "BooreAtkinson2008"' rjb       vs30       mag rake  
-====== ======================================================================== ========= ========== ==========
+====== ==================================================== ========= ========== ==========
+grp_id gsims                                                distances siteparams ruptparams
+====== ==================================================== ========= ========== ==========
+0      '[SadighEtAl1997]'                                   rrup      vs30       mag rake  
+1      '[NRCan15SiteTerm]\ngmpe_name = "BooreAtkinson2008"' rjb       vs30       mag rake  
+====== ==================================================== ========= ========== ==========
 
 Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=1)
-  0,'[SadighEtAl1997]': [0]
-  1,'[NRCan15SiteTerm]\n                    gmpe_name = "BooreAtkinson2008"': [0]>
+  <RlzsAssoc(size=2, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -78,47 +76,50 @@ source_model.xml 1      Stable Continental   1            1
 #TRT models   2      
 #eff_ruptures 2      
 #tot_ruptures 2      
-#tot_weight   0.20000
+#tot_weight   2.00000
 ============= =======
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-1      2         P    1     2     1            0.0       7.391E-06  1.00000   1         0.10000
-0      1         P    0     1     1            0.0       7.629E-06  1.00000   1         0.10000
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+0      1         P    0     1     1            0.00251   1.00000   1.00000 3,030,339,619
+1      2         P    1     2     1            0.00247   1.00000   1.00000 27,612,088   
+====== ========= ==== ===== ===== ============ ========= ========= ======= =============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.0       2     
+P    0.00498   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00153 NaN       0.00153 0.00153 1      
-split_filter       0.00250 6.019E-05 0.00246 0.00254 2      
+preclassical       0.00303 4.350E-05 0.00300 0.00306 2      
+read_source_models 0.00224 NaN       0.00224 0.00224 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=313 B fnames=107 B           1.98 KB 
-split_filter       srcs=1.14 KB srcfilter=253 B seed=14 B 2.47 KB 
-================== ====================================== ========
+================== ===================================================== ========
+task               sent                                                  received
+preclassical       srcs=2.31 KB params=956 B gsims=920 B srcfilter=440 B 686 B   
+read_source_models converter=313 B fnames=107 B                          1.98 KB 
+================== ===================================================== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total split_filter       0.00500  1.42188   2     
-total read_source_models 0.00153  0.0       1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total preclassical       0.00607   0.0       2     
+managing sources         0.00342   0.0       1     
+total read_source_models 0.00224   0.0       1     
+store source_info        0.00165   0.0       1     
+aggregate curves         3.588E-04 0.0       2     
+======================== ========= ========= ======

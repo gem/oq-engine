@@ -108,8 +108,8 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae(dist_bins, [8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48,
                          52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100,
                          104, 108, 112])
-        aaae(lon_bins, [[0, 2.4]])
-        aaae(lat_bins, [[0, 2.4]])
+        aaae(lon_bins, [0, 2.4])
+        aaae(lat_bins, [0, 2.4])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
         self.assertEqual(trt_bins, [self.trt])
         aaae(matrix.shape, (2, 26, 1, 1, 3, 1))
@@ -219,4 +219,3 @@ class PMFExtractorsTestCase(unittest.TestCase):
             (pmf1 + pmf2) / 2, [1, 1])
         numpy.testing.assert_allclose(
             disagg.mag_pmf(mean), [0.99999944, 0.99999999])
-

@@ -7,6 +7,11 @@ how to install the engine. If you have already installed it and have
 issues running calculations you should go [here for hazard calculations](
 faq-hazard.md) and [here for risk calculations](faq-risk.md).
 
+### Help! I have a multi-node cluster and I'm in trouble
+
+If you are running the OpenQuake Engine on a multi-node cluster you should also
+have a look at [FAQ related to cluster deployments](faq-cluster.md).
+
 ******
 
 ### Python 2.7 compatibility 
@@ -24,13 +29,17 @@ The OpenQuake Engine has at least three installation methods. To choose the one 
 ### Supported operating systems
 
 Binary packages are provided for the following 64bit operating systems:
-- [Windows](installing/windows.md)
-- [macOS](installing/macos.md)
-- Linux [Ubuntu](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux/Fedora](installing/rhel.md) via _deb_ and _rpm_
+- [Windows 10](installing/windows.md)
+- [macOS 10.9+](installing/macos.md)
+- Linux [Ubuntu 16.04+](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux 7+ and Fedora 28+](installing/rhel.md) via _deb_ and _rpm_
 - Any other generic Linux distribution via a [self-installable binary distribution](installing/linux-generic.md)
 - [Docker](installing/docker.md) hosts
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
+
+#### Windows 7 compatibility
+
+**Windows 7** is **deprecated** as a platform for running the Engine since it is reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support). Compatibility with Windows 7 will be removed in next Engine releases. Please upgrade your Windows installation to Windows 10.
 
 ******
 
@@ -48,7 +57,7 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ### 32bit support
 
-The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
+The OpenQuake Engine **requires a 64bit operating system**. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
 
 ******
 
@@ -137,116 +146,6 @@ More information is available on [Running the OpenQuake Engine](running/unix.md)
 ### DbServer ports
 
 The default port for the DbServer (configured via the `openquake.cfg` configuration file) is `1908` or `1907`.
-
-******
-
-### error: OSError: Unable to open file (on a multi-node cluster)
-
-A more detailed stack trace:
-
-```python
-OSError:
-  File "/opt/openquake/lib/python3.6/site-packages/openquake/baselib/parallel.py", line 312, in new
-    val = func(*args)
-  File "/opt/openquake/lib/python3.6/site-packages/openquake/baselib/parallel.py", line 376, in gfunc
-    yield func(*args)
-  File "/opt/openquake/lib/python3.6/site-packages/openquake/calculators/classical.py", line 301, in build_hazard_stats
-    pgetter.init()  # if not already initialized
-  File "/opt/openquake/lib/python3.6/site-packages/openquake/calculators/getters.py", line 69, in init
-    self.dstore = hdf5.File(self.dstore, 'r')
-  File "/opt/openquake/lib64/python3.6/site-packages/h5py/_hl/files.py", line 312, in __init__
-    fid = make_fid(name, mode, userblock_size, fapl, swmr=swmr)
-  File "/opt/openquake/lib64/python3.6/site-packages/h5py/_hl/files.py", line 142, in make_fid
-    fid = h5f.open(name, flags, fapl=fapl)
-  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
-  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
-  File "h5py/h5f.pyx", line 78, in h5py.h5f.open
-OSError: Unable to open file (unable to open file: name = '/home/openquake/oqdata/cache_1.hdf5', errno = 2, error message = 'No such file or directory', flags = 0, o_flags = 0)
-```
-
-This happens when the [shared dir](installing/cluster.md#shared_filesystem) is not configured properly and workers cannot access data from the master node.
-Please note that starting with OpenQuake Engine 3.3 the shared directory **is required** on multi-node deployments.
-
-You can get more information about setting up the shared directory on the [cluster installation page](installing/cluster.md#shared_filesystem).
-
-******
-
-### error: [Errno 111] Connection refused
-
-A more detailed stack trace:
-
-```python
-Traceback (most recent call last):
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/utils/functional.py", line 333, in retry_over_time
-    return fun(*args, **kwargs)
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 261, in connect
-    return self.connection
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 802, in connection
-    self._connection = self._establish_connection()
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 757, in _establish_connection
-    conn = self.transport.establish_connection()
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/transport/pyamqp.py", line 130, in establish_connection
-    conn.connect()
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 282, in connect
-    self.transport.connect()
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/transport.py", line 109, in connect
-    self._connect(self.host, self.port, self.connect_timeout)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/transport.py", line 150, in _connect
-    self.sock.connect(sa)
-ConnectionRefusedError: [Errno 111] Connection refused
-```
-
-This happens when the **Celery support is enabled but RabbitMQ server is not running**. You can start it running
-```bash
-$ sudo service rabbitmq-server start
-``` 
-
-It may also mean that an incompatible version of Celery is used. Please check it with `/opt/openquake/bin/pip3 freeze`.
-
-******
-
-### error: [Errno 104] Connection reset by peer _or_ (403) ACCESS_REFUSED
-
-More detailed stack traces:
-
-
-```python
-Traceback (most recent call last):
-  [...]
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 180, in __init__
-    (10, 30),  # tune
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/abstract_channel.py", line 67, in wait
-    self.channel_id, allowed_methods, timeout)
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 241, in _wait_method
-    channel, method_sig, args, content = read_timeout(timeout)
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 330, in read_timeout
-    return self.method_reader.read_method()
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/method_framing.py", line 189, in read_method
-    raise m
-error: [Errno 104] Connection reset by peer
-```
-
-```python
-Traceback (most recent call last):
-  [...]
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 288, in connect
-    self.drain_events(timeout=self.connect_timeout)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 471, in drain_events
-    while not self.blocking_read(timeout):
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 477, in blocking_read
-    return self.on_inbound_frame(frame)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/method_framing.py", line 55, in on_frame
-    callback(channel, method_sig, buf, None)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 481, in on_inbound_method
-    method_sig, payload, content,
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/abstract_channel.py", line 128, in dispatch_method
-    listener(*args)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 603, in _on_close
-    (class_id, method_id), ConnectionError)
-amqp.exceptions.AccessRefused: (0, 0): (403) ACCESS_REFUSED - Login was refused using authentication mechanism AMQPLAIN. For details see the broker logfile.
-```
-
-These errors mean that RabbiMQ _user_ and _vhost_ have not been created or set correctly. Please refer to [cluster documentation](installing/cluster.md#rabbitmq) to fix it.
 
 ******
 

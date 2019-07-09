@@ -242,7 +242,7 @@ country2code = dict(line.split(',') for line in COUNTRY_CODE.splitlines())
 code2country = {v: k for k, v in country2code.items()}
 
 COUNTRIES = list(country2code)
-REGEX = '|'.join('(%s)' % country.replace('(', '\(').replace(')', '\)')
+REGEX = '|'.join('(%s)' % country.replace('(', r'\(').replace(')', r'\)')
                  for country in country2code)
 
 

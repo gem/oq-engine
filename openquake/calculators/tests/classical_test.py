@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
+import unittest.mock as mock
 import numpy
 from openquake.baselib import parallel
 from openquake.hazardlib import InvalidFile
@@ -30,7 +30,7 @@ from openquake.qa_tests_data.classical import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_34, case_35, case_36, case_37)
+    case_34, case_35, case_36, case_37, case_38, case_39)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -93,12 +93,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check view_pmap for a single realization
         got = view('pmap:grp-00', self.calc.datastore)
-        self.assertEqual(got, '''\
-{0: <ProbabilityCurve
-[[2.26776679e-03 0.00000000e+00]
- [1.67915423e-05 0.00000000e+00]
- [0.00000000e+00 0.00000000e+00]
- [0.00000000e+00 0.00000000e+00]]>}''')
+        self.assertEqual(got, '<ProbabilityMap 1, 4, 1>')
 
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
@@ -135,7 +130,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_7.__file__)
 
         # exercising extract/mean_std_curves
-        extract(self.calc.datastore, 'mean_std_curves')
+        # extract(self.calc.datastore, 'mean_std_curves')
 
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
@@ -193,7 +188,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # test extract/hcurves/rlz-0, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
-        self.assertEqual(sorted(haz), ['all', 'investigation_time'])
+        self.assertEqual(sorted(haz), ['_extra', 'all', 'investigation_time'])
         self.assertEqual(
             haz['all'].dtype.names, ('lon', 'lat', 'depth', 'mean'))
         array = haz['all']['mean']
@@ -213,7 +208,7 @@ class ClassicalTestCase(CalculatorTestCase):
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-simple_fault.xml 0      Active Shallow Crust 55           447         
+simple_fault.xml 0      Active Shallow Crust 447          447         
 ================ ====== ==================== ============ ============""")
         # test classical
         self.assert_curves_ok([
@@ -252,14 +247,14 @@ hazard_uhs-std.csv
 
         # here is the size of assoc_by_grp for a complex logic tree
         # grp_id gsim_idx rlzis
-        # 0	0	 {0, 1}
-        # 0	1	 {2, 3}
-        # 1	0	 {0, 2}
-        # 1	1	 {1, 3}
-        # 2	0	 {4}
-        # 2	1	 {5}
-        # 3	0	 {6}
-        # 3	1	 {7}
+        # 00 {0, 1}
+        # 01 {2, 3}
+        # 10 {0, 2}
+        # 11 {1, 3}
+        # 20 {4}
+        # 21 {5}
+        # 30 {6}
+        # 31 {7}
         # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
 
         # full source model logic tree
@@ -333,11 +328,12 @@ hazard_uhs-std.csv
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     def test_case_19(self):
+        # this test is a lot faster without parallelism (from 89s to 25s)
         self.assert_curves_ok([
             'hazard_curve-mean_PGA.csv',
             'hazard_curve-mean_SA(0.1).csv',
             'hazard_curve-mean_SA(0.15).csv',
-        ], case_19.__file__, delta=1E-7)
+        ], case_19.__file__, delta=1E-5, concurrent_tasks='0')
 
     def test_case_20(self):  # Source geometry enumeration
         self.assert_curves_ok([
@@ -432,7 +428,9 @@ hazard_uhs-std.csv
         # NonParametricProbabilisticRupture.get_probability_no_exceedance
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
 
-    def test_case_30(self):  # point on the international data line
+    def test_case_30(self):
+        # point on the international data line
+        # this is also a test with IMT-dependent weights
         if NOT_DARWIN:  # broken on macOS
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
@@ -445,13 +443,21 @@ hazard_uhs-std.csv
                                          ('grp-02', 1385)])
 
             # check best_rlz on 5 sites
-            best_rlz = self.calc.datastore['best_rlz'].value
+            best_rlz = self.calc.datastore['best_rlz'][()]
             numpy.testing.assert_equal(best_rlz, [2, 9, 2, 3, 1])
+
+    def test_case_30_sampling(self):
+        # IMT-dependent weights with sampling are not implemented
+        with self.assertRaises(NotImplementedError):
+            self.assert_curves_ok(
+                ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
+                case_30.__file__, number_of_logic_tree_samples='10')
 
     def test_case_31(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
-                               'hazard_curve-std-PGA.csv'], case_31.__file__)
+                               'hazard_curve-std-PGA.csv'], case_31.__file__,
+                              delta=1E-5)
 
     def test_case_32(self):
         # source specific logic tree
@@ -474,7 +480,23 @@ hazard_uhs-std.csv
     def test_case_36(self):
         # test with advanced applyToSources and preclassical
         self.run_calc(case_36.__file__, 'job.ini')
+        self.assertEqual(self.calc.R, 9)  # there are 9 realizations
 
     def test_case_37(self):
-        # chch gsims
+        # check gsims
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_37.__file__)
+
+    def test_case_38(self):
+        # BC Hydro GMPEs with epistemic adjustments
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "quantile_curve-0.16-PGA.csv",
+                               "quantile_curve-0.5-PGA.csv",
+                               "quantile_curve-0.84-PGA.csv"],
+                              case_38.__file__)
+
+    def test_case_39(self):
+        # IMT weights == 0
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
+            'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
+            'hazard_map-mean.csv'], case_39.__file__, delta=1E-5)

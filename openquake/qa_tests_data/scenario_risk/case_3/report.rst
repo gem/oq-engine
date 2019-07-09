@@ -3,11 +3,11 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     372,210,909        
-date           2019-02-18T08:35:36
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:26
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 4, num_levels = 15
+num_sites = 4, num_levels = 15, num_rlzs = 1
 
 Parameters
 ----------
@@ -54,8 +54,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -67,12 +66,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         4       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     4
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -87,8 +84,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-saving gmfs         0.02434   1.03906   1     
-building riskinputs 0.01502   0.0       1     
-computing gmfs      0.00556   0.0       1     
-reading exposure    3.805E-04 0.0       1     
+saving gmfs         0.02733   0.75000   1     
+building riskinputs 0.01488   0.0       1     
+computing gmfs      0.00652   0.0       1     
+reading exposure    4.058E-04 0.0       1     
 =================== ========= ========= ======

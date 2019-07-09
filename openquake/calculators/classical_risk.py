@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
@@ -40,42 +39,36 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
         :class:`openquake.baselib.performance.Monitor` instance
     """
     result = dict(loss_curves=[], stat_curves=[])
+    weights = [w['default'] for w in param['weights']]
+    statnames, stats = zip(*param['stats'])
     for ri in riskinputs:
-        all_outputs = list(riskmodel.gen_outputs(ri, monitor))
-        for outputs in all_outputs:
-            r = outputs.rlzi
-            outputs.average_losses = AccumDict(accum=[])  # l -> array
-            for l, loss_curves in enumerate(outputs):
-                # loss_curves has shape (C, N, 2)
-                for i, asset in enumerate(outputs.assets):
-                    aid = asset.ordinal
-                    avg = scientific.average_loss(loss_curves[:, i].T)
-                    outputs.average_losses[l].append(avg)
-                    lcurve = (loss_curves[:, i, 0], loss_curves[:, i, 1], avg)
+        A = len(ri.assets)
+        L = len(riskmodel.lti)
+        R = ri.hazard_getter.num_rlzs
+        loss_curves = numpy.zeros((R, L, A), object)
+        avg_losses = numpy.zeros((R, L, A))
+        for out in riskmodel.gen_outputs(ri, monitor):
+            r = out.rlzi
+            for l, loss_type in enumerate(riskmodel.loss_types):
+                # loss_curves has shape (A, C)
+                for i, asset in enumerate(ri.assets):
+                    loss_curves[out.rlzi, l, i] = lc = out[loss_type][i]
+                    aid = asset['ordinal']
+                    avg = scientific.average_loss(lc)
+                    avg_losses[r, l, i] = avg
+                    lcurve = (lc['loss'], lc['poe'], avg)
                     result['loss_curves'].append((l, r, aid, lcurve))
 
         # compute statistics
-        R = ri.hazard_getter.num_rlzs
-        w = param['weights']
-        statnames, stats = zip(*param['stats'])
-        l_idxs = range(len(riskmodel.lti))
-        for assets, outs in groupby(
-                all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [w[out.rlzi]['default'] for out in outs]
-            out = outs[0]
-            for l in l_idxs:
-                for i, asset in enumerate(assets):
-                    avgs = numpy.array([r.average_losses[l][i] for r in outs])
-                    avg_stats = compute_stats(avgs, stats, weights)
-                    # is a pair loss_curves, insured_loss_curves
-                    # out[l][:, i, 0] are the i-th losses
-                    # out[l][:, i, 1] are the i-th poes
-                    losses = out[l][:, i, 0]
-                    poes_stats = compute_stats(
-                        numpy.array([out[l][:, i, 1] for out in outs]),
-                        stats, weights)
-                    result['stat_curves'].append(
-                        (l, asset.ordinal, losses, poes_stats, avg_stats))
+        for l, loss_type in enumerate(riskmodel.loss_types):
+            for i, asset in enumerate(ri.assets):
+                avg_stats = compute_stats(avg_losses[:, l, i], stats, weights)
+                losses = loss_curves[0, l, i]['loss']
+                all_poes = numpy.array(
+                    [loss_curves[r, l, i]['poe'] for r in range(R)])
+                poes_stats = compute_stats(all_poes, stats, weights)
+                result['stat_curves'].append(
+                    (l, asset['ordinal'], losses, poes_stats, avg_stats))
     if R == 1:  # the realization is the same as the mean
         del result['loss_curves']
     return result
@@ -95,9 +88,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         Associate the assets to the sites and build the riskinputs.
         """
         oq = self.oqparam
-        if oq.insured_losses:
-            raise ValueError(
-                'insured_losses are not supported for classical_risk')
         super().pre_execute()
         if 'poes' not in self.datastore:  # when building short report
             return
@@ -107,7 +97,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
-        self.I = oq.insured_losses + 1
         self.S = len(oq.hazard_stats())
 
     def post_execute(self, result):
@@ -120,13 +109,13 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                      for cp in self.riskmodel.curve_params
                      if cp.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
-            curve_res, self.oqparam.insured_losses)
+            curve_res, insured_losses=False)
         ltypes = self.riskmodel.loss_types
 
         # loss curves stats are generated always
         stats = encode(list(self.oqparam.hazard_stats()))
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
-        avg_losses = numpy.zeros((self.A, self.S, self.L * self.I), F32)
+        avg_losses = numpy.zeros((self.A, self.S, self.L), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:
             stat_curves_lt = stat_curves[ltypes[l]]
             for s in range(self.S):
@@ -140,7 +129,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         if self.R > 1:  # individual realizations saved only if many
             loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
-            avg_losses = numpy.zeros((self.A, self.R, self.L * self.I), F32)
+            avg_losses = numpy.zeros((self.A, self.R, self.L), F32)
             for l, r, a, (losses, poes, avg) in result['loss_curves']:
                 lc = loss_curves[a, r][ltypes[l]]
                 avg_losses[a, r, l] = avg

@@ -3,11 +3,11 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     3,442,327,537      
-date           2019-02-18T08:36:02
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:40
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 1, num_levels = 1
+num_sites = 1, num_levels = 1, num_rlzs = 2
 
 Parameters
 ----------
@@ -52,9 +52,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[BooreAtkinson2008]': [0]
-  0,'[ChiouYoungs2008]': [1]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------

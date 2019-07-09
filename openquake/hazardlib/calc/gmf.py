@@ -193,8 +193,7 @@ class GmfComputer(object):
             total_residual = stddev_total * rvs(
                 distribution, num_sids, num_events)
             gmf = gsim.to_imt_unit_values(mean + total_residual)
-            stddev_inter = numpy.empty(num_events, F32)
-            stddev_inter.fill(numpy.nan)
+            stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
             epsilons.fill(numpy.nan)
         else:
@@ -208,20 +207,19 @@ class GmfComputer(object):
                 distribution, num_sids, num_events)
 
             if self.correlation_model is not None:
-                ir = self.correlation_model.apply_correlation(
+                intra_residual = self.correlation_model.apply_correlation(
                     self.sites, imt, intra_residual, stddev_intra)
-                # this fixes a mysterious bug: ir[row] is actually
-                # a matrix of shape (E, 1) and not a vector of size E
-                intra_residual = numpy.zeros(ir.shape)
-                for i, val in numpy.ndenumerate(ir):
-                    intra_residual[i] = val
+                sh = intra_residual.shape
+                if len(sh) == 1:  # a vector
+                    intra_residual = intra_residual.reshape(sh + (1,))
 
             epsilons = rvs(distribution, num_events)
             inter_residual = stddev_inter * epsilons
 
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
-        return gmf, stddev_inter.max(axis=0), epsilons
+            stdi = stddev_inter.max(axis=0)
+        return gmf, stdi, epsilons
 
 
 # this is not used in the engine; it is still useful for usage in IPython

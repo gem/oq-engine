@@ -292,7 +292,7 @@ class Mesh(object):
             self.lats.reshape(self.lats.shape + (1, )),
             self.lons,
             self.lats)
-        return numpy.matrix(distances, copy=False)
+        return distances
 
     def _get_proj_convex_hull(self):
         """

@@ -21,7 +21,6 @@ import unittest
 import numpy
 
 from openquake.baselib.general import gettemp
-from openquake.calculators import event_based
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -117,11 +116,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)
 
+    def test_case_12(self):
+        # 1 assets, 2 samples
+        self.run_calc(case_master.__file__, 'job12.ini', exports='csv')
+        # alt = extract(self.calc.datastore, 'asset_loss_table')
+        [fname] = export(('avg_losses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_loss_12.csv', fname)
+
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
         # test the composite_risk_model keys (i.e. slash escaping)
-        crm = sorted(self.calc.datastore.getitem(self.calc.oqparam.risk_model))
+        crm = sorted(self.calc.datastore.getitem('risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
         # test the case when all GMFs are filtered out
@@ -139,14 +145,20 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_2_correlation(self):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation=1.0)
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
         # test losses_by_tag with a single realization
         [fname] = export(
-            ('aggregate_by/taxonomy/avg_losses', 'csv'),
+            ('aggregate_by/avg_losses?tag=taxonomy&kind=rlz-0', 'csv'),
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
+
+        # losses by taxonomy for loss_type=structural
+        [fname] = export(
+            ('aggregate_by/avg_losses?tag=taxonomy&kind=rlz-0&'
+             'loss_type=structural', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_taxo.csv', fname)
 
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
@@ -176,7 +188,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
 
-        fnames = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        fnames = export(('losses_by_event', 'csv'), self.calc.datastore)
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
@@ -208,6 +220,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # check event loss table
+        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
+
         # extract loss_curves/rlz-1 (with the first asset having zero losses)
         [fname] = export(('loss_curves/rlz-1', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
@@ -218,11 +235,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
-
-        # extract curves by tag
-        tags = 'taxonomy=tax1&state=01&cresta=0.11'
-        a = extract(self.calc.datastore, 'agg_curves/structural?' + tags)
-        self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
@@ -235,42 +247,52 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check losses_by_tag
-        fnames = export(('aggregate_by/occupancy/avg_losses', 'csv'),
-                        self.calc.datastore)
+        fnames = export(
+            ('aggregate_by/avg_losses?tag=occupancy&kind=mean', 'csv'),
+            self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
 
         self.check_multi_tag(self.calc.datastore)
 
         # ------------------------- ebrisk calculator ---------------------- #
         self.run_calc(case_master.__file__, 'job.ini',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id),
                       calculation_mode='ebrisk', exports='',
-                      aggregate_by='taxonomy',
-                      insured_losses='false')
+                      aggregate_by='id')
 
         # agg_losses-rlzs has shape (L=5, R=9)
         # agg_losses-stats has shape (L=5, S=4)
         fname = export(('agg_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/agglosses.csv', fname)
+        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
+
+        fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-5)
+
+        fname = export(('agg_maps-stats', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/aggmaps.csv', fname, delta=1E-5)
 
         fname = export(('avg_losses', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avglosses.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/avg_losses-mean.csv',
+                              fname, delta=1E-5)
+
+        fname = export(('losses_by_event', 'csv'), self.calc.datastore)[0]
+        self.assertEqualFiles('expected/elt.csv', fname)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
-        url = 'aggregate_by/taxonomy,occupancy/avg_losses/structural'
-        arr = dict(extract(dstore, url))['quantile-0.5']
+        arr = extract(dstore, 'aggregate/avg_losses?'
+                      'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
         self.assertEqual(len(arr.to_table()), 1)
 
         # aggregate by all loss types
-        fnames = export(('aggregate_by/taxonomy,occupancy/avg_losses', 'csv'),
-                        dstore)
+        fnames = export(
+            ('aggregate_by/avg_losses?tag=taxonomy&tag=occupancy&kind=mean',
+             'csv'),
+            dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
-        event_based.RUPTURES_PER_BLOCK = 20
         self.run_calc(case_miriam.__file__, 'job.ini')
 
         # check minimum_magnitude >= 5.2
@@ -278,34 +300,32 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertGreaterEqual(minmag, 5.2)
 
         # check asset_loss_table
-        tot = self.calc.datastore['asset_loss_table'].value.sum()
-        self.assertEqual(tot, 15743430.0)
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
-                              fname, delta=1E-5)
+        tot = self.calc.datastore['asset_loss_table'][()].sum()
+        self.assertEqual(tot, 15787827.0)
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
-        os.remove(fname)
 
-        # this is a case with exposure and region_grid_spacing=1
+        # this is a case with exposure, site model and region_grid_spacing
         self.run_calc(case_miriam.__file__, 'job2.ini')
         hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']
         sitecol = self.calc.datastore['sitecol']  # filtered sitecol
         self.assertEqual(len(hcurves), len(sitecol))
         assetcol = self.calc.datastore['assetcol']
-        self.assertEqual(len(sitecol), 15)
+        self.assertEqual(len(sitecol), 12)
         self.assertGreater(sitecol.vs30.sum(), 0)
         self.assertEqual(len(assetcol), 548)
 
     def test_case_7a(self):
-        # case with  <insuranceLimit isAbsolute="false"/>
-        # this is also a case with preimported exposure
+        # case with preimported exposure
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
+        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_losses.csv', fname)
+
+        [fname] = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_curves.csv', fname)
 
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
@@ -338,6 +358,26 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_6c.__file__, 'job_h.ini')
         hc = str(self.calc.datastore.calc_id)
         out = self.run_calc(case_6c.__file__, 'job_r.ini', exports='csv',
-                            hazard_calculation_id=hc, concurrent_tasks='0')
+                            hazard_calculation_id=hc)
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)
+
+        [fname] = out['agg_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
+
+    def test_asset_loss_table(self):
+        # this is a case with L=1, R=1, T=2, P=3
+        out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv')
+        [fname] = out['agg_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
+        [fname] = out['agg_maps-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_maps.csv', fname, delta=1E-5)
+
+        # regenerate loss curves and maps
+        out = self.run_calc(
+            case_6c.__file__, 'job_eb.ini', exports='csv',
+            hazard_calculation_id=str(self.calc.datastore.calc_id))
+        [fname] = out['agg_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
+        [fname] = out['agg_maps-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_maps.csv', fname, delta=1E-5)

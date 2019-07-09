@@ -34,10 +34,16 @@ import string
 import random
 from django.test import Client
 from openquake.baselib.general import gettemp
+from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
 from openquake.commands import engine
+
+
+def loadnpz(lines):
+    bio = io.BytesIO(b''.join(ln for ln in lines))
+    return numpy.load(bio, allow_pickle=True)
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -111,6 +117,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
+        assert c > 0, 'There are no jobs??'
         cls.wait()
 
     # tests
@@ -146,45 +154,37 @@ class EngineServerTestCase(unittest.TestCase):
         url = extract_url + 'composite_risk_model.attrs'
         self.assertEqual(self.c.get(url).status_code, 200)
 
-        # check asset_values
-        resp = self.c.get(extract_url + 'asset_values/0')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertEqual(len(got['array']), 49)  # 49 assets on site 0
-        self.assertEqual(resp.status_code, 200)
-
         # check asset_tags
         resp = self.c.get(extract_url + 'asset_tags')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['taxonomy']), 7)
+
+        # check exposure_metadata
+        resp = self.c.get(extract_url + 'exposure_metadata')
+        got = loadnpz(resp.streaming_content)
+        self.assertEqual(sorted(got['tagnames']), ['id', 'taxonomy'])
+        self.assertEqual(sorted(got['array']), ['number', 'value-structural'])
+
+        # check assets
+        resp = self.c.get(
+            extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
+        got = loadnpz(resp.streaming_content)
+        self.assertEqual(len(got['array']), 25)
 
         # check avg_losses-rlzs
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
         self.assertEqual(resp.status_code, 200)
 
         # check *-aggregation
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=*')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['tags']), 6)  # expected 6 taxonomies
         self.assertEqual(len(got['array']), 6)  # expected 6 aggregates
         self.assertEqual(resp.status_code, 200)
-
-        # check agg_curves with a single realization
-        # the case with multiple rlzs is tested in event_based_risk/case_master
-        resp = self.c.get(
-            extract_url + 'agg_curves/structural?taxonomy=*')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertEqual(list(got['stats']), [b'mean'])
-        self.assertEqual(list(got['return_periods']), [5, 10, 20, 50, 100])
-        self.assertEqual(list(got['units']), [b'EUR'])
 
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
@@ -195,11 +195,10 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertIn('Could not export XXX in csv', str(ctx.exception))
 
         # check MFD distribution
-        extract_url = '/v1/calc/%s/extract/event_based_mfd' % job_id
-        data = b''.join(ln for ln in self.c.get(extract_url))
-        got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertGreater(len(got['array']['mag']), 1)
-        self.assertGreater(len(got['array']['freq']), 1)
+        extract_url = '/v1/calc/%s/extract/event_based_mfd?kind=mean' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertGreater(len(got['magnitudes']), 1)
+        self.assertGreater(len(got['mean_frequency']), 1)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
@@ -209,7 +208,7 @@ class EngineServerTestCase(unittest.TestCase):
         # fullreport, input, hcurves, hmaps, realizations, sourcegroups
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
-        self.assertGreaterEqual(len(results), 6)
+        self.assertGreaterEqual(len(results), 5)
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']

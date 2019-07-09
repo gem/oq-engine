@@ -22,13 +22,12 @@ import logging
 from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import util, logs, readinput
+from openquake.commonlib import logs, readinput
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
-from openquake.calculators.export import export
 from openquake.commands.abort import abort
 
 
@@ -112,25 +111,12 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     job = logs.dbcmd('get_job_from_checksum', haz_checksum)
     reuse = reuse_hazard and job and os.path.exists(job.ds_calc_dir + '.hdf5')
     # recompute the hazard and store the checksum
-    ebr = (oqparam.calculation_mode == 'event_based_risk' and
-           'gmfs' not in oqparam.inputs)
-    if ebr:
-        kw = dict(calculation_mode='event_based')
-        if (oqparam.sites or 'sites' in oqparam.inputs or
-                'site_model' in oqparam.inputs):
-            # remove exposure from the hazard
-            kw['exposure_file'] = ''
-    else:
-        kw = {}
     if not reuse:
-        hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
+        hc_id = run_job(job_ini, log_level, log_file, exports)
         if job is None:
             logs.dbcmd('add_checksum', hc_id, haz_checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             logs.dbcmd('update_job_checksum', hc_id, haz_checksum)
-        if ebr:
-            run_job(job_ini, log_level, log_file,
-                    exports, hazard_calculation_id=hc_id)
     else:
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
@@ -138,7 +124,7 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
                 exports, hazard_calculation_id=hc_id)
 
 
-@sap.script
+@sap.Script  # do not use sap.script, other oq engine will break
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
            upgrade_db, db_version, what_if_I_upgrade, run,
            list_hazard_calculations, list_risk_calculations,

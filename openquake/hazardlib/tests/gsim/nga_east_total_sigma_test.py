@@ -33,7 +33,7 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
     """
     def check(self, filename, max_discrep_percentage):
         filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
+        errors, stats, sctx, rctx, dctx = check_gsim(
             self.GSIM_CLASS, open(filename), max_discrep_percentage)
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
@@ -41,10 +41,6 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
         self.assertEqual(self.GSIM_CLASS.REQUIRES_SITES_PARAMETERS, s_att)
         self.assertEqual(self.GSIM_CLASS.REQUIRES_RUPTURE_PARAMETERS, r_att)
         self.assertEqual(self.GSIM_CLASS.REQUIRES_DISTANCES, d_att)
-        self.assertTrue(
-            np.all(ctxs),
-            msg='Contexts objects have been changed by method '
-                'get_mean_and_stddevs')
         if errors:
             raise AssertionError(stats)
         print()

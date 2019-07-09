@@ -3,11 +3,11 @@ event based two source models
 
 ============== ===================
 checksum32     1,852,256,743      
-date           2019-02-18T08:35:30
-engine_version 3.4.0-git9883ae17a5
+date           2019-06-24T15:33:21
+engine_version 3.6.0-git4b6205639c
 ============== ===================
 
-num_sites = 1, num_levels = 11
+num_sites = 1, num_levels = 11, num_rlzs = ?
 
 Parameters
 ----------
@@ -43,12 +43,10 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -57,14 +55,14 @@ tax1     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-3      2         X    6     402   1            0.0       0.0        0.0       1         0.0   
-2      1         S    4     6     482          0.0       0.0        0.0       1         0.0   
-1      2         S    2     4     4            0.0       0.0        0.0       1         0.0   
-0      1         S    0     2     482          0.0       0.0        0.0       1         0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+3      2         X    6     402   1            0.0       0.0       0.0    2,506,021,815
+2      1         S    4     6     482          0.0       0.0       0.0    2,786,737,502
+1      2         S    2     4     4            0.0       0.0       0.0    3,056,286,023
+0      1         S    0     2     482          0.0       0.0       0.0    2,786,737,502
+====== ========= ==== ===== ===== ============ ========= ========= ====== =============
 
 Computation times by source typology
 ------------------------------------
@@ -77,32 +75,28 @@ X    0.0       1
 
 Duplicated sources
 ------------------
-['1']
-Found 2 source(s) with the same ID and 1 true duplicate(s)
+Found 2 source(s) with the same ID and 1 true duplicate(s): ['1']
 Here is a fake duplicate: 2
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.01485 0.00339   0.01245 0.01724 2      
-only_filter        0.00473 6.625E-04 0.00426 0.00520 2      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.01653 0.00782 0.01100 0.02206 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================== ========
-task               sent                                     received
-read_source_models converter=626 B fnames=218 B             13.91 KB
-only_filter        srcs=11.33 KB srcfilter=253 B dummy=14 B 13.03 KB
-================== ======================================== ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=626 B fnames=218 B 13.93 KB
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.02969   0.14453   2     
-total only_filter        0.00945   1.77734   2     
-reading exposure         6.790E-04 0.0       1     
+total read_source_models 0.03306   0.23828   2     
+reading exposure         5.176E-04 0.0       1     
 ======================== ========= ========= ======

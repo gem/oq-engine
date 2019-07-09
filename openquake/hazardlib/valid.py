@@ -93,7 +93,6 @@ def gsim(value):
     gs = gsim_class(**kwargs)
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     gs.minimum_distance = minimum_distance
-    gs.init()
     return gs
 
 
@@ -342,14 +341,12 @@ def namelist(value):
     ['a1', 'b_2', '_c']
 
     >>> namelist('a1 b_2 1c')
-    Traceback (most recent call last):
-        ...
-    ValueError: List of names containing an invalid name: 1c
+    ['a1', 'b_2', '1c']
     """
     names = value.replace(',', ' ').split()
     for n in names:
         try:
-            name(n)
+            source_id(n)
         except ValueError:
             raise ValueError('List of names containing an invalid name:'
                              ' %s' % n)
@@ -534,7 +531,8 @@ def positivefloats(value):
     :returns:
         a list of positive floats
     """
-    floats = list(map(positivefloat, value.split()))
+    values = value.strip('[]').split()
+    floats = list(map(positivefloat, values))
     return floats
 
 
@@ -655,6 +653,8 @@ def intensity_measure_types(value):
     :param value: input string
     :returns: non-empty list of Intensity Measure Type objects
 
+    >>> intensity_measure_types('')
+    []
     >>> intensity_measure_types('PGA')
     ['PGA']
     >>> intensity_measure_types('PGA, SA(1.00)')
@@ -668,6 +668,8 @@ def intensity_measure_types(value):
     ...
     ValueError: The IMTs are not sorted by period: SA(1), PGA
     """
+    if not value:
+        return []
     imts = []
     for chunk in value.split(','):
         imts.append(imt.from_string(chunk.strip()))
@@ -768,6 +770,24 @@ def logscale(x_min, x_max, n):
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
 
 
+def sqrscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max in a quadratic scale
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min < 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.sqrt(x_max - x_min) / (n - 1)
+    return x_min + (delta * numpy.arange(n))**2
+
+
 def dictionary(value):
     """
     :param value:
@@ -823,7 +843,9 @@ def floatdict(value):
     value = ast.literal_eval(value)
     if isinstance(value, (int, float, list)):
         return {'default': value}
-    return value
+    dic = {'default': value[next(iter(value))]}
+    dic.update(value)
+    return dic
 
 
 def maximum_distance(value):
@@ -990,7 +1012,7 @@ def integers(value):
     """
     if '.' in value:
         raise ValueError('There are decimal points in %s' % value)
-    values = value.replace(',', ' ').split()
+    values = value.strip('[]').replace(',', ' ').split()
     if not values:
         raise ValueError('Not a list of integers: %r' % value)
     try:
@@ -1228,9 +1250,9 @@ class RjbEquivalent(object):
     """
     def __init__(self, filename):
         with hdf5.File(filename, 'r') as f:
-            self.repi = f['default/repi'].value  # shape D
-            self.mags = f['default/mags'].value  # shape M
-            self.reqv = f['default/reqv'].value  # shape D x M
+            self.repi = f['default/repi'][()]  # shape D
+            self.mags = f['default/mags'][()]  # shape M
+            self.reqv = f['default/reqv'][()]  # shape D x M
 
     def get(self, repi, mag):
         """

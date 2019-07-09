@@ -401,7 +401,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     :param mon: a monitor
     """
     isgenfunc = inspect.isgeneratorfunction(func)
-    mon.operation = 'total ' + func.__name__
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
@@ -409,7 +408,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         assert not isgenfunc, func
         return Result.new(func, args, mon)
 
-    mon.measuremem = True
+    mon = mon.new(operation='total ' + func.__name__, measuremem=True)
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     mon.task_no = task_no
     if mon.inject:
@@ -483,6 +482,7 @@ class IterResult(object):
         self.received = []
         first_time = True
         nbytes = AccumDict()
+        names = {self.name}
         for result in self.iresults:
             msg = check_mem_usage()  # log a warning if too much memory is used
             if msg and first_time:
@@ -493,6 +493,7 @@ class IterResult(object):
                 raise result
             elif isinstance(result, Result):
                 val = result.get()
+                names.add(result.mon.operation[6:])
                 self.received.append(len(result.pik))
                 if hasattr(result, 'nbytes'):
                     nbytes += result.nbytes
@@ -506,16 +507,16 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            save_task_info(self, result, mem_gb)
             if not result.func_args:  # not subtask
                 yield val
+                save_task_info(self, result, mem_gb)
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
             logging.info(
-                'Received %s from %d %s outputs in %d seconds, biggest '
-                'output=%s', humansize(tot), len(self.received),
-                self.name, time.time() - t0, humansize(max_per_output))
+                'Received %s in %d seconds, biggest '
+                'output=%s', humansize(tot), time.time() - t0,
+                humansize(max_per_output))
             if nbytes:
                 logging.info('Received %s',
                              {k: humansize(v) for k, v in nbytes.items()})
@@ -560,15 +561,12 @@ def save_task_info(self, res, mem_gb=0):
         data = numpy.array([t], task_info_dt)
         hdf5.extend3(self.hdf5.filename, 'task_info/' + name, data,
                      argnames=self.argnames, sent=self.sent)
-    mon.flush()
+        mon.flush()
 
 
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
-    # unregister raiseMasterKilled in oq-workers to avoid deadlock
-    # since processes are terminated via pool.terminate()
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
     # prctl is still useful (on Linux) to terminate all spawned processes
     # when master is killed via SIGKILL
     try:
@@ -589,23 +587,28 @@ class Starmap(object):
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
-            orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+            # unregister custom handlers before starting the processpool
+            term_handler = signal.signal(signal.SIGTERM, signal.SIG_DFL)
+            int_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = multiprocessing.get_context('spawn').Pool(
                 poolsize, init_workers)
-            signal.signal(signal.SIGINT, orig_handler)
+            # after spawning the processes restore the original handlers
+            # i.e. the ones defined in openquake.engine.engine
+            signal.signal(signal.SIGTERM, term_handler)
+            signal.signal(signal.SIGINT, int_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
-        elif distribute == 'no' and hasattr(cls, 'pool'):
-            cls.shutdown()
         elif distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
     @classmethod
     def shutdown(cls):
+        # shutting down the pool during the runtime causes mysterious
+        # race conditions with errors inside atexit._run_exitfuncs
         if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
@@ -616,7 +619,7 @@ class Starmap(object):
             del cls.dask_client
 
     @classmethod
-    def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
+    def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info):
@@ -682,6 +685,7 @@ class Starmap(object):
             hdf5.create(h5, task_info, task_info_dt)
         if h5 and 'performance_data' not in h5:
             hdf5.create(h5, 'performance_data', perf_dt)
+        self.task_no = 0
 
     @property
     def hdf5(self):
@@ -691,14 +695,15 @@ class Starmap(object):
         """
         Log the progress of the computation in percentage
         """
-        done = self.total - self.todo
-        percent = int(float(done) / self.total * 100)
+        total = len(self.tasks)
+        done = total - self.todo
+        percent = int(float(done) / total * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
             self.progress('Sent %s of data in %d %s task(s)',
-                          humansize(self.sent.sum()), self.total, self.name)
+                          humansize(self.sent.sum()), total, self.name)
         elif percent > self.prev_percent:
-            self.progress('%s %3d%% [of %d]',
+            self.progress('%s %3d%% [of %d tasks]',
                           self.name, percent, len(self.tasks))
             self.prev_percent = percent
         return done
@@ -720,14 +725,8 @@ class Starmap(object):
             args = pickle_sequence(args)
             self.sent += numpy.array([len(p) for p in args])
         res = submit[dist](self, func, args, monitor)
+        self.task_no += 1
         self.tasks.append(res)
-
-    @property
-    def task_no(self):
-        """
-        :returns: number of the last submitted task, starting from 0
-        """
-        return len(self.tasks)
 
     def submit_all(self):
         """
@@ -759,7 +758,7 @@ class Starmap(object):
         if hasattr(self, 'sender'):
             self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)
-        self.total = self.todo = len(self.tasks)
+        self.todo = len(self.tasks)
         while self.todo:
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
@@ -783,7 +782,7 @@ class Starmap(object):
         self.tasks.clear()
 
 
-def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
+def sequential_apply(task, args, concurrent_tasks=cpu_count * 2,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks
@@ -798,3 +797,39 @@ def count(word, mon):
     Used as example in the documentation
     """
     return collections.Counter(word)
+
+
+def split_task(func, *args, duration=1000,
+               weight=operator.attrgetter('weight')):
+    """
+    :param func: a task function
+    :param args: arguments of the task function
+    :param duration: split the task if it exceeds the duration
+    :param weight: weight function for the elements in args[0]
+    :yields: a partial result, 0 or more task objects, 0 or 1 partial result
+    """
+    elements = args[0]
+    n = len(elements)
+    assert n > 0, 'Passed an empty sequence!'
+    if n > 1000:
+        every = 333
+    elif n > 300:
+        every = 100
+    elif n > 100:
+        every = 33
+    else:
+        every = 10
+    sample = [el for i, el in enumerate(elements, 1) if i % every == 0]
+    if not sample:  # there are not enough elements
+        yield func(*args)
+        return
+    other = [el for i, el in enumerate(elements, 1) if i % every != 0]
+    sample_weight = sum(weight(el) for el in sample)
+    t0 = time.time()
+    res = func(*(sample,) + args[1:])
+    dt = (time.time() - t0) / sample_weight  # time per unit of weight
+    yield res
+    blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
+    for block in blocks[:-1]:
+        yield (func, block) + args[1:-1]
+    yield func(*(blocks[-1],) + args[1:])

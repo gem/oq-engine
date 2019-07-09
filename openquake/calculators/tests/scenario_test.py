@@ -20,10 +20,9 @@ from numpy.testing import assert_almost_equal as aae
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10)
-from openquake.baselib.node import floatformat
-from openquake.calculators.export import export
+    case_9, case_10, case_11)
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.hazardlib.contexts import ContextMaker
 
 
 def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
@@ -60,11 +59,6 @@ class ScenarioTestCase(CalculatorTestCase):
                 gmvs = gmfa[sid, :, imti]
                 median[imt].append(numpy.median(gmvs))
         return median
-
-    def test_case_1(self):
-        with floatformat('%5.1E'):
-            out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
-        self.assertEqualFiles('expected.xml', out['gmf_data', 'xml'][0])
 
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
@@ -112,11 +106,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertAlmostEqual(f2, 0)
 
     def test_case_9(self):
-        with floatformat('%10.6E'):
-            out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
-        [f] = out['gmf_data', 'xml']
-        self.assertEqualFiles('gmf.xml', f)
-
+        # test for minimum_distance
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
         f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)
@@ -124,7 +114,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # test the .npz export
         [fname] = out['gmf_data', 'npz']
         with numpy.load(fname) as f:
-            self.assertEqual(len(f.keys()), 2)  # rlz-000 rlz-001
+            self.assertEqual(list(f), ['rlz-000', 'rlz-001'])
             data1 = f['rlz-000']
             data2 = f['rlz-001']
             self.assertEqual(data1.dtype.names, ('lon', 'lat', 'PGA'))
@@ -137,3 +127,19 @@ class ScenarioTestCase(CalculatorTestCase):
         # test importing an exposure with automatic gridding
         self.run_calc(case_10.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['sitecol']), 66)
+
+    def test_case_11(self):
+        # compute the limit distances for a GMV of 0.01g
+        self.run_calc(case_11.__file__, 'job.ini')
+        self.calc.rup.tectonic_region_type = 'Subduction Deep'
+        oq = self.calc.oqparam
+        gsim_lt = self.calc.datastore['csm_info/gsim_lt']
+        mags = {'Subduction Deep': [self.calc.rup.mag]}
+        dist = gsim_lt.get_integration_distance(mags, oq)
+        aae(dist['Subduction Deep'], 162.24509294)
+
+        cmaker = ContextMaker(
+            'Subduction Deep', self.calc.gsims, oq.maximum_distance)
+        dist = cmaker.get_limit_distance(
+            self.calc.sitecol, self.calc.rup, oq.imtls, oq.minimum_intensity)
+        aae(dist, 163.5109114)

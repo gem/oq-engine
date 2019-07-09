@@ -19,17 +19,15 @@ import os
 import sys
 import time
 import operator
-import collections
+import collections.abc
 from contextlib import contextmanager
 import numpy
-import rtree
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import gettemp, cached_property
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
@@ -85,7 +83,7 @@ class Piecewise(object):
         return self.y[idx]
 
 
-class IntegrationDistance(collections.Mapping):
+class IntegrationDistance(collections.abc.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type. The integration distances can be scalars or
@@ -110,7 +108,8 @@ class IntegrationDistance(collections.Mapping):
         self.dic = dic or {}  # TRT -> float or list of pairs
         self.magdist = {}  # TRT -> (magnitudes, distances)
         for trt, value in self.dic.items():
-            if isinstance(value, list):  # assume a list of pairs (mag, dist)
+            if isinstance(value, (list, numpy.ndarray)):
+                # assume a list of pairs (mag, dist)
                 self.magdist[trt] = value
             else:
                 self.dic[trt] = float(value)
@@ -121,8 +120,8 @@ class IntegrationDistance(collections.Mapping):
         value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
-        elif mag is None:  # get the maximum distance
-            return MAX_DISTANCE
+        elif mag is None:  # get the maximum distance for the maximum mag
+            return value[-1][1]
         elif not hasattr(self, 'piecewise'):
             self.piecewise = {}  # function cache
         try:
@@ -179,6 +178,13 @@ class IntegrationDistance(collections.Mapping):
     def __len__(self):
         return len(self.dic)
 
+    def __toh5__(self):
+        dic = {trt: numpy.array(dist) for trt, dist in self.dic.items()}
+        return dic, {}
+
+    def __fromh5__(self, dic, attrs):
+        self.__init__({trt: dic[trt][()] for trt in dic})
+
     def __repr__(self):
         return repr(self.dic)
 
@@ -233,11 +239,14 @@ def split_sources(srcs):
                 if has_samples:
                     split.samples = src.samples
         elif splits:  # single source
-            splits[0].id = src.id
+            [s] = splits
+            s.source_id = src.source_id
+            s.src_group_id = src.src_group_id
+            s.id = src.id
             if has_serial:
-                splits[0].serial = src.serial
+                s.serial = src.serial
             if has_samples:
-                splits[0].samples = src.samples
+                s.samples = src.samples
     return sources, split_time
 
 
@@ -261,16 +270,21 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if sitecol is not None and filename and not os.path.exists(filename):
-            # store the sitecol
+        if filename and not os.path.exists(filename):  # store the sitecol
             with hdf5.File(filename, 'w') as h5:
-                h5['sitecol'] = sitecol
+                h5['sitecol'] = sitecol if sitecol else ()
         else:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
     def __getstate__(self):
-        return dict(filename=self.filename,
-                    integration_distance=self.integration_distance)
+        if self.filename:
+            # in the engine self.filename is the .hdf5 cache file
+            return dict(filename=self.filename,
+                        integration_distance=self.integration_distance)
+        else:
+            # when using calc_hazard_curves without an .hdf5 cache file
+            return dict(filename=None, sitecol=self.sitecol,
+                        integration_distance=self.integration_distance)
 
     @property
     def sitecol(self):
@@ -279,9 +293,10 @@ class SourceFilter(object):
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
-        if self.filename is None or not os.path.exists(self.filename):
-            # case of nofilter/None sitecol
+        if self.filename is None:
             return
+        elif not os.path.exists(self.filename):
+            raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
         with hdf5.File(self.filename, 'r') as h5:
             self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
@@ -353,8 +368,6 @@ class SourceFilter(object):
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
         bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
-        if hasattr(self, 'index'):  # RtreeFilter
-            return within(bb, self.index)
         return self.sitecol.within_bbox(bb)
 
     def filter(self, sources):
@@ -371,72 +384,6 @@ class SourceFilter(object):
             if len(indices):
                 src.indices = indices
                 yield src
-
-
-class RtreeFilter(SourceFilter):
-    """
-    The RtreeFilter uses the rtree library. The index is generated at
-    instantiation time and stored in a temporary file. The filter should be
-    instantiated only once per calculation, after the site collection is
-    known. It should be used as follows::
-
-      rfilter = RtreeFilter(sitecol, integration_distance)
-      for src, sites in rfilter(sources):
-         do_something(...)
-
-    As a side effect, sets the `.indices` attribute of the source, i.e. the
-    number of sites within the integration distance. Notice that
-    libspatialindex indices cannot be properly pickled
-    (https://github.com/Toblerity/rtree/issues/65) this is why they must
-    be saved on the file system where they can be read from the workers.
-
-    NB: an RtreeFilter has an .indexpath attribute, but not a .sitecol
-    attribute nor an .index attribute, so it can be pickled and transferred
-    easily.
-
-    :param sitecol:
-        :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param integration_distance:
-        Integration distance dictionary (TRT -> distance in km)
-    """
-    def __init__(self, sitecol, integration_distance, filename=None):
-        assert sitecol, 'Mandatory in an RtreeFilter'
-        super().__init__(sitecol, integration_distance, filename)
-        self.indexpath = gettemp()
-        index = rtree.index.Index(self.indexpath)
-        lonlats = zip(sitecol.lons, sitecol.lats)
-        for i, (lon, lat) in enumerate(lonlats):
-            index.insert(i, (lon, lat, lon, lat))
-        index.close()
-
-    @cached_property
-    def index(self):
-        """
-        :returns: the underlying index object
-        """
-        return rtree.index.Index(self.indexpath)
-
-    def filter(self, sources):
-        """
-        :param sources: a sequence of sources
-        :yields: rtree-filtered sources
-        """
-        if self.sitecol is None:  # do not filter
-            yield from sources
-            return
-        for src in sources:
-            box = self.integration_distance.get_affected_box(src)
-            indices = within(box, self.index)
-            if len(indices):
-                src.indices = indices
-                yield src
-
-    def __getstate__(self):
-        # NB: the RtreeFilter can be transferred on a single machine only
-        # (on a cluster, even, with a shared_dir, there are permission errors)
-        return dict(filename=self.filename,
-                    indexpath=self.indexpath,
-                    integration_distance=self.integration_distance)
 
 
 nofilter = SourceFilter(None, {})

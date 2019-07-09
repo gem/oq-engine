@@ -111,7 +111,7 @@ def sample_background_model(
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
-    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])].value
+    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])][()]
     # Select magnitudes above the minimum magnitudes
     mag_idx = bg_magnitudes >= min_mag
     mags = bg_magnitudes[mag_idx]
@@ -151,7 +151,6 @@ def build_ruptures(sources, src_filter, param, monitor):
     sampl_mon = monitor('sampling ruptures', measuremem=True)
     res.trt = DEFAULT_TRT
     background_sids = src.get_background_sids(src_filter)
-    sitecol = src_filter.sitecol
     samples = getattr(src, 'samples', 1)
     n_occ = AccumDict(accum=0)
     t0 = time.time()
@@ -169,7 +168,7 @@ def build_ruptures(sources, src_filter, param, monitor):
                    for rup, n in n_occ.items()]
     dic['rup_array'] = stochastic.get_rup_array(eb_ruptures, src_filter)
     dt = time.time() - t0
-    dic['calc_times'] = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
+    dic['calc_times'] = {src.id: numpy.array([tot_occ, dt], F32)}
     return dic
 
 

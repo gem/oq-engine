@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
-import mock
+import unittest.mock as mock
 import os.path
 import logging
 from openquake.baselib import general
@@ -58,8 +58,9 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     checkfile = os.path.join(os.path.dirname(ssmLT), 'CHECKSUM.txt')
     with open(checkfile, 'w') as f:
         f.write(str(checksum))
-    files = logictree.collect_info(ssmLT).smpaths + [
-        os.path.abspath(ssmLT), os.path.abspath(checkfile)]
+    files = [os.path.abspath(ssmLT), os.path.abspath(checkfile)]
+    for fs in logictree.collect_info(ssmLT).smpaths.values():
+        files.extend(fs)
     general.zipfiles(files, archive_zip, log=log, cleanup=True)
     return archive_zip
 
