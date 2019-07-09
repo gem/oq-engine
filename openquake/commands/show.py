@@ -70,10 +70,10 @@ def show(what='contents', calc_id=-1, extra=()):
         print(extract(ds, what, *extra))
     elif what in ds:
         obj = ds[what]
-        if hasattr(obj, 'value'):  # an array
-            print(write_csv(io.BytesIO(), obj.value).decode('utf8'))
-        else:
+        if hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
+        else:  # is a single dataset
+            print(write_csv(io.BytesIO(), obj[()]).decode('utf8'))
     else:
         print('%s not found' % what)
 
