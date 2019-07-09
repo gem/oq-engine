@@ -40,7 +40,6 @@ class ITA04Base(GMPETable):
     def __init__(self, gmpe_table):
         """
         """
-        #self._setup_standard_deviations(fle=None)
         super().__init__(gmpe_table=gmpe_table)
         print(self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
