@@ -49,16 +49,17 @@ tree in order to perform sensitivity experiments at small distances.
 GMPE logic trees with weighted IMTs
 -------------------------------------------
 
-Our Canadian users asked us to implement GMPEs with a different weight per
-each IMT. For instance you could have a GMPE applicable to PGA with a certain
-level of uncertainty to SA(0.1) with another and to SA(1.0) with still
-another one. The user may want to give an higher weight to the IMT were the
-GMPE has a small uncertainty and a lower weight to the IMT with a large
-uncertainty. More the GMPE could not even be applicable for say SA(2.0)
-and in that case the user can assign to it a zero weight, to ignore it.
-This is useful when you have a logic tree with multiple GMPEs, some of
-which are applicable for some IMTs and not for others.
-Here is an example:
+Our Canadian users asked us to implement GMPE logic trees with a
+different weight per each IMT. For instance you could have a GMPE
+applicable to PGA with a certain level of uncertainty, to SA(0.1) with
+another and to SA(1.0) with still another one. The user may want to
+give an higher weight to the IMTs were the GMPE has a small
+uncertainty and a lower weight to the IMTs with a large
+uncertainty. Moreover the GMPE could not be applicable for some
+period, and in that case the user cab assign to it a zero weight, to
+ignore it.  This is useful when you have a logic tree with multiple
+GMPEs per branchset, some of which are applicable for some IMTs and
+not for others.  Here is an example:
 
 .. code-block:: xml
 
@@ -101,8 +102,8 @@ Here is an example:
 Clearly the weights for each IMT must sum up to 1, otherwise the engine
 will complain. Note that this feature only works for the classical and
 disaggregation calculators: in the event based case only the default
-`uncertaintyWeight` (i.e. the first in the list of weights, the one
-without `imt` attribute) would be taken for all IMTs.
+``uncertaintyWeight`` (i.e. the first in the list of weights, the one
+without ``imt`` attribute) would be taken for all IMTs.
 
 
 Equivalent Epicenter Distance Approximation
