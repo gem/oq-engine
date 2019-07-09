@@ -42,7 +42,6 @@ class ITA04Base(GMPETable):
         """
         #self._setup_standard_deviations(fle=None)
         super().__init__(gmpe_table=gmpe_table)
-        print(self.__dict__)
         print(self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
