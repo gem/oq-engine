@@ -160,7 +160,7 @@ We added the ability to generate hazard curves without storing the GMFs,
 simply by setting the flags
 ```
   hazard_curves_from_gmfs = true
-  ground_motion_fields = true
+  ground_motion_fields = false
 ```
 This is useful when one is interested in the hazard curves generated
 by an `event_based` calculation but not in the ground motion fields
