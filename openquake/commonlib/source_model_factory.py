@@ -198,13 +198,15 @@ class SourceModelFactory(object):
             # the limit is really needed only for event based calculations
             raise ValueError('There is a limit of %d src groups!' % TWO16)
 
+        # check applyToSources
         for brid, srcids in self.source_model_lt.info.applytosources.items():
-            for srcid in srcids:
-                if srcid not in self.source_ids:
-                    raise ValueError(
-                        'The source %s is not in the source model, please fix '
-                        'applyToSources in %s or the source model' %
-                        (srcid, self.source_model_lt.filename))
+            if brid in sm.path:
+                for srcid in srcids:
+                    if srcid not in self.source_ids:
+                        raise ValueError(
+                            'The source %s is not in the source model, please '
+                            'fix applyToSources in %s or the source model' %
+                            (srcid, self.source_model_lt.filename))
 
     def store_sm(self, smodel):
         """
