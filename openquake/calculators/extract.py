@@ -509,36 +509,6 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
-# this is used by the QGIS plugin, but it should be removed
-@extract.add('agg_curves')
-def extract_agg_curves(dstore, what):
-    """
-    Aggregate loss curves of the given loss type and tags for
-    event based risk calculations. Use it as
-    /extract/agg_curves/structural?taxonomy=RC&zipcode=20126
-    :returns:
-        array of shape (S, P), being P the number of return periods
-        and S the number of statistics
-    """
-    from openquake.calculators.export.loss_curves import get_loss_builder
-    oq = dstore['oqparam']
-    loss_type, tags = get_loss_type_tags(what)
-    if 'curves-stats' in dstore:  # event_based_risk
-        losses = _get_curves(dstore['curves-stats'], oq.lti[loss_type])
-        stats = dstore['curves-stats'].attrs['stats']
-    elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
-        losses = _get_curves(dstore['curves-rlzs'], oq.lti[loss_type])
-        assert losses.shape[1] == 1, 'There must be a single realization'
-        stats = [b'mean']  # suitable to be stored as hdf5 attribute
-    else:
-        raise KeyError('No curves found in %s' % dstore)
-    res = _filter_agg(dstore['assetcol'], losses, tags, stats)
-    cc = dstore['cost_calculator']
-    res.units = cc.get_units(loss_types=[loss_type])
-    res.return_periods = get_loss_builder(dstore).return_periods
-    return res
-
-
 @extract.add('agg_losses')
 def extract_agg_losses(dstore, what):
     """
