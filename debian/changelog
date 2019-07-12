@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * In some cases `applyToSources` was giving a fake error about the source
+    not being in the source model even if it actually was
+
   [Chris Van Houtte]
   * Adds the Van Houtte et al. (2018) significant duration model for New
     Zealand
@@ -7,7 +11,7 @@
   * Storing the MFDs in TOML format inside the datastore
 
   [Robin Gee]
-  * Moves b4 constant into COEFFS table for GMPE Sharma et al., 2009 
+  * Moves b4 constant into COEFFS table for GMPE Sharma et al., 2009
 
   [Graeme Weatherill]
   * Adds functionality to Cauzzi et al. (2014) and Derras et al. (2014)

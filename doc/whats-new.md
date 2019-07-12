@@ -116,6 +116,11 @@ correctly flagged as an error. Thanks to the change,
 source model logic trees, gsim logic tree, and risk logic trees
 are now stored in the same way internally.
 
+Lastly, we fixed a bug in source model logic trees with the options
+`applyToSources` and `applyToBranches` on; in some times a fake error
+about the source not being in the source model - even if it actually was -
+was raised.
+
 Event based hazard
 ------------------
 
