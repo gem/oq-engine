@@ -92,7 +92,7 @@ each GSIMs keeps its own minimum distance; before they were all
 getting the same minimum distance, causing wrong results to be computed.
 Fortunaly the `minimum_distance` feature is rarely used (and only for
 internal purposes) so the bug is minor. The feature is documented here:
-https://github.com/gem/oq-engine/blob/engine-3.6/doc/adv-manual/special-features.rst#gmpe-logic-trees-with-weighted-imts
+https://github.com/gem/oq-engine/blob/engine-3.6/doc/adv-manual/special-features.rst#gmpe-logic-trees-with-minimum_distance
 
 We implemented zero weights for intensity measure types that should be
 discarded in the GSIM logic tree. You can see the relevant documentation here:
