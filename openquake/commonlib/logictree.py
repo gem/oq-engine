@@ -548,7 +548,7 @@ def collect_info(smlt):
     for blevel in blevels:
         for bset in _bsnodes(smlt, blevel):
             if 'applyToSources' in bset.attrib:
-                applytosources[bset['branchSetID']].extend(
+                applytosources[bset.get('applyToBranches')].extend(
                         bset['applyToSources'].split())
             for br in bset:
                 with node.context(smlt, br):
