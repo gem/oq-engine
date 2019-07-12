@@ -198,6 +198,16 @@ class SourceModelFactory(object):
             # the limit is really needed only for event based calculations
             raise ValueError('There is a limit of %d src groups!' % TWO16)
 
+        # check applyToSources
+        for brid, srcids in self.source_model_lt.info.applytosources.items():
+            if brid in sm.path:
+                for srcid in srcids:
+                    if srcid not in self.source_ids:
+                        raise ValueError(
+                            'The source %s is not in the source model, please '
+                            'fix applyToSources in %s or the source model' %
+                            (srcid, self.source_model_lt.filename))
+
     def store_sm(self, smodel):
         """
         :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
@@ -322,15 +332,6 @@ class SourceModelFactory(object):
             self.hdf5.set_nbytes('integration_distance')
             hdf5.extend(self.hdf5['source_mfds'],
                         numpy.array(list(self.mfds), hdf5.vstr))
-
-        # check applyToSources
-        for srcids in self.source_model_lt.info.applytosources.values():
-            for srcid in srcids:
-                if srcid not in self.source_ids:
-                    raise ValueError(
-                        'The source %s is not in the source model, please fix '
-                        'applyToSources in %s or the source model' %
-                        (srcid, self.source_model_lt.filename))
 
         # log if some source file is being used more than once
         dupl = 0
