@@ -111,7 +111,7 @@ class Socket(object):
 
     def __exit__(self, *args):
         self.zsocket.__exit__(*args)
-        del self.zsocket
+        #del self.zsocket
 
     def __iter__(self):
         """
