@@ -110,8 +110,9 @@ class Socket(object):
         return self
 
     def __exit__(self, *args):
-        self.zsocket.__exit__(*args)
-        #del self.zsocket
+        if self.mode == 'bind':
+            self.zsocket.__exit__(*args)
+            del self.zsocket
 
     def __iter__(self):
         """
