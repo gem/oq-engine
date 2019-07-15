@@ -64,15 +64,15 @@ Scenarios are an exception, since they are usually fast, unless you use
 spatial correlation with a lot of sites. Assuming the parameters of the
 calculation are in a `job.ini` file you can run the following lines in
 the notebook:
-
+```python
 In[1]: from openquake.commands.run import run
 In[2]: calc = run(['job.ini'])
-
+```
 Then you can inspect the contents of the datastore and perform your
 postprocessing:
-
+```python
 In[3]: calc.datastore.open('r')  # open the datastore for reading
-
+```
 The inner format of the databook is not guaranteed to be the same
 across releases and it is not documented, so this approach is
 recommended only to the most adventurous people.
