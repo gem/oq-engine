@@ -109,6 +109,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         tmp = gettemp(rst_table(arr))
         self.assertEqualFiles('expected/src_loss_table.txt', tmp)
 
+    def test_case_1_eb(self):
+        # this is a case with insured losses
+        self.run_calc(case_1.__file__, 'job_eb.ini')
+
     def test_case_1g(self):
         # vulnerability function with PMF
         self.run_calc(case_1g.__file__, 'job_h.ini,job_r.ini')
