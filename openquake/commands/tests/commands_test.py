@@ -229,7 +229,8 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('sitecol', self.calc_id)
-        self.assertEqual(str(p), '<SiteCollection with 1/1 sites>')
+        self.assertEqual(str(p), 'sids,lon,lat,depth,vs30,vs30measured\n'
+                         '0,0.00000,0.00000,-0.10000,8.000000E+02,1')
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)

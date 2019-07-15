@@ -39,6 +39,8 @@ from openquake.qa_tests_data.event_based import (
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
+aae = numpy.testing.assert_almost_equal
+
 
 def strip_calc_id(fname):
     name = os.path.basename(fname)
@@ -103,8 +105,8 @@ class EventBasedTestCase(CalculatorTestCase):
                 oq.ses_per_logic_tree_path)
 
             p05, p10 = expected[case]
-            numpy.testing.assert_almost_equal(joint_prob_0_5, p05, decimal=1)
-            numpy.testing.assert_almost_equal(joint_prob_1_0, p10, decimal=1)
+            aae(joint_prob_0_5, p05, decimal=1)
+            aae(joint_prob_1_0, p10, decimal=1)
 
     def test_blocksize(self):
         # here the <AreaSource 1> is light and not split
@@ -217,6 +219,12 @@ class EventBasedTestCase(CalculatorTestCase):
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
+
+        # check MFD
+        aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
+        self.assertEqual(aw.duration, 30)  # 30 years
+        aae(aw.magnitudes, [4.7, 4.8, 4.9], decimal=6)
+        aae(aw.mean_frequency, [0.006667, 0.01, 0.023333], decimal=6)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
