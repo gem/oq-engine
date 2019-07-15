@@ -219,6 +219,7 @@ def get_params(job_inis, **kw):
     if params['inputs'].get('reqv'):
         # using pointsource_distance=0 because of the reqv approximation
         params['pointsource_distance'] = '0'
+
     return params
 
 
