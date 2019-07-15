@@ -608,22 +608,13 @@ class SourceConverter(RuptureConverter):
                     magnitudes=~mfd_node.magnitudes,
                     occurrence_rates=~mfd_node.occurRates)
             elif mfd_node.tag.endswith('YoungsCoppersmithMFD'):
-                if "totalMomentRate" in mfd_node.attrib.keys():
-                    # Return Youngs & Coppersmith from the total moment rate
-                    return mfd.YoungsCoppersmith1985MFD.from_total_moment_rate(
-                        min_mag=mfd_node["minMag"], b_val=mfd_node["bValue"],
-                        char_mag=mfd_node["characteristicMag"],
-                        total_moment_rate=mfd_node["totalMomentRate"],
-                        bin_width=mfd_node["binWidth"])
-                elif "characteristicRate" in mfd_node.attrib.keys():
-                    # Return Youngs & Coppersmith from the total moment rate
-                    return mfd.YoungsCoppersmith1985MFD.\
-                        from_characteristic_rate(
-                            min_mag=mfd_node["minMag"],
-                            b_val=mfd_node["bValue"],
-                            char_mag=mfd_node["characteristicMag"],
-                            char_rate=mfd_node["characteristicRate"],
-                            bin_width=mfd_node["binWidth"])
+                return mfd.YoungsCoppersmith1985MFD(
+                    min_mag=mfd_node["minMag"],
+                    b_val=mfd_node["bValue"],
+                    char_mag=mfd_node["characteristicMag"],
+                    char_rate=mfd_node.get("characteristicRate"),
+                    total_moment_rate=mfd_node.get("totalMomentRate"),
+                    bin_width=mfd_node["binWidth"])
             elif mfd_node.tag.endswith('multiMFD'):
                 return mfd.multi_mfd.MultiMFD.from_node(
                     mfd_node, self.width_of_mfd_bin)

@@ -267,11 +267,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
         loss_types = ' '.join(self.riskmodel.loss_types)
+        units = self.datastore['cost_calculator'].get_units(loss_types.split())
         shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
         self.datastore.create_dset('agg_curves-rlzs', F32, shp)
         self.datastore.set_attrs(
             'agg_curves-rlzs', return_periods=builder.return_periods,
-            loss_types=loss_types)
+            loss_types=loss_types, units=units)
         if oq.conditional_loss_poes:
             shp = self.get_shape(C, self.R, self.L)  # shape C, R, L, T...
             self.datastore.create_dset('agg_maps-rlzs', F32, shp)
@@ -288,7 +289,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.set_attrs(
                     'agg_maps-stats',
                     stats=[encode(name) for (name, func) in stats],
-                    loss_types=loss_types)
+                    loss_types=loss_types, units=units)
 
     def post_execute(self, times):
         """

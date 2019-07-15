@@ -1,10 +1,32 @@
   [Michele Simionato]
+  * In some cases `applyToSources` was giving a fake error about the source
+    not being in the source model even if it actually was
+
+  [Chris Van Houtte]
+  * Adds the Van Houtte et al. (2018) significant duration model for New
+    Zealand
+
+  [Michele Simionato]
+  * Added a way to compute and plot the MFD coming from an event based
+  * Storing the MFDs in TOML format inside the datastore
+
+  [Robin Gee]
+  * Moves b4 constant into COEFFS table for GMPE Sharma et al., 2009
+
+  [Graeme Weatherill]
+  * Adds functionality to Cauzzi et al. (2014) and Derras et al. (2014)
+    calibrated GMPEs for Germany to use either finite or point source distances
+
+  [Michele Simionato]
+  * Restored the ability to associate site model parameters to a grid of sites
+  * Made it possible to set `hazard_curves_from_gmfs=true` with
+    `ground_motion_fields=false` in the event based hazard calculator
+  * Introduced a mechanism to split the tasks based on an estimated duration
   * Integrated `oq plot_memory` into `oq plot`
-  * Improved the task distribution by splitting the heavy sources on the master
   * Removed `NaN` values for strike and dip when exporting griddedRuptures
   * Fixed `oq reset` to work in multi-user mode
   * Extended the source_id-filtering feature in the job.ini to multiple sources
-  * Supported .wkt files for the binary perils in the multi_risk calculator
+  * Supported WKT files for the binary perils in the multi_risk calculator
   * Added an early check on the coefficients of variation and loss ratios of
     vulnerability functions with the Beta distribution
   * Made sure that `oq engine --dc` removes the HDF5 cache file too

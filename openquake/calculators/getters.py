@@ -406,7 +406,7 @@ class GmfGetter(object):
             with monitor('building hazard', measuremem=True):
                 gmfdata = self.get_gmfdata()
         else:
-            return {}
+            return dict(gmfdata=(), hcurves=hcurves)
         if len(gmfdata) == 0:
             return dict(gmfdata=[])
         indices = []

@@ -18,7 +18,6 @@
 from urllib.parse import parse_qs
 from functools import lru_cache
 import collections
-import operator
 import logging
 import ast
 import io
@@ -510,36 +509,6 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
-# this is used by the QGIS plugin, but it should be removed
-@extract.add('agg_curves')
-def extract_agg_curves(dstore, what):
-    """
-    Aggregate loss curves of the given loss type and tags for
-    event based risk calculations. Use it as
-    /extract/agg_curves/structural?taxonomy=RC&zipcode=20126
-    :returns:
-        array of shape (S, P), being P the number of return periods
-        and S the number of statistics
-    """
-    from openquake.calculators.export.loss_curves import get_loss_builder
-    oq = dstore['oqparam']
-    loss_type, tags = get_loss_type_tags(what)
-    if 'curves-stats' in dstore:  # event_based_risk
-        losses = _get_curves(dstore['curves-stats'], oq.lti[loss_type])
-        stats = dstore['curves-stats'].attrs['stats']
-    elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
-        losses = _get_curves(dstore['curves-rlzs'], oq.lti[loss_type])
-        assert losses.shape[1] == 1, 'There must be a single realization'
-        stats = [b'mean']  # suitable to be stored as hdf5 attribute
-    else:
-        raise KeyError('No curves found in %s' % dstore)
-    res = _filter_agg(dstore['assetcol'], losses, tags, stats)
-    cc = dstore['cost_calculator']
-    res.units = cc.get_units(loss_types=[loss_type])
-    res.return_periods = get_loss_builder(dstore).return_periods
-    return res
-
-
 @extract.add('agg_losses')
 def extract_agg_losses(dstore, what):
     """
@@ -740,14 +709,61 @@ def extract_dmg_by_asset_npz(dstore, what):
 def extract_mfd(dstore, what):
     """
     Display num_ruptures by magnitude for event based calculations.
-    Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?kind=mean
     """
-    dd = collections.defaultdict(int)
-    for rup in dstore['ruptures']:
-        dd[rup['mag']] += 1
-    dt = numpy.dtype([('mag', float), ('freq', int)])
-    magfreq = numpy.array(sorted(dd.items(), key=operator.itemgetter(0)), dt)
-    return magfreq
+    oq = dstore['oqparam']
+    qdic = parse(what)
+    kind_mean = 'mean' in qdic.get('kind', [])
+    kind_by_group = 'by_group' in qdic.get('kind', [])
+    weights = dstore['csm_info/sm_data']['weight']
+    sm_idx = dstore['csm_info/sg_data']['sm_id']
+    grp_weight = weights[sm_idx]
+    duration = oq.investigation_time * oq.ses_per_logic_tree_path
+    dic = {'duration': duration}
+    dd = collections.defaultdict(float)
+    rups = dstore['ruptures']['grp_id', 'mag', 'n_occ']
+    mags = sorted(numpy.unique(rups['mag']))
+    magidx = {mag: idx for idx, mag in enumerate(mags)}
+    num_groups = rups['grp_id'].max() + 1
+    frequencies = numpy.zeros((len(mags), num_groups), float)
+    for grp_id, mag, n_occ in rups:
+        if kind_mean:
+            dd[mag] += n_occ * grp_weight[grp_id] / duration
+        if kind_by_group:
+            frequencies[magidx[mag], grp_id] += n_occ / duration
+    dic['magnitudes'] = numpy.array(mags)
+    if kind_mean:
+        dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
+    if kind_by_group:
+        for grp_id, freqs in enumerate(frequencies.T):
+            dic['grp-%02d_frequency' % grp_id] = freqs
+    return ArrayWrapper((), dic)
+
+# NB: this is an alternative, slower approach giving exactly the same numbers;
+# it is kept here for sake of comparison in case of dubious MFDs
+# @extract.add('event_based_mfd')
+# def extract_mfd(dstore, what):
+#     oq = dstore['oqparam']
+#     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+#     weights = [rlz.weight['default'] for rlz in rlzs]
+#     duration = oq.investigation_time * oq.ses_per_logic_tree_path
+#     mag = dict(dstore['ruptures']['serial', 'mag'])
+#     mags = numpy.unique(dstore['ruptures']['mag'])
+#     mags.sort()
+#     magidx = {mag: idx for idx, mag in enumerate(mags)}
+#     occurrences = numpy.zeros((len(mags), len(weights)), numpy.uint32)
+#     events = dstore['events'][()]
+#     dic = {'duration': duration, 'magnitudes': mags,
+#            'mean_frequencies': numpy.zeros(len(mags))}
+#     for rlz, weight in enumerate(weights):
+#         eids = get_array(events, rlz=rlz)['id']
+#         if len(eids) == 0:
+#             continue
+#         rupids, n_occs = numpy.unique(eids // 2 ** 32, return_counts=True)
+#         for rupid, n_occ in zip(rupids, n_occs):
+#             occurrences[magidx[mag[rupid]], rlz] += n_occ
+#         dic['mean_frequencies'] += occurrences[:, rlz] * weight / duration
+#     return ArrayWrapper(occurrences, dic)
 
 
 @extract.add('src_loss_table')
