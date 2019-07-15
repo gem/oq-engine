@@ -498,13 +498,6 @@ class HazardCalculator(BaseCalculator):
                          'policy_name policy_dict').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
-
-            # this happens for instance for a scenario_damage without
-            # rupture, gmfs, multi_peril
-            #raise InvalidFile(
-            #    '%(job_ini)s: missing gmfs_csv, multi_peril_csv' %
-            #    oq.inputs)
-
         else:
             self.read_inputs()
         if self.riskmodel:
@@ -896,6 +889,12 @@ class RiskCalculator(HazardCalculator):
         return getter
 
     def _gen_riskinputs(self, kind):
+        hazard = ('gmf_data' in self.datastore or 'poes' in self.datastore or
+                  'multi_peril' in self.datastore)
+        if not hazard:
+            raise InvalidFile('Did you forget gmfs_csv|hazard_curves_csv|'
+                              'multi_peril_csv in %s?'
+                              % self.oqparam.inputs['job_ini'])
         rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
         rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
