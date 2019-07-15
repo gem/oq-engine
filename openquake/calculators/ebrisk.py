@@ -165,16 +165,18 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with hdf5.File(self.hdf5cache, 'w') as cache:
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
-        loss_names = oq.loss_dt().names
-        self.param['lba'] = (LossesByAsset(self.assetcol)
-                             if oq.avg_losses else None)
+        ltypes = self.riskmodel.loss_types
+        self.param['lba'] = lba = (
+            LossesByAsset(self.assetcol, ltypes,
+                          self.policy_name, self.policy_dict)
+            if oq.avg_losses else None)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['riskmodel'] = self.riskmodel
-        self.L = L = len(self.riskmodel.loss_types)
+        self.L = L = len(ltypes)
         A = len(self.assetcol)
-        for name in loss_names:
+        for name in lba.loss_names:
             self.datastore.create_dset('avg_losses/' + name, F32, (A,))
         if oq.asset_loss_table:
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))

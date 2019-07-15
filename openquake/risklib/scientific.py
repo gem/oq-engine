@@ -1485,10 +1485,19 @@ class LossCurvesMapsBuilder(object):
 
 class LossesByAsset(object):
     """
-    A class to compute losses by asset
+    A class to compute losses by asset.
+
+    :param assetcol: an AssetCollection instance
+    :param policy_name: the name of the policy field (can be empty)
+    :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
-    def __init__(self, assetcol):
+    def __init__(self, assetcol, loss_types, policy_name='', policy_dict={}):
         self.A = len(assetcol)
+        self.policy_name = policy_name
+        self.policy_dict = policy_dict
+        self.loss_names = list(loss_types)
+        for name in self.policy_dict:
+            self.loss_names.append(name + '_ins')
 
     def compute(self, asset, losses_by_lt):
         """
@@ -1496,7 +1505,12 @@ class LossesByAsset(object):
         :param losses_by_lt: a dictionary loss_type -> losses (of size E)
         :yields: pairs (loss_name, losses)
         """
-        yield from losses_by_lt.items()
+        for lt, losses in losses_by_lt.items():
+            yield lt, losses
+            if lt in self.policy_dict:
+                val = asset['value-' + lt]
+                ded, lim = self.policy_dict[lt][asset[self.policy_name]]
+                yield lt + '_ins', insured_losses(losses, ded * val, lim * val)
 
     @cached_property
     def losses_by_A(self):
