@@ -1493,11 +1493,14 @@ class LossesByAsset(object):
     def compute(self, asset, losses_by_lt):
         """
         :param asset: an asset record
-        :param losses_by_lt: a dictionary loss_type -> losses
+        :param losses_by_lt: a dictionary loss_type -> losses (of size E)
         :yields: pairs (loss_name, losses)
         """
         yield from losses_by_lt.items()
 
     @cached_property
     def losses_by_A(self):
+        """
+        :returns: a dictionary loss name -> array with A losses
+        """
         return AccumDict(accum=numpy.zeros(self.A))
