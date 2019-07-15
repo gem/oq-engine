@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Implemented insured losses
+
+  [Michele Simionato]
   * In some cases `applyToSources` was giving a fake error about the source
     not being in the source model even if it actually was
 
