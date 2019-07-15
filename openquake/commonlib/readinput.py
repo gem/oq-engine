@@ -21,8 +21,6 @@ import csv
 import copy
 import zlib
 import shutil
-import random
-import pickle
 import zipfile
 import logging
 import tempfile
@@ -32,8 +30,8 @@ import collections
 import numpy
 import requests
 
-from openquake.baselib import performance, hdf5, parallel
-from openquake.baselib.general import random_filter, AccumDict
+from openquake.baselib import performance, hdf5
+from openquake.baselib.general import random_filter
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -41,16 +39,15 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.geo.mesh import point3d
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.source_model_factory import SourceModelFactory
 from openquake.commonlib import logictree, source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
-TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
 F64 = numpy.float64
 U16 = numpy.uint16
@@ -115,8 +112,9 @@ def unzip_rename(zpath, name):
         for nam in archive.namelist():
             fname = os.path.join(dpath, nam)
             if os.path.exists(fname):  # already unzipped
-                logging.warn('Using %s instead of the file in %s',
-                             fname, zpath)
+                os.rename(fname, fname + '.bak')
+                logging.warning('Overriding %s with the file in %s',
+                                fname, zpath)
         logging.info('Unzipping %s', zpath)
         archive.extractall(dpath)
     xname = os.path.join(dpath, name)
@@ -412,6 +410,7 @@ def get_site_collection(oqparam):
     """
     mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
+    grid_spacing = oqparam.region_grid_spacing
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
         try:
@@ -420,15 +419,19 @@ def get_site_collection(oqparam):
         except ValueError:
             # this is the normal case
             depth = None
-        sitecol = site.SiteCollection.from_points(
-            sm['lon'], sm['lat'], depth, sm, req_site_params)
-        if oqparam.region_grid_spacing:
-            logging.info('Reducing the grid sites to the site '
-                         'parameters within the grid spacing')
+        if grid_spacing:
+            grid = mesh.get_convex_hull().dilate(
+                grid_spacing).discretize(grid_spacing)
+            grid_sites = site.SiteCollection.from_points(
+                grid.lons, grid.lats, req_site_params=req_site_params)
             sitecol, params, _ = geo.utils.assoc(
-                sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
+                sm, grid_sites, oqparam.region_grid_spacing * 1.414, 'filter')
+            logging.info('Associating %d site model sites to %d grid sites',
+                         len(sm), len(sitecol))
             sitecol.make_complete()
         else:
+            sitecol = site.SiteCollection.from_points(
+                sm['lon'], sm['lat'], depth, sm, req_site_params)
             params = sm
         for name in req_site_params:
             if name in ('vs30measured', 'backarc') \
@@ -551,295 +554,11 @@ def get_source_model_lt(oqparam, validate=True):
     return smlt
 
 
-def check_nonparametric_sources(fname, smodel, investigation_time):
-    """
-    :param fname:
-        full path to a source model file
-    :param smodel:
-        source model object
-    :param investigation_time:
-        investigation_time to compare with in the case of
-        nonparametric sources
-    :returns:
-        the nonparametric sources in the model
-    :raises:
-        a ValueError if the investigation_time is different from the expected
-    """
-    # NonParametricSeismicSources
-    np = [src for sg in smodel.src_groups for src in sg
-          if hasattr(src, 'data')]
-    if np and smodel.investigation_time != investigation_time:
-        raise ValueError(
-            'The source model %s contains an investigation_time '
-            'of %s, while the job.ini has %s' % (
-                fname, smodel.investigation_time, investigation_time))
-    return np
-
-
-class SourceModelFactory(object):
-    def __init__(self):
-        self.fname_hits = collections.Counter()  # fname -> number of calls
-        self.changes = 0
-
-    def __call__(self, fname, sm, apply_uncertainties, investigation_time):
-        """
-        :param fname:
-            the full pathname of a source model file
-        :param sm:
-            the original source model
-        :param apply_uncertainties:
-            a function modifying the sources (or None)
-        :param investigation_time:
-            the investigation_time in the job.ini
-        :returns:
-            a copy of the original source model with changed sources, if any
-        """
-        check_nonparametric_sources(fname, sm, investigation_time)
-        newsm = nrml.SourceModel(
-            [], sm.name, sm.investigation_time, sm.start_time)
-        for group in sm:
-            newgroup = apply_uncertainties(group)
-            newsm.src_groups.append(newgroup)
-            if hasattr(newgroup, 'changed') and newgroup.changed.any():
-                self.changes += newgroup.changed.sum()
-                for src, changed in zip(newgroup, newgroup.changed):
-                    # redoing count_ruptures can be slow
-                    if changed:
-                        src.num_ruptures = src.count_ruptures()
-        self.fname_hits[fname] += 1
-        return newsm
-
-
-source_info_dt = numpy.dtype([
-    ('grp_id', numpy.uint16),          # 0
-    ('source_id', hdf5.vstr),          # 1
-    ('code', (numpy.string_, 1)),      # 2
-    ('gidx1', numpy.uint32),           # 3
-    ('gidx2', numpy.uint32),           # 4
-    ('num_ruptures', numpy.uint32),    # 5
-    ('calc_time', numpy.float32),      # 6
-    ('num_sites', numpy.float32),      # 7
-    ('weight', numpy.float32),         # 8
-    ('checksum', numpy.uint32),        # 9
-])
-
-
-def store_sm(smodel, filename, monitor):
-    """
-    :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
-    :param filename: path to an hdf5 file (cache_XXX.hdf5)
-    :param monitor: a Monitor instance with an .hdf5 attribute
-    """
-    h5 = monitor.hdf5
-    with monitor('store source model'):
-        sources = h5['source_info']
-        source_geom = h5['source_geom']
-        gid = len(source_geom)
-        for sg in smodel:
-            if filename:
-                with hdf5.File(filename, 'r+') as hdf5cache:
-                    hdf5cache['grp-%02d' % sg.id] = sg
-            srcs = []
-            geoms = []
-            for src in sg:
-                srcgeom = src.geom()
-                n = len(srcgeom)
-                geom = numpy.zeros(n, point3d)
-                geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
-                if len(geom) > 1:  # more than a point source
-                    msg = 'source %s' % src.source_id
-                    try:
-                        geo.utils.check_extent(geom['lon'], geom['lat'], msg)
-                    except ValueError as err:
-                        logging.error(str(err))
-                dic = {k: v for k, v in vars(src).items()
-                       if k != 'id' and k != 'src_group_id'}
-                src.checksum = zlib.adler32(pickle.dumps(dic))
-                srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             src.num_ruptures, 0, 0, 0, src.checksum))
-                geoms.append(geom)
-                gid += n
-            if geoms:
-                hdf5.extend(source_geom, numpy.concatenate(geoms))
-            if sources:
-                hdf5.extend(sources, numpy.array(srcs, source_info_dt))
-
-
-def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
-                      in_memory=True, srcfilter=None):
-    """
-    Build all the source models generated by the logic tree.
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param gsim_lt:
-        a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
-    :param source_model_lt:
-        a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
-    :param monitor:
-        a `openquake.baselib.performance.Monitor` instance
-    :param in_memory:
-        if True, keep in memory the sources, else just collect the TRTs
-    :param srcfilter:
-        a SourceFilter instance with an .filename pointing to the cache file
-    :returns:
-        an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
-        tuples
-    """
-    make_sm = SourceModelFactory()
-    spinning_off = oqparam.pointsource_distance == {'default': 0.0}
-    if spinning_off:
-        logging.info('Removing nodal plane and hypocenter distributions')
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
-    smlt_dir = os.path.dirname(source_model_lt.filename)
-    converter = sourceconverter.SourceConverter(
-        oqparam.investigation_time,
-        oqparam.rupture_mesh_spacing,
-        oqparam.complex_fault_mesh_spacing,
-        oqparam.width_of_mfd_bin,
-        oqparam.area_source_discretization,
-        oqparam.minimum_magnitude,
-        not spinning_off,
-        oqparam.source_id)
-    if oqparam.calculation_mode.startswith('ucerf'):
-        [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
-    elif in_memory:
-        logging.info('Reading the source model(s) in parallel')
-        smap = parallel.Starmap(
-            nrml.read_source_models, monitor=monitor, distribute=dist)
-        for sm in source_model_lt.gen_source_models(gsim_lt):
-            for name in sm.names.split():
-                fname = os.path.abspath(os.path.join(smlt_dir, name))
-                smap.submit([fname], converter)
-        dic = {sm.fname: sm for sm in smap}
-
-    # consider only the effective realizations
-    idx = 0
-    grp_id = 0
-    if monitor.hdf5:
-        sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
-        hdf5.create(monitor.hdf5, 'source_geom', point3d)
-        filename = None
-    source_ids = set()
-    mags = AccumDict(accum=set())  # TRT -> mags
-    for sm in source_model_lt.gen_source_models(gsim_lt):
-        apply_unc = functools.partial(
-            source_model_lt.apply_uncertainties, sm.path)
-        src_groups = []
-        for name in sm.names.split():
-            fname = os.path.abspath(os.path.join(smlt_dir, name))
-            if oqparam.calculation_mode.startswith('ucerf'):
-                sg = copy.copy(grp)
-                sg.id = grp_id
-                src = sg[0].new(sm.ordinal, sm.names)  # one source
-                source_ids.add(src.source_id)
-                src.src_group_id = grp_id
-                src.id = idx
-                if oqparam.number_of_logic_tree_samples:
-                    src.samples = sm.samples
-                sg.sources = [src]
-                src_groups.append(sg)
-                idx += 1
-                grp_id += 1
-                data = [((sg.id, src.source_id, src.code, 0, 0,
-                          src.num_ruptures, 0, 0, 0, idx))]
-                hdf5.extend(sources, numpy.array(data, source_info_dt))
-            elif in_memory:
-                newsm = make_sm(fname, dic[fname], apply_unc,
-                                oqparam.investigation_time)
-                for sg in newsm:
-                    # sample a source for each group
-                    if os.environ.get('OQ_SAMPLE_SOURCES'):
-                        sg.sources = random_filtered_sources(
-                            sg.sources, srcfilter, sg.id + oqparam.random_seed)
-                    for src in sg:
-                        if hasattr(src, 'data'):  # nonparametric
-                            srcmags = [item[0].mag for item in src.data]
-                        else:
-                            srcmags = [item[0] for item in
-                                       src.get_annual_occurrence_rates()]
-                        mags[src.tectonic_region_type].update(srcmags)
-                        source_ids.add(src.source_id)
-                        src.src_group_id = grp_id
-                        src.id = idx
-                        idx += 1
-                    sg.id = grp_id
-                    grp_id += 1
-                    src_groups.append(sg)
-                if monitor.hdf5:
-                    store_sm(newsm, filename, monitor)
-            else:  # just collect the TRT models
-                groups = logictree.read_source_groups(fname)
-                for group in groups:
-                    source_ids.update(src['id'] for src in group)
-                src_groups.extend(groups)
-
-        if grp_id >= TWO16:
-            # the limit is really needed only for event based calculations
-            raise ValueError('There is a limit of %d src groups!' % TWO16)
-
-        for brid, srcids in source_model_lt.info.applytosources.items():
-            for srcid in srcids:
-                if srcid not in source_ids:
-                    raise ValueError(
-                        'The source %s is not in the source model, please fix '
-                        'applyToSources in %s or the source model' %
-                        (srcid, source_model_lt.filename))
-        num_sources = sum(len(sg.sources) for sg in src_groups)
-        sm.src_groups = src_groups
-        trts = [mod.trt for mod in src_groups]
-        source_model_lt.tectonic_region_types.update(trts)
-        logging.info(
-            'Processed source model %d with %d gsim path(s) and %d '
-            'sources', sm.ordinal + 1, sm.num_gsim_paths, num_sources)
-
-        gsim_file = oqparam.inputs.get('gsim_logic_tree')
-        if gsim_file:  # check TRTs
-            for src_group in src_groups:
-                if src_group.trt not in gsim_lt.values:
-                    raise ValueError(
-                        "Found in %r a tectonic region type %r inconsistent "
-                        "with the ones in %r" % (sm, src_group.trt, gsim_file))
-        yield sm
-    if mags and monitor.hdf5:
-        mags_by_trt = {trt: sorted(ms) for trt, ms in mags.items()}
-        idist = gsim_lt.get_integration_distance(mags_by_trt, oqparam)
-        monitor.hdf5['integration_distance'] = idist
-        monitor.hdf5.set_nbytes('integration_distance')
-
-    # log if some source file is being used more than once
-    dupl = 0
-    for fname, hits in make_sm.fname_hits.items():
-        if hits > 1:
-            logging.info('%s has been considered %d times', fname, hits)
-            if not make_sm.changes:
-                dupl += hits
-    if make_sm.changes:
-        logging.info('Applied %d changes to the composite source model',
-                     make_sm.changes)
-
-
 def getid(src):
     try:
         return src.source_id
     except AttributeError:
         return src['id']
-
-
-def random_filtered_sources(sources, srcfilter, seed):
-    """
-    :param sources: a list of sources
-    :param srcfilte: a SourceFilter instance
-    :param seed: a random seed
-    :returns: an empty list or a list with a single filtered source
-    """
-    random.seed(seed)
-    while sources:
-        src = random.choice(sources)
-        if srcfilter.get_close_sites(src) is not None:
-            return [src]
-        sources.remove(src)
-    return []
 
 
 def get_composite_source_model(oqparam, monitor=None, in_memory=True,
@@ -871,7 +590,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         logging.info('Considering {:,d} logic tree paths out of {:,d}'.format(
             oqparam.number_of_logic_tree_samples, p))
     else:  # full enumeration
-        if oqparam.is_event_based() and p > oqparam.max_potential_paths:
+        if (oqparam.is_event_based() and
+            (oqparam.ground_motion_fields or oqparam.hazard_curves_from_gmfs)
+                and p > oqparam.max_potential_paths):
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
                 'use sampling instead of full enumeration or reduce the '
@@ -883,8 +604,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if monitor is None:
         monitor = performance.Monitor()
     smodels = []
-    for source_model in get_source_models(
-            oqparam, gsim_lt, source_model_lt, monitor, in_memory, srcfilter):
+    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, monitor,
+                                 in_memory, srcfilter)
+    for source_model in factory.get_models():
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
             for src in src_group:
@@ -1062,7 +784,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     Extract sources from the composite source model
     """
     found = 0
-    to_remove = []
+    to_remove = set()
     for paths in logictree.collect_info(smlt_file).smpaths.values():
         for path in paths:
             logging.info('Reading %s', path)
@@ -1095,7 +817,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                 with open(path, 'wb') as f:
                     nrml.write([model], f, xmlns=root['xmlns'])
             elif remove:  # remove the files completely reduced
-                to_remove.append(path)
+                to_remove.add(path)
     if found:
         for path in to_remove:
             os.remove(path)

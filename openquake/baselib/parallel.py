@@ -509,7 +509,7 @@ class IterResult(object):
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func_args:  # not subtask
                 yield val
-            save_task_info(self, result, mem_gb)
+                save_task_info(self, result, mem_gb)
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
@@ -755,8 +755,6 @@ class Starmap(object):
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
-        if hasattr(self, 'sender'):
-            self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)
         self.todo = len(self.tasks)
         while self.todo:
@@ -797,3 +795,39 @@ def count(word, mon):
     Used as example in the documentation
     """
     return collections.Counter(word)
+
+
+def split_task(func, *args, duration=1000,
+               weight=operator.attrgetter('weight')):
+    """
+    :param func: a task function
+    :param args: arguments of the task function
+    :param duration: split the task if it exceeds the duration
+    :param weight: weight function for the elements in args[0]
+    :yields: a partial result, 0 or more task objects, 0 or 1 partial result
+    """
+    elements = args[0]
+    n = len(elements)
+    assert n > 0, 'Passed an empty sequence!'
+    if n > 1000:
+        every = 333
+    elif n > 300:
+        every = 100
+    elif n > 100:
+        every = 33
+    else:
+        every = 10
+    sample = [el for i, el in enumerate(elements, 1) if i % every == 0]
+    if not sample:  # there are not enough elements
+        yield func(*args)
+        return
+    other = [el for i, el in enumerate(elements, 1) if i % every != 0]
+    sample_weight = sum(weight(el) for el in sample)
+    t0 = time.time()
+    res = func(*(sample,) + args[1:])
+    dt = (time.time() - t0) / sample_weight  # time per unit of weight
+    yield res
+    blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
+    for block in blocks[:-1]:
+        yield (func, block) + args[1:-1]
+    yield func(*(blocks[-1],) + args[1:])

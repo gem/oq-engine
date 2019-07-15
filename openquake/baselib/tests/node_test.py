@@ -146,9 +146,9 @@ param=yyy
     def test_dict(self):
         # convertion to and from JSON strings
         d1 = {'root': {'a': 'A'}}
-        d2 = {'root': {'a': 'A', 'attrib': {'x': 1, 'y': 2}}}
-        d3 = {'root': [{'a': 'A', 'attrib': {'x': 1, 'y': 2}},
-                       {'a': 'A', 'attrib': {'x': 3, 'y': 4}}]}
+        d2 = {'root': {'a': 'A', '_x': 1, '_y': 2}}
+        d3 = {'root': [{'a': 'A', '_x': 1, '_y': 2},
+                       {'a': 'A', '_x': 3, '_y': 4}]}
         for input_dict in [d1, d2, d3]:
             node = n.node_from_dict(input_dict)
             output_dict = n.node_to_dict(node)

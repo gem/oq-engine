@@ -868,6 +868,14 @@ utils_swiss_gmpe
     :undoc-members:
     :show-inheritance:
 
+vanhoutte_2018
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.vanhoutte_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 youngs_1997
 -------------------------------------------
 
