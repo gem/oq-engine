@@ -1158,3 +1158,22 @@ def getsizeof(o, ids=None):
         return nbytes + sum(getsizeof(x, ids) for x in o)
 
     return nbytes
+
+
+def add_defaults(array, **kw):
+    """
+    :param array: a structured array
+    :param kw: a dictionary field name -> default value
+    :returns: a new array with additional fields with default values
+    """
+    dtlist = [(name, array.dtype[name]) for name in array.dtype.names]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            dtlist.append((k, type(v)))
+    new = numpy.zeros(array.shape, dtlist)
+    for name in array.dtype.names:
+        new[name] = array[name]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            new[k] = v
+    return new

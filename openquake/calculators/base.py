@@ -52,7 +52,6 @@ U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
-RUPTURES_PER_BLOCK = 200000  # used in classical_split_filter
 
 
 class InvalidCalculationID(Exception):
@@ -345,7 +344,7 @@ class HazardCalculator(BaseCalculator):
         if not hasattr(self, 'maxweight'):
             trt_sources = self.csm.get_trt_sources()
             self.maxweight = self.csm.get_maxweight(
-                trt_sources, weight, self.oqparam.concurrent_tasks,
+                trt_sources, get_weight, self.oqparam.concurrent_tasks,
                 source.MINWEIGHT)
             if self.maxweight == source.MINWEIGHT:
                 logging.info('Using minweight=%d', source.MINWEIGHT)
@@ -409,6 +408,10 @@ class HazardCalculator(BaseCalculator):
                          'ruptures')
             if res:
                 logging.info(res)
+            # sanity check: the stored MFDs can be read again
+            # uncomment this when adding a new MFD class to test it
+            # for s in self.datastore['source_mfds']:
+            #     mfd.from_toml(s, oq.width_of_mfd_bin)
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):

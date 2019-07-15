@@ -24,14 +24,14 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
     def test_negative_or_zero_min_mag(self):
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=-4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
+            min_mag=-4.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.1
         )
         self.assertEqual(str(exc), 'minimum magnitude must be positive')
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=0.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
+            min_mag=0.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.1
         )
         self.assertEqual(str(exc), 'minimum magnitude must be positive')
@@ -39,14 +39,14 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
     def test_negative_or_zero_b_val(self):
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=-1.0, char_mag=6.0, char_rate=0.001,
+            min_mag=4.0, b_val=-1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.1
         )
         self.assertEqual(str(exc), 'b value must be positive')
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=0.0, char_mag=6.0, char_rate=0.001,
+            min_mag=4.0, b_val=0.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.1
         )
         self.assertEqual(str(exc), 'b value must be positive')
@@ -54,7 +54,7 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
     def test_negative_or_zero_char_mag(self):
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=-6.0, char_rate=0.001,
+            min_mag=4.0, b_val=1.0, char_mag=-6.0, char_rate=0.001,
             bin_width=0.1
         )
         error = 'characteristic magnitude must be positive'
@@ -62,7 +62,7 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=0.0, char_rate=0.001,
+            min_mag=4.0, b_val=1.0, char_mag=0.0, char_rate=0.001,
             bin_width=0.1
         )
         self.assertEqual(str(exc), error)
@@ -70,14 +70,14 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
     def test_negative_or_zero_char_rate(self):
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=-0.001,
+            min_mag=4.0, b_val=1.0, char_mag=6.0, char_rate=-0.001,
             bin_width=0.1
         )
         self.assertEqual(str(exc), 'characteristic rate must be positive')
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.0,
+            min_mag=4.0, b_val=1.0, char_mag=6.0, char_rate=0.0,
             bin_width=0.1
         )
         self.assertEqual(str(exc), 'characteristic rate must be positive')
@@ -85,7 +85,7 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
     def test_bin_width_out_of_valid_range(self):
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
+            min_mag=4.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=-0.1
         )
         error = 'bin width must be in the range (0, 0.5] to allow for at ' \
@@ -95,14 +95,14 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
+            min_mag=4.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.0
         )
         self.assertEqual(str(exc), error)
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
+            min_mag=4.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.6
         )
         self.assertEqual(str(exc), error)
@@ -110,7 +110,7 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
     def test_max_mag_GR_too_close_to_min_mag(self):
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
-            min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=4.3, char_rate=0.001,
+            min_mag=4.0, b_val=1.0, char_mag=4.3, char_rate=0.001,
             bin_width=0.1
         )
         error = ('Maximum magnitude of the G-R distribution (char_mag - 0.25) '
@@ -118,32 +118,10 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
                  'magnitude bin.')
         self.assertEqual(str(exc), error)
 
-    def test_rate_char_mag_not_equal_rate_char_mag_less_1_pt_25(self):
-        # Given the parameters below:
-        # min = 5.0
-        # b_val = 1
-        # char_mag = 6.5
-        # char_rate = 0.001
-        # we can compute an a_val that satisfies the condition using the
-        # following equations
-        # a_incr = b_val * (char_mag - 1.25) + log10(char_rate / 0.5)
-        # a_val = a_incr - log10(b_val * log(10))
-        # if we add 1e-4 to a_val, this raises the error
-        exc = self.assert_mfd_error(
-            YoungsCoppersmith1985MFD,
-            min_mag=5.0, a_val=2.1888143 + 1e-4, b_val=1.0, char_mag=6.5,
-            char_rate=0.001, bin_width=0.1
-        )
-        error = 'Rate of events at the characteristic magnitude is not ' \
-                'equal to the rate of events for magnitude equal to ' \
-                'char_mag - 1.25'
-        self.assertEqual(str(exc), error)
-
     def test_from_total_moment_rate(self):
         mfd = YoungsCoppersmith1985MFD.from_total_moment_rate(
             min_mag=5.0, b_val=0.85, char_mag=6.75,
-            total_moment_rate=6.38119198365e15, bin_width=0.1
-        )
+            total_moment_rate=6.38119198365e15, bin_width=0.1)
         computed_rates = mfd.get_annual_occurrence_rates()
         expected_rates = [(5.05, 0.00017054956240777723),
                           (5.15, 0.00014023312414148282),
