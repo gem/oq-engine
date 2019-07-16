@@ -1,0 +1,359 @@
+[pointSource]
+_id = "2"
+_name = "point"
+_tectonicRegion = "Stable Continental Crust"
+magScaleRel = "WC1994"
+ruptAspectRatio = 0.5
+
+[pointSource.pointGeometry]
+upperSeismoDepth = 0.0
+lowerSeismoDepth = 10.0
+
+[pointSource.truncGutenbergRichterMFD]
+_aValue = -3.5
+_bValue = 1.0
+_minMag = 5.0
+_maxMag = 6.5
+
+[pointSource.nodalPlaneDist]
+[[pointSource.nodalPlaneDist.nodalPlane]]
+_dip = 90.0
+_probability = 0.3
+_strike = 0.0
+_rake = 0.0
+
+[[pointSource.nodalPlaneDist.nodalPlane]]
+_dip = 45.0
+_probability = 0.7
+_strike = 90.0
+_rake = 90.0
+
+[pointSource.hypoDepthDist]
+[[pointSource.hypoDepthDist.hypoDepth]]
+_depth = 4.0
+_probability = 0.5
+
+[[pointSource.hypoDepthDist.hypoDepth]]
+_depth = 8.0
+_probability = 0.5
+
+[pointSource.pointGeometry."gml:Point"]
+"gml:pos" = [ -122.0, 38.0,]
+[complexFaultSource]
+_id = "4"
+_name = "Cascadia Megathrust"
+_tectonicRegion = "Subduction Interface"
+magScaleRel = "WC1994"
+ruptAspectRatio = 2.0
+rake = 30.0
+
+[complexFaultSource.complexFaultGeometry]
+[[complexFaultSource.complexFaultGeometry.intermediateEdge]]
+
+[complexFaultSource.complexFaultGeometry.intermediateEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.59326, -124.977, 41.214, 5.08856, -125.14, 42.096, 4.99734,]
+[[complexFaultSource.complexFaultGeometry.intermediateEdge]]
+
+[complexFaultSource.complexFaultGeometry.intermediateEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.69326, -124.977, 41.214, 5.18856, -125.14, 42.096, 5.09734,]
+
+[complexFaultSource.truncGutenbergRichterMFD]
+_aValue = -3.5
+_bValue = 1.0
+_minMag = 5.0
+_maxMag = 6.5
+
+[complexFaultSource.complexFaultGeometry.faultTopEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.49326, -124.977, 41.214, 4.98856, -125.14, 42.096, 4.89734,]
+
+[complexFaultSource.complexFaultGeometry.faultBottomEdge."gml:LineString"]
+"gml:posList" = [ -123.829, 40.347, 20.3849, -124.137, 41.218, 17.4139, -124.252, 42.115, 17.5274,]
+[areaSource]
+_id = "1"
+_name = "Quito"
+_tectonicRegion = "Active Shallow Crust"
+magScaleRel = "PeerMSR"
+ruptAspectRatio = 1.5
+
+[areaSource.areaGeometry]
+_discretization = 2.0
+upperSeismoDepth = 0.0
+lowerSeismoDepth = 10.0
+
+[areaSource.incrementalMFD]
+_binWidth = 0.1
+_minMag = 6.55
+occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108287999999999, 0.0005080653,]
+
+[areaSource.nodalPlaneDist]
+[[areaSource.nodalPlaneDist.nodalPlane]]
+_dip = 90.0
+_probability = 0.3
+_strike = 0.0
+_rake = 0.0
+
+[[areaSource.nodalPlaneDist.nodalPlane]]
+_dip = 45.0
+_probability = 0.7
+_strike = 90.0
+_rake = 90.0
+
+[areaSource.hypoDepthDist]
+[[areaSource.hypoDepthDist.hypoDepth]]
+_depth = 4.0
+_probability = 0.5
+
+[[areaSource.hypoDepthDist.hypoDepth]]
+_depth = 8.0
+_probability = 0.5
+
+[areaSource.areaGeometry."gml:Polygon"."gml:exterior"."gml:LinearRing"]
+"gml:posList" = [ "-122.5", "37.5", "-121.5", "37.5", "-121.5", "38.5", "-122.5", "38.5",]
+[simpleFaultSource]
+_id = "3"
+_name = "Mount Diablo Thrust"
+_tectonicRegion = "Active Shallow Crust"
+magScaleRel = "WC1994"
+ruptAspectRatio = 1.5
+rake = 30.0
+
+[simpleFaultSource.simpleFaultGeometry]
+dip = 45.0
+upperSeismoDepth = 10.0
+lowerSeismoDepth = 20.0
+
+[simpleFaultSource.incrementalMFD]
+_binWidth = 0.1
+_minMag = 5.0
+occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108287999999999, 0.0005080653,]
+
+[simpleFaultSource.hypoList]
+[[simpleFaultSource.hypoList.hypo]]
+_alongStrike = 0.25
+_downDip = 0.25
+_weight = 0.3
+
+[[simpleFaultSource.hypoList.hypo]]
+_alongStrike = 0.75
+_downDip = 0.75
+_weight = 0.7
+
+[simpleFaultSource.slipList]
+slip = [ "90.0", "135.0",]
+
+[simpleFaultSource.simpleFaultGeometry."gml:LineString"]
+"gml:posList" = [ -121.8229, 37.7301, -122.0388, 37.8771,]
+[characteristicFaultSource]
+_id = "5"
+_name = "characteristic source, simple fault"
+_tectonicRegion = "Volcanic"
+rake = 30.0
+
+[characteristicFaultSource.truncGutenbergRichterMFD]
+_aValue = -3.5
+_bValue = 1.0
+_minMag = 5.0
+_maxMag = 6.5
+
+[characteristicFaultSource.surface.simpleFaultGeometry]
+dip = 45.0
+upperSeismoDepth = 10.0
+lowerSeismoDepth = 20.0
+
+[characteristicFaultSource.surface.simpleFaultGeometry."gml:LineString"]
+"gml:posList" = [ -121.8229, 37.7301, -122.0388, 37.8771,]
+[characteristicFaultSource]
+_id = "6"
+_name = "characteristic source, complex fault"
+_tectonicRegion = "Volcanic"
+rake = 60.0
+
+[characteristicFaultSource.incrementalMFD]
+_binWidth = 0.1
+_minMag = 5.0
+occurRates = [ 0.0010614989, 0.00088291627, 0.00073437777, 0.0006108287999999999, 0.0005080653,]
+
+[characteristicFaultSource.surface.complexFaultGeometry]
+[[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge]]
+
+[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.59326, -124.977, 41.214, 5.08856, -125.14, 42.096, 4.99734,]
+[[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge]]
+
+[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.69326, -124.977, 41.214, 5.18856, -125.14, 42.096, 5.09734,]
+
+[characteristicFaultSource.surface.complexFaultGeometry.faultTopEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.49326, -124.977, 41.214, 4.98856, -125.14, 42.096, 4.89734,]
+
+[characteristicFaultSource.surface.complexFaultGeometry.faultBottomEdge."gml:LineString"]
+"gml:posList" = [ -123.829, 40.347, 20.3849, -124.137, 41.218, 17.4139, -124.252, 42.115, 17.5274,]
+[characteristicFaultSource]
+_id = "7"
+_name = "characteristic source, multi surface"
+_tectonicRegion = "Volcanic"
+rake = 90.0
+
+[characteristicFaultSource.truncGutenbergRichterMFD]
+_aValue = -3.6
+_bValue = 1.0
+_minMag = 5.2
+_maxMag = 6.4
+
+[characteristicFaultSource.surface]
+[[characteristicFaultSource.surface.planarSurface]]
+
+[characteristicFaultSource.surface.planarSurface.topLeft]
+_lon = -1.0
+_lat = 1.0
+_depth = 21.0
+[characteristicFaultSource.surface.planarSurface.topRight]
+_lon = 1.0
+_lat = 1.0
+_depth = 21.0
+[characteristicFaultSource.surface.planarSurface.bottomLeft]
+_lon = -1.0
+_lat = -1.0
+_depth = 59.0
+[characteristicFaultSource.surface.planarSurface.bottomRight]
+_lon = 1.0
+_lat = -1.0
+_depth = 59.0
+[[characteristicFaultSource.surface.planarSurface]]
+
+[characteristicFaultSource.surface.planarSurface.topLeft]
+_lon = 1.0
+_lat = 1.0
+_depth = 20.0
+[characteristicFaultSource.surface.planarSurface.topRight]
+_lon = 3.0
+_lat = 1.0
+_depth = 20.0
+[characteristicFaultSource.surface.planarSurface.bottomLeft]
+_lon = 1.0
+_lat = -1.0
+_depth = 80.0
+[characteristicFaultSource.surface.planarSurface.bottomRight]
+_lon = 3.0
+_lat = -1.0
+_depth = 80.0
+[simpleFaultSource]
+_id = "2A"
+_name = "Mount Diablo Thrust YC Characteristic Rate"
+_tectonicRegion = "Active Shallow Crust"
+magScaleRel = "WC1994"
+ruptAspectRatio = 1.5
+rake = 30.0
+
+[simpleFaultSource.simpleFaultGeometry]
+dip = 45.0
+upperSeismoDepth = 10.0
+lowerSeismoDepth = 20.0
+
+[simpleFaultSource.YoungsCoppersmithMFD]
+_minMag = 5.0
+_bValue = 1.0
+_characteristicMag = 7.0
+_characteristicRate = 0.005
+_binWidth = 0.1
+
+[simpleFaultSource.simpleFaultGeometry."gml:LineString"]
+"gml:posList" = [ -121.8229, 37.7301, -122.0388, 37.8771,]
+[characteristicFaultSource]
+_id = "1"
+_name = "characteristic source, complex fault arbitrary mfd"
+_tectonicRegion = "Subduction Interface"
+rake = 60.0
+
+[characteristicFaultSource.arbitraryMFD]
+magnitudes = [ 8.6, 8.800000000000001, 9.0,]
+occurRates = [ 0.0005999999999999999, 0.0008, 0.0004,]
+
+[characteristicFaultSource.surface.complexFaultGeometry]
+[[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge]]
+
+[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.59326, -124.977, 41.214, 5.08856, -125.14, 42.096, 4.99734,]
+[[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge]]
+
+[characteristicFaultSource.surface.complexFaultGeometry.intermediateEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.69326, -124.977, 41.214, 5.18856, -125.14, 42.096, 5.09734,]
+
+[characteristicFaultSource.surface.complexFaultGeometry.faultTopEdge."gml:LineString"]
+"gml:posList" = [ -124.704, 40.363, 5.49326, -124.977, 41.214, 4.98856, -125.14, 42.096, 4.89734,]
+
+[characteristicFaultSource.surface.complexFaultGeometry.faultBottomEdge."gml:LineString"]
+"gml:posList" = [ -123.829, 40.347, 20.3849, -124.137, 41.218, 17.4139, -124.252, 42.115, 17.5274,]
+[multiPointSource]
+_id = "mp1"
+_name = "multi point source"
+_tectonicRegion = "Stable Continental Crust"
+magScaleRel = "PeerMSR"
+ruptAspectRatio = 1.0
+
+[multiPointSource.multiPointGeometry]
+"gml:posList" = [ "0.0", "1.0", "0.5", "1.0",]
+upperSeismoDepth = 10.0
+lowerSeismoDepth = 20.0
+
+[multiPointSource.multiMFD]
+_kind = "incrementalMFD"
+_size = 2
+bin_width = [ 0.1,]
+min_mag = [ 4.5,]
+occurRates = [ 0.1000000015, 0.05000000075, 0.400000006, 0.200000003, 0.1000000015,]
+lengths = [ 2, 3,]
+
+[multiPointSource.nodalPlaneDist]
+[[multiPointSource.nodalPlaneDist.nodalPlane]]
+_dip = 20.0
+_probability = 0.5
+_strike = 1.0
+_rake = 3.0
+
+[[multiPointSource.nodalPlaneDist.nodalPlane]]
+_dip = 2.0
+_probability = 0.5
+_strike = 2.0
+_rake = 4.0
+
+[multiPointSource.hypoDepthDist.hypoDepth]
+_depth = 14.0
+_probability = 1.0
+[multiPointSource]
+_id = "mp2"
+_name = "mps-with-GR"
+_tectonicRegion = "Stable Continental Crust"
+magScaleRel = "PeerMSR"
+ruptAspectRatio = 1.0
+
+[multiPointSource.multiPointGeometry]
+"gml:posList" = [ "0.1", "1.1",]
+upperSeismoDepth = 5.0
+lowerSeismoDepth = 10.0
+
+[multiPointSource.multiMFD]
+_kind = "truncGutenbergRichterMFD"
+_size = 1
+a_val = [ -5.481,]
+b_val = [ 0.9,]
+bin_width = [ 0.1,]
+max_mag = [ 7.5,]
+min_mag = [ 5.0,]
+
+[multiPointSource.nodalPlaneDist]
+[[multiPointSource.nodalPlaneDist.nodalPlane]]
+_dip = 90.0
+_probability = 0.5
+_strike = 0.0
+_rake = 0.0
+
+[[multiPointSource.nodalPlaneDist.nodalPlane]]
+_dip = 90.0
+_probability = 0.5
+_strike = 90.0
+_rake = 0.0
+
+[multiPointSource.hypoDepthDist.hypoDepth]
+_depth = 6.3
+_probability = 1.0
