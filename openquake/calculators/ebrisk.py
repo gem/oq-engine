@@ -167,7 +167,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['assetcol'] = self.assetcol
         ltypes = self.riskmodel.loss_types
         self.param['lba'] = lba = (
-            LossesByAsset(self.assetcol, ltypes,
+            LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict)
             if oq.avg_losses else None)
         self.param['ses_ratio'] = oq.ses_ratio
