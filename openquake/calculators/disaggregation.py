@@ -23,14 +23,14 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, config
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import RuptureContext, FEWSITES
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.calculators import getters, extract
 from openquake.calculators import base
@@ -140,10 +140,11 @@ The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
     def init(self):
-        if self.N > FEWSITES:
+        few = config.general.max_sites_disagg
+        if self.N > few:
             raise ValueError(
                 'The max number of sites for disaggregation set in '
-                'openquake.cfg is %d, but you have %s' % (FEWSITES, self.N))
+                'openquake.cfg is %d, but you have %s' % (few, self.N))
         super().init()
 
     def execute(self):
