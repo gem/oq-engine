@@ -59,7 +59,7 @@ MFD_PARAMS = [
     ('minMag', 'min_mag', 'f'), ('maxMag', 'max_mag', 'f'),
     ('aValue', 'a_val', 'f'), ('bValue', 'b_val', 'f'),
     ('binWidth', 'bin_width', 'f'),
-    ('characteristicMag', 'characteristic_mag','f')
+    ('characteristicMag', 'characteristic_mag', 'f')
 ]
 
 
@@ -995,7 +995,7 @@ class ShapefileParser(SourceModelParser):
              simple_fault_spacing=1.0, complex_mesh_spacing=5.0,
              mfd_spacing=0.1):
         """
-        Build the source model from nrml format
+        Build the source model from NRML format
         """
         reader = shapefile.Reader(input_shapefile)
         fields = [field[0] for field in reader.fields[1:]]
@@ -1005,9 +1005,8 @@ class ShapefileParser(SourceModelParser):
         if validate:
             converter = SourceConverter(1.0, simple_fault_spacing,
                                         complex_mesh_spacing,
-                                        mfd_spacing,
-                                        10.0)
-        for iloc in range(0, reader.numRecords):
+                                        mfd_spacing, 10.0)
+        for iloc in range(reader.numRecords):
             # Build record dictionary
             record = record_to_dict(records[iloc], fields)
             shape = shapes[iloc]
@@ -1020,6 +1019,9 @@ class ShapefileParser(SourceModelParser):
             elif "complexFaultSource" in record["sourcetype"]:
                 src = build_complex_fault_source_from_shp(shape, record)
             elif "characteristicFaultSource" in record["sourcetype"]:
+                print("Characteristic Fault Source Not Yet Supported - Sorry!")
+                src = None
+            elif "multiPointSource" in record["sourcetype"]:
                 print("Characteristic Fault Source Not Yet Supported - Sorry!")
                 src = None
             if src and validate:
@@ -1094,14 +1096,14 @@ class ShapefileParser(SourceModelParser):
                                  % src.tag)
 
         root = self.destination
-        if len(w_area.shapes()) > 0:
+        if len(w_area.shapes()):
             w_area.save('%s_area' % root)
-        if len(w_point.shapes()) > 0:
+        if len(w_point.shapes()):
             w_point.save('%s_point' % root)
-        if len(w_complex.shapes()) > 0:
+        if len(w_complex.shapes()):
             w_complex.save('%s_complex' % root)
-        if len(w_simple.shapes()) > 0:
+        if len(w_simple.shapes()):
             w_simple.save('%s_simple' % root)
             w_simple3d.save('%s_simple3d' % root)
-        if len(w_planar.shapes()) > 0:
+        if len(w_planar.shapes()):
             w_planar.save('%s_planar' % root)
