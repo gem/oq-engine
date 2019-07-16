@@ -96,7 +96,7 @@ class SourceWriterTestCase(unittest.TestCase):
         self.assertEqual(smodel.name, sm['_name'])
 
 
-class MFDTestCase(unittest.TestCase):
+class TOMLTestCase(unittest.TestCase):
     def test_toml(self):
         out = ''
         for fname in (MIXED, ALT_MFDS, MULTIPOINT):
