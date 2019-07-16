@@ -1491,30 +1491,32 @@ class LossesByAsset(object):
     :param policy_name: the name of the policy field (can be empty)
     :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
-    def __init__(self, assetcol, loss_types, policy_name='', policy_dict={}):
+    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
         self.A = len(assetcol)
         self.policy_name = policy_name
         self.policy_dict = policy_dict
-        self.loss_names = list(loss_types)
-        for name in self.policy_dict:
-            self.loss_names.append(name + '_ins')
+        self.loss_names = loss_names
 
     def compute(self, asset, losses_by_lt):
         """
         :param asset: an asset record
         :param losses_by_lt: a dictionary loss_type -> losses (of size E)
-        :yields: pairs (loss_name, losses)
+        :yields: pairs (loss_idx, losses)
         """
+        idx = 0
         for lt, losses in losses_by_lt.items():
-            yield lt, losses
+            yield idx, losses
+            idx += 1
             if lt in self.policy_dict:
                 val = asset['value-' + lt]
                 ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-                yield lt + '_ins', insured_losses(losses, ded * val, lim * val)
+                ins_losses = insured_losses(losses, ded * val, lim * val)
+                yield idx, ins_losses
+                idx += 1
 
     @cached_property
     def losses_by_A(self):
         """
-        :returns: a dictionary loss name -> array with A losses
+        :returns: an array of shape (A, L)
         """
-        return AccumDict(accum=numpy.zeros(self.A))
+        return numpy.zeros((self.A, len(self.loss_names)), F32)
