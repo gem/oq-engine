@@ -1501,14 +1501,18 @@ class LossesByAsset(object):
         """
         :param asset: an asset record
         :param losses_by_lt: a dictionary loss_type -> losses (of size E)
-        :yields: pairs (loss_name, losses)
+        :yields: (loss_idx, loss_name, losses)
         """
+        idx = 0
         for lt, losses in losses_by_lt.items():
-            yield lt, losses
+            yield idx, lt, losses
+            idx += 1
             if lt in self.policy_dict:
                 val = asset['value-' + lt]
                 ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-                yield lt + '_ins', insured_losses(losses, ded * val, lim * val)
+                ins_losses = insured_losses(losses, ded * val, lim * val)
+                yield idx, lt + '_ins', ins_losses
+                idx += 1
 
     @cached_property
     def losses_by_A(self):
