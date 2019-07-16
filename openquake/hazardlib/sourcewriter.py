@@ -239,10 +239,7 @@ def build_multi_mfd(mfd):
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
-            if len(values[0]) > 1:  # tested in multipoint_test.py
-                values = list(numpy.concatenate(values))
-            else:
-                values = sum(values, [])
+            values = sum(values, [])
         node.append(Node(name, text=values))
     if 'occurRates' in mfd.kwargs:
         lengths = [len(rates) for rates in mfd.kwargs['occurRates']]
