@@ -48,7 +48,7 @@ def build_loss_tables(dstore):
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
     for rec in dstore['losses_by_event'][()]:  # call .value for speed
-        idx = idx_by_ser[rec['eid'] // TWO32]
+        idx = idx_by_ser[rec['event_id'] // TWO32]
         tbl[idx] += rec['loss']
         lbr[rec['rlzi']] += rec['loss']
     return tbl, lbr
@@ -276,7 +276,7 @@ class EbrCalculator(base.RiskCalculator):
         """
         logging.info('Saving event loss table')
         elt_dt = numpy.dtype(
-            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L,)))])
+            [('event_id', U64), ('rlzi', U16), ('loss', (F32, (self.L,)))])
         with self.monitor('saving event loss table', measuremem=True):
             agglosses = numpy.fromiter(
                 ((eid, rlz, losses)
