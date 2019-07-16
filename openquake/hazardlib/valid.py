@@ -536,14 +536,14 @@ def positivefloats(value):
     return floats
 
 
-def floats32(value):
+def floats(value):
     """
     :param value:
         string of whitespace separated floats
     :returns:
-        an array of 32 bit floats
+        a list of floats
     """
-    return numpy.float32(value.split())
+    return list(map(float, value.split()))
 
 
 _BOOL_DICT = {
