@@ -121,10 +121,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
                     losses_by_lt[lt] = losses
-                for name_idx, name, losses in lba.compute(asset, losses_by_lt):
-                    acc[(eidx, name_idx) + tagidxs] += losses
+                for loss_idx, losses in lba.compute(asset, losses_by_lt):
+                    acc[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
-                        lba.losses_by_A[name][aid] += (
+                        lba.losses_by_A[aid, loss_idx] += (
                             losses @ weights * param['ses_ratio'])
             times[sid] = time.time() - t0
     if hazard:
@@ -174,8 +174,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['riskmodel'] = self.riskmodel
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
-        for name in lba.loss_names:
-            self.datastore.create_dset('avg_losses/' + name, F32, (A,))
+        self.datastore.create_dset('avg_losses', F32, (A, L))
         if oq.asset_loss_table:
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
@@ -243,8 +242,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             for r, aggloss in dic['agg_losses'].items():
                 self.datastore['agg_losses-rlzs'][:, r] += aggloss
         with self.monitor('saving avg_losses', autoflush=True):
-            for name, arr in dic['losses_by_A'].items():
-                self.datastore['avg_losses/' + name] += arr
+            self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eidx = dic['alt_eidx']
