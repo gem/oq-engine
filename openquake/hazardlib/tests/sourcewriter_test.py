@@ -104,6 +104,8 @@ class TOMLTestCase(unittest.TestCase):
             for sgroup in smodel:
                 for src in sgroup:
                     out += tomldump(src)
+        # NB: uncomment the line below to regenerate the TOML file
+        # with open(TOML, 'w') as f: f.write(out)
         self.assertEqual(out, open(TOML).read())
 
 
