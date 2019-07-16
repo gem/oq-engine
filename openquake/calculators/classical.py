@@ -432,7 +432,8 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
                     if poes:
                         hmap = calc.make_hmap(pc, pgetter.imtls, poes, sid)
                         pmap_by_kind['hmaps-stats'][s].update(hmap)
-                    if statname == 'mean' and R > 1 and N <= FEWSITES:
+                    if (statname == 'mean' and R > 1 and
+                            N <= config.general.max_sites_disagg):
                         rlz = pmap_by_kind['rlz_by_sid']
                         rlz[sid] = util.closest_to_ref(
                             [p.array for p in pcurves], pc.array)['rlz']
