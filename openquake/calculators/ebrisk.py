@@ -61,8 +61,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         an ArrayWrapper with shape (E, L, T, ...)
     """
     riskmodel = param['riskmodel']
+    lba = param['lba']
     E = rupgetter.num_events
-    L = len(riskmodel.lti)
+    L = len(lba.loss_names)
     N = len(srcfilter.sitecol.complete)
     e1 = rupgetter.first_event
     with monitor('getting assets', measuremem=False):
@@ -85,7 +86,6 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     if param['asset_loss_table']:
         alt = numpy.zeros((A, E, L), F32)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
-    lba = param['lba']
     # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
     num_events_per_sid = 0
@@ -120,9 +120,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                         losses = lratios * asset['value-' + lt]
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
-                    acc[(eidx, lti) + tagidxs] += losses
                     losses_by_lt[lt] = losses
-                for name, losses in lba.compute(asset, losses_by_lt):
+                for name_idx, name, losses in lba.compute(asset, losses_by_lt):
+                    acc[(eidx, name_idx) + tagidxs] += losses
                     if param['avg_losses']:
                         lba.losses_by_A[name][aid] += (
                             losses @ weights * param['ses_ratio'])
@@ -165,7 +165,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with hdf5.File(self.hdf5cache, 'w') as cache:
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
-        ltypes = self.riskmodel.loss_types
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
@@ -173,7 +172,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['riskmodel'] = self.riskmodel
-        self.L = L = len(ltypes)
+        self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
         for name in lba.loss_names:
             self.datastore.create_dset('avg_losses/' + name, F32, (A,))

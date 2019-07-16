@@ -112,6 +112,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_1_eb(self):
         # this is a case with insured losses
         self.run_calc(case_1.__file__, 'job_eb.ini')
+        [fname] = export(('avg_losses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     def test_case_1g(self):
         # vulnerability function with PMF
