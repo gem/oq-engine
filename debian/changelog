@@ -1,3 +1,5 @@
+python3-oq-engine (3.6.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Implemented insured losses
 
@@ -115,6 +117,8 @@
     contributions outside the range of validity of (some of the) GSIMs
   * Now it is possible to export individual hazard curves from an event
   * Added a view gmvs_to_hazard
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 16 Jul 2019 08:42:10 +0000
 
 python3-oq-engine (3.5.2-1~xenial01) xenial; urgency=low
 
