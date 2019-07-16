@@ -29,7 +29,7 @@ Requirements are:
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/linux/oq-engine/openquake-setup-linux64-3.5.2-1.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/linux/oq-engine/openquake-setup-linux64-3.6.0-1.run using any browser
 
 From a terminal run
 
