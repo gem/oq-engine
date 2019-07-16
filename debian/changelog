@@ -1,7 +1,9 @@
-python3-oq-engine (3.6.0-1~xenial01) xenial; urgency=low
-
   [Michele Simionato]
+  * Fixed a bug with the --config option: max_sites_disagg and serialize_jobs
+    could not be overridden
   * Implemented insured losses
+
+python3-oq-engine (3.6.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
   * In some cases `applyToSources` was giving a fake error about the source
