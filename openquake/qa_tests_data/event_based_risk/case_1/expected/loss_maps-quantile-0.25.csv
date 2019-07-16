@@ -1,6 +1,6 @@
-# kind='quantile-0.25', risk_investigation_time=50.0
-id,taxonomy,lon,lat,nonstructural~poe-0.1,structural~poe-0.1
-"a0","RM",81.29850,29.10980,5.31049E+02,6.62629E+02
-"a1","RC",83.08230,27.90060,6.56827E+01,1.64211E+02
-"a2","W",85.74770,27.90150,8.14148E+01,6.06979E+02
-"a3","RM",85.74770,27.90150,3.12513E+02,6.19817E+02
+# generated_by='OpenQuake engine 3.6.0-gitd095d1207d', start_date='2019-07-15T15:28:42', checksum=801826835, kind='quantile-0.25', risk_investigation_time=50.0
+id,policy,taxonomy,lon,lat,nonstructural~poe-0.1,structural~poe-0.1
+"a0","A","RM",81.29850,29.10980,5.31049E+02,6.62629E+02
+"a1","A","RC",83.08230,27.90060,6.56827E+01,1.64211E+02
+"a2","B","W",85.74770,27.90150,8.14148E+01,6.06979E+02
+"a3","B","RM",85.74770,27.90150,3.12513E+02,6.19817E+02

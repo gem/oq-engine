@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, performance, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.risklib.scientific import losses_by_period
+from openquake.risklib.scientific import losses_by_period, LossesByAsset
 from openquake.risklib.riskinput import get_assets_by_taxo, cache_epsilons
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -61,8 +61,9 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         an ArrayWrapper with shape (E, L, T, ...)
     """
     riskmodel = param['riskmodel']
+    lba = param['lba']
     E = rupgetter.num_events
-    L = len(riskmodel.lti)
+    L = len(lba.loss_names)
     N = len(srcfilter.sitecol.complete)
     e1 = rupgetter.first_event
     with monitor('getting assets', measuremem=False):
@@ -81,14 +82,10 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     eid2idx = dict(zip(events['eid'], range(e1, e1 + E)))
     tagnames = param['aggregate_by']
     shape = assetcol.tagcol.agg_shape((E, L), tagnames)
-    elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
+    elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     if param['asset_loss_table']:
         alt = numpy.zeros((A, E, L), F32)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
-    if param['avg_losses']:
-        losses_by_A = numpy.zeros((A, L), F32)
-    else:
-        losses_by_A = 0
     # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
     num_events_per_sid = 0
@@ -114,6 +111,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                 aid = asset['ordinal']
                 tagi = asset[tagnames] if tagnames else ()
                 tagidxs = tuple(idx - 1 for idx in tagi)
+                losses_by_lt = {}
                 for lti, lt in enumerate(riskmodel.loss_types):
                     lratios = out[lt][a]
                     if lt == 'occupants':
@@ -122,23 +120,26 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                         losses = lratios * asset['value-' + lt]
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
-                    acc[(eidx, lti) + tagidxs] += losses
+                    losses_by_lt[lt] = losses
+                for loss_idx, losses in lba.compute(asset, losses_by_lt):
+                    acc[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
-                        losses_by_A[aid, lti] += losses @ weights
+                        lba.losses_by_A[aid, loss_idx] += (
+                            losses @ weights * param['ses_ratio'])
             times[sid] = time.time() - t0
     if hazard:
         num_events_per_sid /= len(hazard)
     with monitor('building event loss table'):
         elt = numpy.fromiter(
-            ((event['eid'], event['rlz'], losses)
+            ((event['eid'], event['rlz'], losses)  # losses (L, T...)
              for event, losses in zip(events, acc) if losses.sum()), elt_dt)
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
             agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
     res = {'elt': elt, 'agg_losses': agg, 'times': times,
            'events_per_sid': num_events_per_sid, 'gmf_nbytes': gmf_nbytes}
-    if param['avg_losses']:
-        res['losses_by_A'] = losses_by_A * param['ses_ratio']
+
+    res['losses_by_A'] = lba.losses_by_A
     if param['asset_loss_table']:
         eidx = numpy.array([eid2idx[eid] for eid in events['eid']])
         res['alt_eidx'] = alt, eidx
@@ -156,24 +157,28 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     accept_precalc = ['event_based', 'event_based_risk', 'ucerf_hazard']
 
     def pre_execute(self):
-        self.oqparam.ground_motion_fields = False
+        oq = self.oqparam
+        oq.ground_motion_fields = False
         super().pre_execute()
         # save a copy of the assetcol in hdf5cache
         self.hdf5cache = self.datastore.hdf5cache()
         with hdf5.File(self.hdf5cache, 'w') as cache:
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
-        self.param['ses_ratio'] = self.oqparam.ses_ratio
-        self.param['aggregate_by'] = self.oqparam.aggregate_by
-        self.param['asset_loss_table'] = self.oqparam.asset_loss_table
+        self.param['lba'] = lba = (
+            LossesByAsset(self.assetcol, oq.loss_names,
+                          self.policy_name, self.policy_dict))
+        self.param['ses_ratio'] = oq.ses_ratio
+        self.param['aggregate_by'] = oq.aggregate_by
+        self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['riskmodel'] = self.riskmodel
-        self.L = L = len(self.riskmodel.loss_types)
+        self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses', F32, (A, L))
-        if self.oqparam.asset_loss_table:
+        if oq.asset_loss_table:
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
-        elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shp))]
+        elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shp))]
         if 'losses_by_event' not in self.datastore:
             self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
@@ -236,9 +241,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with self.monitor('saving agg_losses-rlzs', autoflush=True):
             for r, aggloss in dic['agg_losses'].items():
                 self.datastore['agg_losses-rlzs'][:, r] += aggloss
-        if self.oqparam.avg_losses:
-            with self.monitor('saving avg_losses', autoflush=True):
-                self.datastore['avg_losses'] += dic['losses_by_A']
+        with self.monitor('saving avg_losses', autoflush=True):
+            self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eidx = dic['alt_eidx']
