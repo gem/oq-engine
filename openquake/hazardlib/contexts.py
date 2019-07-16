@@ -26,9 +26,6 @@ from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-# if there are few sites store the rupdata
-FEWSITES = config.general.max_sites_disagg
-
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth rvolc'.split())
 
@@ -270,7 +267,7 @@ class ContextMaker(object):
         """
         sitecol = sites.complete
         N = len(sitecol)
-        fewsites = N <= FEWSITES
+        fewsites = N <= config.general.max_sites_disagg
         rupdata = RupData(self, sites)
         for rup, sites in self._gen_rup_sites(src, sites):
             try:
