@@ -304,7 +304,7 @@ def extract_geometry_params(src):
         if dip and counter:
             dip /= counter
 
-        return dict([("usd", upper_depth), ("lsd", lower_depth), ("dip", dip)])
+        return {"usd": upper_depth, "lsd": lower_depth, "dip": dip}
     else:
         return {}
 
@@ -358,9 +358,8 @@ def extract_source_nodal_planes(src):
     tags = get_taglist(src)
     npd_nodeset = src.nodes[tags.index("nodalPlaneDist")]
     if len(npd_nodeset) > MAX_NODAL_PLANES:
-        raise ValueError("Number of nodal planes %s exceeds stated maximum "
-                         "of %s" % (str(len(npd_nodeset)),
-                                    str(MAX_NODAL_PLANES)))
+        raise ValueError("Number of nodal planes %d exceeds stated maximum "
+                         "of %d" % (len(npd_nodeset), MAX_NODAL_PLANES))
     if len(npd_nodeset):
         strikes = []
         dips = []
