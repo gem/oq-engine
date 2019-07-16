@@ -122,7 +122,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         loss_dt = self.oqparam.loss_dt()
         LI = len(loss_dt.names)
-        dtlist = [('eid', U64), ('loss', (F32, LI))]
+        dtlist = [('event_id', U64), ('loss', (F32, LI))]
         R = self.R
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
