@@ -122,8 +122,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                         alt[aid, eidx, lti] = losses
                     acc[(eidx, lti) + tagidxs] += losses
                     losses_by_lt[lt] = losses
-                if lba:
-                    for name, losses in lba.compute(asset, losses_by_lt):
+                for name, losses in lba.compute(asset, losses_by_lt):
+                    if param['avg_losses']:
                         lba.losses_by_A[name][aid] += (
                             losses @ weights * param['ses_ratio'])
             times[sid] = time.time() - t0
@@ -131,7 +131,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         num_events_per_sid /= len(hazard)
     with monitor('building event loss table'):
         elt = numpy.fromiter(
-            ((event['eid'], event['rlz'], losses)
+            ((event['eid'], event['rlz'], losses)  # losses has shape (L, T...)
              for event, losses in zip(events, acc) if losses.sum()), elt_dt)
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
@@ -168,8 +168,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         ltypes = self.riskmodel.loss_types
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
-                          self.policy_name, self.policy_dict)
-            if oq.avg_losses else None)
+                          self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
