@@ -256,7 +256,7 @@ def export_losses_by_event(ekey, dstore):
         # example (0, 1, 2, 3) -> (0, 2, 3, 1)
         axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
         data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
-        aw = hdf5.ArrayWrapper(data, dic, oq.loss_dt().names)
+        aw = hdf5.ArrayWrapper(data, dic, oq.loss_names)
         writer.save(aw.to_table(), dest)
     else:
         dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
@@ -270,7 +270,7 @@ def export_losses_by_event(ekey, dstore):
         arr['rlz_id'] = get_rlz_ids(events, eids)
         arr['year'] = [year_of[eid] for eid in eids]
         loss = dstore['losses_by_event']['loss'].T  # shape (L, E)
-        for losses, loss_type in zip(loss, oq.loss_dt().names):
+        for losses, loss_type in zip(loss, oq.loss_names):
             arr[loss_type] = losses
         writer.save(arr, dest)
     return writer.getsaved()
