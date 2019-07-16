@@ -90,7 +90,7 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
-    # insured_losses = valid.Param(valid.boolean, False)
+    insurance = valid.Param(valid.namelist, [])
     multi_peril = valid.Param(valid.namelist, [])
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -478,6 +478,18 @@ class OqParam(valid.ParamSet):
         Dictionary extended_loss_type -> extended_loss_type index
         """
         return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
+
+    @property
+    def loss_names(self):
+        """
+        Loss types plus insured types, if any
+        """
+        names = []
+        for lt, _ in self.loss_dt_list():
+            names.append(lt)
+        for name in self.insurance:
+            names.append(lt + '_ins')
+        return names
 
     def loss_dt(self, dtype=F32):
         """
