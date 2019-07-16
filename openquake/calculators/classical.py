@@ -21,9 +21,8 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, config
 from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib.contexts import FEWSITES
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
@@ -353,7 +352,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-        if 'mean' in dict(hstats) and R > 1 and N <= FEWSITES:
+        if ('mean' in dict(hstats) and R > 1 and
+                N <= config.general.max_sites_disagg):
             self.datastore.create_dset('best_rlz', U32, (N,))
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
