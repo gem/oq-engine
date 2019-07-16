@@ -1501,22 +1501,22 @@ class LossesByAsset(object):
         """
         :param asset: an asset record
         :param losses_by_lt: a dictionary loss_type -> losses (of size E)
-        :yields: (loss_idx, loss_name, losses)
+        :yields: pairs (loss_idx, losses)
         """
         idx = 0
         for lt, losses in losses_by_lt.items():
-            yield idx, lt, losses
+            yield idx, losses
             idx += 1
             if lt in self.policy_dict:
                 val = asset['value-' + lt]
                 ded, lim = self.policy_dict[lt][asset[self.policy_name]]
                 ins_losses = insured_losses(losses, ded * val, lim * val)
-                yield idx, lt + '_ins', ins_losses
+                yield idx, ins_losses
                 idx += 1
 
     @cached_property
     def losses_by_A(self):
         """
-        :returns: a dictionary loss name -> array with A losses
+        :returns: an array of shape (A, L)
         """
-        return AccumDict(accum=numpy.zeros(self.A))
+        return numpy.zeros((self.A, len(self.loss_names)), F32)
