@@ -479,6 +479,18 @@ class OqParam(valid.ParamSet):
         """
         return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
 
+    @property
+    def loss_names(self):
+        """
+        Loss types plus insured types, if any
+        """
+        names = []
+        for lt, _ in self.loss_dt_list():
+            names.append(lt)
+        for name in self.insurance:
+            names.append(lt + '_ins')
+        return names
+
     def loss_dt(self, dtype=F32):
         """
         :returns: a composite dtype based on the loss types including occupants

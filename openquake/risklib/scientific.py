@@ -1491,13 +1491,11 @@ class LossesByAsset(object):
     :param policy_name: the name of the policy field (can be empty)
     :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
-    def __init__(self, assetcol, loss_types, policy_name='', policy_dict={}):
+    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
         self.A = len(assetcol)
         self.policy_name = policy_name
         self.policy_dict = policy_dict
-        self.loss_names = list(loss_types)
-        for name in self.policy_dict:
-            self.loss_names.append(name + '_ins')
+        self.loss_names = loss_names
 
     def compute(self, asset, losses_by_lt):
         """
