@@ -494,22 +494,10 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.run()
-            self.param = calc.param
-            self.sitecol = calc.sitecol
-            if hasattr(calc, 'assetcol'):
-                self.assetcol = calc.assetcol
-            if hasattr(calc, 'riskmodel'):
-                self.riskmodel = calc.riskmodel
-            if hasattr(calc, 'rlzs_assoc'):
-                self.rlzs_assoc = calc.rlzs_assoc
-            else:
-                # this happens for instance for a scenario_damage without
-                # rupture, gmfs, multi_peril
-                raise InvalidFile(
-                    '%(job_ini)s: missing gmfs_csv, multi_peril_csv' %
-                    oq.inputs)
-            if hasattr(calc, 'csm'):  # no scenario
-                self.csm = calc.csm
+            for name in ('csm param sitecol assetcol riskmodel rlzs_assoc '
+                         'policy_name policy_dict').split():
+                if hasattr(calc, name):
+                    setattr(self, name, getattr(calc, name))
         else:
             self.read_inputs()
         if self.riskmodel:
@@ -556,10 +544,11 @@ class HazardCalculator(BaseCalculator):
         Read the exposure, the riskmodel and update the attributes
         .sitecol, .assetcol
         """
+        oq = self.oqparam
         with self.monitor('reading exposure', autoflush=True):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
-                    self.oqparam, haz_sitecol, self.riskmodel.loss_types))
+                    oq, haz_sitecol, self.riskmodel.loss_types))
             if len(discarded):
                 self.datastore['discarded'] = discarded
                 if hasattr(self, 'rup'):
@@ -568,14 +557,40 @@ class HazardCalculator(BaseCalculator):
                                  'from the rupture; use `oq show discarded` '
                                  'to show them and `oq plot_assets` to plot '
                                  'them' % len(discarded))
-                elif not self.oqparam.discard_assets:  # raise an error
+                elif not oq.discard_assets:  # raise an error
                     self.datastore['sitecol'] = self.sitecol
                     self.datastore['assetcol'] = self.assetcol
                     raise RuntimeError(
                         '%d assets were discarded; use `oq show discarded` to'
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
+        self.policy_name = ''
+        self.policy_dict = {}
+        if oq.insurance:
+            self.load_insurance_data(oq.insurance, oq.inputs['insurance'])
         return readinput.exposure
+
+    def load_insurance_data(self, ins_types, ins_files):
+        """
+        Read the insurance files and populate the policy_dict
+        """
+        for loss_type, fname in zip(ins_types, ins_files):
+            array = hdf5.read_csv(
+                fname, {'insurance_limit': float, 'deductible': float,
+                        None: object}).array
+            policy_name = array.dtype.names[0]
+            policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
+            insurance = numpy.zeros((len(policy_idx), 2))
+            for pol, ded, lim in array[
+                    [policy_name, 'deductible', 'insurance_limit']]:
+                insurance[policy_idx[pol]] = ded, lim
+            self.policy_dict[loss_type] = insurance
+            if self.policy_name and policy_name != self.policy_name:
+                raise ValueError(
+                    'The file %s contains %s as policy field, but we were '
+                    'expecting %s' % (fname, policy_name, self.policy_name))
+            else:
+                self.policy_name = policy_name
 
     def load_riskmodel(self):
         # to be called before read_exposure
@@ -874,6 +889,12 @@ class RiskCalculator(HazardCalculator):
         return getter
 
     def _gen_riskinputs(self, kind):
+        hazard = ('gmf_data' in self.datastore or 'poes' in self.datastore or
+                  'multi_peril' in self.datastore)
+        if not hazard:
+            raise InvalidFile('Did you forget gmfs_csv|hazard_curves_csv|'
+                              'multi_peril_csv in %s?'
+                              % self.oqparam.inputs['job_ini'])
         rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
         rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
