@@ -1,10 +1,8 @@
-This release features several major new features (including completely 
+This release features several major new features (including completely
 revised disaggregation, automatic optimization of duplicated sources,
-taxonomy mapping) and lots of improvements, new checks and bug fixes.
-More than 200 pull requests were merged.
-
-For the complete list
-of changes, see the changelog:
+fast exposure importer and taxonomy mapping) and lots of improvements,
+new checks and bug fixes. Nearly 200 pull requests were merged.
+For the complete list of changes, see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.6/debian/changelog
 
 Disaggregation
