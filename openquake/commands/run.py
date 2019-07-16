@@ -149,7 +149,8 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
         print('Saved profiling info in %s' % pstat)
         print(get_pstats(pstat, slowest))
     else:
-        _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params)
+        return _run(job_ini, concurrent_tasks, pdb, loglevel,
+                    hc, exports, params)
 
 
 run.arg('job_ini', 'calculation configuration file '
