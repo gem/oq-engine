@@ -235,12 +235,12 @@ def export_losses_by_event(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
     if oq.calculation_mode.startswith('scenario'):
-        arr = dstore['losses_by_event'][('eid', 'loss')]
+        arr = dstore['losses_by_event'][('event_id', 'loss')]
         dtlist = [('event_id', U64), ('rlz_id', U16)] + oq.loss_dt_list()
         num_loss_types = len(dtlist) - 2
         loss = arr['loss']
         z = numpy.zeros(len(arr), dtlist)
-        z['event_id'] = arr['eid']
+        z['event_id'] = arr['event_id']
         z['rlz_id'] = dstore['events']['rlz']
         for i, (name, _) in enumerate(dtlist[2:]):
             z[name] = loss[:, i] if num_loss_types > 1 else loss
@@ -248,11 +248,11 @@ def export_losses_by_event(ekey, dstore):
     elif oq.calculation_mode == 'ebrisk':
         tagcol = dstore['assetcol/tagcol']
         lbe = dstore['losses_by_event'][()]
-        lbe.sort(order='eid')
+        lbe.sort(order='event_id')
         dic = dict(tagnames=['event_id'] + oq.aggregate_by)
         for tagname in oq.aggregate_by:
             dic[tagname] = getattr(tagcol, tagname)
-        dic['event_id'] = ['?'] + list(lbe['eid'])
+        dic['event_id'] = ['?'] + list(lbe['event_id'])
         # example (0, 1, 2, 3) -> (0, 2, 3, 1)
         axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
         data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
@@ -261,7 +261,7 @@ def export_losses_by_event(ekey, dstore):
     else:
         dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
                   ('year', U32)] + oq.loss_dt_list()
-        eids = dstore['losses_by_event']['eid']
+        eids = dstore['losses_by_event']['event_id']
         events = dstore['events']
         year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
         arr = numpy.zeros(len(dstore['losses_by_event']), dtlist)

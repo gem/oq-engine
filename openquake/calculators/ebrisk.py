@@ -82,7 +82,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     eid2idx = dict(zip(events['eid'], range(e1, e1 + E)))
     tagnames = param['aggregate_by']
     shape = assetcol.tagcol.agg_shape((E, L), tagnames)
-    elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
+    elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     if param['asset_loss_table']:
         alt = numpy.zeros((A, E, L), F32)
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
@@ -131,7 +131,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         num_events_per_sid /= len(hazard)
     with monitor('building event loss table'):
         elt = numpy.fromiter(
-            ((event['eid'], event['rlz'], losses)  # losses has shape (L, T...)
+            ((event['eid'], event['rlz'], losses)  # losses (L, T...)
              for event, losses in zip(events, acc) if losses.sum()), elt_dt)
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
@@ -178,7 +178,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if oq.asset_loss_table:
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
-        elt_dt = [('eid', U64), ('rlzi', U16), ('loss', (F32, shp))]
+        elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shp))]
         if 'losses_by_event' not in self.datastore:
             self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
