@@ -142,7 +142,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
                     soft_mem_limit=int, hard_mem_limit=int, port=int,
-                    multi_user=valid.boolean, multi_node=valid.boolean)
+                    multi_user=valid.boolean, multi_node=valid.boolean,
+                    serialize_jobs=valid.boolean, strict=valid.boolean,
+                    max_sites_disagg=int, code=exec)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
