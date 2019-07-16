@@ -574,12 +574,12 @@ class HazardCalculator(BaseCalculator):
         """
         Read the insurance files and populate the policy_dict
         """
-        policy_idx = self.assetcol.tagcol.policy_idx
         for loss_type, fname in zip(ins_types, ins_files):
             array = hdf5.read_csv(
                 fname, {'insurance_limit': float, 'deductible': float,
                         None: object}).array
             policy_name = array.dtype.names[0]
+            policy_idx = getattr(self.assetcol.tagcol, policy_name + '_idx')
             insurance = numpy.zeros((len(policy_idx), 2))
             for pol, ded, lim in array[
                     [policy_name, 'deductible', 'insurance_limit']]:
