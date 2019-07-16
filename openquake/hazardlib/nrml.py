@@ -238,7 +238,7 @@ validators = {
     'posList': valid.posList,
     'pos': valid.lon_lat,
     'aValue': float,
-    'a_val': valid.floats32,
+    'a_val': valid.floats,
     'bValue': valid.positivefloat,
     'b_val': valid.positivefloats,
     'magScaleRel': valid.mag_scale_rel,
