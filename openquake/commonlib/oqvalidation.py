@@ -106,6 +106,7 @@ class OqParam(valid.ParamSet):
     max_hazard_curves = valid.Param(valid.boolean, False)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
+    max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
