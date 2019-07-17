@@ -18,7 +18,6 @@
 import abc
 import numpy
 
-from openquake.baselib import config
 from openquake.baselib.hdf5 import vfloat64
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module, const
@@ -137,6 +136,7 @@ class ContextMaker(object):
     def __init__(self, trt, gsims, maximum_distance=None, param=None,
                  monitor=Monitor()):
         param = param or {}
+        self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.trt = trt
         self.gsims = gsims
         self.maximum_distance = maximum_distance or IntegrationDistance({})
@@ -267,7 +267,7 @@ class ContextMaker(object):
         """
         sitecol = sites.complete
         N = len(sitecol)
-        fewsites = N <= config.general.max_sites_disagg
+        fewsites = N <= self.max_sites_disagg
         rupdata = RupData(self, sites)
         for rup, sites in self._gen_rup_sites(src, sites):
             try:
