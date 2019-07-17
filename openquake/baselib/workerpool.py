@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import signal
 import subprocess
 import multiprocessing
@@ -64,6 +65,7 @@ class WorkerMaster(object):
         :param streamer:
             if True, starts a streamer with multiprocessing.Process
         """
+        # streamer=True is used only in the tests
         if streamer and not general.socket_ready(self.task_in_url):  # started
             self.streamer = multiprocessing.Process(
                 target=_streamer,
@@ -84,6 +86,7 @@ class WorkerMaster(object):
             starting.append(' '.join(args))
             po = subprocess.Popen(args)
             self.pids.append(po.pid)
+        time.sleep(1)  # wait a bit, useful in travis
         return 'starting %s' % starting
 
     def stop(self):
