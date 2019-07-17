@@ -64,8 +64,7 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         Extra parameters like hazard_calculation_id and calculation_mode
     """
     if ZMQ:  # start zworkers
-        master = w.WorkerMaster(config.dbserver.host, **config.zworkers)
-        logging.warning(master.start())
+        logs.dbcmd('start_zworkers')
     try:
         job_id = logs.init('job', getattr(logging, log_level.upper()))
         with logs.handle(job_id, log_level, log_file):
@@ -75,7 +74,7 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
             eng.run_calc(job_id, oqparam, exports, **kw)
     finally:
         if ZMQ:  # stop zworkers
-            logging.warning(master.stop())
+            logs.dbcmd('stop_zworkers')
     for line in logs.dbcmd('list_outputs', job_id, False):
         safeprint(line)
     return job_id
