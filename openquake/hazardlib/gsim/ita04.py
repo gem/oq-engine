@@ -20,9 +20,8 @@
 Module exports :class:`ITA04Base`
 """
 import os
-import numpy as np
+import numpy
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
-from openquake.hazardlib import const
 
 BASE_PATH = os.path.dirname(__file__)
 
@@ -33,86 +32,85 @@ class ITA04Base(GMPETable):
     2004 version of the national hazard model for Italy.
     """
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,
-                                                const.StdDev.INTER_EVENT,
-                                                const.StdDev.INTRA_EVENT))
-
     def __init__(self, gmpe_table):
         """
         """
         super().__init__(gmpe_table=gmpe_table)
-        print(self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
+        self.init()
 
+    """
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        """
-        Returns the mean and standard deviations
-        """
         # Return imls
         imls = self._return_tables(rctx.mag, imt, "IMLs")
         # Get distance vector for the given magnitude
-        idx = np.searchsorted(self.m_w, rctx.mag)
+        idx = numpy.searchsorted(self.m_w, rctx.mag)
         dists = self.distances[:, 0, idx - 1]
         # Get mean and standard deviations
         mean = self._get_mean(imls, dctx, dists)
-        stddevs = self.get_stddevs(stddev_types, len(dctx.repi))
-        return np.log(mean), stddevs
-
-    def get_stddevs(self, stddev_types, num_sites):
-        """
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(sigma + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                raise ValueError("Unsupported sigma type")
-        return stddevs
+        stddevs = self._get_stddevs(stddev_types, len(dctx.repi))
+        return numpy.log(mean), stddevs
+    """
 
 
 class AmbraseysEtAl1996Normal(ITA04Base):
     """
+    This class implements an adjusted version of the Ambraseys et al. (1996)
+    ground motion model as described in Stucchi et al. (2004).
+    Document available at:
+    http://zonesismiche.mi.ingv.it/elaborazioni/download.php)
     """
     path = "./ita04_tables/asb96_normal.hdf5"
     TABLE_PATH = os.path.abspath(os.path.join(BASE_PATH, path))
 
     def __init__(self):
         if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
+            raise NotImplementedError("hdf file not defined")
         super().__init__(gmpe_table=self.TABLE_PATH)
+
 
 class AmbraseysEtAl1996Reverse(ITA04Base):
     """
+    See :class:`openquake.hazardlib.gsim.ita04.AmbraseysEtAl1996Normal`
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/asb96_reverse.hdf5")
 
     def __init__(self):
         if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
+            raise NotImplementedError("hdf file not defined")
         super().__init__(gmpe_table=self.TABLE_PATH)
+
 
 class AmbraseysEtAl1996Strike(ITA04Base):
     """
+    See :class:`openquake.hazardlib.gsim.ita04.AmbraseysEtAl1996Normal`
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/asb96_strike.hdf5")
 
     def __init__(self):
         if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
+            raise NotImplementedError("hdf file not defined")
         super().__init__(gmpe_table=self.TABLE_PATH)
+
 
 class AmbraseysEtAl1996Undef(ITA04Base):
     """
+    See :class:`openquake.hazardlib.gsim.ita04.AmbraseysEtAl1996Normal`
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/asb96_undef.hdf5")
 
     def __init__(self):
         if not self.TABLE_PATH:
-            raise NotImplementedError("This ")
+            raise NotImplementedError("hdf file not defined")
         super().__init__(gmpe_table=self.TABLE_PATH)
+
 
 class SabettaPugliese1996Normal(ITA04Base):
     """
+    This class implements an adjusted version of the Sabetta e Pugliese (1996)
+    ground motion model as described in Stucchi et al. (2004).
+    Document available at:
+    http://zonesismiche.mi.ingv.it/elaborazioni/download.php)
+
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/sp96_normal.hdf5")
 
@@ -121,8 +119,10 @@ class SabettaPugliese1996Normal(ITA04Base):
             raise NotImplementedError("This ")
         super().__init__(gmpe_table=self.TABLE_PATH)
 
+
 class SabettaPugliese1996Reverse(ITA04Base):
     """
+    See :class:`openquake.hazardlib.gsim.ita04.SabettaPugliese1996Normal`
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/sp96_reverse.hdf5")
 
@@ -131,8 +131,10 @@ class SabettaPugliese1996Reverse(ITA04Base):
             raise NotImplementedError("This ")
         super().__init__(gmpe_table=self.TABLE_PATH)
 
+
 class SabettaPugliese1996Strike(ITA04Base):
     """
+    See :class:`openquake.hazardlib.gsim.ita04.SabettaPugliese1996Normal`
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/sp96_strike.hdf5")
 
@@ -141,8 +143,10 @@ class SabettaPugliese1996Strike(ITA04Base):
             raise NotImplementedError("This ")
         super().__init__(gmpe_table=self.TABLE_PATH)
 
+
 class SabettaPugliese1996Undef(ITA04Base):
     """
+    See :class:`openquake.hazardlib.gsim.ita04.SabettaPugliese1996Normal`
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/sp96_undef.hdf5")
 
@@ -151,8 +155,14 @@ class SabettaPugliese1996Undef(ITA04Base):
             raise NotImplementedError("This ")
         super().__init__(gmpe_table=self.TABLE_PATH)
 
+
 class REG1(ITA04Base):
     """
+    This class implements a set of regionalised GMM used in the calculation of
+    hazard for the 2004 version of the Italy National Hazard model as described
+    in Stucchi et al. (2004).
+    Document available at:
+    http://zonesismiche.mi.ingv.it/elaborazioni/download.php)
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/reg1.hdf5")
 
@@ -161,8 +171,10 @@ class REG1(ITA04Base):
             raise NotImplementedError("This ")
         super().__init__(gmpe_table=self.TABLE_PATH)
 
+
 class REG2(ITA04Base):
     """
+    See :class:`openquake.hazardlib.gsim.ita04.REG1`
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/reg2.hdf5")
 
@@ -171,8 +183,10 @@ class REG2(ITA04Base):
             raise NotImplementedError("This ")
         super().__init__(gmpe_table=self.TABLE_PATH)
 
+
 class REG3(ITA04Base):
     """
+    See :class:`openquake.hazardlib.gsim.ita04.REG1`
     """
     TABLE_PATH = os.path.abspath("./ita04_tables/reg3.hdf5")
 
@@ -181,9 +195,8 @@ class REG3(ITA04Base):
             raise NotImplementedError("This ")
         super().__init__(gmpe_table=self.TABLE_PATH)
 
+
 class VULC30bar(ITA04Base):
-    """
-    """
     TABLE_PATH = os.path.abspath("./ita04_tables/vulc30bar.hdf5")
 
     def __init__(self):
@@ -191,9 +204,8 @@ class VULC30bar(ITA04Base):
             raise NotImplementedError("This ")
         super().__init__(gmpe_table=self.TABLE_PATH)
 
+
 class VULC50bar(ITA04Base):
-    """
-    """
     TABLE_PATH = os.path.abspath("./ita04_tables/vulc50bar.hdf5")
 
     def __init__(self):
