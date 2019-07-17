@@ -70,7 +70,6 @@ if OQ_DISTRIBUTE == 'zmq':
         for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
-                time.sleep(10)
                 if not general.socket_ready(url):
                     logs.LOG.warn('%s is not running', host)
                     continue
