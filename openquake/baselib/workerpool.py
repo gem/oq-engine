@@ -78,7 +78,7 @@ class WorkerMaster(object):
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
-                args = ['ssh', host, self.remote_python]
+                args = ['ssh', '-t', host, self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool',
                      ctrl_url, self.task_out_url, cores]
             starting.append(' '.join(args))
