@@ -66,16 +66,18 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     if ZMQ:  # start zworkers
         master = w.WorkerMaster(config.dbserver.host, **config.zworkers)
         logging.warning(master.start())
-    job_id = logs.init('job', getattr(logging, log_level.upper()))
-    with logs.handle(job_id, log_level, log_file):
-        job_ini = os.path.abspath(job_ini)
-        oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
-        kw['username'] = username
-        eng.run_calc(job_id, oqparam, exports, **kw)
-        for line in logs.dbcmd('list_outputs', job_id, False):
-            safeprint(line)
-    if ZMQ:  # stop zworkers
-        logging.warning(master.stop())
+    try:
+        job_id = logs.init('job', getattr(logging, log_level.upper()))
+        with logs.handle(job_id, log_level, log_file):
+            job_ini = os.path.abspath(job_ini)
+            oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
+            kw['username'] = username
+            eng.run_calc(job_id, oqparam, exports, **kw)
+    finally:
+        if ZMQ:  # stop zworkers
+            logging.warning(master.stop())
+    for line in logs.dbcmd('list_outputs', job_id, False):
+        safeprint(line)
     return job_id
 
 
