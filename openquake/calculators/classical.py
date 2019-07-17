@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5, config
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -239,6 +239,7 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
+            max_sites_disagg=oq.max_sites_disagg,
             task_duration=td, maxweight=maxweight)
         logging.info('ruptures_per_task = %(maxweight)d, '
                      'task_duration = %(task_duration)ds', param)
@@ -352,15 +353,14 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-        if ('mean' in dict(hstats) and R > 1 and
-                N <= config.general.max_sites_disagg):
+        if 'mean' in dict(hstats) and R > 1 and N <= oq.max_sites_disagg:
             self.datastore.create_dset('best_rlz', U32, (N,))
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(parent, weights, t.sids, oq.poes),
-             N, hstats, oq.individual_curves)
+             N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
         parallel.Starmap(build_hazard_stats, allargs, self.monitor()).reduce(
             self.save_hazard_stats)
@@ -391,12 +391,14 @@ def _build_stat_curve(poes, imtls, stat, weights):
     return ProbabilityCurve(array)
 
 
-def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
+def build_hazard_stats(pgetter, N, hstats, individual_curves,
+                       max_sites_disagg, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_curves: if True, also build the individual curves
+    :param max_sites_disagg: if there are less sites than this, store rup info
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
@@ -432,8 +434,7 @@ def build_hazard_stats(pgetter, N, hstats, individual_curves, monitor):
                     if poes:
                         hmap = calc.make_hmap(pc, pgetter.imtls, poes, sid)
                         pmap_by_kind['hmaps-stats'][s].update(hmap)
-                    if (statname == 'mean' and R > 1 and
-                            N <= config.general.max_sites_disagg):
+                    if statname == 'mean' and R > 1 and N <= max_sites_disagg:
                         rlz = pmap_by_kind['rlz_by_sid']
                         rlz[sid] = util.closest_to_ref(
                             [p.array for p in pcurves], pc.array)['rlz']
