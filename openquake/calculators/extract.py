@@ -880,25 +880,8 @@ def extract_source_geom(dstore, srcidxs):
         yield rec['source_id'], geom
 
 
-def disagg_key(dstore):
-    """
-    :param dstore: a DataStore object
-    :returns: a function (imt, sid, poe_id) => disagg_output
-    """
-    oq = dstore['oqparam']
-    N = len(dstore['sitecol'])
-    if oq.rlz_index is None:
-        try:
-            rlzs = dstore['best_rlz'][()]
-        except KeyError:
-            rlzs = numpy.zeros(N, int)
-    else:
-        rlzs = [oq.rlz_index] * N
-
-    def getkey(imt, sid, poe_id):
-        return 'rlz-%d-%s-sid-%d-poe-%d' % (rlzs[sid], imt, sid, poe_id)
-    getkey.rlzs = rlzs
-    return getkey
+def disagg_key(imt, sid, poe_id):
+    return '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
 
 
 @extract.add('disagg')
@@ -906,15 +889,15 @@ def extract_disagg(dstore, what):
     """
     Extract a disaggregation output
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/disagg?by=Mag_Dist&imt=PGA
+    http://127.0.0.1:8800/v1/calc/30/extract/
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1
     """
     qdict = parse(what)
-    label = qdict['by'][0]
+    label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    key = disagg_key(dstore)
-    dset = dstore['disagg/' + key(imt, sid, poe_idx)]
+    dset = dstore['disagg/' + disagg_key(imt, sid, poe_idx)]
     matrix = dset[label][()]
 
     # adapted from the nrml_converters
@@ -937,6 +920,36 @@ def extract_disagg(dstore, what):
         values.append(matrix.flatten())
         values = numpy.array(values).T
     return ArrayWrapper(values, qdict)
+
+
+@extract.add('disagg_layer')
+def extract_disagg_layer(dstore, what):
+    """
+    Extract a disaggregation output containing all sites
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/
+    disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0
+    """
+    qdict = parse(what)
+    [label] = qdict['kind']
+    [imt] = qdict['imt']
+    poe_id = int(qdict['poe_id'][0])
+    dset = dstore['disagg/' + disagg_key(imt, 0, poe_id)][label]
+    dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
+          ('poes', (dset.dtype, dset.shape))]
+    sitecol = dstore['sitecol']
+    out = numpy.zeros(len(sitecol), dt)
+    import pdb; pdb.set_trace()
+    out[0] = (0, sitecol.lons[0], sitecol.lats[0], dset[()])
+    for sid, lon, lat, rec in zip(
+            sitecol.sids, sitecol.lons, sitecol.lats, out):
+        if sid > 0:
+            grp = dstore['disagg/' + disagg_key(imt, sid, poe_id)]
+            rec['site_id'] = sid
+            rec['lon'] = lon
+            rec['lat'] = lat
+            rec['poes'] = grp[label][()]
+    return out
 
 
 # #####################  extraction from the WebAPI ###################### #
