@@ -558,7 +558,7 @@ def export_disagg_csv(ekey, dstore):
             header = label.lower().split('_') + ['poe']
             com = {key: value for key, value in metadata.items()
                    if value is not None and key not in skip_keys}
-            com.update(poe='%.7f' % poe, iml='%.7e' % iml)
+            com.update(poe='%.7f' % poe, iml='%.7e' % iml, rlz=rlz.ordinal)
             fname = dstore.export_path(key + '_%s.csv' % label)
             values = extract(dstore,
                              'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d' %
