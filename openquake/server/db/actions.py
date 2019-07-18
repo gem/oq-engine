@@ -21,7 +21,7 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import datastore, general, config, workerpool as w
+from openquake.baselib import datastore, general
 from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
@@ -797,15 +797,15 @@ def get_job_from_checksum(db, checksum):
     return jobs[0]
 
 
-def start_zworkers(db):
+def start_zworkers(db, master):
     """
     Start the zmq workers
     """
-    w.WorkerMaster(config.dbserver.listen, **config.zworkers).start()
+    master.start()
 
 
-def stop_zworkers(db):
+def stop_zworkers(db, master):
     """
     Stop the zmq workers
     """
-    w.WorkerMaster(config.dbserver.listen, **config.zworkers).stop()
+    master.stop()
