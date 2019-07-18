@@ -19,7 +19,8 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import sap, config, datastore
+from openquake.baselib import (
+    sap, config, datastore, workerpool as w)
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput
@@ -33,6 +34,8 @@ from openquake.commands.abort import abort
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
+ZMQ = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
 
 def get_job_id(job_id, username=None):
@@ -65,7 +68,14 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         job_ini = os.path.abspath(job_ini)
         oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
         kw['username'] = username
-        eng.run_calc(job_id, oqparam, exports, **kw)
+        if ZMQ:  # start zworkers
+            master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
+            logs.dbcmd('start_zworkers', master)
+        try:
+            eng.run_calc(job_id, oqparam, exports, **kw)
+        finally:
+            if ZMQ:  # stop zworkers
+                logs.dbcmd('stop_zworkers', master)
         for line in logs.dbcmd('list_outputs', job_id, False):
             safeprint(line)
     return job_id
