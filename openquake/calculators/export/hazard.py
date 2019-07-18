@@ -561,7 +561,7 @@ def export_disagg_csv(ekey, dstore):
             com.update(poe='%.7f' % poe, iml='%.7e' % iml)
             fname = dstore.export_path(key + '_%s.csv' % label)
             values = extract(dstore,
-                             'disagg?by=%s&imt=%s&site_id=%s&poe_id=%d' %
+                             'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d' %
                              (label, imt, site_id, poe_id))
             writers.write_csv(fname, values, header=header, comment=com,
                               fmt='%.5E')
