@@ -57,8 +57,6 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        self.master = w.WorkerMaster(config.dbserver.host,
-                                     **config.zworkers)
 
     def dworker(self, sock):
         # a database worker responding to commands
@@ -99,11 +97,6 @@ class DbServer(object):
             logging.warning('Task streamer started from %s -> %s',
                             c.task_in_port, c.task_out_port)
 
-            # start zworkers and wait a bit for them
-            msg = self.master.start()
-            logging.warning(msg)
-            time.sleep(1)
-
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
@@ -119,7 +112,6 @@ class DbServer(object):
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
         if ZMQ:
-            logging.warning(self.master.stop())
             z.context.term()
         self.db.close()
 
@@ -138,7 +130,7 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    address = address or (config.dbserver.host, DBSERVER_PORT)
+    address = address or (config.dbserver.listen, DBSERVER_PORT)
     return 'running' if socket_ready(address) else 'not-running'
 
 
