@@ -36,7 +36,7 @@ from openquake.calculators import getters, extract
 from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = '%(rlz)s-%(imt)s-%(sid)s-%(poe)s/'
+DISAGG_RES_FMT = '%(imt)s-%(sid)s-%(poe)s/'
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 
 
@@ -227,7 +227,15 @@ producing too small PoEs.'''
         csm_info = self.datastore['csm_info']
         poes_disagg = oq.poes_disagg or (None,)
         R = len(self.rlzs_assoc.realizations)
-        rlzs = extract.disagg_key(self.datastore).rlzs
+
+        if oq.rlz_index is None:
+            try:
+                rlzs = self.datastore['best_rlz'][()]
+            except KeyError:
+                rlzs = numpy.zeros(self.N, int)
+        else:
+            rlzs = [oq.rlz_index] * self.N
+
         if oq.iml_disagg:
             self.poe_id = {None: 0}
             curves = [None] * len(self.sitecol)  # no hazard curves are needed
@@ -362,7 +370,7 @@ producing too small PoEs.'''
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
-            rlz='rlz-%d' % rlz_id, imt=imt_str, sid='sid-%d' % site_id,
+            imt=imt_str, sid='sid-%d' % site_id,
             poe='poe-%d' % self.poe_id[poe])
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
