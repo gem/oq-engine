@@ -936,6 +936,7 @@ def extract_disagg_layer(dstore, what):
     poe_id = int(qdict['poe_id'][0])
     grp = dstore['disagg/' + disagg_key(imt, 0, poe_id)]
     dset = grp[label]
+    edges = {key: grp.attrs[key] for key in grp.attrs if key.endswith('_edges')}
     dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
           ('poes', (dset.dtype, dset.shape))]
     sitecol = dstore['sitecol']
@@ -950,7 +951,7 @@ def extract_disagg_layer(dstore, what):
             rec['lat'] = lat
             rec['rlz'] = grp.attrs['rlzi']
             rec['poes'] = grp[label][()]
-    return out
+    return ArrayWrapper(out, edges)
 
 
 # #####################  extraction from the WebAPI ###################### #
