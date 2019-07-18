@@ -220,7 +220,8 @@ producing too small PoEs.'''
         if hasattr(self, 'csm'):
             for sg in self.csm.src_groups:
                 if sg.atomic:
-                    raise NotImplemented('Atomic groups are not supported yet')
+                    raise NotImplementedError(
+                        'Atomic groups are not supported yet')
             if not self.csm.get_sources():
                 raise RuntimeError('All sources were filtered away!')
 
@@ -282,8 +283,6 @@ producing too small PoEs.'''
         self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
         self.save_bin_edges()
 
-        # build all_args
-        all_args = []
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             iml2 = iml2s[s]
@@ -293,6 +292,8 @@ producing too small PoEs.'''
                 for m, imt in enumerate(oq.imtls):
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
+        # submit disagg tasks
+        smap = parallel.Starmap(compute_disagg, monitor=self.monitor())
         for grp, dset in self.datastore['rup'].items():
             grp_id = int(grp[4:])
             trt = csm_info.trt_by_grp[grp_id]
@@ -302,14 +303,11 @@ producing too small PoEs.'''
                 trt, rlzs_by_gsim, src_filter.integration_distance,
                 {'filter_distance': oq.filter_distance})
             for block in block_splitter(dset[()], 1000):
-                all_args.append(
-                    (src_filter.sitecol, numpy.array(block), cmaker, iml2s,
-                     trti, self.bin_edges, oq))
+                smap.submit(src_filter.sitecol, numpy.array(block), cmaker,
+                            iml2s, trti, self.bin_edges, oq)
 
         self.num_ruptures = [0] * len(self.trts)
-        mon = self.monitor()
-        results = parallel.Starmap(compute_disagg, all_args, mon).reduce(
-            self.agg_result, AccumDict(accum={}))
+        results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results
 
     def save_bin_edges(self):
