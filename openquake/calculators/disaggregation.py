@@ -319,7 +319,8 @@ producing too small PoEs.'''
             bins = disagg.get_bins(b, sid)
             shape = [len(bin) - 1 for bin in bins] + [len(self.trts)]
             shape_dic = dict(zip(BIN_NAMES, shape))
-            logging.info('nbins=%s for site=#%d', shape_dic, sid)
+            if sid == 0:
+                logging.info('nbins=%s for site=#%d', shape_dic, sid)
             matrix_size = numpy.prod(shape)
             if matrix_size > 1E7:
                 raise ValueError(
