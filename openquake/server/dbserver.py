@@ -130,7 +130,7 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    address = address or (config.dbserver.host, DBSERVER_PORT)
+    address = address or (config.dbserver.listen, DBSERVER_PORT)
     return 'running' if socket_ready(address) else 'not-running'
 
 

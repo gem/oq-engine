@@ -80,7 +80,7 @@ class WorkerMaster(object):
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
-                args = ['ssh', '-t', host, self.remote_python]
+                args = ['ssh', host, self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool',
                      ctrl_url, self.task_out_url, cores]
             starting.append(' '.join(args))
@@ -135,15 +135,15 @@ class WorkerMaster(object):
 class WorkerPool(object):
     """
     A pool of workers accepting the command 'stop' and 'kill' and reading
-    tasks to perform from the task_out_port.
+    tasks to perform from the task_out_url.
 
     :param ctrl_url: zmq address of the control socket
-    :param task_out_port: zmq address of the task streamer
+    :param task_out_url: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
-    def __init__(self, ctrl_url, task_out_port, num_workers='-1'):
+    def __init__(self, ctrl_url, task_out_url, num_workers='-1'):
         self.ctrl_url = ctrl_url
-        self.task_out_port = task_out_port
+        self.task_out_url = task_out_url
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
         self.pid = os.getpid()
@@ -165,7 +165,7 @@ class WorkerPool(object):
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
-            sock = z.Socket(self.task_out_port, z.zmq.PULL, 'connect')
+            sock = z.Socket(self.task_out_url, z.zmq.PULL, 'connect')
             proc = multiprocessing.Process(target=self.worker, args=(sock,))
             proc.start()
             sock.pid = proc.pid
@@ -202,5 +202,5 @@ class WorkerPool(object):
 
 if __name__ == '__main__':
     # start a workerpool without a streamer
-    ctrl_url, task_out_port, num_workers = sys.argv[1:]
-    WorkerPool(ctrl_url, task_out_port, num_workers).start()
+    ctrl_url, task_out_url, num_workers = sys.argv[1:]
+    WorkerPool(ctrl_url, task_out_url, num_workers).start()
