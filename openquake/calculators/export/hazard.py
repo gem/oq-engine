@@ -537,7 +537,7 @@ def export_disagg_csv(ekey, dstore):
         imt = from_string(attrs['imt'])
         site_id = attrs['site_id']
         lon, lat = attrs['location']
-        metadata = {}
+        metadata = dstore.metadata
         # Loads "disaggMatrices" nodes
         if hasattr(rlz, 'sm_lt_path'):
             metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
