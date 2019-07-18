@@ -63,20 +63,21 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
     """
-    if ZMQ:  # start zworkers
-        logs.dbcmd('start_zworkers')
-    try:
-        job_id = logs.init('job', getattr(logging, log_level.upper()))
-        with logs.handle(job_id, log_level, log_file):
-            job_ini = os.path.abspath(job_ini)
-            oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
-            kw['username'] = username
+    job_id = logs.init('job', getattr(logging, log_level.upper()))
+    with logs.handle(job_id, log_level, log_file):
+        job_ini = os.path.abspath(job_ini)
+        oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
+        kw['username'] = username
+        if ZMQ:  # start zworkers
+            master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
+            logs.dbcmd('start_zworkers', master)
+        try:
             eng.run_calc(job_id, oqparam, exports, **kw)
-    finally:
-        if ZMQ:  # stop zworkers
-            logs.dbcmd('stop_zworkers')
-    for line in logs.dbcmd('list_outputs', job_id, False):
-        safeprint(line)
+        finally:
+            if ZMQ:  # stop zworkers
+                logs.dbcmd('stop_zworkers', master)
+        for line in logs.dbcmd('list_outputs', job_id, False):
+            safeprint(line)
     return job_id
 
 
