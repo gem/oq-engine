@@ -934,13 +934,13 @@ def extract_disagg_layer(dstore, what):
     [label] = qdict['kind']
     [imt] = qdict['imt']
     poe_id = int(qdict['poe_id'][0])
-    dset = dstore['disagg/' + disagg_key(imt, 0, poe_id)][label]
+    grp = dstore['disagg/' + disagg_key(imt, 0, poe_id)]
+    dset = grp[label]
     dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
           ('poes', (dset.dtype, dset.shape))]
     sitecol = dstore['sitecol']
     out = numpy.zeros(len(sitecol), dt)
-    import pdb; pdb.set_trace()
-    out[0] = (0, sitecol.lons[0], sitecol.lats[0], dset[()])
+    out[0] = (0, sitecol.lons[0], sitecol.lats[0], grp.attrs['rlzi'], dset[()])
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         if sid > 0:
@@ -948,6 +948,7 @@ def extract_disagg_layer(dstore, what):
             rec['site_id'] = sid
             rec['lon'] = lon
             rec['lat'] = lat
+            rec['rlz'] = grp.attrs['rlzi']
             rec['poes'] = grp[label][()]
     return out
 
