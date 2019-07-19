@@ -234,8 +234,10 @@ def build_matrices(rupdata, singlesitecol, cmaker, iml2,
     :returns: {poe, imt, rlz: matrix}
     """
     [sid] = singlesitecol.sids
+    dist = rupdata[cmaker.filter_distance][:, sid]
+    maxdist = cmaker.maximum_distance(cmaker.trt)
     bin_data = _collect_bin_data(
-        rupdata, singlesitecol, cmaker, iml2,
+        rupdata[dist < maxdist], singlesitecol, cmaker, iml2,
         trunclevel, num_epsilon_bins, monitor)
     return _build_disagg_matrix(bin_data, bins, monitor)
 
