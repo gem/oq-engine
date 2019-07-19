@@ -293,7 +293,7 @@ producing too small PoEs.'''
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
         # submit disagg tasks
-        smap = parallel.Starmap(compute_disagg, monitor=self.monitor())
+        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         for grp, dset in self.datastore['rup'].items():
             grp_id = int(grp[4:])
             trt = csm_info.trt_by_grp[grp_id]

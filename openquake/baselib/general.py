@@ -355,7 +355,7 @@ _tmp_paths = []
 def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
 
-    Please note: the temporary file must be deleted by the caller.
+    Please note: the temporary file can be deleted by the caller or not.
 
     :param string content: the content to write to the temporary file.
     :param string dir: directory where the file should be created
