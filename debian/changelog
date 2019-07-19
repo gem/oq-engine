@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Reduced the data transfer by reading the rupture data directly from the
+  * Reduced the data transfer by reading the data directly from the
     datastore in disaggregation calculations
   * Reduced the memory consumption sending disaggregation tasks incrementally
   * Added an extract API disagg_layer
