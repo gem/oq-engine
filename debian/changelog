@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Reduced the memory consumption while sending disaggregatiion tasks
+  * Reduced the data transfer by reading the rupture data directly from the
+    datastore in disaggregation calculations
+  * Reduced the memory consumption sending disaggregation tasks incrementally
   * Added an extract API disagg_layer
   * Moved `max_sites_disagg` from openquake.cfg into the job.ini
   * Fixed a bug with the --config option: serialize_jobs could not be overridden
