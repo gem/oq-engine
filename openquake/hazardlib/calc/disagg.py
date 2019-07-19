@@ -58,7 +58,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
-        return acc
+        return pack(acc, 'mags dists lons lats'.split())
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     acc['mags'] = rupdata['mag']
     acc['lons'] = rupdata['lon'][:, sid]
@@ -82,7 +82,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
                         gsim, rctx, sitecol, dctx, imt, iml,
                         truncnorm, epsilons, eps_bands)
                 acc[poe, str(imt), iml2.rlzi].append(pne)
-    return acc
+    return pack(acc, 'mags dists lons lats'.split())
 
 
 def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
@@ -131,8 +131,8 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
     return rupture.get_probability_no_exceedance(poes)
 
 
-# in practice this is always called with a single site
-def _collect_bin_data(rupdata, sitecol, cmaker, iml3,
+# this is always called with a single site
+def _collect_bin_data(rupdata, sitecol, cmaker, iml2,
                       truncation_level, n_epsilons, monitor=Monitor()):
     """
     :param rupdata: array of ruptures
@@ -147,8 +147,7 @@ def _collect_bin_data(rupdata, sitecol, cmaker, iml3,
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
     eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
-    acc = disaggregate(cmaker, sitecol, rupdata, iml3, tn, eps, monitor)
-    return pack(acc, 'mags dists lons lats'.split())
+    return disaggregate(cmaker, sitecol, rupdata, iml2, tn, eps, monitor)
 
 
 def lon_lat_bins(bb, coord_bin_width):
