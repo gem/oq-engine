@@ -70,7 +70,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, monitor=Monitor()):
     dists = rupdata[cmaker.filter_distance][:, sid]
     if gsim.minimum_distance:
         dists[dists < gsim.minimum_distance] = gsim.minimum_distance
-    rdata = rupdata[dists < maxdist]
+    rdata = rupdata[dists < maxdist]  # discard far away ruptures
     acc['mags'] = rdata['mag']
     acc['lons'] = rdata['lon'][:, sid]
     acc['lats'] = rdata['lat'][:, sid]
