@@ -23,11 +23,15 @@ from datetime import datetime
 import psutil
 import numpy
 
-from openquake.baselib.general import humansize
+from openquake.baselib.general import humansize, gettemp
 from openquake.baselib import hdf5
 
 perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
+task_info_dt = numpy.dtype(
+    [('taskno', numpy.uint32), ('weight', numpy.float32),
+     ('duration', numpy.float32), ('received', numpy.int64),
+     ('mem_gb', numpy.float32)])
 
 
 def _pairs(items):
@@ -79,10 +83,10 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='', hdf5=None,
+    def __init__(self, operation='', hdf5path=None,
                  autoflush=False, measuremem=False, inner_loop=False):
         self.operation = operation
-        self.hdf5 = hdf5
+        self.hdf5path = hdf5path or hdf5.uuid1()
         self.autoflush = autoflush
         self.measuremem = measuremem
         self.inner_loop = inner_loop
@@ -151,6 +155,21 @@ class Monitor(object):
         if self.autoflush:
             self.flush()
 
+    def save_task_info(self, res, argnames, sent, mem_gb=0):
+        """
+        Called by parallel.IterResult.
+
+        :param res: a :class:`Result` object
+        :param argnames: names of the task arguments
+        :param sent: number of bytes sent
+        :param mem_gb: memory consumption at the saving time (optional)
+        """
+        name = self.operation[6:]  # strip 'total '
+        t = (self.task_no, self.weight, self.duration, len(res.pik), mem_gb)
+        data = numpy.array([t], task_info_dt)
+        hdf5.extend3(self.hdf5path, 'task_info/' + name, data,
+                     argnames=argnames, sent=sent)
+
     def flush(self):
         """
         Save the measurements on the performance file (or on stdout)
@@ -159,15 +178,16 @@ class Monitor(object):
             raise RuntimeError(
                 'Monitor(%r).flush() must not be called in a worker' %
                 self.operation)
+        if not os.path.exists(self.hdf5path):
+            with hdf5.File(self.hdf5path, 'w') as h5:
+                hdf5.create(h5, 'performance_data', perf_dt)
+                hdf5.create(h5, 'task_info', task_info_dt)
         for child in self.children:
-            child.hdf5 = self.hdf5
             child.flush()
         data = self.get_data()
         if len(data) == 0:  # no information
             return []
-        elif self.hdf5:
-            hdf5.extend(self.hdf5['performance_data'], data)
-
+        hdf5.extend3(self.hdf5path, 'performance_data', data)
         # reset monitor
         self.duration = 0
         self.mem = 0
@@ -187,13 +207,9 @@ class Monitor(object):
         """
         Return a copy of the monitor usable for a different operation.
         """
-        self_vars = vars(self).copy()
-        del self_vars['operation']
-        del self_vars['children']
-        del self_vars['counts']
-        del self_vars['_flush']
-        new = self.__class__(operation)
-        vars(new).update(self_vars)
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self), operation=operation, children=[],
+                         counts=0, mem=0, duration=0)
         vars(new).update(kw)
         return new
 
@@ -209,3 +225,23 @@ class Monitor(object):
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
+
+
+def dump(hdf5path, h5):
+    """
+    Dump the performance info into a persistent file,
+    then remove the temporary file.
+
+    :param hdf5path: the temporary file
+    :param h5: an hdf5.File open for writing
+    """
+    with hdf5.File(hdf5path, 'r') as h:
+        if 'performance_data' not in h5:
+            hdf5.create(h5, 'performance_data', perf_dt)
+        hdf5.extend(h5['performance_data'], h['performance_data'][()])
+        for name, dset in h['task_info'].items():
+            fullname = 'task_info/' + name
+            if fullname not in h5:
+                hdf5.create(h5, fullname, task_info_dt)
+            hdf5.extend(h5[fullname], dset[()])
+    os.remove(hdf5path)

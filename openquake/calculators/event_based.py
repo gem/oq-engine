@@ -129,7 +129,7 @@ class EventBasedCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm.gsim_lt.values
         logging.info('Building ruptures')
         smap = parallel.Starmap(
-            self.build_ruptures.__func__, monitor=self.monitor())
+            self.build_ruptures.__func__, h5=self.datastore.hdf5)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(2, F32))
         ses_idx = 0
@@ -265,8 +265,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # build the associations eid -> rlz in parallel
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
                                 ((rgetter,) for rgetter in rgetters),
-                                self.monitor('get_eid_rlz'),
-                                progress=logging.debug)
+                                progress=logging.debug, h5=self.datastore.hdf5)
         i = 0
         for eid_rlz in smap:  # 30 million of events associated in 1 minute!
             for er in eid_rlz:
@@ -344,7 +343,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
-            self.core_task.__func__, iterargs, self.monitor()
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5
         ).reduce(self.agg_dicts, self.acc0())
 
         if self.indices:

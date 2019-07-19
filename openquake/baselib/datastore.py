@@ -139,7 +139,7 @@ class DataStore(collections.abc.MutableMapping):
 
     >>> ds = DataStore()
     >>> ds['example'] = 42
-    >>> print(ds['example'].value)
+    >>> print(ds['example'][()])
     42
     >>> ds.clear()
 

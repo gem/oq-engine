@@ -131,7 +131,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         :returns: a new Monitor instance
         """
-        mon = self._monitor(operation, hdf5=self.datastore.hdf5)
+        mon = self._monitor(operation)
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
@@ -176,7 +176,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         with self._monitor:
             self._monitor.username = kw.get('username', '')
-            self._monitor.hdf5 = self.datastore.hdf5
             if concurrent_tasks is None:  # use the job.ini parameter
                 ct = self.oqparam.concurrent_tasks
             else:  # used the parameter passed in the command-line
@@ -402,7 +401,7 @@ class HazardCalculator(BaseCalculator):
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(), srcfilter=self.src_filter)
+                oq, self.datastore.hdf5, srcfilter=self.src_filter)
             res = views.view('dupl_sources', self.datastore)
             logging.info(f'The composite source model has {res.val:,d} '
                          'ruptures')
@@ -923,7 +922,7 @@ class RiskCalculator(HazardCalculator):
             self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.param, self.monitor()),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            weight=get_weight
+            weight=get_weight, h5=self.datastore.hdf5
         ).reduce(self.combine)
         return res
 
