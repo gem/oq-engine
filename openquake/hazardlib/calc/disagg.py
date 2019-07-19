@@ -132,8 +132,8 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
 
 
 # in practice this is always called with a single site
-def collect_bin_data(rupdata, sitecol, cmaker, iml3,
-                     truncation_level, n_epsilons, monitor=Monitor()):
+def _collect_bin_data(rupdata, sitecol, cmaker, iml3,
+                      truncation_level, n_epsilons, monitor=Monitor()):
     """
     :param rupdata: array of ruptures
     :param sitecol: a SiteCollection instance with a single site
@@ -155,7 +155,7 @@ def lon_lat_bins(bb, coord_bin_width):
     """
     Define bin edges for disaggregation histograms.
 
-    Given bins data as provided by :func:`collect_bin_data`, this function
+    Given bins data as provided by :func:`_collect_bin_data`, this function
     finds edges of histograms, taking into account maximum and minimum values
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
@@ -182,7 +182,7 @@ def get_bins(bin_edges, sid):
 
 
 # this is fast
-def build_disagg_matrix(bdata, bins, mon=Monitor):
+def _build_disagg_matrix(bdata, bins, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
@@ -236,11 +236,11 @@ def build_matrices(rupdata, singlesitecol, cmaker, iml2,
     """
     result = {}
     [sid] = singlesitecol.sids
-    bin_data = collect_bin_data(
+    bin_data = _collect_bin_data(
         rupdata, singlesitecol, cmaker, iml2,
         trunclevel, num_epsilon_bins, monitor)
     if bin_data:  # dictionary poe, imt, rlzi -> pne
-        for (poe, imt, rlzi), matrix in build_disagg_matrix(
+        for (poe, imt, rlzi), matrix in _build_disagg_matrix(
                 bin_data, bins, monitor).items():
             result[sid, rlzi, poe, imt] = matrix
     return result
@@ -356,7 +356,7 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        bdata[trt] = collect_bin_data(
+        bdata[trt] = _collect_bin_data(
             rupdata, sitecol, cmaker, iml2, truncation_level, n_epsilons)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
@@ -390,7 +390,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        dic = build_disagg_matrix(bdata[trt], bin_edges)
+        dic = _build_disagg_matrix(bdata[trt], bin_edges)
         if dic:  # (poe, imt, rlzi) -> matrix
             [mat] = dic.values()
             matrix[..., trt_num[trt]] = mat
