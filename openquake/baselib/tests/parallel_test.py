@@ -119,7 +119,7 @@ class StarmapTestCase(unittest.TestCase):
         numchars = sum(len(arg) for arg, in allargs)  # 61
         tmpdir = tempfile.mkdtemp()
         tmp = os.path.join(tmpdir, 'calc_1.hdf5')
-        hdf5.File(tmp, 'w').close()
+        hdf5.File(tmp, 'w').close()  # the file must exist
         smap = parallel.Starmap(supertask, allargs, hdf5path=tmp)
         res = smap.reduce()
         self.assertEqual(res, {'n': numchars})
