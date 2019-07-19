@@ -274,7 +274,8 @@ class SourceModelFactory(object):
         elif self.in_memory:
             logging.info('Reading the source model(s) in parallel')
             smap = parallel.Starmap(
-                nrml.read_source_models, distribute=dist, h5=self.hdf5)
+                nrml.read_source_models, distribute=dist,
+                hdf5path=self.hdf5.filename if self.hdf5 else None)
             for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
                 for name in sm.names.split():
                     fname = os.path.abspath(os.path.join(smlt_dir, name))

@@ -23,7 +23,7 @@ from datetime import datetime
 import psutil
 import numpy
 
-from openquake.baselib.general import humansize, gettemp
+from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
 
 perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
@@ -227,15 +227,15 @@ class Monitor(object):
             return '<%s>' % msg
 
 
-def dump(hdf5path, h5):
+def dump(temppath, perspath):
     """
     Dump the performance info into a persistent file,
     then remove the temporary file.
 
-    :param hdf5path: the temporary file
-    :param h5: an hdf5.File open for writing
+    :param temppath: the temporary file
+    :param perspath: the persistent file
     """
-    with hdf5.File(hdf5path, 'r') as h:
+    with hdf5.File(temppath, 'r') as h, hdf5.File(perspath, 'r+') as h5:
         if 'performance_data' not in h5:
             hdf5.create(h5, 'performance_data', perf_dt)
         hdf5.extend(h5['performance_data'], h['performance_data'][()])
@@ -244,4 +244,4 @@ def dump(hdf5path, h5):
             if fullname not in h5:
                 hdf5.create(h5, fullname, task_info_dt)
             hdf5.extend(h5[fullname], dset[()])
-    os.remove(hdf5path)
+    os.remove(temppath)
