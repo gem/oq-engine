@@ -46,7 +46,7 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
-def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, monitor=Monitor()):
+def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, pne_mon):
     """
     Disaggregate (separate) PoE in different contributions.
 
@@ -55,7 +55,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, monitor=Monitor()):
     :param rupdata: an array of rupture data with the same TRT
     :param iml2: a 2D array of IMLs of shape (M, P)
     :param eps3: a triple (truncnorm, epsilons, epsilon bands)
-    :param monitor: a Monitor instance
+    :param pne_mon: a Monitor instance
     :returns:
         an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
     """
@@ -65,7 +65,6 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, monitor=Monitor()):
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
         return pack(acc, 'mags dists lons lats'.split())
-    pne_mon = monitor('disaggregate_pne', measuremem=False)
     maxdist = cmaker.maximum_distance(cmaker.trt)
     dists = rupdata[cmaker.filter_distance][:, sid]
     if gsim.minimum_distance:

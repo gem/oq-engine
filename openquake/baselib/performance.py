@@ -170,6 +170,14 @@ class Monitor(object):
         hdf5.extend3(self.hdf5path, 'task_info/' + name, data,
                      argnames=argnames, sent=sent)
 
+    def reset(self):
+        """
+        Reset duration, mem, counts
+        """
+        self.duration = 0
+        self.mem = 0
+        self.counts = 0
+
     def flush(self):
         """
         Save the measurements on the performance file (or on stdout)
@@ -182,17 +190,15 @@ class Monitor(object):
             with hdf5.File(self.hdf5path, 'w') as h5:
                 hdf5.create(h5, 'performance_data', perf_dt)
                 hdf5.create(h5, 'task_info', task_info_dt)
+        data = [self.get_data()]
         for child in self.children:
-            child.flush()
-        data = self.get_data()
+            data.append(child.get_data())
+            child.reset()
+        data = numpy.concatenate(data)
         if len(data) == 0:  # no information
             return []
         hdf5.extend3(self.hdf5path, 'performance_data', data)
-        # reset monitor
-        self.duration = 0
-        self.mem = 0
-        self.counts = 0
-        return data
+        self.reset()
 
     # TODO: rename this as spawn; see what will break
     def __call__(self, operation='no operation', **kw):
