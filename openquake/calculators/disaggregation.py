@@ -23,8 +23,8 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib import parallel, hdf5, general
+from openquake.baselib.general import AccumDict, gen_slices
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.calculators import getters, extract
+from openquake.calculators import getters
 from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
@@ -72,15 +72,16 @@ def _iml2s(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return lst
 
 
-def compute_disagg(sitecol, rupdata, cmaker, iml2s, trti, bin_edges,
-                   oqparam, monitor):
+def compute_disagg(dstore, grp, slc, cmaker, iml2s, trti, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rupdata:
-        rupdata array
+    :param dstore:
+        a :class:`openquake.baselib.datastore.DataStore` instance
+    :param grp:
+        string of kind `grp-XX` describing a group of ruptures
+    :param slc:
+        a slice of ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml2s:
@@ -89,14 +90,17 @@ def compute_disagg(sitecol, rupdata, cmaker, iml2s, trti, bin_edges,
         tectonic region type index
     :param bin_egdes:
         a quintet (mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-    :param oqparam:
-        the parameters in the job.ini file
     :param monitor:
         monitor of the currently running job
     :returns:
         a dictionary of probability arrays, with composite key
         (sid, rlzi, poe, imt, iml, trti).
     """
+    dstore.open('r')
+    oqparam = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    rupdata = dstore['rup/' + grp][slc]
+    dstore.close()
     result = {'trti': trti, 'num_ruptures': 0}
     # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
@@ -293,8 +297,12 @@ producing too small PoEs.'''
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
         # submit disagg tasks
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        slices_by_grp = AccumDict(accum=[])
         for grp, dset in self.datastore['rup'].items():
+            slices_by_grp[grp].extend(gen_slices(len(dset), 1000))
+        self.datastore.close()
+        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        for grp, slices in slices_by_grp.items():
             grp_id = int(grp[4:])
             trt = csm_info.trt_by_grp[grp_id]
             trti = trt_num[trt]
@@ -302,9 +310,9 @@ producing too small PoEs.'''
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim, src_filter.integration_distance,
                 {'filter_distance': oq.filter_distance})
-            for block in block_splitter(dset[()], 1000):
-                smap.submit(src_filter.sitecol, numpy.array(block), cmaker,
-                            iml2s, trti, self.bin_edges, oq)
+            for slc in slices:
+                smap.submit(self.datastore, grp, slc, cmaker,
+                            iml2s, trti, self.bin_edges)
 
         self.num_ruptures = [0] * len(self.trts)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
@@ -341,6 +349,7 @@ producing too small PoEs.'''
         :param results:
             a dictionary (sid, rlzi, poe, imt) -> trti -> disagg matrix
         """
+        self.datastore.open('r+')
         T = len(self.trts)
         # build a dictionary (sid, rlzi, poe, imt) -> 6D matrix
         results = {k: _to_matrix(v, T) for k, v in results.items()}
