@@ -44,7 +44,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     Disaggregate (separate) PoE in different contributions.
 
     :param cmaker: a ContextMaker instance
-    :param sitecol: a SiteCollection with N=1 site
+    :param sitecol: a SiteCollection with 1 site
     :param ruptures: an iterator over ruptures with the same TRT
     :param iml2: a 2D array of IMLs of shape (M, P)
     :param truncnorm: an instance of scipy.stats.truncnorm
@@ -53,14 +53,13 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     :returns:
         an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
     """
-    assert len(sitecol) == 1, sitecol
+    [sid] = sitecol.sids
     acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[])
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
         return acc
     pne_mon = monitor('disaggregate_pne', measuremem=False)
-    [sid] = sitecol.sids
     acc['mags'] = rupdata['mag']
     acc['lons'] = rupdata['lon'][:, sid]
     acc['lats'] = rupdata['lat'][:, sid]
@@ -86,15 +85,15 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     return acc
 
 
-# in practice this is always called with a single site
 def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
                      epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
 
-    Other parameters are the same as for `gsim.get_poes`, with
-    differences that ``truncation_level`` is required to be positive.
+    Other parameters are the same as for `gsim.get_poes`, with the
+    difference that ``truncation_level`` is required to be positive
+    and the site context must refer to a single site.
 
     :returns:
         Contribution to probability of exceedance of ``iml`` coming
@@ -133,8 +132,8 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
 
 
 # in practice this is always called with a single site
-def collect_bin_data(rupdata, sitecol, cmaker, iml3,
-                     truncation_level, n_epsilons, monitor=Monitor()):
+def _collect_bin_data(rupdata, sitecol, cmaker, iml3,
+                      truncation_level, n_epsilons, monitor=Monitor()):
     """
     :param rupdata: array of ruptures
     :param sitecol: a SiteCollection instance with a single site
@@ -156,7 +155,7 @@ def lon_lat_bins(bb, coord_bin_width):
     """
     Define bin edges for disaggregation histograms.
 
-    Given bins data as provided by :func:`collect_bin_data`, this function
+    Given bins data as provided by :func:`_collect_bin_data`, this function
     finds edges of histograms, taking into account maximum and minimum values
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
@@ -183,7 +182,7 @@ def get_bins(bin_edges, sid):
 
 
 # this is fast
-def build_disagg_matrix(bdata, bins, mon=Monitor):
+def _build_disagg_matrix(bdata, bins, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
@@ -227,6 +226,24 @@ def build_disagg_matrix(bdata, bins, mon=Monitor):
                 mat[i_mag, i_dist, i_lon, i_lat] *= pne
             out[k] = 1. - mat
     return out
+
+
+# called by the engine
+def build_matrices(rupdata, singlesitecol, cmaker, iml2,
+                   trunclevel, num_epsilon_bins, bins, monitor):
+    """
+    :returns: {sid, rlzi, poe, imt: matrix}
+    """
+    result = {}
+    [sid] = singlesitecol.sids
+    bin_data = _collect_bin_data(
+        rupdata, singlesitecol, cmaker, iml2,
+        trunclevel, num_epsilon_bins, monitor)
+    if bin_data:  # dictionary poe, imt, rlzi -> pne
+        for (poe, imt, rlzi), matrix in _build_disagg_matrix(
+                bin_data, bins, monitor).items():
+            result[sid, rlzi, poe, imt] = matrix
+    return result
 
 
 def _digitize_lons(lons, lon_bins):
@@ -339,7 +356,7 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        bdata[trt] = collect_bin_data(
+        bdata[trt] = _collect_bin_data(
             rupdata, sitecol, cmaker, iml2, truncation_level, n_epsilons)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
@@ -373,7 +390,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        dic = build_disagg_matrix(bdata[trt], bin_edges)
+        dic = _build_disagg_matrix(bdata[trt], bin_edges)
         if dic:  # (poe, imt, rlzi) -> matrix
             [mat] = dic.values()
             matrix[..., trt_num[trt]] = mat
