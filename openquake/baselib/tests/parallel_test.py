@@ -119,12 +119,11 @@ class StarmapTestCase(unittest.TestCase):
                    ('aaaaeeeeiiiiiooooooo',)]
         numchars = sum(len(arg) for arg, in allargs)  # 61
         tmp = pathlib.Path(tempfile.mkdtemp(), 'calc_1.hdf5')
-        with hdf5.File(tmp) as h5:
-            monitor = performance.Monitor(hdf5=h5)
-            res = parallel.Starmap(supertask, allargs, monitor).reduce()
+        smap = parallel.Starmap(supertask, allargs)
+        res = smap.reduce()
         self.assertEqual(res, {'n': numchars})
         # check that the correct information is stored in the hdf5 file
-        with hdf5.File(tmp) as h5:
+        with hdf5.File(smap.monitor.hdf5path, 'r') as h5:
             num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
             self.assertEqual(num[b'total supertask'], 5)  # outputs

@@ -207,7 +207,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('rupgeoms', cache)
         self.init_logic_tree(self.csm_info)
         smap = parallel.Starmap(
-            self.core_task.__func__, monitor=self.monitor())
+            self.core_task.__func__, h5=self.datastore.hdf5)
         trt_by_grp = self.csm_info.grp_by("trt")
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
@@ -311,14 +311,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         else:
             dstore = self.datastore
         allargs = [(dstore.filename, builder, rlzi) for rlzi in range(self.R)]
-        mon = performance.Monitor(hdf5=hdf5.File(self.datastore.hdf5cache()))
-        acc = list(parallel.Starmap(compute_loss_curves_maps, allargs, mon))
+        h5 = hdf5.File(self.datastore.hdf5cache())
+        acc = list(parallel.Starmap(compute_loss_curves_maps, allargs, h5=h5))
         # copy performance information from the cache to the datastore
-        pd = mon.hdf5['performance_data'][()]
+        pd = h5['performance_data'][()]
         hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
         self.datastore['task_info/compute_loss_curves_and_maps'] = (
-            mon.hdf5['task_info/compute_loss_curves_maps'][()])
+            h5['task_info/compute_loss_curves_maps'][()])
         self.datastore.open('r+')
         with self.monitor('saving loss_curves and maps', autoflush=True):
             for r, (curves, maps) in acc:
