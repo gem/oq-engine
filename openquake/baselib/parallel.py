@@ -448,16 +448,16 @@ class IterResult(object):
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     :param progress:
         a logging function for the progress report
-    :param h5:
+    :param hdf5path:
         an open hdf5.File where to store persistently the performance info
      """
-    def __init__(self, iresults, taskname, argnames, sent, h5):
+    def __init__(self, iresults, taskname, argnames, sent, hdf5path):
         self.iresults = iresults
         self.name = taskname
         self.argnames = ' '.join(argnames)
         self.sent = sent
         self.received = []
-        self.h5 = h5
+        self.hdf5path = hdf5path
 
     def __iter__(self):
         if self.iresults == ():
@@ -509,9 +509,11 @@ class IterResult(object):
                 logging.info('Received %s',
                              {k: humansize(v) for k, v in nbytes.items()})
             # collect performance info and remove temporary files
-            if self.h5:
-                for temp in temps:
-                    dump(temp, self.h5)
+            for temp in temps:
+                if self.hdf5path is not None:
+                    dump(temp, self.hdf5path)
+                else:
+                    os.remove(temp)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -596,7 +598,7 @@ class Starmap(object):
     def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
-              distribute=None, progress=logging.info, h5=None):
+              distribute=None, progress=logging.info, hdf5path=None):
         r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -611,7 +613,7 @@ class Starmap(object):
         :param key: function to extract the kind of an item in arg0
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
-        :param h5: an open hdf5.File where to store the performance info
+        :param hdf5path: an open hdf5.File where to store the performance info
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
@@ -622,14 +624,15 @@ class Starmap(object):
         else:  # split_in_blocks is eager
             task_args = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(task, task_args, distribute, progress, h5).submit_all()
+        return cls(task, task_args, distribute, progress,
+                   hdf5path).submit_all()
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, h5=None):
+                 progress=logging.info, hdf5path=None):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
-        if h5:
-            match = re.search(r'(\d+)', os.path.basename(h5.filename))
+        if hdf5path:
+            match = re.search(r'(\d+)', os.path.basename(hdf5path))
             calc_id = int(match.group(1))
         else:
             calc_id = None
@@ -639,7 +642,7 @@ class Starmap(object):
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
         self.progress = progress
-        self.h5 = h5
+        self.hdf5path = hdf5path
         try:
             self.num_tasks = len(self.task_args)
         except TypeError:  # generators have no len
@@ -710,7 +713,7 @@ class Starmap(object):
         :returns: an :class:`IterResult` instance
         """
         return IterResult(self._loop(), self.name, self.argnames,
-                          self.sent, self.h5)
+                          self.sent, self.hdf5path)
 
     def reduce(self, agg=operator.add, acc=None):
         """
