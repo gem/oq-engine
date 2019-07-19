@@ -270,6 +270,19 @@ def split_in_slices(number, num_slices):
     return slices
 
 
+def gen_slices(n, block_size):
+    """
+    Yields slices of lenght at most block_size
+    """
+    start = 0
+    while True:
+        stop = start + block_size
+        yield slice(start, min(stop, n))
+        start = stop
+        if start >= n:
+            break
+
+
 def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
