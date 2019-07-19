@@ -44,7 +44,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     Disaggregate (separate) PoE in different contributions.
 
     :param cmaker: a ContextMaker instance
-    :param sitecol: a SiteCollection with N=1 site
+    :param sitecol: a SiteCollection with 1 site
     :param ruptures: an iterator over ruptures with the same TRT
     :param iml2: a 2D array of IMLs of shape (M, P)
     :param truncnorm: an instance of scipy.stats.truncnorm
@@ -53,14 +53,13 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     :returns:
         an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
     """
-    assert len(sitecol) == 1, sitecol
+    [sid] = sitecol.sids
     acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[])
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
         return acc
     pne_mon = monitor('disaggregate_pne', measuremem=False)
-    [sid] = sitecol.sids
     acc['mags'] = rupdata['mag']
     acc['lons'] = rupdata['lon'][:, sid]
     acc['lats'] = rupdata['lat'][:, sid]
@@ -86,15 +85,15 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     return acc
 
 
-# in practice this is always called with a single site
 def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
                      epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
 
-    Other parameters are the same as for `gsim.get_poes`, with
-    differences that ``truncation_level`` is required to be positive.
+    Other parameters are the same as for `gsim.get_poes`, with the
+    difference that ``truncation_level`` is required to be positive
+    and the site context must refer to a single site.
 
     :returns:
         Contribution to probability of exceedance of ``iml`` coming
