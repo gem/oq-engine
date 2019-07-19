@@ -101,21 +101,17 @@ def compute_disagg(dstore, grp, slc, cmaker, iml2s, trti, bin_edges, monitor):
     sitecol = dstore['sitecol']
     rupdata = dstore['rup/' + grp][slc]
     dstore.close()
-    result = {'trti': trti, 'num_ruptures': 0}
+    result = {'trti': trti}
     # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oqparam.investigation_time)
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
-        bin_data = disagg.collect_bin_data(
-            rupdata, singlesitecol, cmaker, iml2,
-            oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
-        if bin_data:  # dictionary poe, imt, rlzi -> pne
-            bins = disagg.get_bins(bin_edges, sid)
-            for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
-                    bin_data, bins, monitor).items():
-                result[sid, rlzi, poe, imt] = matrix
-        result['num_ruptures'] += len(bin_data.mags)
+        bins = disagg.get_bins(bin_edges, sid)
+        res = disagg.build_matrices(
+            rupdata, singlesitecol, cmaker, iml2, oqparam.truncation_level,
+            oqparam.num_epsilon_bins, bins, monitor)
+        result.update(res)
     return result  # sid, rlzi, poe, imt, iml -> array
 
 
@@ -166,7 +162,6 @@ producing too small PoEs.'''
         """
         # this is fast
         trti = result.pop('trti')
-        self.num_ruptures[trti] += result.pop('num_ruptures')
         for key, val in result.items():
             acc[key][trti] = agg_probs(acc[key].get(trti, 0), val)
         return acc
@@ -300,8 +295,9 @@ producing too small PoEs.'''
         slices_by_grp = AccumDict(accum=[])
         for grp, dset in self.datastore['rup'].items():
             slices_by_grp[grp].extend(gen_slices(len(dset), 1000))
-        self.datastore.close()
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(compute_disagg,
+                                hdf5path=self.datastore.filename)
+        self.datastore.close()  # must stay after the smap
         for grp, slices in slices_by_grp.items():
             grp_id = int(grp[4:])
             trt = csm_info.trt_by_grp[grp_id]
@@ -313,8 +309,6 @@ producing too small PoEs.'''
             for slc in slices:
                 smap.submit(self.datastore, grp, slc, cmaker,
                             iml2s, trti, self.bin_edges)
-
-        self.num_ruptures = [0] * len(self.trts)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results
 
@@ -359,8 +353,7 @@ producing too small PoEs.'''
                len(self.oqparam.imtls))  # N, P, M
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d)', numpy.prod(shp), *shp)
-        self.save_disagg_result(results, trts=encode(self.trts),
-                                num_ruptures=self.num_ruptures)
+        self.save_disagg_result(results, trts=encode(self.trts))
 
     def save_disagg_result(self, results, **attrs):
         """

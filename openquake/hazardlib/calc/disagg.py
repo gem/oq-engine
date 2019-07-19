@@ -228,6 +228,24 @@ def build_disagg_matrix(bdata, bins, mon=Monitor):
     return out
 
 
+# called by the engine
+def build_matrices(rupdata, singlesitecol, cmaker, iml2,
+                   trunclevel, num_epsilon_bins, bins, monitor):
+    """
+    :returns: {sid, rlzi, poe, imt: matrix}
+    """
+    result = {}
+    [sid] = singlesitecol.sids
+    bin_data = collect_bin_data(
+        rupdata, singlesitecol, cmaker, iml2,
+        trunclevel, num_epsilon_bins, monitor)
+    if bin_data:  # dictionary poe, imt, rlzi -> pne
+        for (poe, imt, rlzi), matrix in build_disagg_matrix(
+                bin_data, bins, monitor).items():
+            result[sid, rlzi, poe, imt] = matrix
+    return result
+
+
 def _digitize_lons(lons, lon_bins):
     """
     Return indices of the bins to which each value in lons belongs.
