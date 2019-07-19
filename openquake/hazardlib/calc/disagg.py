@@ -27,7 +27,6 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib import pmf, contexts, const
-from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import pack, groupby, AccumDict
 from openquake.hazardlib.calc import filters
@@ -46,7 +45,7 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
-def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, pne_mon):
+def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
     """
     Disaggregate (separate) PoE in different contributions.
 
@@ -55,7 +54,6 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, pne_mon):
     :param rupdata: an array of rupture data with the same TRT
     :param iml2: a 2D array of IMLs of shape (M, P)
     :param eps3: a triple (truncnorm, epsilons, epsilon bands)
-    :param pne_mon: a Monitor instance
     :returns:
         an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
     """
@@ -83,9 +81,8 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, pne_mon):
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
                 iml = iml2[m, p]
-                with pne_mon:
-                    pne = disaggregate_pne(
-                        gsim, rctx, sitecol, dctx, imt, iml, *eps3)
+                pne = disaggregate_pne(
+                    gsim, rctx, sitecol, dctx, imt, iml, *eps3)
                 acc[poe, str(imt), iml2.rlzi].append(pne)
     return pack(acc, 'mags dists lons lats'.split())
 
@@ -165,62 +162,63 @@ def get_bins(bin_edges, sid):
 
 
 # this is fast
-def _build_disagg_matrix(bdata, bins, mon=Monitor):
+def _build_disagg_matrix(bdata, bins):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
     :param mon: a Monitor instance
     :returns: a dictionary key -> matrix|pmf for each key in bdata
     """
-    with mon('build_disagg_matrix'):
-        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
-        dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
+    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
+    dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
 
-        # find bin indexes of rupture attributes; bins are assumed closed
-        # on the lower bound, and open on the upper bound, that is [ )
-        # longitude values need an ad-hoc method to take into account
-        # the 'international date line' issue
-        # the 'minus 1' is needed because the digitize method returns the
-        # index of the upper bound of the bin
-        mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
-        dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
-        lons_idx = _digitize_lons(bdata.lons, lon_bins)
-        lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
+    # find bin indexes of rupture attributes; bins are assumed closed
+    # on the lower bound, and open on the upper bound, that is [ )
+    # longitude values need an ad-hoc method to take into account
+    # the 'international date line' issue
+    # the 'minus 1' is needed because the digitize method returns the
+    # index of the upper bound of the bin
+    mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
+    dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
+    lons_idx = _digitize_lons(bdata.lons, lon_bins)
+    lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
 
-        # because of the way numpy.digitize works, values equal to the last bin
-        # edge are associated to an index equal to len(bins) which is not a
-        # valid index for the disaggregation matrix. Such values are assumed
-        # to fall in the last bin
-        mags_idx[mags_idx == dim1] = dim1 - 1
-        dists_idx[dists_idx == dim2] = dim2 - 1
-        lons_idx[lons_idx == dim3] = dim3 - 1
-        lats_idx[lats_idx == dim4] = dim4 - 1
+    # because of the way numpy.digitize works, values equal to the last bin
+    # edge are associated to an index equal to len(bins) which is not a
+    # valid index for the disaggregation matrix. Such values are assumed
+    # to fall in the last bin
+    mags_idx[mags_idx == dim1] = dim1 - 1
+    dists_idx[dists_idx == dim2] = dim2 - 1
+    lons_idx[lons_idx == dim3] = dim3 - 1
+    lats_idx[lats_idx == dim4] = dim4 - 1
 
-        out = {}
-        num_zeros = 0
-        for k, pnes in bdata.items():
-            # pnes has shape (U, 1, E)
-            if pnes.sum() == pnes.size:  # all pnes are 1
-                num_zeros += 1
-                continue  # zero matrices are not transferred
-            mat = numpy.ones(shape)
-            for i_mag, i_dist, i_lon, i_lat, pne in zip(
-                    mags_idx, dists_idx, lons_idx, lats_idx, pnes):
-                mat[i_mag, i_dist, i_lon, i_lat] *= pne
-            out[k] = 1. - mat
+    out = {}
+    num_zeros = 0
+    for k, pnes in bdata.items():
+        # pnes has shape (U, 1, E)
+        if pnes.sum() == pnes.size:  # all pnes are 1
+            num_zeros += 1
+            continue  # zero matrices are not transferred
+        mat = numpy.ones(shape)
+        for i_mag, i_dist, i_lon, i_lat, pne in zip(
+                mags_idx, dists_idx, lons_idx, lats_idx, pnes):
+            mat[i_mag, i_dist, i_lon, i_lat] *= pne
+        out[k] = 1. - mat
     return out
 
 
 # called by the engine
 def build_matrices(rupdata, singlesitecol, cmaker, iml2,
-                   trunclevel, num_epsilon_bins, bins, monitor):
+                   trunclevel, num_epsilon_bins, bins, pne_mon, mat_mon):
     """
     :returns: {poe, imt, rlz: matrix}
     """
     [sid] = singlesitecol.sids
     eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
-    bdata = disaggregate(cmaker, singlesitecol, rupdata, iml2, eps3, monitor)
-    return _build_disagg_matrix(bdata, bins, monitor)
+    with pne_mon:
+        bdata = disaggregate(cmaker, singlesitecol, rupdata, iml2, eps3)
+    with mat_mon:
+        return _build_disagg_matrix(bdata, bins)
 
 
 def _digitize_lons(lons, lon_bins):

@@ -106,12 +106,13 @@ def compute_disagg(dstore, grp, slc, cmaker, iml2s, trti, bin_edges, monitor):
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oqparam.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
+    mat_mon = monitor('build_disagg_matrix', measuremem=False)
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
         bins = disagg.get_bins(bin_edges, sid)
         res = disagg.build_matrices(
             rupdata, singlesitecol, cmaker, iml2, oqparam.truncation_level,
-            oqparam.num_epsilon_bins, bins, pne_mon)
+            oqparam.num_epsilon_bins, bins, pne_mon, mat_mon)
         for (poe, imt, rlz), matrix in res.items():
             result[sid, rlz, poe, imt] = matrix
     return result  # sid, rlz, poe, imt -> array
