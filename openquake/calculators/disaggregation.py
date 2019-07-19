@@ -293,9 +293,11 @@ producing too small PoEs.'''
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
         # submit disagg tasks
+        nrups = sum(len(dset) for dset in self.datastore['rup'].values())
+        blocksize = nrups // (oq.concurrent_tasks or 1) + 1
         slices_by_grp = AccumDict(accum=[])
         for grp, dset in self.datastore['rup'].items():
-            slices_by_grp[grp].extend(gen_slices(len(dset), 1000))
+            slices_by_grp[grp].extend(gen_slices(len(dset), blocksize))
         smap = parallel.Starmap(compute_disagg,
                                 hdf5path=self.datastore.filename)
         self.datastore.close()  # must stay after the smap
