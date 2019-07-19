@@ -13,6 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+[general]
+strict = false
+
 [distribution]
 # set multi_node = true if are on a cluster
 multi_node = true
@@ -20,11 +23,9 @@ multi_node = true
 oq_distribute = celery
 # make sure workers are terminated when tasks are revoked
 terminate_workers_on_revoke = true
-# enable the queue
 serialize_jobs = true
 # change this on a cluster if using oq_distribute = dask
 dask_scheduler = 127.0.0.1:1921
-
 
 [memory]
 # above this quantity (in %) of memory used a warning will be printed
