@@ -92,7 +92,7 @@ class SourceModelFactory(object):
     A class able to build source models from the logic tree and to store
     them inside the `source_info` dataset.
     """
-    def __init__(self, oqparam, gsim_lt, source_model_lt, h5,
+    def __init__(self, oqparam, gsim_lt, source_model_lt, h5=None,
                  in_memory=True, srcfilter=None):
         self.oqparam = oqparam
         self.gsim_lt = gsim_lt
