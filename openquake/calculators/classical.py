@@ -195,7 +195,7 @@ class ClassicalCalculator(base.HazardCalculator):
         #     logging.warn('No integration_distance')
         with self.monitor('managing sources', autoflush=True):
             smap = parallel.Starmap(
-                self.core_task.__func__, monitor=self.monitor())
+                self.core_task.__func__, h5=self.datastore.hdf5)
             self.submit_sources(smap)
         self.calc_times = AccumDict(accum=numpy.zeros(2, F32))
         try:
@@ -362,8 +362,8 @@ class ClassicalCalculator(base.HazardCalculator):
             (getters.PmapGetter(parent, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
-        parallel.Starmap(build_hazard_stats, allargs, self.monitor()).reduce(
-            self.save_hazard_stats)
+        parallel.Starmap(build_hazard_stats, allargs,
+                         h5=self.datastore.hdf5).reduce(self.save_hazard_stats)
 
 
 @base.calculators.add('preclassical')
