@@ -131,33 +131,12 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
     return rupture.get_probability_no_exceedance(poes)
 
 
-# this is always called with a single site
-def _collect_bin_data(rupdata, sitecol, cmaker, iml2,
-                      truncation_level, n_epsilons, monitor=Monitor()):
-    """
-    :param rupdata: array of ruptures
-    :param sitecol: a SiteCollection instance with a single site
-    :param cmaker: a ContextMaker instance
-    :param iml3: an ArrayWrapper of intensities of shape (R, M, P)
-    :param truncation_level: the truncation level
-    :param n_epsilons: the number of epsilons
-    :param monitor: a Monitor instance
-    :returns: a dictionary (poe, imt, rlzi) -> probabilities of shape (N, E)
-    """
-    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
-    tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
-    return disaggregate(cmaker, sitecol, rupdata, iml2, tn, eps, monitor)
-
-
 def lon_lat_bins(bb, coord_bin_width):
     """
-    Define bin edges for disaggregation histograms.
+    Define lon, lat bin edges for disaggregation histograms.
 
-    Given bins data as provided by :func:`_collect_bin_data`, this function
-    finds edges of histograms, taking into account maximum and minimum values
-    of magnitude, distance and coordinates as well as requested sizes/numbers
-    of bins.
+    :param bb: bounding box west, south, east, north
+    :param coord_bin_width: bin width
     """
     west, south, east, north = bb
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
@@ -234,12 +213,14 @@ def build_matrices(rupdata, singlesitecol, cmaker, iml2,
     :returns: {poe, imt, rlz: matrix}
     """
     [sid] = singlesitecol.sids
+    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
+    tn = scipy.stats.truncnorm(-trunclevel, trunclevel)
+    eps = numpy.linspace(-trunclevel, trunclevel, num_epsilon_bins + 1)
     dist = rupdata[cmaker.filter_distance][:, sid]
     maxdist = cmaker.maximum_distance(cmaker.trt)
-    bin_data = _collect_bin_data(
-        rupdata[dist < maxdist], singlesitecol, cmaker, iml2,
-        trunclevel, num_epsilon_bins, monitor)
-    return _build_disagg_matrix(bin_data, bins, monitor)
+    rups = rupdata[dist < maxdist]
+    bdata = disaggregate(cmaker, singlesitecol, rups, iml2, tn, eps, monitor)
+    return _build_disagg_matrix(bdata, bins, monitor)
 
 
 def _digitize_lons(lons, lon_bins):
@@ -345,6 +326,8 @@ def disaggregation(
     sitecol = SiteCollection([site])
     iml2 = ArrayWrapper(numpy.array([[iml]]),
                         dict(imts=[imt], poes_disagg=[None], rlzi=0))
+    tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
+    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
     for trt, srcs in by_trt.items():
         cmaker = ContextMaker(
             trt, rlzs_by_gsim, source_filter.integration_distance,
@@ -352,8 +335,7 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        bdata[trt] = _collect_bin_data(
-            rupdata, sitecol, cmaker, iml2, truncation_level, n_epsilons)
+        bdata[trt] = disaggregate(cmaker, sitecol, rupdata, iml2, tn, eps)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
