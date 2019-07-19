@@ -38,17 +38,23 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
-def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
-                 monitor=Monitor()):
+def _eps3(truncation_level, n_epsilons):
+    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
+    tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
+    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
+    eps_bands = tn.cdf(eps[1:]) - tn.cdf(eps[:-1])
+    return tn, eps, eps_bands
+
+
+def disaggregate(cmaker, sitecol, rupdata, iml2, eps3, monitor=Monitor()):
     """
     Disaggregate (separate) PoE in different contributions.
 
     :param cmaker: a ContextMaker instance
     :param sitecol: a SiteCollection with 1 site
-    :param ruptures: an iterator over ruptures with the same TRT
+    :param rupdata: an array of rupture data with the same TRT
     :param iml2: a 2D array of IMLs of shape (M, P)
-    :param truncnorm: an instance of scipy.stats.truncnorm
-    :param epsilons: the epsilon bins
+    :param eps3: a triple (truncnorm, epsilons, epsilon bands)
     :param monitor: a Monitor instance
     :returns:
         an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
@@ -58,17 +64,18 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
-        return acc
+        return pack(acc, 'mags dists lons lats'.split())
     pne_mon = monitor('disaggregate_pne', measuremem=False)
-    acc['mags'] = rupdata['mag']
-    acc['lons'] = rupdata['lon'][:, sid]
-    acc['lats'] = rupdata['lat'][:, sid]
-    acc['dists'] = dists = rupdata[cmaker.filter_distance][:, sid]
+    maxdist = cmaker.maximum_distance(cmaker.trt)
+    dists = rupdata[cmaker.filter_distance][:, sid]
     if gsim.minimum_distance:
         dists[dists < gsim.minimum_distance] = gsim.minimum_distance
-    # compute epsilon bin contributions only once
-    eps_bands = truncnorm.cdf(epsilons[1:]) - truncnorm.cdf(epsilons[:-1])
-    for rec in rupdata:
+    rdata = rupdata[dists < maxdist]  # discard far away ruptures
+    acc['mags'] = rdata['mag']
+    acc['lons'] = rdata['lon'][:, sid]
+    acc['lats'] = rdata['lat'][:, sid]
+    acc['dists'] = dists[dists < maxdist]
+    for rec in rdata:
         rctx = contexts.RuptureContext(rec)
         dctx = contexts.DistancesContext(
             (param, rec[param][[sid]])
@@ -79,10 +86,9 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
                 iml = iml2[m, p]
                 with pne_mon:
                     pne = disaggregate_pne(
-                        gsim, rctx, sitecol, dctx, imt, iml,
-                        truncnorm, epsilons, eps_bands)
+                        gsim, rctx, sitecol, dctx, imt, iml, *eps3)
                 acc[poe, str(imt), iml2.rlzi].append(pne)
-    return acc
+    return pack(acc, 'mags dists lons lats'.split())
 
 
 def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
@@ -131,34 +137,12 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
     return rupture.get_probability_no_exceedance(poes)
 
 
-# in practice this is always called with a single site
-def _collect_bin_data(rupdata, sitecol, cmaker, iml3,
-                      truncation_level, n_epsilons, monitor=Monitor()):
-    """
-    :param rupdata: array of ruptures
-    :param sitecol: a SiteCollection instance with a single site
-    :param cmaker: a ContextMaker instance
-    :param iml3: an ArrayWrapper of intensities of shape (R, M, P)
-    :param truncation_level: the truncation level
-    :param n_epsilons: the number of epsilons
-    :param monitor: a Monitor instance
-    :returns: a dictionary (poe, imt, rlzi) -> probabilities of shape (N, E)
-    """
-    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
-    tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
-    acc = disaggregate(cmaker, sitecol, rupdata, iml3, tn, eps, monitor)
-    return pack(acc, 'mags dists lons lats'.split())
-
-
 def lon_lat_bins(bb, coord_bin_width):
     """
-    Define bin edges for disaggregation histograms.
+    Define lon, lat bin edges for disaggregation histograms.
 
-    Given bins data as provided by :func:`_collect_bin_data`, this function
-    finds edges of histograms, taking into account maximum and minimum values
-    of magnitude, distance and coordinates as well as requested sizes/numbers
-    of bins.
+    :param bb: bounding box west, south, east, north
+    :param coord_bin_width: bin width
     """
     west, south, east, north = bb
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
@@ -232,18 +216,12 @@ def _build_disagg_matrix(bdata, bins, mon=Monitor):
 def build_matrices(rupdata, singlesitecol, cmaker, iml2,
                    trunclevel, num_epsilon_bins, bins, monitor):
     """
-    :returns: {sid, rlzi, poe, imt: matrix}
+    :returns: {poe, imt, rlz: matrix}
     """
-    result = {}
     [sid] = singlesitecol.sids
-    bin_data = _collect_bin_data(
-        rupdata, singlesitecol, cmaker, iml2,
-        trunclevel, num_epsilon_bins, monitor)
-    if bin_data:  # dictionary poe, imt, rlzi -> pne
-        for (poe, imt, rlzi), matrix in _build_disagg_matrix(
-                bin_data, bins, monitor).items():
-            result[sid, rlzi, poe, imt] = matrix
-    return result
+    eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
+    bdata = disaggregate(cmaker, singlesitecol, rupdata, iml2, eps3, monitor)
+    return _build_disagg_matrix(bdata, bins, monitor)
 
 
 def _digitize_lons(lons, lon_bins):
@@ -349,6 +327,7 @@ def disaggregation(
     sitecol = SiteCollection([site])
     iml2 = ArrayWrapper(numpy.array([[iml]]),
                         dict(imts=[imt], poes_disagg=[None], rlzi=0))
+    eps3 = _eps3(truncation_level, n_epsilons)
     for trt, srcs in by_trt.items():
         cmaker = ContextMaker(
             trt, rlzs_by_gsim, source_filter.integration_distance,
@@ -356,8 +335,7 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        bdata[trt] = _collect_bin_data(
-            rupdata, sitecol, cmaker, iml2, truncation_level, n_epsilons)
+        bdata[trt] = disaggregate(cmaker, sitecol, rupdata, iml2, eps3)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'

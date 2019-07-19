@@ -23,7 +23,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5, general
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, gen_slices
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
@@ -111,8 +111,9 @@ def compute_disagg(dstore, grp, slc, cmaker, iml2s, trti, bin_edges, monitor):
         res = disagg.build_matrices(
             rupdata, singlesitecol, cmaker, iml2, oqparam.truncation_level,
             oqparam.num_epsilon_bins, bins, monitor)
-        result.update(res)
-    return result  # sid, rlzi, poe, imt, iml -> array
+        for (poe, imt, rlz), matrix in res.items():
+            result[sid, rlz, poe, imt] = matrix
+    return result  # sid, rlz, poe, imt -> array
 
 
 def agg_probs(*probs):
@@ -292,9 +293,11 @@ producing too small PoEs.'''
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
         # submit disagg tasks
+        nrups = sum(len(dset) for dset in self.datastore['rup'].values())
+        blocksize = nrups // (oq.concurrent_tasks or 1) + 1
         slices_by_grp = AccumDict(accum=[])
         for grp, dset in self.datastore['rup'].items():
-            slices_by_grp[grp].extend(gen_slices(len(dset), 1000))
+            slices_by_grp[grp].extend(gen_slices(len(dset), blocksize))
         smap = parallel.Starmap(compute_disagg,
                                 hdf5path=self.datastore.filename)
         self.datastore.close()  # must stay after the smap
