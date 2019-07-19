@@ -30,7 +30,7 @@ import collections
 import numpy
 import requests
 
-from openquake.baselib import performance, hdf5
+from openquake.baselib import hdf5
 from openquake.baselib.general import random_filter
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
@@ -562,7 +562,7 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, h5, in_memory=True,
+def get_composite_source_model(oqparam, h5=None, in_memory=True,
                                srcfilter=SourceFilter(None, {})):
     """
     Parse the XML and build a complete composite source model in memory.
