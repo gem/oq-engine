@@ -91,17 +91,13 @@ way your code is future-proof.
 Monitoring
 =============================
 
-The major feature of the Starmap API is the ability to pass to it a
-Monitor instance, an object which is able to measure the time and
-memory occupation in each spawned task. The monitor stores that
-into a secret .hdf5 file. If you do not pass a Monitor instance to the Starmap,
-internally a do-nothing monitor is instantiated. Here is an example:
-
->>> from openquake.baselib.performance import Monitor
->>> mon = Monitor('count')
+A major feature of the Starmap API is the ability to pass to it an hdf5
+file open for writing where information about the performance of the tasks
+can be stored. In order to use such feature the task functions must have
+a last argument which is a monitor.
 
 The engine provides a command `oq show performance` to print the performance
-information stored in the HDF5 datastore in a nice way.
+information stored in the HDF5 file in a nice way.
 
 The Starmap.apply API
 ====================================
@@ -114,7 +110,7 @@ letter counting example discussed before, `Starmap.apply` could
 be used as follows:
 
 >>> text = 'helloworld'  # sequence of characters
->>> res3 = Starmap.apply(count, (text, mon)).reduce()
+>>> res3 = Starmap.apply(count, (text, Monitor())).reduce()
 >>> assert res3 == res
 
 The API of `Starmap.apply` is designed to extend the one of `apply`,
