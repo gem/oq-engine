@@ -246,4 +246,6 @@ def dump(temppath, perspath):
             if fullname not in h5:
                 hdf5.create(h5, fullname, task_info_dt)
             hdf5.extend(h5[fullname], dset[()])
+            for k, v in dset.attrs.items():
+                h5[fullname].attrs[k] = v
     os.remove(temppath)
