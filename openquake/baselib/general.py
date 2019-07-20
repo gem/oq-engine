@@ -21,7 +21,6 @@ Utility functions of general interest.
 """
 import os
 import sys
-import imp
 import copy
 import math
 import socket
