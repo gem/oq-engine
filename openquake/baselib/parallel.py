@@ -460,17 +460,11 @@ class IterResult(object):
         self.received = []
         self.hdf5path = hdf5path
 
-    def __iter__(self):
-        if self.iresults == ():
-            return ()
-        t0 = time.time()
-        self.received = []
+    def _iter(self, temp):
         first_time = True
-        nbytes = AccumDict()
-        names = {self.name}
-        temp = self.hdf5path + '~'
         for result in self.iresults:
-            msg = check_mem_usage()  # log a warning if too much memory is used
+            msg = check_mem_usage()
+            # log a warning if too much memory is used
             if msg and first_time:
                 logging.warning(msg)
                 first_time = False  # warn only once
@@ -479,10 +473,9 @@ class IterResult(object):
                 raise result
             elif isinstance(result, Result):
                 val = result.get()
-                names.add(result.mon.operation[6:])
                 self.received.append(len(result.pik))
                 if hasattr(result, 'nbytes'):
-                    nbytes += result.nbytes
+                    self.nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
             if OQ_DISTRIBUTE == 'processpool' and sys.platform != 'darwin':
@@ -495,22 +488,34 @@ class IterResult(object):
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func_args:  # not subtask
                 yield val
-                print('saving on', temp)
                 result.mon.save_task_info(
                     temp, result, self.argnames, self.sent, mem_gb)
                 result.mon.flush(temp)
-        if self.received:
-            tot = sum(self.received)
-            max_per_output = max(self.received)
-            logging.info(
-                'Received %s in %d seconds, biggest '
-                'output=%s', humansize(tot), time.time() - t0,
-                humansize(max_per_output))
-            if nbytes:
-                logging.info('Received %s',
-                             {k: humansize(v) for k, v in nbytes.items()})
-            # collect performance info and remove temporary file
-            dump(temp, self.hdf5path)
+
+    def __iter__(self):
+        if self.iresults == ():
+            return ()
+        t0 = time.time()
+        self.received = []
+        self.nbytes = AccumDict()
+        temp = self.hdf5path + '~'
+        try:
+            yield from self._iter(temp)
+            if self.received:
+                tot = sum(self.received)
+                max_per_output = max(self.received)
+                logging.info(
+                    'Received %s in %d seconds, biggest '
+                    'output=%s', humansize(tot), time.time() - t0,
+                    humansize(max_per_output))
+                if self.nbytes:
+                    nb = {k: humansize(v) for k, v in self.nbytes.items()}
+                    logging.info('Received %s', nb)
+                # collect performance info
+                dump(temp, self.hdf5path)
+        finally:
+            if os.path.exists(temp):
+                os.remove(temp)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
