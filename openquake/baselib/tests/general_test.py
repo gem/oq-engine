@@ -24,7 +24,7 @@ import unittest
 from operator import attrgetter
 from collections import namedtuple
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, search_module, assert_close,
+    block_splitter, split_in_blocks, assert_close,
     deprecated, DeprecationWarning, cached_property)
 
 
@@ -124,20 +124,6 @@ class BlockSplitterTestCase(unittest.TestCase):
                             key=attrgetter('typology')))
         self.assertEqual(list(map(len, blocks)), [1, 1, 1, 2])
         self.assertEqual([b.weight for b in blocks], [2, 4, 4, 2])
-
-
-class SearchModuleTestCase(unittest.TestCase):
-    def test_existing_module_simple(self):
-        self.assertIsNotNone(search_module('os'))
-
-    def test_non_existing_module_simple(self):
-        self.assertIsNone(search_module('do_not_exist'))
-
-    def test_non_existing_module_in_package(self):
-        self.assertIsNone(search_module('openquake.do_not_exist'))
-
-    def test_existing_module_in_package(self):
-        self.assertIsNotNone(search_module('openquake.baselib.general'))
 
 
 class AssertCloseTestCase(unittest.TestCase):
