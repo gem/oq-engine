@@ -294,14 +294,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
-        if len(times):  # store some info on the calculation times
+        if len(times):
             try:
                 dset = self.datastore['task_info/start_ebrisk']
             except KeyError:
                 # can happen for mysterious race conditions on some machines
                 pass
             else:
-                # store the time information
+                # store the time information plus the events_per_sid info
                 dset.attrs['times'] = times
                 dset.attrs['events_per_sid'] = numpy.mean(self.events_per_sid)
 
