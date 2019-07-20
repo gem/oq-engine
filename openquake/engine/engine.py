@@ -340,8 +340,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         logs.LOG.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         duration = time.time() - t0
-        calc._monitor.flush()
-        records = views.performance_view(calc.datastore)
+        records = views.performance_view(calc.datastore, add_calc_id=False)
         logs.dbcmd('save_performance', job_id, records)
         calc.datastore.close()
         logs.LOG.info('Calculation %d finished correctly in %d seconds',
