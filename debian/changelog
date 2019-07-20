@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * `oq show performance` can be called in the middle of a computation again
   * Filtered out the far away distances and reduced the time spent in
     saving the performance info by orders of magnitude in large disaggregations
   * Reduced the data transfer by reading the data directly from the
