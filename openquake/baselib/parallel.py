@@ -162,11 +162,12 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config
+from openquake.baselib import config, hdf5
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, dump
 from openquake.baselib.general import (
-    split_in_blocks, block_splitter, AccumDict, humansize, CallableDict)
+    split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
+    gettemp)
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
@@ -467,7 +468,7 @@ class IterResult(object):
         first_time = True
         nbytes = AccumDict()
         names = {self.name}
-        temps = set()
+        temp = self.hdf5path + '~'
         for result in self.iresults:
             msg = check_mem_usage()  # log a warning if too much memory is used
             if msg and first_time:
@@ -495,9 +496,8 @@ class IterResult(object):
             if not result.func_args:  # not subtask
                 yield val
                 result.mon.save_task_info(
-                    result, self.argnames, self.sent, mem_gb)
-                result.mon.flush()
-                temps.add(result.mon.hdf5path)
+                    temp, result, self.argnames, self.sent, mem_gb)
+                result.mon.flush(temp)
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
@@ -508,12 +508,8 @@ class IterResult(object):
             if nbytes:
                 logging.info('Received %s',
                              {k: humansize(v) for k, v in nbytes.items()})
-            # collect performance info and remove temporary files
-            for temp in temps:
-                if self.hdf5path is not None:
-                    dump(temp, self.hdf5path)
-                else:
-                    os.remove(temp)
+            # collect performance info and remove temporary file
+            dump(temp, self.hdf5path)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -642,7 +638,7 @@ class Starmap(object):
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
         self.progress = progress
-        self.hdf5path = hdf5path
+        self.hdf5path = hdf5path or gettemp(suffix='.hdf5')
         try:
             self.num_tasks = len(self.task_args)
         except TypeError:  # generators have no len
