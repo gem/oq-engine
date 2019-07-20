@@ -83,11 +83,8 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='', hdf5path=None,
-                 autoflush=False, measuremem=False, inner_loop=False):
+    def __init__(self, operation='', measuremem=False, inner_loop=False):
         self.operation = operation
-        self.hdf5path = hdf5path or hdf5.uuid1()
-        self.autoflush = autoflush
         self.measuremem = measuremem
         self.inner_loop = inner_loop
         self.mem = 0
@@ -96,7 +93,6 @@ class Monitor(object):
         self.children = []
         self.counts = 0
         self.address = None
-        self._flush = True
         self.username = getpass.getuser()
 
     @property
@@ -152,13 +148,14 @@ class Monitor(object):
 
     def on_exit(self):
         "To be overridden in subclasses"
-        if self.autoflush:
-            self.flush()
+        if hasattr(self, 'hdf5path'):
+            self.flush(self.hdf5path)
 
-    def save_task_info(self, res, argnames, sent, mem_gb=0):
+    def save_task_info(self, hdf5path, res, argnames, sent, mem_gb=0):
         """
         Called by parallel.IterResult.
 
+        :param hdf5path: where to save the info
         :param res: a :class:`Result` object
         :param argnames: names of the task arguments
         :param sent: number of bytes sent
@@ -167,7 +164,7 @@ class Monitor(object):
         name = self.operation[6:]  # strip 'total '
         t = (self.task_no, self.weight, self.duration, len(res.pik), mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend3(self.hdf5path, 'task_info/' + name, data,
+        hdf5.extend3(hdf5path, 'task_info/' + name, data,
                      argnames=argnames, sent=sent)
 
     def reset(self):
@@ -178,26 +175,25 @@ class Monitor(object):
         self.mem = 0
         self.counts = 0
 
-    def flush(self):
+    def flush(self, hdf5path):
         """
-        Save the measurements on the performance file (or on stdout)
+        Save the measurements on the performance file
         """
-        if not self._flush:
-            raise RuntimeError(
-                'Monitor(%r).flush() must not be called in a worker' %
-                self.operation)
-        if not os.path.exists(self.hdf5path):
-            with hdf5.File(self.hdf5path, 'w') as h5:
+        if not self.children:
+            data = self.get_data()
+        else:
+            lst = [self.get_data()]
+            for child in self.children:
+                lst.append(child.get_data())
+                child.reset()
+            data = numpy.concatenate(lst)
+        if len(data) == 0:  # no information
+            return
+        elif not os.path.exists(hdf5path):
+            with hdf5.File(hdf5path, 'w') as h5:
                 hdf5.create(h5, 'performance_data', perf_dt)
                 hdf5.create(h5, 'task_info', task_info_dt)
-        data = [self.get_data()]
-        for child in self.children:
-            data.append(child.get_data())
-            child.reset()
-        data = numpy.concatenate(data)
-        if len(data) == 0:  # no information
-            return []
-        hdf5.extend3(self.hdf5path, 'performance_data', data)
+        hdf5.extend3(hdf5path, 'performance_data', data)
         self.reset()
 
     # TODO: rename this as spawn; see what will break
