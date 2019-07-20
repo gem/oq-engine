@@ -243,8 +243,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 r, sid, imt = str2rsi(key)
                 array = acc[r].setdefault(sid, 0).array[imtls(imt), 0]
                 array[:] = 1. - (1. - array) * (1. - poes)
-        sav_mon.flush()
-        agg_mon.flush()
         self.datastore.flush()
         return acc
 

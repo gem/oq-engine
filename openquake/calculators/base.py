@@ -123,15 +123,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self.datastore = datastore.DataStore(calc_id)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True)
+        self._monitor.hdf5path = self.datastore.filename  # autoflush
         self.oqparam = oqparam
-        if 'performance_data' not in self.datastore:
-            self.datastore.create_dset('performance_data', perf_dt)
 
     def monitor(self, operation='', **kw):
         """
         :returns: a new Monitor instance
         """
         mon = self._monitor(operation)
+        mon.hdf5path = self.datastore.filename  # flushable monitor
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
@@ -214,7 +214,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-                self._monitor.flush()
 
                 if close:  # in the engine we close later
                     self.result = None
