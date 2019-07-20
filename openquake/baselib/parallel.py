@@ -162,7 +162,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config, hdf5
+from openquake.baselib import config
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, dump
 from openquake.baselib.general import (
