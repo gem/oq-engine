@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Filtered out the far away distances and reduced the time spent in
+    saving the performance info by orders of magnitude in large disaggregations
   * Reduced the data transfer by reading the data directly from the
     datastore in disaggregation calculations
   * Reduced the memory consumption sending disaggregation tasks incrementally
