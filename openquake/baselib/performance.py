@@ -248,5 +248,4 @@ def dump(temppath, perspath):
             hdf5.extend(h5[fullname], dset[()])
             for k, v in dset.attrs.items():
                 h5[fullname].attrs[k] = v
-        h5.flush()
     os.remove(temppath)
