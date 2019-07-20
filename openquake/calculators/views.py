@@ -468,7 +468,7 @@ def view_fullreport(token, dstore):
     return ReportWriter(dstore).make_report()
 
 
-def performance_view(dstore):
+def performance_view(dstore, add_calc_id=True):
     """
     Returns the performance view as a numpy array.
     """
@@ -485,7 +485,8 @@ def performance_view(dstore):
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
     dt = copy.copy(perf_dt)
-    dt.names = ('calc_%d' % dstore.calc_id,) + dt.names[1:]
+    if add_calc_id:
+        dt.names = ('calc_%d' % dstore.calc_id,) + dt.names[1:]
     return numpy.array(out, dt)
 
 
