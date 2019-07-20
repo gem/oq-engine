@@ -19,7 +19,6 @@
 import os
 import ast
 import csv
-import uuid
 import inspect
 import logging
 import tempfile
@@ -40,13 +39,6 @@ vuint16 = h5py.special_dtype(vlen=numpy.uint16)
 vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
-
-
-def uuid1():
-    """
-    :returns: an unique .hdf5 filename without creating it
-    """
-    return os.path.join(tempfile.gettempdir(), str(uuid.uuid1()) + '.hdf5')
 
 
 def maybe_encode(value):
