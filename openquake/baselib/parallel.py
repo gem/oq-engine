@@ -495,6 +495,7 @@ class IterResult(object):
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func_args:  # not subtask
                 yield val
+                print('saving on', temp)
                 result.mon.save_task_info(
                     temp, result, self.argnames, self.sent, mem_gb)
                 result.mon.flush(temp)
