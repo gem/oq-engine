@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import ast
+import copy
 import os.path
 import numbers
 import operator
@@ -483,7 +484,9 @@ def performance_view(dstore):
             mem = max(mem, memory_mb)
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    return numpy.array(out, perf_dt)
+    dt = copy.copy(perf_dt)
+    dt.names = ('calc_%d' % dstore.calc_id,) + dt.names[1:]
+    return numpy.array(out, dt)
 
 
 @view.add('performance')
