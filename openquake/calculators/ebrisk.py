@@ -294,6 +294,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the losses_by_event dataset,
         and then loss curves and maps.
         """
+        if len(times):  # store some info on the calculation times
+            self.datastore.set_attrs(
+                'task_info/start_ebrisk', times=times,
+                events_per_sid=numpy.mean(self.events_per_sid))
+
         oq = self.oqparam
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
@@ -357,11 +362,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             builder.eff_time)
             numpy.testing.assert_allclose(
                 curves, self.datastore['agg_curves-rlzs'][()])
-
-        if len(times):  # store some info on the calculation times
-            self.datastore.set_attrs(
-                'task_info/start_ebrisk', times=times,
-                events_per_sid=numpy.mean(self.events_per_sid))
 
 
 # 1) parallelizing by events does not work, we need all the events
