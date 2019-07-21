@@ -86,14 +86,19 @@ class RupData(object):
         self.data = AccumDict(accum=[])  # param -> list of floats
         self.vdata = AccumDict(accum=[])  # param -> list of arrays
 
-    def from_srcs(self, srcs):
+    def from_srcs(self, srcs):  # used in disagg.disaggregation
         """
-        :returns: the underlying rupdata array
+        :returns: param -> array
         """
         for src in srcs:
             for rup in src.iter_ruptures():
                 self.cmaker.add_rup_params(rup)
                 self.add(rup, src.id)
+        rdata = {}
+        for k, v in self.data.items():
+            rdata[k] = numpy.array(v)
+        rdata.update(self.vdata)
+        return rdata
 
     def add(self, rup, src_id):
         try:
