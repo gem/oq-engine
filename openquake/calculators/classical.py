@@ -129,7 +129,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         calc_times[src.id] += numpy.array([src.weight, dt], F32)
         nsites[src.id] = src.nsites
     return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data={}, rupvdata={}, nsites=nsites)
+                rup_data={'grp_id': []}, rupvdata={}, nsites=nsites)
 
 
 @base.calculators.add('classical')
@@ -165,8 +165,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.datastore.extend('rup/' + k, v)
                 rupvdata = dic['rupvdata']
                 for par in self.vparams:
-                    val = rupvdata[par]  # varlen-array of size nr
-                    if len(val) == 0:  # missing parameter
+                    try:
+                        val = rupvdata[par]  # varlen-array of size nr
+                    except KeyError:
                         val = [numpy.zeros(0, F32)] * nr
                     self.datastore.hdf5.save_vlen('rup/' + par, val)
             if 'source_data' in dic:
