@@ -45,22 +45,24 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
-def _get_mask(sids_by_rup, N):
-    # a mask of shape (U, N)
+def _site_indices(sids_by_rup, N):
+    # an array of indices of shape (N, U)
     U = len(sids_by_rup)
-    mask = numpy.zeros((U, N), bool)
+    idx = -numpy.ones((N, U), numpy.int16)
     for ridx, sids in enumerate(sids_by_rup):
-        mask[ridx, sids] = True
-    return mask
+        for sidx, sid in enumerate(sids):
+            idx[sid, ridx] = sidx
+    return idx
 
 
-def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
+def disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
     """
     Disaggregate (separate) PoE in different contributions.
 
     :param cmaker: a ContextMaker instance
     :param sitecol: a SiteCollection with 1 site
     :param rupdata: a dictionary of arrays with the rupture data
+    :param indices: site indeces for each rupture
     :param iml2: a 2D array of IMLs of shape (M, P)
     :param eps3: a triple (truncnorm, epsilons, epsilon bands)
     :returns:
@@ -73,21 +75,25 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
     except KeyError:
         return pack(acc, 'mags dists lons lats'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
-    acc['mags'] = rupdata['mag']
-    for ridx, sids in enumerate(rupdata['sid']):
-        idx, = numpy.where(sids == sid)
-        mindist = rupdata[cmaker.filter_distance][ridx][idx].min()
-        if mindist >= maxdist:
+    for ridx, idx in enumerate(indices):
+        if idx == -1:  # no contribution for this site
             continue
+        dist = rupdata[cmaker.filter_distance][ridx][idx]
+        if dist >= maxdist:
+            continue
+        elif gsim.minimum_distance and dist < gsim.minimum_distance:
+            dist = gsim.minimum_distance
         rctx = contexts.RuptureContext()
         for par in rupdata:
             setattr(rctx, par, rupdata[par][ridx])
         dctx = contexts.DistancesContext(
-            (param, getattr(rctx, param)[idx])
-            for param in cmaker.REQUIRES_DISTANCES)
+            (param, getattr(rctx, param)[[idx]])
+            for param in cmaker.REQUIRES_DISTANCES).roundup(
+                    gsim.minimum_distance)
+        acc['mags'].append(rctx.mag)
         acc['lons'].append(rctx.lon[idx])
         acc['lats'].append(rctx.lat[idx])
-        acc['dists'].append(getattr(rctx, cmaker.filter_distance)[idx])
+        acc['dists'].append(dist)
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
                 iml = iml2[m, p]
@@ -223,15 +229,16 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
     """
     :yield: (sid, {poe, imt, rlz: matrix})
     """
-    mask = _get_mask(rupdata['sid'], len(sitecol))
+    if rupdata['sid'].max() >= 32768:
+        raise ValueError('You can disaggregate at max 32,768 sites')
+    indices = _site_indices(rupdata['sid'], len(sitecol))
     eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
     for sid, iml2 in zip(sitecol.sids, iml2s):
-        msk = mask[:, sid]  # ruptures contributing to the given site
-        rdata = {k: rupdata[k][msk] for k in rupdata}
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         with pne_mon:
-            bdata = disaggregate(cmaker, singlesitecol, rdata, iml2, eps3)
+            bdata = disaggregate(cmaker, singlesitecol, rupdata,
+                                 indices[sid], iml2, eps3)
         with mat_mon:
             yield sid, _build_disagg_matrix(bdata, bins)
 
@@ -347,7 +354,8 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        bdata[trt] = disaggregate(cmaker, sitecol, rdata, iml2, eps3)
+        idxs = _site_indices(rdata['sid'], 1)[0]
+        bdata[trt] = disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
