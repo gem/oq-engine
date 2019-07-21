@@ -45,6 +45,17 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
+def build_sidx(sids_by_rup, N):
+    """
+    :returns: a matrix of shape (U, N)
+    """
+    U = len(sids_by_rup)
+    mat = numpy.zeros((U, N), bool)
+    for ridx, sids in enumerate(sids_by_rup):
+        mat[ridx, sids] = True
+    return mat
+
+
 def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
     """
     Disaggregate (separate) PoE in different contributions.
