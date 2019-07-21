@@ -208,17 +208,19 @@ def _build_disagg_matrix(bdata, bins):
 
 
 # called by the engine
-def build_matrices(rupdata, singlesitecol, cmaker, iml2,
-                   trunclevel, num_epsilon_bins, bins, pne_mon, mat_mon):
+def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
+                   num_epsilon_bins, bin_edges, pne_mon, mat_mon):
     """
-    :returns: {poe, imt, rlz: matrix}
+    :yield: (sid, {poe, imt, rlz: matrix})
     """
-    [sid] = singlesitecol.sids
     eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
-    with pne_mon:
-        bdata = disaggregate(cmaker, singlesitecol, rupdata, iml2, eps3)
-    with mat_mon:
-        return _build_disagg_matrix(bdata, bins)
+    for sid, iml2 in zip(sitecol.sids, iml2s):
+        singlesitecol = sitecol.filtered([sid])
+        bins = get_bins(bin_edges, sid)
+        with pne_mon:
+            bdata = disaggregate(cmaker, singlesitecol, rupdata, iml2, eps3)
+        with mat_mon:
+            yield sid, _build_disagg_matrix(bdata, bins)
 
 
 def _digitize_lons(lons, lon_bins):
