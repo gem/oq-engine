@@ -76,8 +76,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
         rctx = contexts.RuptureContext(rec)
         dctx = contexts.DistancesContext(
             (param, rec[param][[sid]])
-            for param in cmaker.REQUIRES_DISTANCES
-        ).roundup(gsim.minimum_distance)
+            for param in cmaker.REQUIRES_DISTANCES)
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
                 iml = iml2[m, p]
