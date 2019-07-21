@@ -45,15 +45,13 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
-def build_sidx(sids_by_rup, N):
-    """
-    :returns: a matrix of shape (U, N)
-    """
+def _get_mask(sids_by_rup, N):
+    # a mask of shape (U, N)
     U = len(sids_by_rup)
-    mat = numpy.zeros((U, N), bool)
+    mask = numpy.zeros((U, N), bool)
     for ridx, sids in enumerate(sids_by_rup):
-        mat[ridx, sids] = True
-    return mat
+        mask[ridx, sids] = True
+    return mask
 
 
 def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
@@ -77,10 +75,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
     # maxdist = cmaker.maximum_distance(cmaker.trt)
     acc['mags'] = rupdata['mag']
     for ridx, sids in enumerate(rupdata['sid']):
-        idxs, = numpy.where(sids == sid)
-        if len(idxs) == 0:  # there are no ruptures affecting the site
-            continue
-        [idx] = idxs
+        idx, = numpy.where(sids == sid)
         rctx = contexts.RuptureContext()
         for par in rupdata:
             setattr(rctx, par, rupdata[par][ridx])
@@ -226,12 +221,15 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
     """
     :yield: (sid, {poe, imt, rlz: matrix})
     """
+    mask = _get_mask(rupdata['sid'], len(sitecol))
     eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
     for sid, iml2 in zip(sitecol.sids, iml2s):
+        msk = mask[:, sid]  # ruptures contributing to the given site
+        rdata = {k: rupdata[k][msk] for k in rupdata}
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         with pne_mon:
-            bdata = disaggregate(cmaker, singlesitecol, rupdata, iml2, eps3)
+            bdata = disaggregate(cmaker, singlesitecol, rdata, iml2, eps3)
         with mat_mon:
             yield sid, _build_disagg_matrix(bdata, bins)
 
