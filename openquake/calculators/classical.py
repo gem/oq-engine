@@ -155,7 +155,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if pmap:
                     acc[grp_id] |= pmap
             rup_data = dic['rup_data']
-            if rup_data:
+            if len(rup_data['grp_id']):
                 nr = len(rup_data['srcidx'])
                 for k in self.rparams:
                     try:
@@ -181,7 +181,8 @@ class ClassicalCalculator(base.HazardCalculator):
         csm_info = self.csm.info
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
-        rparams = set()
+        rparams = {'grp_id', 'srcidx', 'occurrence_rate',
+                   'weight', 'probs_occur'}
         vparams = {'sid', 'lon', 'lat'}
         for grp in self.csm.src_groups:
             gsims = csm_info.gsim_lt.get_gsims(grp.trt)

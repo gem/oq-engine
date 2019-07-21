@@ -280,7 +280,7 @@ class CompositionInfo(object):
 
     def grp_by(self, name):
         """
-        :returns: a dictionary grp_id -> TRT string
+        :returns: a dictionary grp_id -> group attribute
         """
         dic = {}
         for smodel in self.source_models:

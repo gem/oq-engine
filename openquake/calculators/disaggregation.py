@@ -24,7 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, gen_slices
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
@@ -72,14 +72,12 @@ def _iml2s(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return lst
 
 
-def compute_disagg(dstore, grp, slc, cmaker, iml2s, trti, bin_edges, monitor):
+def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dstore:
         a :class:`openquake.baselib.datastore.DataStore` instance
-    :param grp:
-        string of kind `grp-XX` describing a group of ruptures
     :param slc:
         a slice of ruptures
     :param cmaker:
@@ -99,7 +97,7 @@ def compute_disagg(dstore, grp, slc, cmaker, iml2s, trti, bin_edges, monitor):
     dstore.open('r')
     oqparam = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rupdata = dstore['rup/' + grp][slc]
+    rupdata = {k: dstore['rup/' + k][slc] for k in dstore['rup']}
     dstore.close()
     result = {'trti': trti}
     # all the time is spent in collect_bin_data
@@ -295,26 +293,25 @@ producing too small PoEs.'''
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
         # submit disagg tasks
-        nrups = sum(len(dset) for dset in self.datastore['rup'].values())
-        blocksize = nrups // (oq.concurrent_tasks or 1) + 1
-        slices_by_grp = AccumDict(accum=[])
-        for grp, dset in self.datastore['rup'].items():
-            slices_by_grp[grp].extend(gen_slices(len(dset), blocksize))
-        smap = parallel.Starmap(compute_disagg,
-                                hdf5path=self.datastore.filename)
-        self.datastore.close()  # must stay after the smap
-        for grp, slices in slices_by_grp.items():
-            grp_id = int(grp[4:])
-            trt = csm_info.trt_by_grp[grp_id]
+        gid = self.datastore['rup/grp_id'][()]
+        blocksize = len(gid) // (oq.concurrent_tasks or 1) + 1
+        allargs = []
+        for grp_id, trt in csm_info.trt_by_grp.items():
+            idxs, = numpy.where(gid == grp_id)
+            assert (idxs == numpy.sort(idxs)).all()
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim, src_filter.integration_distance,
                 {'filter_distance': oq.filter_distance})
-            for slc in slices:
-                smap.submit(self.datastore, grp, slc, cmaker,
-                            iml2s, trti, self.bin_edges)
-        results = smap.reduce(self.agg_result, AccumDict(accum={}))
+            for block in block_splitter(idxs, blocksize):
+                slc = slice(block[0], block[-1])
+                allargs.append((self.datastore, slc, cmaker,
+                                iml2s, trti, self.bin_edges))
+        self.datastore.close()  # must stay after the smap
+        results = parallel.Starmap(
+            compute_disagg, allargs, hdf5path=self.datastore.filename
+        ).reduce(self.agg_result, AccumDict(accum={}))
         return results
 
     def save_bin_edges(self):
