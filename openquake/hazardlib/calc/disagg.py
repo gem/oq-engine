@@ -201,7 +201,7 @@ def _build_disagg_matrix(bdata, bins):
     out = {}
     num_zeros = 0
     for k, pnes in bdata.items():
-        # pnes has shape (U, 1, E)
+        # pnes has shape (U, E)
         if pnes.sum() == pnes.size:  # all pnes are 1
             num_zeros += 1
             continue  # zero matrices are not transferred
@@ -346,6 +346,7 @@ def disaggregation(
         rdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
         idxs = _site_indices(rdata['sid'], 1)[0]
         bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
+
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
