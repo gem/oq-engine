@@ -72,10 +72,13 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
         return pack(acc, 'mags dists lons lats'.split())
-    # maxdist = cmaker.maximum_distance(cmaker.trt)
+    maxdist = cmaker.maximum_distance(cmaker.trt)
     acc['mags'] = rupdata['mag']
     for ridx, sids in enumerate(rupdata['sid']):
         idx, = numpy.where(sids == sid)
+        mindist = rupdata[cmaker.filter_distance][ridx][idx].min()
+        if mindist >= maxdist:
+            continue
         rctx = contexts.RuptureContext()
         for par in rupdata:
             setattr(rctx, par, rupdata[par][ridx])
@@ -83,8 +86,8 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
             (param, getattr(rctx, param)[idx])
             for param in cmaker.REQUIRES_DISTANCES
         ).roundup(gsim.minimum_distance)
-        acc['lons'].append(rctx.lon)
-        acc['lats'].append(rctx.lat)
+        acc['lons'].append(rctx.lon[idx])
+        acc['lats'].append(rctx.lat[idx])
         acc['dists'].append(getattr(rctx, cmaker.filter_distance)[idx])
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
@@ -344,8 +347,8 @@ def disaggregation(
             {'filter_distance': filter_distance})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
-        rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        bdata[trt] = disaggregate(cmaker, sitecol, rupdata, iml2, eps3)
+        rdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
+        bdata[trt] = disaggregate(cmaker, sitecol, rdata, iml2, eps3)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
