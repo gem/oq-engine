@@ -133,7 +133,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     pmap.trt = trt
-    rupdata = {grp_id: [] for grp_id in grp_ids}
+    rup_data = {}
+    rupvdata = {}
     # AccumDict of arrays with 2 elements weight, calc_time
     calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
@@ -156,9 +157,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         elif poemap:
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
-        if len(cmaker.rupdata):
+        if len(cmaker.data):
             for gid in src.src_group_ids:
-                rupdata[gid].append(cmaker.rupdata)
+                rup_data += cmaker.data
+                rupvdata += cmaker.vdata
         calc_times[src.id] += numpy.array([src.weight, time.time() - t0])
         # storing the number of contributing ruptures too
         eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
@@ -173,11 +175,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param, tom, imtls, gsims, grp_ids, pmap)
     # Return results
-    for gid, data in rupdata.items():
-        if len(data):
-            rupdata[gid] = numpy.concatenate(data)
-    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data=rupdata, nsites=nsites)
+    return dict(pmap=pmap, calc_times=calc_times,
+                eff_ruptures=eff_ruptures, nsites=nsites,
+                rup_data={k: numpy.array(v) for k, v in rup_data.items()},
+                rupvdata=rupvdata)
 
 
 def calc_hazard_curves(
