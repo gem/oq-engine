@@ -631,7 +631,7 @@ class AccumDict(dict):
                 if k not in self:
                     self[k] = v
                 elif isinstance(v, list):
-                    # special case optimized for speed
+                    # specialized for speed
                     self[k].extend(v)
                 else:
                     self[k] = self[k] + v
