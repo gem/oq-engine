@@ -291,7 +291,7 @@ producing too small PoEs.'''
 
         # submit disagg tasks
         gid = self.datastore['rup/grp_id'][()]
-        indices_by_grp = get_indices(gid)
+        indices_by_grp = get_indices(gid)  # grp_id -> [(start, stop),...]
         allargs = []
         for grp_id, trt in csm_info.trt_by_grp.items():
             trti = trt_num[trt]
@@ -299,11 +299,9 @@ producing too small PoEs.'''
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim, src_filter.integration_distance,
                 {'filter_distance': oq.filter_distance})
-            for ss in indices_by_grp[grp_id]:
-                for start, stop in ss:
-                    slc = slice(start, stop)
-                    allargs.append((self.datastore, slc, cmaker,
-                                    iml2s, trti, self.bin_edges))
+            for start, stop in indices_by_grp[grp_id]:
+                allargs.append((self.datastore, slice(start, stop), cmaker,
+                                iml2s, trti, self.bin_edges))
         self.datastore.close()  # must stay after the smap
         results = parallel.Starmap(
             compute_disagg, allargs, hdf5path=self.datastore.filename

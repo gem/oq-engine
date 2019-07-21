@@ -165,9 +165,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.datastore.extend('rup/' + k, v)
                 rupvdata = dic['rupvdata']
                 for par in self.vparams:
-                    try:
-                        val = rupvdata[par]  # varlen-array of size nr
-                    except KeyError:
+                    val = rupvdata[par]  # varlen-array of size nr
+                    if len(val) == 0:  # missing parameter
                         val = [numpy.zeros(0, F32)] * nr
                     self.datastore.hdf5.save_vlen('rup/' + par, val)
             if 'source_data' in dic:
