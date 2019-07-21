@@ -51,7 +51,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
 
     :param cmaker: a ContextMaker instance
     :param sitecol: a SiteCollection with 1 site
-    :param rupdata: an array of rupture data with the same TRT
+    :param rupdata: a dictionary of arrays with the rupture data
     :param iml2: a 2D array of IMLs of shape (M, P)
     :param eps3: a triple (truncnorm, epsilons, epsilon bands)
     :returns:
@@ -63,21 +63,23 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
         return pack(acc, 'mags dists lons lats'.split())
-    maxdist = cmaker.maximum_distance(cmaker.trt)
-    dists = rupdata[cmaker.filter_distance][:, sid]
-    if gsim.minimum_distance:
-        dists[dists < gsim.minimum_distance] = gsim.minimum_distance
-    rdata = rupdata[dists < maxdist]  # discard far away ruptures
-    acc['mags'] = rdata['mag']
-    acc['lons'] = rdata['lon'][:, sid]
-    acc['lats'] = rdata['lat'][:, sid]
-    acc['dists'] = dists[dists < maxdist]
-    for rec in rdata:
-        rctx = contexts.RuptureContext(rec)
+    # maxdist = cmaker.maximum_distance(cmaker.trt)
+    acc['mags'] = rupdata['mag']
+    for ridx, sids in enumerate(rupdata['sid']):
+        idxs, = numpy.where(sids == sid)
+        if len(idxs) == 0:  # there are no ruptures affecting the site
+            continue
+        [idx] = idxs
+        rctx = contexts.RuptureContext()
+        for par in rupdata:
+            setattr(rctx, par, rupdata[par][ridx])
         dctx = contexts.DistancesContext(
-            (param, rec[param][[sid]])
+            (param, getattr(rctx, param)[idx])
             for param in cmaker.REQUIRES_DISTANCES
         ).roundup(gsim.minimum_distance)
+        acc['lons'].append(rctx.lon)
+        acc['lats'].append(rctx.lat)
+        acc['dists'].append(getattr(rctx, cmaker.filter_distance)[idx])
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
                 iml = iml2[m, p]

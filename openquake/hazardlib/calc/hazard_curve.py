@@ -139,6 +139,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     nsites = {}  # src.id -> num_sites
+    gids = []
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
         nsites[src.id] = src.nsites
@@ -160,7 +161,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         if len(cmaker.data):
             nr = len(cmaker.vdata['sid'])
             for gid in src.src_group_ids:
-                rup_data['grp_id'].extend([gid] * nr)
+                gids.extend([gid] * nr)
                 for k, v in cmaker.data.items():
                     rup_data[k].extend(v)
                 for k, v in cmaker.vdata.items():
@@ -179,10 +180,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param, tom, imtls, gsims, grp_ids, pmap)
     # Return results
-    return dict(pmap=pmap, calc_times=calc_times,
-                eff_ruptures=eff_ruptures, nsites=nsites,
-                rup_data={k: numpy.array(v) for k, v in rup_data.items()},
-                rupvdata=rupvdata)
+    rdata = {k: numpy.array(v) for k, v in rup_data.items()}
+    rdata['grp_id'] = numpy.uint16(gids)
+    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
+                nsites=nsites, rup_data=rdata, rupvdata=rupvdata)
 
 
 def calc_hazard_curves(
