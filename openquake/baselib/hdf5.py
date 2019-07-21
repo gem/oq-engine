@@ -310,8 +310,7 @@ class File(h5py.File):
             totlen += len(val)
         length = len(dset)
         dset.resize((length + len(data),) + shape[1:])
-        for i, arr in enumerate(data):
-            dset[length + i] = arr
+        dset[length:length + len(data)] = data
         dset.attrs['nbytes'] = nbytes
         dset.attrs['totlen'] = totlen
 
