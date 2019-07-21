@@ -55,19 +55,9 @@ def _site_indices(sids_by_rup, N):
     return idx
 
 
-def disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
-    """
-    Disaggregate (separate) PoE in different contributions.
-
-    :param cmaker: a ContextMaker instance
-    :param sitecol: a SiteCollection with 1 site
-    :param rupdata: a dictionary of arrays with the rupture data
-    :param indices: site indeces for each rupture
-    :param iml2: a 2D array of IMLs of shape (M, P)
-    :param eps3: a triple (truncnorm, epsilons, epsilon bands)
-    :returns:
-        an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
-    """
+def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
+    # disaggregate (separate) PoE in different contributions
+    # returns AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
     [sid] = sitecol.sids
     acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[])
     try:
@@ -237,8 +227,8 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         with pne_mon:
-            bdata = disaggregate(cmaker, singlesitecol, rupdata,
-                                 indices[sid], iml2, eps3)
+            bdata = _disaggregate(cmaker, singlesitecol, rupdata,
+                                  indices[sid], iml2, eps3)
         with mat_mon:
             yield sid, _build_disagg_matrix(bdata, bins)
 
@@ -355,7 +345,7 @@ def disaggregation(
             srcs[0].temporal_occurrence_model)
         rdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
         idxs = _site_indices(rdata['sid'], 1)[0]
-        bdata[trt] = disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
+        bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
