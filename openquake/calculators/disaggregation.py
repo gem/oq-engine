@@ -24,7 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter, get_indices
+from openquake.baselib.general import AccumDict, gen_slices, get_indices
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
@@ -293,6 +293,7 @@ producing too small PoEs.'''
         gid = self.datastore['rup/grp_id'][()]
         indices_by_grp = get_indices(gid)  # grp_id -> [(start, stop),...]
         allargs = []
+        blocksize = len(gid) // (oq.concurrent_tasks or 1) + 1
         for grp_id, trt in csm_info.trt_by_grp.items():
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
@@ -300,8 +301,9 @@ producing too small PoEs.'''
                 trt, rlzs_by_gsim, src_filter.integration_distance,
                 {'filter_distance': oq.filter_distance})
             for start, stop in indices_by_grp[grp_id]:
-                allargs.append((self.datastore, slice(start, stop), cmaker,
-                                iml2s, trti, self.bin_edges))
+                for slc in gen_slices(start, stop, blocksize):
+                    allargs.append((self.datastore, slc, cmaker,
+                                    iml2s, trti, self.bin_edges))
         self.datastore.close()  # must stay after the smap
         results = parallel.Starmap(
             compute_disagg, allargs, hdf5path=self.datastore.filename
