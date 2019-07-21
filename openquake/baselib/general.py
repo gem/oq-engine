@@ -628,10 +628,13 @@ class AccumDict(dict):
     def __iadd__(self, other):
         if hasattr(other, 'items'):
             for k, v in other.items():
-                try:
-                    self[k] = self[k] + v
-                except KeyError:
+                if k not in self:
                     self[k] = v
+                elif isinstance(v, list):
+                    # special case optimized for speed
+                    self[k].extend(v)
+                else:
+                    self[k] = self[k] + v
         else:  # add other to all elements
             for k in self:
                 self[k] = self[k] + other
