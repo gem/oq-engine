@@ -182,8 +182,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Return results
     rdata = {k: numpy.array(v) for k, v in rup_data.items()}
     rdata['grp_id'] = numpy.uint16(gids)
+    vdata = {k: numpy.array(v) for k, v in rupvdata.items()}
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                nsites=nsites, rup_data=rdata, rupvdata=rupvdata)
+                nsites=nsites, rup_data=rdata, rupvdata=vdata)
 
 
 def calc_hazard_curves(
