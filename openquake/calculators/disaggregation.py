@@ -292,8 +292,8 @@ producing too small PoEs.'''
         # submit disagg tasks
         gid = self.datastore['rup/grp_id'][()]
         indices_by_grp = get_indices(gid)  # grp_id -> [(start, stop),...]
-        allargs = []
         blocksize = len(gid) // (oq.concurrent_tasks or 1) + 1
+        allargs = []
         for grp_id, trt in csm_info.trt_by_grp.items():
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
@@ -304,7 +304,7 @@ producing too small PoEs.'''
                 for slc in gen_slices(start, stop, blocksize):
                     allargs.append((self.datastore, slc, cmaker,
                                     iml2s, trti, self.bin_edges))
-        self.datastore.close()  # must stay after the smap
+        self.datastore.close()
         results = parallel.Starmap(
             compute_disagg, allargs, hdf5path=self.datastore.filename
         ).reduce(self.agg_result, AccumDict(accum={}))
