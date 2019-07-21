@@ -84,8 +84,7 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
             setattr(rctx, par, rupdata[par][ridx])
         dctx = contexts.DistancesContext(
             (param, getattr(rctx, param)[idx])
-            for param in cmaker.REQUIRES_DISTANCES
-        ).roundup(gsim.minimum_distance)
+            for param in cmaker.REQUIRES_DISTANCES)
         acc['lons'].append(rctx.lon[idx])
         acc['lats'].append(rctx.lat[idx])
         acc['dists'].append(getattr(rctx, cmaker.filter_distance)[idx])
