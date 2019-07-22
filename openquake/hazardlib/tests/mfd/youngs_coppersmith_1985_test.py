@@ -119,9 +119,10 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
         self.assertEqual(str(exc), error)
 
     def test_from_total_moment_rate(self):
+        total_moment_rate = 6.38119198365e15
         mfd = YoungsCoppersmith1985MFD.from_total_moment_rate(
             min_mag=5.0, b_val=0.85, char_mag=6.75,
-            total_moment_rate=6.38119198365e15, bin_width=0.1)
+            total_moment_rate=total_moment_rate, bin_width=0.1)
         computed_rates = mfd.get_annual_occurrence_rates()
         expected_rates = [(5.05, 0.00017054956240777723),
                           (5.15, 0.00014023312414148282),
@@ -143,7 +144,13 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
                           (6.75, 7.057610011964502e-05),
                           (6.85, 7.057610011964502e-05),
                           (6.95, 7.057610011964502e-05)]
-        numpy.testing.assert_allclose(computed_rates, expected_rates)
+
+        computed_total_moment_rate = sum([rate * 10.**(1.5 * mag + 9.05) 
+                                          for (mag, rate) in computed_rates])
+
+        #numpy.testing.assert_allclose(computed_rates, expected_rates)
+        numpy.testing.assert_almost_equal(computed_total_moment_rate,
+                                          total_moment_rate)
 
         self.assertEqual((5.05, 6.95), mfd.get_min_max_mag())
 
