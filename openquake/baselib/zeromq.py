@@ -124,12 +124,11 @@ class Socket(object):
         self.running = True
         while self.running:
             try:
-                if self.zsocket.poll(self.timeout):
+                ready = self.zsocket.poll(self.timeout)
+                if ready:
                     args = self.zsocket.recv_pyobj()
-                else:
-                    # wait a bit more; print a warning for PULL sockets
-                    if self.socket_type == 'PULL':
-                        logging.warning('Timeout in %s', self)
+                elif self.socket_type == zmq.PULL:
+                    logging.debug('Timeout in %s', self)
                     continue
             except zmq.ZMQError:
                 # sending SIGTERM raises ZMQError
