@@ -133,11 +133,12 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     pmap.trt = trt
-    rupdata = {grp_id: [] for grp_id in grp_ids}
+    rup_data = AccumDict(accum=[])
     # AccumDict of arrays with 2 elements weight, calc_time
     calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     nsites = {}  # src.id -> num_sites
+    gids = []
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
         nsites[src.id] = src.nsites
@@ -156,9 +157,12 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         elif poemap:
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
-        if len(cmaker.rupdata):
+        if len(cmaker.data):
+            nr = len(cmaker.data['sid_'])
             for gid in src.src_group_ids:
-                rupdata[gid].append(cmaker.rupdata)
+                gids.extend([gid] * nr)
+                for k, v in cmaker.data.items():
+                    rup_data[k].extend(v)
         calc_times[src.id] += numpy.array([src.weight, time.time() - t0])
         # storing the number of contributing ruptures too
         eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
@@ -173,11 +177,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param, tom, imtls, gsims, grp_ids, pmap)
     # Return results
-    for gid, data in rupdata.items():
-        if len(data):
-            rupdata[gid] = numpy.concatenate(data)
+    rdata = {k: numpy.array(v) for k, v in rup_data.items()}
+    rdata['grp_id'] = numpy.uint16(gids)
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data=rupdata, nsites=nsites)
+                nsites=nsites, rup_data=rdata)
 
 
 def calc_hazard_curves(

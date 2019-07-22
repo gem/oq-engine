@@ -24,7 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, gen_slices
+from openquake.baselib.general import AccumDict, gen_slices, get_indices
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
@@ -39,7 +39,7 @@ weight = operator.attrgetter('weight')
 DISAGG_RES_FMT = '%(imt)s-%(sid)s-%(poe)s/'
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 POE_TOO_BIG = '''\
-You are trying to disaggregate for poe=%s.
+Site #%d: you are trying to disaggregate for poe=%s.
 However the source model produces at most probabilities
 of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
@@ -54,7 +54,7 @@ def _check_curve(sid, rlz, curve, imtls, poes_disagg):
         max_poe = curve[imt].max()
         for poe in poes_disagg:
             if poe > max_poe:
-                logging.warning(POE_TOO_BIG, poe, max_poe, rlz, imt)
+                logging.warning(POE_TOO_BIG, sid, poe, max_poe, rlz, imt)
                 bad += 1
     return bool(bad)
 
@@ -91,14 +91,12 @@ def _iml2s(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return lst
 
 
-def compute_disagg(dstore, grp, slc, cmaker, iml2s, trti, bin_edges, monitor):
+def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dstore:
         a :class:`openquake.baselib.datastore.DataStore` instance
-    :param grp:
-        string of kind `grp-XX` describing a group of ruptures
     :param slc:
         a slice of ruptures
     :param cmaker:
@@ -118,7 +116,7 @@ def compute_disagg(dstore, grp, slc, cmaker, iml2s, trti, bin_edges, monitor):
     dstore.open('r')
     oqparam = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rupdata = dstore['rup/' + grp][slc]
+    rupdata = {k: dstore['rup/' + k][slc] for k in dstore['rup']}
     dstore.close()
     result = {'trti': trti}
     # all the time is spent in collect_bin_data
@@ -312,26 +310,24 @@ class DisaggregationCalculator(base.HazardCalculator):
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
         # submit disagg tasks
-        nrups = sum(len(dset) for dset in self.datastore['rup'].values())
-        blocksize = nrups // (oq.concurrent_tasks or 1) + 1
-        slices_by_grp = AccumDict(accum=[])
-        for grp, dset in self.datastore['rup'].items():
-            slices_by_grp[grp].extend(gen_slices(len(dset), blocksize))
-        smap = parallel.Starmap(compute_disagg,
-                                hdf5path=self.datastore.filename)
-        self.datastore.close()  # must stay after the smap
-        for grp, slices in slices_by_grp.items():
-            grp_id = int(grp[4:])
-            trt = csm_info.trt_by_grp[grp_id]
+        gid = self.datastore['rup/grp_id'][()]
+        indices_by_grp = get_indices(gid)  # grp_id -> [(start, stop),...]
+        blocksize = len(gid) // (oq.concurrent_tasks or 1) + 1
+        allargs = []
+        for grp_id, trt in csm_info.trt_by_grp.items():
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim, src_filter.integration_distance,
                 {'filter_distance': oq.filter_distance})
-            for slc in slices:
-                smap.submit(self.datastore, grp, slc, cmaker,
-                            iml2s, trti, self.bin_edges)
-        results = smap.reduce(self.agg_result, AccumDict(accum={}))
+            for start, stop in indices_by_grp[grp_id]:
+                for slc in gen_slices(start, stop, blocksize):
+                    allargs.append((self.datastore, slc, cmaker,
+                                    iml2s, trti, self.bin_edges))
+        self.datastore.close()
+        results = parallel.Starmap(
+            compute_disagg, allargs, hdf5path=self.datastore.filename
+        ).reduce(self.agg_result, AccumDict(accum={}))
         return results
 
     def save_bin_edges(self):
