@@ -285,9 +285,9 @@ class OqParam(valid.ParamSet):
 
         # checks for ebrisk
         if self.calculation_mode == 'ebrisk':
-            pass
-            # elif self.number_of_logic_tree_samples == 0:
-            #    logging.warning('ebrisk is not meant for full enumeration')
+            if self.risk_investigation_time is None:
+                raise InvalidFile('Please set the risk_investigation_time in'
+                                  ' %s' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
