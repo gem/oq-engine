@@ -83,8 +83,7 @@ class RupData(object):
     def __init__(self, cmaker, sitecol):
         self.cmaker = cmaker
         self.sitecol = sitecol  # filtered
-        self.data = AccumDict(accum=[])  # param -> list of floats
-        self.vdata = AccumDict(accum=[])  # param -> list of arrays
+        self.data = AccumDict(accum=[])
 
     def from_srcs(self, srcs):  # used in disagg.disaggregation
         """
@@ -94,11 +93,7 @@ class RupData(object):
             for rup in src.iter_ruptures():
                 self.cmaker.add_rup_params(rup)
                 self.add(rup, src.id)
-        rdata = {}
-        for k, v in self.data.items():
-            rdata[k] = numpy.array(v)
-        rdata.update(self.vdata)
-        return rdata
+        return {k: numpy.array(v) for k, v in self.data.items()}
 
     def add(self, rup, src_id):
         try:
@@ -114,13 +109,13 @@ class RupData(object):
         for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
             self.data[rup_param].append(getattr(rup, rup_param))
 
-        self.vdata['sid'].append(self.sitecol.sids)
+        self.data['sid_'].append(numpy.int16(self.sitecol.sids))
         for dst_param in self.cmaker.REQUIRES_DISTANCES:
-            self.vdata[dst_param].append(
+            self.data[dst_param + '_'].append(
                 F32(get_distances(rup, self.sitecol, dst_param)))
         closest = rup.surface.get_closest_points(self.sitecol)
-        self.vdata['lon'].append(F32(closest.lons))
-        self.vdata['lat'].append(F32(closest.lats))
+        self.data['lon_'].append(F32(closest.lons))
+        self.data['lat_'].append(F32(closest.lats))
 
 
 class ContextMaker(object):
@@ -274,7 +269,7 @@ class ContextMaker(object):
             yield rup, sctx, dctx
             if fewsites:  # store rupdata
                 rupdata.add(rup, src.id)
-        self.data, self.vdata = rupdata.data, rupdata.vdata
+        self.data = rupdata.data
 
     def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
