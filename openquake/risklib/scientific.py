@@ -82,7 +82,10 @@ class VulnerabilityFunction(object):
                  distribution="LN"):
         """
         A wrapper around a probabilistic distribution function
-        (currently only the log normal distribution is supported).
+        (currently, the Log-normal ("LN") and Beta ("BT") 
+        distributions are supported amongst the continuous probability
+        distributions. For specifying a discrete probability 
+        distribution refer to the class VulnerabilityFunctionWithPMF.
         It is meant to be pickeable to allow distributed computation.
         The only important method is `.__call__`, which applies
         the vulnerability function to a given set of ground motion

@@ -34,14 +34,14 @@ class Hdf5TestCase(unittest.TestCase):
         nrows = hdf5.extend3(self.tmp, 'dset', data)
         self.assertEqual(nrows, 3)
         with hdf5.File(self.tmp, 'r') as f:
-            print(f['dset'].value)
+            print(f['dset'][()])
 
     def test_extend3_vlen_same_len(self):
         data = numpy.array([[4, 1], [1, 2], [3, 1]], hdf5.vfloat32)
         nrows = hdf5.extend3(self.tmp, 'dset', data)
         self.assertEqual(nrows, 3)
         with hdf5.File(self.tmp, 'r') as f:
-            print(f['dset'].value)
+            print(f['dset'][()])
 
     def tearDown(self):
         os.remove(self.tmp)
