@@ -338,12 +338,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
                     data.append((grp_id, grp_name[grp_id], extreme))
-                    #if 'rup' in set(self.datastore):
-                    #    self.datastore.set_nbytes('rup/grp-%02d' % grp_id)
-                    #    tot_ruptures = sum(
-                    #        len(r) for r in self.datastore['rup'].values())
-                    #    self.datastore.set_attrs(
-                    #        'rup', tot_ruptures=tot_ruptures)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
             self.datastore['disagg_by_grp'] = numpy.array(
