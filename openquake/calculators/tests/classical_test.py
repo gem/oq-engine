@@ -437,10 +437,16 @@ hazard_uhs-std.csv
                                   case_30.__file__)
             # check rupdata
             nruptures = []
-            for grp, rupdata in sorted(self.calc.datastore['rup'].items()):
-                nruptures.append((grp, len(rupdata)))
-            self.assertEqual(nruptures, [('grp-00', 700), ('grp-01', 1117),
-                                         ('grp-02', 1385)])
+            for par, rupdata in sorted(self.calc.datastore['rup'].items()):
+                nruptures.append((par, len(rupdata)))
+            self.assertEqual(
+                nruptures,
+                [('dip', 3202), ('grp_id', 3202), ('hypo_depth', 3202),
+                 ('lat_', 3202), ('lon_', 3202), ('mag', 3202),
+                 ('occurrence_rate', 3202), ('probs_occur', 3202),
+                 ('rake', 3202), ('rjb_', 3202), ('rrup_', 3202),
+                 ('rx_', 3202), ('sid_', 3202), ('srcidx', 3202),
+                 ('weight', 3202), ('ztor', 3202)])
 
             # check best_rlz on 5 sites
             best_rlz = self.calc.datastore['best_rlz'][()]
