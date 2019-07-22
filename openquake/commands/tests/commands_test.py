@@ -442,12 +442,16 @@ class EngineRunJobTestCase(unittest.TestCase):
             job_id = run_job(job_ini, log_level='error')
         self.assertIn('id | name', str(p))
 
-        # sanity check on the performance view: make sure that the most
-        # relevant information is stored (it can be lost for instance due
-        # to a wrong refactoring of the safely_call function)
+        # sanity check on the performance views: make sure that the most
+        # relevant information is stored (it can be lost due to a wrong
+        # refactoring of the monitoring and it happened several times)
         with read(job_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
+            task_info = view('task_info', dstore)
+            self.assertIn('compute_gmfs', task_info)
+            job_info = view('job_info', dstore)
+            self.assertIn('compute_gmfs', job_info)
 
     def test_smart_run(self):
         # test smart_run with gmf_ebrisk, since it was breaking

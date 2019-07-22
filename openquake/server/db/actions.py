@@ -795,3 +795,17 @@ def get_job_from_checksum(db, checksum):
     if not jobs:
         return
     return jobs[0]
+
+
+def start_zworkers(db, master):
+    """
+    Start the zmq workers
+    """
+    master.start()
+
+
+def stop_zworkers(db, master):
+    """
+    Stop the zmq workers
+    """
+    master.stop()

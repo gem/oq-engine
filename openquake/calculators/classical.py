@@ -23,6 +23,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
@@ -128,7 +129,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         calc_times[src.id] += numpy.array([src.weight, dt], F32)
         nsites[src.id] = src.nsites
     return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data={}, nsites=nsites)
+                rup_data={'grp_id': []}, nsites=nsites)
 
 
 @base.calculators.add('classical')
@@ -153,9 +154,21 @@ class ClassicalCalculator(base.HazardCalculator):
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
-            for grp_id, data in dic['rup_data'].items():
-                if len(data):
-                    self.datastore.extend('rup/grp-%02d' % grp_id, data)
+            rup_data = dic['rup_data']
+            if len(rup_data['grp_id']):
+                nr = len(rup_data['srcidx'])
+                default = (numpy.ones(nr, F32) * numpy.nan,
+                           [numpy.zeros(0, F32)] * nr)
+                for k in self.rparams:
+                    vlen = k.endswith('_')  # variable lenght array
+                    try:
+                        v = rup_data[k]
+                    except KeyError:
+                        v = default[vlen]
+                    if vlen:
+                        self.datastore.hdf5.save_vlen('rup/' + k, v)
+                    else:
+                        self.datastore.extend('rup/' + k, v)
             if 'source_data' in dic:
                 self.datastore.extend('source_data', dic['source_data'])
         return acc
@@ -167,11 +180,18 @@ class ClassicalCalculator(base.HazardCalculator):
         csm_info = self.csm.info
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
+        rparams = {'grp_id', 'srcidx', 'occurrence_rate',
+                   'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
         for grp in self.csm.src_groups:
-            num_gsims = len(csm_info.gsim_lt.get_gsims(grp.trt))
-            zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
+            gsims = csm_info.gsim_lt.get_gsims(grp.trt)
+            cm = ContextMaker(grp.trt, gsims)
+            rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
+            for dparam in cm.REQUIRES_DISTANCES:
+                rparams.add(dparam + '_')
+            zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         zd.nsites = AccumDict()  # src.id -> nsites
+        self.rparams = sorted(rparams)
         return zd
 
     def execute(self):
@@ -195,7 +215,7 @@ class ClassicalCalculator(base.HazardCalculator):
         #     logging.warn('No integration_distance')
         with self.monitor('managing sources', autoflush=True):
             smap = parallel.Starmap(
-                self.core_task.__func__, monitor=self.monitor())
+                self.core_task.__func__, hdf5path=self.datastore.filename)
             self.submit_sources(smap)
         self.calc_times = AccumDict(accum=numpy.zeros(2, F32))
         try:
@@ -318,12 +338,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
                     data.append((grp_id, grp_name[grp_id], extreme))
-                    if 'rup' in set(self.datastore):
-                        self.datastore.set_nbytes('rup/grp-%02d' % grp_id)
-                        tot_ruptures = sum(
-                            len(r) for r in self.datastore['rup'].values())
-                        self.datastore.set_attrs(
-                            'rup', tot_ruptures=tot_ruptures)
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
             self.datastore['disagg_by_grp'] = numpy.array(
@@ -362,8 +376,9 @@ class ClassicalCalculator(base.HazardCalculator):
             (getters.PmapGetter(parent, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
-        parallel.Starmap(build_hazard_stats, allargs, self.monitor()).reduce(
-            self.save_hazard_stats)
+        parallel.Starmap(build_hazard_stats, allargs,
+                         hdf5path=self.datastore.filename).reduce(
+                             self.save_hazard_stats)
 
 
 @base.calculators.add('preclassical')

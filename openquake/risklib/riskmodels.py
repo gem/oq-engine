@@ -304,7 +304,8 @@ class RiskModel(object):
         :returns: a list of triples (eal_orig, eal_retro, bcr_result)
         """
         if loss_type != 'structural':
-            raise NotImplemented('retrofitted is not defined for ' + loss_type)
+            raise NotImplementedError(
+                'retrofitted is not defined for ' + loss_type)
         n = len(assets)
         self.assets = assets
         vf = self.risk_functions[loss_type, 'vulnerability']

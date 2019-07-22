@@ -29,7 +29,7 @@ import numpy
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.performance import perf_dt, Monitor
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
@@ -123,15 +123,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self.datastore = datastore.DataStore(calc_id)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True)
+        self._monitor.hdf5path = self.datastore.filename  # autoflush
         self.oqparam = oqparam
-        if 'performance_data' not in self.datastore:
-            self.datastore.create_dset('performance_data', perf_dt)
 
     def monitor(self, operation='', **kw):
         """
         :returns: a new Monitor instance
         """
-        mon = self._monitor(operation, hdf5=self.datastore.hdf5)
+        mon = self._monitor(operation)
+        mon.hdf5path = self.datastore.filename  # flushable monitor
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
@@ -176,7 +176,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         with self._monitor:
             self._monitor.username = kw.get('username', '')
-            self._monitor.hdf5 = self.datastore.hdf5
             if concurrent_tasks is None:  # use the job.ini parameter
                 ct = self.oqparam.concurrent_tasks
             else:  # used the parameter passed in the command-line
@@ -215,7 +214,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-                self._monitor.flush()
 
                 if close:  # in the engine we close later
                     self.result = None
@@ -402,7 +400,7 @@ class HazardCalculator(BaseCalculator):
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(), srcfilter=self.src_filter)
+                oq, self.datastore.hdf5, srcfilter=self.src_filter)
             res = views.view('dupl_sources', self.datastore)
             logging.info(f'The composite source model has {res.val:,d} '
                          'ruptures')
@@ -448,8 +446,6 @@ class HazardCalculator(BaseCalculator):
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
             haz_sitecol = readinput.get_site_collection(oq)
-            # NB: horrible: get_site_collection calls get_pmap_from_nrml
-            # that sets oq.investigation_time, so it must be called first
             self.load_riskmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             self.datastore['poes/grp-00'] = fix_ones(readinput.pmap)
@@ -904,7 +900,7 @@ class RiskCalculator(HazardCalculator):
             getter = self.get_getter(kind, sid)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(getter, numpy.array(block))
+                yield riskinput.RiskInput(sid, getter, numpy.array(block))
             rinfo.append((sid, len(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
@@ -923,7 +919,7 @@ class RiskCalculator(HazardCalculator):
             self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.param, self.monitor()),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            weight=get_weight
+            weight=get_weight, hdf5path=self.datastore.filename
         ).reduce(self.combine)
         return res
 
