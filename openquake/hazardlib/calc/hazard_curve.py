@@ -134,7 +134,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
                       for grp_id in grp_ids})
     pmap.trt = trt
     rup_data = AccumDict(accum=[])
-    rupvdata = AccumDict(accum=[])
     # AccumDict of arrays with 2 elements weight, calc_time
     calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
     eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
@@ -159,13 +158,11 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
         if len(cmaker.data):
-            nr = len(cmaker.vdata['sid'])
+            nr = len(cmaker.data['sid_'])
             for gid in src.src_group_ids:
                 gids.extend([gid] * nr)
                 for k, v in cmaker.data.items():
                     rup_data[k].extend(v)
-                for k, v in cmaker.vdata.items():
-                    rupvdata[k].extend(v)
         calc_times[src.id] += numpy.array([src.weight, time.time() - t0])
         # storing the number of contributing ruptures too
         eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
@@ -182,9 +179,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Return results
     rdata = {k: numpy.array(v) for k, v in rup_data.items()}
     rdata['grp_id'] = numpy.uint16(gids)
-    vdata = {k: numpy.array(v) for k, v in rupvdata.items()}
     return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                nsites=nsites, rup_data=rdata, rupvdata=vdata)
+                nsites=nsites, rup_data=rdata)
 
 
 def calc_hazard_curves(
