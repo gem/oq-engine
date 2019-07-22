@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Sites for which the disaggregation PoE cannot be reached are discarded
+    and a warning is printed, rather than killing the whole computation
   * `oq show performance` can be called in the middle of a computation again
   * Filtered out the far away distances and reduced the time spent in
     saving the performance info by orders of magnitude in large disaggregations
