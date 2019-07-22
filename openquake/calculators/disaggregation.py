@@ -221,11 +221,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                                oq.imtls, oq.poes_disagg)
             if not bad:
                 ok_sites.append(sid)
-        self.sitecol = self.sitecol.filtered(ok_sites)
-        if len(self.sitecol) == 0:
+        if len(ok_sites) == 0:
             raise SystemExit('Cannot do any disaggregation')
         elif len(ok_sites) < self.N:
             logging.warning('Doing the disaggregation on' % self.sitecol)
+        return ok_sites
 
     def full_disaggregation(self):
         """
@@ -257,10 +257,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         if oq.iml_disagg:
             self.poe_id = {None: 0}
             curves = [None] * len(self.sitecol)  # no hazard curves are needed
+            self.ok_sites = set(self.sitecol.sids)
         else:
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs) for sid in self.sitecol.sids]
-            self.check_poes_disagg(curves, rlzs)
+            self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
         iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
@@ -416,14 +417,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         attrs['location'] = (lon, lat)
         # sanity check: all poe_agg should be the same
         attrs['poe_agg'] = poe_agg
-        if poe:
+        if poe and site_id in self.ok_sites:
             attrs['poe'] = poe
             poe_agg = numpy.mean(attrs['poe_agg'])
             if abs(1 - poe_agg / poe) > .1:
                 logging.warning(
-                    'poe_agg=%s is quite different from the expected'
+                    'Site #%d: poe_agg=%s is quite different from the expected'
                     ' poe=%s; perhaps the number of intensity measure'
-                    ' levels is too small?', poe_agg, poe)
+                    ' levels is too small?', site_id, poe_agg, poe)
 
     def build_disagg_by_src(self, iml2s):
         """
