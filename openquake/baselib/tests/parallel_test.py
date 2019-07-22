@@ -20,12 +20,11 @@ import os
 import unittest.mock as mock
 import time
 import shutil
-import pathlib
 import unittest
 import itertools
 import tempfile
 import numpy
-from openquake.baselib import parallel, performance, general, hdf5
+from openquake.baselib import parallel, general, hdf5
 
 try:
     import celery
@@ -118,19 +117,20 @@ class StarmapTestCase(unittest.TestCase):
                    ('aaaaaaaaeeeeiii',),
                    ('aaaaeeeeiiiiiooooooo',)]
         numchars = sum(len(arg) for arg, in allargs)  # 61
-        tmp = pathlib.Path(tempfile.mkdtemp(), 'calc_1.hdf5')
-        with hdf5.File(tmp) as h5:
-            monitor = performance.Monitor(hdf5=h5)
-            res = parallel.Starmap(supertask, allargs, monitor).reduce()
+        tmpdir = tempfile.mkdtemp()
+        tmp = os.path.join(tmpdir, 'calc_1.hdf5')
+        hdf5.File(tmp, 'w').close()  # the file must exist
+        smap = parallel.Starmap(supertask, allargs, hdf5path=tmp)
+        res = smap.reduce()
         self.assertEqual(res, {'n': numchars})
         # check that the correct information is stored in the hdf5 file
-        with hdf5.File(tmp) as h5:
+        with hdf5.File(tmp, 'r') as h5:
             num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
             self.assertEqual(num[b'total supertask'], 5)  # outputs
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
             self.assertGreater(len(h5['task_info/supertask']), 0)
-        shutil.rmtree(tmp.parent)
+        shutil.rmtree(tmpdir)
 
     @classmethod
     def tearDownClass(cls):
