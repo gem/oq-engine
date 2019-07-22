@@ -902,7 +902,7 @@ class RiskCalculator(HazardCalculator):
             getter = self.get_getter(kind, sid)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(getter, numpy.array(block))
+                yield riskinput.RiskInput(sid, getter, numpy.array(block))
             rinfo.append((sid, len(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
