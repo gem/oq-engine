@@ -260,7 +260,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # including the ones far away that will be discarded later on
         rgetters = self.gen_rupture_getters()
 
-        # build the associations eid -> rlz sequentially pr in parallel
+        # build the associations eid -> rlz sequentially or in parallel
         distribute = 'no' if len(events) < 1E5 else None
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
                                 ((rgetter,) for rgetter in rgetters),
