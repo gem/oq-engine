@@ -388,7 +388,8 @@ class RiskInput(object):
     :param assets_by_site:
         array of assets, one per site
     """
-    def __init__(self, hazard_getter, assets):
+    def __init__(self, sid, hazard_getter, assets):
+        self.sid = sid
         self.hazard_getter = hazard_getter
         self.assets = assets
         self.weight = len(assets)
@@ -398,9 +399,8 @@ class RiskInput(object):
         self.aids = numpy.array(aids, numpy.uint32)
 
     def __repr__(self):
-        return '<%s taxonomy=%s, %d asset(s)>' % (
-            self.__class__.__name__,
-            ' '.join(map(str, self.taxonomies)), len(self.aids))
+        return '<%s sid=%s, %d asset(s)>' % (
+            self.__class__.__name__, self.sid, len(self.aids))
 
 
 # used in scenario_risk
