@@ -25,6 +25,7 @@ from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
+F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth rvolc'.split())
 
@@ -119,9 +120,9 @@ class RupData(object):
         for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
             dtlist.append((rup_param, float))
         for dist_param in self.cmaker.REQUIRES_DISTANCES:
-            dtlist.append((dist_param, (float, (self.N,))))
-        dtlist.append(('lon', (float, (self.N,))))  # closest lons
-        dtlist.append(('lat', (float, (self.N,))))  # closest lats
+            dtlist.append((dist_param, (F32, (self.N,))))
+        dtlist.append(('lon', (F32, (self.N,))))  # closest lons
+        dtlist.append(('lat', (F32, (self.N,))))  # closest lats
         dtlist.append(('mutex_weight', float))
         dtlist.append(('probs_occur', vfloat64))
         return numpy.array(self.data, dtlist)
