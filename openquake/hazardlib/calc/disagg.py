@@ -48,11 +48,11 @@ def _eps3(truncation_level, n_epsilons):
 def _site_indices(sids_by_rup, N):
     # an array of indices of shape (N, U)
     U = len(sids_by_rup)
-    idx = -numpy.ones((N, U), numpy.int16)
+    mat = -numpy.ones((N, U), numpy.int16)
     for ridx, sids in enumerate(sids_by_rup):
         for sidx, sid in enumerate(sids):
-            idx[sid, ridx] = sidx
-    return idx
+            mat[sid, ridx] = sidx
+    return mat
 
 
 def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
@@ -66,10 +66,10 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
         return pack(acc, 'mags dists lons lats'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
     fildist = rupdata[cmaker.filter_distance + '_']
-    for ridx, idx in enumerate(indices):
-        if idx == -1:  # no contribution for this site
+    for ridx, sidx in enumerate(indices):
+        if sidx == -1:  # no contribution for this site
             continue
-        dist = fildist[ridx][idx]
+        dist = fildist[ridx][sidx]
         if dist >= maxdist:
             continue
         elif gsim.minimum_distance and dist < gsim.minimum_distance:
@@ -78,12 +78,12 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
         for par in rupdata:
             setattr(rctx, par, rupdata[par][ridx])
         dctx = contexts.DistancesContext(
-            (param, getattr(rctx, param + '_')[[idx]])
+            (param, getattr(rctx, param + '_')[[sidx]])
             for param in cmaker.REQUIRES_DISTANCES).roundup(
                     gsim.minimum_distance)
         acc['mags'].append(rctx.mag)
-        acc['lons'].append(rctx.lon_[idx])
-        acc['lats'].append(rctx.lat_[idx])
+        acc['lons'].append(rctx.lon_[sidx])
+        acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
