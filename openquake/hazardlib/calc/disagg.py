@@ -65,10 +65,11 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
     except KeyError:
         return pack(acc, 'mags dists lons lats'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
+    fildist = rupdata[cmaker.filter_distance + '_']
     for ridx, idx in enumerate(indices):
         if idx == -1:  # no contribution for this site
             continue
-        dist = rupdata[cmaker.filter_distance][ridx][idx]
+        dist = fildist[ridx][idx]
         if dist >= maxdist:
             continue
         elif gsim.minimum_distance and dist < gsim.minimum_distance:
@@ -77,12 +78,12 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
         for par in rupdata:
             setattr(rctx, par, rupdata[par][ridx])
         dctx = contexts.DistancesContext(
-            (param, getattr(rctx, param)[[idx]])
+            (param, getattr(rctx, param + '_')[[idx]])
             for param in cmaker.REQUIRES_DISTANCES).roundup(
                     gsim.minimum_distance)
         acc['mags'].append(rctx.mag)
-        acc['lons'].append(rctx.lon[idx])
-        acc['lats'].append(rctx.lat[idx])
+        acc['lons'].append(rctx.lon_[idx])
+        acc['lats'].append(rctx.lat_[idx])
         acc['dists'].append(dist)
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
@@ -221,7 +222,7 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
     """
     if len(sitecol) >= 32768:
         raise ValueError('You can disaggregate at max 32,768 sites')
-    indices = _site_indices(rupdata['sid'], len(sitecol))
+    indices = _site_indices(rupdata['sid_'], len(sitecol))
     eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
@@ -344,7 +345,7 @@ def disaggregation(
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        idxs = _site_indices(rdata['sid'], 1)[0]
+        idxs = _site_indices(rdata['sid_'], 1)[0]
         bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
 
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
