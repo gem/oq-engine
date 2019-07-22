@@ -39,7 +39,7 @@ weight = operator.attrgetter('weight')
 DISAGG_RES_FMT = '%(imt)s-%(sid)s-%(poe)s/'
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 POE_TOO_BIG = '''\
-You are trying to disaggregate for poe=%s.
+Site #%d: you are trying to disaggregate for poe=%s.
 However the source model produces at most probabilities
 of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
@@ -54,7 +54,7 @@ def _check_curve(sid, rlz, curve, imtls, poes_disagg):
         max_poe = curve[imt].max()
         for poe in poes_disagg:
             if poe > max_poe:
-                logging.warning(POE_TOO_BIG, poe, max_poe, rlz, imt)
+                logging.warning(POE_TOO_BIG, sid, poe, max_poe, rlz, imt)
                 bad += 1
     return bool(bad)
 
