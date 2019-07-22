@@ -269,16 +269,19 @@ def split_in_slices(number, num_slices):
     return slices
 
 
-def gen_slices(n, block_size):
+def gen_slices(start, stop, blocksize):
     """
-    Yields slices of lenght at most block_size
+    Yields slices of lenght at most block_size.
+
+    >>> list(gen_slices(1, 6, 2))
+    [slice(1, 3, None), slice(3, 5, None), slice(5, 6, None)]
     """
-    start = 0
+    assert start <= stop, (start, stop)
+    assert blocksize > 0, blocksize
     while True:
-        stop = start + block_size
-        yield slice(start, min(stop, n))
-        start = stop
-        if start >= n:
+        yield slice(start, min(start + blocksize, stop))
+        start += blocksize
+        if start >= stop:
             break
 
 
@@ -628,10 +631,13 @@ class AccumDict(dict):
     def __iadd__(self, other):
         if hasattr(other, 'items'):
             for k, v in other.items():
-                try:
-                    self[k] = self[k] + v
-                except KeyError:
+                if k not in self:
                     self[k] = v
+                elif isinstance(v, list):
+                    # specialized for speed
+                    self[k].extend(v)
+                else:
+                    self[k] = self[k] + v
         else:  # add other to all elements
             for k in self:
                 self[k] = self[k] + other

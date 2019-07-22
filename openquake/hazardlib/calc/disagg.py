@@ -45,18 +45,19 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
-def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
-    """
-    Disaggregate (separate) PoE in different contributions.
+def _site_indices(sids_by_rup, N):
+    # an array of indices of shape (N, U)
+    U = len(sids_by_rup)
+    mat = -numpy.ones((N, U), numpy.int16)
+    for ridx, sids in enumerate(sids_by_rup):
+        for sidx, sid in enumerate(sids):
+            mat[sid, ridx] = sidx
+    return mat
 
-    :param cmaker: a ContextMaker instance
-    :param sitecol: a SiteCollection with 1 site
-    :param rupdata: an array of rupture data with the same TRT
-    :param iml2: a 2D array of IMLs of shape (M, P)
-    :param eps3: a triple (truncnorm, epsilons, epsilon bands)
-    :returns:
-        an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
-    """
+
+def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
+    # disaggregate (separate) PoE in different contributions
+    # returns AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
     [sid] = sitecol.sids
     acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[])
     try:
@@ -64,19 +65,26 @@ def disaggregate(cmaker, sitecol, rupdata, iml2, eps3):
     except KeyError:
         return pack(acc, 'mags dists lons lats'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
-    dists = rupdata[cmaker.filter_distance][:, sid]
-    if gsim.minimum_distance:
-        dists[dists < gsim.minimum_distance] = gsim.minimum_distance
-    rdata = rupdata[dists < maxdist]  # discard far away ruptures
-    acc['mags'] = rdata['mag']
-    acc['lons'] = rdata['lon'][:, sid]
-    acc['lats'] = rdata['lat'][:, sid]
-    acc['dists'] = dists[dists < maxdist]
-    for rec in rdata:
-        rctx = contexts.RuptureContext(rec)
+    fildist = rupdata[cmaker.filter_distance + '_']
+    for ridx, sidx in enumerate(indices):
+        if sidx == -1:  # no contribution for this site
+            continue
+        dist = fildist[ridx][sidx]
+        if dist >= maxdist:
+            continue
+        elif gsim.minimum_distance and dist < gsim.minimum_distance:
+            dist = gsim.minimum_distance
+        rctx = contexts.RuptureContext()
+        for par in rupdata:
+            setattr(rctx, par, rupdata[par][ridx])
         dctx = contexts.DistancesContext(
-            (param, rec[param][[sid]])
-            for param in cmaker.REQUIRES_DISTANCES)
+            (param, getattr(rctx, param + '_')[[sidx]])
+            for param in cmaker.REQUIRES_DISTANCES).roundup(
+                    gsim.minimum_distance)
+        acc['mags'].append(rctx.mag)
+        acc['lons'].append(rctx.lon_[sidx])
+        acc['lats'].append(rctx.lat_[sidx])
+        acc['dists'].append(dist)
         for m, imt in enumerate(iml2.imts):
             for p, poe in enumerate(iml2.poes_disagg):
                 iml = iml2[m, p]
@@ -194,7 +202,7 @@ def _build_disagg_matrix(bdata, bins):
     out = {}
     num_zeros = 0
     for k, pnes in bdata.items():
-        # pnes has shape (U, 1, E)
+        # pnes has shape (U, E)
         if pnes.sum() == pnes.size:  # all pnes are 1
             num_zeros += 1
             continue  # zero matrices are not transferred
@@ -212,12 +220,16 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
     """
     :yield: (sid, {poe, imt, rlz: matrix})
     """
+    if len(sitecol) >= 32768:
+        raise ValueError('You can disaggregate at max 32,768 sites')
+    indices = _site_indices(rupdata['sid_'], len(sitecol))
     eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         with pne_mon:
-            bdata = disaggregate(cmaker, singlesitecol, rupdata, iml2, eps3)
+            bdata = _disaggregate(cmaker, singlesitecol, rupdata,
+                                  indices[sid], iml2, eps3)
         with mat_mon:
             yield sid, _build_disagg_matrix(bdata, bins)
 
@@ -332,8 +344,10 @@ def disaggregation(
             {'filter_distance': filter_distance})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
-        rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        bdata[trt] = disaggregate(cmaker, sitecol, rupdata, iml2, eps3)
+        rdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
+        idxs = _site_indices(rdata['sid_'], 1)[0]
+        bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
+
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
