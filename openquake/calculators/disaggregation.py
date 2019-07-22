@@ -38,6 +38,25 @@ from openquake.calculators import base
 weight = operator.attrgetter('weight')
 DISAGG_RES_FMT = '%(imt)s-%(sid)s-%(poe)s/'
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
+POE_TOO_BIG = '''\
+You are trying to disaggregate for poe=%s.
+However the source model produces at most probabilities
+of %.7f for rlz=#%d, IMT=%s.
+The disaggregation PoE is too big or your model is wrong,
+producing too small PoEs.'''
+
+
+def _check_curve(sid, rlz, curve, imtls, poes_disagg):
+    # there may be sites where the sources are too small to produce
+    # an effect at the given poes_disagg
+    bad = 0
+    for imt in imtls:
+        max_poe = curve[imt].max()
+        for poe in poes_disagg:
+            if poe > max_poe:
+                logging.warning(POE_TOO_BIG, poe, max_poe, rlz, imt)
+                bad += 1
+    return bool(bad)
 
 
 def _to_matrix(matrices, num_trts):
@@ -132,12 +151,6 @@ class DisaggregationCalculator(base.HazardCalculator):
     """
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
-    POE_TOO_BIG = '''\
-You are trying to disaggregate for poe=%s.
-However the source model produces at most probabilities
-of %.7f for rlz=#%d, IMT=%s.
-The disaggregation PoE is too big or your model is wrong,
-producing too small PoEs.'''
 
     def init(self):
         few = self.oqparam.max_sites_disagg
@@ -199,15 +212,22 @@ producing too small PoEs.'''
         the hazard curves.
         """
         oq = self.oqparam
+        # there may be sites where the sources are too small to produce
+        # an effect at the given poes_disagg
+        ok_sites = []
         for sid in self.sitecol.sids:
-            poes = curves[sid]
-            if poes is not None:
-                for imt in oq.imtls:
-                    max_poe = poes[imt].max()
-                    for poe in oq.poes_disagg:
-                        if poe > max_poe:
-                            raise ValueError(self.POE_TOO_BIG % (
-                                poe, max_poe, rlzs[sid], imt))
+            if curves[sid] is None:
+                ok_sites.append(sid)
+                continue
+            bad = _check_curve(sid, rlzs[sid], curves[sid],
+                               oq.imtls, oq.poes_disagg)
+            if not bad:
+                ok_sites.append(sid)
+        self.sitecol = self.sitecol.filtered(ok_sites)
+        if len(self.sitecol) == 0:
+            raise SystemExit('Cannot do any disaggregation')
+        elif len(ok_sites) < self.N:
+            logging.warning('Doing the disaggregation on' % self.sitecol)
 
     def full_disaggregation(self):
         """
