@@ -21,7 +21,6 @@ Utility functions of general interest.
 """
 import os
 import sys
-import imp
 import copy
 import math
 import socket
@@ -270,6 +269,22 @@ def split_in_slices(number, num_slices):
     return slices
 
 
+def gen_slices(start, stop, blocksize):
+    """
+    Yields slices of lenght at most block_size.
+
+    >>> list(gen_slices(1, 6, 2))
+    [slice(1, 3, None), slice(3, 5, None), slice(5, 6, None)]
+    """
+    assert start <= stop, (start, stop)
+    assert blocksize > 0, blocksize
+    while True:
+        yield slice(start, min(start + blocksize, stop))
+        start += blocksize
+        if start >= stop:
+            break
+
+
 def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
@@ -355,7 +370,7 @@ _tmp_paths = []
 def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
 
-    Please note: the temporary file must be deleted by the caller.
+    Please note: the temporary file can be deleted by the caller or not.
 
     :param string content: the content to write to the temporary file.
     :param string dir: directory where the file should be created
@@ -488,25 +503,6 @@ def assert_independent(package, *packages):
                 raise CodeDependencyError('%s depends on %s' % (package, pkg))
 
 
-def search_module(module, syspath=sys.path):
-    """
-    Given a module name (possibly with dots) returns the corresponding
-    filepath, or None, if the module cannot be found.
-
-    :param module: (dotted) name of the Python module to look for
-    :param syspath: a list of directories to search (default sys.path)
-    """
-    lst = module.split(".")
-    pkg, submodule = lst[0], ".".join(lst[1:])
-    try:
-        fileobj, filepath, descr = imp.find_module(pkg, syspath)
-    except ImportError:
-        return
-    if submodule:  # recursive search
-        return search_module(submodule, [filepath])
-    return filepath
-
-
 class CallableDict(dict):
     r"""
     A callable object built on top of a dictionary of functions, used
@@ -635,10 +631,13 @@ class AccumDict(dict):
     def __iadd__(self, other):
         if hasattr(other, 'items'):
             for k, v in other.items():
-                try:
-                    self[k] = self[k] + v
-                except KeyError:
+                if k not in self:
                     self[k] = v
+                elif isinstance(v, list):
+                    # specialized for speed
+                    self[k].extend(v)
+                else:
+                    self[k] = self[k] + v
         else:  # add other to all elements
             for k in self:
                 self[k] = self[k] + other

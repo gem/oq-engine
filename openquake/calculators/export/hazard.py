@@ -537,7 +537,7 @@ def export_disagg_csv(ekey, dstore):
         imt = from_string(attrs['imt'])
         site_id = attrs['site_id']
         lon, lat = attrs['location']
-        metadata = {}
+        metadata = dstore.metadata
         # Loads "disaggMatrices" nodes
         if hasattr(rlz, 'sm_lt_path'):
             metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
@@ -558,10 +558,10 @@ def export_disagg_csv(ekey, dstore):
             header = label.lower().split('_') + ['poe']
             com = {key: value for key, value in metadata.items()
                    if value is not None and key not in skip_keys}
-            com.update(poe='%.7f' % poe, iml='%.7e' % iml)
+            com.update(poe='%.7f' % poe, iml='%.7e' % iml, rlz=rlz.ordinal)
             fname = dstore.export_path(key + '_%s.csv' % label)
             values = extract(dstore,
-                             'disagg?by=%s&imt=%s&site_id=%s&poe_id=%d' %
+                             'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d' %
                              (label, imt, site_id, poe_id))
             writers.write_csv(fname, values, header=header, comment=com,
                               fmt='%.5E')

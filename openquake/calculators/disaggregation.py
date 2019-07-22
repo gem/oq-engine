@@ -24,7 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, hdf5
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict, gen_slices, get_indices
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
@@ -32,12 +32,31 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.calculators import getters, extract
+from openquake.calculators import getters
 from openquake.calculators import base
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = '%(rlz)s-%(imt)s-%(sid)s-%(poe)s/'
+DISAGG_RES_FMT = '%(imt)s-%(sid)s-%(poe)s/'
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
+POE_TOO_BIG = '''\
+Site #%d: you are trying to disaggregate for poe=%s.
+However the source model produces at most probabilities
+of %.7f for rlz=#%d, IMT=%s.
+The disaggregation PoE is too big or your model is wrong,
+producing too small PoEs.'''
+
+
+def _check_curve(sid, rlz, curve, imtls, poes_disagg):
+    # there may be sites where the sources are too small to produce
+    # an effect at the given poes_disagg
+    bad = 0
+    for imt in imtls:
+        max_poe = curve[imt].max()
+        for poe in poes_disagg:
+            if poe > max_poe:
+                logging.warning(POE_TOO_BIG, sid, poe, max_poe, rlz, imt)
+                bad += 1
+    return bool(bad)
 
 
 def _to_matrix(matrices, num_trts):
@@ -72,15 +91,14 @@ def _iml2s(rlzs, iml_disagg, imtls, poes_disagg, curves):
     return lst
 
 
-def compute_disagg(sitecol, rupdata, cmaker, iml2s, trti, bin_edges,
-                   oqparam, monitor):
+def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rupdata:
-        rupdata array
+    :param dstore:
+        a :class:`openquake.baselib.datastore.DataStore` instance
+    :param slc:
+        a slice of ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param iml2s:
@@ -89,30 +107,29 @@ def compute_disagg(sitecol, rupdata, cmaker, iml2s, trti, bin_edges,
         tectonic region type index
     :param bin_egdes:
         a quintet (mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-    :param oqparam:
-        the parameters in the job.ini file
     :param monitor:
         monitor of the currently running job
     :returns:
         a dictionary of probability arrays, with composite key
         (sid, rlzi, poe, imt, iml, trti).
     """
-    result = {'trti': trti, 'num_ruptures': 0}
+    dstore.open('r')
+    oqparam = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    rupdata = {k: dstore['rup/' + k][slc] for k in dstore['rup']}
+    dstore.close()
+    result = {'trti': trti}
     # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         oqparam.investigation_time)
-    for sid, iml2 in zip(sitecol.sids, iml2s):
-        singlesitecol = sitecol.filtered([sid])
-        bin_data = disagg.collect_bin_data(
-            rupdata, singlesitecol, cmaker, iml2,
-            oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
-        if bin_data:  # dictionary poe, imt, rlzi -> pne
-            bins = disagg.get_bins(bin_edges, sid)
-            for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
-                    bin_data, bins, monitor).items():
-                result[sid, rlzi, poe, imt] = matrix
-        result['num_ruptures'] += len(bin_data.mags)
-    return result  # sid, rlzi, poe, imt, iml -> array
+    pne_mon = monitor('disaggregate_pne', measuremem=False)
+    mat_mon = monitor('build_disagg_matrix', measuremem=False)
+    for sid, res in disagg.build_matrices(
+            rupdata, sitecol, cmaker, iml2s, oqparam.truncation_level,
+            oqparam.num_epsilon_bins, bin_edges, pne_mon, mat_mon):
+        for (poe, imt, rlz), matrix in res.items():
+            result[sid, rlz, poe, imt] = matrix
+    return result  # sid, rlz, poe, imt -> array
 
 
 def agg_probs(*probs):
@@ -132,12 +149,6 @@ class DisaggregationCalculator(base.HazardCalculator):
     """
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
-    POE_TOO_BIG = '''\
-You are trying to disaggregate for poe=%s.
-However the source model produces at most probabilities
-of %.7f for rlz=#%d, IMT=%s.
-The disaggregation PoE is too big or your model is wrong,
-producing too small PoEs.'''
 
     def init(self):
         few = self.oqparam.max_sites_disagg
@@ -162,7 +173,6 @@ producing too small PoEs.'''
         """
         # this is fast
         trti = result.pop('trti')
-        self.num_ruptures[trti] += result.pop('num_ruptures')
         for key, val in result.items():
             acc[key][trti] = agg_probs(acc[key].get(trti, 0), val)
         return acc
@@ -200,15 +210,22 @@ producing too small PoEs.'''
         the hazard curves.
         """
         oq = self.oqparam
+        # there may be sites where the sources are too small to produce
+        # an effect at the given poes_disagg
+        ok_sites = []
         for sid in self.sitecol.sids:
-            poes = curves[sid]
-            if poes is not None:
-                for imt in oq.imtls:
-                    max_poe = poes[imt].max()
-                    for poe in oq.poes_disagg:
-                        if poe > max_poe:
-                            raise ValueError(self.POE_TOO_BIG % (
-                                poe, max_poe, rlzs[sid], imt))
+            if curves[sid] is None:
+                ok_sites.append(sid)
+                continue
+            bad = _check_curve(sid, rlzs[sid], curves[sid],
+                               oq.imtls, oq.poes_disagg)
+            if not bad:
+                ok_sites.append(sid)
+        if len(ok_sites) == 0:
+            raise SystemExit('Cannot do any disaggregation')
+        elif len(ok_sites) < self.N:
+            logging.warning('Doing the disaggregation on' % self.sitecol)
+        return ok_sites
 
     def full_disaggregation(self):
         """
@@ -220,21 +237,31 @@ producing too small PoEs.'''
         if hasattr(self, 'csm'):
             for sg in self.csm.src_groups:
                 if sg.atomic:
-                    raise NotImplemented('Atomic groups are not supported yet')
+                    raise NotImplementedError(
+                        'Atomic groups are not supported yet')
             if not self.csm.get_sources():
                 raise RuntimeError('All sources were filtered away!')
 
         csm_info = self.datastore['csm_info']
         poes_disagg = oq.poes_disagg or (None,)
         R = len(self.rlzs_assoc.realizations)
-        rlzs = extract.disagg_key(self.datastore).rlzs
+
+        if oq.rlz_index is None:
+            try:
+                rlzs = self.datastore['best_rlz'][()]
+            except KeyError:
+                rlzs = numpy.zeros(self.N, int)
+        else:
+            rlzs = [oq.rlz_index] * self.N
+
         if oq.iml_disagg:
             self.poe_id = {None: 0}
             curves = [None] * len(self.sitecol)  # no hazard curves are needed
+            self.ok_sites = set(self.sitecol.sids)
         else:
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs) for sid in self.sitecol.sids]
-            self.check_poes_disagg(curves, rlzs)
+            self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
         iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
@@ -274,8 +301,6 @@ producing too small PoEs.'''
         self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
         self.save_bin_edges()
 
-        # build all_args
-        all_args = []
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             iml2 = iml2s[s]
@@ -285,23 +310,25 @@ producing too small PoEs.'''
                 for m, imt in enumerate(oq.imtls):
                     self.imldict[s, r, poe, imt] = iml2[m, p]
 
-        for grp, dset in self.datastore['rup'].items():
-            grp_id = int(grp[4:])
-            trt = csm_info.trt_by_grp[grp_id]
+        # submit disagg tasks
+        gid = self.datastore['rup/grp_id'][()]
+        indices_by_grp = get_indices(gid)  # grp_id -> [(start, stop),...]
+        blocksize = len(gid) // (oq.concurrent_tasks or 1) + 1
+        allargs = []
+        for grp_id, trt in csm_info.trt_by_grp.items():
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim, src_filter.integration_distance,
                 {'filter_distance': oq.filter_distance})
-            for block in block_splitter(dset[()], 1000):
-                all_args.append(
-                    (src_filter.sitecol, numpy.array(block), cmaker, iml2s,
-                     trti, self.bin_edges, oq))
-
-        self.num_ruptures = [0] * len(self.trts)
-        mon = self.monitor()
-        results = parallel.Starmap(compute_disagg, all_args, mon).reduce(
-            self.agg_result, AccumDict(accum={}))
+            for start, stop in indices_by_grp[grp_id]:
+                for slc in gen_slices(start, stop, blocksize):
+                    allargs.append((self.datastore, slc, cmaker,
+                                    iml2s, trti, self.bin_edges))
+        self.datastore.close()
+        results = parallel.Starmap(
+            compute_disagg, allargs, hdf5path=self.datastore.filename
+        ).reduce(self.agg_result, AccumDict(accum={}))
         return results
 
     def save_bin_edges(self):
@@ -313,7 +340,8 @@ producing too small PoEs.'''
             bins = disagg.get_bins(b, sid)
             shape = [len(bin) - 1 for bin in bins] + [len(self.trts)]
             shape_dic = dict(zip(BIN_NAMES, shape))
-            logging.info('nbins=%s for site=#%d', shape_dic, sid)
+            if sid == 0:
+                logging.info('nbins=%s for site=#%d', shape_dic, sid)
             matrix_size = numpy.prod(shape)
             if matrix_size > 1E7:
                 raise ValueError(
@@ -334,6 +362,7 @@ producing too small PoEs.'''
         :param results:
             a dictionary (sid, rlzi, poe, imt) -> trti -> disagg matrix
         """
+        self.datastore.open('r+')
         T = len(self.trts)
         # build a dictionary (sid, rlzi, poe, imt) -> 6D matrix
         results = {k: _to_matrix(v, T) for k, v in results.items()}
@@ -343,8 +372,7 @@ producing too small PoEs.'''
                len(self.oqparam.imtls))  # N, P, M
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d)', numpy.prod(shp), *shp)
-        self.save_disagg_result(results, trts=encode(self.trts),
-                                num_ruptures=self.num_ruptures)
+        self.save_disagg_result(results, trts=encode(self.trts))
 
     def save_disagg_result(self, results, **attrs):
         """
@@ -362,7 +390,7 @@ producing too small PoEs.'''
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
-            rlz='rlz-%d' % rlz_id, imt=imt_str, sid='sid-%d' % site_id,
+            imt=imt_str, sid='sid-%d' % site_id,
             poe='poe-%d' % self.poe_id[poe])
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
@@ -389,14 +417,14 @@ producing too small PoEs.'''
         attrs['location'] = (lon, lat)
         # sanity check: all poe_agg should be the same
         attrs['poe_agg'] = poe_agg
-        if poe:
+        if poe and site_id in self.ok_sites:
             attrs['poe'] = poe
             poe_agg = numpy.mean(attrs['poe_agg'])
             if abs(1 - poe_agg / poe) > .1:
                 logging.warning(
-                    'poe_agg=%s is quite different from the expected'
+                    'Site #%d: poe_agg=%s is quite different from the expected'
                     ' poe=%s; perhaps the number of intensity measure'
-                    ' levels is too small?', poe_agg, poe)
+                    ' levels is too small?', site_id, poe_agg, poe)
 
     def build_disagg_by_src(self, iml2s):
         """

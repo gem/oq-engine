@@ -1,4 +1,16 @@
   [Michele Simionato]
+  * Added a check for missing `risk_investigation_time` in ebrisk
+  * Reduced drastically (I measured improvements over 40x) memory occupation,
+    data transfer and data storage for multi-sites disaggregation
+  * Sites for which the disaggregation PoE cannot be reached are discarded
+    and a warning is printed, rather than killing the whole computation
+  * `oq show performance` can be called in the middle of a computation again
+  * Filtered out the far away distances and reduced the time spent in
+    saving the performance info by orders of magnitude in large disaggregations
+  * Reduced the data transfer by reading the data directly from the
+    datastore in disaggregation calculations
+  * Reduced the memory consumption sending disaggregation tasks incrementally
+  * Added an extract API disagg_layer
   * Moved `max_sites_disagg` from openquake.cfg into the job.ini
   * Fixed a bug with the --config option: serialize_jobs could not be overridden
   * Implemented insured losses
