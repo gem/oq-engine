@@ -391,7 +391,7 @@ hazard_uhs-std.csv
             '/hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1)',
             'hazard_curve-mean-SA(0.2).csv', 'hazard_curve-mean-SA(0.5).csv',
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
-        ], case_22.__file__)
+        ], case_22.__file__, delta=1E-6)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
