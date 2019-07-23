@@ -319,6 +319,8 @@ hazard_uhs-std.csv
 
         #if os.environ.get('TRAVIS'):
         #    raise unittest.SkipTest('Currently broken on travis')
+        self.calc.datastore.close()
+        self.calc.datastore.open('r')
 
         # check exporting a single realization in CSV and XML
         [fname] = export(('uhs/rlz-001', 'csv'),  self.calc.datastore)
