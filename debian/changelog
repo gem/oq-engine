@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Accepted again meanLRs greater than 1 in vulnerability functions of kind LN
+  * Fixed a bug in event based with correlation and a filtered site collection
+  * Fixed the CSV exporter for the realizations in the case of scenarios
+    with parametric GSIMs
+  * Removed some misleading warnings for calculations with a site model
   * Added a check for missing `risk_investigation_time` in ebrisk
   * Reduced drastically (I measured improvements over 40x) memory occupation,
     data transfer and data storage for multi-sites disaggregation

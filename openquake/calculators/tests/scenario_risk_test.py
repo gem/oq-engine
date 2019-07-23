@@ -165,7 +165,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2493.7097, 2943.6640]])
+        aac(obj.array, [[2499.0835, 2949.6074]])
 
     def test_case_7(self):
         # check independence from concurrent_tasks

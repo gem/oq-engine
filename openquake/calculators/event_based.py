@@ -19,6 +19,7 @@
 import os.path
 import logging
 import collections
+import itertools
 import operator
 import numpy
 
@@ -260,13 +261,17 @@ class EventBasedCalculator(base.HazardCalculator):
         # including the ones far away that will be discarded later on
         rgetters = self.gen_rupture_getters()
 
-        # build the associations eid -> rlz in parallel
-        smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                ((rgetter,) for rgetter in rgetters),
-                                progress=logging.debug,
-                                hdf5path=self.datastore.filename)
+        # build the associations eid -> rlz sequentially or in parallel
+        # this is very fast: I saw 30 million events associated in 1 minute!
+        if len(events) < 1E5:
+            it = map(RuptureGetter.get_eid_rlz, rgetters)
+        else:
+            it = parallel.Starmap(RuptureGetter.get_eid_rlz,
+                                  ((rgetter,) for rgetter in rgetters),
+                                  progress=logging.debug,
+                                  hdf5path=self.datastore.filename)
         i = 0
-        for eid_rlz in smap:  # 30 million of events associated in 1 minute!
+        for eid_rlz in it:
             for er in eid_rlz:
                 events[i] = er
                 i += 1
@@ -276,6 +281,8 @@ class EventBasedCalculator(base.HazardCalculator):
         n_unique_events = len(numpy.unique(events['id']))
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
+        logging.info('Stored %d ruptures and %d events', len(rup_array),
+                     len(events))
 
     def check_overflow(self):
         """
