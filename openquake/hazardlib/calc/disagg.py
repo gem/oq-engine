@@ -57,13 +57,14 @@ def _site_indices(sids_by_rup, N):
 
 def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
     # disaggregate (separate) PoE in different contributions
-    # returns AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
+    # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
     [sid] = sitecol.sids
-    acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[])
+    acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[],
+                    M=len(iml2.imts), P=len(iml2.poes_disagg))
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
-        return pack(acc, 'mags dists lons lats'.split())
+        return pack(acc, 'mags dists lons lats P M'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
     fildist = rupdata[cmaker.filter_distance + '_']
     for ridx, sidx in enumerate(indices):
@@ -91,7 +92,7 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
                 pne = disaggregate_pne(
                     gsim, rctx, sitecol, dctx, imt, iml, *eps3)
                 acc[p, m].append(pne)
-    return pack(acc, 'mags dists lons lats'.split())
+    return pack(acc, 'mags dists lons lats P M'.split())
 
 
 def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
@@ -174,7 +175,8 @@ def _build_disagg_matrix(bdata, bins):
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
     :param mon: a Monitor instance
-    :returns: a dictionary key -> matrix|pmf for each key in bdata
+    :returns: a matrix of shape (P, M, #magbins, #distbins, #lonbins,
+                                       #latbins, #epsbins)
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
     dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
@@ -199,18 +201,14 @@ def _build_disagg_matrix(bdata, bins):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
-    out = {}
-    num_zeros = 0
-    for k, pnes in bdata.items():
+    out = numpy.zeros([bdata.P, bdata.M] + shape)
+    for (p, m), pnes in bdata.items():
         # pnes has shape (U, E)
-        if pnes.sum() == pnes.size:  # all pnes are 1
-            num_zeros += 1
-            continue  # zero matrices are not transferred
         mat = numpy.ones(shape)
         for i_mag, i_dist, i_lon, i_lat, pne in zip(
                 mags_idx, dists_idx, lons_idx, lats_idx, pnes):
             mat[i_mag, i_dist, i_lon, i_lat] *= pne
-        out[k] = 1. - mat
+        out[p, m] = 1. - mat
     return out
 
 
@@ -231,7 +229,9 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
             bdata = _disaggregate(cmaker, singlesitecol, rupdata,
                                   indices[sid], iml2, eps3)
         with mat_mon:
-            yield sid, _build_disagg_matrix(bdata, bins)
+            mat = _build_disagg_matrix(bdata, bins)
+            if mat.any():  # nonzero
+                yield sid, mat
 
 
 def _digitize_lons(lons, lon_bins):
@@ -380,10 +380,8 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        dic = _build_disagg_matrix(bdata[trt], bin_edges)
-        if dic:  # (poe, imt, rlzi) -> matrix
-            [mat] = dic.values()
-            matrix[..., trt_num[trt]] = mat
+        [[mat]] = _build_disagg_matrix(bdata[trt], bin_edges)
+        matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
 
