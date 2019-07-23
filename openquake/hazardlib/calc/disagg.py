@@ -90,7 +90,7 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
                 iml = iml2[m, p]
                 pne = disaggregate_pne(
                     gsim, rctx, sitecol, dctx, imt, iml, *eps3)
-                acc[poe, str(imt), iml2.rlzi].append(pne)
+                acc[poe, str(imt)].append(pne)
     return pack(acc, 'mags dists lons lats'.split())
 
 
