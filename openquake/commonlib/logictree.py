@@ -1479,10 +1479,12 @@ class GsimLogicTree(object):
             gsim = valid.gsim(gsim_)
             self.values[branch['trt']].append(gsim)
             if isinstance(gsim, GMPETable):
-                if 'gmpe_table' in gsim.kwargs:
-                    gsim.init(dic[gsim.kwargs['gmpe_table']])
-                else:
+                try:
+                    name = gsim.kwargs['gmpe_table']
+                except KeyError:
                     gsim.init()
+                else:
+                    gsim.init(dic[name])
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
@@ -1635,7 +1637,7 @@ class GsimLogicTree(object):
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
 
-    # tested in scenario/case_11
+    # tested in scenario/case_11; works only without a site model
     def get_integration_distance(self, mags_by_trt, oq):
         """
         :param mags_by_trt:

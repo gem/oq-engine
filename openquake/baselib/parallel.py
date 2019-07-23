@@ -37,11 +37,13 @@ how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
 >>> arglist = [('hello',), ('world',)]  # list of arguments
->>> res = Starmap(count, arglist).reduce()  # aggregated counts
->>> sorted(res.items())  # counts per letter
+>>> smap = Starmap(count, arglist)  # Starmap instance, nothing started yet
+>>> sorted(smap.reduce().items())  # build the counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
 
-`Starmap` has a `reduce` method with sensible defaults:
+A `Starmap` object is an iterable: when iterating over it produces
+task results. It also has a `reduce` method similar to `functools.reduce`
+with sensible defaults:
 
 1. the default aggregation function is `add`, so there is no need to specify it
 2. the default accumulator is an empty accumulation dictionary (see
@@ -91,10 +93,19 @@ way your code is future-proof.
 Monitoring
 =============================
 
-A major feature of the Starmap API is the ability to pass to it an hdf5
-file open for writing where information about the performance of the tasks
-can be stored. In order to use such feature the task functions must have
-a last argument which is a monitor.
+A major feature of the Starmap API is the ability to monitor the time spent
+in each task and the memory allocated. Such information is written into a
+temporary HDF5 file and can be accessed after the last task output is
+returned:
+
+>>> import h5py
+>>> with h5py.File(smap.hdf5path, 'r') as f:
+...     f['performance_data'].dtype.names
+('operation', 'time_sec', 'memory_mb', 'counts')
+
+The user can also specify an explicit value for `hdf5path`, corresponding
+to an existing HDF5 file; in such a case the performance info will be appended
+there.
 
 The engine provides a command `oq show performance` to print the performance
 information stored in the HDF5 file in a nice way.
@@ -774,7 +785,7 @@ def count(word, mon):
 def split_task(func, *args, duration=1000,
                weight=operator.attrgetter('weight')):
     """
-    :param func: a task function
+    :param func: a task function with a monitor as last argument
     :param args: arguments of the task function
     :param duration: split the task if it exceeds the duration
     :param weight: weight function for the elements in args[0]
