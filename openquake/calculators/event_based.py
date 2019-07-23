@@ -19,6 +19,7 @@
 import os.path
 import logging
 import collections
+import itertools
 import operator
 import numpy
 
@@ -261,11 +262,14 @@ class EventBasedCalculator(base.HazardCalculator):
         rgetters = self.gen_rupture_getters()
 
         # build the associations eid -> rlz sequentially or in parallel
-        distribute = 'no' if len(events) < 1E5 else None
-        smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                ((rgetter,) for rgetter in rgetters),
-                                progress=logging.debug, distribute=distribute,
-                                hdf5path=self.datastore.filename)
+        if len(events) < 1E5:
+            smap = itertools.starmap(RuptureGetter.get_eid_rlz,
+                                     ((rgetter,) for rgetter in rgetters))
+        else:
+            smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
+                                    ((rgetter,) for rgetter in rgetters),
+                                    progress=logging.debug,
+                                    hdf5path=self.datastore.filename)
         i = 0
         for eid_rlz in smap:  # 30 million of events associated in 1 minute!
             for er in eid_rlz:
