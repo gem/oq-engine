@@ -66,11 +66,11 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
         # where s is the number of samples
         N = len(sites.complete)
         n = len(sites)
-        if n < N:
+        if n < N:  # filtered site collection
             res = numpy.zeros((N, residuals.shape[1]))
             res[sites.sids] = residuals
             return (corma @ res)[sites.sids, :]  # shape (n, s)
-        else:
+        else:  # complete site collection
             return corma @ residuals  # shape (N, s)
 
 
