@@ -21,6 +21,7 @@ from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11)
+from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.hazardlib.contexts import ContextMaker
 
@@ -110,6 +111,10 @@ class ScenarioTestCase(CalculatorTestCase):
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
         f = out['gmf_data', 'csv'][0]
         self.assertEqualFiles('gmf.csv', f)
+
+        # test the realizations export
+        [f] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('realizations.csv', f)
 
         # test the .npz export
         [fname] = out['gmf_data', 'npz']
