@@ -1635,7 +1635,7 @@ class GsimLogicTree(object):
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
 
-    # tested in scenario/case_11
+    # tested in scenario/case_11; works only without a site model
     def get_integration_distance(self, mags_by_trt, oq):
         """
         :param mags_by_trt:
