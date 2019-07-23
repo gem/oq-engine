@@ -125,13 +125,13 @@ class Socket(object):
         while self.running:
             try:
                 ready = self.zsocket.poll(self.timeout)
+                if ready:
+                    yield self.zsocket.recv_pyobj()
+                elif self.socket_type == zmq.PULL:
+                    logging.debug('Timeout in %s', self)
             except zmq.ZMQError:
                 # sending SIGTERM raises ZMQError
                 break
-            if ready:
-                yield self.zsocket.recv_pyobj()
-            elif self.socket_type == zmq.PULL:
-                logging.debug('Timeout in %s', self)
 
     def send(self, obj):
         """
