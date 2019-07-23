@@ -59,7 +59,7 @@ def _check_curve(sid, rlz, curve, imtls, poes_disagg):
     return bool(bad)
 
 
-def _to_matrix(matrices, num_trts):
+def _8d_matrix(matrices, num_trts):
     # convert a dict trti -> matrix into a single matrix of shape (T, ...)
     trti = next(iter(matrices))
     mat = numpy.zeros((num_trts,) + matrices[trti].shape)
@@ -314,13 +314,13 @@ class DisaggregationCalculator(base.HazardCalculator):
         results = parallel.Starmap(
             compute_disagg, allargs, hdf5path=self.datastore.filename
         ).reduce(self.agg_result, AccumDict(accum={}))
-        return results  # sid -> trti-> array
+        return results  # sid -> trti-> 7D array
 
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results.
 
-        :param acc: dictionary k -> dic accumulating the results
+        :param acc: dictionary sid -> trti -> 7D array
         :param result: dictionary with the result coming from a task
         """
         # this is fast
@@ -363,7 +363,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore.open('r+')
         T = len(self.trts)
         # build a dictionary sid -> 8D matrix of shape (T, P, M, ...)
-        results = {sid: _to_matrix(dic, T) for sid, dic in results.items()}
+        results = {sid: _8d_matrix(dic, T) for sid, dic in results.items()}
 
         # get the number of outputs
         shp = (len(self.sitecol), len(self.poes_disagg), len(self.imts))
@@ -378,15 +378,15 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             an 8D-matrix of shape (T, P, M, ...)
         """
-        for sid, matrix in results.items():
+        for sid, matrix8 in results.items():
             rlzi = self.iml2s[sid].rlzi
             for p, poe in enumerate(self.poes_disagg):
                 for m, imt in enumerate(self.imts):
                     self._save_result(
-                        'disagg', sid, rlzi, poe, imt, matrix[:, p, m])
+                        'disagg', sid, rlzi, poe, imt, matrix8[:, p, m])
         self.datastore.set_attrs('disagg', **attrs)
 
-    def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix):
+    def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):
         disagg_outputs = self.oqparam.disagg_outputs
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
@@ -397,10 +397,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
             poe_agg = []
-            aggmatrix = agg_probs(*matrix)
+            aggmatrix = agg_probs(*matrix6)
             for key, fn in disagg.pmf_map.items():
                 if not disagg_outputs or key in disagg_outputs:
-                    pmf = fn(matrix if key.endswith('TRT') else aggmatrix)
+                    pmf = fn(matrix6 if key.endswith('TRT') else aggmatrix)
                     self.datastore[disp_name + key] = pmf
                     poe_agg.append(1. - numpy.prod(1. - pmf))
 
