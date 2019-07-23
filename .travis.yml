@@ -15,20 +15,20 @@ jobs:
     env: HAZARDLIB
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
-          pytest --doctest-modules -xv openquake/baselib;
-          pytest --doctest-modules -n auto -xv openquake/hazardlib openquake/hmtk;
+          pytest --doctest-modules -xv openquake/baselib --tb=short;
+          pytest --doctest-modules -n auto -xv openquake/hazardlib openquake/hmtk --tb=short;
           fi
   - stage: tests
     env: ENGINE
     before_script:
         - oq dbserver start
     script:
-        - pytest --doctest-modules -xv openquake/engine
-        - pytest --doctest-modules -xv openquake/server
-        - pytest --doctest-modules -xv openquake/calculators
-        - pytest --doctest-modules -xv openquake/risklib
-        - pytest --doctest-modules -xv openquake/commonlib
-        - pytest --doctest-modules -xv openquake/commands
+        - pytest --doctest-modules -xv openquake/engine --tb=short
+        - pytest --doctest-modules -xv openquake/server --tb=short
+        - pytest --doctest-modules -xv openquake/calculators --tb=short
+        - pytest --doctest-modules -xv openquake/risklib --tb=short
+        - pytest --doctest-modules -xv openquake/commonlib --tb=short
+        - pytest --doctest-modules -xv openquake/commands --tb=short
         - oq webui migrate
     after_success:  # old sphinx does not work well with Python 3.5.4+
         - pip install sphinx==1.6.5
