@@ -196,7 +196,8 @@ def extract_realizations(dstore, dummy):
     arr['ordinal'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
     if scenario:
-        arr['branch_path'] = dstore['csm_info/gsim_lt/branches']['uncertainty']
+        gsims = dstore['csm_info/gsim_lt/branches']['uncertainty']
+        arr['branch_path'] = [repr(gsim) for gsim in gsims]
     else:
         arr['branch_path'] = rlzs['branch_path']
     return arr
