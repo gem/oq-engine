@@ -281,6 +281,8 @@ class EventBasedCalculator(base.HazardCalculator):
         n_unique_events = len(numpy.unique(events['id']))
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
+        logging.info('Stored %d ruptures and %d events', len(rup_array),
+                     len(events))
 
     def check_overflow(self):
         """
