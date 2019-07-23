@@ -262,16 +262,16 @@ class EventBasedCalculator(base.HazardCalculator):
         rgetters = self.gen_rupture_getters()
 
         # build the associations eid -> rlz sequentially or in parallel
+        # this is very fast: I saw 30 million events associated in 1 minute!
         if len(events) < 1E5:
-            smap = itertools.starmap(RuptureGetter.get_eid_rlz,
-                                     ((rgetter,) for rgetter in rgetters))
+            it = map(RuptureGetter.get_eid_rlz, rgetters)
         else:
-            smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                    ((rgetter,) for rgetter in rgetters),
-                                    progress=logging.debug,
-                                    hdf5path=self.datastore.filename)
+            it = parallel.Starmap(RuptureGetter.get_eid_rlz,
+                                  ((rgetter,) for rgetter in rgetters),
+                                  progress=logging.debug,
+                                  hdf5path=self.datastore.filename)
         i = 0
-        for eid_rlz in smap:  # 30 million of events associated in 1 minute!
+        for eid_rlz in it:
             for er in eid_rlz:
                 events[i] = er
                 i += 1
