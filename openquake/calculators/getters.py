@@ -464,7 +464,6 @@ def gen_rupture_getters(dstore, slc=slice(None),
             yield rgetter
             nr += len(block)
             ne += rgetter.num_events
-    logging.info('Read %d ruptures and %d events', nr, ne)
 
 
 def get_maxloss_rupture(dstore, loss_type):
@@ -565,7 +564,7 @@ class RuptureGetter(object):
                                       for ri in rup_indices])
                 yield rgetter
 
-    def get_eid_rlz(self, monitor=None):
+    def get_eid_rlz(self):
         """
         :returns: a composite array with the associations eid->rlz
         """
