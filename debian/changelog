@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the CSV exporter for the realizations in the case of scenarios
+    with parametric GSIMs
   * Removed some misleading warnings for calculations with a site model
   * Added a check for missing `risk_investigation_time` in ebrisk
   * Reduced drastically (I measured improvements over 40x) memory occupation,
