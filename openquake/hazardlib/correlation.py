@@ -61,14 +61,17 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
             corma = self.get_lower_triangle_correlation_matrix(
                 sites.complete, imt)
             self.cache[imt] = corma
-        if len(sites.complete) == len(sites):
-            return numpy.dot(corma, residuals)
-        # it is important to allocate little memory, this is why I am
-        # accumulating below; if S is the length of the complete sites
-        # the correlation matrix has shape (S, S) and the residuals (N, s),
+        # if N is the length of the complete site collection, then the
+        # correlation matrix has shape (N, N) and the residuals (N, s),
         # where s is the number of samples
-        return sum(corma[sites.sids, sid] * res
-                   for sid, res in zip(sites.sids, residuals))
+        N = len(sites.complete)
+        n = len(sites)
+        if n < N:  # filtered site collection
+            res = numpy.zeros((N, residuals.shape[1]))
+            res[sites.sids] = residuals
+            return (corma @ res)[sites.sids, :]  # shape (n, s)
+        else:  # complete site collection
+            return corma @ residuals  # shape (N, s)
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
