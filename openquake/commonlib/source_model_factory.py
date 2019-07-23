@@ -309,7 +309,7 @@ class SourceModelFactory(object):
             else:
                 self.apply_uncertainties(sm, idx, dic)
             yield sm
-        if self.mags and self.hdf5:
+        if self.mags and self.hdf5 and not oq.inputs['site_model']:
             mags_by_trt = {trt: sorted(ms) for trt, ms in self.mags.items()}
             idist = self.gsim_lt.get_integration_distance(mags_by_trt, oq)
             self.hdf5['integration_distance'] = idist
