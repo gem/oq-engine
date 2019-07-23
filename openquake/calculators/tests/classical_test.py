@@ -317,11 +317,6 @@ hazard_uhs-std.csv
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
-        #if os.environ.get('TRAVIS'):
-        #    raise unittest.SkipTest('Currently broken on travis')
-        self.calc.datastore.close()
-        self.calc.datastore.open('r')
-
         # check exporting a single realization in CSV and XML
         [fname] = export(('uhs/rlz-001', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
