@@ -110,8 +110,7 @@ def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary of probability arrays, with composite key
-        (sid, rlzi, poe, imt, iml, trti).
+        a dictionary of probability arrays, with composite key (sid, poe, imt)
     """
     dstore.open('r')
     oqparam = dstore['oqparam']
@@ -127,9 +126,9 @@ def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
     for sid, res in disagg.build_matrices(
             rupdata, sitecol, cmaker, iml2s, oqparam.truncation_level,
             oqparam.num_epsilon_bins, bin_edges, pne_mon, mat_mon):
-        for (poe, imt, rlz), matrix in res.items():
-            result[sid, rlz, poe, imt] = matrix
-    return result  # sid, rlz, poe, imt -> array
+        for (poe, imt), matrix in res.items():
+            result[sid, poe, imt] = matrix
+    return result  # sid, poe, imt -> array
 
 
 def agg_probs(*probs):
@@ -262,10 +261,10 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs) for sid in self.sitecol.sids]
             self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
-        iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
+        self.iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
-                self.build_disagg_by_src(iml2s)
+                self.build_disagg_by_src()
             else:
                 logging.warning('disagg_by_src works only with 1 realization, '
                                 'you have %d', R)
@@ -303,7 +302,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
-            iml2 = iml2s[s]
+            iml2 = self.iml2s[s]
             r = rlzs[s]
             logging.info('Site #%d, disaggregating for rlz=#%d', s, r)
             for p, poe in enumerate(oq.poes_disagg or [None]):
@@ -324,7 +323,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for start, stop in indices_by_grp[grp_id]:
                 for slc in gen_slices(start, stop, blocksize):
                     allargs.append((self.datastore, slc, cmaker,
-                                    iml2s, trti, self.bin_edges))
+                                    self.iml2s, trti, self.bin_edges))
         self.datastore.close()
         results = parallel.Starmap(
             compute_disagg, allargs, hdf5path=self.datastore.filename
@@ -360,7 +359,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
         :param results:
-            a dictionary (sid, rlzi, poe, imt) -> trti -> disagg matrix
+            a dictionary (sid, poe, imt) -> trti -> disagg matrix
         """
         self.datastore.open('r+')
         T = len(self.trts)
@@ -381,7 +380,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             a dictionary sid, rlz, poe, imt -> 6D disagg_matrix
         """
-        for (sid, rlz, poe, imt), matrix in sorted(results.items()):
+        for (sid, poe, imt), matrix in sorted(results.items()):
+            rlz = self.iml2s[sid].rlzi
             self._save_result('disagg', sid, rlz, poe, imt, matrix)
         self.datastore.set_attrs('disagg', **attrs)
 
@@ -426,7 +426,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     ' poe=%s; perhaps the number of intensity measure'
                     ' levels is too small?', site_id, poe_agg, poe)
 
-    def build_disagg_by_src(self, iml2s):
+    def build_disagg_by_src(self):
         """
         :param dstore: a datastore
         :param iml2s: N arrays of IMLs with shape (M, P)
@@ -442,7 +442,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         P = len(poes_disagg)
         for rec in self.sitecol.array:
             sid = rec['sids']
-            iml2 = iml2s[sid]
+            iml2 = self.iml2s[sid]
             for imti, imt in enumerate(oq.imtls):
                 xs = oq.imtls[imt]
                 poes = numpy.zeros((G, P))
