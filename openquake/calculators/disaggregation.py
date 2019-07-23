@@ -126,9 +126,9 @@ def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
     for sid, res in disagg.build_matrices(
             rupdata, sitecol, cmaker, iml2s, oqparam.truncation_level,
             oqparam.num_epsilon_bins, bin_edges, pne_mon, mat_mon):
-        for (poe, imt), matrix in res.items():
-            result[sid, poe, imt] = matrix
-    return result  # sid, poe, imt -> array
+        for (p, m), matrix in res.items():
+            result[sid, p, m] = matrix
+    return result  # sid, p, m -> array
 
 
 def agg_probs(*probs):
@@ -164,8 +164,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results,
-        a dictionary with key (sid, rlzi, poe, imt, trti)
-        and values which are probability arrays.
+        a dictionary with key (s, p, m) and values which are probability arrays
 
         :param acc: dictionary k -> dic accumulating the results
         :param result: dictionary with the result coming from a task
@@ -242,7 +241,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 raise RuntimeError('All sources were filtered away!')
 
         csm_info = self.datastore['csm_info']
-        poes_disagg = oq.poes_disagg or (None,)
+        self.poes_disagg = oq.poes_disagg or (None,)
+        self.imts = list(oq.imtls)
         R = len(self.rlzs_assoc.realizations)
 
         if oq.rlz_index is None:
@@ -261,7 +261,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
             curves = [self.get_curve(sid, rlzs) for sid in self.sitecol.sids]
             self.ok_sites = set(self.check_poes_disagg(curves, rlzs))
-        self.iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls, poes_disagg, curves)
+        self.iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls,
+                            self.poes_disagg, curves)
         if oq.disagg_by_src:
             if R == 1:
                 self.build_disagg_by_src()
@@ -359,7 +360,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
         :param results:
-            a dictionary (sid, poe, imt) -> trti -> disagg matrix
+            a dictionary (s, p, m) -> trti -> disagg matrix
         """
         self.datastore.open('r+')
         T = len(self.trts)
@@ -380,9 +381,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             a dictionary sid, rlz, poe, imt -> 6D disagg_matrix
         """
-        for (sid, poe, imt), matrix in sorted(results.items()):
-            rlz = self.iml2s[sid].rlzi
-            self._save_result('disagg', sid, rlz, poe, imt, matrix)
+        for (s, p, m), matrix in sorted(results.items()):
+            r = self.iml2s[s].rlzi
+            self._save_result('disagg', s, r,
+                              self.poes_disagg[p], self.imts[m], matrix)
         self.datastore.set_attrs('disagg', **attrs)
 
     def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix):
