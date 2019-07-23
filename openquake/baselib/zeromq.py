@@ -124,8 +124,7 @@ class Socket(object):
         self.running = True
         while self.running:
             try:
-                ready = self.zsocket.poll(self.timeout)
-                if ready:
+                if self.zsocket.poll(self.timeout):
                     yield self.zsocket.recv_pyobj()
                 elif self.socket_type == zmq.PULL:
                     logging.debug('Timeout in %s', self)
