@@ -307,7 +307,6 @@ hazard_uhs-std.csv
             case_17.__file__)
 
     def test_case_18(self):  # GMPEtable
-        raise unittest.SkipTest('Currently broken on travis')
         self.assert_curves_ok(
             ['hazard_curve-mean_PGA.csv',
              'hazard_curve-mean_SA(0.2).csv',
