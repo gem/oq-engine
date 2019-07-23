@@ -565,7 +565,7 @@ class RuptureGetter(object):
                                       for ri in rup_indices])
                 yield rgetter
 
-    def get_eid_rlz(self, monitor=None):
+    def get_eid_rlz(self):
         """
         :returns: a composite array with the associations eid->rlz
         """
