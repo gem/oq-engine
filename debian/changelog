@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in event based with correlation and a filtered site collection
   * Fixed the CSV exporter for the realizations in the case of scenarios
     with parametric GSIMs
   * Removed some misleading warnings for calculations with a site model
