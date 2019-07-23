@@ -31,7 +31,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import AccumDict, CallableDict, cached_property
+from openquake.baselib.general import CallableDict, cached_property
 from openquake.hazardlib.stats import compute_stats2
 
 F32 = numpy.float32
@@ -82,9 +82,9 @@ class VulnerabilityFunction(object):
                  distribution="LN"):
         """
         A wrapper around a probabilistic distribution function
-        (currently, the Log-normal ("LN") and Beta ("BT") 
+        (currently, the Log-normal ("LN") and Beta ("BT")
         distributions are supported amongst the continuous probability
-        distributions. For specifying a discrete probability 
+        distributions. For specifying a discrete probability
         distribution refer to the class VulnerabilityFunctionWithPMF.
         It is meant to be pickeable to allow distributed computation.
         The only important method is `.__call__`, which applies
@@ -125,11 +125,14 @@ class VulnerabilityFunction(object):
                 msg = ("It is not valid to define a loss ratio = 0.0 with a "
                        "corresponding coeff. of variation > 0.0")
                 raise ValueError(msg)
-            if distribution == 'BT' and lr > 0 and cov ** 2 > 1 / lr - 1:
-                # see https://github.com/gem/oq-engine/issues/4841
-                raise ValueError(
-                    'The coefficient of variation %s > %s is too large in %s'
-                    % (cov, numpy.sqrt(1 / lr - 1), self))
+            if distribution == 'BT':
+                if lr > 1:
+                    raise ValueError('The meanLRs must be <= 1, got %s' % lr)
+                elif cov ** 2 > 1 / lr - 1:
+                    # see https://github.com/gem/oq-engine/issues/4841
+                    raise ValueError(
+                        'The coefficient of variation %s > %s is too large '
+                        'in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
 
         self.distribution_name = distribution
 

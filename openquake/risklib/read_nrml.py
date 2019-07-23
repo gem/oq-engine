@@ -409,7 +409,7 @@ def update_validators():
         'coefficientsVariation': valid.positivefloats,
         'probabilisticDistribution': valid.Choice('LN', 'BT'),
         'dist': valid.Choice('LN', 'BT', 'PM'),
-        'meanLRs': valid.probabilities,
+        'meanLRs': valid.positivefloats,
         'covLRs': valid.positivefloats,
         'format': valid.ChoiceCI('discrete', 'continuous'),
         'mean': valid.positivefloat,
