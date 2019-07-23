@@ -69,9 +69,9 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
         if n < N:
             res = numpy.zeros((N, residuals.shape[1]))
             res[sites.sids] = residuals
-            return (corma @ res)[sites.sids, :]
+            return (corma @ res)[sites.sids, :]  # shape (n, s)
         else:
-            return corma @ residuals
+            return corma @ residuals  # shape (N, s)
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
