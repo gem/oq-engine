@@ -404,7 +404,7 @@ def update_validators():
         'vulnerabilitySetID': str,  # any ASCII string is fine
         'vulnerabilityFunctionID': str,  # any ASCII string is fine
         'lossCategory': valid.utf8,  # a description field
-        'lr': valid.probability,
+        'lr': valid.positivefloats,
         'lossRatio': valid.positivefloats,
         'coefficientsVariation': valid.positivefloats,
         'probabilisticDistribution': valid.Choice('LN', 'BT'),
