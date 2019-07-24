@@ -634,17 +634,16 @@ class Starmap(object):
         arg0 = args[0]  # this is assumed to be a sequence
         args = args[1:-1]
         if maxweight:  # block_splitter is lazy
-            task_args = ((blk,) + args for blk in block_splitter(
+            taskargs = ((blk,) + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
-            task_args = [(blk,) + args for blk in split_in_blocks(
+            taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(task, task_args, distribute, progress,
-                   hdf5path).submit_all()
+        return cls(task, taskargs, distribute, progress, hdf5path).submit_all()
 
     def __init__(self, task_func, task_args=(), distribute=None,
                  progress=logging.info, hdf5path=None):
-        self.__class__.init(distribute)
+        self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if hdf5path:
             match = re.search(r'(\d+)', os.path.basename(hdf5path))
