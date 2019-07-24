@@ -23,7 +23,7 @@ from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.hazardlib.calc.stochastic import TWO32
-from openquake.risklib import riskinput, riskmodels
+from openquake.risklib import riskinput, criskmodels
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -54,11 +54,11 @@ def build_loss_tables(dstore):
     return tbl, lbr
 
 
-def event_based_risk(riskinputs, riskmodel, param, monitor):
+def event_based_risk(riskinputs, criskmodel, param, monitor):
     """
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param riskmodel:
+    :param criskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         a dictionary of parameters
@@ -67,7 +67,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    L = len(riskmodel.lti)
+    L = len(criskmodel.lti)
     epspath = param['epspath']
     for ri in riskinputs:
         with monitor('getting hazard'):
@@ -89,16 +89,16 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
         # update the result dictionary and the agg array with each output
-        for out in riskmodel.gen_outputs(ri, monitor, epspath, hazard):
+        for out in criskmodel.gen_outputs(ri, monitor, epspath, hazard):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
             agglosses = numpy.zeros((len(out.eids), L), F32)
-            for l, loss_type in enumerate(riskmodel.loss_types):
+            for l, loss_type in enumerate(criskmodel.loss_types):
                 loss_ratios = out[loss_type]
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
-                avalues = riskmodels.get_values(loss_type, ri.assets)
+                avalues = criskmodels.get_values(loss_type, ri.assets)
                 for a, asset in enumerate(ri.assets):
                     aval = avalues[a]
                     aid = asset['ordinal']
@@ -157,7 +157,7 @@ class EbrCalculator(base.RiskCalculator):
         if not oq.ground_motion_fields:
             return  # this happens in the reportwriter
 
-        self.L = len(self.riskmodel.lti)
+        self.L = len(self.criskmodel.lti)
         self.T = len(self.assetcol.tagcol)
         self.A = len(self.assetcol)
         if parent:
@@ -180,7 +180,7 @@ class EbrCalculator(base.RiskCalculator):
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['epspath'] = riskinput.cache_epsilons(
-            self.datastore, oq, self.assetcol, self.riskmodel, self.E)
+            self.datastore, oq, self.assetcol, self.criskmodel, self.E)
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['stats'] = list(oq.hazard_stats().items())
