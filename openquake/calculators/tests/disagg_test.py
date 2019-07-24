@@ -142,9 +142,18 @@ class DisaggregationTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-    def test_disagg_by_src(self):
-        # this is a case with iml_disagg and disagg_by_src
-        self.run_calc(case_master.__file__, 'job1.ini')
-        arr = self.calc.datastore[
-            'disagg_by_src/iml-0.02-PGA-sid-0'][()]
-        numpy.testing.assert_almost_equal(arr, [0.6757448, 0.1780308])
+        # test_disagg_by_src
+        dbs = self.calc.datastore['disagg_by_src']
+        self.assertEqual(sorted(dbs), ['poe-0.01-PGA-sid-0',
+                                       'poe-0.01-PGA-sid-1',
+                                       'poe-0.01-SA(0.25)-sid-0',
+                                       'poe-0.01-SA(0.25)-sid-1',
+                                       'poe-0.05-PGA-sid-0',
+                                       'poe-0.05-PGA-sid-1',
+                                       'poe-0.05-SA(0.25)-sid-0',
+                                       'poe-0.05-SA(0.25)-sid-1'])
+        arr = dbs['poe-0.01-PGA-sid-0'][()]
+        numpy.testing.assert_almost_equal(
+            arr, [0.00000000e+00, 0.00000000e+00,
+                  5.38093847e-05, 9.94706034e-03])
+
