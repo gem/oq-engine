@@ -375,7 +375,7 @@ class ClassicalCalculator(base.HazardCalculator):
             (getters.PmapGetter(parent, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
-        parallel.Starmap(build_hazard_stats, allargs,
+        parallel.Starmap(build_hazard, allargs,
                          hdf5path=self.datastore.filename).reduce(
                              self.save_hazard)
 
@@ -405,8 +405,8 @@ def _build_stat_curve(poes, imtls, stat, weights):
     return ProbabilityCurve(array)
 
 
-def build_hazard_stats(pgetter, N, hstats, individual_curves,
-                       max_sites_disagg, monitor):
+def build_hazard(pgetter, N, hstats, individual_curves,
+                 max_sites_disagg, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param N: the total number of sites
