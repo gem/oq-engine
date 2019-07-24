@@ -430,9 +430,9 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     :param taxonomy:
         a taxonomy string
     :param oqparam:
-        an object containing the parameters needed by the crmodel class
+        an object containing the parameters needed by the RiskModel class
     :param extra:
-        extra parameters to pass to the crmodel class
+        extra parameters to pass to the RiskModel class
     """
     extra['hazard_imtls'] = oqparam.imtls
     extra['investigation_time'] = oqparam.investigation_time
@@ -452,7 +452,7 @@ class ValidationError(Exception):
     pass
 
 
-def extract(rmdict, kind):
+def _extract(rmdict, kind):
     lst = []
     for riskid, rm in rmdict.items():
         risk_functions = getattr(rm, 'risk_functions', rm)
@@ -519,7 +519,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for riskid, risk_functions in sorted(riskdict.items()):
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oqparam, risk_functions=risk_functions)
-        elif (extract(riskdict, 'fragility') or
+        elif (_extract(riskdict, 'fragility') or
               'damage' in oqparam.calculation_mode):
             # classical_damage/scenario_damage calculator
             if oqparam.calculation_mode in ('classical', 'scenario'):
@@ -546,7 +546,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.init(oqparam)
 
     def has(self, kind):
-        return extract(self._riskmodels, kind)
+        return _extract(self._riskmodels, kind)
 
     def init(self, oqparam):
         self.imtls = oqparam.imtls
