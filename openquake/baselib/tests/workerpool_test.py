@@ -28,8 +28,6 @@ def double(x):
     return 2 * x
 
 
-# this test is temporarily disabled, the workerpool is tested in the demos
-# in travis, since they are run with OQ_DISTRIBUTE=zmq
 class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
