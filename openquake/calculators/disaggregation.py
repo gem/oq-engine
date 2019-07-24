@@ -433,26 +433,29 @@ class DisaggregationCalculator(base.HazardCalculator):
         ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         pgetter = getters.PmapGetter(self.datastore, ws, self.sitecol.sids)
         G = len(self.datastore['csm_info/sg_data'])
+        M = len(oq.imtls)
         P = len(self.poes_disagg)
-        for sid, lon, lat in self.sitecol[['sids', 'lon', 'lat']]:
+        for sid in self.sitecol.sids:
+            poes = numpy.zeros((M, P, G))
             iml2 = self.iml2s[sid]
-            poes = numpy.zeros((G, P))
             for g in range(G):
                 pcurve = pgetter.get_pcurve(sid, iml2.rlzi, g)
-                if pcurve is not None:
-                    for imti, imt in enumerate(oq.imtls):
-                        xs = oq.imtls[imt]
-                        ys = pcurve.array[oq.imtls(imt), 0]
-                        poes[g] = numpy.interp(iml2[imti, :], xs, ys)
+                if pcurve is None:
+                    continue
+                for m, imt in enumerate(oq.imtls):
+                    xs = oq.imtls[imt]
+                    ys = pcurve.array[oq.imtls(imt), 0]
+                    poes[m, :, g] = numpy.interp(iml2[m], xs, ys)
+            for m, imt in enumerate(oq.imtls):
                 for p, poe in enumerate(self.poes_disagg):
                     pref = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                             else 'poe-%s' % poe)
-                    name = 'disagg_by_src/%s-%s-%s-%s' % (pref, imt, lon, lat)
-                    if poes[:, p].sum():  # nonzero contribution
-                        poe_agg = 1 - numpy.prod(1 - poes[:, p])
+                    name = 'disagg_by_src/%s-%s-sid-%s' % (pref, imt, sid)
+                    if poes[m, p].sum():  # nonzero contribution
+                        poe_agg = 1 - numpy.prod(1 - poes[m, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
                             logging.warning(
                                 'poe_agg=%s is quite different from '
                                 'the expected poe=%s', poe_agg, poe)
-                        self.datastore[name] = poes[:, p]
+                        self.datastore[name] = poes[m, p]
                         self.datastore.set_attrs(name, poe_agg=poe_agg)
