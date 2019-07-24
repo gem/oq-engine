@@ -65,17 +65,9 @@ class StarmapTestCase(unittest.TestCase):
     def setUpClass(cls):
         parallel.Starmap.init()  # initialize the pool
         if parallel.oq_distribute() == 'zmq':
-            c = config.zworkers
-            host = config.dbserver.host
-            port = int(c['task_in_port'])
-            if not general.socket_ready((host, port)):
-                raise unittest.SkipTest('The task streamer is off')
-            master = workerpool.WorkerMaster(
-                '127.0.0.1', c['task_in_port'], c['task_out_port'],
-                c['ctrl_port'], c['host_cores'])
-            [(host, status)] = master.status()
-            if status != 'running':
-                raise unittest.SkipTest('The workerpool is off')
+            err = workerpool.check_status()
+            if err:
+                raise unittest.SkipTest(err)
 
     def test_apply(self):
         res = parallel.Starmap.apply(
