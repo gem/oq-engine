@@ -34,7 +34,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, source, calc, util
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
@@ -601,7 +601,7 @@ class HazardCalculator(BaseCalculator):
         if not self.criskmodel:
             parent = self.datastore.parent
             if 'risk_model' in parent:
-                self.criskmodel = riskinput.CompositeRiskModel.read(parent)
+                self.criskmodel = riskmodels.CompositeRiskModel.read(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
             raise InvalidFile('No intensity_measure_types specified in %s' %
