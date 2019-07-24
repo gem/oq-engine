@@ -44,7 +44,7 @@ def classical_bcr(riskinputs, crmodel, param, monitor):
     R = riskinputs[0].hazard_getter.num_rlzs
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
     for ri in riskinputs:
-        for out in crmodel.gen_outputs(ri, monitor):
+        for out in ri.gen_outputs(crmodel, monitor):
             for asset, (eal_orig, eal_retro, bcr) in zip(
                     ri.assets, out['structural']):
                 aval = asset['value-structural']
