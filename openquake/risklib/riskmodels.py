@@ -192,7 +192,7 @@ class RiskModel(object):
     :param risk_functions: a dict (loss_type, kind) -> risk_function
     """
     time_event = None  # used in scenario_risk
-    compositemodel = None  # set by get_risk_model
+    compositemodel = None  # set by get_crmodel
 
     def __init__(self, calcmode, taxonomy, risk_functions, **kw):
         self.calcmode = calcmode
@@ -424,21 +424,21 @@ class ValidationError(Exception):
 
 
 # NB: the approach used here relies on the convention of having the
-# names of the arguments of the criskmodel class to be equal to the
+# names of the arguments of the crmodel class to be equal to the
 # names of the parameter in the oqparam object. This is seen as a
 # feature, since it forces people to be consistent with the names,
 # in the spirit of the 'convention over configuration' philosophy
-def get_criskmodel(taxonomy, oqparam, **extra):
+def get_riskmodel(taxonomy, oqparam, **extra):
     """
-    Return an instance of the correct criskmodel class, depending on the
+    Return an instance of the correct risk model class, depending on the
     attribute `calculation_mode` of the object `oqparam`.
 
     :param taxonomy:
         a taxonomy string
     :param oqparam:
-        an object containing the parameters needed by the criskmodel class
+        an object containing the parameters needed by the crmodel class
     :param extra:
-        extra parameters to pass to the criskmodel class
+        extra parameters to pass to the crmodel class
     """
     extra['hazard_imtls'] = oqparam.imtls
     extra['investigation_time'] = oqparam.investigation_time
@@ -485,7 +485,7 @@ def extract(rmdict, kind):
 
 class CompositeRiskModel(collections.abc.Mapping):
     """
-    A container (riskid, kind) -> criskmodel
+    A container (riskid, kind) -> crmodel
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -534,11 +534,11 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def __init__(self, oqparam, riskdict):
         self.damage_states = []
-        self._riskmodels = {}  # riskid -> criskmodel
+        self._riskmodels = {}  # riskid -> crmodel
         if oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
             for riskid, risk_functions in sorted(riskdict.items()):
-                self._riskmodels[riskid] = get_criskmodel(
+                self._riskmodels[riskid] = get_riskmodel(
                     riskid, oqparam, risk_functions=risk_functions)
         elif (extract(riskdict, 'fragility') or
               'damage' in oqparam.calculation_mode):
@@ -553,7 +553,7 @@ class CompositeRiskModel(collections.abc.Mapping):
 
             self.damage_states = ['no_damage'] + list(riskdict.limit_states)
             for riskid, ffs_by_lt in sorted(riskdict.items()):
-                self._riskmodels[riskid] = get_criskmodel(
+                self._riskmodels[riskid] = get_riskmodel(
                     riskid, oqparam, risk_functions=ffs_by_lt)
         else:
             # classical, event based and scenario calculators
@@ -562,7 +562,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
                     vf.seed = oqparam.random_seed
-                self._riskmodels[riskid] = get_criskmodel(
+                self._riskmodels[riskid] = get_riskmodel(
                     riskid, oqparam, risk_functions=vfs)
         self.init(oqparam)
 

@@ -265,7 +265,7 @@ lossCategory="contents">
                       'type "structural", expected "contents"',
                       str(ctx.exception))
 
-    def test_wrong_criskmodel_association(self):
+    def test_wrong_riskmodel_association(self):
         cfm = os.path.join(FF_DIR, 'contents_fragility_model.xml')
         # passing a fragility model instead of a consequence model
         oq = mock.Mock()

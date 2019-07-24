@@ -446,7 +446,7 @@ class HazardCalculator(BaseCalculator):
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
             haz_sitecol = readinput.get_site_collection(oq)
-            self.load_criskmodel()  # must be after get_site_collection
+            self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             self.datastore['poes/grp-00'] = fix_ones(readinput.pmap)
             self.datastore['sitecol'] = self.sitecol
@@ -490,14 +490,14 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.run()
-            for name in ('csm param sitecol assetcol criskmodel rlzs_assoc '
+            for name in ('csm param sitecol assetcol crmodel rlzs_assoc '
                          'policy_name policy_dict').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
             self.read_inputs()
-        if self.criskmodel:
-            self.save_criskmodel()
+        if self.crmodel:
+            self.save_crmodel()
 
     def init(self):
         """
@@ -537,14 +537,14 @@ class HazardCalculator(BaseCalculator):
 
     def read_exposure(self, haz_sitecol=None):  # after load_risk_model
         """
-        Read the exposure, the criskmodel and update the attributes
+        Read the exposure, the risk models and update the attributes
         .sitecol, .assetcol
         """
         oq = self.oqparam
         with self.monitor('reading exposure', autoflush=True):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
-                    oq, haz_sitecol, self.criskmodel.loss_types))
+                    oq, haz_sitecol, self.crmodel.loss_types))
             if len(discarded):
                 self.datastore['discarded'] = discarded
                 if hasattr(self, 'rup'):
@@ -588,31 +588,31 @@ class HazardCalculator(BaseCalculator):
             else:
                 self.policy_name = policy_name
 
-    def load_criskmodel(self):
+    def load_crmodel(self):
         # to be called before read_exposure
         # NB: this is called even if there is no risk model
         """
-        Read the risk model and set the attribute .criskmodel.
-        The criskmodel can be empty for hazard calculations.
+        Read the risk models and set the attribute .crmodel.
+        The crmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
         logging.info('Reading the risk model if present')
-        self.criskmodel = readinput.get_risk_model(self.oqparam)
-        if not self.criskmodel:
+        self.crmodel = readinput.get_crmodel(self.oqparam)
+        if not self.crmodel:
             parent = self.datastore.parent
             if 'risk_model' in parent:
-                self.criskmodel = riskmodels.CompositeRiskModel.read(parent)
+                self.crmodel = riskmodels.CompositeRiskModel.read(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
             raise InvalidFile('No intensity_measure_types specified in %s' %
                               self.oqparam.inputs['job_ini'])
         self.save_params()  # re-save oqparam
 
-    def save_criskmodel(self):
+    def save_crmodel(self):
         """
         Save the risk models in the datastore
         """
-        self.datastore['risk_model'] = rm = self.criskmodel
+        self.datastore['risk_model'] = rm = self.crmodel
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes('risk_model')
@@ -621,7 +621,7 @@ class HazardCalculator(BaseCalculator):
         # read the exposure (if any), the risk model (if any) and then the
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
-        self.load_criskmodel()  # must be called first
+        self.load_crmodel()  # must be called first
 
         if oq.hazard_calculation_id:
             with util.read(oq.hazard_calculation_id) as dstore:
@@ -695,21 +695,21 @@ class HazardCalculator(BaseCalculator):
             tmap_arr, tmap_lst = logictree.taxonomy_mapping(
                 self.oqparam.inputs.get('taxonomy_mapping'),
                 self.assetcol.tagcol.taxonomy)
-            self.criskmodel.tmap = tmap_lst
+            self.crmodel.tmap = tmap_lst
             if len(tmap_arr):
                 self.datastore['taxonomy_mapping'] = tmap_arr
-            taxonomies = set(taxo for items in self.criskmodel.tmap
+            taxonomies = set(taxo for items in self.crmodel.tmap
                              for taxo, weight in items if taxo != '?')
             # check that we are covering all the taxonomies in the exposure
-            missing = taxonomies - set(self.criskmodel.taxonomies)
-            if self.criskmodel and missing:
+            missing = taxonomies - set(self.crmodel.taxonomies)
+            if self.crmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
-            if len(self.criskmodel.taxonomies) > len(taxonomies):
+            if len(self.crmodel.taxonomies) > len(taxonomies):
                 logging.info('Reducing risk model from %d to %d taxonomies',
-                             len(self.criskmodel.taxonomies), len(taxonomies))
-                self.criskmodel = self.criskmodel.reduce(taxonomies)
-                self.criskmodel.tmap = tmap_lst
+                             len(self.crmodel.taxonomies), len(taxonomies))
+                self.crmodel = self.crmodel.reduce(taxonomies)
+                self.crmodel.tmap = tmap_lst
 
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
@@ -796,7 +796,7 @@ def build_hmaps(hcurves_by_kind, slice_, imtls, poes, monitor):
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
-    attributes .criskmodel, .sitecol, .assetcol, .riskinputs in the
+    attributes .crmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
     def read_shakemap(self, haz_sitecol, assetcol):
@@ -849,8 +849,8 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        if not hasattr(self.criskmodel, 'tmap'):
-            _, self.criskmodel.tmap = logictree.taxonomy_mapping(
+        if not hasattr(self.crmodel, 'tmap'):
+            _, self.crmodel.tmap = logictree.taxonomy_mapping(
                 self.oqparam.inputs.get('taxonomy_mapping'),
                 self.assetcol.tagcol.taxonomy)
         with self.monitor('building riskinputs', autoflush=True):
@@ -911,13 +911,13 @@ class RiskCalculator(HazardCalculator):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
         Require a `.core_task` to be defined with signature
-        (riskinputs, criskmodel, rlzs_assoc, monitor).
+        (riskinputs, crmodel, rlzs_assoc, monitor).
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
         res = Starmap.apply(
             self.core_task.__func__,
-            (self.riskinputs, self.criskmodel, self.param, self.monitor()),
+            (self.riskinputs, self.crmodel, self.param, self.monitor()),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=get_weight, hdf5path=self.datastore.filename
         ).reduce(self.combine)
