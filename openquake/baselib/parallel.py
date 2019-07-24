@@ -178,7 +178,7 @@ from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, dump
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, socket_ready)
+    gettemp)
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
@@ -210,10 +210,8 @@ def celery_submit(self, func, args, monitor):
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
     if not hasattr(self, 'sender'):
-        hostport = config.dbserver.host, int(config.zworkers.task_in_port)
+        hostport = config.dbserver.host, config.zworkers.task_in_port
         task_in_url = 'tcp://%s:%s' % hostport
-        if not socket_ready(hostport):
-            raise RuntimeError('There is no task streamer on %s' % task_in_url)
         self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
     return self.sender.send((func, args, self.task_no, monitor))
 
@@ -676,11 +674,9 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         if self.distribute == 'zmq':  # add a check
-            worker_status = workerpool.WorkerMaster(
-                config.dbserver.listen, **config.zworkers).status()
-            for host, status in worker_status:
-                if status != 'running':
-                    raise RuntimeError('The workerpool on %s is down' % host)
+            err = workerpool.check_status()
+            if err:
+                raise RuntimeError(err)
 
     def log_percent(self):
         """
