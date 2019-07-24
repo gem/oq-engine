@@ -178,18 +178,10 @@ from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, dump
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp)
+    gettemp, socket_ready)
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
-OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
-if OQ_DISTRIBUTE == 'futures':  # legacy name
-    print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
-    OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                         'dask'):
-    raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
-
 submit = CallableDict()
 
 
@@ -204,7 +196,10 @@ def processpool_submit(self, func, args, monitor):
         safely_call, (func, args, self.task_no, monitor))
 
 
-threadpool_submit = submit.add('threadpool')(processpool_submit)
+@submit.add('threadpool')
+def threadpool_submit(self, func, args, monitor):
+    return self.pool.apply_async(
+        safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('celery')
@@ -215,8 +210,10 @@ def celery_submit(self, func, args, monitor):
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
     if not hasattr(self, 'sender'):
-        task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
-                                       config.zworkers.task_in_port)
+        hostport = config.dbserver.host, int(config.zworkers.task_in_port)
+        task_in_url = 'tcp://%s:%s' % hostport
+        if not socket_ready(hostport):
+            raise RuntimeError('There is no task streamer on %s' % task_in_url)
         self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
     return self.sender.send((func, args, self.task_no, monitor))
 
@@ -230,7 +227,11 @@ def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or 'processpool'
     """
-    return os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
+                    'dask'):
+        raise ValueError('Invalid oq_distribute=%s' % dist)
+    return dist
 
 
 class Pickled(object):
@@ -436,7 +437,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
                 break
 
 
-if OQ_DISTRIBUTE.startswith('celery'):
+if oq_distribute().startswith('celery'):
     from celery import Celery
     from celery.task import task
 
@@ -444,7 +445,7 @@ if OQ_DISTRIBUTE.startswith('celery'):
     app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
 
-elif OQ_DISTRIBUTE == 'dask':
+elif oq_distribute() == 'dask':
     from dask.distributed import Client
 
 
@@ -489,7 +490,7 @@ class IterResult(object):
                     self.nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
-            if OQ_DISTRIBUTE == 'processpool' and sys.platform != 'darwin':
+            if sys.platform != 'darwin':
                 # it normally works on macOS, but not in notebooks calling
                 # notebooks, which is the case relevant for Marco Pagani
                 mem_gb = (memory_rss(os.getpid()) + sum(
@@ -574,8 +575,9 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
 
     @classmethod
-    def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
-        if distribute == 'processpool' and not hasattr(cls, 'pool'):
+    def init(cls, poolsize=None, distribute=None):
+        cls.distribute = distribute or oq_distribute()
+        if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
             # unregister custom handlers before starting the processpool
             term_handler = signal.signal(signal.SIGTERM, signal.SIG_DFL)
             int_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -589,9 +591,9 @@ class Starmap(object):
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
-        elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
+        elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
-        elif distribute == 'dask':
+        elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
     @classmethod
@@ -632,17 +634,16 @@ class Starmap(object):
         arg0 = args[0]  # this is assumed to be a sequence
         args = args[1:-1]
         if maxweight:  # block_splitter is lazy
-            task_args = ((blk,) + args for blk in block_splitter(
+            taskargs = ((blk,) + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
-            task_args = [(blk,) + args for blk in split_in_blocks(
+            taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(task, task_args, distribute, progress,
-                   hdf5path).submit_all()
+        return cls(task, taskargs, distribute, progress, hdf5path).submit_all()
 
     def __init__(self, task_func, task_args=(), distribute=None,
                  progress=logging.info, hdf5path=None):
-        self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
+        self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if hdf5path:
             match = re.search(r'(\d+)', os.path.basename(hdf5path))
@@ -653,7 +654,6 @@ class Starmap(object):
         self.monitor.calc_id = calc_id
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
-        self.distribute = distribute or oq_distribute(task_func)
         self.progress = progress
         self.hdf5path = hdf5path or gettemp(suffix='.hdf5')
         try:
