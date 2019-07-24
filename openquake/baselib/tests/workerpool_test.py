@@ -22,10 +22,9 @@ from openquake.baselib import config
 from openquake.baselib.workerpool import WorkerMaster
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import _get_free_port, socket_ready
-from openquake.baselib.performance import Monitor
 
 
-def double(x, mon):
+def double(x):
     return 2 * x
 
 
@@ -36,21 +35,17 @@ class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.z = config.zworkers.copy()
-        dic = dict(master_host='127.0.0.1')
-        config.zworkers.update(dic)
         ctrl_port = _get_free_port()
         host_cores = '127.0.0.1 4'
+        hostport = '127.0.0.1:%s' % cls.z['task_in_port']
         cls.master = WorkerMaster(
-            dic['master_host'], dic['task_in_port'], dic['task_out_port'],
+            '127.0.0.1', cls.z['task_in_port'], cls.z['task_out_port'],
             ctrl_port, host_cores)
-
-        hostport = dic['master_host'], int(dic['task_in_port'])
         cls.master.start(streamer=not socket_ready(hostport))
 
     def test(self):
-        mon = Monitor()
         iterargs = ((i,) for i in range(10))
-        smap = Starmap(double, iterargs, mon, distribute='zmq')
+        smap = Starmap(double, iterargs, distribute='zmq')
         self.assertEqual(sum(res for res in smap), 90)
         # sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
 
