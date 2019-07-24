@@ -89,7 +89,7 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
         # update the result dictionary and the agg array with each output
-        for out in crmodel.gen_outputs(ri, monitor, epspath, hazard):
+        for out in ri.gen_outputs(crmodel, monitor, epspath, hazard):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
