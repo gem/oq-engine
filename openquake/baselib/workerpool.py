@@ -80,9 +80,6 @@ class WorkerMaster(object):
         Start multiple workerpools, possibly on remote servers via ssh,
         assuming there is an active streamer.
         """
-        if not general.socket_ready(self.task_in_url):
-            raise RuntimeError('There is no task streamer on %s' %
-                               self.task_in_url)
         starting = []
         for host, cores in self.host_cores:
             if self.status(host)[0][1] == 'running':
