@@ -24,7 +24,7 @@ import unittest
 import itertools
 import tempfile
 import numpy
-from openquake.baselib import parallel, general, hdf5, config
+from openquake.baselib import parallel, general, hdf5, config, workerpool
 
 try:
     import celery
@@ -65,10 +65,17 @@ class StarmapTestCase(unittest.TestCase):
     def setUpClass(cls):
         parallel.Starmap.init()  # initialize the pool
         if parallel.oq_distribute() == 'zmq':
+            c = config.zworkers
             host = config.dbserver.host
-            port = int(config.zworkers['task_in_port'])
+            port = int(c['task_in_port'])
             if not general.socket_ready((host, port)):
                 raise unittest.SkipTest('The task streamer is off')
+            master = workerpool.WorkerMaster(
+                '127.0.0.1', c['task_in_port'], c['task_out_port'],
+                c['ctrl_port'], c['host_cores'])
+            [(host, status)] = master.status()
+            if status != 'running':
+                raise unittest.SkipTest('The workerpool is off')
 
     def test_apply(self):
         res = parallel.Starmap.apply(
