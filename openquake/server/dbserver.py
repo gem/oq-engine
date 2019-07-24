@@ -23,6 +23,7 @@ import sqlite3
 import logging
 import threading
 import subprocess
+import multiprocessing
 
 from openquake.baselib import config, sap, zeromq as z, workerpool as w
 from openquake.baselib.general import socket_ready, detach_process
@@ -90,10 +91,11 @@ class DbServer(object):
         if ZMQ:
             # start task_in->task_out streamer thread
             c = config.zworkers
-            threading.Thread(
+            self.zstreamer = multiprocessing.Process(
                 target=w._streamer,
                 args=(self.master_host, c.task_in_port, c.task_out_port)
-            ).start()
+            )
+            self.zstreamer.start()
             logging.warning('Task streamer started from %s -> %s',
                             c.task_in_port, c.task_out_port)
 
@@ -112,6 +114,7 @@ class DbServer(object):
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
         if ZMQ:
+            self.zstreamer.terminate()
             z.context.term()
         self.db.close()
 
