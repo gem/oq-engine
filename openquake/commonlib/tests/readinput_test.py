@@ -481,7 +481,7 @@ class GetCompositeRiskModelTestCase(unittest.TestCase):
     def test_missing_vulnerability_function(self):
         oq = readinput.get_oqparam('job.ini', case_caracas)
         with self.assertRaises(ValidationError):
-            readinput.get_risk_model(oq)
+            readinput.get_crmodel(oq)
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):
