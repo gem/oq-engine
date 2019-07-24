@@ -23,13 +23,13 @@ from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk
 
 
-def classical_damage(riskinputs, riskmodel, param, monitor):
+def classical_damage(riskinputs, criskmodel, param, monitor):
     """
     Core function for a classical damage computation.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param riskmodel:
+    :param criskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
@@ -40,8 +40,8 @@ def classical_damage(riskinputs, riskmodel, param, monitor):
     """
     result = AccumDict(accum=AccumDict())
     for ri in riskinputs:
-        for out in riskmodel.gen_outputs(ri, monitor):
-            for l, loss_type in enumerate(riskmodel.loss_types):
+        for out in criskmodel.gen_outputs(ri, monitor):
+            for l, loss_type in enumerate(criskmodel.loss_types):
                 ordinals = ri.assets['ordinal']
                 result[l, out.rlzi] += dict(zip(ordinals, out[loss_type]))
     return result
@@ -63,7 +63,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
             a dictionary (l, r) -> asset_ordinal -> fractions per damage state
         """
         damages_dt = numpy.dtype([(ds, numpy.float32)
-                                  for ds in self.riskmodel.damage_states])
+                                  for ds in self.criskmodel.damage_states])
         damages = numpy.zeros((self.A, self.R, self.L), damages_dt)
         for l, r in result:
             for aid, fractions in result[l, r].items():

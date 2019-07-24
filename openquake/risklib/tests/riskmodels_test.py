@@ -24,7 +24,7 @@ import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.risklib import riskmodels, nrml_examples
+from openquake.risklib import criskmodels, nrml_examples
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 FF_DIR = os.path.dirname(case_4b.__file__)
@@ -260,18 +260,18 @@ lossCategory="contents">
         oq = mock.Mock()
         oq.inputs = dict(structural_consequence=ccm, contents_consequence=scm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_models(oq, 'consequence')
+            criskmodels.get_risk_models(oq, 'consequence')
         self.assertIn('structural_consequence_model.xml": lossCategory is of '
                       'type "structural", expected "contents"',
                       str(ctx.exception))
 
-    def test_wrong_riskmodel_association(self):
+    def test_wrong_criskmodel_association(self):
         cfm = os.path.join(FF_DIR, 'contents_fragility_model.xml')
         # passing a fragility model instead of a consequence model
         oq = mock.Mock()
         oq.inputs = dict(contents_consequence=cfm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_models(oq, 'consequence')
+            criskmodels.get_risk_models(oq, 'consequence')
         self.assertIn('is of kind FragilityModel, '
                       'expected ConsequenceModel', str(ctx.exception))
 
@@ -323,7 +323,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 </nrml>""")
         vfs = {('structural', 'vulnerability'):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
-        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
+        rm = criskmodels.RiskModel('event_based_risk', "RC/A", vfs,
                                   ignore_covs=False)
         assets = [0, 1]
         eids = numpy.array([1, 2, 3, 4, 5])
