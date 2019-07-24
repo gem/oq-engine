@@ -47,7 +47,7 @@ def classical_risk(riskinputs, crmodel, param, monitor):
         R = ri.hazard_getter.num_rlzs
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
-        for out in crmodel.gen_outputs(ri, monitor):
+        for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
                 # loss_curves has shape (A, C)

@@ -55,7 +55,7 @@ def scenario_damage(riskinputs, crmodel, param, monitor):
     result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
                   c_asset=[], c_event=numpy.zeros((E, R, L), F64))
     for ri in riskinputs:
-        for out in crmodel.gen_outputs(ri, monitor):
+        for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):

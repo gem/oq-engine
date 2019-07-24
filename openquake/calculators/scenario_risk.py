@@ -61,7 +61,7 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
     result = dict(agg=numpy.zeros((E, L), F32), avg=[],
                   all_losses=AccumDict(accum={}))
     for ri in riskinputs:
-        for out in crmodel.gen_outputs(ri, monitor, param['epspath']):
+        for out in ri.gen_outputs(crmodel, monitor, param['epspath']):
             r = out.rlzi
             weight = param['weights'][r]
             slc = param['event_slice'](r)

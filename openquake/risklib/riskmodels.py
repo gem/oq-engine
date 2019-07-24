@@ -417,14 +417,8 @@ class RiskModel(object):
         return [a['number'] * damage for a in assets]
 
 
-# ######################## CompositeRiskModel #########################
-
-class ValidationError(Exception):
-    pass
-
-
 # NB: the approach used here relies on the convention of having the
-# names of the arguments of the crmodel class to be equal to the
+# names of the arguments of the RiskModel class to be equal to the
 # names of the parameter in the oqparam object. This is seen as a
 # feature, since it forces people to be consistent with the names,
 # in the spirit of the 'convention over configuration' philosophy
@@ -452,25 +446,10 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
-def get_assets_by_taxo(assets, epspath=None):
-    """
-    :param assets: an array of assets
-    :param epspath: hdf5 file where the epsilons are (or None)
-    :returns: assets_by_taxo with attributes eps and idxs
-    """
-    assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
-    assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
-        a['ordinal'] for a in assets_by_taxo.values()]))
-    assets_by_taxo.eps = {}
-    if epspath is None:  # no epsilons
-        return assets_by_taxo
-    # otherwise read the epsilons and group them by taxonomy
-    with hdf5.File(epspath, 'r') as h5:
-        dset = h5['epsilon_matrix']
-        for taxo, assets in assets_by_taxo.items():
-            lst = [dset[aid] for aid in assets['ordinal']]
-            assets_by_taxo.eps[taxo] = numpy.array(lst)
-    return assets_by_taxo
+# ######################## CompositeRiskModel #########################
+
+class ValidationError(Exception):
+    pass
 
 
 def extract(rmdict, kind):
@@ -485,7 +464,7 @@ def extract(rmdict, kind):
 
 class CompositeRiskModel(collections.abc.Mapping):
     """
-    A container (riskid, kind) -> crmodel
+    A container (riskid, kind) -> riskmodel
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -680,34 +659,6 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def __len__(self):
         return len(self._riskmodels)
-
-    def gen_outputs(self, riskinput, monitor, epspath=None, haz=None):
-        """
-        Group the assets per taxonomy and compute the outputs by using the
-        underlying riskmodels. Yield one output per realization.
-
-        :param riskinput: a RiskInput instance
-        :param monitor: a monitor object used to measure the performance
-        """
-        self.monitor = monitor
-        hazard_getter = riskinput.hazard_getter
-        [sid] = hazard_getter.sids
-        if haz is None:
-            with monitor('getting hazard'):
-                haz = hazard_getter.get_hazard()
-        if isinstance(haz, dict):
-            items = haz.items()
-        else:  # list of length R
-            items = enumerate(haz)
-        with monitor('computing risk', measuremem=False):
-            # this approach is slow for event_based_risk since a lot of
-            # small arrays are passed (one per realization) instead of
-            # a long array with all realizations; ebrisk does the right
-            # thing since it calls get_output directly
-            assets_by_taxo = get_assets_by_taxo(riskinput.assets, epspath)
-            for rlzi, haz_by_rlzi in items:
-                out = self.get_output(assets_by_taxo, haz_by_rlzi, rlzi)
-                yield out
 
     def get_output(self, assets_by_taxo, haz, rlzi=None):
         """
