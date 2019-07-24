@@ -413,21 +413,21 @@ class RiskModel(object):
 
 
 # NB: the approach used here relies on the convention of having the
-# names of the arguments of the riskmodel class to be equal to the
+# names of the arguments of the criskmodel class to be equal to the
 # names of the parameter in the oqparam object. This is seen as a
 # feature, since it forces people to be consistent with the names,
 # in the spirit of the 'convention over configuration' philosophy
-def get_riskmodel(taxonomy, oqparam, **extra):
+def get_criskmodel(taxonomy, oqparam, **extra):
     """
-    Return an instance of the correct riskmodel class, depending on the
+    Return an instance of the correct criskmodel class, depending on the
     attribute `calculation_mode` of the object `oqparam`.
 
     :param taxonomy:
         a taxonomy string
     :param oqparam:
-        an object containing the parameters needed by the riskmodel class
+        an object containing the parameters needed by the criskmodel class
     :param extra:
-        extra parameters to pass to the riskmodel class
+        extra parameters to pass to the criskmodel class
     """
     extra['hazard_imtls'] = oqparam.imtls
     extra['investigation_time'] = oqparam.investigation_time

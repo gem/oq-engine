@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
     AccumDict, group_array, cached_property)
-from openquake.risklib import scientific, riskmodels
+from openquake.risklib import scientific, criskmodels
 
 
 class ValidationError(Exception):
@@ -69,7 +69,7 @@ def extract(rmdict, kind):
 
 class CompositeRiskModel(collections.abc.Mapping):
     """
-    A container (riskid, kind) -> riskmodel
+    A container (riskid, kind) -> criskmodel
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -118,11 +118,11 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def __init__(self, oqparam, riskdict):
         self.damage_states = []
-        self._riskmodels = {}  # riskid -> riskmodel
+        self._criskmodels = {}  # riskid -> criskmodel
         if oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
             for riskid, risk_functions in sorted(riskdict.items()):
-                self._riskmodels[riskid] = riskmodels.get_riskmodel(
+                self._criskmodels[riskid] = criskmodels.get_criskmodel(
                     riskid, oqparam, risk_functions=risk_functions)
         elif (extract(riskdict, 'fragility') or
               'damage' in oqparam.calculation_mode):
@@ -137,7 +137,7 @@ class CompositeRiskModel(collections.abc.Mapping):
 
             self.damage_states = ['no_damage'] + list(riskdict.limit_states)
             for riskid, ffs_by_lt in sorted(riskdict.items()):
-                self._riskmodels[riskid] = riskmodels.get_riskmodel(
+                self._criskmodels[riskid] = criskmodels.get_criskmodel(
                     riskid, oqparam, risk_functions=ffs_by_lt)
         else:
             # classical, event based and scenario calculators
@@ -146,12 +146,12 @@ class CompositeRiskModel(collections.abc.Mapping):
                     # set the seed; this is important for the case of
                     # VulnerabilityFunctionWithPMF
                     vf.seed = oqparam.random_seed
-                self._riskmodels[riskid] = riskmodels.get_riskmodel(
+                self._criskmodels[riskid] = criskmodels.get_criskmodel(
                     riskid, oqparam, risk_functions=vfs)
         self.init(oqparam)
 
     def has(self, kind):
-        return extract(self._riskmodels, kind)
+        return extract(self._criskmodels, kind)
 
     def init(self, oqparam):
         self.imtls = oqparam.imtls
@@ -164,26 +164,26 @@ class CompositeRiskModel(collections.abc.Mapping):
             ltypes.update(rm.loss_types)
         self.loss_types = sorted(ltypes)
         self.taxonomies = set()
-        for riskid, riskmodel in self._riskmodels.items():
+        for riskid, criskmodel in self._criskmodels.items():
             self.taxonomies.add(riskid)
-            riskmodel.compositemodel = self
-            for lt, vf in riskmodel.risk_functions.items():
+            criskmodel.compositemodel = self
+            for lt, vf in criskmodel.risk_functions.items():
                 # save the number of nonzero coefficients of variation
                 if hasattr(vf, 'covs') and vf.covs.any():
                     self.covs += 1
             missing = set(self.loss_types) - set(
-                lt for lt, kind in riskmodel.risk_functions)
+                lt for lt, kind in criskmodel.risk_functions)
             if missing:
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (riskid, ', '.join(missing)))
-            riskmodel.imti = {lt: imti[riskmodel.risk_functions[lt, kind].imt]
-                              for lt, kind in riskmodel.risk_functions
+            criskmodel.imti = {lt: imti[criskmodel.risk_functions[lt, kind].imt]
+                              for lt, kind in criskmodel.risk_functions
                               if kind in 'vulnerability fragility'}
 
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
-        for riskid, rm in self._riskmodels.items():
+        for riskid, rm in self._criskmodels.items():
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):
                     iml[rf.imt].append(rf.imls[0])
@@ -247,7 +247,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         return loss_ratios
 
     def __getitem__(self, taxo):
-        return self._riskmodels[taxo]
+        return self._criskmodels[taxo]
 
     def get_rmodels_weights(self, taxidx):
         """
@@ -255,20 +255,20 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         rmodels, weights = [], []
         for key, weight in self.tmap[taxidx]:
-            rmodels.append(self._riskmodels[key])
+            rmodels.append(self._criskmodels[key])
             weights.append(weight)
         return rmodels, weights
 
     def __iter__(self):
-        return iter(sorted(self._riskmodels))
+        return iter(sorted(self._criskmodels))
 
     def __len__(self):
-        return len(self._riskmodels)
+        return len(self._criskmodels)
 
     def gen_outputs(self, riskinput, monitor, epspath=None, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
-        underlying riskmodels. Yield one output per realization.
+        underlying criskmodels. Yield one output per realization.
 
         :param riskinput: a RiskInput instance
         :param monitor: a monitor object used to measure the performance
@@ -353,10 +353,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a new CompositeRiskModel reduced to the given taxonomies
         """
         new = copy.copy(self)
-        new._riskmodels = {}
-        for riskid, rm in self._riskmodels.items():
+        new._criskmodels = {}
+        for riskid, rm in self._criskmodels.items():
             if riskid in taxonomies:
-                new._riskmodels[riskid] = rm
+                new._criskmodels[riskid] = rm
                 rm.compositemodel = new
         return new
 
@@ -370,7 +370,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
                 dic['loss_ratios_' + lt] = rf.loss_ratios[lt]
-        return self._riskmodels, dic
+        return self._criskmodels, dic
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -424,13 +424,13 @@ def make_eps(asset_array, num_samples, seed, correlation):
     return eps
 
 
-def cache_epsilons(dstore, oq, assetcol, riskmodel, E):
+def cache_epsilons(dstore, oq, assetcol, criskmodel, E):
     """
     Do nothing if there are no coefficients of variation of ignore_covs is
     set. Otherwise, generate an epsilon matrix of shape (A, E) and save it
     in the cache file, by returning the path to it.
     """
-    if oq.ignore_covs or not riskmodel.covs:
+    if oq.ignore_covs or not criskmodel.covs:
         return
     A = len(assetcol)
     hdf5path = dstore.hdf5cache()
