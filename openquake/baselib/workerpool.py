@@ -4,7 +4,7 @@ import time
 import signal
 import subprocess
 import multiprocessing
-from openquake.baselib import zeromq as z, general, parallel
+from openquake.baselib import zeromq as z, general, parallel, config
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -19,6 +19,24 @@ def _streamer(host, task_in_port, task_out_port):
                     z.bind('tcp://%s:%s' % (host, task_out_port), z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ZMQError):
         pass  # killed cleanly by SIGINT/SIGTERM
+
+
+def check_status(**kw):
+    """
+    :returns: a non-empty error string if the streamer or worker pools are down
+    """
+    c = config.zworkers.copy()
+    c['master_host'] = config.dbserver.listen
+    c.update(kw)
+    hostport = c['master_host'], int(c['task_in_port'])
+    task_in_url = 'tcp://%s:%s' % hostport
+    errors = []
+    if not general.socket_ready(hostport):
+        errors.append('The task streamer on %s is down' % task_in_url)
+    for host, status in WorkerMaster(**c).status():
+        if status != 'running':
+            errors.append('The workerpool on %s is down' % host)
+    return '\n'.join(errors)
 
 
 class WorkerMaster(object):
@@ -57,20 +75,11 @@ class WorkerMaster(object):
             lst.append((host, 'running' if ready else 'not-running'))
         return lst
 
-    def start(self, streamer=False):
+    def start(self):
         """
         Start multiple workerpools, possibly on remote servers via ssh,
-        and possibly a streamer, depending on the `streamercls`.
-
-        :param streamer:
-            if True, starts a streamer with multiprocessing.Process
+        assuming there is an active streamer.
         """
-        # streamer=True is used only in the tests
-        if streamer and not general.socket_ready(self.task_in_url):  # started
-            self.streamer = multiprocessing.Process(
-                target=_streamer,
-                args=(self.master_host, self.task_in_port, self.task_out_port))
-            self.streamer.start()
         starting = []
         for host, cores in self.host_cores:
             if self.status(host)[0][1] == 'running':
@@ -102,8 +111,6 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('stop')
                 stopped.append(host)
-        if hasattr(self, 'streamer'):
-            self.streamer.terminate()
         return 'stopped %s' % stopped
 
     def kill(self):
@@ -119,8 +126,6 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('kill')
                 killed.append(host)
-        if hasattr(self, 'streamer'):
-            self.streamer.terminate()
         return 'killed %s' % killed
 
     def restart(self):
