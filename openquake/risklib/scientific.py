@@ -468,7 +468,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
 
-# this is meant to be instantiated by criskmodels.get_risk_models
+# this is meant to be instantiated by riskmodels.get_risk_models
 class VulnerabilityModel(dict):
     """
     Container for a set of vulnerability functions. You can access each
@@ -701,7 +701,7 @@ def build_imls(ff, continuous_fragility_discretization,
     return gen_imls
 
 
-# this is meant to be instantiated by criskmodels.get_fragility_model
+# this is meant to be instantiated by riskmodels.get_fragility_model
 class FragilityModel(dict):
     """
     Container for a set of fragility functions. You can access each
