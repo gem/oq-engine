@@ -41,7 +41,7 @@ from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
-from openquake.risklib.riskmodels import get_risk_models
+from openquake.risklib.criskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_model_factory import SourceModelFactory
 from openquake.commonlib import logictree, source

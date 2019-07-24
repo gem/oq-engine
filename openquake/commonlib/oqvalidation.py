@@ -27,7 +27,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree, util
-from openquake.risklib.riskmodels import get_risk_files
+from openquake.risklib.criskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
