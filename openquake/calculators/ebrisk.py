@@ -23,7 +23,8 @@ from openquake.baselib import hdf5, datastore, parallel, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib.scientific import losses_by_period, LossesByAsset
-from openquake.risklib.riskinput import cache_epsilons, get_assets_by_taxo
+from openquake.risklib.riskinput import (
+    cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -105,7 +106,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
         with mon_risk:
-            out = crmodel.get_output(assets_by_taxo, haz)
+            out = get_output(crmodel, assets_by_taxo, haz)
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']

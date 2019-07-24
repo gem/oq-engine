@@ -25,7 +25,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import AccumDict, group_array, cached_property
+from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
@@ -659,60 +659,6 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def __len__(self):
         return len(self._riskmodels)
-
-    def get_output(self, assets_by_taxo, haz, rlzi=None):
-        """
-        :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
-        :param haz: an array or a dictionary of hazard on that site
-        :param rlzi: if given, a realization index
-        """
-        if hasattr(haz, 'array'):  # classical
-            eids = []
-            data = [haz.array[self.imtls(imt), 0] for imt in self.imtls]
-        elif isinstance(haz, numpy.ndarray):
-            # NB: in GMF-based calculations the order in which
-            # the gmfs are stored is random since it depends on
-            # which hazard task ends first; here we reorder
-            # the gmfs by event ID; this is convenient in
-            # general and mandatory for the case of
-            # VulnerabilityFunctionWithPMF, otherwise the
-            # sample method would receive the means in random
-            # order and produce random results even if the
-            # seed is set correctly; very tricky indeed! (MS)
-            haz.sort(order='eid')
-            eids = haz['eid']
-            data = haz['gmv']  # shape (E, M)
-        elif haz == 0:  # no hazard for this site (event based)
-            eids = numpy.arange(1)
-            data = []
-        else:
-            raise ValueError('Unexpected haz=%s' % haz)
-        dic = dict(eids=eids)
-        if rlzi is not None:
-            dic['rlzi'] = rlzi
-        for l, lt in enumerate(self.loss_types):
-            ls = []
-            for taxonomy, assets_ in assets_by_taxo.items():
-                if len(assets_by_taxo.eps):
-                    epsilons = assets_by_taxo.eps[taxonomy][:, eids]
-                else:  # no CoVs
-                    epsilons = ()
-                arrays = []
-                rmodels, weights = self.get_rmodels_weights(taxonomy)
-                for rm in rmodels:
-                    if len(data) == 0:
-                        dat = [0]
-                    elif len(eids):  # gmfs
-                        dat = data[:, rm.imti[lt]]
-                    else:  # hcurves
-                        dat = data[rm.imti[lt]]
-                    arrays.append(rm(lt, assets_, dat, eids, epsilons))
-                res = arrays[0] if len(arrays) == 1 else numpy.sum(
-                    a * w for a, w in zip(arrays, weights))
-                ls.append(res)
-            arr = numpy.concatenate(ls)
-            dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
-        return hdf5.ArrayWrapper((), dic)
 
     def reduce(self, taxonomies):
         """
