@@ -73,13 +73,13 @@ def make_eps(asset_array, num_samples, seed, correlation):
     return eps
 
 
-def cache_epsilons(dstore, oq, assetcol, criskmodel, E):
+def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     """
     Do nothing if there are no coefficients of variation of ignore_covs is
     set. Otherwise, generate an epsilon matrix of shape (A, E) and save it
     in the cache file, by returning the path to it.
     """
-    if oq.ignore_covs or not criskmodel.covs:
+    if oq.ignore_covs or not crmodel.covs:
         return
     A = len(assetcol)
     hdf5path = dstore.hdf5cache()
