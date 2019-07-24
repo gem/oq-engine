@@ -21,7 +21,7 @@ import unittest
 from openquake.baselib import config
 from openquake.baselib.workerpool import WorkerMaster
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import _get_free_port
+from openquake.baselib.general import _get_free_port, socket_ready
 from openquake.baselib.performance import Monitor
 
 
@@ -36,17 +36,16 @@ class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.z = config.zworkers.copy()
-        dic = dict(master_host='127.0.0.1',
-                   task_in_port=_get_free_port(),
-                   task_out_port=_get_free_port(),
-                   receiver_ports=_get_free_port())
+        dic = dict(master_host='127.0.0.1')
         config.zworkers.update(dic)
         ctrl_port = _get_free_port()
         host_cores = '127.0.0.1 4'
         cls.master = WorkerMaster(
             dic['master_host'], dic['task_in_port'], dic['task_out_port'],
             ctrl_port, host_cores)
-        cls.master.start(streamer=True)
+
+        hostport = dic['master_host'], int(dic['task_in_port'])
+        cls.master.start(streamer=not socket_ready(hostport))
 
     def test(self):
         mon = Monitor()
