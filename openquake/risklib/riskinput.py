@@ -20,11 +20,32 @@ import logging
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import group_array
+from openquake.baselib.general import group_array, AccumDict
 from openquake.risklib import scientific
 
 U32 = numpy.uint32
 F32 = numpy.float32
+
+
+def get_assets_by_taxo(assets, epspath=None):
+    """
+    :param assets: an array of assets
+    :param epspath: hdf5 file where the epsilons are (or None)
+    :returns: assets_by_taxo with attributes eps and idxs
+    """
+    assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
+    assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
+        a['ordinal'] for a in assets_by_taxo.values()]))
+    assets_by_taxo.eps = {}
+    if epspath is None:  # no epsilons
+        return assets_by_taxo
+    # otherwise read the epsilons and group them by taxonomy
+    with hdf5.File(epspath, 'r') as h5:
+        dset = h5['epsilon_matrix']
+        for taxo, assets in assets_by_taxo.items():
+            lst = [dset[aid] for aid in assets['ordinal']]
+            assets_by_taxo.eps[taxo] = numpy.array(lst)
+    return assets_by_taxo
 
 
 class RiskInput(object):
@@ -46,6 +67,34 @@ class RiskInput(object):
         for asset in self.assets:
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
+
+    def gen_outputs(self, cr_model, monitor, epspath=None, haz=None):
+        """
+        Group the assets per taxonomy and compute the outputs by using the
+        underlying riskmodels. Yield one output per realization.
+
+        :param cr_model: a CompositeRiskModel instance
+        :param monitor: a monitor object used to measure the performance
+        """
+        self.monitor = monitor
+        hazard_getter = self.hazard_getter
+        [sid] = hazard_getter.sids
+        if haz is None:
+            with monitor('getting hazard'):
+                haz = hazard_getter.get_hazard()
+        if isinstance(haz, dict):
+            items = haz.items()
+        else:  # list of length R
+            items = enumerate(haz)
+        with monitor('computing risk', measuremem=False):
+            # this approach is slow for event_based_risk since a lot of
+            # small arrays are passed (one per realization) instead of
+            # a long array with all realizations; ebrisk does the right
+            # thing since it calls get_output directly
+            assets_by_taxo = get_assets_by_taxo(self.assets, epspath)
+            for rlzi, haz_by_rlzi in items:
+                out = cr_model.get_output(assets_by_taxo, haz_by_rlzi, rlzi)
+                yield out
 
     def __repr__(self):
         return '<%s sid=%s, %d asset(s)>' % (
