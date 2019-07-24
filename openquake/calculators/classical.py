@@ -281,10 +281,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('Found %d heavy sources %s, ...',
                              len(heavy_sources), heavy_sources[0])
 
-    def save_hazard_stats(self, acc, pmap_by_kind):
+    def save_hazard(self, acc, pmap_by_kind):
         """
-        Works by side effect by saving statistical hcurves and hmaps on the
-        datastore.
+        Works by side effect by saving hcurves and hmaps on the datastore
 
         :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
@@ -378,7 +377,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for t in self.sitecol.split_in_tiles(ct)]
         parallel.Starmap(build_hazard_stats, allargs,
                          hdf5path=self.datastore.filename).reduce(
-                             self.save_hazard_stats)
+                             self.save_hazard)
 
 
 @base.calculators.add('preclassical')
