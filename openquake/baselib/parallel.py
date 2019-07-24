@@ -173,7 +173,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config
+from openquake.baselib import config, workerpool
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, dump
 from openquake.baselib.general import (
@@ -675,6 +675,12 @@ class Starmap(object):
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
+        if self.distribute == 'zmq':  # add a check
+            worker_status = workerpool.WorkerMaster(
+                config.dbserver.listen, **config.zworkers).status()
+            for host, status in worker_status:
+                if status != 'running':
+                    raise RuntimeError('The workerpool on %s is down' % host)
 
     def log_percent(self):
         """
