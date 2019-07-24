@@ -559,22 +559,23 @@ class CompositeRiskModel(collections.abc.Mapping):
             ltypes.update(rm.loss_types)
         self.loss_types = sorted(ltypes)
         self.taxonomies = set()
-        for riskid, crm in self._riskmodels.items():
+        for riskid, rm in self._riskmodels.items():
             self.taxonomies.add(riskid)
-            crm.compositemodel = self
-            for lt, vf in crm.risk_functions.items():
+            rm.compositemodel = self
+            for lt, vf in rm.risk_functions.items():
+                vf.seed = oqparam.master_seed  # setting the seed
                 # save the number of nonzero coefficients of variation
                 if hasattr(vf, 'covs') and vf.covs.any():
                     self.covs += 1
             missing = set(self.loss_types) - set(
-                lt for lt, kind in crm.risk_functions)
+                lt for lt, kind in rm.risk_functions)
             if missing:
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (riskid, ', '.join(missing)))
-            crm.imti = {lt: imti[crm.risk_functions[lt, kind].imt]
-                        for lt, kind in crm.risk_functions
-                        if kind in 'vulnerability fragility'}
+            rm.imti = {lt: imti[rm.risk_functions[lt, kind].imt]
+                       for lt, kind in rm.risk_functions
+                       if kind in 'vulnerability fragility'}
 
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
