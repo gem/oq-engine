@@ -77,6 +77,7 @@ def fine_graining(points, steps):
 
 class VulnerabilityFunction(object):
     dtype = numpy.dtype([('iml', F32), ('loss_ratio', F32), ('cov', F32)])
+    seed = None  # to be overridden
 
     def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
                  distribution="LN"):
@@ -154,6 +155,7 @@ class VulnerabilityFunction(object):
             self.distribution = DegenerateDistribution()
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
+        self.distribution.seed = self.seed  # set by CompositeRiskModel.init
 
     def interpolate(self, gmvs):
         """
@@ -185,7 +187,7 @@ class VulnerabilityFunction(object):
         :returns:
            array of E' loss ratios
         """
-        if epsilons is None:
+        if self.distribution_name == 'LN' and epsilons is None:
             return means
         self.set_distribution(epsilons)
         res = self.distribution.sample(means, covs, means * covs, idxs)
@@ -350,14 +352,15 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     :param ratios: an array of mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed=42):
+    seed = None
+
+    def __init__(self, vf_id, imt, imls, loss_ratios, probs):
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
         self.loss_ratios = loss_ratios
         self.probs = probs
-        self.seed = seed
         self.distribution_name = "PM"
 
         # to be set in .init(), called also by __setstate__

@@ -184,7 +184,8 @@ class EventBasedCalculator(base.HazardCalculator):
             grp_indices[grp_id] = startstop
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', grp_indices=grp_indices, **attrs)
-        self.save_events(sorted_ruptures)
+        with self.monitor('saving events'):
+            self.save_events(sorted_ruptures)
 
     def gen_rupture_getters(self):
         """
@@ -310,9 +311,9 @@ class EventBasedCalculator(base.HazardCalculator):
     def set_param(self, **kw):
         oq = self.oqparam
         # set the minimum_intensity
-        if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
+        if hasattr(self, 'crmodel') and not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
-            oq.minimum_intensity = self.riskmodel.min_iml
+            oq.minimum_intensity = self.crmodel.min_iml
         min_iml = oq.min_iml
         if min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '

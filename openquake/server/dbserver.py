@@ -89,16 +89,14 @@ class DbServer(object):
         logging.warning('DB server started with %s on %s, pid %d',
                         sys.executable, self.frontend, self.pid)
         if ZMQ:
-            # start task_in->task_out streamer thread
+            # start task_in->task_server streamer thread
             c = config.zworkers
             self.zstreamer = multiprocessing.Process(
                 target=w._streamer,
-                args=(self.master_host, c.task_in_port, c.task_out_port)
-            )
-            self.zstreamer.start()
-            logging.warning('Task streamer started from %s -> %s',
-                            c.task_in_port, c.task_out_port)
-
+                args=(self.master_host, int(c.ctrl_port) + 1)
+            ).start()
+            logging.warning('Task streamer started on port %d',
+                            int(c.ctrl_port) + 1)
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),

@@ -24,7 +24,7 @@ import unittest
 import itertools
 import tempfile
 import numpy
-from openquake.baselib import parallel, general, hdf5
+from openquake.baselib import parallel, general, hdf5, config, workerpool
 
 try:
     import celery
@@ -64,6 +64,10 @@ class StarmapTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         parallel.Starmap.init()  # initialize the pool
+        if parallel.oq_distribute() == 'zmq':
+            err = workerpool.check_status()
+            if err:
+                raise unittest.SkipTest(err)
 
     def test_apply(self):
         res = parallel.Starmap.apply(
