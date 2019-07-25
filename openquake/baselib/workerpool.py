@@ -28,9 +28,9 @@ def check_status(**kw):
     c = config.zworkers.copy()
     c['master_host'] = config.dbserver.listen
     c.update(kw)
-    url = c['task_in_url']
+    hostport = c['master_host'], int(c['task_out_port'])
     errors = []
-    if not general.socket_ready(url.split('//')[1]):
+    if not general.socket_ready(hostport:
         errors.append('The task streamer on %s is down' % url)
     for host, status in WorkerMaster(**c).status():
         if status != 'running':
