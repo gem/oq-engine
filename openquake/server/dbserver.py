@@ -24,7 +24,7 @@ import logging
 import threading
 import subprocess
 
-from openquake.baselib import config, sap, zeromq as z, workerpool as w
+from openquake.baselib import config, zeromq as z, workerpool as w
 from openquake.baselib.general import socket_ready, detach_process
 from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
@@ -157,8 +157,8 @@ def ensure_on():
         # multiprocessing.Process(target=run_server).start() and apparently
         # it works, but then run-demos.sh hangs after the end of the first
         # calculation, but only if the DbServer is started by oq engine (!?)
-        subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
-                          '-l', 'INFO'])
+        subprocess.Popen([sys.executable, '-m', 'openquake.commands',
+                          'dbserver', 'start'])
 
         # wait for the dbserver to start
         waiting_seconds = 30
@@ -170,7 +170,6 @@ def ensure_on():
             waiting_seconds -= 1
 
 
-@sap.script
 def run_server(dbpath=os.path.expanduser(config.dbserver.file),
                dbhostport=None, loglevel='WARN', foreground=False):
     """
@@ -206,11 +205,3 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
         # will loose control of the process
         detach_process()
     DbServer(db, addr).start()  # expects to be killed with CTRL-C
-
-
-run_server.arg('dbpath', 'dbpath')
-run_server.arg('dbhostport', 'dbhost:port')
-run_server.opt('loglevel', 'WARN or INFO')
-
-if __name__ == '__main__':
-    run_server.callfunc()
