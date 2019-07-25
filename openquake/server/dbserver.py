@@ -92,10 +92,10 @@ class DbServer(object):
             c = config.zworkers
             threading.Thread(
                 target=w._streamer,
-                args=(self.master_host, c.task_in_url, int(c.ctrl_port) + 1)
+                args=(self.master_host, int(c.ctrl_port) + 1)
             ).start()
-            logging.warning('Task streamer started from %s -> %s',
-                            c.task_in_url, int(c.ctrl_port) + 1)
+            logging.warning('Task streamer started on port %d',
+                            int(c.ctrl_port) + 1)
 
         # start frontend->backend proxy for the database workers
         try:
