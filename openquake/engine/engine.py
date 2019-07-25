@@ -40,7 +40,7 @@ except ImportError:
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
-    parallel, general, config, __version__, zeromq as z)
+    parallel, general, config, __version__, zeromq as z, workerpool as w)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, oqzip
 from openquake.calculators import base, views, export
@@ -301,6 +301,10 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     :param exports:
         A comma-separated string of export types.
     """
+    if OQ_DISTRIBUTE == 'zmq':  # start zworkers
+        master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
+        logs.dbcmd('start_zworkers', master)
+        logging.info('WorkerPool %s', master.status())
     register_signals()
     setproctitle('oq-job-%d' % job_id)
     calc = base.calculators(oqparam, calc_id=job_id)
@@ -362,6 +366,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # if there was an error in the calculation, this part may fail;
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate
+        if OQ_DISTRIBUTE == 'zmq':  # stop zworkers
+            logs.dbcmd('stop_zworkers', master)
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
                 celery_cleanup(TERMINATE)
