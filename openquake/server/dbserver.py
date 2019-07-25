@@ -91,9 +91,10 @@ class DbServer(object):
         if ZMQ:
             # start task_in->task_server streamer thread
             c = config.zworkers
-            self.zstreamer = multiprocessing.Process(
+            multiprocessing.Process(
                 target=w._streamer,
-                args=(self.master_host, int(c.ctrl_port) + 1)
+                args=(self.master_host, int(c.ctrl_port) + 1),
+                daemon=True
             ).start()
             logging.warning('Task streamer started on port %d',
                             int(c.ctrl_port) + 1)
@@ -101,7 +102,7 @@ class DbServer(object):
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
                         z.bind(self.backend, z.zmq.DEALER))
-        except (KeyboardInterrupt, z.zmq.ZMQError):
+        except (KeyboardInterrupt, z.zmq.ContextTerminated):
             for sock in dworkers:
                 sock.running = False
                 sock.zsocket.close()
@@ -112,7 +113,6 @@ class DbServer(object):
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
         if ZMQ:
-            self.zstreamer.terminate()
             z.context.term()
         self.db.close()
 
