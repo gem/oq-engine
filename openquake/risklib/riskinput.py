@@ -183,7 +183,7 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     set. Otherwise, generate an epsilon matrix of shape (A, E) and save it
     in the cache file, by returning the path to it.
     """
-    if oq.ignore_covs or not crmodel.covs:
+    if oq.ignore_covs or not crmodel.covs or 'LN' not in crmodel.distributions:
         return
     A = len(assetcol)
     hdf5path = dstore.hdf5cache()

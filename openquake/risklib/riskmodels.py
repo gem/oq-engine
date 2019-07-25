@@ -559,13 +559,16 @@ class CompositeRiskModel(collections.abc.Mapping):
             ltypes.update(rm.loss_types)
         self.loss_types = sorted(ltypes)
         self.taxonomies = set()
+        self.distributions = set()
         for riskid, rm in self._riskmodels.items():
             self.taxonomies.add(riskid)
             rm.compositemodel = self
-            for lt, vf in rm.risk_functions.items():
-                vf.seed = oqparam.master_seed  # setting the seed
+            for lt, rf in rm.risk_functions.items():
+                if hasattr(rf, 'distribution_name'):
+                    self.distributions.add(rf.distribution_name)
+                rf.seed = oqparam.master_seed  # setting the seed
                 # save the number of nonzero coefficients of variation
-                if hasattr(vf, 'covs') and vf.covs.any():
+                if hasattr(rf, 'covs') and rf.covs.any():
                     self.covs += 1
             missing = set(self.loss_types) - set(
                 lt for lt, kind in rm.risk_functions)
@@ -576,7 +579,6 @@ class CompositeRiskModel(collections.abc.Mapping):
             rm.imti = {lt: imti[rm.risk_functions[lt, kind].imt]
                        for lt, kind in rm.risk_functions
                        if kind in 'vulnerability fragility'}
-
         self.curve_params = self.make_curve_params(oqparam)
         iml = collections.defaultdict(list)
         for riskid, rm in self._riskmodels.items():
