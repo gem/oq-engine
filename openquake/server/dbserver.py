@@ -159,8 +159,8 @@ def ensure_on():
         # multiprocessing.Process(target=run_server).start() and apparently
         # it works, but then run-demos.sh hangs after the end of the first
         # calculation, but only if the DbServer is started by oq engine (!?)
-        subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
-                          '-l', 'INFO'])
+        subprocess.Popen([sys.executable, '-m', 'openquake.commands',
+                          'dbserver', 'start'])
 
         # wait for the dbserver to start
         waiting_seconds = 30
