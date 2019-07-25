@@ -28,19 +28,16 @@ def double(x):
     return 2 * x
 
 
-# this test is temporarily disabled, the workerpool is tested in the demos
-# in travis, since they are run with OQ_DISTRIBUTE=zmq
 class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.z = config.zworkers.copy()
         host_cores = '127.0.0.1 4'
-        hostport = '127.0.0.1:%s' % cls.z['task_in_port']
+        hostport = '127.0.0.1', int(cls.z['ctrl_port']) + 1
         if not socket_ready(hostport):
             raise unittest.SkipTest('The task streamer is off')
         cls.master = WorkerMaster(
-            '127.0.0.1', cls.z['task_in_port'], cls.z['task_out_port'],
-            cls.z['ctrl_port'], host_cores)
+            '127.0.0.1', cls.z['ctrl_port'], host_cores)
         cls.master.start()
 
     def test(self):

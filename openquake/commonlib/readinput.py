@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.risklib import asset, riskinput
+from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_model_factory import SourceModelFactory
@@ -648,7 +648,7 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def get_risk_model(oqparam):
+def get_crmodel(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
 
@@ -657,7 +657,7 @@ def get_risk_model(oqparam):
     """
     riskdict = get_risk_models(oqparam)
     oqparam.set_risk_imtls(riskdict)
-    crm = riskinput.CompositeRiskModel(oqparam, riskdict)
+    crm = riskmodels.CompositeRiskModel(oqparam, riskdict)
     return crm
 
 
