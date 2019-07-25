@@ -40,6 +40,7 @@ from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
 from openquake.commands import engine
 
+
 class TimeoutError(RuntimeError):
     pass
 
@@ -84,7 +85,7 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        for i in range(20):
+        for i in range(40):  # 20 seconds of timeout
             time.sleep(0.5)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
