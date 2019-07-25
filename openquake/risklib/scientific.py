@@ -187,7 +187,7 @@ class VulnerabilityFunction(object):
         :returns:
            array of E' loss ratios
         """
-        if epsilons is None:
+        if self.distribution_name == 'LN' and epsilons is None:
             return means
         self.set_distribution(epsilons)
         res = self.distribution.sample(means, covs, means * covs, idxs)
