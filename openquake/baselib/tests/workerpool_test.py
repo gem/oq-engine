@@ -33,11 +33,11 @@ class WorkerPoolTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.z = config.zworkers.copy()
         host_cores = '127.0.0.1 4'
-        hostport = '127.0.0.1:%s' % cls.z['task_in_port']
-        if not socket_ready(hostport):
+        url = cls.z['task_in_url'].split('//')[1]
+        if not socket_ready(url):
             raise unittest.SkipTest('The task streamer is off')
         cls.master = WorkerMaster(
-            '127.0.0.1', cls.z['task_in_port'], cls.z['task_out_port'],
+            '127.0.0.1', cls.z['task_in_url'], cls.z['task_out_port'],
             cls.z['ctrl_port'], host_cores)
         cls.master.start()
 
