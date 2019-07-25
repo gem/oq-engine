@@ -23,7 +23,6 @@ import sqlite3
 import logging
 import threading
 import subprocess
-import multiprocessing
 
 from openquake.baselib import config, sap, zeromq as z, workerpool as w
 from openquake.baselib.general import socket_ready, detach_process
@@ -92,9 +91,7 @@ class DbServer(object):
             # start task_in->task_server streamer thread
             c = config.zworkers
             threading.Thread(
-                target=w._streamer,
-                args=(self.master_host, int(c.ctrl_port) + 1),
-                daemon=True
+                target=w._streamer, args=(self.master_host,), daemon=True
             ).start()
             logging.warning('Task streamer started on port %d',
                             int(c.ctrl_port) + 1)
