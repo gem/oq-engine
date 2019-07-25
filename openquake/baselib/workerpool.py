@@ -20,7 +20,7 @@ def _streamer(host, task_server_port):
     try:
         z.zmq.proxy(z.bind(IPC, z.zmq.PULL),
                     z.bind(task_server_url, z.zmq.PUSH))
-    except (KeyboardInterrupt, z.zmq.ZMQError):
+    except (KeyboardInterrupt, z.zmq.ContextTerminated):
         pass  # killed cleanly by SIGINT/SIGTERM
 
 
