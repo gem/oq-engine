@@ -176,6 +176,9 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
     """
+    # configure the logging first of all
+    logging.basicConfig(level=getattr(logging, loglevel.upper()))
+
     if dbhostport:  # assume a string of the form "dbhost:port"
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
@@ -197,8 +200,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
     # reset any computation left in the 'executing' state
     actions.reset_is_running(db)
 
-    # configure logging and start the server
-    logging.basicConfig(level=getattr(logging, loglevel))
+    # start the dbserver
     if hasattr(os, 'fork') and not (config.dbserver.multi_user or foreground):
         # needed for https://github.com/gem/oq-engine/issues/3211
         # but only if multi_user = False, otherwise init/supervisor
