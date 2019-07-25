@@ -19,11 +19,12 @@ import time
 import logging
 import numpy
 
-from openquake.baselib import hdf5, datastore, parallel, performance, general
+from openquake.baselib import hdf5, datastore, parallel, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib.scientific import losses_by_period, LossesByAsset
-from openquake.risklib.riskinput import get_assets_by_taxo, cache_epsilons
+from openquake.risklib.riskinput import (
+    cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -60,7 +61,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :returns:
         an ArrayWrapper with shape (E, L, T, ...)
     """
-    riskmodel = param['riskmodel']
+    crmodel = param['crmodel']
     lba = param['lba']
     E = rupgetter.num_events
     L = len(lba.loss_names)
@@ -105,14 +106,14 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
         with mon_risk:
-            out = riskmodel.get_output(assets_by_taxo, haz)
+            out = get_output(crmodel, assets_by_taxo, haz)
         with mon_agg:
             for a, asset in enumerate(assets_on_sid):
                 aid = asset['ordinal']
                 tagi = asset[tagnames] if tagnames else ()
                 tagidxs = tuple(idx - 1 for idx in tagi)
                 losses_by_lt = {}
-                for lti, lt in enumerate(riskmodel.loss_types):
+                for lti, lt in enumerate(crmodel.loss_types):
                     lratios = out[lt][a]
                     if lt == 'occupants':
                         losses = lratios * asset['occupants_None']
@@ -171,7 +172,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
-        self.param['riskmodel'] = self.riskmodel
+        self.param['crmodel'] = self.crmodel
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses', F32, (A, L))
@@ -191,7 +192,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
             maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
             epspath=cache_epsilons(
-                self.datastore, oq, self.assetcol, self.riskmodel, self.E))
+                self.datastore, oq, self.assetcol, self.crmodel, self.E))
         parent = self.datastore.parent
         if parent:
             hdf5path = parent.filename
@@ -264,7 +265,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         S = len(stats)
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
-        loss_types = ' '.join(self.riskmodel.loss_types)
+        loss_types = ' '.join(self.crmodel.loss_types)
         units = self.datastore['cost_calculator'].get_units(loss_types.split())
         shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
         self.datastore.create_dset('agg_curves-rlzs', F32, shp)
@@ -339,7 +340,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             set_rlzs_stats(self.datastore, 'agg_curves')
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=builder.return_periods,
-                loss_types=' '.join(self.riskmodel.loss_types))
+                loss_types=' '.join(self.crmodel.loss_types))
             if oq.conditional_loss_poes:
                 logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')

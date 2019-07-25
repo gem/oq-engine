@@ -181,8 +181,8 @@ class MultiRiskCalculator(base.RiskCalculator):
         self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
     def execute(self):
-        dstates = self.riskmodel.damage_states
-        ltypes = self.riskmodel.loss_types
+        dstates = self.crmodel.damage_states
+        ltypes = self.crmodel.loss_types
         P = len(self.oqparam.multi_peril) + 1
         L = len(ltypes)
         D = len(dstates)
@@ -193,9 +193,9 @@ class MultiRiskCalculator(base.RiskCalculator):
         if 'ASH' in self.oqparam.multi_peril:
             assets = self.assetcol.assets_by_site()
             gmf = self.datastore['multi_peril']['ASH']
-            dmg_csq[:, 0] = get_dmg_csq(self.riskmodel, assets, gmf)
+            dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf)
             perils.append('ASH_DRY')
-            dmg_csq[:, 1] = get_dmg_csq(self.riskmodel, assets, gmf * ampl)
+            dmg_csq[:, 1] = get_dmg_csq(self.crmodel, assets, gmf * ampl)
             perils.append('ASH_WET')
         hazard = self.datastore['multi_peril']
         binary_perils = []
@@ -217,7 +217,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         md = extract(self.datastore, 'exposure_metadata')
         categories = [cat.replace('value-', 'loss-') for cat in md] + [
-            ds + '-structural' for ds in self.riskmodel.damage_states]
+            ds + '-structural' for ds in self.crmodel.damage_states]
         multi_risk = list(md.array)
         multi_risk += sorted(
             set(arr.dtype.names) -
