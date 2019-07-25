@@ -27,7 +27,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_6c, case_master, case_miriam,
-    occupants, case_1g, case_7a)
+    occupants, case_1f, case_1g, case_7a)
 
 
 def aae(data, expected):
@@ -118,6 +118,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+    def test_case_1f(self):
+        # vulnerability function with BT
+        self.run_calc(case_1f.__file__, 'job_h.ini,job_r.ini')
+        fname = gettemp(view('portfolio_losses', self.calc.datastore))
+        self.assertEqualFiles('portfolio_losses.txt', fname, delta=1E-5)
+        os.remove(fname)
 
     def test_case_1g(self):
         # vulnerability function with PMF
