@@ -91,17 +91,15 @@ class DbServer(object):
             # start task_in->task_server streamer thread
             c = config.zworkers
             threading.Thread(
-                target=w._streamer,
-                args=(self.master_host, int(c.ctrl_port) + 1)
+                target=w._streamer, args=(self.master_host,), daemon=True
             ).start()
             logging.warning('Task streamer started on port %d',
                             int(c.ctrl_port) + 1)
-
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
                         z.bind(self.backend, z.zmq.DEALER))
-        except (KeyboardInterrupt, z.zmq.ZMQError):
+        except (KeyboardInterrupt, z.zmq.ContextTerminated):
             for sock in dworkers:
                 sock.running = False
                 sock.zsocket.close()
