@@ -25,13 +25,13 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def scenario_damage(riskinputs, riskmodel, param, monitor):
+def scenario_damage(riskinputs, crmodel, param, monitor):
     """
     Core function for a damage computation.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param riskmodel:
+    :param crmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
@@ -48,22 +48,22 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
     If there is no consequence model `c_asset` is an empty list and
     `c_tag` is a zero-valued array.
     """
-    L = len(riskmodel.loss_types)
-    D = len(riskmodel.damage_states)
+    L = len(crmodel.loss_types)
+    D = len(crmodel.damage_states)
     E = param['number_of_ground_motion_fields']
     R = riskinputs[0].hazard_getter.num_rlzs
     result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
                   c_asset=[], c_event=numpy.zeros((E, R, L), F64))
     for ri in riskinputs:
-        for out in riskmodel.gen_outputs(ri, monitor):
+        for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
-            for l, loss_type in enumerate(riskmodel.loss_types):
+            for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     dmg = fractions[:, :D] * asset['number']  # shape (E, D)
                     result['d_event'][:, r, l] += dmg
                     result['d_asset'].append(
                         (l, r, asset['ordinal'], scientific.mean_std(dmg)))
-                    if riskmodel.has('consequence'):
+                    if crmodel.has('consequence'):
                         csq = fractions[:, D] * asset['value-' + loss_type]
                         result['c_asset'].append(
                             (l, r, asset['ordinal'], scientific.mean_std(csq)))
@@ -96,8 +96,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if not result:
             self.collapsed()
             return
-        dstates = self.riskmodel.damage_states
-        ltypes = self.riskmodel.loss_types
+        dstates = self.crmodel.damage_states
+        ltypes = self.crmodel.loss_types
         L = len(ltypes)
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
@@ -113,9 +113,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = d_asset
-        dmg_dt = [(ds, F32) for ds in self.riskmodel.damage_states]
+        dmg_dt = [(ds, F32) for ds in self.crmodel.damage_states]
         d_event = numpy.zeros((F, R, L), dmg_dt)
-        for d, ds in enumerate(self.riskmodel.damage_states):
+        for d, ds in enumerate(self.crmodel.damage_states):
             d_event[ds] = result['d_event'][:, :, :, d]
         self.datastore['dmg_by_event'] = d_event
 

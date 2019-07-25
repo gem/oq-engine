@@ -441,8 +441,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
         G = len(pmap_by_grp)
         P = len(poes_disagg)
-        for rec in self.sitecol.array:
-            sid = rec['sids']
+        for sid in self.sitecol.sids:
             iml2 = self.iml2s[sid]
             for imti, imt in enumerate(oq.imtls):
                 xs = oq.imtls[imt]
@@ -455,8 +454,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for p, poe in enumerate(poes_disagg):
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                               else 'poe-%s' % poe)
-                    name = 'disagg_by_src/%s-%s-%s-%s' % (
-                        prefix, imt, rec['lon'], rec['lat'])
+                    name = 'disagg_by_src/%s-%s-sid-%s' % (prefix, imt, sid)
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
