@@ -12,10 +12,10 @@ except ImportError:
         "Do nothing"
 
 
-def _streamer(host, task_in_url, task_out_port):
+def _streamer(host, task_out_port):
     # streamer for zmq workers
     try:
-        z.zmq.proxy(z.bind(task_in_url, z.zmq.PULL),
+        z.zmq.proxy(z.bind('ipc://zworkers', z.zmq.PULL),
                     z.bind('tcp://%s:%s' % (host, task_out_port), z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ZMQError):
         pass  # killed cleanly by SIGINT/SIGTERM
@@ -41,17 +41,14 @@ def check_status(**kw):
 class WorkerMaster(object):
     """
     :param master_host: hostname or IP of the master node
-    :param task_in_port: port where to send the tasks
-    :param task_out_port: port from where to read the tasks
     :param ctrl_port: port on which the worker pools listen
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, master_host, task_in_url, ctrl_port,
-                 host_cores, remote_python=None, receiver_ports=None):
+    def __init__(self, master_host, ctrl_port, host_cores,
+                 remote_python=None, receiver_ports=None):
         # receiver_ports is not used
         self.master_host = master_host
-        self.task_in_url = task_in_url
         self.task_out_url = 'tcp://%s:%d' % (master_host, int(ctrl_port) + 1)
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
