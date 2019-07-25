@@ -11,12 +11,15 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
+IPC = 'ipc://zworkers'  # input point for the task streamer
 
-def _streamer(host, task_in_port, task_out_port):
+
+def _streamer(host, task_server_port):
     # streamer for zmq workers
+    task_server_url = 'tcp://%s:%s' % (host, task_server_port)
     try:
-        z.zmq.proxy(z.bind('tcp://%s:%s' % (host, task_in_port), z.zmq.PULL),
-                    z.bind('tcp://%s:%s' % (host, task_out_port), z.zmq.PUSH))
+        z.zmq.proxy(z.bind(IPC, z.zmq.PULL),
+                    z.bind(task_server_url, z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ZMQError):
         pass  # killed cleanly by SIGINT/SIGTERM
 
@@ -28,11 +31,10 @@ def check_status(**kw):
     c = config.zworkers.copy()
     c['master_host'] = config.dbserver.listen
     c.update(kw)
-    hostport = c['master_host'], int(c['task_in_port'])
-    task_in_url = 'tcp://%s:%s' % hostport
+    hostport = c['master_host'], int(c['ctrl_port']) + 1
     errors = []
     if not general.socket_ready(hostport):
-        errors.append('The task streamer on %s is down' % task_in_url)
+        errors.append('The task streamer on %s:%s is down' % hostport)
     for host, status in WorkerMaster(**c).status():
         if status != 'running':
             errors.append('The workerpool on %s is down' % host)
@@ -42,23 +44,19 @@ def check_status(**kw):
 class WorkerMaster(object):
     """
     :param master_host: hostname or IP of the master node
-    :param task_in_port: port where to send the tasks
-    :param task_out_port: port from where to read the tasks
     :param ctrl_port: port on which the worker pools listen
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, master_host, task_in_port, task_out_port, ctrl_port,
-                 host_cores, remote_python=None, receiver_ports=None):
-        # receiver_ports is not used
+    def __init__(self, master_host, ctrl_port, host_cores,
+                 remote_python=None, receiver_ports=None):
+        # NB: receiver_ports is not used but needed for compliance
         self.master_host = master_host
-        self.task_in_port = task_in_port
-        self.task_out_port = task_out_port
-        self.task_in_url = 'tcp://%s:%s' % (master_host, task_in_port)
-        self.task_out_url = 'tcp://%s:%s' % (master_host, task_out_port)
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
         self.remote_python = remote_python or sys.executable
+        self.task_server_url = 'tcp://%s:%d' % (
+            master_host, self.ctrl_port + 1)
         self.pids = []
 
     def status(self, host=None):
@@ -91,7 +89,7 @@ class WorkerMaster(object):
             else:
                 args = ['ssh', host, self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool',
-                     ctrl_url, self.task_out_url, cores]
+                     ctrl_url, self.task_server_url, cores]
             starting.append(' '.join(args))
             po = subprocess.Popen(args)
             self.pids.append(po.pid)
@@ -140,15 +138,15 @@ class WorkerMaster(object):
 class WorkerPool(object):
     """
     A pool of workers accepting the command 'stop' and 'kill' and reading
-    tasks to perform from the task_out_url.
+    tasks to perform from the task_server_url.
 
     :param ctrl_url: zmq address of the control socket
-    :param task_out_url: zmq address of the task streamer
+    :param task_server_url: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
-    def __init__(self, ctrl_url, task_out_url, num_workers='-1'):
+    def __init__(self, ctrl_url, task_server_url, num_workers='-1'):
         self.ctrl_url = ctrl_url
-        self.task_out_url = task_out_url
+        self.task_server_url = task_server_url
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
         self.pid = os.getpid()
@@ -170,7 +168,7 @@ class WorkerPool(object):
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
-            sock = z.Socket(self.task_out_url, z.zmq.PULL, 'connect')
+            sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
             proc = multiprocessing.Process(target=self.worker, args=(sock,))
             proc.start()
             sock.pid = proc.pid
@@ -207,5 +205,5 @@ class WorkerPool(object):
 
 if __name__ == '__main__':
     # start a workerpool without a streamer
-    ctrl_url, task_out_url, num_workers = sys.argv[1:]
-    WorkerPool(ctrl_url, task_out_url, num_workers).start()
+    ctrl_url, task_server_url, num_workers = sys.argv[1:]
+    WorkerPool(ctrl_url, task_server_url, num_workers).start()

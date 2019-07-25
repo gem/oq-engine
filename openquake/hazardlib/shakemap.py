@@ -104,7 +104,7 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
     missing = set(imts) - available_imts
     if missing:
         msg = ('The IMT %s is required but not in the available set %s, '
-               'please change the riskmodel otherwise you will have '
+               'please change the risk model otherwise you will have '
                'incorrect zero losses for the associated taxonomies' %
                (missing.pop(), ', '.join(available_imts)))
         if discard_assets:
