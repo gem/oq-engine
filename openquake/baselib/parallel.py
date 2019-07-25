@@ -210,9 +210,7 @@ def celery_submit(self, func, args, monitor):
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
     if not hasattr(self, 'sender'):
-        hostport = config.dbserver.host, config.zworkers.task_in_port
-        task_in_url = 'tcp://%s:%s' % hostport
-        self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
+        self.sender = Socket(workerpool.IPC, zmq.PUSH, 'connect').__enter__()
     return self.sender.send((func, args, self.task_no, monitor))
 
 
