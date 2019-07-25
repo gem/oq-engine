@@ -11,14 +11,14 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-IPC = 'ipc://zworkers'  # input point for the task streamer
 
-
-def _streamer(host, task_server_port):
+def _streamer(host):
     # streamer for zmq workers
-    task_server_url = 'tcp://%s:%s' % (host, task_server_port)
+    port = int(config.zworkers.ctrl_port)
+    task_input_url = 'tcp://127.0.0.1:%d' % (port + 2)
+    task_server_url = 'tcp://%s:%s' % (host, port + 1)
     try:
-        z.zmq.proxy(z.bind(IPC, z.zmq.PULL),
+        z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
                     z.bind(task_server_url, z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ContextTerminated):
         pass  # killed cleanly by SIGINT/SIGTERM
