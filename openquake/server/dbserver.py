@@ -91,7 +91,7 @@ class DbServer(object):
         if ZMQ:
             # start task_in->task_server streamer thread
             c = config.zworkers
-            multiprocessing.Process(
+            threading.Thread(
                 target=w._streamer,
                 args=(self.master_host, int(c.ctrl_port) + 1),
                 daemon=True
