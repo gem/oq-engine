@@ -432,14 +432,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         oq = self.oqparam
         ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         pgetter = getters.PmapGetter(self.datastore, ws, self.sitecol.sids)
-        G = len(self.datastore['csm_info/sg_data'])
+        groups = list(self.datastore['rlzs_by_grp'])
         M = len(oq.imtls)
         P = len(self.poes_disagg)
         for sid in self.sitecol.sids:
-            poes = numpy.zeros((M, P, G))
+            poes = numpy.zeros((M, P, len(groups)))
             iml2 = self.iml2s[sid]
-            for g in range(G):
-                pcurve = pgetter.get_pcurve(sid, iml2.rlzi, g)
+            for g, grp_id in enumerate(groups):
+                pcurve = pgetter.get_pcurve(sid, iml2.rlzi, int(grp_id[4:]))
                 if pcurve is None:
                     continue
                 for m, imt in enumerate(oq.imtls):

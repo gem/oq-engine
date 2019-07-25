@@ -25,13 +25,13 @@ from openquake.calculators import base
 F32 = numpy.float32
 
 
-def classical_risk(riskinputs, riskmodel, param, monitor):
+def classical_risk(riskinputs, crmodel, param, monitor):
     """
     Compute and return the average losses for each asset.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param riskmodel:
+    :param crmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
@@ -43,13 +43,13 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
     statnames, stats = zip(*param['stats'])
     for ri in riskinputs:
         A = len(ri.assets)
-        L = len(riskmodel.lti)
+        L = len(crmodel.lti)
         R = ri.hazard_getter.num_rlzs
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
-        for out in riskmodel.gen_outputs(ri, monitor):
+        for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
-            for l, loss_type in enumerate(riskmodel.loss_types):
+            for l, loss_type in enumerate(crmodel.loss_types):
                 # loss_curves has shape (A, C)
                 for i, asset in enumerate(ri.assets):
                     loss_curves[out.rlzi, l, i] = lc = out[loss_type][i]
@@ -60,7 +60,7 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
                     result['loss_curves'].append((l, r, aid, lcurve))
 
         # compute statistics
-        for l, loss_type in enumerate(riskmodel.loss_types):
+        for l, loss_type in enumerate(crmodel.loss_types):
             for i, asset in enumerate(ri.assets):
                 avg_stats = compute_stats(avg_losses[:, l, i], stats, weights)
                 losses = loss_curves[0, l, i]['loss']
@@ -96,7 +96,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.param = dict(stats=stats, weights=weights)
         self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
-        self.L = len(self.riskmodel.loss_types)
+        self.L = len(self.crmodel.loss_types)
         self.S = len(oq.hazard_stats())
 
     def post_execute(self, result):
@@ -106,11 +106,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         :param result: aggregated result of the task classical_risk
         """
         curve_res = {cp.loss_type: cp.curve_resolution
-                     for cp in self.riskmodel.curve_params
+                     for cp in self.crmodel.curve_params
                      if cp.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
             curve_res, insured_losses=False)
-        ltypes = self.riskmodel.loss_types
+        ltypes = self.crmodel.loss_types
 
         # loss curves stats are generated always
         stats = encode(list(self.oqparam.hazard_stats()))
