@@ -146,5 +146,5 @@ class DisaggregationTestCase(CalculatorTestCase):
         # this is a case with iml_disagg and disagg_by_src
         self.run_calc(case_master.__file__, 'job1.ini')
         arr = self.calc.datastore[
-            'disagg_by_src/iml-0.02-PGA--122.6-38.3'][()]
+            'disagg_by_src/iml-0.02-PGA-sid-0'][()]
         numpy.testing.assert_almost_equal(arr, [0.6757448, 0.1780308])
