@@ -30,7 +30,7 @@ def check_status(**kw):
     c.update(kw)
     hostport = c['master_host'], int(c['task_out_port'])
     errors = []
-    if not general.socket_ready(hostport:
+    if not general.socket_ready(hostport):
         errors.append('The task streamer on %s is down' % url)
     for host, status in WorkerMaster(**c).status():
         if status != 'running':
