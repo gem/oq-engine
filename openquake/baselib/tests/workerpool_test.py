@@ -37,7 +37,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         if not socket_ready(hostport):
             raise unittest.SkipTest('The task streamer is off')
         cls.master = WorkerMaster(
-            '127.0.0.1', cls.z['task_in_url'], cls.z['ctrl_port'], host_cores)
+            '127.0.0.1', cls.z['ctrl_port'], host_cores)
         cls.master.start()
 
     def test(self):
