@@ -71,7 +71,7 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         if ZMQ:  # start zworkers
             master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
             logs.dbcmd('start_zworkers', master)
-            logging.info('Task servers: %s', master.status())
+            logging.info('WorkerPool %s', master.status())
         try:
             eng.run_calc(job_id, oqparam, exports, **kw)
         finally:
