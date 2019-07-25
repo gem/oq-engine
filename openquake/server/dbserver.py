@@ -88,7 +88,7 @@ class DbServer(object):
         logging.warning('DB server started with %s on %s, pid %d',
                         sys.executable, self.frontend, self.pid)
         if ZMQ:
-            # start task_in->task_out streamer thread
+            # start task_in->task_server streamer thread
             c = config.zworkers
             threading.Thread(
                 target=w._streamer,
