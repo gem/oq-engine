@@ -12,10 +12,10 @@ except ImportError:
         "Do nothing"
 
 
-def _streamer(host, task_in_port, task_out_port):
+def _streamer(host, task_in_url, task_out_port):
     # streamer for zmq workers
     try:
-        z.zmq.proxy(z.bind('tcp://%s:%s' % (host, task_in_port), z.zmq.PULL),
+        z.zmq.proxy(z.bind(task_in_url, z.zmq.PULL),
                     z.bind('tcp://%s:%s' % (host, task_out_port), z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ZMQError):
         pass  # killed cleanly by SIGINT/SIGTERM
@@ -28,11 +28,10 @@ def check_status(**kw):
     c = config.zworkers.copy()
     c['master_host'] = config.dbserver.listen
     c.update(kw)
-    hostport = c['master_host'], int(c['task_in_port'])
-    task_in_url = 'tcp://%s:%s' % hostport
+    url = c['task_in_url']
     errors = []
-    if not general.socket_ready(hostport):
-        errors.append('The task streamer on %s is down' % task_in_url)
+    if not general.socket_ready(url.split('//')[1]):
+        errors.append('The task streamer on %s is down' % url)
     for host, status in WorkerMaster(**c).status():
         if status != 'running':
             errors.append('The workerpool on %s is down' % host)
@@ -48,13 +47,12 @@ class WorkerMaster(object):
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, master_host, task_in_port, task_out_port, ctrl_port,
+    def __init__(self, master_host, task_in_url, task_out_port, ctrl_port,
                  host_cores, remote_python=None, receiver_ports=None):
         # receiver_ports is not used
         self.master_host = master_host
-        self.task_in_port = task_in_port
+        self.task_in_url = task_in_url
         self.task_out_port = task_out_port
-        self.task_in_url = 'tcp://%s:%s' % (master_host, task_in_port)
         self.task_out_url = 'tcp://%s:%s' % (master_host, task_out_port)
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
