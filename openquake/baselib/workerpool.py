@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import signal
 import subprocess
 import multiprocessing
@@ -9,6 +10,10 @@ try:
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+
+
+class TimeoutError(RuntimeError):
+    pass
 
 
 def _streamer(host):
@@ -57,6 +62,19 @@ class WorkerMaster(object):
         self.task_server_url = 'tcp://%s:%d' % (
             master_host, self.ctrl_port + 1)
         self.pids = []
+
+    def wait_pools(self):
+        """
+        Wait until all workerpools start
+        """
+        for _ in range(60):
+            time.sleep(.5)
+            status = self.status()
+            if all(st == 'running' for host, st in status):
+                break
+        else:
+            raise TimeoutError(status)
+        return status
 
     def status(self, host=None):
         """
