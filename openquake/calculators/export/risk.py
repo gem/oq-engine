@@ -234,18 +234,8 @@ def export_losses_by_event(ekey, dstore):
     oq = dstore['oqparam']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
-    if oq.calculation_mode.startswith('scenario'):
-        arr = dstore['losses_by_event'][('event_id', 'loss')]
-        dtlist = [('event_id', U64), ('rlz_id', U16)] + oq.loss_dt_list()
-        num_loss_types = len(dtlist) - 2
-        loss = arr['loss']
-        z = numpy.zeros(len(arr), dtlist)
-        z['event_id'] = arr['event_id']
-        z['rlz_id'] = dstore['events']['rlz']
-        for i, (name, _) in enumerate(dtlist[2:]):
-            z[name] = loss[:, i] if num_loss_types > 1 else loss
-        writer.save(z, dest)
-    elif oq.calculation_mode == 'ebrisk':
+    if (oq.calculation_mode.startswith('scenario') or
+            oq.calculation_mode == 'ebrisk'):
         tagcol = dstore['assetcol/tagcol']
         lbe = dstore['losses_by_event'][()]
         lbe.sort(order='event_id')
