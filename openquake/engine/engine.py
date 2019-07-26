@@ -58,6 +58,11 @@ GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND is_running=1 AND pid > 0 ORDER BY id'''
 
+
+class TimeoutError(RuntimeError):
+    pass
+
+
 if OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default(job_id):
@@ -304,8 +309,14 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     if OQ_DISTRIBUTE == 'zmq':  # start zworkers
         master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
         logs.dbcmd('start_zworkers', master)
-        time.sleep(1)
-        logging.info('WorkerPool %s', master.status())
+        for _ in range(60):
+            time.sleep(.5)
+            status = master.status()
+            if all(st == 'running' for host, st in status):
+                break
+        else:
+            raise TimeoutError(status)
+        logging.info('WorkerPool %s', status)
     register_signals()
     setproctitle('oq-job-%d' % job_id)
     calc = base.calculators(oqparam, calc_id=job_id)
