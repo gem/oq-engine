@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import signal
 import subprocess
 import multiprocessing
@@ -93,7 +92,6 @@ class WorkerMaster(object):
             starting.append(' '.join(args))
             po = subprocess.Popen(args)
             self.pids.append(po.pid)
-        time.sleep(1)  # wait a bit, useful in travis
         return 'starting %s' % starting
 
     def stop(self):
