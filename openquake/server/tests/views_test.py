@@ -35,7 +35,7 @@ import random
 from django.test import Client
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
-from openquake.engine.engine import TimeoutError
+from openquake.baselib.workerpool import TimeoutError
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
