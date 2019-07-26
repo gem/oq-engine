@@ -144,11 +144,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['agglosses'] = agglosses
 
             # losses by event
-            lbe = []
-            n = self.oqparam.number_of_ground_motion_fields
-            for ei in range(E):
-                lbe.append((ei, ei // n, res[ei]))
-            lbe = numpy.array(lbe, dtlist)
+            lbe = numpy.zeros(E, dtlist)
+            lbe['event_id'] = range(E)
+            lbe['rlzi'] = (lbe['event_id'] //
+                           self.oqparam.number_of_ground_motion_fields)
+            lbe['loss'] = res
             self.datastore['losses_by_event'] = lbe
             loss_types = ' '.join(self.oqparam.loss_dt().names)
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
