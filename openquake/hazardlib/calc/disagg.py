@@ -27,7 +27,7 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib import pmf, contexts, const
-from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib import hdf5, performance
 from openquake.baselib.general import pack, groupby, AccumDict
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -55,7 +55,8 @@ def _site_indices(sids_by_rup, N):
     return mat
 
 
-def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
+def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
+                  pne_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
     # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
     [sid] = sitecol.sids
@@ -86,12 +87,13 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3):
         acc['lons'].append(rctx.lon_[sidx])
         acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
-        for m, imt in enumerate(iml2.imts):
-            for p, poe in enumerate(iml2.poes_disagg):
-                iml = iml2[m, p]
-                pne = disaggregate_pne(
-                    gsim, rctx, sitecol, dctx, imt, iml, *eps3)
-                acc[p, m].append(pne)
+        with pne_mon:
+            for m, imt in enumerate(iml2.imts):
+                for p, poe in enumerate(iml2.poes_disagg):
+                    iml = iml2[m, p]
+                    pne = disaggregate_pne(
+                        gsim, rctx, sitecol, dctx, imt, iml, *eps3)
+                    acc[p, m].append(pne)
     return pack(acc, 'mags dists lons lats P M'.split())
 
 
@@ -225,9 +227,8 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
-        with pne_mon:
-            bdata = _disaggregate(cmaker, singlesitecol, rupdata,
-                                  indices[sid], iml2, eps3)
+        bdata = _disaggregate(cmaker, singlesitecol, rupdata,
+                              indices[sid], iml2, eps3, pne_mon)
         with mat_mon:
             mat = _build_disagg_matrix(bdata, bins)
             if mat.any():  # nonzero
@@ -335,8 +336,8 @@ def disaggregation(
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
-    iml2 = ArrayWrapper(numpy.array([[iml]]),
-                        dict(imts=[imt], poes_disagg=[None], rlzi=0))
+    iml2 = hdf5.ArrayWrapper(numpy.array([[iml]]),
+                             dict(imts=[imt], poes_disagg=[None], rlzi=0))
     eps3 = _eps3(truncation_level, n_epsilons)
     for trt, srcs in by_trt.items():
         cmaker = ContextMaker(
