@@ -63,12 +63,12 @@ class WorkerMaster(object):
             master_host, self.ctrl_port + 1)
         self.pids = []
 
-    def wait_pools(self):
+    def wait_pools(self, seconds):
         """
         Wait until all workerpools start
         """
-        for _ in range(60):
-            time.sleep(.5)
+        for _ in range(seconds):
+            time.sleep(1)
             status = self.status()
             if all(st == 'running' for host, st in status):
                 break
