@@ -123,6 +123,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('totlosses', dstore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
+        # testing portfolio_losses
+        fname = gettemp(view('portfolio_losses', dstore))
+        self.assertEqualFiles('expected/portfolio_losses.txt', fname)
+
         # two equal gsims
         with self.assertRaises(InvalidLogicTree):
             self.run_calc(case_6a.__file__, 'job_haz.ini',
