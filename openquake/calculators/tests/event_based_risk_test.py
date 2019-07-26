@@ -123,7 +123,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # vulnerability function with BT
         self.run_calc(case_1f.__file__, 'job_h.ini,job_r.ini')
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
-        self.assertEqualFiles('portfolio_losses.txt', fname, delta=1E-5)
+        self.assertEqualFiles('portfolio_losses.txt', fname, delta=1E-6)
         os.remove(fname)
 
     def test_case_1g(self):
