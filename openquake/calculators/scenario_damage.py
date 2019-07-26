@@ -128,5 +128,5 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 c_asset[a, r, l] = stat
             self.datastore['losses_by_asset'] = c_asset
             self.datastore['losses_by_event'] = numpy.fromiter(
-                ((eid, rlzi, F32(result['c_event'][eid, rlzi]))
+                ((eid + rlzi * F, rlzi, F32(result['c_event'][eid, rlzi]))
                  for rlzi in range(R) for eid in range(F)), dtlist)
