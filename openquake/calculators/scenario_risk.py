@@ -121,8 +121,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         loss_dt = self.oqparam.loss_dt()
-        LI = len(loss_dt.names)
-        dtlist = [('event_id', U64), ('loss', (F32, LI))]
+        L = len(loss_dt.names)
+        dtlist = [('event_id', U64), ('loss', (F32, (L,)))]
         R = self.R
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
