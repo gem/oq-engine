@@ -155,7 +155,7 @@ class VulnerabilityFunction(object):
             self.distribution = DegenerateDistribution()
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
-        self.distribution.seed = self.seed  # set by CompositeRiskModel.init
+        numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
 
     def interpolate(self, gmvs):
         """
@@ -378,7 +378,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     def set_distribution(self, epsilons=None):
         self.distribution = DISTRIBUTIONS[self.distribution_name]()
         self.distribution.epsilons = epsilons
-        self.distribution.seed = self.seed
+        self.distribution.seed = self.seed  # needed only for PM
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
@@ -858,7 +858,8 @@ class BetaDistribution(Distribution):
     def sample(self, means, _covs, stddevs, _idxs=None):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
-        return numpy.random.beta(alpha, beta, size=None)
+        res = numpy.random.beta(alpha, beta, size=None)
+        return res
 
     def survival(self, loss_ratio, mean, stddev):
         return stats.beta.sf(loss_ratio,
