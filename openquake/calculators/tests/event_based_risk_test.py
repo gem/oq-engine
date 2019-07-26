@@ -116,6 +116,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+        fnames = export(('agg_curves-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/eb_%s' % strip_calc_id(fname),
+                                  fname)
+
+        fnames = export(('agg_losses-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 

@@ -449,6 +449,8 @@ class AssetCollection(object):
             for lti, lt in enumerate(loss_types):
                 if lt == 'occupants':
                     aval[asset['ordinal'], lti] = asset[lt + '_None']
+                elif lt.endswith('_ins'):
+                    aval[asset['ordinal'], lti] = asset['value-' + lt[:-4]]
                 elif lt in self.fields:
                     aval[asset['ordinal'], lti] = asset['value-' + lt]
         res = self.aggregate_by(list(tagnames), aval)
