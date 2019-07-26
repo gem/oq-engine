@@ -135,7 +135,7 @@ def build_report(job_ini, output_dir=None):
     """
     calc_id = logs.init()
     oq = readinput.get_oqparam(job_ini)
-    if oq.calculation_mode == 'classical':
+    if oq.calculation_mode in 'classical disaggregation':
         oq.calculation_mode = 'preclassical'
     oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)
