@@ -1,4 +1,4 @@
-# generated_by='OpenQuake engine 3.7.0-git723378f9d3', start_date='2019-07-26T15:06:06', checksum=1757983285, kind='mean', risk_investigation_time=50.0
+# generated_by='OpenQuake engine 3.7.0-git9bb58e5a78', start_date='2019-07-26T15:55:15', checksum=1757983285, kind='mean', risk_investigation_time=50.0
 annual_frequency_of_exceedence,return_period,loss_type,loss_value,loss_ratio
 3.33333E-02,30,nonstructural,NAN,NAN
 3.33333E-02,30,structural,NAN,NAN
