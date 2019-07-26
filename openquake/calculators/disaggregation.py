@@ -249,11 +249,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.iml2s = _iml2s(rlzs, oq.iml_disagg, oq.imtls,
                             self.poes_disagg, curves)
         if oq.disagg_by_src:
-            if R == 1:
-                self.build_disagg_by_src()
-            else:
-                logging.warning('disagg_by_src works only with 1 realization, '
-                                'you have %d', R)
+            self.build_disagg_by_src()
 
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
@@ -434,32 +430,32 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         logging.warning('Disaggregation by source is experimental')
         oq = self.oqparam
-        poes_disagg = oq.poes_disagg or (None,)
         ws = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         pgetter = getters.PmapGetter(self.datastore, ws, self.sitecol.sids)
-        pmap_by_grp = pgetter.init()
-        grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
-        G = len(pmap_by_grp)
-        P = len(poes_disagg)
+        groups = list(self.datastore['rlzs_by_grp'])
+        M = len(oq.imtls)
+        P = len(self.poes_disagg)
         for sid in self.sitecol.sids:
+            poes = numpy.zeros((M, P, len(groups)))
             iml2 = self.iml2s[sid]
-            for imti, imt in enumerate(oq.imtls):
-                xs = oq.imtls[imt]
-                poes = numpy.zeros((G, P))
-                for g, grp_id in enumerate(grp_ids):
-                    pmap = pmap_by_grp['grp-%02d' % grp_id]
-                    if sid in pmap:
-                        ys = pmap[sid].array[oq.imtls(imt), 0]
-                        poes[g] = numpy.interp(iml2[imti, :], xs, ys)
-                for p, poe in enumerate(poes_disagg):
-                    prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
-                              else 'poe-%s' % poe)
-                    name = 'disagg_by_src/%s-%s-sid-%s' % (prefix, imt, sid)
-                    if poes[:, p].sum():  # nonzero contribution
-                        poe_agg = 1 - numpy.prod(1 - poes[:, p])
+            for g, grp_id in enumerate(groups):
+                pcurve = pgetter.get_pcurve(sid, iml2.rlzi, int(grp_id[4:]))
+                if pcurve is None:
+                    continue
+                for m, imt in enumerate(oq.imtls):
+                    xs = oq.imtls[imt]
+                    ys = pcurve.array[oq.imtls(imt), 0]
+                    poes[m, :, g] = numpy.interp(iml2[m], xs, ys)
+            for m, imt in enumerate(oq.imtls):
+                for p, poe in enumerate(self.poes_disagg):
+                    pref = ('iml-%s' % oq.iml_disagg[imt] if poe is None
+                            else 'poe-%s' % poe)
+                    name = 'disagg_by_src/%s-%s-sid-%s' % (pref, imt, sid)
+                    if poes[m, p].sum():  # nonzero contribution
+                        poe_agg = 1 - numpy.prod(1 - poes[m, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
                             logging.warning(
                                 'poe_agg=%s is quite different from '
                                 'the expected poe=%s', poe_agg, poe)
-                        self.datastore[name] = poes[:, p]
+                        self.datastore[name] = poes[m, p]
                         self.datastore.set_attrs(name, poe_agg=poe_agg)
