@@ -122,7 +122,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         loss_dt = self.oqparam.loss_dt()
         L = len(loss_dt.names)
-        dtlist = [('event_id', U64), ('loss', (F32, (L,)))]
+        dtlist = [('event_id', U64), ('rlzi', U16), ('loss', (F32, (L,)))]
         R = self.R
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
@@ -144,7 +144,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['agglosses'] = agglosses
 
             # losses by event
-            lbe = numpy.fromiter(((ei, res[ei]) for ei in range(E)), dtlist)
+            lbe = []
+            n = self.oqparam.number_of_ground_motion_fields
+            for ei in range(E):
+                lbe.append((ei, ei // n, res[ei]))
+            lbe = numpy.array(lbe, dtlist)
             self.datastore['losses_by_event'] = lbe
             loss_types = ' '.join(self.oqparam.loss_dt().names)
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
