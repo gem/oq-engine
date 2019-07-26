@@ -1,0 +1,4 @@
+loss_type,loss_value,exposed_value,loss_ratio
+nonstructural,1.89726E+02,5.50000E+03,3.44956E-02
+structural,7.34503E+02,1.10000E+04,6.67730E-02
+structural_ins,4.76383E+02,1.10000E+04,4.33076E-02
