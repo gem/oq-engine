@@ -304,6 +304,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     if OQ_DISTRIBUTE == 'zmq':  # start zworkers
         master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
         logs.dbcmd('start_zworkers', master)
+        time.sleep(1)
         logging.info('WorkerPool %s', master.status())
     register_signals()
     setproctitle('oq-job-%d' % job_id)
