@@ -1073,7 +1073,7 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None, cleanup=False):
     Build a zip archive from the given file names.
 
     :param fnames: list of path names
-    :param archive: path of the archive
+    :param archive: path of the archive or BytesIO object
     """
     prefix = len(os.path.commonprefix([os.path.dirname(f) for f in fnames]))
     with zipfile.ZipFile(
@@ -1083,7 +1083,6 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None, cleanup=False):
             z.write(f, f[prefix:])
             if cleanup:  # remove the zipped file
                 os.remove(f)
-    log('Generated %s' % archive)
     return archive
 
 
