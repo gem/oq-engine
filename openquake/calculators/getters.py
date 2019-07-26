@@ -153,6 +153,28 @@ class PmapGetter(object):
                     pcurves[rlzi] |= c
         return pcurves
 
+    def get_pcurve(self, s, r, g):  # used in disaggregation
+        """
+        :param s: site ID
+        :param r: realization ID
+        :param g: group ID
+        :returns: a probability curves with shape L (or None, if missing)
+        """
+        grp = 'grp-%02d' % g
+        pmap = self.init()[grp]
+        try:
+            pc = pmap[s]
+        except KeyError:
+            return
+        L = len(self.imtls.array)
+        pcurve = probability_map.ProbabilityCurve(numpy.zeros((L, 1)))
+        for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
+            for rlzi in rlzis:
+                if rlzi == r:
+                    pcurve |= probability_map.ProbabilityCurve(
+                        pc.array[:, [gsim_idx]])
+        return pcurve
+
     def items(self, kind=''):
         """
         Extract probability maps from the datastore, possibly generating
