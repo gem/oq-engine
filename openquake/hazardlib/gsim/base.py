@@ -336,7 +336,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             imls = self.to_distribution_values(imls)
             mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
             mean = mean.reshape(mean.shape + (1, ))
-            return (imls <= mean).astype(float)
+            return imls <= mean
         else:
             # use real normal distribution
             assert (const.StdDev.TOTAL
