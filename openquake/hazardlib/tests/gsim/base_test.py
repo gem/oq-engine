@@ -143,9 +143,6 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertAlmostEqual(poe2, 0.43432352175355504, places=6)
 
     def test_several_contexts(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
-            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
-            {const.StdDev.TOTAL})
         mean_stddev = numpy.array([[3, 4], [5, 6]])
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
@@ -171,7 +168,7 @@ class TGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = None
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     REQUIRES_SITES_PARAMETERS = None
     REQUIRES_RUPTURE_PARAMETERS = None
     REQUIRES_DISTANCES = None
@@ -182,7 +179,7 @@ class TIPE(IPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = None
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     REQUIRES_SITES_PARAMETERS = None
     REQUIRES_RUPTURE_PARAMETERS = None
     REQUIRES_DISTANCES = None
