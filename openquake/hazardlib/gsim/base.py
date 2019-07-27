@@ -193,7 +193,13 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     @classmethod
     def __init_subclass__(cls):
-        registry[cls.__name__] = cls
+        stddevtypes = cls.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+        if not isinstance(stddevtypes, abc.abstractproperty):  # concrete class
+            if const.StdDev.TOTAL not in stddevtypes:
+                raise ValueError('%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
+                                 'not defined for const.StdDev.TOTAL' %
+                                 cls.__name__)
+            registry[cls.__name__] = cls
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
