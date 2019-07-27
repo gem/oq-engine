@@ -45,7 +45,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
             DEFINED_FOR_TECTONIC_REGION_TYPE = None
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-            DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
+            DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
             REQUIRES_SITES_PARAMETERS = set()
             REQUIRES_RUPTURE_PARAMETERS = set()
             REQUIRES_DISTANCES = set()
@@ -83,10 +83,6 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
 class GetPoEsTestCase(_FakeGSIMTestCase):
     def test_no_truncation(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
-            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
-            {const.StdDev.TOTAL})
-
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             self.assertEqual(imt, self.DEFAULT_IMT())
             self.assertEqual(stddev_types, [const.StdDev.TOTAL])
