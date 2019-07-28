@@ -338,38 +338,6 @@ class ContextMaker(object):
                 pne_array[:, slc, i] = pno
         return pne_array
 
-    # tested in scenario/case_11
-    def get_limit_distance(self, sites, rup, imts, minimum_intensity):
-        """
-        Calculate the distance over which the GMVs are lower than the
-        minimum_intensity for all IMTs and GSIMs.
-
-        :param sites: a SiteCollection
-        :param rup: a rupture
-        :param imts: a sequence on intensity measure strings
-        :param minimum_intensity: a dictionary TRT -> minimum_intensity
-        :returns: the limit distance
-        """
-        if not minimum_intensity:
-            return self.maximum_distance[rup.tectonic_region_type]
-        sctx, dctx = self.make_contexts(sites, rup)
-        fdist = getattr(dctx, self.filter_distance)
-        limit_dist = 0
-        for im in imts:
-            try:
-                minint = minimum_intensity[im]
-            except KeyError:
-                minint = minimum_intensity['default']
-            imt = imt_module.from_string(im)
-            for gsim in self.gsims:
-                mean, _ = gsim.get_mean_and_stddevs(
-                    sctx, rup, dctx, imt, [const.StdDev.TOTAL])
-                for i, gmv in enumerate(numpy.exp(mean)):
-                    if gmv <= minint:
-                        limit_dist = max(limit_dist, fdist[i])
-                        break
-        return limit_dist or self.maximum_distance[rup.tectonic_region_type]
-
 
 class BaseContext(metaclass=abc.ABCMeta):
     """
