@@ -238,13 +238,13 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     # for cluster groups or groups with mutually exclusive sources.
     if (getattr(sources, 'atomic', False) and
             getattr(sources, 'cluster', False)):
-            eb_ruptures, calc_times, eff_ruptures, grp_id = sample_cluster(
-                sources, srcfilter, num_ses, param)
+        eb_ruptures, calc_times, eff_ruptures, grp_id = sample_cluster(
+            sources, srcfilter, num_ses, param)
 
-            # Yield ruptures
-            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
-                            calc_times=calc_times,
-                            eff_ruptures={grp_id: eff_ruptures})
+        # Yield ruptures
+        yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+                        calc_times=calc_times,
+                        eff_ruptures={grp_id: eff_ruptures})
     else:
         eb_ruptures = []
         # AccumDict of arrays with 2 elements weight, calc_time
