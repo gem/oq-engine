@@ -16,7 +16,7 @@ jobs:
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
           pytest --doctest-modules -xv openquake/baselib --tb=short;
-          pytest --doctest-modules -xv openquake/hazardlib -k Parallel --tb=short;
+          pytest --doctest-modules -xv openquake/hazardlib/test/calc -k Parallel --tb=short;
           pytest --doctest-modules -n auto -xv openquake/hazardlib openquake/hmtk -k "not Parallel" --tb=short;
           fi
   - stage: tests

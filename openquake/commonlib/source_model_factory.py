@@ -288,6 +288,7 @@ class SourceModelFactory(object):
         if self.hdf5:
             sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
             hdf5.create(self.hdf5, 'source_geom', point3d)
+            hdf5.create(self.hdf5, 'source_mfds', hdf5.vstr)
         grp_id = 0
         for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
             if 'ucerf' in dic:
@@ -308,6 +309,9 @@ class SourceModelFactory(object):
             else:
                 self.apply_uncertainties(sm, idx, dic)
             yield sm
+            if self.hdf5:
+                hdf5.extend(self.hdf5['source_mfds'],
+                            numpy.array(list(self.mfds), hdf5.vstr))
 
         # log if some source file is being used more than once
         dupl = 0
