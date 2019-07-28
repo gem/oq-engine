@@ -237,7 +237,6 @@ def make_figure_event_based_mfd(extractors, what):
                 *expected.get_annual_occurrence_rates())
             ax.plot(magnitudes, frequencies, label='expected')
         ax.legend()
-        ax.legend()
     return plt
 
 
