@@ -230,6 +230,13 @@ def make_figure_event_based_mfd(extractors, what):
         ax.set_ylabel('annual frequency [on %dy]' % duration)
         for label, freqs in mfd_dict.items():
             ax.plot(mags, freqs, label=label)
+        mfds = ex.get('source_mfds').array
+        if len(mfds) == 1:
+            expected = mfd.from_toml(mfds[0], ex.oqparam.width_of_mfd_bin)
+            magnitudes, frequencies = zip(
+                *expected.get_annual_occurrence_rates())
+            ax.plot(magnitudes, frequencies, label='expected')
+        ax.legend()
         ax.legend()
     return plt
 
