@@ -288,7 +288,6 @@ class SourceModelFactory(object):
         if self.hdf5:
             sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
             hdf5.create(self.hdf5, 'source_geom', point3d)
-            hdf5.create(self.hdf5, 'source_mfds', hdf5.vstr)
         grp_id = 0
         for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
             if 'ucerf' in dic:
@@ -309,13 +308,6 @@ class SourceModelFactory(object):
             else:
                 self.apply_uncertainties(sm, idx, dic)
             yield sm
-        if self.mags and self.hdf5 and 'site_model' not in oq.inputs:
-            mags_by_trt = {trt: sorted(ms) for trt, ms in self.mags.items()}
-            idist = self.gsim_lt.get_integration_distance(mags_by_trt, oq)
-            self.hdf5['integration_distance'] = idist
-            self.hdf5.set_nbytes('integration_distance')
-            hdf5.extend(self.hdf5['source_mfds'],
-                        numpy.array(list(self.mfds), hdf5.vstr))
 
         # log if some source file is being used more than once
         dupl = 0
