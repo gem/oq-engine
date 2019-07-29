@@ -264,8 +264,8 @@ precision.
 [output]
 export_dir = outputs/
 # given the specified `intensity_measure_types_and_levels`
-mean_hazard_curves = true
-quantile_hazard_curves = 0.1 0.5 0.9
+mean = true
+quantiles = 0.1 0.5 0.9
 uniform_hazard_spectra = false
 poes = 0.1
 \end{minted}
@@ -274,8 +274,8 @@ The final section of the configuration file is the one that contains the
 parameters controlling the types of output to be produced. Providing an export
 directory will tell OpenQuake where to place the output files when the
 \texttt{-{}-exports} flag is used when running the program. Setting
-\verb=mean_hazard_curves= to true will result in a specific output containing
-the mean curves of the logic tree, likewise \verb=quantile_hazard_curves= will
+\verb=mean= to true will result in a specific output containing
+the mean curves of the logic tree, likewise \verb=quantiles= will
 produce separate files containing the quantile hazard curves at the quantiles
 listed (0.1, 0.5 and 0.9 in the example above, leave blank or omit if no
 quantiles are required). Setting \verb=uniform_hazard_spectra= to true will
