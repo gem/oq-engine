@@ -543,10 +543,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         is_running = request_get_dict.get('is_running')
         filterdict['is_running'] = valid.boolean(is_running)
 
-    if 'relevant' in request_get_dict:
-        relevant = request_get_dict.get('relevant')
-        filterdict['relevant'] = valid.boolean(relevant)
-
     if 'limit' in request_get_dict:
         limit = int(request_get_dict.get('limit'))
     else:
