@@ -331,12 +331,12 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             del data  # save memory
 
         poll_queue(job_id, _PID, poll_time=15)
-        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default(job_id)
         if OQ_DISTRIBUTE == 'zmq':  # start zworkers
             master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
             logs.dbcmd('start_zworkers', master)
             logging.info('WorkerPool %s',  master.wait_pools(seconds=30))
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
+            set_concurrent_tasks_default(job_id)
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id,
