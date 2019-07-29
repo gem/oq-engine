@@ -100,7 +100,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     :returns:
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
-        .eff_ruptures
     """
     if not hasattr(src_filter, 'sitecol'):  # a sitecol was passed
         src_filter = SourceFilter(src_filter, {})
@@ -136,7 +135,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     rup_data = AccumDict(accum=[])
     # AccumDict of arrays with 3 elements nrups, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-    eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     gids = []
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
@@ -163,9 +161,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
                     rup_data[k].extend(v)
         calc_times[src.id] += numpy.array(
             [cmaker.nrups, cmaker.nsites, time.time() - t0])
-        # storing the number of contributing ruptures too
-        eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
-                         for gid in src.src_group_ids}
     # Updating the probability map in the case of mutually exclusive
     # sources
     group_probability = getattr(group, 'grp_probability', None)
@@ -178,8 +173,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Return results
     rdata = {k: numpy.array(v) for k, v in rup_data.items()}
     rdata['grp_id'] = numpy.uint16(gids)
-    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data=rdata)
+    return dict(pmap=pmap, calc_times=calc_times, rup_data=rdata)
 
 
 def calc_hazard_curves(
