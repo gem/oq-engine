@@ -1,3 +1,7 @@
+  [Richard Styron]
+  * Fixed `YoungsCoppersmith1985MFD.from_total_moment_rate()`: due to numeric
+    errors it was producing incorrect seismicity rates
+
   [Michele Simionato]
   * Now we generate the output `disagg_by_src` during disaggregation even in the
     case of multiple realizations
