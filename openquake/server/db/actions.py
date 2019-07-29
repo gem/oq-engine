@@ -127,8 +127,8 @@ def delete_uncompleted_calculations(db, user):
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param user: user name
     """
-    db("UPDATE job SET status = 'deleted'"
-       " WHERE user_name=?x AND status != 'complete'", user)
+    db("UPDATE job SET status = 'deleted' "
+       "WHERE user_name=?x AND status != 'complete'", user)
 
 
 def get_job(db, job_id, username=None):
@@ -154,12 +154,12 @@ def get_job(db, job_id, username=None):
 
     # else negative job_id
     if username:
-        joblist = db('SELECT * FROM job WHERE user_name=?x'
-                     " AND status != 'deleted' ORDER BY id DESC LIMIT ?x",
+        joblist = db('SELECT * FROM job WHERE user_name=?x '
+                     "AND status != 'deleted' ORDER BY id DESC LIMIT ?x",
                      username, -job_id)
     else:
-        joblist = db("SELECT * FROM job WHERE status != 'deleted'"
-                     ' ORDER BY id DESC LIMIT ?x', -job_id)
+        joblist = db("SELECT * FROM job WHERE status != 'deleted' "
+                     'ORDER BY id DESC LIMIT ?x', -job_id)
     if not joblist:  # no jobs
         return
     else:
@@ -353,8 +353,8 @@ def del_calc(db, job_id, user, force=False):
         return {"error": 'Cannot delete calculation %d:'
                 ' ID does not exist' % job_id}
 
-    deleted = db('UPDATE job SET status=?x WHERE id=?x AND user_name=?x',
-                 'deleted', job_id, user).rowcount
+    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND user_name=?x",
+                 job_id, user).rowcount
     if not deleted:
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
@@ -559,8 +559,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s'
-              " AND status != 'deleted' ORDER BY id DESC LIMIT %d"
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s '
+              "AND status != 'deleted' ORDER BY id DESC LIMIT %d"
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
