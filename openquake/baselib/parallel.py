@@ -794,22 +794,17 @@ def split_task(func, *args, duration=1000,
     :param weight: weight function for the elements in args[0]
     :yields: a partial result, 0 or more task objects, 0 or 1 partial result
     """
-    elements = args[0]
+    elements = numpy.array(args[0])
     n = len(elements)
     assert n > 0, 'Passed an empty sequence!'
-    if n > 1000:
-        every = 333
-    elif n > 300:
-        every = 100
-    elif n > 100:
-        every = 33
-    else:
-        every = 10
-    sample = [el for i, el in enumerate(elements, 1) if i % every == 0]
-    if not sample:  # there are not enough elements
+    if n < 10:
         yield func(*args)
         return
-    other = [el for i, el in enumerate(elements, 1) if i % every != 0]
+    numpy.random.seed(42)
+    ok = numpy.zeros(n, dtype=bool)
+    ok[numpy.random.choice(numpy.arange(n), 5, replace=False)] = True
+    sample = elements[ok]
+    other = elements[~ok]
     sample_weight = sum(weight(el) for el in sample)
     t0 = time.time()
     res = func(*(sample,) + args[1:])
