@@ -84,14 +84,14 @@ class RupData(object):
         self.cmaker = cmaker
         self.data = AccumDict(accum=[])
 
-    def from_srcs(self, srcs):  # used in disagg.disaggregation
+    def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
         :returns: param -> array
         """
         for src in srcs:
             for rup in src.iter_ruptures():
                 self.cmaker.add_rup_params(rup)
-                self.add(rup, src.id)
+                self.add(rup, src.id, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
 
     def add(self, rup, src_id, sites):

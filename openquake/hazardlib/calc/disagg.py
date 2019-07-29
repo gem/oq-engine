@@ -345,7 +345,7 @@ def disaggregation(
             {'filter_distance': filter_distance})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
-        rdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
+        rdata = contexts.RupData(cmaker).from_srcs(srcs, sitecol)
         idxs = _site_indices(rdata['sid_'], 1)[0]
         bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
 
