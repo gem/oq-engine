@@ -93,12 +93,6 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
     if sources:
-        tot = 0
-        sd = AccumDict(accum=numpy.zeros(3))  # nsites, nrupts, weight
-        for src in sources:
-            arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
-            sd[src.id] += arr
-            tot += 1
         yield from parallel.split_task(
                 classical, sources, srcfilter, gsims, params, monitor,
                 duration=params['task_duration'])
