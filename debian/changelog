@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Removed the 'oq dbserver restart' command since it was broken
+
   [Richard Styron]
   * Fixed `YoungsCoppersmith1985MFD.from_total_moment_rate()`: due to numeric
     errors it was producing incorrect seismicity rates
