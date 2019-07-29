@@ -49,10 +49,12 @@ def dbserver(cmd, dbhostport=None,
         else:
             print('dbserver already running')
     elif cmd == 'restart':
-        if status == 'running':
-            pid = logs.dbcmd('getpid')
-            os.kill(pid, signal.SIGINT)
-        dbs.run_server(dbpath, dbhostport, loglevel, foreground)
+        print('please use oq dbserver start/stop')
+        # FIXME restart is currently broken
+        # if status == 'running':
+        #     pid = logs.dbcmd('getpid')
+        #     os.kill(pid, signal.SIGINT)
+        # dbs.run_server(dbpath, dbhostport, loglevel, foreground)
 
 
 dbserver.arg('cmd', 'dbserver command',
