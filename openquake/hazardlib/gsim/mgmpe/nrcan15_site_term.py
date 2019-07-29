@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.mgmp.nrcan15_site_term` implements
 
 import copy
 import numpy as np
+from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
@@ -41,7 +42,7 @@ class NRCan15SiteTerm(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
