@@ -117,8 +117,7 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     Prefilter the sources
     """
     eff_ruptures = AccumDict(accum=0)   # grp_id -> num_ruptures
-    calc_times = AccumDict(accum=numpy.zeros(2, F32))  # weight, time
-    nsites = {}
+    calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     for src in srcs:
         t0 = time.time()
         if srcfilter.get_close_sites(src) is None:
@@ -126,10 +125,9 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         for grp_id in src.src_group_ids:
             eff_ruptures[grp_id] += src.num_ruptures
         dt = time.time() - t0
-        calc_times[src.id] += numpy.array([src.weight, dt], F32)
-        nsites[src.id] = src.nsites
+        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
     return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data={'grp_id': []}, nsites=nsites)
+                rup_data={'grp_id': []})
 
 
 @base.calculators.add('classical')
@@ -148,7 +146,6 @@ class ClassicalCalculator(base.HazardCalculator):
         :param dic: dict with keys pmap, calc_times, eff_ruptures, rup_data
         """
         with self.monitor('aggregate curves', autoflush=True):
-            acc.nsites.update(dic['nsites'])
             acc.eff_ruptures += dic['eff_ruptures']
             self.calc_times += dic['calc_times']
             for grp_id, pmap in dic['pmap'].items():
@@ -190,7 +187,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 rparams.add(dparam + '_')
             zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
-        zd.nsites = AccumDict()  # src.id -> nsites
         self.rparams = sorted(rparams)
         return zd
 
@@ -224,18 +220,6 @@ class ClassicalCalculator(base.HazardCalculator):
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
-        if acc.nsites:
-            if len(acc.nsites) > 100000:
-                # not saving source_info.num_sites since it would be slow:
-                # we do not want to wait hours for unused information
-                logging.warn(
-                    'There are %d contributing sources', len(acc.nsites))
-            else:
-                logging.info('Saving source_info.num_sites for %d sources',
-                             len(acc.nsites))
-                src_ids = sorted(acc.nsites)
-                nsites = [acc.nsites[i] for i in src_ids]
-                self.datastore['source_info'][src_ids, 'num_sites'] = nsites
         if not self.calc_times:
             raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory
