@@ -312,8 +312,6 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     msg = check_obsolete_version(oqparam.calculation_mode)
     if msg:
         logs.LOG.warn(msg)
-    if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-        set_concurrent_tasks_default(job_id)
     calc.from_engine = True
     tb = 'None\n'
     try:
@@ -333,6 +331,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             del data  # save memory
 
         poll_queue(job_id, _PID, poll_time=15)
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
+            set_concurrent_tasks_default(job_id)
         if OQ_DISTRIBUTE == 'zmq':  # start zworkers
             master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
             logs.dbcmd('start_zworkers', master)
