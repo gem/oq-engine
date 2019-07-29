@@ -264,7 +264,8 @@ def _parse_csv_line(headers, values, req_site_params):
             # value is sites context object attribute
             if param == 'site_vs30measured' or param == 'site_backarc':
                 value = float(value) != 0
-            elif param == 'site_siteclass':
+            elif param in ('site_siteclass', 'site_ec8', 'site_ec8_p18',
+                           'site_geology'):
                 value = numpy.string_(value)
             else:
                 value = float(value)
