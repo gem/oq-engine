@@ -41,7 +41,7 @@ weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 source_data_dt = numpy.dtype(
-    [('taskno', U16), ('src_id', U32), ('nsites', U32), ('nruptures', U32),
+    [('taskno', U16), ('src_id', U32), ('nsites', F32), ('nruptures', U32),
      ('weight', F32)])
 
 
