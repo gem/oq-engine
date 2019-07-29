@@ -99,35 +99,23 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
             sd[src.id] += arr
             tot += 1
-        source_data = numpy.array([(monitor.task_no, src_id, s/tot, r, w)
-                                   for src_id, (s, r, w) in sd.items()],
-                                  source_data_dt)
-        first = True
-        for out in parallel.split_task(
+        yield from parallel.split_task(
                 classical, sources, srcfilter, gsims, params, monitor,
-                duration=params['task_duration']):
-            if first:
-                out['source_data'] = source_data
-                first = False
-            yield out
+                duration=params['task_duration'])
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     Prefilter the sources
     """
-    eff_ruptures = AccumDict(accum=0)   # grp_id -> num_ruptures
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     for src in srcs:
         t0 = time.time()
         if srcfilter.get_close_sites(src) is None:
             continue
-        for grp_id in src.src_group_ids:
-            eff_ruptures[grp_id] += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
-    return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data={'grp_id': []})
+    return dict(pmap={}, calc_times=calc_times, rup_data={'grp_id': []})
 
 
 @base.calculators.add('classical')
@@ -143,14 +131,16 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys pmap, calc_times, eff_ruptures, rup_data
+        :param dic: dict with keys pmap, calc_times, rup_data
         """
         with self.monitor('aggregate curves', autoflush=True):
-            acc.eff_ruptures += dic['eff_ruptures']
             self.calc_times += dic['calc_times']
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
+                    for src_id, (nr, ns, dt) in dic['calc_times'].items():
+                        acc.eff_ruptures[grp_id] += nr
+
             rup_data = dic['rup_data']
             if len(rup_data['grp_id']):
                 nr = len(rup_data['srcidx'])
@@ -166,8 +156,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         self.datastore.hdf5.save_vlen('rup/' + k, v)
                     else:
                         self.datastore.extend('rup/' + k, v)
-            if 'source_data' in dic:
-                self.datastore.extend('source_data', dic['source_data'])
         return acc
 
     def acc0(self):
@@ -186,7 +174,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for dparam in cm.REQUIRES_DISTANCES:
                 rparams.add(dparam + '_')
             zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
-        zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
+        zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
         return zd
 
@@ -213,7 +201,7 @@ class ClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(
                 self.core_task.__func__, hdf5path=self.datastore.filename)
             self.submit_sources(smap)
-        self.calc_times = AccumDict(accum=numpy.zeros(2, F32))
+        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
