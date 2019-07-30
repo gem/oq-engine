@@ -626,9 +626,9 @@ def view_task_hazard(token, dstore):
     arr = dstore['source_info']['source_id', 'num_sites', 'weight'][srcids]
     st = [stats('nsites', arr['num_sites'] / arr['weight']),
           stats('weight', arr['weight'])]
-    srcs = set(s.split(':', 1)[0] for s in arr['source_id'])
+    srcs = arr['source_id']
     res = ('taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n'
-           % (taskno, rec['weight'], rec['duration'], ' '.join(sorted(srcs))))
+           % (taskno, rec['weight'], rec['duration'], ' '.join(srcs)))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
 
 
