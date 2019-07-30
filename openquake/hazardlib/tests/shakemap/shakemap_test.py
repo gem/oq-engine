@@ -116,6 +116,7 @@ class ShakemapTestCase(unittest.TestCase):
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, site_effects=False)
+        # PGA, SA(0.3), SA(1.0), SA(3.0)
         aae(gmf_by_imt, [[0.0975815, 0.2442196, 0.0286512, 0.6358019],
                          [0.2023841, 0.5013746, 0.0297236, 0.6544367],
                          [0.3010831, 0.5986038, 0.0305651, 0.6575208],
