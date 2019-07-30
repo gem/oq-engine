@@ -172,8 +172,8 @@ def _build_disagg_matrix(bdata, bins):
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
     :param mon: a Monitor instance
-    :returns: a matrix of shape (P, M, #magbins, #distbins, #lonbins,
-                                       #latbins, #epsbins)
+    :returns: a 7D-matrix of shape (#magbins, #distbins, #lonbins,
+                                    #latbins, #imts, #poes, #epsbins)
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
     dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
@@ -198,13 +198,12 @@ def _build_disagg_matrix(bdata, bins):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
-    pnes = bdata.pnes
-    U, M, P, E = pnes.shape
-    mat = numpy.ones(shape[:-1] + [M, P, E])
+    U, M, P, E = bdata.pnes.shape
+    mat7D = numpy.ones(shape[:-1] + [M, P, E])
     for i_mag, i_dist, i_lon, i_lat, pne in zip(
-            mags_idx, dists_idx, lons_idx, lats_idx, pnes):
-        mat[i_mag, i_dist, i_lon, i_lat] *= pne
-    return 1. - mat
+            mags_idx, dists_idx, lons_idx, lats_idx, bdata.pnes):
+        mat7D[i_mag, i_dist, i_lon, i_lat] *= pne
+    return 1. - mat7D
 
 
 # called by the engine
