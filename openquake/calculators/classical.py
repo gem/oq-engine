@@ -40,9 +40,8 @@ F64 = numpy.float64
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
-source_data_dt = numpy.dtype(
-    [('taskno', U16), ('src_id', U32), ('nsites', F32), ('nruptures', U32),
-     ('weight', F32)])
+
+sources_by_task_dt = numpy.dtype([('task_no', U32), ('srcids', hdf5.vuint32)])
 
 
 def get_src_ids(sources):
@@ -112,7 +111,8 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
-    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []})
+    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
+                task_no=monitor.task_no)
 
 
 @base.calculators.add('classical')
@@ -132,6 +132,9 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         with self.monitor('aggregate curves', autoflush=True):
             self.calc_times += dic['calc_times']
+            srcids = U32(sorted(dic['calc_times']))
+            arr = numpy.array([(dic['task_no'], srcids)], sources_by_task_dt)
+            self.datastore.extend('sources_by_task', arr)
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
@@ -173,6 +176,7 @@ class ClassicalCalculator(base.HazardCalculator):
             zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
+        self.datastore.create_dset('sources_by_task', sources_by_task_dt)
         return zd
 
     def execute(self):
