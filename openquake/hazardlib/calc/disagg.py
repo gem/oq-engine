@@ -99,7 +99,7 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
     return pack(acc, 'mags dists lons lats P M'.split())
 
 
-def _disaggregate_pne(rupture, mean, stddev, imls, truncnorm,
+def _disaggregate_pne(rupture, mean, stddev, iml, truncnorm,
                       epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
@@ -111,7 +111,7 @@ def _disaggregate_pne(rupture, mean, stddev, imls, truncnorm,
     """
     # compute iml value with respect to standard (mean=0, std=1)
     # normal distributions
-    [lvl] = (imls - mean) / stddev
+    [lvl] = (iml - mean) / stddev
 
     # take the minimum epsilon larger than standard_iml
     bin = numpy.searchsorted(epsilons, lvl)
