@@ -41,8 +41,6 @@ weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
-sources_by_task_dt = numpy.dtype([('task_no', U32), ('srcids', hdf5.vuint32)])
-
 
 def get_src_ids(sources):
     """
@@ -133,8 +131,7 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('aggregate curves', autoflush=True):
             self.calc_times += dic['calc_times']
             srcids = U32(sorted(dic['calc_times']))
-            arr = numpy.array([(dic['task_no'], srcids)], sources_by_task_dt)
-            self.datastore.extend('sources_by_task', arr)
+            self.sources_by_task[dic['task_no']] = srcids
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
@@ -176,7 +173,7 @@ class ClassicalCalculator(base.HazardCalculator):
             zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
-        self.datastore.create_dset('sources_by_task', sources_by_task_dt)
+        self.sources_by_task = {}  # task_no => src_ids
         return zd
 
     def execute(self):
@@ -204,6 +201,12 @@ class ClassicalCalculator(base.HazardCalculator):
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
+                num_tasks = max(self.sources_by_task) + 1
+                sbt = numpy.zeros(num_tasks, hdf5.vuint32)
+                for task_no, srcids in self.sources_by_task.items():
+                    sbt[task_no] = srcids
+                self.datastore['sources_by_task'] = sbt
+                self.sources_by_task.clear()
         if not self.calc_times:
             raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory
