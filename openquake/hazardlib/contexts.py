@@ -20,14 +20,14 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import imt as imt_module, const
+from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth rvolc'.split())
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
 
 
 def get_distances(rupture, mesh, param):
@@ -53,6 +53,8 @@ def get_distances(rupture, mesh, param):
         dist = rupture.get_cdppvalue(mesh)
     elif param == 'azimuth':
         dist = rupture.surface.get_azimuth(mesh)
+    elif param == 'azimuth_cp':
+        dist = rupture.surface.get_azimuth_of_closest_point(mesh)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(mesh.lons)
