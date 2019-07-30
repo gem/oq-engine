@@ -3,8 +3,8 @@ Classical PSHA QA test with sites_csv
 
 ============== ===================
 checksum32     2,580,379,596      
-date           2019-07-30T06:21:24
-engine_version 3.7.0-git1f0cf139e1
+date           2019-07-30T15:04:34
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 10, num_levels = 13, num_rlzs = 2
@@ -77,7 +77,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ====== =======
 source_id grp_id code num_ruptures calc_time num_sites weight speed  
 ========= ====== ==== ============ ========= ========= ====== =======
-3         0      S    447          0.00335   10        447    133,594
+3         0      S    447          0.00325   10        447    137,553
 ========= ====== ==== ============ ========= ========= ====== =======
 
 Computation times by source typology
@@ -85,33 +85,33 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.00335   1     
+S    0.00325   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-preclassical       0.00378 NaN    0.00378 0.00378 1      
-read_source_models 0.00362 NaN    0.00362 0.00362 1      
+preclassical       0.00362 NaN    0.00362 0.00362 1      
+read_source_models 0.00360 NaN    0.00360 0.00360 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ========================================================= ========
 task               sent                                                      received
-preclassical       params=110.68 KB srcs=1.12 KB gsims=296 B srcfilter=219 B 330 B   
-read_source_models converter=314 B fnames=107 B                              1.49 KB 
+preclassical       params=110.68 KB srcs=1.12 KB gsims=296 B srcfilter=220 B 342 B   
+read_source_models converter=314 B fnames=100 B                              1.49 KB 
 ================== ========================================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_5039                time_sec  memory_mb counts
+calc_15552               time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.00378   1.91797   1     
-total read_source_models 0.00362   0.19922   1     
-managing sources         0.00285   0.10547   1     
-store source_info        0.00205   0.17188   1     
-aggregate curves         3.345E-04 0.0       1     
+managing sources         0.00496   0.0       1     
+total preclassical       0.00362   0.0       1     
+total read_source_models 0.00360   0.0       1     
+store source_info        0.00254   0.0       1     
+aggregate curves         1.695E-04 0.0       1     
 ======================== ========= ========= ======

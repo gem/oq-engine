@@ -109,9 +109,9 @@ class ReportWriter(object):
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info'])
-            if 'classical' in tasks:
-                self.add('task_hazard:0')
-                self.add('task_hazard:-1')
+            if 'classical_split_filter' in tasks:
+                self.add('task:classical_split_filter:0')
+                self.add('task:classical_split_filter:-1')
             self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')

@@ -2,9 +2,9 @@ disaggregation with a complex logic tree
 ========================================
 
 ============== ===================
-checksum32     1,766,748,636      
-date           2019-06-24T15:33:27
-engine_version 3.6.0-git4b6205639c
+checksum32     2,607,118,707      
+date           2019-07-30T15:03:56
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 2, num_levels = 102, num_rlzs = 8
@@ -12,7 +12,7 @@ num_sites = 2, num_levels = 102, num_rlzs = 8
 Parameters
 ----------
 =============================== =================
-calculation_mode                'disaggregation' 
+calculation_mode                'preclassical'   
 number_of_logic_tree_samples    0                
 maximum_distance                {'default': 60.0}
 investigation_time              50.0             
@@ -72,104 +72,63 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 543          543         
-source_model_1.xml 1      Stable Shallow Crust 4            4           
+source_model_1.xml 1      Stable Shallow Crust 5            4           
 source_model_2.xml 2      Active Shallow Crust 543          543         
-source_model_2.xml 3      Stable Shallow Crust 1            1           
+source_model_2.xml 3      Stable Shallow Crust 5            1           
 ================== ====== ==================== ============ ============
 
 ============= =====
 #TRT models   4    
-#eff_ruptures 1,091
+#eff_ruptures 1,096
 #tot_ruptures 1,091
-#tot_weight   1,091
 ============= =====
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======= =============
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
-====== ========= ==== ===== ===== ============ ========= ========= ======= =============
-0      1         S    0     2     543          2.26177   2.00000   618     1,425,686,071
-3      2         X    6     402   1            0.03162   2.00000   1.13863 953,932,561  
-1      2         S    2     4     4            0.01107   2.00000   4.55452 2,443,917,473
-2      1         S    4     6     543          0.0       0.0       0.0     1,425,686,071
-====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+========= ====== ==== ============ ========= ========= ======= =======
+source_id grp_id code num_ruptures calc_time num_sites weight  speed  
+========= ====== ==== ============ ========= ========= ======= =======
+2         1      S    4            0.00364   4.00000   5.00000 1,374  
+1         0      S    543          0.00286   2.00000   543     189,871
+========= ====== ==== ============ ========= ========= ======= =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    2.27283   3     
-X    0.03162   1     
+S    0.00650   3     
+X    0.0       1     
 ==== ========= ======
 
 Duplicated sources
 ------------------
-Found 2 source(s) with the same ID and 1 true duplicate(s): ['1']
-Here is a fake duplicate: 2
+Found 2 unique sources and 1 duplicate sources with multiplicity 2.0: ['1']
 
 Information about the tasks
 ---------------------------
-====================== ======= ======= ========= ======= =======
-operation-duration     mean    stddev  min       max     outputs
-build_hazard_stats     0.01598 0.00159 0.01485   0.01711 2      
-classical              0.25161 0.08075 0.18811   0.38705 8      
-classical_split_filter 0.03369 0.08742 2.196E-04 0.27855 10     
-read_source_models     0.01595 0.00427 0.01293   0.01897 2      
-====================== ======= ======= ========= ======= =======
-
-Fastest task
-------------
-taskno=0, weight=543, duration=0 s, sources="2"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   543     NaN    543 543 1
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=0, weight=543, duration=0 s, sources="2"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   543     NaN    543 543 1
-======== ======= ====== === === =
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+preclassical       0.00358 5.509E-04 0.00319 0.00397 2      
+read_source_models 0.00940 0.00548   0.00552 0.01327 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-====================== ============================================================ =========
-task                   sent                                                         received 
-build_hazard_stats     pgetter=890 B hstats=390 B N=28 B individual_curves=26 B     5.9 KB   
-classical              srcs=23.29 KB params=13.2 KB gsims=2.65 KB srcfilter=2.15 KB 340.54 KB
-classical_split_filter srcs=23.29 KB params=13.2 KB gsims=2.65 KB srcfilter=2.15 KB 68.39 KB 
-read_source_models     converter=626 B fnames=220 B                                 13.93 KB 
-====================== ============================================================ =========
+================== ======================================================== ========
+task               sent                                                     received
+preclassical       srcs=12.47 KB params=2.72 KB gsims=538 B srcfilter=440 B 694 B   
+read_source_models converter=628 B fnames=206 B                             13.91 KB
+================== ======================================================== ========
 
 Slowest operations
 ------------------
-============================ ========= ========= ======
-operation                    time_sec  memory_mb counts
-============================ ========= ========= ======
-total classical              2.01288   0.50391   8     
-make_contexts                1.01990   0.0       548   
-get_poes                     0.51513   0.0       548   
-total classical_split_filter 0.33694   0.0       10    
-aggregate curves             0.03567   0.0       10    
-total build_hazard_stats     0.03196   0.50781   2     
-total read_source_models     0.03191   0.0       2     
-read PoEs                    0.02277   0.50781   2     
-filtering/splitting sources  0.01287   0.0       2     
-saving probability maps      0.00986   0.0       1     
-compute stats                0.00739   0.0       2     
-store source model           0.00555   0.0       2     
-saving statistics            0.00341   0.0       2     
-managing sources             0.00285   0.0       1     
-store source_info            0.00150   0.0       1     
-combine pmaps                8.359E-04 0.0       2     
-============================ ========= ========= ======
+======================== ========= ========= ======
+calc_15504               time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.01880   0.0       2     
+total preclassical       0.00715   0.0       2     
+store source_info        0.00204   0.0       1     
+managing sources         0.00137   0.0       1     
+aggregate curves         2.911E-04 0.0       2     
+======================== ========= ========= ======
