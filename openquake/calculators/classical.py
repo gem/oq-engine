@@ -203,8 +203,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.store_source_info(self.calc_times)
                 num_tasks = max(self.sources_by_task) + 1
                 sbt = numpy.zeros(num_tasks, hdf5.vuint32)
-                for task_no, srcids in self.sources_by_task.items():
-                    sbt[task_no] = srcids
+                for task_no in range(num_tasks):
+                    sbt[task_no] = self.sources_by_task.get(task_no, U32([]))
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
         if not self.calc_times:
