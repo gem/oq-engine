@@ -16,9 +16,9 @@ shakemap_dt = numpy.dtype([('lon', float), ('lat', float), ('val', imt_dt),
 CDIR = os.path.dirname(__file__)
 
 
-def mean_gmf(shakemap):
+def mean_gmf(shakemap, site_effects):
     _, gmfs = to_gmfs(
-        shakemap, 'yes', 'yes', site_effects=True, trunclevel=3,
+        shakemap, 'yes', 'yes', site_effects, trunclevel=3,
         num_gmfs=10, seed=42)
     return [gmfs[..., i].mean() for i in range(len(imts))]
 
@@ -32,7 +32,7 @@ class ShakemapTestCase(unittest.TestCase):
         sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
-        gmf_by_imt = mean_gmf(shakemap)
+        gmf_by_imt = mean_gmf(shakemap, site_effects=True)
         aae(gmf_by_imt, [0.0058806, 0.0230781, 0.0432714, 0.0219532])
 
     def test_amplify(self):
@@ -103,3 +103,14 @@ class ShakemapTestCase(unittest.TestCase):
             trunclevel=3, num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=0), [0.5127171, 0.7800206])  # PGA
         aae(gmfs[..., 2].sum(axis=0), [0.4932519, 0.6731384])  # SA(1.0)
+
+    def test_from_files(self):
+        # files provided by Vitor Silva, without site amplification
+        f1 = os.path.join(CDIR, 'test_shaking.xml')
+        f2 = os.path.join(CDIR, 'test_uncertainty.xml')
+        array = get_shakemap_array(f1, f2)
+        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
+        n = 4  # number of sites
+        self.assertEqual(len(sitecol), n)
+        gmf_by_imt = mean_gmf(shakemap, site_effects=False)
+        aae(gmf_by_imt, [0.2185606, 0.5340556, 0.0272893, 0.6078433])
