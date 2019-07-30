@@ -2,12 +2,12 @@ Volcano example
 ===============
 
 ============== ===================
-checksum32     480,304,266        
-date           2019-06-24T15:33:24
-engine_version 3.6.0-git4b6205639c
+checksum32     3,488,609,606      
+date           2019-07-30T15:04:09
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
-num_sites = 172, num_levels = 45, num_rlzs = 1
+num_sites = 173, num_levels = 45, num_rlzs = 1
 
 Parameters
 ----------
@@ -68,7 +68,7 @@ scenario     0      *   1            0
 Exposure model
 --------------
 =========== ===
-#assets     173
+#assets     174
 #taxonomies 4  
 =========== ===
 
@@ -77,14 +77,14 @@ taxonomy      mean    stddev  min max num_sites num_assets
 Moderate_roof 1.02778 0.16667 1   2   36        37        
 Heavy_roof    1.00000 0.0     1   1   35        35        
 Weak_roof     1.00000 0.0     1   1   43        43        
-Slab_roof     1.00000 0.0     1   1   58        58        
-*ALL*         1.00581 0.07625 1   2   172       173       
+Slab_roof     1.00000 0.0     1   1   59        59        
+*ALL*         1.00578 0.07603 1   2   173       174       
 ============= ======= ======= === === ========= ==========
 
 Slowest operations
 ------------------
 ================ ======== ========= ======
-operation        time_sec memory_mb counts
+calc_15513       time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00307  0.0       1     
+reading exposure 0.00299  0.0       1     
 ================ ======== ========= ======

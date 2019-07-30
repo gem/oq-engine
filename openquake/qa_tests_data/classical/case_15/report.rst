@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     905,885,649        
-date           2019-06-24T15:34:16
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:04:29
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 3, num_levels = 17, num_rlzs = 8
@@ -82,53 +82,50 @@ source_model_2.xml 3      Active Shallow Crust     240          240
 #TRT models   4  
 #eff_ruptures 510
 #tot_ruptures 510
-#tot_weight   510
 ============= ===
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-3      1         A    6     10    240          0.00257   3.00000   292    180,990,795  
-0      1         P    0     1     15           0.00253   3.00000   18     3,661,451,496
-1      2         P    1     2     15           0.00253   3.00000   18     1,214,927,378
-2      1         A    2     6     240          0.00244   3.00000   292    3,807,489,059
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+========= ====== ==== ============ ========= ========= ====== ======
+source_id grp_id code num_ruptures calc_time num_sites weight speed 
+========= ====== ==== ============ ========= ========= ====== ======
+1         0      P    15           0.00538   9.00000   495    92,017
+2         1      P    15           0.00184   3.00000   15     8,154 
+========= ====== ==== ============ ========= ========= ====== ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00501   2     
-P    0.00506   2     
+A    0.0       2     
+P    0.00722   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-preclassical       0.00304 5.376E-05 0.00296 0.00309 4      
-read_source_models 0.00615 0.00339   0.00224 0.00820 3      
+preclassical       0.00231 3.094E-04 0.00205 0.00275 4      
+read_source_models 0.00343 0.00179   0.00145 0.00494 3      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ========================================================= ========
 task               sent                                                      received
-preclassical       srcs=6.16 KB params=2.59 KB gsims=1.09 KB srcfilter=880 B 1.34 KB 
-read_source_models converter=939 B fnames=327 B                              6.73 KB 
+preclassical       srcs=6.16 KB params=2.74 KB gsims=1.09 KB srcfilter=880 B 1.34 KB 
+read_source_models converter=942 B fnames=306 B                              6.71 KB 
 ================== ========================================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_15534               time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.01845   0.0       3     
-total preclassical       0.01214   0.0       4     
-managing sources         0.00409   0.0       1     
-store source_info        0.00187   0.0       1     
-aggregate curves         8.931E-04 0.0       4     
+total read_source_models 0.01028   0.0       3     
+total preclassical       0.00922   0.0       4     
+managing sources         0.00526   0.0       1     
+store source_info        0.00205   0.0       1     
+aggregate curves         5.660E-04 0.0       4     
 ======================== ========= ========= ======
