@@ -265,7 +265,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
             dt = time.time() - t0
             try:
                 n_sites = len(_sites)
-            except Exception:  # _sites can be None or a closed dataset
+            except (TypeError, ValueError):  # for None or a closed dataset
                 n_sites = 0
             calc_times[src.id] += numpy.array([n_sites, n_occ, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
