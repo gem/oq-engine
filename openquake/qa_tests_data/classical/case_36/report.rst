@@ -3,8 +3,8 @@ applyToSources with multiple sources
 
 ============== ===================
 checksum32     3,235,130,248      
-date           2019-06-24T15:34:13
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:04:22
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 9
@@ -77,44 +77,24 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 1      Subduction Interface 633          633         
-source_model.xml 4      Subduction Interface 656          633         
-source_model.xml 7      Subduction Interface 633          633         
+source_model.xml 1      Subduction Interface 1,922        633         
+source_model.xml 4      Subduction Interface 1,922        633         
+source_model.xml 7      Subduction Interface 1,922        633         
 ================ ====== ==================== ============ ============
 
 ============= ======
 #TRT models   3     
-#eff_ruptures 1,922 
+#eff_ruptures 5,766 
 #tot_ruptures 24,093
-#tot_weight   24,152
 ============= ======
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-1      1         C    8     107   633          0.00809   1.00000   633    1,533,553,417
-7      1         C    422   521   633          0.00498   1.00000   633    1,575,366,303
-4      1         C    215   314   656          0.00413   1.00000   656    1,234,317,691
-8      8         A    611   621   8            0.0       0.0       0.0    708,507,413  
-8      7         A    600   611   12           0.0       0.0       0.0    3,679,458,754
-8      6         A    588   600   16           0.0       0.0       0.0    3,249,480,013
-8      5         A    578   588   12           0.0       0.0       0.0    2,080,051,216
-8      4         S    569   578   1,949        0.0       0.0       0.0    3,679,426,160
-8      3         S    553   569   2,114        0.0       0.0       0.0    691,140,255  
-8      2         S    535   553   2,136        0.0       0.0       0.0    3,239,186,311
-8      11        A    530   535   844          0.0       0.0       0.0    2,479,904,457
-8      10        A    521   530   16           0.0       0.0       0.0    2,478,296,780
-6      9         A    414   422   80           0.0       0.0       0.0    1,928,457,209
-5      8         A    404   414   10           0.0       0.0       0.0    2,604,659,283
-5      7         A    393   404   15           0.0       0.0       0.0    3,162,247,425
-5      6         A    381   393   20           0.0       0.0       0.0    323,099,789  
-5      5         A    371   381   15           0.0       0.0       0.0    2,285,440,894
-5      4         S    362   371   1,949        0.0       0.0       0.0    2,220,726,331
-5      3         S    346   362   2,114        0.0       0.0       0.0    119,994,474  
-5      2         S    328   346   2,136        0.0       0.0       0.0    2,212,892,808
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+========= ====== ==== ============ ========= ========= ====== =======
+source_id grp_id code num_ruptures calc_time num_sites weight speed  
+========= ====== ==== ============ ========= ========= ====== =======
+1         1      C    633          0.01521   3.00000   1,922  126,399
+========= ====== ==== ============ ========= ========= ====== =======
 
 Computation times by source typology
 ------------------------------------
@@ -122,7 +102,7 @@ Computation times by source typology
 code calc_time counts
 ==== ========= ======
 A    0.0       21    
-C    0.01720   3     
+C    0.01521   3     
 S    0.0       9     
 ==== ========= ======
 
@@ -130,26 +110,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-preclassical       0.00525 0.00245 0.00179 0.00947 18     
-read_source_models 0.25268 0.02517 0.22419 0.27191 3      
+preclassical       0.00763 0.00435 0.00215 0.01628 12     
+read_source_models 0.35274 0.05023 0.29476 0.38301 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== =========================================================== ========
-task               sent                                                        received
-preclassical       srcs=57.15 KB params=9.81 KB srcfilter=5.7 KB gsims=2.58 KB 5.29 KB 
-read_source_models converter=939 B fnames=321 B                                47.81 KB
-================== =========================================================== ========
+================== ======================================================== ========
+task               sent                                                     received
+preclassical       srcs=52.45 KB params=7 KB srcfilter=3.8 KB gsims=1.72 KB 3.48 KB 
+read_source_models converter=942 B fnames=300 B                             47.79 KB
+================== ======================================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_15529               time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.75803  0.51172   3     
-total preclassical       0.09452  0.0       18    
-managing sources         0.02177  0.0       1     
-aggregate curves         0.00268  0.0       18    
-store source_info        0.00189  0.0       1     
+total read_source_models 1.05822  0.16797   3     
+total preclassical       0.09158  0.0       12    
+managing sources         0.00588  0.0       1     
+store source_info        0.00210  0.0       1     
+aggregate curves         0.00164  0.0       12    
 ======================== ======== ========= ======
