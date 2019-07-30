@@ -19,6 +19,8 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.hazardlib.scalerel.wc1994 import WC1994
+from openquake.hazardlib.geo.geodetic import point_at
 
 
 class Dummy:
@@ -33,7 +35,10 @@ class Dummy:
         """
         sites = []
         for n in range(nelements):
-            s = Site(Point(0, 0))
+            if 'hyp_lon' in kwargs.keys() and 'hyp_lat' in kwargs.keys():
+                s = Site(Point(kwargs['hyp_lon'], kwargs['hyp_lat']))
+            else:
+                s = Site(Point(0, 0))
             for key in kwargs:
                 if np.size(kwargs[key]) > 1:
                     setattr(s, key, kwargs[key][n])
@@ -43,10 +48,17 @@ class Dummy:
         return SiteCollection(sites)
 
     @classmethod
-    def get_surface(self):
+    def get_surface(self, hyp_lon=0.0, hyp_lat=0.5, mag=None, asp_ratio=None):
         """ """
-        hyp = Line([Point(0, 0.5)])
-        trc = Line([Point(0, 0), Point(0, 1)])
+        hyp = Line([Point(hyp_lon, hyp_lat)])
+        if mag is None:
+            trc = Line([Point(0, 0), Point(0, 1)])
+        else:
+            msr = WC1994()
+            len = (msr.get_median_area(mag, 0.0)*asp_ratio)**0.5
+            pnt1 = point_at(hyp_lon, hyp_lat, 180, len/2)
+            pnt2 = point_at(hyp_lon, hyp_lat, 0, len/2)
+            trc = Line([Point(pnt1[0], pnt1[1]), Point(pnt2[0], pnt2[1])])
         sfc = SimpleFaultSurface.from_fault_data(fault_trace=trc,
                                                  upper_seismogenic_depth=0,
                                                  lower_seismogenic_depth=15,

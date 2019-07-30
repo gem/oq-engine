@@ -18,11 +18,14 @@
 
 """
 Module exports :class:`AbrahamsonEtAl2014`
+               :class:`AbrahamsonEtAl2014NonErgodic`
                :class:`AbrahamsonEtAl2014RegCHN`
                :class:`AbrahamsonEtAl2014RegJPN`
                :class:`AbrahamsonEtAl2014RegTWN`
 """
+import os
 import copy
+import h5py
 import numpy as np
 
 from scipy import interpolate
@@ -535,3 +538,65 @@ class AbrahamsonEtAl2014RegJPN(AbrahamsonEtAl2014):
         phi_al[idx] *= C['s6']
 
         return phi_al
+
+
+class AbrahamsonEtAl2014NonErgodic(AbrahamsonEtAl2014):
+    """
+    Implements a modified version of Abrahamson et al. (2014) as proposed by
+    Kuehn and Abrahamson (2019) in the paper titled "Incorporating Nonergodic
+    Path Effects into the NGA-West2 Ground-Motion Prediction Equations"
+    published on BSSA, Vol. 109, No. 2, pp. 575–585, April 2019,
+    doi: 10.1785/0120180260.
+
+    :param filename:
+        The name of the .hdf5 file containing the anelastic coefficients
+    """
+
+    # This version of ASK also requires azimuth
+    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ry0', 'azimuth'))
+
+    dirname = os.path.dirname(__file__)
+    BASE_PATH = os.path.join(dirname, 'abrahamson_2014_tables')
+    TABLENAME = os.path.join(BASE_PATH, 'kuehn_2019.hdf5')
+    SPATIAL_INDEX = os.path.join(BASE_PATH, 'kuehn_2019_sites_spatial_index')
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        mean, stds = AbrahamsonEtAl2014().get_mean_and_stddevs(sites, rup,
+                                                               dists, imt,
+                                                               stddev_types)
+        C = self.COEFFS[imt]
+        # Tests are green without this modification
+        mean -= C['a17']*dists.rrup
+
+        # Open data file
+        fle = h5py.File(self.TABLENAME, 'r')
+
+        # Find distance index
+        distances = fle['distances'][:]['distance']
+        i_distance = _get_closest_index(distances, dists.rrup)
+
+        # Find azimuth index
+        # TODO - Need to check if the azimuth is consistent with the value
+        # used to create the table
+        azimuths = fle['azimuths'][:]['azimuth']
+        i_azimuth = _get_closest_index(azimuths, dists.azimuth)
+
+        for site in sites:
+            lo = site.longitude
+
+
+        fle.close()
+        return mean, stds
+
+
+def _get_closest_index(reference, values):
+    """
+    :param reference:
+        A vector
+    :param values:
+        A vector
+    """
+    idx = np.searchsorted(reference, values)
+    dff = 2*values - reference[idx] - reference[idx+1]
+    idx = np.where(dff < 0, idx, idx+1)
+    return idx
