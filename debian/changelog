@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Added a new rupture-site metric: the azimuth to the closest point on the
+    rupture
+
   [Michele Simionato]
   * The site amplification has been disabled by default in the ShakeMap
     calculator, since it is usually already taken into account by the USGS
