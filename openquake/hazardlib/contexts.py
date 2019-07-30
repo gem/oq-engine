@@ -449,10 +449,9 @@ class RuptureContext(BaseContext):
         'hypo_depth', 'width', 'hypo_loc')
     temporal_occurrence_model = None  # to be set
 
-    def __init__(self, rec=None):
-        if rec is not None:
-            for name in rec.dtype.names:
-                setattr(self, name, rec[name])
+    def __init__(self, param_pairs=()):
+        for param, value in param_pairs:
+            setattr(self, param, value)
 
     def get_probability_no_exceedance(self, poes):
         """

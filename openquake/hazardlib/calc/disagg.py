@@ -76,9 +76,8 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
             continue
         elif gsim.minimum_distance and dist < gsim.minimum_distance:
             dist = gsim.minimum_distance
-        rctx = contexts.RuptureContext()
-        for par in rupdata:
-            setattr(rctx, par, rupdata[par][ridx])
+        rctx = contexts.RuptureContext(
+            (par, val[ridx]) for par, val in rupdata.items())
         dctx = contexts.DistancesContext(
             (param, getattr(rctx, param + '_')[[sidx]])
             for param in cmaker.REQUIRES_DISTANCES).roundup(
