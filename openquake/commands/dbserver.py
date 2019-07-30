@@ -48,15 +48,10 @@ def dbserver(cmd, dbhostport=None,
             dbs.run_server(dbpath, dbhostport, loglevel, foreground)
         else:
             print('dbserver already running')
-    elif cmd == 'restart':
-        if status == 'running':
-            pid = logs.dbcmd('getpid')
-            os.kill(pid, signal.SIGINT)
-        dbs.run_server(dbpath, dbhostport, loglevel, foreground)
 
 
 dbserver.arg('cmd', 'dbserver command',
-             choices='start stop status restart'.split())
+             choices='start stop status'.split())
 dbserver.arg('dbhostport', 'dbhost:port')
 dbserver.arg('dbpath', 'dbpath')
 dbserver.opt('loglevel', 'DEBUG|INFO|WARN')
