@@ -614,8 +614,8 @@ def view_task_hazard(token, dstore):
      $ oq show task_hazard:-1  # the slowest task
     """
     tasks = set(dstore['task_info'])
-    if 'source_data' not in dstore:
-        return 'Missing source_data'
+    if 'sources_by_task' not in dstore:
+        return 'Missing sources_by_task'
     if 'classical_split_filter' in tasks:
         data = dstore['task_info/classical_split_filter'][()]
     else:
@@ -623,10 +623,10 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
-    arr = get_array(dstore['source_data'][()], taskno=taskno)
-    st = [stats('nsites', arr['nsites']), stats('weight', arr['weight'])]
-    sources = dstore['source_info']['source_id'][arr['src_id']]
-    srcs = set(s.split(':', 1)[0] for s in sources)
+    srcids = dstore['sources_by_task'][taskno]
+    arr = dstore['source_info']['source_id', 'num_sites', 'weight'][srcids]
+    st = [stats('nsites', arr['num_sites']), stats('weight', arr['weight'])]
+    srcs = set(s.split(':', 1)[0] for s in arr['source_id'])
     res = ('taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n'
            % (taskno, rec['weight'], rec['duration'], ' '.join(sorted(srcs))))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
