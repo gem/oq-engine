@@ -110,7 +110,8 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
             continue
         dt = time.time() - t0
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
-        pmap[src.src_group_id] += 0
+        for grp_id in src.src_group_ids:
+            pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []})
 
 
