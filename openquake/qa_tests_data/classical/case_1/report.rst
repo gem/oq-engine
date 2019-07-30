@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 1
 
 ============== ===================
 checksum32     141,718,627        
-date           2019-06-24T15:34:16
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:04:22
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 1, num_levels = 6, num_rlzs = 1
@@ -72,44 +72,44 @@ source_model.xml 0      Active Shallow Crust 1            1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======= =============
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight  checksum     
-====== ========= ==== ===== ===== ============ ========= ========= ======= =============
-0      1         P    0     1     1            0.00246   1.00000   1.00000 3,030,339,619
-====== ========= ==== ===== ===== ============ ========= ========= ======= =============
+========= ====== ==== ============ ========= ========= ======= =====
+source_id grp_id code num_ruptures calc_time num_sites weight  speed
+========= ====== ==== ============ ========= ========= ======= =====
+1         0      P    1            0.00144   1.00000   1.00000 695  
+========= ====== ==== ============ ========= ========= ======= =====
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.00246   1     
+P    0.00144   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-preclassical       0.00298 NaN    0.00298 0.00298 1      
-read_source_models 0.00160 NaN    0.00160 0.00160 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+preclassical       0.00178   NaN    0.00178   0.00178   1      
+read_source_models 7.060E-04 NaN    7.060E-04 7.060E-04 1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
 ================== ===================================================== ========
 task               sent                                                  received
-preclassical       srcs=1.16 KB params=573 B srcfilter=220 B gsims=147 B 343 B   
-read_source_models converter=305 B fnames=106 B                          1.56 KB 
+preclassical       srcs=1.16 KB params=612 B srcfilter=220 B gsims=147 B 342 B   
+read_source_models converter=306 B fnames=99 B                           1.55 KB 
 ================== ===================================================== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_15528               time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.00298   0.0       1     
-managing sources         0.00290   0.0       1     
-store source_info        0.00163   0.0       1     
-total read_source_models 0.00160   0.0       1     
-aggregate curves         1.466E-04 0.0       1     
+store source_info        0.00264   0.0       1     
+total preclassical       0.00178   0.0       1     
+managing sources         9.367E-04 0.0       1     
+total read_source_models 7.060E-04 0.0       1     
+aggregate curves         1.395E-04 0.0       1     
 ======================== ========= ========= ======

@@ -3,8 +3,8 @@ scenario hazard
 
 ============== ===================
 checksum32     2,482,429,138      
-date           2019-06-24T15:33:40
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:03:48
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 2
@@ -81,7 +81,7 @@ tax3     1.00000 NaN    1   1   1         1
 Slowest operations
 ------------------
 ================ ========= ========= ======
-operation        time_sec  memory_mb counts
+calc_15458       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 6.447E-04 0.0       1     
+reading exposure 6.001E-04 0.0       1     
 ================ ========= ========= ======

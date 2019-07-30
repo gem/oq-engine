@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 35 - Cluster model
 
 ============== ===================
 checksum32     1,518,465,114      
-date           2019-03-19T10:05:09
-engine_version 3.5.0-gitad6b69ea66
+date           2019-07-30T15:04:30
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 1, num_levels = 5, num_rlzs = 1
@@ -60,8 +60,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[SadighEtAl1997]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -73,42 +72,47 @@ source_model.xml 0      Active Shallow Crust 2            2
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         X    27    54    1            0.0       0.0        1.00000   1         1.00000
-0      0         X    0     27    1            0.0       0.0        1.00000   1         1.00000
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+========= ====== ==== ============ ========= ========= ======= =====
+source_id grp_id code num_ruptures calc_time num_sites weight  speed
+========= ====== ==== ============ ========= ========= ======= =====
+0         0      X    1            6.592E-04 1.00000   1.00000 1,517
+1         0      X    1            4.106E-04 1.00000   1.00000 2,436
+========= ====== ==== ============ ========= ========= ======= =====
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.0       2     
+X    0.00107   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00471 NaN    0.00471 0.00471 1      
-only_filter        0.00255 NaN    0.00255 0.00255 1      
+classical          0.03168 NaN    0.03168 0.03168 1      
+read_source_models 0.00407 NaN    0.00407 0.00407 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================= ========
-task               sent                                    received
-read_source_models converter=313 B fnames=107 B            3.57 KB 
-only_filter        srcs=3.37 KB srcfilter=253 B dummy=14 B 3.23 KB 
-================== ======================================= ========
+================== ==================================================== ========
+task               sent                                                 received
+classical          srcs=3.4 KB params=533 B srcfilter=220 B gsims=147 B 1.3 KB  
+read_source_models converter=314 B fnames=100 B                         3.57 KB 
+================== ==================================================== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.00471  0.00391   1     
-total only_filter        0.00255  1.45312   1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+calc_15540               time_sec  memory_mb counts
+======================== ========= ========= ======
+total classical          0.03168   0.0       1     
+aggregate curves         0.00774   0.0       1     
+total read_source_models 0.00407   0.0       1     
+store source_info        0.00209   0.0       1     
+managing sources         0.00100   0.0       1     
+make_contexts            3.271E-04 0.0       2     
+get_poes                 2.975E-04 0.0       2     
+======================== ========= ========= ======
