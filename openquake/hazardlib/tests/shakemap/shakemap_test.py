@@ -19,7 +19,7 @@ CDIR = os.path.dirname(__file__)
 def mean_gmf(shakemap, site_effects):
     _, gmfs = to_gmfs(
         shakemap, 'yes', 'yes', site_effects, trunclevel=3,
-        num_gmfs=10, seed=42)
+        num_gmfs=1000, seed=42)
     return [gmfs[..., i].mean() for i in range(len(imts))]
 
 
@@ -33,7 +33,7 @@ class ShakemapTestCase(unittest.TestCase):
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt = mean_gmf(shakemap, site_effects=True)
-        aae(gmf_by_imt, [0.0058806, 0.0230781, 0.0432714, 0.0219532])
+        aae(gmf_by_imt, [0.0061624, 0.025782, 0.0497146, 0.0229737])
 
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])
@@ -113,4 +113,4 @@ class ShakemapTestCase(unittest.TestCase):
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt = mean_gmf(shakemap, site_effects=False)
-        aae(gmf_by_imt, [0.2185606, 0.5340556, 0.0272893, 0.6078433])
+        aae(gmf_by_imt, [0.2469717, 0.5693307, 0.0296547, 0.646782])
