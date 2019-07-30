@@ -200,16 +200,11 @@ def _build_disagg_matrix(bdata, bins):
 
     pnes = bdata.pnes
     U, M, P, E = pnes.shape
-    out = numpy.zeros([M, P] + shape)
-    for m in range(M):
-        for p in range(P):
-            # pnes has shape (U, E)
-            mat = numpy.ones(shape)
-            for i_mag, i_dist, i_lon, i_lat, pne in zip(
-                    mags_idx, dists_idx, lons_idx, lats_idx, pnes[:, m, p]):
-                mat[i_mag, i_dist, i_lon, i_lat] *= pne
-            out[m, p] = 1. - mat
-    return out
+    mat = numpy.ones(shape[:-1] + [M, P, E])
+    for i_mag, i_dist, i_lon, i_lat, pne in zip(
+            mags_idx, dists_idx, lons_idx, lats_idx, pnes):
+        mat[i_mag, i_dist, i_lon, i_lat] *= pne
+    return 1. - mat
 
 
 # called by the engine
