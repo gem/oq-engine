@@ -174,7 +174,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     rdata = {k: numpy.array(v) for k, v in rup_data.items()}
     rdata['grp_id'] = numpy.uint16(gids)
     return dict(pmap=pmap, calc_times=calc_times, rup_data=rdata,
-                task_no=monitor.task_no)
+                task_no=getattr(monitor, 'task_no', 0))
 
 
 def calc_hazard_curves(
