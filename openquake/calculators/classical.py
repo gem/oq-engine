@@ -103,13 +103,15 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     Prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
+    pmap = AccumDict(accum=0)
     for src in srcs:
         t0 = time.time()
         if srcfilter.get_close_sites(src) is None:
             continue
         dt = time.time() - t0
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
-    return dict(pmap={}, calc_times=calc_times, rup_data={'grp_id': []})
+        pmap[src.src_group_id] += 0
+    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []})
 
 
 @base.calculators.add('classical')
@@ -132,8 +134,8 @@ class ClassicalCalculator(base.HazardCalculator):
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
-                    for src_id, (nr, ns, dt) in dic['calc_times'].items():
-                        acc.eff_ruptures[grp_id] += nr
+                for src_id, (nr, ns, dt) in dic['calc_times'].items():
+                    acc.eff_ruptures[grp_id] += nr
 
             rup_data = dic['rup_data']
             if len(rup_data['grp_id']):
