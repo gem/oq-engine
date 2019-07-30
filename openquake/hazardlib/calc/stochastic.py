@@ -197,7 +197,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                 # Store info
                 dt = time.time() - t0
                 calc_times[src.id] += numpy.array(
-                    [len(_sites), len(rup_data[src.id]), dt])
+                    [len(rup_data[src.id]), len(_sites), dt])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
     # Create event based ruptures
@@ -226,7 +226,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
     :yields:
         dictionaries with keys rup_array, calc_times
     """
-    # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
+    # AccumDict of arrays with 3 elements num_ruptures, num_sites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
     num_ses = param['ses_per_logic_tree_path']
@@ -267,7 +267,7 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                 n_sites = len(_sites)
             except (TypeError, ValueError):  # for None or a closed dataset
                 n_sites = 0
-            calc_times[src.id] += numpy.array([n_sites, n_occ, dt])
+            calc_times[src.id] += numpy.array([n_occ, n_sites, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(rup_array=rup_array, calc_times=calc_times,
                         eff_ruptures={grp_id: eff_ruptures})
