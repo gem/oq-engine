@@ -331,3 +331,4 @@ class EbrCalculator(base.RiskCalculator):
                 'agg_curves-stats', return_periods=b.return_periods,
                 stats=[encode(name) for (name, func) in stats],
                 loss_types=loss_types, units=units)
+
