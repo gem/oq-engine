@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * The site amplification has been disabled by default in the ShakeMap
+    calculator, since it is usually already taken into account by the USGS
+
   [Daniele Viganò]
   * Deleted calculations are not removed from the database anymore
   * Removed the 'oq dbserver restart' command since it was broken
