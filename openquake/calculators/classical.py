@@ -40,9 +40,6 @@ F64 = numpy.float64
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
-source_data_dt = numpy.dtype(
-    [('taskno', U16), ('src_id', U32), ('nsites', F32), ('nruptures', U32),
-     ('weight', F32)])
 
 
 def get_src_ids(sources):
@@ -112,7 +109,8 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
-    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []})
+    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
+                task_no=monitor.task_no)
 
 
 @base.calculators.add('classical')
@@ -132,6 +130,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         with self.monitor('aggregate curves', autoflush=True):
             self.calc_times += dic['calc_times']
+            srcids = U32(sorted(dic['calc_times']))
+            self.sources_by_task[dic['task_no']] = srcids
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
@@ -173,6 +173,7 @@ class ClassicalCalculator(base.HazardCalculator):
             zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
         zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
+        self.sources_by_task = {}  # task_no => src_ids
         return zd
 
     def execute(self):
@@ -200,6 +201,13 @@ class ClassicalCalculator(base.HazardCalculator):
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
+            if self.sources_by_task:
+                num_tasks = max(self.sources_by_task) + 1
+                sbt = numpy.zeros(num_tasks, hdf5.vuint32)
+                for task_no in range(num_tasks):
+                    sbt[task_no] = self.sources_by_task.get(task_no, U32([]))
+                self.datastore['sources_by_task'] = sbt
+                self.sources_by_task.clear()
         if not self.calc_times:
             raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory
