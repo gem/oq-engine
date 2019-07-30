@@ -80,22 +80,21 @@ class RupData(object):
     """
     A class to collect rupture information into an array
     """
-    def __init__(self, cmaker, sitecol):
+    def __init__(self, cmaker):
         self.cmaker = cmaker
-        self.sitecol = sitecol  # filtered
         self.data = AccumDict(accum=[])
 
-    def from_srcs(self, srcs):  # used in disagg.disaggregation
+    def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
         """
         :returns: param -> array
         """
         for src in srcs:
             for rup in src.iter_ruptures():
                 self.cmaker.add_rup_params(rup)
-                self.add(rup, src.id)
+                self.add(rup, src.id, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
 
-    def add(self, rup, src_id):
+    def add(self, rup, src_id, sites):
         try:
             rate = rup.occurrence_rate
             probs_occur = numpy.zeros(0, numpy.float64)
@@ -109,11 +108,11 @@ class RupData(object):
         for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
             self.data[rup_param].append(getattr(rup, rup_param))
 
-        self.data['sid_'].append(numpy.int16(self.sitecol.sids))
+        self.data['sid_'].append(numpy.int16(sites.sids))
         for dst_param in self.cmaker.REQUIRES_DISTANCES:
             self.data[dst_param + '_'].append(
-                F32(get_distances(rup, self.sitecol, dst_param)))
-        closest = rup.surface.get_closest_points(self.sitecol)
+                F32(get_distances(rup, sites, dst_param)))
+        closest = rup.surface.get_closest_points(sites)
         self.data['lon_'].append(F32(closest.lons))
         self.data['lat_'].append(F32(closest.lats))
 
@@ -245,30 +244,30 @@ class ContextMaker(object):
                 reqv_rup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
                 dctx.rrup = reqv_rup
         self.add_rup_params(rupture)
-        # NB: returning a SitesContext make sures that the GSIM cannot
-        # access site parameters different from the ones declared
-        sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
-        return sctx, dctx
+        return sites, dctx
 
-    def gen_rup_contexts(self, src, sites):
+    def gen_rup_contexts(self, src, src_sites):
         """
         :param src: a hazardlib source
-        :param sites: the sites affected by it
+        :param src_sites: the sites affected by it
         :yields: (rup, sctx, dctx)
         """
-        sitecol = sites.complete
+        sitecol = src_sites.complete
         N = len(sitecol)
         fewsites = N <= self.max_sites_disagg
-        rupdata = RupData(self, sites)
-        for rup, sites in self._gen_rup_sites(src, sites):
+        rupdata = RupData(self)
+        self.nrups, self.nsites = 0, 0
+        for rup, sites in self._gen_rup_sites(src, src_sites):
             try:
                 with self.ctx_mon:
                     sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             yield rup, sctx, dctx
+            self.nrups += 1
+            self.nsites += len(sctx)
             if fewsites:  # store rupdata
-                rupdata.add(rup, src.id)
+                rupdata.add(rup, src.id, sctx)
         self.data = rupdata.data
 
     def _gen_rup_sites(self, src, sites):
