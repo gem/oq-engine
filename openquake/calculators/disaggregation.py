@@ -358,7 +358,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         self.datastore.open('r+')
         T = len(self.trts)
-        # build a dictionary sid -> 8D matrix of shape (T, P, M, ...)
+        # build a dictionary sid -> 8D matrix of shape (T, M, P, ...)
         results = {sid: _8d_matrix(dic, T) for sid, dic in results.items()}
 
         # get the number of outputs
@@ -372,14 +372,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         Save the computed PMFs in the datastore
 
         :param results:
-            an 8D-matrix of shape (T, P, M, ...)
+            an 8D-matrix of shape (T, M, P, ...)
         """
         for sid, matrix8 in results.items():
             rlzi = self.iml2s[sid].rlzi
             for p, poe in enumerate(self.poes_disagg):
                 for m, imt in enumerate(self.imts):
                     self._save_result(
-                        'disagg', sid, rlzi, poe, imt, matrix8[:, p, m])
+                        'disagg', sid, rlzi, poe, imt, matrix8[:, m, p])
         self.datastore.set_attrs('disagg', **attrs)
 
     def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix6):

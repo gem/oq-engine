@@ -60,12 +60,14 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
     # disaggregate (separate) PoE in different contributions
     # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
     [sid] = sitecol.sids
-    acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[],
-                    M=len(iml2.imts), P=len(iml2.poes_disagg))
+    M = len(iml2.imts)
+    P = len(iml2.poes_disagg)
+    E = len(eps3[2])  # number of epsilons
+    acc = dict(pnes=[], mags=[], dists=[], lons=[], lats=[])
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
-        return pack(acc, 'mags dists lons lats P M'.split())
+        return pack(acc, 'mags dists lons lats pnes'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
     fildist = rupdata[cmaker.filter_distance + '_']
     for ridx, sidx in enumerate(indices):
@@ -88,14 +90,15 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['dists'].append(dist)
         iml = gsim.to_distribution_values(iml2)
         with pne_mon:
+            pne = numpy.zeros((M, P, E))
             for m, imt in enumerate(iml2.imts):
                 mean, [stddev] = gsim.get_mean_and_stddevs(
                     sitecol, rctx, dctx, imt, [const.StdDev.TOTAL])
                 for p, poe in enumerate(iml2.poes_disagg):
-                    pne = _disaggregate_pne(
+                    pne[m, p] = _disaggregate_pne(
                         rctx, mean, stddev, iml[m, p], *eps3)
-                    acc[p, m].append(pne)
-    return pack(acc, 'mags dists lons lats P M'.split())
+            acc['pnes'].append(pne)
+    return pack(acc, 'mags dists lons lats pnes'.split())
 
 
 def _disaggregate_pne(rupture, mean, stddev, iml, truncnorm,
@@ -195,14 +198,17 @@ def _build_disagg_matrix(bdata, bins):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
-    out = numpy.zeros([bdata.P, bdata.M] + shape)
-    for (p, m), pnes in bdata.items():
-        # pnes has shape (U, E)
-        mat = numpy.ones(shape)
-        for i_mag, i_dist, i_lon, i_lat, pne in zip(
-                mags_idx, dists_idx, lons_idx, lats_idx, pnes):
-            mat[i_mag, i_dist, i_lon, i_lat] *= pne
-        out[p, m] = 1. - mat
+    pnes = bdata.pnes
+    U, M, P, E = pnes.shape
+    out = numpy.zeros([M, P] + shape)
+    for m in range(M):
+        for p in range(P):
+            # pnes has shape (U, E)
+            mat = numpy.ones(shape)
+            for i_mag, i_dist, i_lon, i_lat, pne in zip(
+                    mags_idx, dists_idx, lons_idx, lats_idx, pnes[:, m, p]):
+                mat[i_mag, i_dist, i_lon, i_lat] *= pne
+            out[m, p] = 1. - mat
     return out
 
 
@@ -221,10 +227,11 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
         bins = get_bins(bin_edges, sid)
         bdata = _disaggregate(cmaker, singlesitecol, rupdata,
                               indices[sid], iml2, eps3, pne_mon)
-        with mat_mon:
-            mat = _build_disagg_matrix(bdata, bins)
-            if mat.any():  # nonzero
-                yield sid, mat
+        if len(bdata.mags):
+            with mat_mon:
+                mat = _build_disagg_matrix(bdata, bins)
+                if mat.any():  # nonzero
+                    yield sid, mat
 
 
 def _digitize_lons(lons, lon_bins):
