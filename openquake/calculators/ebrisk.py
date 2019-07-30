@@ -286,7 +286,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=builder.return_periods,
                 stats=[encode(name) for (name, func) in stats],
-                shape=shape_descr, loss_types=loss_types, units=units,
+                shape_descr=shape_descr, loss_types=loss_types, units=units,
                 **aggregate_by)
             if oq.conditional_loss_poes:
                 shp = self.get_shape(C, S, self.L)  # shape C, S, L, T...
