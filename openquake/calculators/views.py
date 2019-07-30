@@ -604,23 +604,20 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task_hazard')
+@view.add('task')
 def view_task_hazard(token, dstore):
     """
     Display info about a given task. Here are a few examples of usage::
 
-     $ oq show task_hazard:0  # the fastest task
-     $ oq show task_hazard:-1  # the slowest task
+     $ oq show task:classical:0  # the fastest task
+     $ oq show task:classical:-1  # the slowest task
     """
-    tasks = set(dstore['task_info'])
+    _, name, index = token.split(':')
     if 'sources_by_task' not in dstore:
         return 'Missing sources_by_task'
-    if 'classical_split_filter' in tasks:
-        data = dstore['task_info/classical_split_filter'][()]
-    else:
-        data = dstore['task_info/compute_gmfs'][()]
+    data = dstore['task_info/' + name][()]
     data.sort(order='duration')
-    rec = data[int(token.split(':')[1])]
+    rec = data[int(index)]
     taskno = rec['taskno']
     srcids = dstore['sources_by_task'][taskno]
     arr = dstore['source_info']['source_id', 'num_sites', 'weight'][srcids]
