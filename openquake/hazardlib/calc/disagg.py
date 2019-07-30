@@ -86,38 +86,31 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['lons'].append(rctx.lon_[sidx])
         acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
+        iml = gsim.to_distribution_values(iml2)
         with pne_mon:
             for m, imt in enumerate(iml2.imts):
+                mean, [stddev] = gsim.get_mean_and_stddevs(
+                    sitecol, rctx, dctx, imt, [const.StdDev.TOTAL])
                 for p, poe in enumerate(iml2.poes_disagg):
-                    iml = iml2[m, p]
-                    pne = disaggregate_pne(
-                        gsim, rctx, sitecol, dctx, imt, iml, *eps3)
+                    pne = _disaggregate_pne(
+                        rctx, mean, stddev, iml[m, p], *eps3)
                     acc[p, m].append(pne)
     return pack(acc, 'mags dists lons lats P M'.split())
 
 
-def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
-                     epsilons, eps_bands):
+def _disaggregate_pne(rupture, mean, stddev, iml, truncnorm,
+                      epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
-
-    Other parameters are the same as for `gsim.get_poes`, with the
-    difference that ``truncation_level`` is required to be positive
-    and the site context must refer to a single site.
-
     :returns:
         Contribution to probability of exceedance of ``iml`` coming
         from different sigma bands in the form of a 2D numpy array of
         probabilities with shape (n_sites, n_epsilons)
     """
-    # compute mean and standard deviations
-    mean, [stddev] = gsim.get_mean_and_stddevs(sctx, rupture, dctx, imt,
-                                               [const.StdDev.TOTAL])
-
     # compute iml value with respect to standard (mean=0, std=1)
     # normal distributions
-    [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
+    [lvl] = (iml - mean) / stddev
 
     # take the minimum epsilon larger than standard_iml
     bin = numpy.searchsorted(epsilons, lvl)
