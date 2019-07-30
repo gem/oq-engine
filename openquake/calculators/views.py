@@ -26,8 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, countby, AccumDict, CallableDict,
-    get_array, group_array)
+    humansize, groupby, countby, AccumDict, CallableDict, group_array)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid
@@ -625,7 +624,8 @@ def view_task_hazard(token, dstore):
     taskno = rec['taskno']
     srcids = dstore['sources_by_task'][taskno]
     arr = dstore['source_info']['source_id', 'num_sites', 'weight'][srcids]
-    st = [stats('nsites', arr['num_sites']), stats('weight', arr['weight'])]
+    st = [stats('nsites', arr['num_sites'] / arr['weight']),
+          stats('weight', arr['weight'])]
     srcs = set(s.split(':', 1)[0] for s in arr['source_id'])
     res = ('taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n'
            % (taskno, rec['weight'], rec['duration'], ' '.join(sorted(srcs))))
