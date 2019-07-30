@@ -201,6 +201,7 @@ class ClassicalCalculator(base.HazardCalculator):
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
+            if self.sources_by_task:
                 num_tasks = max(self.sources_by_task) + 1
                 sbt = numpy.zeros(num_tasks, hdf5.vuint32)
                 for task_no in range(num_tasks):
