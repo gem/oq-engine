@@ -160,6 +160,7 @@ class ContextMaker(object):
                     self.gsim_by_rlzi[rlzi] = gsim
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+        self.gmf_mon = monitor('computing mean_std', measuremem=False)
 
     def filter(self, sites, rupture):
         """
@@ -325,7 +326,8 @@ class ContextMaker(object):
         pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
             dctx_ = dctx.roundup(gsim.minimum_distance)
-            mean_std = gsim.get_mean_std(sctx, rupture, dctx_, imts)
+            with self.gmf_mon:
+                mean_std = gsim.get_mean_std(sctx, rupture, dctx_, imts)
             for m, imt in enumerate(imtls):
                 slc = imtls(imt)
                 if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
