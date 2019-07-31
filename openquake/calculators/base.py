@@ -768,11 +768,12 @@ class HazardCalculator(BaseCalculator):
         """
         if calc_times:
             source_info = self.datastore['source_info']
-            arr = numpy.zeros((len(source_info), 2), F32)
+            arr = numpy.zeros((len(source_info), 3), F32)
             ids, vals = zip(*sorted(calc_times.items()))
             arr[numpy.array(ids)] = vals
             source_info['weight'] += arr[:, 0]
-            source_info['calc_time'] += arr[:, 1]
+            source_info['num_sites'] += arr[:, 1]
+            source_info['calc_time'] += arr[:, 2]
 
     def post_process(self):
         """For compatibility with the engine"""

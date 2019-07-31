@@ -100,7 +100,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     :returns:
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
-        .eff_ruptures
     """
     if not hasattr(src_filter, 'sitecol'):  # a sitecol was passed
         src_filter = SourceFilter(src_filter, {})
@@ -134,14 +133,11 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
                       for grp_id in grp_ids})
     pmap.trt = trt
     rup_data = AccumDict(accum=[])
-    # AccumDict of arrays with 2 elements weight, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
-    eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
-    nsites = {}  # src.id -> num_sites
+    # AccumDict of arrays with 3 elements nrups, nsites, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     gids = []
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
-        nsites[src.id] = src.nsites
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
@@ -163,10 +159,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
                 gids.extend([gid] * nr)
                 for k, v in cmaker.data.items():
                     rup_data[k].extend(v)
-        calc_times[src.id] += numpy.array([src.weight, time.time() - t0])
-        # storing the number of contributing ruptures too
-        eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
-                         for gid in src.src_group_ids}
+        calc_times[src.id] += numpy.array(
+            [cmaker.nrups, cmaker.nsites, time.time() - t0])
     # Updating the probability map in the case of mutually exclusive
     # sources
     group_probability = getattr(group, 'grp_probability', None)
@@ -179,8 +173,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Return results
     rdata = {k: numpy.array(v) for k, v in rup_data.items()}
     rdata['grp_id'] = numpy.uint16(gids)
-    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                nsites=nsites, rup_data=rdata)
+    return dict(pmap=pmap, calc_times=calc_times, rup_data=rdata,
+                task_no=getattr(monitor, 'task_no', 0))
 
 
 def calc_hazard_curves(

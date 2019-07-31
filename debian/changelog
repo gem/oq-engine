@@ -1,3 +1,19 @@
+  [Marco Pagani]
+  * Added a new rupture-site metric: the azimuth to the closest point on the
+    rupture
+
+  [Michele Simionato]
+  * The site amplification has been disabled by default in the ShakeMap
+    calculator, since it is usually already taken into account by the USGS
+
+  [Daniele Viganò]
+  * Deleted calculations are not removed from the database anymore
+  * Removed the 'oq dbserver restart' command since it was broken
+
+  [Richard Styron]
+  * Fixed `YoungsCoppersmith1985MFD.from_total_moment_rate()`: due to numeric
+    errors it was producing incorrect seismicity rates
+
   [Michele Simionato]
   * Now we generate the output `disagg_by_src` during disaggregation even in the
     case of multiple realizations

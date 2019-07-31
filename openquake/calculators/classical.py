@@ -40,9 +40,6 @@ F64 = numpy.float64
 weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
-source_data_dt = numpy.dtype(
-    [('taskno', U16), ('src_id', U32), ('nsites', U32), ('nruptures', U32),
-     ('weight', F32)])
 
 
 def get_src_ids(sources):
@@ -93,43 +90,27 @@ def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
             splits, _stime = split_sources([src])
             sources.extend(srcfilter.filter(splits))
     if sources:
-        tot = 0
-        sd = AccumDict(accum=numpy.zeros(3))  # nsites, nrupts, weight
-        for src in sources:
-            arr = numpy.array([src.nsites, src.num_ruptures, src.weight])
-            sd[src.id] += arr
-            tot += 1
-        source_data = numpy.array([(monitor.task_no, src_id, s/tot, r, w)
-                                   for src_id, (s, r, w) in sd.items()],
-                                  source_data_dt)
-        first = True
-        for out in parallel.split_task(
+        yield from parallel.split_task(
                 classical, sources, srcfilter, gsims, params, monitor,
-                duration=params['task_duration']):
-            if first:
-                out['source_data'] = source_data
-                first = False
-            yield out
+                duration=params['task_duration'])
 
 
 def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     Prefilter the sources
     """
-    eff_ruptures = AccumDict(accum=0)   # grp_id -> num_ruptures
-    calc_times = AccumDict(accum=numpy.zeros(2, F32))  # weight, time
-    nsites = {}
+    calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
+    pmap = AccumDict(accum=0)
     for src in srcs:
         t0 = time.time()
         if srcfilter.get_close_sites(src) is None:
             continue
-        for grp_id in src.src_group_ids:
-            eff_ruptures[grp_id] += src.num_ruptures
         dt = time.time() - t0
-        calc_times[src.id] += numpy.array([src.weight, dt], F32)
-        nsites[src.id] = src.nsites
-    return dict(pmap={}, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data={'grp_id': []}, nsites=nsites)
+        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
+        for grp_id in src.src_group_ids:
+            pmap[grp_id] += 0
+    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
+                task_no=monitor.task_no)
 
 
 @base.calculators.add('classical')
@@ -145,15 +126,18 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys pmap, calc_times, eff_ruptures, rup_data
+        :param dic: dict with keys pmap, calc_times, rup_data
         """
         with self.monitor('aggregate curves', autoflush=True):
-            acc.nsites.update(dic['nsites'])
-            acc.eff_ruptures += dic['eff_ruptures']
             self.calc_times += dic['calc_times']
+            srcids = U32(sorted(dic['calc_times']))
+            self.sources_by_task[dic['task_no']] = srcids
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
+                for src_id, (nr, ns, dt) in dic['calc_times'].items():
+                    acc.eff_ruptures[grp_id] += nr
+
             rup_data = dic['rup_data']
             if len(rup_data['grp_id']):
                 nr = len(rup_data['srcidx'])
@@ -169,8 +153,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         self.datastore.hdf5.save_vlen('rup/' + k, v)
                     else:
                         self.datastore.extend('rup/' + k, v)
-            if 'source_data' in dic:
-                self.datastore.extend('source_data', dic['source_data'])
         return acc
 
     def acc0(self):
@@ -189,9 +171,9 @@ class ClassicalCalculator(base.HazardCalculator):
             for dparam in cm.REQUIRES_DISTANCES:
                 rparams.add(dparam + '_')
             zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
-        zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
-        zd.nsites = AccumDict()  # src.id -> nsites
+        zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
         self.rparams = sorted(rparams)
+        self.sources_by_task = {}  # task_no => src_ids
         return zd
 
     def execute(self):
@@ -207,35 +189,25 @@ class ClassicalCalculator(base.HazardCalculator):
             parent.close()
             self.calc_stats(parent)  # post-processing
             return {}
-        # TODO: enable integration_distance when implemented correctly
-        # try:
-        #     self.src_filter.integration_distance = self.datastore[
-        #        'integration_distance']
-        # except KeyError:
-        #     logging.warn('No integration_distance')
+
         with self.monitor('managing sources', autoflush=True):
             smap = parallel.Starmap(
                 self.core_task.__func__, hdf5path=self.datastore.filename)
             self.submit_sources(smap)
-        self.calc_times = AccumDict(accum=numpy.zeros(2, F32))
+        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.calc_times)
-        if acc.nsites:
-            if len(acc.nsites) > 100000:
-                # not saving source_info.num_sites since it would be slow:
-                # we do not want to wait hours for unused information
-                logging.warn(
-                    'There are %d contributing sources', len(acc.nsites))
-            else:
-                logging.info('Saving source_info.num_sites for %d sources',
-                             len(acc.nsites))
-                src_ids = sorted(acc.nsites)
-                nsites = [acc.nsites[i] for i in src_ids]
-                self.datastore['source_info'][src_ids, 'num_sites'] = nsites
+            if self.sources_by_task:
+                num_tasks = max(self.sources_by_task) + 1
+                sbt = numpy.zeros(num_tasks, hdf5.vuint32)
+                for task_no in range(num_tasks):
+                    sbt[task_no] = self.sources_by_task.get(task_no, U32([]))
+                self.datastore['sources_by_task'] = sbt
+                self.sources_by_task.clear()
         if not self.calc_times:
             raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory

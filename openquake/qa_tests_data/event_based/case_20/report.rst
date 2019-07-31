@@ -3,8 +3,8 @@ British Columbia With Vs30
 
 ============== ===================
 checksum32     226,163,923        
-date           2019-06-24T15:33:48
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:03:51
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -57,15 +57,10 @@ RES1-W1-LC 1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-4      OFS       A    29    37    15,618       0.0       0.0       0.0    3,579,414,048
-3      OFS       A    22    29    8,778        0.0       0.0       0.0    3,422,059,876
-2      OFS       A    15    22    8,778        0.0       0.0       0.0    3,422,059,876
-1      OFS       A    7     15    15,618       0.0       0.0       0.0    3,579,414,048
-0      OFS       A    0     7     8,778        0.0       0.0       0.0    3,422,059,876
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+========= ====== ==== ============ ========= ========= ====== =====
+source_id grp_id code num_ruptures calc_time num_sites weight speed
+========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ====== =====
 
 Computation times by source typology
 ------------------------------------
@@ -75,25 +70,29 @@ code calc_time counts
 A    0.0       5     
 ==== ========= ======
 
+Duplicated sources
+------------------
+Found 0 unique sources and 2 duplicate sources with multiplicity 2.5: ['OFS' 'OFS']
+
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05723 0.01806 0.03665 0.07831 5      
+read_source_models 0.05991 0.01025 0.05320 0.07804 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================== ========
 task               sent                           received
-read_source_models converter=1.74 KB fnames=585 B 13.98 KB
+read_source_models converter=1.74 KB fnames=550 B 13.94 KB
 ================== ============================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_15478               time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.28617  0.0       5     
-reading exposure         0.00162  0.0       1     
+total read_source_models 0.29954  0.0       5     
+reading exposure         0.00154  0.0       1     
 ======================== ======== ========= ======
