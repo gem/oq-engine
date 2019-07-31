@@ -56,6 +56,27 @@ which contains the `source_id` string used in the XML source model.
 
 ## general
 
+### Can I run a calculation from a Jupyter notebook?
+
+You can run any kind of calculation from a Jupyter notebook, but usually
+calculations are long and it is not convenient to run them interactively.
+Scenarios are an exception, since they are usually fast, unless you use
+spatial correlation with a lot of sites. Assuming the parameters of the
+calculation are in a `job.ini` file you can run the following lines in
+the notebook:
+```python
+In[1]: from openquake.commands.run import run
+In[2]: calc = run(['job.ini'])
+```
+Then you can inspect the contents of the datastore and perform your
+postprocessing:
+```python
+In[3]: calc.datastore.open('r')  # open the datastore for reading
+```
+The inner format of the databook is not guaranteed to be the same
+across releases and it is not documented, so this approach is
+recommended only to the most adventurous people.
+
 ### how do I plot/analyze/postprocess the results of a calculation?
 
 The official way to plot the result of a calculation is to use the

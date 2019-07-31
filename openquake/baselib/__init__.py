@@ -22,7 +22,7 @@ import configparser
 from openquake.baselib.general import git_suffix
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.6.0'
+__version__ = '3.7.0'
 __version__ += git_suffix(__file__)
 
 
@@ -105,8 +105,7 @@ def boolean(flag):
 
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=boolean, multi_node=boolean,
-            serialize_jobs=boolean, strict=boolean, max_sites_disagg=int,
-            code=exec)
+            serialize_jobs=boolean, strict=boolean, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp

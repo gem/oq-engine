@@ -124,7 +124,7 @@ def get_vulnerability_functions_05(node, fname):
                 scientific.VulnerabilityFunctionWithPMF(
                     vf_id, imt, imls, numpy.array(loss_ratios),
                     all_probs))
-            # the seed will be set by readinput.get_risk_model
+            # the seed will be set by readinput.get_crmodel
         else:
             with context(fname, vfun):
                 loss_ratios = ~vfun.meanLRs
@@ -409,7 +409,7 @@ def update_validators():
         'coefficientsVariation': valid.positivefloats,
         'probabilisticDistribution': valid.Choice('LN', 'BT'),
         'dist': valid.Choice('LN', 'BT', 'PM'),
-        'meanLRs': valid.probabilities,
+        'meanLRs': valid.positivefloats,
         'covLRs': valid.positivefloats,
         'format': valid.ChoiceCI('discrete', 'continuous'),
         'mean': valid.positivefloat,

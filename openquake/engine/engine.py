@@ -40,7 +40,7 @@ except ImportError:
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
-    parallel, general, config, __version__, zeromq as z)
+    parallel, general, config, __version__, zeromq as z, workerpool as w)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, oqzip
 from openquake.calculators import base, views, export
@@ -312,8 +312,6 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     msg = check_obsolete_version(oqparam.calculation_mode)
     if msg:
         logs.LOG.warn(msg)
-    if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-        set_concurrent_tasks_default(job_id)
     calc.from_engine = True
     tb = 'None\n'
     try:
@@ -333,6 +331,12 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             del data  # save memory
 
         poll_queue(job_id, _PID, poll_time=15)
+        if OQ_DISTRIBUTE == 'zmq':  # start zworkers
+            master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
+            logs.dbcmd('start_zworkers', master)
+            logging.info('WorkerPool %s',  master.wait_pools(seconds=30))
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
+            set_concurrent_tasks_default(job_id)
         t0 = time.time()
         calc.run(exports=exports,
                  hazard_calculation_id=hazard_calculation_id,
@@ -340,8 +344,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         logs.LOG.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         duration = time.time() - t0
-        calc._monitor.flush()
-        records = views.performance_view(calc.datastore)
+        records = views.performance_view(calc.datastore, add_calc_id=False)
         logs.dbcmd('save_performance', job_id, records)
         calc.datastore.close()
         logs.LOG.info('Calculation %d finished correctly in %d seconds',
@@ -363,6 +366,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # if there was an error in the calculation, this part may fail;
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate
+        if OQ_DISTRIBUTE == 'zmq':  # stop zworkers
+            logs.dbcmd('stop_zworkers', master)
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
                 celery_cleanup(TERMINATE)
