@@ -30,7 +30,7 @@ class PitilakisEtAl2018TestCase(BaseGSIMTestCase):
     GSIM_CLASS = PitilakisEtAl2018
 
     def test_mean(self):
-        self.check("sera_site_amp/Pitilakis2018Amplification_MEAN.csv"
+        self.check("sera_site/Pitilakis2018Amplification_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
 
@@ -39,7 +39,7 @@ class Eurocode8AmplificationTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Eurocode8Amplification
 
     def test_mean(self):
-        self.check("sera_site_amp/Eurocode8Amplification_MEAN.csv"
+        self.check("sera_site/Eurocode8Amplification_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
 
@@ -48,7 +48,7 @@ class Eurocode8AmplificationDefaultTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Eurocode8AmplificationDefault
 
     def test_mean(self):
-        self.check("sera_site_amp/EurocodeDefaultAmplification_MEAN.csv"
+        self.check("sera_site/EurocodeDefaultAmplification_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
 
@@ -57,7 +57,36 @@ class SandikkayaDinsever2018TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SandikkayaDinsever2018
 
     def test_mean(self):
-        self.check("sera_site_amp/SandikkayaDinsever2018_DEFAULT_PHI0_MEAN.csv"
+        self.check("sera_site/SandikkayaDinsever2018_DEFAULT_PHI0_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    gmpe_name="BindiEtAl2014Rjb")
 
+    def test_std_intra(self):
+        self.check("sera_site/SandikkayaDinsever2018_DEFAULT_PHI0_INTRA_EVENT_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   gmpe_name="BindiEtAl2014Rjb")
+
+
+class SandikkayaDinsever2018RegionTestCase(BaseGSIMTestCase):
+    """
+    Tests the case when a regional coefficient adaptation is used
+    """
+    GSIM_CLASS = SandikkayaDinsever2018
+
+    def test_mean(self):
+        self.check(
+            "sera_site/SandikkayaDinsever2018_DEFAULT_PHI0_ckWA_MEAN.csv",
+            max_discrep_percentage=MAX_DISCREP,
+            gmpe_name="BindiEtAl2014Rjb", region="WA")
+
+
+class SandikkayaDinsever2018InputPhi0TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = SandikkayaDinsever2018
+
+    def test_std_intra(self):
+        input_phi0 = {"PGA": 1.0, "SA(0.03)": 0.9, "SA(0.2)": 0.8,
+                      "SA(0.5)": 0.7, "SA(1.0)": 0.6, "SA(1.25)": 0.55,
+                      "SA(3.0)": 0.5}
+        self.check("sera_site/SandikkayaDinsever2018_INPUT_PHI0_INTRA_EVENT_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   gmpe_name="BindiEtAl2014Rjb", phi_0=input_phi0)
