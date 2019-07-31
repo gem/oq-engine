@@ -319,11 +319,13 @@ class ContextMaker(object):
 
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, sctx, dctx, imtls, trunclevel):
+        imts = [imt_module.from_string(imt) for imt in imtls]
         nsites = len(sctx.sids)
         pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
             dctx_ = dctx.roundup(gsim.minimum_distance)
-            for imt in imtls:
+            mean_std = gsim.get_mean_std(sctx, rupture, dctx_, imts)
+            for m, imt in enumerate(imtls):
                 slc = imtls(imt)
                 if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
                     # set by the engine when parsing the gsim logictree;
@@ -331,8 +333,7 @@ class ContextMaker(object):
                     pno = numpy.ones((nsites, slc.stop - slc.start))
                 else:
                     poes = gsim.get_poes(
-                        sctx, rupture, dctx_,
-                        imt_module.from_string(imt), imtls[imt], trunclevel)
+                        mean_std[:, :, m], imtls[imt], trunclevel)
                     pno = rupture.get_probability_no_exceedance(poes)
                 pne_array[:, slc, i] = pno
         return pne_array
