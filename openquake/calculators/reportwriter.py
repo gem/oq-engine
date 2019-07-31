@@ -52,8 +52,8 @@ class ReportWriter(object):
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
         'slow_sources': 'Slowest sources',
-        'task_hazard:0': 'Fastest task',
-        'task_hazard:-1': 'Slowest task',
+        'task:classical_split_filter:0': 'Fastest task',
+        'task:classical_split_filter:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
         'times_by_source_class': 'Computation times by source typology',
         'performance': 'Slowest operations',
@@ -109,9 +109,9 @@ class ReportWriter(object):
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info'])
-            if 'classical' in tasks:
-                self.add('task_hazard:0')
-                self.add('task_hazard:-1')
+            if 'classical_split_filter' in tasks:
+                self.add('task:classical_split_filter:0')
+                self.add('task:classical_split_filter:-1')
             self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')
@@ -135,7 +135,7 @@ def build_report(job_ini, output_dir=None):
     """
     calc_id = logs.init()
     oq = readinput.get_oqparam(job_ini)
-    if oq.calculation_mode == 'classical':
+    if oq.calculation_mode in 'classical disaggregation':
         oq.calculation_mode = 'preclassical'
     oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)

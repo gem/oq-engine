@@ -3,8 +3,8 @@ event based two source models
 
 ============== ===================
 checksum32     1,852,256,743      
-date           2019-06-24T15:33:21
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:04:10
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 1, num_levels = 11, num_rlzs = ?
@@ -55,14 +55,10 @@ tax1     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-3      2         X    6     402   1            0.0       0.0       0.0    2,506,021,815
-2      1         S    4     6     482          0.0       0.0       0.0    2,786,737,502
-1      2         S    2     4     4            0.0       0.0       0.0    3,056,286,023
-0      1         S    0     2     482          0.0       0.0       0.0    2,786,737,502
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+========= ====== ==== ============ ========= ========= ====== =====
+source_id grp_id code num_ruptures calc_time num_sites weight speed
+========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ====== =====
 
 Computation times by source typology
 ------------------------------------
@@ -75,28 +71,27 @@ X    0.0       1
 
 Duplicated sources
 ------------------
-Found 2 source(s) with the same ID and 1 true duplicate(s): ['1']
-Here is a fake duplicate: 2
+Found 2 unique sources and 1 duplicate sources with multiplicity 2.0: ['1']
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01653 0.00782 0.01100 0.02206 2      
+read_source_models 0.01097 0.00415 0.00803 0.01390 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=626 B fnames=218 B 13.93 KB
+read_source_models converter=628 B fnames=204 B 13.91 KB
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_15515               time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.03306   0.23828   2     
-reading exposure         5.176E-04 0.0       1     
+total read_source_models 0.02194   0.0       2     
+reading exposure         5.159E-04 0.0       1     
 ======================== ========= ========= ======

@@ -28,6 +28,10 @@ from openquake.baselib import hdf5
 
 perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
+task_info_dt = numpy.dtype(
+    [('taskno', numpy.uint32), ('weight', numpy.float32),
+     ('duration', numpy.float32), ('received', numpy.int64),
+     ('mem_gb', numpy.float32)])
 
 
 def _pairs(items):
@@ -79,11 +83,8 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='', hdf5=None,
-                 autoflush=False, measuremem=False, inner_loop=False):
+    def __init__(self, operation='', measuremem=False, inner_loop=False):
         self.operation = operation
-        self.hdf5 = hdf5
-        self.autoflush = autoflush
         self.measuremem = measuremem
         self.inner_loop = inner_loop
         self.mem = 0
@@ -92,7 +93,6 @@ class Monitor(object):
         self.children = []
         self.counts = 0
         self.address = None
-        self._flush = True
         self.username = getpass.getuser()
 
     @property
@@ -148,31 +148,53 @@ class Monitor(object):
 
     def on_exit(self):
         "To be overridden in subclasses"
-        if self.autoflush:
-            self.flush()
+        if hasattr(self, 'hdf5path'):
+            self.flush(self.hdf5path)
 
-    def flush(self):
+    def save_task_info(self, hdf5path, res, argnames, sent, mem_gb=0):
         """
-        Save the measurements on the performance file (or on stdout)
-        """
-        if not self._flush:
-            raise RuntimeError(
-                'Monitor(%r).flush() must not be called in a worker' %
-                self.operation)
-        for child in self.children:
-            child.hdf5 = self.hdf5
-            child.flush()
-        data = self.get_data()
-        if len(data) == 0:  # no information
-            return []
-        elif self.hdf5:
-            hdf5.extend(self.hdf5['performance_data'], data)
+        Called by parallel.IterResult.
 
-        # reset monitor
+        :param hdf5path: where to save the info
+        :param res: a :class:`Result` object
+        :param argnames: names of the task arguments
+        :param sent: number of bytes sent
+        :param mem_gb: memory consumption at the saving time (optional)
+        """
+        name = self.operation[6:]  # strip 'total '
+        t = (self.task_no, self.weight, self.duration, len(res.pik), mem_gb)
+        data = numpy.array([t], task_info_dt)
+        hdf5.extend3(hdf5path, 'task_info/' + name, data,
+                     argnames=argnames, sent=sent)
+
+    def reset(self):
+        """
+        Reset duration, mem, counts
+        """
         self.duration = 0
         self.mem = 0
         self.counts = 0
-        return data
+
+    def flush(self, hdf5path):
+        """
+        Save the measurements on the performance file
+        """
+        if not self.children:
+            data = self.get_data()
+        else:
+            lst = [self.get_data()]
+            for child in self.children:
+                lst.append(child.get_data())
+                child.reset()
+            data = numpy.concatenate(lst)
+        if len(data) == 0:  # no information
+            return
+        elif not os.path.exists(hdf5path):
+            with hdf5.File(hdf5path, 'w') as h5:
+                hdf5.create(h5, 'performance_data', perf_dt)
+                hdf5.create(h5, 'task_info', task_info_dt)
+        hdf5.extend3(hdf5path, 'performance_data', data)
+        self.reset()
 
     # TODO: rename this as spawn; see what will break
     def __call__(self, operation='no operation', **kw):
@@ -187,13 +209,9 @@ class Monitor(object):
         """
         Return a copy of the monitor usable for a different operation.
         """
-        self_vars = vars(self).copy()
-        del self_vars['operation']
-        del self_vars['children']
-        del self_vars['counts']
-        del self_vars['_flush']
-        new = self.__class__(operation)
-        vars(new).update(self_vars)
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self), operation=operation, children=[],
+                         counts=0, mem=0, duration=0)
         vars(new).update(kw)
         return new
 
@@ -209,3 +227,25 @@ class Monitor(object):
                 msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
+
+
+def dump(temppath, perspath):
+    """
+    Dump the performance info into a persistent file,
+    then remove the temporary file.
+
+    :param temppath: the temporary file
+    :param perspath: the persistent file
+    """
+    with hdf5.File(temppath, 'r') as h, hdf5.File(perspath, 'r+') as h5:
+        if 'performance_data' not in h5:
+            hdf5.create(h5, 'performance_data', perf_dt)
+        hdf5.extend(h5['performance_data'], h['performance_data'][()])
+        for name, dset in h['task_info'].items():
+            fullname = 'task_info/' + name
+            if fullname not in h5:
+                hdf5.create(h5, fullname, task_info_dt)
+            hdf5.extend(h5[fullname], dset[()])
+            for k, v in dset.attrs.items():
+                h5[fullname].attrs[k] = v
+    os.remove(temppath)

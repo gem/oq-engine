@@ -196,7 +196,8 @@ def extract_realizations(dstore, dummy):
     arr['ordinal'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
     if scenario:
-        arr['branch_path'] = dstore['csm_info/gsim_lt/branches']['uncertainty']
+        gsims = dstore['csm_info/gsim_lt/branches']['uncertainty']
+        arr['branch_path'] = [repr(gsim) for gsim in gsims]
     else:
         arr['branch_path'] = rlzs['branch_path']
     return arr
@@ -509,36 +510,6 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
-# this is used by the QGIS plugin, but it should be removed
-@extract.add('agg_curves')
-def extract_agg_curves(dstore, what):
-    """
-    Aggregate loss curves of the given loss type and tags for
-    event based risk calculations. Use it as
-    /extract/agg_curves/structural?taxonomy=RC&zipcode=20126
-    :returns:
-        array of shape (S, P), being P the number of return periods
-        and S the number of statistics
-    """
-    from openquake.calculators.export.loss_curves import get_loss_builder
-    oq = dstore['oqparam']
-    loss_type, tags = get_loss_type_tags(what)
-    if 'curves-stats' in dstore:  # event_based_risk
-        losses = _get_curves(dstore['curves-stats'], oq.lti[loss_type])
-        stats = dstore['curves-stats'].attrs['stats']
-    elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
-        losses = _get_curves(dstore['curves-rlzs'], oq.lti[loss_type])
-        assert losses.shape[1] == 1, 'There must be a single realization'
-        stats = [b'mean']  # suitable to be stored as hdf5 attribute
-    else:
-        raise KeyError('No curves found in %s' % dstore)
-    res = _filter_agg(dstore['assetcol'], losses, tags, stats)
-    cc = dstore['cost_calculator']
-    res.units = cc.get_units(loss_types=[loss_type])
-    res.return_periods = get_loss_builder(dstore).return_periods
-    return res
-
-
 @extract.add('agg_losses')
 def extract_agg_losses(dstore, what):
     """
@@ -744,7 +715,7 @@ def extract_mfd(dstore, what):
     oq = dstore['oqparam']
     qdic = parse(what)
     kind_mean = 'mean' in qdic.get('kind', [])
-    kind_individual = 'individual' in qdic.get('kind', [])
+    kind_by_group = 'by_group' in qdic.get('kind', [])
     weights = dstore['csm_info/sm_data']['weight']
     sm_idx = dstore['csm_info/sg_data']['sm_id']
     grp_weight = weights[sm_idx]
@@ -754,18 +725,19 @@ def extract_mfd(dstore, what):
     rups = dstore['ruptures']['grp_id', 'mag', 'n_occ']
     mags = sorted(numpy.unique(rups['mag']))
     magidx = {mag: idx for idx, mag in enumerate(mags)}
-    frequencies = numpy.zeros((len(mags), sm_idx.max() + 1), float)
+    num_groups = rups['grp_id'].max() + 1
+    frequencies = numpy.zeros((len(mags), num_groups), float)
     for grp_id, mag, n_occ in rups:
         if kind_mean:
             dd[mag] += n_occ * grp_weight[grp_id] / duration
-        if kind_individual:
-            frequencies[magidx[mag], sm_idx[grp_id]] += n_occ / duration
+        if kind_by_group:
+            frequencies[magidx[mag], grp_id] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
     if kind_mean:
         dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
-    if kind_individual:
-        for sm_id, freqs in enumerate(frequencies.T):
-            dic['sm%d_frequency' % sm_id] = freqs
+    if kind_by_group:
+        for grp_id, freqs in enumerate(frequencies.T):
+            dic['grp-%02d_frequency' % grp_id] = freqs
     return ArrayWrapper((), dic)
 
 # NB: this is an alternative, slower approach giving exactly the same numbers;
@@ -909,25 +881,8 @@ def extract_source_geom(dstore, srcidxs):
         yield rec['source_id'], geom
 
 
-def disagg_key(dstore):
-    """
-    :param dstore: a DataStore object
-    :returns: a function (imt, sid, poe_id) => disagg_output
-    """
-    oq = dstore['oqparam']
-    N = len(dstore['sitecol'])
-    if oq.rlz_index is None:
-        try:
-            rlzs = dstore['best_rlz'][()]
-        except KeyError:
-            rlzs = numpy.zeros(N, int)
-    else:
-        rlzs = [oq.rlz_index] * N
-
-    def getkey(imt, sid, poe_id):
-        return 'rlz-%d-%s-sid-%d-poe-%d' % (rlzs[sid], imt, sid, poe_id)
-    getkey.rlzs = rlzs
-    return getkey
+def disagg_key(imt, sid, poe_id):
+    return '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
 
 
 @extract.add('disagg')
@@ -935,15 +890,15 @@ def extract_disagg(dstore, what):
     """
     Extract a disaggregation output
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/disagg?by=Mag_Dist&imt=PGA
+    http://127.0.0.1:8800/v1/calc/30/extract/
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1
     """
     qdict = parse(what)
-    label = qdict['by'][0]
+    label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    key = disagg_key(dstore)
-    dset = dstore['disagg/' + key(imt, sid, poe_idx)]
+    dset = dstore['disagg/' + disagg_key(imt, sid, poe_idx)]
     matrix = dset[label][()]
 
     # adapted from the nrml_converters
@@ -966,6 +921,38 @@ def extract_disagg(dstore, what):
         values.append(matrix.flatten())
         values = numpy.array(values).T
     return ArrayWrapper(values, qdict)
+
+
+@extract.add('disagg_layer')
+def extract_disagg_layer(dstore, what):
+    """
+    Extract a disaggregation output containing all sites
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/
+    disagg_layer?kind=Mag_Dist&imt=PGA&poe_id=0
+    """
+    qdict = parse(what)
+    [label] = qdict['kind']
+    [imt] = qdict['imt']
+    poe_id = int(qdict['poe_id'][0])
+    grp = dstore['disagg/' + disagg_key(imt, 0, poe_id)]
+    dset = grp[label]
+    edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
+    dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
+          ('poes', (dset.dtype, dset.shape))]
+    sitecol = dstore['sitecol']
+    out = numpy.zeros(len(sitecol), dt)
+    out[0] = (0, sitecol.lons[0], sitecol.lats[0], grp.attrs['rlzi'], dset[()])
+    for sid, lon, lat, rec in zip(
+            sitecol.sids, sitecol.lons, sitecol.lats, out):
+        if sid > 0:
+            grp = dstore['disagg/' + disagg_key(imt, sid, poe_id)]
+            rec['site_id'] = sid
+            rec['lon'] = lon
+            rec['lat'] = lat
+            rec['rlz'] = grp.attrs['rlzi']
+            rec['poes'] = grp[label][()]
+    return ArrayWrapper(out, edges)
 
 
 # #####################  extraction from the WebAPI ###################### #

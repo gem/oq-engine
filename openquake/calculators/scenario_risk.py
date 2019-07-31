@@ -35,13 +35,13 @@ def _event_slice(num_gmfs, r):
     return slice(r * num_gmfs, (r + 1) * num_gmfs)
 
 
-def scenario_risk(riskinputs, riskmodel, param, monitor):
+def scenario_risk(riskinputs, crmodel, param, monitor):
     """
     Core function for a scenario computation.
 
     :param riskinput:
         a of :class:`openquake.risklib.riskinput.RiskInput` object
-    :param riskmodel:
+    :param crmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
@@ -57,15 +57,15 @@ def scenario_risk(riskinputs, riskmodel, param, monitor):
         (n, R, 4), with n the number of assets in the current riskinput object
     """
     E = param['E']
-    L = len(riskmodel.loss_types)
+    L = len(crmodel.loss_types)
     result = dict(agg=numpy.zeros((E, L), F32), avg=[],
                   all_losses=AccumDict(accum={}))
     for ri in riskinputs:
-        for out in riskmodel.gen_outputs(ri, monitor, param['epspath']):
+        for out in ri.gen_outputs(crmodel, monitor, param['epspath']):
             r = out.rlzi
             weight = param['weights'][r]
             slc = param['event_slice'](r)
-            for l, loss_type in enumerate(riskmodel.loss_types):
+            for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
                     continue
@@ -105,7 +105,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         E = oq.number_of_ground_motion_fields * self.R
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['epspath'] = riskinput.cache_epsilons(
-            self.datastore, oq, self.assetcol, self.riskmodel, E)
+            self.datastore, oq, self.assetcol, self.crmodel, E)
         self.param['E'] = E
         # assuming the weights are the same for all IMTs
         try:
@@ -121,8 +121,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         loss_dt = self.oqparam.loss_dt()
-        LI = len(loss_dt.names)
-        dtlist = [('eid', U64), ('loss', (F32, LI))]
+        L = len(loss_dt.names)
+        dtlist = [('event_id', U64), ('rlzi', U16), ('loss', (F32, (L,)))]
         R = self.R
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
@@ -144,7 +144,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['agglosses'] = agglosses
 
             # losses by event
-            lbe = numpy.fromiter(((ei, res[ei]) for ei in range(E)), dtlist)
+            lbe = numpy.zeros(E, dtlist)
+            lbe['event_id'] = range(E)
+            lbe['rlzi'] = (lbe['event_id'] //
+                           self.oqparam.number_of_ground_motion_fields)
+            lbe['loss'] = res
             self.datastore['losses_by_event'] = lbe
             loss_types = ' '.join(self.oqparam.loss_dt().names)
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)

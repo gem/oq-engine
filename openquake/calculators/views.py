@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import ast
+import copy
 import os.path
 import numbers
 import operator
@@ -25,8 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, countby, AccumDict, CallableDict,
-    get_array, group_array)
+    humansize, groupby, countby, AccumDict, CallableDict, group_array)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid
@@ -467,7 +467,7 @@ def view_fullreport(token, dstore):
     return ReportWriter(dstore).make_report()
 
 
-def performance_view(dstore):
+def performance_view(dstore, add_calc_id=True):
     """
     Returns the performance view as a numpy array.
     """
@@ -483,7 +483,10 @@ def performance_view(dstore):
             mem = max(mem, memory_mb)
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    return numpy.array(out, perf_dt)
+    dt = copy.copy(perf_dt)
+    if add_calc_id:
+        dt.names = ('calc_%d' % dstore.calc_id,) + dt.names[1:]
+    return numpy.array(out, dt)
 
 
 @view.add('performance')
@@ -601,30 +604,28 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task_hazard')
+@view.add('task')
 def view_task_hazard(token, dstore):
     """
     Display info about a given task. Here are a few examples of usage::
 
-     $ oq show task_hazard:0  # the fastest task
-     $ oq show task_hazard:-1  # the slowest task
+     $ oq show task:classical:0  # the fastest task
+     $ oq show task:classical:-1  # the slowest task
     """
-    tasks = set(dstore['task_info'])
-    if 'source_data' not in dstore:
-        return 'Missing source_data'
-    if 'classical_split_filter' in tasks:
-        data = dstore['task_info/classical_split_filter'][()]
-    else:
-        data = dstore['task_info/compute_gmfs'][()]
+    _, name, index = token.split(':')
+    if 'sources_by_task' not in dstore:
+        return 'Missing sources_by_task'
+    data = dstore['task_info/' + name][()]
     data.sort(order='duration')
-    rec = data[int(token.split(':')[1])]
+    rec = data[int(index)]
     taskno = rec['taskno']
-    arr = get_array(dstore['source_data'][()], taskno=taskno)
-    st = [stats('nsites', arr['nsites']), stats('weight', arr['weight'])]
-    sources = dstore['source_info']['source_id'][arr['src_id']]
-    srcs = set(s.split(':', 1)[0] for s in sources)
+    srcids = dstore['sources_by_task'][taskno]
+    arr = dstore['source_info']['source_id', 'num_sites', 'weight'][srcids]
+    st = [stats('nsites', arr['num_sites'] / arr['weight']),
+          stats('weight', arr['weight'])]
+    srcs = arr['source_id']
     res = ('taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n'
-           % (taskno, rec['weight'], rec['duration'], ' '.join(sorted(srcs))))
+           % (taskno, rec['weight'], rec['duration'], ' '.join(srcs)))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
 
 

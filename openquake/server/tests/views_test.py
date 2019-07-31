@@ -35,6 +35,7 @@ import random
 from django.test import Client
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
+from openquake.baselib.workerpool import TimeoutError
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
@@ -81,11 +82,12 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        while True:
+        for i in range(40):  # 20 seconds of timeout
+            time.sleep(0.5)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
-                break
-            time.sleep(0.5)
+                return
+        raise TimeoutError(running_calcs)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
@@ -248,8 +250,8 @@ class EngineServerTestCase(unittest.TestCase):
             sys.stderr.write('Empty traceback, please check!\n')
 
         self.post('%s/remove' % job_id)
-        # make sure job_id is no more in the list of relevant jobs
-        job_ids = [job['id'] for job in self.get('list', relevant=True)]
+        # make sure job_id is no more in the list of jobs
+        job_ids = [job['id'] for job in self.get('list')]
         self.assertFalse(job_id in job_ids)
 
     def test_err_2(self):

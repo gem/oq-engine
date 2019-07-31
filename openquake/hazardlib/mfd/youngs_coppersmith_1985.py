@@ -241,8 +241,19 @@ class YoungsCoppersmith1985MFD(BaseMFD):
         just before converting a function to a histogram.
         See :meth:`_get_min_mag_and_num_bins`.
         """
+        # there is some contorsion here to get the correct seismicity rates,
+        # see https://github.com/gem/oq-engine/issues/4930
+        tmp = cls(min_mag, b_val, char_mag, None, bin_width, total_moment_rate)
+
+        calculated_moment_rate = sum(
+            [rate * 10. ** (1.5 * mag + 9.05)
+             for (mag, rate) in tmp.get_annual_occurrence_rates()])
+
+        misfit = calculated_moment_rate / total_moment_rate
+        total_moment_rate_adjusted = total_moment_rate / misfit
+
         return cls(min_mag, b_val, char_mag, None, bin_width,
-                   total_moment_rate)
+                   total_moment_rate_adjusted)
 
     @classmethod
     def from_characteristic_rate(cls, min_mag, b_val, char_mag, char_rate,

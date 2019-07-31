@@ -24,6 +24,7 @@ from openquake.hazardlib.probability_map import combine
 from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_master)
@@ -97,15 +98,18 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
 
+        # test extract disagg_layer
+        aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
+                     'imt=SA(0.1)&poe_id=0')
+        self.assertEqual(aw.dtype.names,
+                         ('site_id', 'lon', 'lat', 'rlz', 'poes'))
+        self.assertEqual(aw['poes'].shape, (2, 15))  # 2 rows
+
     def test_case_3(self):
-        with self.assertRaises(ValueError) as ctx:
+        # a case with poes_disagg too large
+        with self.assertRaises(SystemExit) as ctx:
             self.run_calc(case_3.__file__, 'job.ini')
-        self.assertEqual(str(ctx.exception), '''\
-You are trying to disaggregate for poe=0.1.
-However the source model produces at most probabilities
-of 0.0061466 for rlz=#4, IMT=PGA.
-The disaggregation PoE is too big or your model is wrong,
-producing too small PoEs.''')
+        self.assertEqual(str(ctx.exception), 'Cannot do any disaggregation')
 
     def test_case_4(self):
         # this is case with number of lon/lat bins different for site 0/site 1
@@ -138,9 +142,18 @@ producing too small PoEs.''')
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-    def test_disagg_by_src(self):
-        # this is a case with iml_disagg and disagg_by_src
-        self.run_calc(case_master.__file__, 'job1.ini')
-        arr = self.calc.datastore[
-            'disagg_by_src/iml-0.02-PGA--122.6-38.3'][()]
-        numpy.testing.assert_almost_equal(arr, [0.6757448, 0.1780308])
+        # test_disagg_by_src
+        dbs = self.calc.datastore['disagg_by_src']
+        self.assertEqual(sorted(dbs), ['poe-0.01-PGA-sid-0',
+                                       'poe-0.01-PGA-sid-1',
+                                       'poe-0.01-SA(0.25)-sid-0',
+                                       'poe-0.01-SA(0.25)-sid-1',
+                                       'poe-0.05-PGA-sid-0',
+                                       'poe-0.05-PGA-sid-1',
+                                       'poe-0.05-SA(0.25)-sid-0',
+                                       'poe-0.05-SA(0.25)-sid-1'])
+        arr = dbs['poe-0.01-PGA-sid-0'][()]
+        numpy.testing.assert_almost_equal(
+            arr, [0.00000000e+00, 0.00000000e+00,
+                  5.38093847e-05, 9.94706034e-03])
+

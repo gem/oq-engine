@@ -90,7 +90,7 @@ class OqParam(valid.ParamSet):
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
-    # insured_losses = valid.Param(valid.boolean, False)
+    insurance = valid.Param(valid.namelist, [])
     multi_peril = valid.Param(valid.namelist, [])
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -106,6 +106,7 @@ class OqParam(valid.ParamSet):
     max_hazard_curves = valid.Param(valid.boolean, False)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
+    max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
@@ -142,7 +143,7 @@ class OqParam(valid.ParamSet):
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
-    site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
+    site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
     sites_slice = valid.Param(valid.simple_slice, (None, None))
@@ -284,9 +285,9 @@ class OqParam(valid.ParamSet):
 
         # checks for ebrisk
         if self.calculation_mode == 'ebrisk':
-            pass
-            # elif self.number_of_logic_tree_samples == 0:
-            #    logging.warning('ebrisk is not meant for full enumeration')
+            if self.risk_investigation_time is None:
+                raise InvalidFile('Please set the risk_investigation_time in'
+                                  ' %s' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
@@ -478,6 +479,18 @@ class OqParam(valid.ParamSet):
         Dictionary extended_loss_type -> extended_loss_type index
         """
         return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
+
+    @property
+    def loss_names(self):
+        """
+        Loss types plus insured types, if any
+        """
+        names = []
+        for lt, _ in self.loss_dt_list():
+            names.append(lt)
+        for name in self.insurance:
+            names.append(lt + '_ins')
+        return names
 
     def loss_dt(self, dtype=F32):
         """
