@@ -124,8 +124,7 @@ def get_weighted_poes(gsim, sctx, rctx, dctx, imt, imls, truncation_level,
         mean = mean.reshape(mean.shape + (1, ))
         output = np.zeros([mean.shape[0], imls.shape[0]])
         for (wgt, fct) in weighting:
-            output += (wgt *
-                       (imls <= (mean + (fct * adjustment))).astype(float))
+            output += wgt * (imls <= mean + fct * adjustment)
         return output
     else:
         # use real normal distribution
@@ -138,7 +137,7 @@ def get_weighted_poes(gsim, sctx, rctx, dctx, imt, imls, truncation_level,
         stddev = stddev.reshape(stddev.shape + (1, ))
         output = np.zeros([mean.shape[0], imls.shape[0]])
         for (wgt, fct) in weighting:
-            values = (imls - (mean + (fct * adjustment))) / stddev
+            values = (imls - (mean + fct * adjustment)) / stddev
             if truncation_level is None:
                 output += (wgt * _norm_sf(values))
             else:
