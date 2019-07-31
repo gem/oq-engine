@@ -144,7 +144,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 default = (numpy.ones(nr, F32) * numpy.nan,
                            [numpy.zeros(0, F32)] * nr)
                 for k in self.rparams:
-                    vlen = k.endswith('_')  # variable lenght array
+                    # variable lenght arrays
+                    vlen = k.endswith('_') or k == 'probs_occur'
                     try:
                         v = rup_data[k]
                     except KeyError:
