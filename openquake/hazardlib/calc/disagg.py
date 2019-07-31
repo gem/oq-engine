@@ -97,7 +97,7 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
                 with pne_mon:
                     pne[m, p] = _disaggregate_pne(
                         rctx, mean, stddev, iml[m, p], *eps3)
-            acc['pnes'].append(pne)
+        acc['pnes'].append(pne)
     return pack(acc, 'mags dists lons lats pnes'.split())
 
 
