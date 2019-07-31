@@ -20,7 +20,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import imt as imt_module, const
+from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -449,10 +449,9 @@ class RuptureContext(BaseContext):
         'hypo_depth', 'width', 'hypo_loc')
     temporal_occurrence_model = None  # to be set
 
-    def __init__(self, rec=None):
-        if rec is not None:
-            for name in rec.dtype.names:
-                setattr(self, name, rec[name])
+    def __init__(self, param_pairs=()):
+        for param, value in param_pairs:
+            setattr(self, param, value)
 
     def get_probability_no_exceedance(self, poes):
         """
