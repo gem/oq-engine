@@ -26,9 +26,9 @@ import operator
 import numpy
 import scipy.stats
 
-from openquake.hazardlib import pmf, contexts, const
+from openquake.hazardlib import pmf, contexts
 from openquake.baselib import hdf5, performance
-from openquake.baselib.general import pack, groupby, AccumDict
+from openquake.baselib.general import pack, groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -90,18 +90,17 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['dists'].append(dist)
         iml = gsim.to_distribution_values(iml2)
         pne = numpy.zeros((M, P, E))
-        for m, imt in enumerate(iml2.imts):
-            mean, [stddev] = gsim.get_mean_and_stddevs(
-                sitecol, rctx, dctx, imt, [const.StdDev.TOTAL])
-            for p, poe in enumerate(iml2.poes_disagg):
-                with pne_mon:
+        mean_std = gsim.get_mean_std(sitecol, rctx, dctx, iml2.imts)
+        with pne_mon:
+            for m, imt in enumerate(iml2.imts):
+                for p, poe in enumerate(iml2.poes_disagg):
                     pne[m, p] = _disaggregate_pne(
-                        rctx, mean, stddev, iml[m, p], *eps3)
+                        rctx, mean_std[:, :, m], iml[m, p], *eps3)
         acc['pnes'].append(pne)
     return pack(acc, 'mags dists lons lats pnes'.split())
 
 
-def _disaggregate_pne(rupture, mean, stddev, iml, truncnorm,
+def _disaggregate_pne(rupture, mean_std, iml, truncnorm,
                       epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
@@ -113,7 +112,7 @@ def _disaggregate_pne(rupture, mean, stddev, iml, truncnorm,
     """
     # compute iml value with respect to standard (mean=0, std=1)
     # normal distributions
-    [lvl] = (iml - mean) / stddev
+    [lvl] = (iml - mean_std[0]) / mean_std[1]
 
     # take the minimum epsilon larger than standard_iml
     bin = numpy.searchsorted(epsilons, lvl)

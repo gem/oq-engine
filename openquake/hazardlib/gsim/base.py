@@ -291,30 +291,17 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             arr[1, :, m] = std
         return arr
 
-    def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
+    def get_poes(self, mean_std, imls, truncation_level):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
         for one or more pairs "site -- rupture".
 
-        :param sctx:
-            An instance of :class:`SitesContext` with sites information
-            to calculate PoEs on.
-        :param rctx:
-            An instance of :class:`RuptureContext` with a single rupture
-            information.
-        :param dctx:
-            An instance of :class:`DistancesContext` with information about
-            the distances between sites and a rupture.
-
-            All three contexts (``sctx``, ``rctx`` and ``dctx``) must conform
-            to each other. The easiest way to get them is to call
-            ContextMaker.make_contexts.
-        :param imt:
-            An intensity measure type object (that is, an instance of one
-            of classes from :mod:`openquake.hazardlib.imt`).
+        :param mean_std:
+            An array of shape (2, N) with mean and standard deviation for
+            the current intensity measure type
         :param imls:
-            List of interested intensity measure levels (of type ``imt``).
+            List of interested intensity measure levels
         :param truncation_level:
             Can be ``None``, which means that the distribution of intensity
             is treated as Gaussian distribution with possible values ranging
@@ -349,9 +336,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        self._check_imt(imt)
-        mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                   [const.StdDev.TOTAL])
+        mean, stddev = mean_std
         mean = mean.reshape(mean.shape + (1, ))
         stddev = stddev.reshape(stddev.shape + (1, ))
         imls = self.to_distribution_values(imls)
