@@ -146,6 +146,7 @@ class ContextMaker(object):
             else:
                 filter_distance = 'rrup'
         self.filter_distance = filter_distance
+        self.imts = [imt_module.from_string(imt) for imt in param['imtls']]
         self.reqv = param.get('reqv')
         self.REQUIRES_DISTANCES.add(self.filter_distance)
         if self.reqv is not None:
@@ -248,11 +249,11 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def gen_rup_contexts(self, src, src_sites):
+    def gen_rup_mean_std(self, src, src_sites):
         """
         :param src: a hazardlib source
         :param src_sites: the sites affected by it
-        :yields: (rup, sctx, dctx)
+        :yields: (rup, mean_std)
         """
         sitecol = src_sites.complete
         N = len(sitecol)
@@ -265,7 +266,13 @@ class ContextMaker(object):
                     sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
-            yield rup, sctx, dctx
+            with self.gmf_mon:
+                mean_std = []
+                for i, gsim in enumerate(self.gsims):
+                    dctx_ = dctx.roundup(gsim.minimum_distance)
+                    mean_std.append(
+                        gsim.get_mean_std(sctx, rup, dctx_, self.imts))
+            yield rup, sctx.sids, numpy.array(mean_std)
             self.nrups += 1
             self.nsites += len(sctx)
             if fewsites:  # store rupdata
@@ -305,11 +312,11 @@ class ContextMaker(object):
             len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
         eff_ruptures = 0
-        for rup, sctx, dctx in self.gen_rup_contexts(src, s_sites):
+        for rup, sids, mean_std in self.gen_rup_mean_std(src, s_sites):
             eff_ruptures += 1
             with self.poe_mon:
-                pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
-                for sid, pne in zip(sctx.sids, pnes):
+                pnes = self._make_pnes(rup, sids, mean_std, imtls, trunclevel)
+                for sid, pne in zip(sids, pnes):
                     if rup_indep:
                         pmap[sid].array *= pne
                     else:
@@ -320,14 +327,10 @@ class ContextMaker(object):
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, sctx, dctx, imtls, trunclevel):
-        imts = [imt_module.from_string(imt) for imt in imtls]
-        nsites = len(sctx.sids)
+    def _make_pnes(self, rupture, sids, mean_std, imtls, trunclevel):
+        nsites = len(sids)
         pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
-            dctx_ = dctx.roundup(gsim.minimum_distance)
-            with self.gmf_mon:
-                mean_std = gsim.get_mean_std(sctx, rupture, dctx_, imts)
             for m, imt in enumerate(imtls):
                 slc = imtls(imt)
                 if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
@@ -336,7 +339,7 @@ class ContextMaker(object):
                     pno = numpy.ones((nsites, slc.stop - slc.start))
                 else:
                     poes = gsim.get_poes(
-                        mean_std[:, :, m], imtls[imt], trunclevel)
+                        mean_std[i, :, :, m], imtls[imt], trunclevel)
                     pno = rupture.get_probability_no_exceedance(poes)
                 pne_array[:, slc, i] = pno
         return pne_array

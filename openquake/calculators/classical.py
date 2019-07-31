@@ -167,7 +167,8 @@ class ClassicalCalculator(base.HazardCalculator):
                    'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
         for grp in self.csm.src_groups:
             gsims = csm_info.gsim_lt.get_gsims(grp.trt)
-            cm = ContextMaker(grp.trt, gsims)
+            cm = ContextMaker(
+                grp.trt, gsims, param=dict(imtls=self.oqparam.imtls))
             rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
                 rparams.add(dparam + '_')
