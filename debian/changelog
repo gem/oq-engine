@@ -1,3 +1,8 @@
+  [Graeme Weatherill]
+  * Adds new meta ground motion models to undertake PSHA using design code
+    based amplification coefficients (Eurocode 8, Pitilakis et al., 2018)
+  * Adds site amplification model of Sandikkaya & Dinsever (2018)
+  
   [Marco Pagani]
   * Added a new rupture-site metric: the azimuth to the closest point on the
     rupture
