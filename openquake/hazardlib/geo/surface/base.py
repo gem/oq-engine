@@ -440,3 +440,17 @@ class BaseSurface:
         # Compute the azimuth from the fault strike
         rel_azi = (azim - strike) % 360
         return rel_azi
+
+    def get_azimuth_of_closest_point(self, mesh):
+        """
+        Compute the azimuth between point in `mesh` and the corresponding
+        closest point on the rupture surface.
+
+        :param mesh:
+            An instance of  :class:`openquake.hazardlib.geo.mesh`
+        :return:
+            An :class:`numpy.ndarray` instance with the azimuth values.
+        """
+        mesh_closest = self.get_closest_points(mesh)
+        return geodetic.azimuth(mesh.lons, mesh.lats, mesh_closest.lons,
+                                mesh_closest.lats)
