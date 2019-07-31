@@ -30,7 +30,7 @@ import collections
 import numpy
 import requests
 
-from openquake.baselib import performance, hdf5
+from openquake.baselib import hdf5
 from openquake.baselib.general import random_filter
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.risklib import asset, riskinput
+from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_model_factory import SourceModelFactory
@@ -112,7 +112,8 @@ def unzip_rename(zpath, name):
         for nam in archive.namelist():
             fname = os.path.join(dpath, nam)
             if os.path.exists(fname):  # already unzipped
-                logging.warning('Using %s instead of the file in %s',
+                os.rename(fname, fname + '.bak')
+                logging.warning('Overriding %s with the file in %s',
                                 fname, zpath)
         logging.info('Unzipping %s', zpath)
         archive.extractall(dpath)
@@ -218,6 +219,7 @@ def get_params(job_inis, **kw):
     if params['inputs'].get('reqv'):
         # using pointsource_distance=0 because of the reqv approximation
         params['pointsource_distance'] = '0'
+
     return params
 
 
@@ -560,15 +562,15 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, monitor=None, in_memory=True,
+def get_composite_source_model(oqparam, h5=None, in_memory=True,
                                srcfilter=SourceFilter(None, {})):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param monitor:
-         a `openquake.baselib.performance.Monitor` instance
+    :param h5:
+         an open hdf5.File where to store the source info
     :param in_memory:
         if False, just parse the XML without instantiating the sources
     :param srcfilter:
@@ -600,10 +602,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    if monitor is None:
-        monitor = performance.Monitor()
     smodels = []
-    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, monitor,
+    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, h5,
                                  in_memory, srcfilter)
     for source_model in factory.get_models():
         for src_group in source_model.src_groups:
@@ -648,7 +648,7 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def get_risk_model(oqparam):
+def get_crmodel(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
 
@@ -657,7 +657,7 @@ def get_risk_model(oqparam):
     """
     riskdict = get_risk_models(oqparam)
     oqparam.set_risk_imtls(riskdict)
-    crm = riskinput.CompositeRiskModel(oqparam, riskdict)
+    crm = riskmodels.CompositeRiskModel(oqparam, riskdict)
     return crm
 
 

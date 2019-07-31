@@ -22,10 +22,10 @@ import unittest.mock as mock
 import unittest
 from io import BytesIO
 
-from openquake.baselib import general, performance, datastore
+from openquake.baselib import general, datastore
 from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
-from openquake.risklib.riskinput import ValidationError
+from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput
 from openquake.qa_tests_data.classical import case_1, case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
@@ -465,12 +465,10 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
     def test_extra_large_source(self):
         oq = readinput.get_oqparam('job.ini', case_21)
-        mon = performance.Monitor('csm', datastore.hdf5new())
-        with mock.patch('logging.error') as error:
+        with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
             with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
-                readinput.get_composite_source_model(oq, mon)
-        mon.hdf5.close()
-        os.remove(mon.hdf5.path)
+                readinput.get_composite_source_model(oq, h5)
+                os.remove(h5.filename)
         self.assertEqual(
             error.call_args[0][0], 'source SFLT2: too large: 84 km')
 
@@ -483,7 +481,7 @@ class GetCompositeRiskModelTestCase(unittest.TestCase):
     def test_missing_vulnerability_function(self):
         oq = readinput.get_oqparam('job.ini', case_caracas)
         with self.assertRaises(ValidationError):
-            readinput.get_risk_model(oq)
+            readinput.get_crmodel(oq)
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

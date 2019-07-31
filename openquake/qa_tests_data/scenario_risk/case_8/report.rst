@@ -2,12 +2,12 @@ Scenario Risk Maule Mw 8.8 reduced
 ==================================
 
 ============== ===================
-checksum32     35,423,337         
-date           2019-02-18T08:35:35
-engine_version 3.4.0-git9883ae17a5
+checksum32     1,825,679,455      
+date           2019-07-30T15:03:54
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
-num_sites = 258, num_levels = 78
+num_sites = 258, num_levels = 78, num_rlzs = 1
 
 Parameters
 ----------
@@ -36,9 +36,10 @@ Input files
 Name                     File                                                                              
 ======================== ==================================================================================
 exposure                 `exposure_model.xml <exposure_model.xml>`_                                        
-gmfs                     `GMFs_Mabe.xml <GMFs_Mabe.xml>`_                                                  
+gmfs                     `gmfs.csv <gmfs.csv>`_                                                            
 job_ini                  `job.ini <job.ini>`_                                                              
 occupants_vulnerability  `occupants_vulnerabilityRes.xml <occupants_vulnerabilityRes.xml>`_                
+sites                    `sitemodel.csv <sitemodel.csv>`_                                                  
 structural_vulnerability `structural_vulnerability_model_Res.xml <structural_vulnerability_model_Res.xml>`_
 ======================== ==================================================================================
 
@@ -55,8 +56,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[FromFile]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -68,12 +68,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         94      
-#taxonomies     35      
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== ==
+#assets     94
+#taxonomies 35
+=========== ==
 
 ============= ======= ======= === === ========= ==========
 taxonomy      mean    stddev  min max num_sites num_assets
@@ -118,8 +116,8 @@ LWAL_H3       1.00000 NaN     1   1   1         1
 Slowest operations
 ------------------
 =================== ======== ========= ======
-operation           time_sec memory_mb counts
+calc_15491          time_sec memory_mb counts
 =================== ======== ========= ======
-building riskinputs 0.04506  0.0       1     
-reading exposure    0.00755  0.0       1     
+building riskinputs 0.05189  0.0       1     
+reading exposure    0.00729  0.0       1     
 =================== ======== ========= ======

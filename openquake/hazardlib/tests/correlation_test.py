@@ -135,6 +135,18 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(inferred_corrcoef, actual_corrcoef,
                                           decimal=2)
 
+    def test_filtered_sitecol(self):
+        filtered = self.SITECOL.filtered([0, 2])
+        numpy.random.seed(13)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        intra_residuals_sampled = numpy.random.normal(size=(2, 5))
+        intra_residuals_correlated = cormo.apply_correlation(
+            filtered, PGA(), intra_residuals_sampled)
+        aaae(intra_residuals_correlated,
+             [[-0.71239066, 0.75376638, -0.04450308, 0.45181234, 1.34510171],
+              [0.51816327, 1.36481251, 0.86016437, 1.48732124, -1.01860545]],
+             decimal=6)
+
 
 class HM2018CorrelationMatrixTestCase(unittest.TestCase):
     SITECOL = SiteCollection([Site(Point(2, -40), 1, 1, 1),
@@ -210,7 +222,7 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
         Nsim = 100000
         cormo = HM2018CorrelationModel(uncertainty_multiplier=1)
         imt = SA(period=3, damping=5)
-        
+
         corma_3d = numpy.zeros((len(self.SITECOL), len(self.SITECOL), Nsim))
 
         # For each simulation, construct a new correlation matrix

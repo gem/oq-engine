@@ -27,8 +27,7 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib import pmf, contexts, const
-from openquake.baselib.performance import Monitor
-from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib import hdf5, performance
 from openquake.baselib.general import pack, groupby, AccumDict
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -38,76 +37,83 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
-def disaggregate(cmaker, sitecol, rupdata, iml2, truncnorm, epsilons,
-                 monitor=Monitor()):
-    """
-    Disaggregate (separate) PoE in different contributions.
+def _eps3(truncation_level, n_epsilons):
+    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
+    tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
+    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
+    eps_bands = tn.cdf(eps[1:]) - tn.cdf(eps[:-1])
+    return tn, eps, eps_bands
 
-    :param cmaker: a ContextMaker instance
-    :param sitecol: a SiteCollection with N=1 site
-    :param ruptures: an iterator over ruptures with the same TRT
-    :param iml2: a 2D array of IMLs of shape (M, P)
-    :param truncnorm: an instance of scipy.stats.truncnorm
-    :param epsilons: the epsilon bins
-    :param monitor: a Monitor instance
-    :returns:
-        an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
-    """
-    assert len(sitecol) == 1, sitecol
-    acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[])
+
+def _site_indices(sids_by_rup, N):
+    # an array of indices of shape (N, U)
+    U = len(sids_by_rup)
+    mat = -numpy.ones((N, U), numpy.int16)
+    for ridx, sids in enumerate(sids_by_rup):
+        for sidx, sid in enumerate(sids):
+            mat[sid, ridx] = sidx
+    return mat
+
+
+def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
+                  pne_mon=performance.Monitor()):
+    # disaggregate (separate) PoE in different contributions
+    # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
+    [sid] = sitecol.sids
+    M = len(iml2.imts)
+    P = len(iml2.poes_disagg)
+    E = len(eps3[2])  # number of epsilons
+    acc = dict(pnes=[], mags=[], dists=[], lons=[], lats=[])
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
-        return acc
-    pne_mon = monitor('disaggregate_pne', measuremem=False)
-    [sid] = sitecol.sids
-    acc['mags'] = rupdata['mag']
-    acc['lons'] = rupdata['lon'][:, sid]
-    acc['lats'] = rupdata['lat'][:, sid]
-    acc['dists'] = dists = rupdata[cmaker.filter_distance][:, sid]
-    if gsim.minimum_distance:
-        dists[dists < gsim.minimum_distance] = gsim.minimum_distance
-    # compute epsilon bin contributions only once
-    eps_bands = truncnorm.cdf(epsilons[1:]) - truncnorm.cdf(epsilons[:-1])
-    for rec in rupdata:
-        rctx = contexts.RuptureContext(rec)
+        return pack(acc, 'mags dists lons lats pnes'.split())
+    maxdist = cmaker.maximum_distance(cmaker.trt)
+    fildist = rupdata[cmaker.filter_distance + '_']
+    for ridx, sidx in enumerate(indices):
+        if sidx == -1:  # no contribution for this site
+            continue
+        dist = fildist[ridx][sidx]
+        if dist >= maxdist:
+            continue
+        elif gsim.minimum_distance and dist < gsim.minimum_distance:
+            dist = gsim.minimum_distance
+        rctx = contexts.RuptureContext(
+            (par, val[ridx]) for par, val in rupdata.items())
         dctx = contexts.DistancesContext(
-            (param, rec[param][[sid]])
-            for param in cmaker.REQUIRES_DISTANCES
-        ).roundup(gsim.minimum_distance)
+            (param, getattr(rctx, param + '_')[[sidx]])
+            for param in cmaker.REQUIRES_DISTANCES).roundup(
+                    gsim.minimum_distance)
+        acc['mags'].append(rctx.mag)
+        acc['lons'].append(rctx.lon_[sidx])
+        acc['lats'].append(rctx.lat_[sidx])
+        acc['dists'].append(dist)
+        iml = gsim.to_distribution_values(iml2)
+        pne = numpy.zeros((M, P, E))
         for m, imt in enumerate(iml2.imts):
+            mean, [stddev] = gsim.get_mean_and_stddevs(
+                sitecol, rctx, dctx, imt, [const.StdDev.TOTAL])
             for p, poe in enumerate(iml2.poes_disagg):
-                iml = iml2[m, p]
                 with pne_mon:
-                    pne = disaggregate_pne(
-                        gsim, rctx, sitecol, dctx, imt, iml,
-                        truncnorm, epsilons, eps_bands)
-                acc[poe, str(imt), iml2.rlzi].append(pne)
-    return acc
+                    pne[m, p] = _disaggregate_pne(
+                        rctx, mean, stddev, iml[m, p], *eps3)
+        acc['pnes'].append(pne)
+    return pack(acc, 'mags dists lons lats pnes'.split())
 
 
-# in practice this is always called with a single site
-def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
-                     epsilons, eps_bands):
+def _disaggregate_pne(rupture, mean, stddev, iml, truncnorm,
+                      epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
-
-    Other parameters are the same as for `gsim.get_poes`, with
-    differences that ``truncation_level`` is required to be positive.
-
     :returns:
         Contribution to probability of exceedance of ``iml`` coming
         from different sigma bands in the form of a 2D numpy array of
         probabilities with shape (n_sites, n_epsilons)
     """
-    # compute mean and standard deviations
-    mean, [stddev] = gsim.get_mean_and_stddevs(sctx, rupture, dctx, imt,
-                                               [const.StdDev.TOTAL])
-
     # compute iml value with respect to standard (mean=0, std=1)
     # normal distributions
-    [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
+    [lvl] = (iml - mean) / stddev
 
     # take the minimum epsilon larger than standard_iml
     bin = numpy.searchsorted(epsilons, lvl)
@@ -132,34 +138,12 @@ def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
     return rupture.get_probability_no_exceedance(poes)
 
 
-# in practice this is always called with a single site
-def collect_bin_data(rupdata, sitecol, cmaker, iml3,
-                     truncation_level, n_epsilons, monitor=Monitor()):
-    """
-    :param rupdata: array of ruptures
-    :param sitecol: a SiteCollection instance with a single site
-    :param cmaker: a ContextMaker instance
-    :param iml3: an ArrayWrapper of intensities of shape (R, M, P)
-    :param truncation_level: the truncation level
-    :param n_epsilons: the number of epsilons
-    :param monitor: a Monitor instance
-    :returns: a dictionary (poe, imt, rlzi) -> probabilities of shape (N, E)
-    """
-    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
-    tn = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    eps = numpy.linspace(-truncation_level, truncation_level, n_epsilons + 1)
-    acc = disaggregate(cmaker, sitecol, rupdata, iml3, tn, eps, monitor)
-    return pack(acc, 'mags dists lons lats'.split())
-
-
 def lon_lat_bins(bb, coord_bin_width):
     """
-    Define bin edges for disaggregation histograms.
+    Define lon, lat bin edges for disaggregation histograms.
 
-    Given bins data as provided by :func:`collect_bin_data`, this function
-    finds edges of histograms, taking into account maximum and minimum values
-    of magnitude, distance and coordinates as well as requested sizes/numbers
-    of bins.
+    :param bb: bounding box west, south, east, north
+    :param coord_bin_width: bin width
     """
     west, south, east, north = bb
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
@@ -183,50 +167,65 @@ def get_bins(bin_edges, sid):
 
 
 # this is fast
-def build_disagg_matrix(bdata, bins, mon=Monitor):
+def _build_disagg_matrix(bdata, bins):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
     :param mon: a Monitor instance
-    :returns: a dictionary key -> matrix|pmf for each key in bdata
+    :returns: a 7D-matrix of shape (#magbins, #distbins, #lonbins,
+                                    #latbins, #imts, #poes, #epsbins)
     """
-    with mon('build_disagg_matrix'):
-        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
-        dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
+    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
+    dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
 
-        # find bin indexes of rupture attributes; bins are assumed closed
-        # on the lower bound, and open on the upper bound, that is [ )
-        # longitude values need an ad-hoc method to take into account
-        # the 'international date line' issue
-        # the 'minus 1' is needed because the digitize method returns the
-        # index of the upper bound of the bin
-        mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
-        dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
-        lons_idx = _digitize_lons(bdata.lons, lon_bins)
-        lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
+    # find bin indexes of rupture attributes; bins are assumed closed
+    # on the lower bound, and open on the upper bound, that is [ )
+    # longitude values need an ad-hoc method to take into account
+    # the 'international date line' issue
+    # the 'minus 1' is needed because the digitize method returns the
+    # index of the upper bound of the bin
+    mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
+    dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
+    lons_idx = _digitize_lons(bdata.lons, lon_bins)
+    lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
 
-        # because of the way numpy.digitize works, values equal to the last bin
-        # edge are associated to an index equal to len(bins) which is not a
-        # valid index for the disaggregation matrix. Such values are assumed
-        # to fall in the last bin
-        mags_idx[mags_idx == dim1] = dim1 - 1
-        dists_idx[dists_idx == dim2] = dim2 - 1
-        lons_idx[lons_idx == dim3] = dim3 - 1
-        lats_idx[lats_idx == dim4] = dim4 - 1
+    # because of the way numpy.digitize works, values equal to the last bin
+    # edge are associated to an index equal to len(bins) which is not a
+    # valid index for the disaggregation matrix. Such values are assumed
+    # to fall in the last bin
+    mags_idx[mags_idx == dim1] = dim1 - 1
+    dists_idx[dists_idx == dim2] = dim2 - 1
+    lons_idx[lons_idx == dim3] = dim3 - 1
+    lats_idx[lats_idx == dim4] = dim4 - 1
 
-        out = {}
-        num_zeros = 0
-        for k, pnes in bdata.items():
-            # pnes has shape (U, 1, E)
-            if pnes.sum() == pnes.size:  # all pnes are 1
-                num_zeros += 1
-                continue  # zero matrices are not transferred
-            mat = numpy.ones(shape)
-            for i_mag, i_dist, i_lon, i_lat, pne in zip(
-                    mags_idx, dists_idx, lons_idx, lats_idx, pnes):
-                mat[i_mag, i_dist, i_lon, i_lat] *= pne
-            out[k] = 1. - mat
-    return out
+    U, M, P, E = bdata.pnes.shape
+    mat7D = numpy.ones(shape[:-1] + [M, P, E])
+    for i_mag, i_dist, i_lon, i_lat, pne in zip(
+            mags_idx, dists_idx, lons_idx, lats_idx, bdata.pnes):
+        mat7D[i_mag, i_dist, i_lon, i_lat] *= pne
+    return 1. - mat7D
+
+
+# called by the engine
+def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
+                   num_epsilon_bins, bin_edges, pne_mon, mat_mon):
+    """
+    :yield: (sid, {poe, imt, rlz: matrix})
+    """
+    if len(sitecol) >= 32768:
+        raise ValueError('You can disaggregate at max 32,768 sites')
+    indices = _site_indices(rupdata['sid_'], len(sitecol))
+    eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
+    for sid, iml2 in zip(sitecol.sids, iml2s):
+        singlesitecol = sitecol.filtered([sid])
+        bins = get_bins(bin_edges, sid)
+        bdata = _disaggregate(cmaker, singlesitecol, rupdata,
+                              indices[sid], iml2, eps3, pne_mon)
+        if len(bdata.mags):
+            with mat_mon:
+                mat = _build_disagg_matrix(bdata, bins)
+                if mat.any():  # nonzero
+                    yield sid, mat
 
 
 def _digitize_lons(lons, lon_bins):
@@ -330,17 +329,19 @@ def disaggregation(
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
-    iml2 = ArrayWrapper(numpy.array([[iml]]),
-                        dict(imts=[imt], poes_disagg=[None], rlzi=0))
+    iml2 = hdf5.ArrayWrapper(numpy.array([[iml]]),
+                             dict(imts=[imt], poes_disagg=[None], rlzi=0))
+    eps3 = _eps3(truncation_level, n_epsilons)
     for trt, srcs in by_trt.items():
         cmaker = ContextMaker(
             trt, rlzs_by_gsim, source_filter.integration_distance,
             {'filter_distance': filter_distance})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
-        rupdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
-        bdata[trt] = collect_bin_data(
-            rupdata, sitecol, cmaker, iml2, truncation_level, n_epsilons)
+        rdata = contexts.RupData(cmaker).from_srcs(srcs, sitecol)
+        idxs = _site_indices(rdata['sid_'], 1)[0]
+        bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
+
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
@@ -373,10 +374,8 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        dic = build_disagg_matrix(bdata[trt], bin_edges)
-        if dic:  # (poe, imt, rlzi) -> matrix
-            [mat] = dic.values()
-            matrix[..., trt_num[trt]] = mat
+        mat = _build_disagg_matrix(bdata[trt], bin_edges)[..., 0, 0, :]
+        matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
 

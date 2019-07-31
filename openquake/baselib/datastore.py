@@ -139,7 +139,7 @@ class DataStore(collections.abc.MutableMapping):
 
     >>> ds = DataStore()
     >>> ds['example'] = 42
-    >>> print(ds['example'].value)
+    >>> print(ds['example'][()])
     42
     >>> ds.clear()
 
@@ -194,7 +194,10 @@ class DataStore(collections.abc.MutableMapping):
             try:
                 self.hdf5 = hdf5.File(self.filename, **kw)
             except OSError as exc:
-                raise OSError('%s in %s' % (exc, self.filename))
+                if os.path.exists(self.filename + '~'):  # temporary file
+                    self.hdf5 = hdf5.File(self.filename + '~', **kw)
+                else:
+                    raise OSError('%s in %s' % (exc, self.filename))
 
     @property
     def export_dir(self):

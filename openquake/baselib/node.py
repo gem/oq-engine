@@ -639,7 +639,8 @@ def node_to_dict(node):
     dic = {}
     if node.attrib:
         for nam, val in node.attrib.items():
-            dic['_' + nam] = val
+            dic['_' + nam] = (float(val)
+                              if isinstance(val, numpy.float64) else val)
     if isinstance(node.text, str) and node.text.strip() == '':
         pass
     elif node.text is not None:

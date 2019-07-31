@@ -37,11 +37,13 @@ how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
 >>> arglist = [('hello',), ('world',)]  # list of arguments
->>> res = Starmap(count, arglist).reduce()  # aggregated counts
->>> sorted(res.items())  # counts per letter
+>>> smap = Starmap(count, arglist)  # Starmap instance, nothing started yet
+>>> sorted(smap.reduce().items())  # build the counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
 
-`Starmap` has a `reduce` method with sensible defaults:
+A `Starmap` object is an iterable: when iterating over it produces
+task results. It also has a `reduce` method similar to `functools.reduce`
+with sensible defaults:
 
 1. the default aggregation function is `add`, so there is no need to specify it
 2. the default accumulator is an empty accumulation dictionary (see
@@ -91,23 +93,22 @@ way your code is future-proof.
 Monitoring
 =============================
 
-The major feature of the Starmap API is the ability to pass to it a
-Monitor instance, an object which is able to measure the time and
-memory occupation in each spawned task. The monitor can keep that
-information in memory or even store it into an .hdf5 file. If you
-do not pass a Monitor instance to the Starmap, internally a do-nothing
-monitor is instantiated. Here is an in-memory monitor:
+A major feature of the Starmap API is the ability to monitor the time spent
+in each task and the memory allocated. Such information is written into a
+temporary HDF5 file and can be accessed after the last task output is
+returned:
 
->>> from openquake.baselib.performance import Monitor
->>> mon = Monitor('count')
+>>> import h5py
+>>> with h5py.File(smap.hdf5path, 'r') as f:
+...     f['performance_data'].dtype.names
+('operation', 'time_sec', 'memory_mb', 'counts')
 
-Here is a monitoring writing on an .hdf5 file:
-
->>> from openquake.baselib import hdf5
->>> mon = Monitor('count', hdf5.File.temporary())
+The user can also specify an explicit value for `hdf5path`, corresponding
+to an existing HDF5 file; in such a case the performance info will be appended
+there.
 
 The engine provides a command `oq show performance` to print the performance
-information stored in the HDF5 datastore in a nice way.
+information stored in the HDF5 file in a nice way.
 
 The Starmap.apply API
 ====================================
@@ -120,7 +121,7 @@ letter counting example discussed before, `Starmap.apply` could
 be used as follows:
 
 >>> text = 'helloworld'  # sequence of characters
->>> res3 = Starmap.apply(count, (text, mon)).reduce()
+>>> res3 = Starmap.apply(count, (text, Monitor())).reduce()
 >>> assert res3 == res
 
 The API of `Starmap.apply` is designed to extend the one of `apply`,
@@ -151,6 +152,7 @@ a great deal of work trying to split slow sources in more manageable
 fast sources.
 """
 import os
+import re
 import sys
 import time
 import socket
@@ -171,29 +173,15 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import config, workerpool
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.performance import Monitor, memory_rss, perf_dt
-
+from openquake.baselib.performance import Monitor, memory_rss, dump
 from openquake.baselib.general import (
-    split_in_blocks, block_splitter, AccumDict, humansize, CallableDict)
+    split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
+    gettemp)
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
-OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
-if OQ_DISTRIBUTE == 'futures':  # legacy name
-    print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
-    OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                         'dask'):
-    raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
-
-# data type for storing the performance information
-task_info_dt = numpy.dtype(
-    [('taskno', numpy.uint32), ('weight', numpy.float32),
-     ('duration', numpy.float32), ('received', numpy.int64),
-     ('mem_gb', numpy.float32)])
-
 submit = CallableDict()
 
 
@@ -208,7 +196,10 @@ def processpool_submit(self, func, args, monitor):
         safely_call, (func, args, self.task_no, monitor))
 
 
-threadpool_submit = submit.add('threadpool')(processpool_submit)
+@submit.add('threadpool')
+def threadpool_submit(self, func, args, monitor):
+    return self.pool.apply_async(
+        safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('celery')
@@ -219,9 +210,10 @@ def celery_submit(self, func, args, monitor):
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
     if not hasattr(self, 'sender'):
-        task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
-                                       config.zworkers.task_in_port)
-        self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
+        port = int(config.zworkers.ctrl_port) + 2
+        task_input_url = 'tcp://127.0.0.1:%d' % port
+        self.sender = Socket(
+            task_input_url, zmq.PUSH, 'connect').__enter__()
     return self.sender.send((func, args, self.task_no, monitor))
 
 
@@ -234,7 +226,11 @@ def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or 'processpool'
     """
-    return os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
+                    'dask'):
+        raise ValueError('Invalid oq_distribute=%s' % dist)
+    return dist
 
 
 class Pickled(object):
@@ -440,7 +436,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
                 break
 
 
-if OQ_DISTRIBUTE.startswith('celery'):
+if oq_distribute().startswith('celery'):
     from celery import Celery
     from celery.task import task
 
@@ -448,7 +444,7 @@ if OQ_DISTRIBUTE.startswith('celery'):
     app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
 
-elif OQ_DISTRIBUTE == 'dask':
+elif oq_distribute() == 'dask':
     from dask.distributed import Client
 
 
@@ -464,27 +460,22 @@ class IterResult(object):
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     :param progress:
         a logging function for the progress report
-    :param hdf5:
-        if given, hdf5 file where to append the performance information
-    """
-    def __init__(self, iresults, taskname, argnames, sent, hdf5=None):
+    :param hdf5path:
+        an open hdf5.File where to store persistently the performance info
+     """
+    def __init__(self, iresults, taskname, argnames, sent, hdf5path):
         self.iresults = iresults
         self.name = taskname
         self.argnames = ' '.join(argnames)
         self.sent = sent
-        self.hdf5 = hdf5
         self.received = []
+        self.hdf5path = hdf5path
 
-    def __iter__(self):
-        if self.iresults == ():
-            return ()
-        t0 = time.time()
-        self.received = []
+    def _iter(self, temp):
         first_time = True
-        nbytes = AccumDict()
-        names = {self.name}
         for result in self.iresults:
-            msg = check_mem_usage()  # log a warning if too much memory is used
+            msg = check_mem_usage()
+            # log a warning if too much memory is used
             if msg and first_time:
                 logging.warning(msg)
                 first_time = False  # warn only once
@@ -493,13 +484,12 @@ class IterResult(object):
                 raise result
             elif isinstance(result, Result):
                 val = result.get()
-                names.add(result.mon.operation[6:])
                 self.received.append(len(result.pik))
                 if hasattr(result, 'nbytes'):
-                    nbytes += result.nbytes
+                    self.nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
-            if OQ_DISTRIBUTE == 'processpool' and sys.platform != 'darwin':
+            if sys.platform != 'darwin':
                 # it normally works on macOS, but not in notebooks calling
                 # notebooks, which is the case relevant for Marco Pagani
                 mem_gb = (memory_rss(os.getpid()) + sum(
@@ -509,17 +499,34 @@ class IterResult(object):
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func_args:  # not subtask
                 yield val
-                save_task_info(self, result, mem_gb)
-        if self.received:
-            tot = sum(self.received)
-            max_per_output = max(self.received)
-            logging.info(
-                'Received %s in %d seconds, biggest '
-                'output=%s', humansize(tot), time.time() - t0,
-                humansize(max_per_output))
-            if nbytes:
-                logging.info('Received %s',
-                             {k: humansize(v) for k, v in nbytes.items()})
+                result.mon.save_task_info(
+                    temp, result, self.argnames, self.sent, mem_gb)
+                result.mon.flush(temp)
+
+    def __iter__(self):
+        if self.iresults == ():
+            return ()
+        t0 = time.time()
+        self.received = []
+        self.nbytes = AccumDict()
+        temp = self.hdf5path + '~'
+        try:
+            yield from self._iter(temp)
+            if self.received:
+                tot = sum(self.received)
+                max_per_output = max(self.received)
+                logging.info(
+                    'Received %s in %d seconds, biggest '
+                    'output=%s', humansize(tot), time.time() - t0,
+                    humansize(max_per_output))
+                if self.nbytes:
+                    nb = {k: humansize(v) for k, v in self.nbytes.items()}
+                    logging.info('Received %s', nb)
+                # collect performance info
+                dump(temp, self.hdf5path)
+        finally:
+            if os.path.exists(temp):
+                os.remove(temp)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -547,23 +554,6 @@ class IterResult(object):
         return res
 
 
-def save_task_info(self, res, mem_gb=0):
-    """
-    :param self: an object with attributes .hdf5, .argnames, .sent
-    :parent res: a :class:`Result` object
-    :param mem_gb: memory consumption at the saving time (optional)
-    """
-    mon = res.mon
-    name = mon.operation[6:]  # strip 'total '
-    if self.hdf5:
-        mon.hdf5 = self.hdf5  # needed for the flush below
-        t = (mon.task_no, mon.weight, mon.duration, len(res.pik), mem_gb)
-        data = numpy.array([t], task_info_dt)
-        hdf5.extend3(self.hdf5.filename, 'task_info/' + name, data,
-                     argnames=self.argnames, sent=self.sent)
-        mon.flush()
-
-
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
@@ -580,13 +570,13 @@ def init_workers():
 
 class Starmap(object):
     calc_id = None
-    hdf5 = None
     pids = ()
     running_tasks = []  # currently running tasks
 
     @classmethod
-    def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
-        if distribute == 'processpool' and not hasattr(cls, 'pool'):
+    def init(cls, poolsize=None, distribute=None):
+        cls.distribute = distribute or oq_distribute()
+        if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
             # unregister custom handlers before starting the processpool
             term_handler = signal.signal(signal.SIGTERM, signal.SIG_DFL)
             int_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -600,9 +590,9 @@ class Starmap(object):
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
-        elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
+        elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
-        elif distribute == 'dask':
+        elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
     @classmethod
@@ -622,7 +612,7 @@ class Starmap(object):
     def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
-              distribute=None, progress=logging.info):
+              distribute=None, progress=logging.info, hdf5path=None):
         r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -637,29 +627,34 @@ class Starmap(object):
         :param key: function to extract the kind of an item in arg0
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
+        :param hdf5path: an open hdf5.File where to store the performance info
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
-        mon = args[-1]
         args = args[1:-1]
         if maxweight:  # block_splitter is lazy
-            task_args = ((blk,) + args for blk in block_splitter(
+            taskargs = ((blk,) + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
-            task_args = [(blk,) + args for blk in split_in_blocks(
+            taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(task, task_args, mon, distribute, progress).submit_all()
+        return cls(task, taskargs, distribute, progress, hdf5path).submit_all()
 
-    def __init__(self, task_func, task_args=(), monitor=None, distribute=None,
-                 progress=logging.info):
-        self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
+    def __init__(self, task_func, task_args=(), distribute=None,
+                 progress=logging.info, hdf5path=None):
+        self.__class__.init(distribute=distribute)
         self.task_func = task_func
-        self.monitor = monitor or Monitor(task_func.__name__)
-        self.calc_id = getattr(self.monitor, 'calc_id', None)
+        if hdf5path:
+            match = re.search(r'(\d+)', os.path.basename(hdf5path))
+            calc_id = int(match.group(1))
+        else:
+            calc_id = None
+        self.monitor = Monitor(task_func.__name__)
+        self.monitor.calc_id = calc_id
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
-        self.distribute = distribute or oq_distribute(task_func)
         self.progress = progress
+        self.hdf5path = hdf5path or gettemp(suffix='.hdf5')
         try:
             self.num_tasks = len(self.task_args)
         except TypeError:  # generators have no len
@@ -678,18 +673,11 @@ class Starmap(object):
         self.sent = numpy.zeros(len(self.argnames) - 1)
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
-        h5 = self.monitor.hdf5
-        task_info = 'task_info/' + self.name
-        if h5 and task_info not in h5:  # first time
-            # task_info and performance_data should be generated in advance
-            hdf5.create(h5, task_info, task_info_dt)
-        if h5 and 'performance_data' not in h5:
-            hdf5.create(h5, 'performance_data', perf_dt)
         self.task_no = 0
-
-    @property
-    def hdf5(self):
-        return self.monitor.hdf5
+        if self.distribute == 'zmq':  # add a check
+            err = workerpool.check_status()
+            if err:
+                raise RuntimeError(err)
 
     def log_percent(self):
         """
@@ -741,7 +729,7 @@ class Starmap(object):
         :returns: an :class:`IterResult` instance
         """
         return IterResult(self._loop(), self.name, self.argnames,
-                          self.sent, self.monitor.hdf5)
+                          self.sent, self.hdf5path)
 
     def reduce(self, agg=operator.add, acc=None):
         """
@@ -755,8 +743,6 @@ class Starmap(object):
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
-        if hasattr(self, 'sender'):
-            self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)
         self.todo = len(self.tasks)
         while self.todo:
@@ -802,28 +788,23 @@ def count(word, mon):
 def split_task(func, *args, duration=1000,
                weight=operator.attrgetter('weight')):
     """
-    :param func: a task function
+    :param func: a task function with a monitor as last argument
     :param args: arguments of the task function
     :param duration: split the task if it exceeds the duration
     :param weight: weight function for the elements in args[0]
     :yields: a partial result, 0 or more task objects, 0 or 1 partial result
     """
-    elements = args[0]
+    elements = numpy.array(args[0])
     n = len(elements)
     assert n > 0, 'Passed an empty sequence!'
-    if n > 1000:
-        every = 333
-    elif n > 300:
-        every = 100
-    elif n > 100:
-        every = 33
-    else:
-        every = 10
-    sample = [el for i, el in enumerate(elements, 1) if i % every == 0]
-    if not sample:  # there are not enough elements
+    if n < 10:
         yield func(*args)
         return
-    other = [el for i, el in enumerate(elements, 1) if i % every != 0]
+    numpy.random.seed(42)
+    ok = numpy.zeros(n, dtype=bool)
+    ok[numpy.random.choice(numpy.arange(n), 5, replace=False)] = True
+    sample = elements[ok]
+    other = elements[~ok]
     sample_weight = sum(weight(el) for el in sample)
     t0 = time.time()
     res = func(*(sample,) + args[1:])
