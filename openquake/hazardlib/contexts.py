@@ -97,12 +97,11 @@ class RupData(object):
         return {k: numpy.array(v) for k, v in self.data.items()}
 
     def add(self, rup, src_id, sites):
-        try:
-            rate = rup.occurrence_rate
-            probs_occur = numpy.zeros(0, numpy.float64)
-        except AttributeError:  # for nonparametric ruptures
-            rate = numpy.nan
+        rate = rup.occurrence_rate
+        if numpy.isnan(rate):  # for nonparametric ruptures
             probs_occur = rup.probs_occur
+        else:
+            probs_occur = numpy.zeros(0, numpy.float64)
         self.data['srcidx'].append(src_id or 0)
         self.data['occurrence_rate'].append(rate)
         self.data['weight'].append(rup.weight or numpy.nan)
