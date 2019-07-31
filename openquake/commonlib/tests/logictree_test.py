@@ -39,8 +39,6 @@ from openquake.commonlib.source_model_factory import SourceModelFactory
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-
-from openquake.baselib import performance
 from openquake.commonlib.logictree import SourceModelLogicTree, GsimLogicTree
 
 
@@ -2322,11 +2320,10 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
 
         oqparam = readinput.get_oqparam(fname_ini)
         ssc_lt = SourceModelLogicTree(fname_ssc)
-        gmc_lt = GsimLogicTree(fname_gmc)
+        gs_lt = GsimLogicTree(fname_gmc)
 
-        mon = performance.Monitor()
         mags = [5.7, 5.98, 6.26, 6.54, 6.82, 7.1]
-        for sm in SourceModelFactory(oqparam, gmc_lt, ssc_lt, mon).get_models():
+        for sm in SourceModelFactory(oqparam, gs_lt, ssc_lt).get_models():
             for src in sm.src_groups[0]:
                 if src.source_id == 'a2':
                     self.assertEqual(src.mfd.max_mag, 6.5)

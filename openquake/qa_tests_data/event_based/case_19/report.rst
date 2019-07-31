@@ -3,8 +3,8 @@ Vancouver - 5 branches - 5 Years
 
 ============== ===================
 checksum32     2,220,417,399      
-date           2019-06-24T15:33:53
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:03:49
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -42,15 +42,10 @@ source_model_logic_tree `ssmLT_0.xml <ssmLT_0.xml>`_
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-2      JDFN      A    73    84    3,276        0.0       0.0       0.0    1,294,240,903
-2      AID       A    67    73    51,300       0.0       0.0       0.0    2,863,391,130
-1      CIS-15    C    17    67    8            0.0       0.0       0.0    115,938,974  
-1      AKC       A    9     17    42,525       0.0       0.0       0.0    520,868,549  
-0      GTP       A    0     9     1,971        0.0       0.0       0.0    2,228,117,419
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+========= ====== ==== ============ ========= ========= ====== =====
+source_id grp_id code num_ruptures calc_time num_sites weight speed
+========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ====== =====
 
 Computation times by source typology
 ------------------------------------
@@ -65,20 +60,20 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.71825 NaN    0.71825 0.71825 1      
+read_source_models 0.58201 NaN    0.58201 0.58201 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=313 B fnames=111 B 10.23 KB
+read_source_models converter=314 B fnames=104 B 10.22 KB
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_15468               time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.71825  0.0       1     
+total read_source_models 0.58201  0.67578   1     
 ======================== ======== ========= ======

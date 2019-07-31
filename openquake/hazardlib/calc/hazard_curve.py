@@ -100,7 +100,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     :returns:
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
-        .eff_ruptures
     """
     if not hasattr(src_filter, 'sitecol'):  # a sitecol was passed
         src_filter = SourceFilter(src_filter, {})
@@ -133,14 +132,12 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     pmap.trt = trt
-    rupdata = {grp_id: [] for grp_id in grp_ids}
-    # AccumDict of arrays with 2 elements weight, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
-    eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
-    nsites = {}  # src.id -> num_sites
+    rup_data = AccumDict(accum=[])
+    # AccumDict of arrays with 3 elements nrups, nsites, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    gids = []
     # Computing hazard
     for src, s_sites in src_filter(group):  # filter now
-        nsites[src.id] = src.nsites
         t0 = time.time()
         try:
             poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
@@ -156,13 +153,14 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         elif poemap:
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
-        if len(cmaker.rupdata):
+        if len(cmaker.data):
+            nr = len(cmaker.data['sid_'])
             for gid in src.src_group_ids:
-                rupdata[gid].append(cmaker.rupdata)
-        calc_times[src.id] += numpy.array([src.weight, time.time() - t0])
-        # storing the number of contributing ruptures too
-        eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
-                         for gid in src.src_group_ids}
+                gids.extend([gid] * nr)
+                for k, v in cmaker.data.items():
+                    rup_data[k].extend(v)
+        calc_times[src.id] += numpy.array(
+            [cmaker.nrups, cmaker.nsites, time.time() - t0])
     # Updating the probability map in the case of mutually exclusive
     # sources
     group_probability = getattr(group, 'grp_probability', None)
@@ -173,11 +171,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param, tom, imtls, gsims, grp_ids, pmap)
     # Return results
-    for gid, data in rupdata.items():
-        if len(data):
-            rupdata[gid] = numpy.concatenate(data)
-    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                rup_data=rupdata, nsites=nsites)
+    rdata = {k: numpy.array(v) for k, v in rup_data.items()}
+    rdata['grp_id'] = numpy.uint16(gids)
+    return dict(pmap=pmap, calc_times=calc_times, rup_data=rdata,
+                task_no=getattr(monitor, 'task_no', 0))
 
 
 def calc_hazard_curves(

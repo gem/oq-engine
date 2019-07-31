@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="20100227063414" shakemap_id="20100227063414" shakemap_version="1" code_version="3.5.1586" process_timestamp="2018-03-12T21:09:49Z" shakemap_originator="us" map_status="RELEASED" shakemap_event_type="ACTUAL">
+<event event_id="20100227063414" magnitude="8.8" depth="35" lat="-35.908900" lon="-72.732700" event_timestamp="2010-02-27T06:34:14UTC" event_network="us" event_description="Maule, Chile" />
+<grid_specification lon_min="-77.232700" lat_min="-41.173900" lon_max="-64.232700" lat_max="-30.643900" nominal_lon_spacing="0.008333" nominal_lat_spacing="0.008331" nlon="1561" nlat="1265" />
+<event_specific_uncertainty name="pga" value="0.570978" numsta="327" />
+<event_specific_uncertainty name="pgv" value="0.676098" numsta="321" />
+<event_specific_uncertainty name="mi" value="0.956069" numsta="327" />
+<event_specific_uncertainty name="psa03" value="0.621158" numsta="319" />
+<event_specific_uncertainty name="psa10" value="0.718369" numsta="319" />
+<event_specific_uncertainty name="psa30" value="0.686980" numsta="319" />
+<grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="PGA" units="pctg" />
+<grid_field index="4" name="PGV" units="cms" />
+<grid_field index="5" name="MMI" units="intensity" />
+<grid_field index="6" name="PSA03" units="pctg" />
+<grid_field index="7" name="PSA10" units="pctg" />
+<grid_field index="8" name="PSA30" units="pctg" />
+<grid_field index="9" name="STDPGA" units="ln(pctg)" />
+<grid_field index="10" name="URAT" units="" />
+<grid_field index="11" name="SVEL" units="ms" />
+<grid_data>
+0.0 0.0 10 174 5.61 25 3.04 66 0.6 1 600
+0.1 0.1 20 175 5.61 50 3.05 66 0.6 1 600
+0.0 0.1 30 175 5.61 60 3.06 66 0.6 1 600
+0.1 0.0 40 175 5.61 100 3.06 66 0.6 1 600
+</grid_data>
+</shakemap_grid>

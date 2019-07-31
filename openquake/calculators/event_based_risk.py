@@ -48,17 +48,17 @@ def build_loss_tables(dstore):
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
     for rec in dstore['losses_by_event'][()]:  # call .value for speed
-        idx = idx_by_ser[rec['eid'] // TWO32]
+        idx = idx_by_ser[rec['event_id'] // TWO32]
         tbl[idx] += rec['loss']
         lbr[rec['rlzi']] += rec['loss']
     return tbl, lbr
 
 
-def event_based_risk(riskinputs, riskmodel, param, monitor):
+def event_based_risk(riskinputs, crmodel, param, monitor):
     """
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param riskmodel:
+    :param crmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         a dictionary of parameters
@@ -67,7 +67,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    L = len(riskmodel.lti)
+    L = len(crmodel.lti)
     epspath = param['epspath']
     for ri in riskinputs:
         with monitor('getting hazard'):
@@ -89,12 +89,12 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
         # update the result dictionary and the agg array with each output
-        for out in riskmodel.gen_outputs(ri, monitor, epspath, hazard):
+        for out in ri.gen_outputs(crmodel, monitor, epspath, hazard):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
             agglosses = numpy.zeros((len(out.eids), L), F32)
-            for l, loss_type in enumerate(riskmodel.loss_types):
+            for l, loss_type in enumerate(crmodel.loss_types):
                 loss_ratios = out[loss_type]
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
@@ -157,7 +157,7 @@ class EbrCalculator(base.RiskCalculator):
         if not oq.ground_motion_fields:
             return  # this happens in the reportwriter
 
-        self.L = len(self.riskmodel.lti)
+        self.L = len(self.crmodel.lti)
         self.T = len(self.assetcol.tagcol)
         self.A = len(self.assetcol)
         if parent:
@@ -180,7 +180,7 @@ class EbrCalculator(base.RiskCalculator):
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['epspath'] = riskinput.cache_epsilons(
-            self.datastore, oq, self.assetcol, self.riskmodel, self.E)
+            self.datastore, oq, self.assetcol, self.crmodel, self.E)
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['stats'] = list(oq.hazard_stats().items())
@@ -276,7 +276,7 @@ class EbrCalculator(base.RiskCalculator):
         """
         logging.info('Saving event loss table')
         elt_dt = numpy.dtype(
-            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L,)))])
+            [('event_id', U64), ('rlzi', U16), ('loss', (F32, (self.L,)))])
         with self.monitor('saving event loss table', measuremem=True):
             agglosses = numpy.fromiter(
                 ((eid, rlz, losses)
