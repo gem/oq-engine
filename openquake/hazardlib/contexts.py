@@ -27,7 +27,7 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 
 F32 = numpy.float32
 KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth rvolc'.split())
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
 
 
 def get_distances(rupture, mesh, param):
@@ -53,6 +53,8 @@ def get_distances(rupture, mesh, param):
         dist = rupture.get_cdppvalue(mesh)
     elif param == 'azimuth':
         dist = rupture.surface.get_azimuth(mesh)
+    elif param == 'azimuth_cp':
+        dist = rupture.surface.get_azimuth_of_closest_point(mesh)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(mesh.lons)
@@ -95,12 +97,11 @@ class RupData(object):
         return {k: numpy.array(v) for k, v in self.data.items()}
 
     def add(self, rup, src_id, sites):
-        try:
-            rate = rup.occurrence_rate
-            probs_occur = numpy.zeros(0, numpy.float64)
-        except AttributeError:  # for nonparametric ruptures
-            rate = numpy.nan
+        rate = rup.occurrence_rate
+        if numpy.isnan(rate):  # for nonparametric ruptures
             probs_occur = rup.probs_occur
+        else:
+            probs_occur = numpy.zeros(0, numpy.float64)
         self.data['srcidx'].append(src_id or 0)
         self.data['occurrence_rate'].append(rate)
         self.data['weight'].append(rup.weight or numpy.nan)
