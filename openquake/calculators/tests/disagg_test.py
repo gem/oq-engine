@@ -126,6 +126,9 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_5(self):
         # this exercise gridded nonparametric sources
         self.run_calc(case_5.__file__, 'job.ini')
+        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
@@ -156,4 +159,3 @@ class DisaggregationTestCase(CalculatorTestCase):
         numpy.testing.assert_almost_equal(
             arr, [0.00000000e+00, 0.00000000e+00,
                   5.38093847e-05, 9.94706034e-03])
-
