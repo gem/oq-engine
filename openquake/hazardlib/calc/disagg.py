@@ -89,12 +89,12 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
         iml = gsim.to_distribution_values(iml2)
-        with pne_mon:
-            pne = numpy.zeros((M, P, E))
-            for m, imt in enumerate(iml2.imts):
-                mean, [stddev] = gsim.get_mean_and_stddevs(
-                    sitecol, rctx, dctx, imt, [const.StdDev.TOTAL])
-                for p, poe in enumerate(iml2.poes_disagg):
+        pne = numpy.zeros((M, P, E))
+        for m, imt in enumerate(iml2.imts):
+            mean, [stddev] = gsim.get_mean_and_stddevs(
+                sitecol, rctx, dctx, imt, [const.StdDev.TOTAL])
+            for p, poe in enumerate(iml2.poes_disagg):
+                with pne_mon:
                     pne[m, p] = _disaggregate_pne(
                         rctx, mean, stddev, iml[m, p], *eps3)
             acc['pnes'].append(pne)
@@ -374,7 +374,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        [[mat]] = _build_disagg_matrix(bdata[trt], bin_edges)
+        mat = _build_disagg_matrix(bdata[trt], bin_edges)[..., 0, 0, :]
         matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
