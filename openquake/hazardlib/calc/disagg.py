@@ -60,9 +60,6 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
     # disaggregate (separate) PoE in different contributions
     # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
     [sid] = sitecol.sids
-    M = len(iml2.imts)
-    P = len(iml2.poes_disagg)
-    E = len(eps3[2])  # number of epsilons
     acc = dict(pnes=[], mags=[], dists=[], lons=[], lats=[])
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
@@ -89,18 +86,14 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
         iml = gsim.to_distribution_values(iml2)
-        pne = numpy.zeros((M, P, E))
         mean_std = gsim.get_mean_std(sitecol, rctx, dctx, iml2.imts)
         with pne_mon:
-            for m, imt in enumerate(iml2.imts):
-                for p, poe in enumerate(iml2.poes_disagg):
-                    pne[m, p] = _disaggregate_pne(
-                        rctx, mean_std[:, :, m], iml[m, p], *eps3)
-        acc['pnes'].append(pne)
+            pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
+            acc['pnes'].append(pne)
     return pack(acc, 'mags dists lons lats pnes'.split())
 
 
-def _disaggregate_pne(rupture, mean_std, iml, truncnorm,
+def _disaggregate_pne(rupture, mean_std, imls, truncnorm,
                       epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
@@ -110,30 +103,31 @@ def _disaggregate_pne(rupture, mean_std, iml, truncnorm,
         from different sigma bands in the form of a 2D numpy array of
         probabilities with shape (n_sites, n_epsilons)
     """
-    # compute iml value with respect to standard (mean=0, std=1)
-    # normal distributions
-    [lvl] = (iml - mean_std[0]) / mean_std[1]
-
-    # take the minimum epsilon larger than standard_iml
-    bin = numpy.searchsorted(epsilons, lvl)
     n_epsilons = len(epsilons) - 1
-    if bin == 0:
-        poes = eps_bands
-    elif bin > n_epsilons:
-        poes = numpy.zeros(n_epsilons)
-    else:
-        # for other cases (when ``lvl`` falls somewhere in the
-        # histogram):
-        poes = numpy.concatenate([
-            # take zeros for bins that are on the left hand side
-            # from the bin ``lvl`` falls into,
-            numpy.zeros(bin - 1),
-            # ... area of the portion of the bin containing ``lvl``
-            # (the portion is limited on the left hand side by
-            # ``lvl`` and on the right hand side by the bin edge),
-            [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
-            # ... and all bins on the right go unchanged.
-            eps_bands[bin:]])
+    poes = numpy.zeros(imls.shape + (n_epsilons,))
+    for (m, p), iml in numpy.ndenumerate(imls):
+        # compute iml value with respect to standard (mean=0, std=1)
+        # normal distributions
+        [lvl] = (iml - mean_std[0, :, m]) / mean_std[1, :, m]
+        # take the minimum epsilon larger than standard_iml
+        bin = numpy.searchsorted(epsilons, lvl)
+        if bin == 0:
+            poes[m, p] = eps_bands
+        elif bin > n_epsilons:
+            poes[m, p] = numpy.zeros(n_epsilons)
+        else:
+            # for other cases (when ``lvl`` falls somewhere in the
+            # histogram):
+            poes[m, p] = numpy.concatenate([
+                # take zeros for bins that are on the left hand side
+                # from the bin ``lvl`` falls into,
+                numpy.zeros(bin - 1),
+                # ... area of the portion of the bin containing ``lvl``
+                # (the portion is limited on the left hand side by
+                # ``lvl`` and on the right hand side by the bin edge),
+                [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
+                # ... and all bins on the right go unchanged.
+                eps_bands[bin:]])
     return rupture.get_probability_no_exceedance(poes)
 
 
@@ -220,7 +214,7 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
         bins = get_bins(bin_edges, sid)
         bdata = _disaggregate(cmaker, singlesitecol, rupdata,
                               indices[sid], iml2, eps3, pne_mon)
-        if len(bdata.mags):
+        if bdata.pnes.sum():
             with mat_mon:
                 mat = _build_disagg_matrix(bdata, bins)
                 if mat.any():  # nonzero
