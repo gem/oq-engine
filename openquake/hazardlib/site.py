@@ -119,6 +119,12 @@ site_param_dt = {
     'siteclass': (numpy.string_, 1),
     'backarc': numpy.bool,
 
+    # Parameters for site amplification
+    'ec8': (numpy.string_, 1),
+    'ec8_p18': (numpy.string_, 2),
+    'h800': numpy.float64,
+    'geology': (numpy.string_, 20),
+
     # parameters for geotechnic hazard
     'liquefaction_susceptibility': numpy.int16,
     'landsliding_susceptibility': numpy.int16,
