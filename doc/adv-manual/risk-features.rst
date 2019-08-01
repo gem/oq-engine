@@ -30,14 +30,14 @@ original exposure. If in the future we will be able to get specific
 risk functions, then we will just remove the taxonomy mapping.
 This usage of the taxonomy mapping (use proxies for missing risk
 functions) is pretty useful, but there is also another usage which
-is even for interesting.
+is even more interesting.
 
-Consider a situation where there are be doubts about the precise
+Consider a situation where there are doubts about the precise
 composition of the exposure. For instance we may know than in a given
 geographic region 20% of the building of type "Wood" are of "Wood Type
 A", 30% of "Wood Type B" and 50% of "Wood Type C", corresponding to
 different risk functions, but do not know building per building
-what it his precise taxonomy, so we just use a generic "Wood"
+what it its precise taxonomy, so we just use a generic "Wood"
 taxonomy in the exposure. We may encode the weight information into a
 `taxonomy_mapping.csv` file like the following:
 
