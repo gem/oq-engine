@@ -314,7 +314,7 @@ class ContextMaker(object):
             initvalue=rup_indep)
         for rup, sids, mean_std in self.gen_rup_mean_std(src, s_sites):
             with self.poe_mon:
-                pnes = self._make_pnes(rup, sids, mean_std, imtls, trunclevel)
+                pnes = self._make_pnes(rup, sids, mean_std, trunclevel)
                 for sid, pne in zip(sids, pnes):
                     if rup_indep:
                         pmap[sid].array *= pne
@@ -325,7 +325,8 @@ class ContextMaker(object):
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, sids, mean_std, imtls, trunclevel):
+    def _make_pnes(self, rupture, sids, mean_std, trunclevel):
+        imtls = self.imtls
         nsites = len(sids)
         pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
