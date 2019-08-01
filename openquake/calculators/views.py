@@ -625,9 +625,9 @@ def view_task_hazard(token, dstore):
     st = [stats('nsites', arr['num_sites'] / arr['eff_ruptures']),
           stats('eff_ruptures', arr['eff_ruptures'])]
     srcs = arr['source_id']
-    res = ('taskno=%d, duration=%d s, sources="%s"\n\n'
+    res = ('\ntaskno=%d, duration=%d s, sources="%s"'
            % (taskno, rec['duration'], ' '.join(srcs)))
-    return res + rst_table(st, header='variable mean stddev min max n'.split())
+    return rst_table(st, header='variable mean stddev min max n'.split()) + res
 
 
 @view.add('task_risk')
