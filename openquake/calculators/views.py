@@ -184,14 +184,14 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info']['source_id', 'grp_id', 'code', 'num_ruptures',
-                                 'calc_time', 'num_sites', 'weight']
+                                 'calc_time', 'num_sites', 'eff_ruptures']
     info = info[info['calc_time'] > 0]
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names]
                        + [('speed', float)])
     for name in info.dtype.names:
         data[name] = info[name]
-    data['speed'] = info['weight'] / info['calc_time']
+    data['speed'] = info['eff_ruptures'] / info['calc_time']
     return rst_table(data[::-1][:maxrows])
 
 
@@ -620,12 +620,13 @@ def view_task_hazard(token, dstore):
     rec = data[int(index)]
     taskno = rec['taskno']
     srcids = dstore['sources_by_task'][taskno]
-    arr = dstore['source_info']['source_id', 'num_sites', 'weight'][srcids]
-    st = [stats('nsites', arr['num_sites'] / arr['weight']),
-          stats('weight', arr['weight'])]
+    arr = dstore['source_info'][
+        'source_id', 'num_sites', 'eff_ruptures'][srcids]
+    st = [stats('nsites', arr['num_sites'] / arr['eff_ruptures']),
+          stats('eff_ruptures', arr['eff_ruptures'])]
     srcs = arr['source_id']
-    res = ('taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n'
-           % (taskno, rec['weight'], rec['duration'], ' '.join(srcs)))
+    res = ('taskno=%d, duration=%d s, sources="%s"\n\n'
+           % (taskno, rec['duration'], ' '.join(srcs)))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
 
 
