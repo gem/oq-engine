@@ -129,14 +129,22 @@ class ClassicalCalculator(base.HazardCalculator):
         :param dic: dict with keys pmap, calc_times, rup_data
         """
         with self.monitor('aggregate curves', autoflush=True):
-            self.calc_times += dic['calc_times']
-            srcids = U32(sorted(dic['calc_times']))
-            self.sources_by_task[dic['task_no']] = srcids
+            d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
+            self.calc_times += d
+            srcids = []
+            eff_rups = 0
+            eff_sites = 0
+            for srcid, rec in d.items():
+                srcids.append(srcid)
+                eff_rups += rec[0]
+                if rec[0]:
+                    eff_sites += rec[1] / rec[0]
+            self.sources_by_task[dic['task_no']] = (
+                eff_rups, eff_sites, U32(srcids))
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
-                for src_id, (nr, ns, dt) in dic['calc_times'].items():
-                    acc.eff_ruptures[grp_id] += nr
+                acc.eff_ruptures[grp_id] += eff_rups
 
             rup_data = dic['rup_data']
             if len(rup_data['grp_id']):
@@ -205,9 +213,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.store_source_info(self.calc_times)
             if self.sources_by_task:
                 num_tasks = max(self.sources_by_task) + 1
-                sbt = numpy.zeros(num_tasks, hdf5.vuint32)
+                sbt = numpy.zeros(
+                    num_tasks, [('eff_ruptures', U32),
+                                ('eff_sites', U32),
+                                ('srcids', hdf5.vuint32)])
                 for task_no in range(num_tasks):
-                    sbt[task_no] = self.sources_by_task.get(task_no, U32([]))
+                    sbt[task_no] = self.sources_by_task.get(
+                        task_no, (0, 0, U32([])))
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
         if not self.calc_times:
