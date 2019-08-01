@@ -303,9 +303,7 @@ class ContextMaker(object):
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
-        eff_ruptures = 0
         for rup, sctx, dctx in self.gen_rup_contexts(src, s_sites):
-            eff_ruptures += 1
             with self.poe_mon:
                 pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
                 for sid, pne in zip(sctx.sids, pnes):
@@ -315,7 +313,6 @@ class ContextMaker(object):
                         pmap[sid].array += (1.-pne) * rup.weight
         if rup_indep:
             pmap = ~pmap
-        pmap.eff_ruptures = eff_ruptures
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
