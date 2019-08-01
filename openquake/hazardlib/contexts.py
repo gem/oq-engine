@@ -124,7 +124,7 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, trt, gsims, param, monitor=Monitor()):
+    def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.trt = trt
