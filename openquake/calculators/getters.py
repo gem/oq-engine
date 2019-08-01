@@ -301,7 +301,8 @@ class GmfGetter(object):
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
             if isinstance(oqparam.maximum_distance, dict)
             else oqparam.maximum_distance,
-            {'filter_distance': oqparam.filter_distance})
+            {'filter_distance': oqparam.filter_distance,
+             'imtls': oqparam.imtls})
         self.correl_model = oqparam.correl_model
 
     @property
