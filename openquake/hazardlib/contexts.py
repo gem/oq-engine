@@ -124,13 +124,13 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, trt, gsims, maximum_distance=None, param=None,
-                 monitor=Monitor()):
+    def __init__(self, trt, gsims, param, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.trt = trt
         self.gsims = gsims
-        self.maximum_distance = maximum_distance or IntegrationDistance({})
+        self.maximum_distance = (
+            param.get('maximum_distance') or IntegrationDistance({}))
         self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
@@ -146,7 +146,8 @@ class ContextMaker(object):
             else:
                 filter_distance = 'rrup'
         self.filter_distance = filter_distance
-        self.imts = [imt_module.from_string(imt) for imt in param['imtls']]
+        self.imtls = param.get('imtls', {})
+        self.imts = [imt_module.from_string(imt) for imt in self.imtls]
         self.reqv = param.get('reqv')
         self.REQUIRES_DISTANCES.add(self.filter_distance)
         if self.reqv is not None:
@@ -299,15 +300,15 @@ class ContextMaker(object):
             for rup in src.iter_ruptures():
                 yield rup, sites
 
-    def poe_map(self, src, s_sites, imtls, trunclevel, rup_indep=True):
+    def poe_map(self, src, s_sites, trunclevel, rup_indep=True):
         """
         :param src: a source object
         :param s_sites: a filtered SiteCollection of sites around the source
-        :param imtls: intensity measure and levels
         :param trunclevel: truncation level
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
+        imtls = self.imtls
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
