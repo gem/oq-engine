@@ -131,9 +131,16 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('aggregate curves', autoflush=True):
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
-            srcids = U32(sorted(d))
-            eff_rups = sum(d[srcid][0] for srcid in d)
-            self.sources_by_task[dic['task_no']] = (eff_rups, srcids)
+            srcids = []
+            eff_rups = 0
+            eff_sites = 0
+            for srcid, rec in d.items():
+                srcids.append(srcid)
+                eff_rups += rec[0]
+                if rec[0]:
+                    eff_sites += rec[1] / rec[0]
+            self.sources_by_task[dic['task_no']] = (
+                eff_rups, eff_sites, U32(srcids))
             for grp_id, pmap in dic['pmap'].items():
                 if pmap:
                     acc[grp_id] |= pmap
@@ -207,10 +214,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 num_tasks = max(self.sources_by_task) + 1
                 sbt = numpy.zeros(
                     num_tasks, [('eff_ruptures', U32),
+                                ('eff_sites', U32),
                                 ('srcids', hdf5.vuint32)])
                 for task_no in range(num_tasks):
                     sbt[task_no] = self.sources_by_task.get(
-                        task_no, (0, U32([])))
+                        task_no, (0, 0, U32([])))
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
         if not self.calc_times:
