@@ -123,9 +123,10 @@ def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
         oq.investigation_time)
     pne_mon = monitor('disaggregate_pne', measuremem=False)
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
+    gmf_mon = monitor('computing mean_std', measuremem=False)
     for sid, arr in disagg.build_matrices(
             rupdata, sitecol, cmaker, iml2s, oq.truncation_level,
-            oq.num_epsilon_bins, bin_edges, pne_mon, mat_mon):
+            oq.num_epsilon_bins, bin_edges, pne_mon, mat_mon, gmf_mon):
         result[sid] = arr
     return result  # sid -> array
 
