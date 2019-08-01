@@ -26,9 +26,9 @@ import operator
 import numpy
 import scipy.stats
 
-from openquake.hazardlib import pmf, contexts, const
+from openquake.hazardlib import pmf, contexts
 from openquake.baselib import hdf5, performance
-from openquake.baselib.general import pack, groupby, AccumDict
+from openquake.baselib.general import pack, groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -56,13 +56,11 @@ def _site_indices(sids_by_rup, N):
 
 
 def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
-                  pne_mon=performance.Monitor()):
+                  pne_mon=performance.Monitor(),
+                  gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
     # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
     [sid] = sitecol.sids
-    M = len(iml2.imts)
-    P = len(iml2.poes_disagg)
-    E = len(eps3[2])  # number of epsilons
     acc = dict(pnes=[], mags=[], dists=[], lons=[], lats=[])
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
@@ -88,21 +86,16 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['lons'].append(rctx.lon_[sidx])
         acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
-        iml = gsim.to_distribution_values(iml2)
-        pne = numpy.zeros((M, P, E))
-        for m, imt in enumerate(iml2.imts):
-            mean, [stddev] = gsim.get_mean_and_stddevs(
-                sitecol, rctx, dctx, imt, [const.StdDev.TOTAL])
-            for p, poe in enumerate(iml2.poes_disagg):
-                with pne_mon:
-                    pne[m, p] = _disaggregate_pne(
-                        rctx, mean, stddev, iml[m, p], *eps3)
-        acc['pnes'].append(pne)
+        with gmf_mon:
+            mean_std = gsim.get_mean_std(sitecol, rctx, dctx, iml2.imts)
+        with pne_mon:
+            iml = gsim.to_distribution_values(iml2)
+            pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
+            acc['pnes'].append(pne)
     return pack(acc, 'mags dists lons lats pnes'.split())
 
 
-def _disaggregate_pne(rupture, mean, stddev, iml, truncnorm,
-                      epsilons, eps_bands):
+def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
@@ -111,30 +104,31 @@ def _disaggregate_pne(rupture, mean, stddev, iml, truncnorm,
         from different sigma bands in the form of a 2D numpy array of
         probabilities with shape (n_sites, n_epsilons)
     """
-    # compute iml value with respect to standard (mean=0, std=1)
-    # normal distributions
-    [lvl] = (iml - mean) / stddev
-
-    # take the minimum epsilon larger than standard_iml
-    bin = numpy.searchsorted(epsilons, lvl)
     n_epsilons = len(epsilons) - 1
-    if bin == 0:
-        poes = eps_bands
-    elif bin > n_epsilons:
-        poes = numpy.zeros(n_epsilons)
-    else:
-        # for other cases (when ``lvl`` falls somewhere in the
-        # histogram):
-        poes = numpy.concatenate([
-            # take zeros for bins that are on the left hand side
-            # from the bin ``lvl`` falls into,
-            numpy.zeros(bin - 1),
-            # ... area of the portion of the bin containing ``lvl``
-            # (the portion is limited on the left hand side by
-            # ``lvl`` and on the right hand side by the bin edge),
-            [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
-            # ... and all bins on the right go unchanged.
-            eps_bands[bin:]])
+    poes = numpy.zeros(imls.shape + (n_epsilons,))
+    for (m, p), iml in numpy.ndenumerate(imls):
+        # compute iml value with respect to standard (mean=0, std=1)
+        # normal distributions
+        [lvl] = (iml - mean_std[0, :, m]) / mean_std[1, :, m]
+        # take the minimum epsilon larger than standard_iml
+        bin = numpy.searchsorted(epsilons, lvl)
+        if bin == 0:
+            poes[m, p] = eps_bands
+        elif bin > n_epsilons:
+            poes[m, p] = numpy.zeros(n_epsilons)
+        else:
+            # for other cases (when ``lvl`` falls somewhere in the
+            # histogram):
+            poes[m, p] = numpy.concatenate([
+                # take zeros for bins that are on the left hand side
+                # from the bin ``lvl`` falls into,
+                numpy.zeros(bin - 1),
+                # ... area of the portion of the bin containing ``lvl``
+                # (the portion is limited on the left hand side by
+                # ``lvl`` and on the right hand side by the bin edge),
+                [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
+                # ... and all bins on the right go unchanged.
+                eps_bands[bin:]])
     return rupture.get_probability_no_exceedance(poes)
 
 
@@ -208,7 +202,8 @@ def _build_disagg_matrix(bdata, bins):
 
 # called by the engine
 def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
-                   num_epsilon_bins, bin_edges, pne_mon, mat_mon):
+                   num_epsilon_bins, bin_edges,
+                   pne_mon, mat_mon, gmf_mon):
     """
     :yield: (sid, {poe, imt, rlz: matrix})
     """
@@ -220,8 +215,8 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         bdata = _disaggregate(cmaker, singlesitecol, rupdata,
-                              indices[sid], iml2, eps3, pne_mon)
-        if len(bdata.mags):
+                              indices[sid], iml2, eps3, pne_mon, gmf_mon)
+        if bdata.pnes.sum():
             with mat_mon:
                 mat = _build_disagg_matrix(bdata, bins)
                 if mat.any():  # nonzero
