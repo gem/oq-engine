@@ -229,8 +229,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         csm_info = self.datastore['csm_info']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
-        R = len(self.rlzs_assoc.realizations)
-
         if oq.rlz_index is None:
             try:
                 rlzs = self.datastore['best_rlz'][()]
@@ -301,8 +299,9 @@ class DisaggregationCalculator(base.HazardCalculator):
             trti = trt_num[trt]
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
-                trt, rlzs_by_gsim, src_filter.integration_distance,
-                {'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
+                trt, rlzs_by_gsim,
+                {'maximum_distance': src_filter.integration_distance,
+                 'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
             for start, stop in indices_by_grp[grp_id]:
                 for slc in gen_slices(start, stop, blocksize):
                     allargs.append((self.datastore, slc, cmaker,

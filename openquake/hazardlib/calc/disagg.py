@@ -329,8 +329,9 @@ def disaggregation(
     eps3 = _eps3(truncation_level, n_epsilons)
     for trt, srcs in by_trt.items():
         cmaker = ContextMaker(
-            trt, rlzs_by_gsim, source_filter.integration_distance,
-            {'filter_distance': filter_distance, 'imtls': {str(imt): [iml]}})
+            trt, rlzs_by_gsim,
+            {'maximum_distance': source_filter.integration_distance,
+             'filter_distance': filter_distance, 'imtls': {str(imt): [iml]}})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
         rdata = contexts.RupData(cmaker).from_srcs(srcs, sitecol)
