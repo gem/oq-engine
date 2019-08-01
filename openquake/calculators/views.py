@@ -619,14 +619,12 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['taskno']
-    eff_ruptures, srcids = dstore['sources_by_task'][taskno]
-    arr = dstore['source_info'][
-        'source_id', 'num_sites', 'eff_ruptures'][srcids]
-    st = [stats('nsites', arr['num_sites'] / arr['eff_ruptures'])]
-    srcs = arr['source_id']
-    res = '\ntaskno=%d, eff_ruptures=%d, duration=%d s, sources="%s"' % (
-        taskno, eff_ruptures, rec['duration'], ' '.join(srcs))
-    return rst_table(st, header='variable mean stddev min max n'.split()) + res
+    eff_ruptures, eff_sites, srcids = dstore['sources_by_task'][taskno]
+    srcs = dstore['source_info']['source_id'][srcids]
+    res = ('taskno=%d, eff_ruptures=%d, eff_sites=%d, duration=%d s\n'
+           'sources="%s"' % (taskno, eff_ruptures, eff_sites, rec['duration'],
+                             ' '.join(srcs)))
+    return res
 
 
 @view.add('task_risk')
