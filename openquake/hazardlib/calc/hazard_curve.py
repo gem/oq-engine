@@ -68,12 +68,12 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
 
-def _cluster(param, tom, imtls, gsims, grp_ids, pmap):
+def _cluster(param, tom, gsims, grp_ids, pmap):
     """
     Computes the probability map in case of a cluster group
     """
-    pmapclu = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
-                         for grp_id in grp_ids})
+    M, G = len(param['imtls'].array), len(gsims)
+    pmapclu = AccumDict({grp_id: ProbabilityMap(M, G) for grp_id in grp_ids})
     # Get temporal occurrence model
     # Number of occurrences for the cluster
     first = True
@@ -123,11 +123,11 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         grp_ids.update(src.src_group_ids)
         trts.add(src.tectonic_region_type)
     # Now preparing context
-    maxdist = src_filter.integration_distance
+    param['maximum_distance'] = src_filter.integration_distance
     imtls = param['imtls']
     trunclevel = param.get('truncation_level')
     [trt] = trts  # there must be a single tectonic region type
-    cmaker = ContextMaker(trt, gsims, maxdist, param, monitor)
+    cmaker = ContextMaker(trt, gsims, param, monitor)
     # Prepare the accumulator for the probability maps
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
@@ -140,7 +140,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     for src, s_sites in src_filter(group):  # filter now
         t0 = time.time()
         try:
-            poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
+            poemap = cmaker.poe_map(src, s_sites, trunclevel,
                                     rup_indep=not rup_mutex)
         except Exception as err:
             etype, err, tb = sys.exc_info()
@@ -169,7 +169,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Processing cluster
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
-        pmap = _cluster(param, tom, imtls, gsims, grp_ids, pmap)
+        pmap = _cluster(param, tom, gsims, grp_ids, pmap)
     # Return results
     rdata = {k: numpy.array(v) for k, v in rup_data.items()}
     rdata['grp_id'] = numpy.uint16(gids)
