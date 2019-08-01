@@ -3,6 +3,8 @@
     rupture
 
   [Michele Simionato]
+  * Fixed a regression in disaggregation with nonparametric sources, which
+    were effectively discarded
   * The site amplification has been disabled by default in the ShakeMap
     calculator, since it is usually already taken into account by the USGS
 
