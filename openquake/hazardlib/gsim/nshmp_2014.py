@@ -110,9 +110,8 @@ def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         sgn = 0
     else:
         raise NameError(cname)
-    sup = super(self.__class__, self)  # works for single inheritance
-    mean, stddevs = sup.get_mean_and_stddevs(
-        sctx, rctx, dctx, imt, stddev_types)
+    mean, stddevs = self.__class__.__base__.get_mean_and_stddevs(
+        self, sctx, rctx, dctx, imt, stddev_types)
 
     # return mean, increased by the adjustment factor, and standard deviation
     self.adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
@@ -138,8 +137,8 @@ def get_weighted_poes(gsim, mean_std, imls, truncation_level,
     output = np.zeros([len(mean), len(imls)])
     for w, s in weighting:
         mean_std[0] = mean + s * gsim.adjustment
-        output += super(gsim.__class__, gsim).get_poes(
-            mean_std, imls, truncation_level) * w
+        output += gsim.__class__.__base__.get_poes(
+            gsim, mean_std, imls, truncation_level) * w
     return output
 
 
