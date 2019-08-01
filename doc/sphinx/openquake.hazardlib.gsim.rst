@@ -748,6 +748,14 @@ sadigh_1997
     :undoc-members:
     :show-inheritance:
 
+sera_amplification_models
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sera_amplification_models
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 shahjouei_pezeshk_2016
 --------------------------------------------
 
