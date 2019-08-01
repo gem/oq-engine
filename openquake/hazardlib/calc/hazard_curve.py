@@ -72,8 +72,8 @@ def _cluster(param, tom, gsims, grp_ids, pmap):
     """
     Computes the probability map in case of a cluster group
     """
-    M, G = len(param['imtls'].array), len(gsims)
-    pmapclu = AccumDict({grp_id: ProbabilityMap(M, G) for grp_id in grp_ids})
+    L, G = len(param['imtls'].array), len(gsims)
+    pmapclu = AccumDict({grp_id: ProbabilityMap(L, G) for grp_id in grp_ids})
     # Get temporal occurrence model
     # Number of occurrences for the cluster
     first = True
