@@ -303,7 +303,10 @@ class ContextMaker(object):
             nsites += len(sctx)
             if fewsites:  # store rupdata
                 rupdata.add(rup, src.id, sctx)
-        return poemap, nrups, nsites, rupdata.data
+        poemap.nrups = nrups
+        poemap.nsites = nsites
+        poemap.data = rupdata.data
+        return poemap
 
     def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
@@ -344,8 +347,7 @@ class ContextMaker(object):
             t0 = time.time()
             try:
                 src, s_sites = next(it)
-                poemap, nrups, nsites, data = self.get_pmap(
-                    src, s_sites, not rup_mutex)
+                poemap = self.get_pmap(src, s_sites, not rup_mutex)
                 _update(pmap, poemap, src, src_mutex, rup_mutex)
             except StopIteration:
                 break
@@ -353,14 +355,14 @@ class ContextMaker(object):
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
                 raise etype(msg).with_traceback(tb)
-            if len(data):
-                nr = len(data['sid_'])
+            if len(poemap.data):
+                nr = len(poemap.data['sid_'])
                 for gid in src.src_group_ids:
                     gids.extend([gid] * nr)
-                    for k, v in data.items():
+                    for k, v in poemap.data.items():
                         rup_data[k].extend(v)
-            dt = time.time() - t0
-            calc_times[src.id] += numpy.array([nrups, nsites, dt])
+            calc_times[src.id] += numpy.array(
+                [poemap.nrups, poemap.nsites, time.time() - t0])
 
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         rdata['grp_id'] = numpy.uint16(gids)
