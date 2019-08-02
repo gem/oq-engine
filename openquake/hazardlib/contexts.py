@@ -328,7 +328,7 @@ class ContextMaker(object):
             for rup in src.iter_ruptures():
                 yield rup, sites
 
-    def compute_pmap(self, src_sites, src_mutex=False, rup_mutex=False):
+    def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
         """
         :param src_sites: an iterator of pairs (source, sites)
         :param src_mutex: True if the sources are mutually exclusive
