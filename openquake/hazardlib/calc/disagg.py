@@ -201,7 +201,7 @@ def _build_disagg_matrix(bdata, bins):
 
 
 # called by the engine
-def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
+def build_matrices(rupdata, sitecol, cmaker, iml2s,
                    num_epsilon_bins, bin_edges,
                    pne_mon, mat_mon, gmf_mon):
     """
@@ -210,7 +210,7 @@ def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
     if len(sitecol) >= 32768:
         raise ValueError('You can disaggregate at max 32,768 sites')
     indices = _site_indices(rupdata['sid_'], len(sitecol))
-    eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
+    eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)  # this is slow
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
@@ -330,7 +330,8 @@ def disaggregation(
     for trt, srcs in by_trt.items():
         cmaker = ContextMaker(
             trt, rlzs_by_gsim,
-            {'maximum_distance': source_filter.integration_distance,
+            {'truncation_level': truncation_level,
+             'maximum_distance': source_filter.integration_distance,
              'filter_distance': filter_distance, 'imtls': {str(imt): [iml]}})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
