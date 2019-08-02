@@ -296,12 +296,13 @@ class GmfGetter(object):
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
         M32 = (F32, len(oqparam.imtls))
         self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U64)])
+        md = (calc.filters.IntegrationDistance(oqparam.maximum_distance)
+              if isinstance(oqparam.maximum_distance, dict)
+              else oqparam.maximum_distance)
+        param = {'filter_distance': oqparam.filter_distance,
+                 'imtls': oqparam.imtls, 'maximum_distance': md}
         self.cmaker = ContextMaker(
-            rupgetter.trt, rupgetter.rlzs_by_gsim,
-            calc.filters.IntegrationDistance(oqparam.maximum_distance)
-            if isinstance(oqparam.maximum_distance, dict)
-            else oqparam.maximum_distance,
-            {'filter_distance': oqparam.filter_distance})
+            rupgetter.trt, rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model
 
     @property
