@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import abc
+import sys
+import time
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -301,7 +303,39 @@ class ContextMaker(object):
             for rup in src.iter_ruptures():
                 yield rup, sites
 
-    def poe_map(self, src, s_sites, rup_indep=True):
+    def update_pmap(self, pmap, src_sites, src_mutex=False, rup_mutex=False):
+        gids = []
+        rup_data = AccumDict(accum=[])
+        # AccumDict of arrays with 3 elements nrups, nsites, calc_time
+        calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+        for src, s_sites in src_sites:
+            t0 = time.time()
+            try:
+                poemap = self._poe_map(src, s_sites, not rup_mutex)
+            except Exception as err:
+                etype, err, tb = sys.exc_info()
+                msg = '%s (source id=%s)' % (str(err), src.source_id)
+                raise etype(msg).with_traceback(tb)
+            if poemap and src_mutex:
+                for gid in src.src_group_ids:
+                    pmap[gid] += poemap * src.mutex_weight
+            elif poemap:
+                for gid in src.src_group_ids:
+                    pmap[gid] |= poemap
+            if len(self.data):
+                nr = len(self.data['sid_'])
+                for gid in src.src_group_ids:
+                    gids.extend([gid] * nr)
+                    for k, v in self.data.items():
+                        rup_data[k].extend(v)
+            calc_times[src.id] += numpy.array(
+                [self.nrups, self.nsites, time.time() - t0])
+
+        rdata = {k: numpy.array(v) for k, v in rup_data.items()}
+        rdata['grp_id'] = numpy.uint16(gids)
+        return rdata, calc_times
+
+    def _poe_map(self, src, s_sites, rup_indep=True):
         """
         :param src: a source object
         :param s_sites: a filtered SiteCollection of sites around the source
