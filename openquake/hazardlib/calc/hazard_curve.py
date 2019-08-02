@@ -140,8 +140,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     for src, s_sites in src_filter(group):  # filter now
         t0 = time.time()
         try:
-            poemap = cmaker.poe_map(src, s_sites, trunclevel,
-                                    rup_indep=not rup_mutex)
+            poemap = cmaker.poe_map(src, s_sites, rup_indep=not rup_mutex)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = '%s (source id=%s)' % (str(err), src.source_id)

@@ -125,7 +125,7 @@ def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
     mat_mon = monitor('build_disagg_matrix', measuremem=False)
     gmf_mon = monitor('computing mean_std', measuremem=False)
     for sid, arr in disagg.build_matrices(
-            rupdata, sitecol, cmaker, iml2s, oq.truncation_level,
+            rupdata, sitecol, cmaker, iml2s,
             oq.num_epsilon_bins, bin_edges, pne_mon, mat_mon, gmf_mon):
         result[sid] = arr
     return result  # sid -> array
@@ -300,7 +300,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim,
-                {'maximum_distance': src_filter.integration_distance,
+                {'truncation_level': oq.truncation_level,
+                 'maximum_distance': src_filter.integration_distance,
                  'filter_distance': oq.filter_distance, 'imtls': oq.imtls})
             for start, stop in indices_by_grp[grp_id]:
                 for slc in gen_slices(start, stop, blocksize):
