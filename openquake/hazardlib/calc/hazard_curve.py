@@ -124,14 +124,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         trts.add(src.tectonic_region_type)
     # Now preparing context
     param['maximum_distance'] = src_filter.integration_distance
-    imtls = param['imtls']
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
-    # Prepare the accumulator for the probability maps
-    pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
-                      for grp_id in grp_ids})
-    rup_data, calc_times = cmaker.update_pmap(
-        pmap, src_filter(group), src_mutex, rup_mutex)
+    pmap, rup_data, calc_times = cmaker.compute_pmap(
+        src_filter(group), src_mutex, rup_mutex)
 
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:

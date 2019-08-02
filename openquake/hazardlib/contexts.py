@@ -303,15 +303,34 @@ class ContextMaker(object):
             for rup in src.iter_ruptures():
                 yield rup, sites
 
-    def update_pmap(self, pmap, src_sites, src_mutex=False, rup_mutex=False):
+    def compute_pmap(self, src_sites, src_mutex=False, rup_mutex=False):
+        """
+        :param src_sites: an iterator of pairs (source, sites)
+        :param src_mutex: True if the sources are mutually exclusive
+        :param rup_mutex: True if the ruptures are mutually exclusive
+        """
+        imtls = self.imtls
+        L, G = len(imtls.array), len(self.gsims)
+        pmap = AccumDict(accum=ProbabilityMap(L, G))
         gids = []
         rup_data = AccumDict(accum=[])
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+        rup_indep = not rup_mutex
         for src, s_sites in src_sites:
             t0 = time.time()
             try:
-                poemap = self._poe_map(src, s_sites, not rup_mutex)
+                poemap = ProbabilityMap(L, G)
+                for rup, sids, mean_std in self.gen_rup_mean_std(src, s_sites):
+                    with self.poe_mon:
+                        for sid, pne in self._make_pnes(rup, sids, mean_std):
+                            pcurve = poemap.setdefault(sid, rup_indep)
+                            if rup_indep:
+                                pcurve.array *= pne
+                            else:
+                                pcurve.array += (1.-pne) * rup.weight
+                if rup_indep:
+                    poemap = ~poemap
             except Exception as err:
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
@@ -333,30 +352,7 @@ class ContextMaker(object):
 
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         rdata['grp_id'] = numpy.uint16(gids)
-        return rdata, calc_times
-
-    def _poe_map(self, src, s_sites, rup_indep=True):
-        """
-        :param src: a source object
-        :param s_sites: a filtered SiteCollection of sites around the source
-        :param rup_indep: True if the ruptures are independent
-        :returns: a ProbabilityMap instance
-        """
-        imtls = self.imtls
-        L, G = len(imtls.array), len(self.gsims)
-        pmap = ProbabilityMap(L, G)
-        for rup, sids, mean_std in self.gen_rup_mean_std(src, s_sites):
-            with self.poe_mon:
-                pnes = self._make_pnes(rup, sids, mean_std)
-                for sid, pne in zip(sids, pnes):
-                    pcurve = pmap.setdefault(sid, rup_indep)
-                    if rup_indep:
-                        pcurve.array *= pne
-                    else:
-                        pcurve.array += (1.-pne) * rup.weight
-        if rup_indep:
-            pmap = ~pmap
-        return pmap
+        return pmap, rdata, calc_times
 
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, sids, mean_std):
@@ -375,7 +371,7 @@ class ContextMaker(object):
                         mean_std[i, :, :, m], imtls[imt], self.trunclevel)
                     pno = rupture.get_probability_no_exceedance(poes)
                 pne_array[:, slc, i] = pno
-        return pne_array
+        return zip(sids, pne_array)
 
 
 class BaseContext(metaclass=abc.ABCMeta):
