@@ -308,6 +308,7 @@ class ContextMaker(object):
         :param src_sites: an iterator of pairs (source, sites)
         :param src_mutex: True if the sources are mutually exclusive
         :param rup_mutex: True if the ruptures are mutually exclusive
+        :return: dictionaries pmap, rdata, calc_times
         """
         imtls = self.imtls
         L, G = len(imtls.array), len(self.gsims)
@@ -317,8 +318,13 @@ class ContextMaker(object):
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         rup_indep = not rup_mutex
-        for src, s_sites in src_sites:
+        it = iter(src_sites)
+        while True:
             t0 = time.time()
+            try:
+                src, s_sites = next(it)
+            except StopIteration:
+                break
             try:
                 poemap = ProbabilityMap(L, G)
                 for rup, sids, mean_std in self.gen_rup_mean_std(src, s_sites):
