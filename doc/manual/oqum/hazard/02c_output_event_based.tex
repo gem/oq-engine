@@ -43,14 +43,14 @@ file with their latitude and longitude coordinates.
 
 
 The \texttt{Events} output produces a csv file with fields \texttt{event\_id},
-\texttt{rup\_id} and \texttr{rlz\_id}. The \texttt{event\_id} is a 64 bit
+\texttt{rup\_id} and \texttt{rlz\_id}. The \texttt{event\_id} is a 64 bit
 integer that identifies uniquely the event; the \texttt{rup\_id}
 is a 32 bit integer that identifies uniquely the rupture; the \texttt{rlz\_id}
 is a 16 bit integer that identifies uniquely the
 realization. There is a formula connecting event IDs and rupture IDs:
 
 $$
-rup\_id = event\_ id // 2 ** 32
+rup\_id = event\_ id // 2^{32}
 $$
 
 where $//$ is the integer division operator.
