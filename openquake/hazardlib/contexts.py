@@ -309,17 +309,17 @@ class ContextMaker(object):
         :returns: a ProbabilityMap instance
         """
         imtls = self.imtls
-        pmap = ProbabilityMap.build(
-            len(imtls.array), len(self.gsims), s_sites.sids,
-            initvalue=rup_indep)
+        L, G = len(imtls.array), len(self.gsims)
+        pmap = ProbabilityMap(L, G)
         for rup, sids, mean_std in self.gen_rup_mean_std(src, s_sites):
             with self.poe_mon:
                 pnes = self._make_pnes(rup, sids, mean_std, self.trunclevel)
                 for sid, pne in zip(sids, pnes):
+                    pcurve = pmap.setdefault(sid, rup_indep)
                     if rup_indep:
-                        pmap[sid].array *= pne
+                        pcurve.array *= pne
                     else:
-                        pmap[sid].array += (1.-pne) * rup.weight
+                        pcurve.array += (1.-pne) * rup.weight
         if rup_indep:
             pmap = ~pmap
         return pmap
