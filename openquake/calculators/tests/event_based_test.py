@@ -169,6 +169,8 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1_ruptures(self):
         self.run_calc(case_1.__file__, 'job_ruptures.ini')
         self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        [fname] = export(('events', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/events.csv', fname)
 
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',

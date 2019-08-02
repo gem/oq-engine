@@ -180,10 +180,10 @@ Response:
      'type': 'ruptures',
      'url': 'http://127.0.0.1:8800/v1/calc/result/30'},
     {'id': 31,
-     'name': 'Seismic Source Groups',
+     'name': 'Events',
      'outtypes': ['csv'],
      'size_mb': None,
-     'type': 'sourcegroups',
+     'type': 'events',
      'url': 'http://127.0.0.1:8800/v1/calc/result/31'}]
 ```
 #### GET /v1/calc/result/:result_id
