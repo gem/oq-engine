@@ -54,10 +54,7 @@ efficient. Here we start a parallel computation per each realization,
 the engine manages all the realizations at once.
 """
 
-import sys
-import time
 import operator
-import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
@@ -68,12 +65,12 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
 
-def _cluster(param, tom, gsims, grp_ids, pmap):
+def _cluster(param, tom, gsims, pmap):
     """
     Computes the probability map in case of a cluster group
     """
     L, G = len(param['imtls'].array), len(gsims)
-    pmapclu = AccumDict({grp_id: ProbabilityMap(L, G) for grp_id in grp_ids})
+    pmapclu = AccumDict(accum=ProbabilityMap(L, G))
     # Get temporal occurrence model
     # Number of occurrences for the cluster
     first = True
@@ -108,8 +105,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
     rup_mutex = getattr(group, 'rup_interdep', None) == 'mutex'
     cluster = getattr(group, 'cluster', None)
-    # Compute the number of ruptures
-    grp_ids = set()
     trts = set()
     for src in group:
         if not src.num_ruptures:
@@ -120,7 +115,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
         # Updating IDs
-        grp_ids.update(src.src_group_ids)
         trts.add(src.tectonic_region_type)
     # Now preparing context
     param['maximum_distance'] = src_filter.integration_distance
@@ -135,7 +129,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
-        pmap = _cluster(param, tom, gsims, grp_ids, pmap)
+        pmap = _cluster(param, tom, gsims, pmap)
 
     return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
                 task_no=getattr(monitor, 'task_no', 0))
