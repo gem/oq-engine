@@ -124,13 +124,14 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, trt, gsims, maximum_distance=None, param=None,
-                 monitor=Monitor()):
+    def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.trt = trt
         self.gsims = gsims
-        self.maximum_distance = maximum_distance or IntegrationDistance({})
+        self.maximum_distance = (
+            param.get('maximum_distance') or IntegrationDistance({}))
+        self.trunclevel = param.get('truncation_level')
         self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
@@ -146,6 +147,8 @@ class ContextMaker(object):
             else:
                 filter_distance = 'rrup'
         self.filter_distance = filter_distance
+        self.imtls = param.get('imtls', {})
+        self.imts = [imt_module.from_string(imt) for imt in self.imtls]
         self.reqv = param.get('reqv')
         self.REQUIRES_DISTANCES.add(self.filter_distance)
         if self.reqv is not None:
@@ -248,11 +251,11 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         return sites, dctx
 
-    def gen_rup_contexts(self, src, src_sites):
+    def gen_rup_mean_std(self, src, src_sites):
         """
         :param src: a hazardlib source
         :param src_sites: the sites affected by it
-        :yields: (rup, sctx, dctx)
+        :yields: (rup, mean_std)
         """
         sitecol = src_sites.complete
         N = len(sitecol)
@@ -265,7 +268,13 @@ class ContextMaker(object):
                     sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
-            yield rup, sctx, dctx
+            with self.gmf_mon:
+                mean_std = []
+                for i, gsim in enumerate(self.gsims):
+                    dctx_ = dctx.roundup(gsim.minimum_distance)
+                    mean_std.append(
+                        gsim.get_mean_std(sctx, rup, dctx_, self.imts))
+            yield rup, sctx.sids, numpy.array(mean_std)
             self.nrups += 1
             self.nsites += len(sctx)
             if fewsites:  # store rupdata
@@ -292,39 +301,35 @@ class ContextMaker(object):
             for rup in src.iter_ruptures():
                 yield rup, sites
 
-    def poe_map(self, src, s_sites, imtls, trunclevel, rup_indep=True):
+    def poe_map(self, src, s_sites, rup_indep=True):
         """
         :param src: a source object
         :param s_sites: a filtered SiteCollection of sites around the source
-        :param imtls: intensity measure and levels
-        :param trunclevel: truncation level
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
-        pmap = ProbabilityMap.build(
-            len(imtls.array), len(self.gsims), s_sites.sids,
-            initvalue=rup_indep)
-        for rup, sctx, dctx in self.gen_rup_contexts(src, s_sites):
+        imtls = self.imtls
+        L, G = len(imtls.array), len(self.gsims)
+        pmap = ProbabilityMap(L, G)
+        for rup, sids, mean_std in self.gen_rup_mean_std(src, s_sites):
             with self.poe_mon:
-                pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
-                for sid, pne in zip(sctx.sids, pnes):
+                pnes = self._make_pnes(rup, sids, mean_std, self.trunclevel)
+                for sid, pne in zip(sids, pnes):
+                    pcurve = pmap.setdefault(sid, rup_indep)
                     if rup_indep:
-                        pmap[sid].array *= pne
+                        pcurve.array *= pne
                     else:
-                        pmap[sid].array += (1.-pne) * rup.weight
+                        pcurve.array += (1.-pne) * rup.weight
         if rup_indep:
             pmap = ~pmap
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, sctx, dctx, imtls, trunclevel):
-        imts = [imt_module.from_string(imt) for imt in imtls]
-        nsites = len(sctx.sids)
+    def _make_pnes(self, rupture, sids, mean_std, trunclevel):
+        imtls = self.imtls
+        nsites = len(sids)
         pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
-            dctx_ = dctx.roundup(gsim.minimum_distance)
-            with self.gmf_mon:
-                mean_std = gsim.get_mean_std(sctx, rupture, dctx_, imts)
             for m, imt in enumerate(imtls):
                 slc = imtls(imt)
                 if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
@@ -333,7 +338,7 @@ class ContextMaker(object):
                     pno = numpy.ones((nsites, slc.stop - slc.start))
                 else:
                     poes = gsim.get_poes(
-                        mean_std[:, :, m], imtls[imt], trunclevel)
+                        mean_std[i, :, :, m], imtls[imt], trunclevel)
                     pno = rupture.get_probability_no_exceedance(poes)
                 pne_array[:, slc, i] = pno
         return pne_array
