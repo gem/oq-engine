@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Removed the output `sourcegroups` and added the output `events`
+
   [Graeme Weatherill]
   * Adds new meta ground motion models to undertake PSHA using design code
     based amplification coefficients (Eurocode 8, Pitilakis et al., 2018)

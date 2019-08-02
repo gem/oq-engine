@@ -207,7 +207,7 @@ class EngineServerTestCase(unittest.TestCase):
         self.wait()
 
         # check that we get at least the following 6 outputs
-        # fullreport, input, hcurves, hmaps, realizations, sourcegroups
+        # fullreport, input, hcurves, hmaps, realizations, events
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
         self.assertGreaterEqual(len(results), 5)
