@@ -101,7 +101,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     :returns:
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
     """
-    if not hasattr(src_filter, 'sitecol'):  # a sitecol was passed
+    if not hasattr(src_filter, 'sitecol'):  # do not filter
         src_filter = SourceFilter(src_filter, {})
 
     # Get the parameters assigned to the group
@@ -125,7 +125,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Now preparing context
     param['maximum_distance'] = src_filter.integration_distance
     imtls = param['imtls']
-    trunclevel = param.get('truncation_level')
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
     # Prepare the accumulator for the probability maps
