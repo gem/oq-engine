@@ -130,47 +130,18 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # Prepare the accumulator for the probability maps
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
-    pmap.trt = trt
-    rup_data = AccumDict(accum=[])
-    # AccumDict of arrays with 3 elements nrups, nsites, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-    gids = []
-    # Computing hazard
-    for src, s_sites in src_filter(group):  # filter now
-        t0 = time.time()
-        try:
-            poemap = cmaker.poe_map(src, s_sites, not rup_mutex)
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = '%s (source id=%s)' % (str(err), src.source_id)
-            raise etype(msg).with_traceback(tb)
-        if poemap and src_mutex:
-            for gid in src.src_group_ids:
-                pmap[gid] += poemap * src.mutex_weight
-        elif poemap:
-            for gid in src.src_group_ids:
-                pmap[gid] |= poemap
-        if len(cmaker.data):
-            nr = len(cmaker.data['sid_'])
-            for gid in src.src_group_ids:
-                gids.extend([gid] * nr)
-                for k, v in cmaker.data.items():
-                    rup_data[k].extend(v)
-        calc_times[src.id] += numpy.array(
-            [cmaker.nrups, cmaker.nsites, time.time() - t0])
-    # Updating the probability map in the case of mutually exclusive
-    # sources
+    rup_data, calc_times = cmaker.update_pmap(
+        pmap, src_filter(group), src_mutex, rup_mutex)
+
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
         pmap[src.src_group_id] *= group_probability
-    # Processing cluster
+
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
         pmap = _cluster(param, tom, gsims, grp_ids, pmap)
-    # Return results
-    rdata = {k: numpy.array(v) for k, v in rup_data.items()}
-    rdata['grp_id'] = numpy.uint16(gids)
-    return dict(pmap=pmap, calc_times=calc_times, rup_data=rdata,
+
+    return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
                 task_no=getattr(monitor, 'task_no', 0))
 
 
