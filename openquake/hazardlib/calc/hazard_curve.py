@@ -65,11 +65,11 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
 
-def _cluster(param, tom, gsims, pmap):
+def _cluster(imtls, tom, gsims, pmap):
     """
     Computes the probability map in case of a cluster group
     """
-    L, G = len(param['imtls'].array), len(gsims)
+    L, G = len(imtls.array), len(gsims)
     pmapclu = AccumDict(accum=ProbabilityMap(L, G))
     # Get temporal occurrence model
     # Number of occurrences for the cluster
@@ -111,16 +111,15 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
             # src.num_ruptures is set when parsing the XML, but not when
             # the source is instantiated manually, so it is set here
             src.num_ruptures = src.count_ruptures()
-        # This sets the proper TOM in case of a cluster
+        # set the proper TOM in case of a cluster
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
-        # Updating IDs
         trts.add(src.tectonic_region_type)
-    # Now preparing context
+
     param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
-    pmap, rup_data, calc_times = cmaker.compute_pmap(
+    pmap, rup_data, calc_times = cmaker.get_pmap_by_grp(
         src_filter(group), src_mutex, rup_mutex)
 
     group_probability = getattr(group, 'grp_probability', None)
@@ -129,7 +128,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
-        pmap = _cluster(param, tom, gsims, pmap)
+        pmap = _cluster(param['imtls'], tom, gsims, pmap)
 
     return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
                 task_no=getattr(monitor, 'task_no', 0))
