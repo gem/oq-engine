@@ -595,20 +595,6 @@ def export_realizations(ekey, dstore):
     return [path]
 
 
-@export.add(('sourcegroups', 'csv'))
-def export_sourcegroups(ekey, dstore):
-    csm_info = dstore['csm_info']
-    data = [['grp_id', 'trt', 'eff_ruptures']]
-    for i, sm in enumerate(csm_info.source_models):
-        for src_group in sm.src_groups:
-            trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures
-            data.append((src_group.id, trt, er))
-    path = dstore.export_path('sourcegroups.csv')
-    writers.write_csv(path, data, fmt='%s')
-    return [path]
-
-
 @export.add(('events', 'csv'))
 def export_events(ekey, dstore):
     ev = dstore['events'][()]
