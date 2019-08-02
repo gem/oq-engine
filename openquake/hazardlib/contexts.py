@@ -32,6 +32,14 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
 
 
+def _update(pmap, pm, src, src_mutex):
+    for grp_id in src.src_group_ids:
+        if src_mutex:
+            pmap[grp_id] += pm * src.mutex_weight
+        else:
+            pmap[grp_id] |= pm
+
+
 def get_distances(rupture, mesh, param):
     """
     :param rupture: a rupture
@@ -337,16 +345,12 @@ class ContextMaker(object):
                                 pcurve.array += (1.-pne) * rup.weight
                 if rup_indep:
                     poemap = ~poemap
+                if poemap:
+                    _update(pmap, poemap, src, src_mutex)
             except Exception as err:
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
                 raise etype(msg).with_traceback(tb)
-            if poemap and src_mutex:
-                for gid in src.src_group_ids:
-                    pmap[gid] += poemap * src.mutex_weight
-            elif poemap:
-                for gid in src.src_group_ids:
-                    pmap[gid] |= poemap
             if len(self.data):
                 nr = len(self.data['sid_'])
                 for gid in src.src_group_ids:
