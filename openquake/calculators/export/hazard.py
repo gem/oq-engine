@@ -38,7 +38,7 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
-
+TWO32 = 2 ** 32
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
@@ -606,6 +606,19 @@ def export_sourcegroups(ekey, dstore):
             data.append((src_group.id, trt, er))
     path = dstore.export_path('sourcegroups.csv')
     writers.write_csv(path, data, fmt='%s')
+    return [path]
+
+
+@export.add(('events', 'csv'))
+def export_events(ekey, dstore):
+    ev = dstore['events'][()]
+    events = numpy.zeros(
+        len(ev), [('event_id', U64), ('rup_id', U32), ('rlz_id', U16)])
+    events['event_id'] = ev['id']
+    events['rup_id'] = ev['id'] // TWO32
+    events['rlz_id'] = ev['rlz']
+    path = dstore.export_path('events.csv')
+    writers.write_csv(path, events, fmt='%s')
     return [path]
 
 
