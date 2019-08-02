@@ -278,7 +278,7 @@ class ContextMaker(object):
         N, M = len(sitecol), len(imts)
         fewsites = N <= self.max_sites_disagg
         rupdata = RupData(self)
-        self.nrups, self.nsites = 0, 0
+        nrups, nsites = 0, 0
         L, G = len(self.imtls.array), len(self.gsims)
         poemap = ProbabilityMap(L, G)
         for rup, sites in self._gen_rup_sites(src, src_sites):
@@ -299,12 +299,11 @@ class ContextMaker(object):
                         pcurve.array *= pne
                     else:
                         pcurve.array += (1.-pne) * rup.weight
-            self.nrups += 1
-            self.nsites += len(sctx)
+            nrups += 1
+            nsites += len(sctx)
             if fewsites:  # store rupdata
                 rupdata.add(rup, src.id, sctx)
-        self.data = rupdata.data
-        return poemap
+        return poemap, nrups, nsites, rupdata.data
 
     def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
@@ -345,7 +344,8 @@ class ContextMaker(object):
             t0 = time.time()
             try:
                 src, s_sites = next(it)
-                poemap = self.get_pmap(src, s_sites, not rup_mutex)
+                poemap, nrups, nsites, data = self.get_pmap(
+                    src, s_sites, not rup_mutex)
                 _update(pmap, poemap, src, src_mutex, rup_mutex)
             except StopIteration:
                 break
@@ -353,14 +353,14 @@ class ContextMaker(object):
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
                 raise etype(msg).with_traceback(tb)
-            if len(self.data):
-                nr = len(self.data['sid_'])
+            if len(data):
+                nr = len(data['sid_'])
                 for gid in src.src_group_ids:
                     gids.extend([gid] * nr)
-                    for k, v in self.data.items():
+                    for k, v in data.items():
                         rup_data[k].extend(v)
-            calc_times[src.id] += numpy.array(
-                [self.nrups, self.nsites, time.time() - t0])
+            dt = time.time() - t0
+            calc_times[src.id] += numpy.array([nrups, nsites, dt])
 
         rdata = {k: numpy.array(v) for k, v in rup_data.items()}
         rdata['grp_id'] = numpy.uint16(gids)
