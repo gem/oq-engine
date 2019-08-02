@@ -139,15 +139,14 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     for src, s_sites in src_filter(group):  # filter now
         t0 = time.time()
         try:
-            poemap = cmaker.poe_map(src, s_sites, rup_indep=not rup_mutex)
+            poemap = cmaker.poe_map(src, s_sites, not rup_mutex)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = '%s (source id=%s)' % (str(err), src.source_id)
             raise etype(msg).with_traceback(tb)
-        if src_mutex:  # mutex sources, there is a single group
-            for sid in poemap:
-                pcurve = pmap[src.src_group_id].setdefault(sid, 0)
-                pcurve += poemap[sid] * src.mutex_weight
+        if poemap and src_mutex:
+            for gid in src.src_group_ids:
+                pmap[gid] += poemap * src.mutex_weight
         elif poemap:
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
