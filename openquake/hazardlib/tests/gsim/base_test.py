@@ -25,7 +25,7 @@ from copy import deepcopy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
-    GMPE, IPE, CoeffsTable, SitesContext, RuptureContext, DistancesContext,
+    GMPE, IPE, CoeffsTable, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV, SA
