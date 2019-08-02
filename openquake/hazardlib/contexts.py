@@ -313,7 +313,7 @@ class ContextMaker(object):
         pmap = ProbabilityMap(L, G)
         for rup, sids, mean_std in self.gen_rup_mean_std(src, s_sites):
             with self.poe_mon:
-                pnes = self._make_pnes(rup, sids, mean_std, self.trunclevel)
+                pnes = self._make_pnes(rup, sids, mean_std)
                 for sid, pne in zip(sids, pnes):
                     pcurve = pmap.setdefault(sid, rup_indep)
                     if rup_indep:
@@ -325,7 +325,7 @@ class ContextMaker(object):
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, sids, mean_std, trunclevel):
+    def _make_pnes(self, rupture, sids, mean_std):
         imtls = self.imtls
         nsites = len(sids)
         pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
@@ -338,7 +338,7 @@ class ContextMaker(object):
                     pno = numpy.ones((nsites, slc.stop - slc.start))
                 else:
                     poes = gsim.get_poes(
-                        mean_std[i, :, :, m], imtls[imt], trunclevel)
+                        mean_std[i, :, :, m], imtls[imt], self.trunclevel)
                     pno = rupture.get_probability_no_exceedance(poes)
                 pne_array[:, slc, i] = pno
         return pne_array
