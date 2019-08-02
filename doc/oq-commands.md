@@ -151,7 +151,7 @@ losses_by_tag ['csv']
 realizations ['csv']
 rup_loss_table ['xml']
 ruptures ['xml', 'csv']
-sourcegroups ['csv']
+events ['csv']
 uhs ['csv', 'xml', 'npz']
 There are 53 exporters defined.
 ```
