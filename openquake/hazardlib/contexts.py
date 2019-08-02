@@ -32,10 +32,14 @@ KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
 
 
-def _update(pmap, pm, src, src_mutex):
+def _update(pmap, pm, src, src_mutex, rup_mutex):
+    if not rup_mutex:
+        pm = ~pm
+    if src_mutex:
+        pm *= src.mutex_weight
     for grp_id in src.src_group_ids:
         if src_mutex:
-            pmap[grp_id] += pm * src.mutex_weight
+            pmap[grp_id] += pm
         else:
             pmap[grp_id] |= pm
 
@@ -343,10 +347,8 @@ class ContextMaker(object):
                                 pcurve.array *= pne
                             else:
                                 pcurve.array += (1.-pne) * rup.weight
-                if rup_indep:
-                    poemap = ~poemap
                 if poemap:
-                    _update(pmap, poemap, src, src_mutex)
+                    _update(pmap, poemap, src, src_mutex, rup_mutex)
             except Exception as err:
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
