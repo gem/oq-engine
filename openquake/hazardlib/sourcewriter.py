@@ -44,8 +44,9 @@ def build_area_source_geometry(area_source):
         Instance of :class:`openquake.baselib.node.Node`
     """
     geom = []
-    for lon_lat in zip(area_source.polygon.lons, area_source.polygon.lats):
-        geom.extend(lon_lat)
+    for lon, lat in zip(area_source.polygon.lons, area_source.polygon.lats):
+        # NB: converting numpy.float64 -> float is good for TOML
+        geom.extend((float(lon), float(lat)))
     poslist_node = Node("gml:posList", text=geom)
     linear_ring_node = Node("gml:LinearRing", nodes=[poslist_node])
     exterior_node = Node("gml:exterior", nodes=[linear_ring_node])
@@ -483,8 +484,9 @@ def build_multi_point_source_node(multi_point_source):
     # parse geometry
     pos = []
     for p in multi_point_source.mesh:
-        pos.append(p.x)
-        pos.append(p.y)
+        # converting numpy.float64 -> float is good for TOML
+        pos.append(float(p.x))
+        pos.append(float(p.y))
     mesh_node = Node('gml:posList', text=pos)
     upper_depth_node = Node(
         "upperSeismoDepth", text=multi_point_source.upper_seismogenic_depth)
@@ -494,8 +496,8 @@ def build_multi_point_source_node(multi_point_source):
         "multiPointGeometry",
         nodes=[mesh_node, upper_depth_node, lower_depth_node])]
     # parse common distributed attributes
-    source_nodes.extend(get_distributed_seismicity_source_nodes(
-        multi_point_source))
+    source_nodes.extend(
+        get_distributed_seismicity_source_nodes(multi_point_source))
     return Node("multiPointSource",
                 get_source_attributes(multi_point_source),
                 nodes=source_nodes)
