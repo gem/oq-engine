@@ -112,7 +112,7 @@ class RupData(object):
                 self.add(rup, src.id, sites)
         return {k: numpy.array(v) for k, v in self.data.items()}
 
-    def add(self, rup, src_id, sites):
+    def add(self, rup, src_id, sctx, dctx=None):
         rate = rup.occurrence_rate
         if numpy.isnan(rate):  # for nonparametric ruptures
             probs_occur = rup.probs_occur
@@ -125,11 +125,14 @@ class RupData(object):
         for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
             self.data[rup_param].append(getattr(rup, rup_param))
 
-        self.data['sid_'].append(numpy.int16(sites.sids))
+        self.data['sid_'].append(numpy.int16(sctx.sids))
         for dst_param in self.cmaker.REQUIRES_DISTANCES:
-            self.data[dst_param + '_'].append(
-                F32(get_distances(rup, sites, dst_param)))
-        closest = rup.surface.get_closest_points(sites)
+            if dctx is None:  # compute the distances
+                dists = get_distances(rup, sctx, dst_param)
+            else:  # reuse already computed distances
+                dists = getattr(dctx, dst_param)
+            self.data[dst_param + '_'].append(F32(dists))
+        closest = rup.surface.get_closest_points(sctx)
         self.data['lon_'].append(F32(closest.lons))
         self.data['lat_'].append(F32(closest.lats))
 
@@ -302,7 +305,7 @@ class ContextMaker(object):
             nrups += 1
             nsites += len(sctx)
             if fewsites:  # store rupdata
-                rupdata.add(rup, src.id, sctx)
+                rupdata.add(rup, src.id, sctx, dctx)
         poemap.nrups = nrups
         poemap.nsites = nsites
         poemap.data = rupdata.data
