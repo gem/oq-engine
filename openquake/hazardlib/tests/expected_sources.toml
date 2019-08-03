@@ -328,7 +328,7 @@ magScaleRel = "PeerMSR"
 ruptAspectRatio = 1.0
 
 [multiPointSource.multiPointGeometry]
-"gml:posList" = [ 1.0, 2.0,]
+"gml:posList" = [ 0.1000000014901161, 1.100000023841858,]
 upperSeismoDepth = 5.0
 lowerSeismoDepth = 10.0
 
