@@ -128,10 +128,10 @@ class RupData(object):
         self.data['sid_'].append(numpy.int16(sctx.sids))
         for dst_param in self.cmaker.REQUIRES_DISTANCES:
             if dctx is None:  # compute the distances
-                dist = get_distances(rup, sctx, dst_param)
+                dists = get_distances(rup, sctx, dst_param)
             else:  # reuse already computed distances
-                dist = getattr(dctx, dst_param)
-            self.data[dst_param + '_'].append(F32(dist))
+                dists = getattr(dctx, dst_param)
+            self.data[dst_param + '_'].append(F32(dists))
         closest = rup.surface.get_closest_points(sctx)
         self.data['lon_'].append(F32(closest.lons))
         self.data['lat_'].append(F32(closest.lats))
