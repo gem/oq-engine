@@ -1,5 +1,4 @@
 # Installing the OpenQuake Engine on macOS
-
 The OpenQuake Engine is available for macOS in the form of **self-installable binary distribution**.
 
 - this distribution uses Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-366/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
@@ -20,7 +19,7 @@ Requirements are:
 - Python 3.6 from [python.org](https://python.org)
 
 Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.8/python-3.6.8-macosx10.9.pkg).
-It is also recommended to run the script located under `/Applications/Python 3.6/Install Certificates.command`, after Python has been installed, to update the SSL certificates.
+Make sure to run the script located under `/Applications/Python 3.6/Install Certificates.command`, after Python has been installed, to update the SSL certificates bundle [see FAQ](../faq.md#certificate-verification-on-macOS).
 
 ## Install packages from the OpenQuake website
 
