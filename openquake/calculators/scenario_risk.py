@@ -63,7 +63,6 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['epspath']):
             r = out.rlzi
-            weight = param['weights'][r]
             slc = param['event_slice'](r)
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
@@ -75,7 +74,7 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
                     stats['stddev'][a] = losses[a].std(ddof=1)
                     result['avg'].append((l, r, asset['ordinal'], stats[a]))
                 agglosses = losses.sum(axis=0)  # shape num_gmfs
-                result['agg'][slc, l] += agglosses * weight
+                result['agg'][slc, l] += agglosses
                 if param['asset_loss_table']:
                     aids = ri.assets['ordinal']
                     result['all_losses'][l, r] += AccumDict(zip(aids, losses))
