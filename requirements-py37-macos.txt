@@ -17,7 +17,7 @@ http://wheelhouse.openquake.org/v3/macos/py/docutils-0.14-py3-none-any.whl
 http://wheelhouse.openquake.org/v3/macos/py/decorator-4.4.0-py2.py3-none-any.whl
 http://wheelhouse.openquake.org/v3/macos/py/pbr-5.2.0-py2.py3-none-any.whl
 http://wheelhouse.openquake.org/v3/macos/py/six-1.12.0-py2.py3-none-any.whl
-http://wheelhouse.openquake.org/v3/macos/py/Django-2.2.1-py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/Django-2.2.4-py3-none-any.whl
 http://wheelhouse.openquake.org/v3/macos/py/sqlparse-0.3.0-py2.py3-none-any.whl
 http://wheelhouse.openquake.org/v3/macos/py/certifi-2019.3.9-py2.py3-none-any.whl
 http://wheelhouse.openquake.org/v3/macos/py/chardet-3.0.4-py2.py3-none-any.whl
