@@ -1,4 +1,4 @@
-# generated_by='OpenQuake engine 3.6.0-gite56a4a24b3', start_date='2019-06-17T10:08:28', checksum=2307593317
+# generated_by='OpenQuake engine 3.7.0-git9f96ee7884', start_date='2019-08-06T07:03:17', checksum=2307593317
 rlz_id,loss_type,unit,mean,stddev
-0,structural,USD,1.676968E+03,1.660424E+03
-1,structural,USD,6.581619E+02,5.499982E+02
+0,structural,USD,2.235958E+03,2.213899E+03
+1,structural,USD,2.632648E+03,2.199993E+03
