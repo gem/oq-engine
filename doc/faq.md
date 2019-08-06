@@ -165,6 +165,64 @@ The OpenQuake Engine may require lot of disk space for the raw results data (`hd
 
 ******
 
+### Certificate verification on macOS
+
+```python
+Traceback (most recent call last):
+  File "/Users/openquake/py36/bin/oq", line 11, in <module>
+    load_entry_point('openquake.engine', 'console_scripts', 'oq')()
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/__main__.py", line 53, in oq
+    parser.callfunc()
+  File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 181, in callfunc
+    return self.func(**vars(namespace))
+  File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 251, in main
+    return func(**kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 210, in engine
+    exports, hazard_calculation_id=hc_id)
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 70, in run_job
+    eng.run_calc(job_id, oqparam, exports, **kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/engine/engine.py", line 341, in run_calc
+    close=False, **kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 192, in run
+    self.pre_execute()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/scenario_damage.py", line 85, in pre_execute
+    super().pre_execute()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 465, in pre_execute
+    self.read_inputs()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 398, in read_inputs
+    self._read_risk_data()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 655, in _read_risk_data
+    haz_sitecol, assetcol)
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 821, in read_shakemap
+    oq.discard_assets)
+  File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 100, in get_sitecol_shakemap
+    array = download_array(array_or_id)
+  File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 74, in download_array
+    contents = json.loads(urlopen(url).read())[
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 223, in urlopen
+    return opener.open(url, data, timeout)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 526, in open
+    response = self._open(req, data)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 544, in _open
+    '_open', req)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 504, in _call_chain
+    result = func(*args)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1361, in https_open
+    context=self._context, check_hostname=self._check_hostname)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1320, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:852)>
+```
+
+Please have a look at `/Applications/Python 3.6/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
+
+```bash
+sudo /Applications/Python\ 3.6/install_certificates.command
+```
+
+******
+
+
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
   * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
