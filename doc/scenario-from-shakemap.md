@@ -1,5 +1,4 @@
-Scenario calculations starting from USGS ShakeMaps
-==================================================
+# Scenario calculations starting from USGS ShakeMaps
 
 Beginning with version 3.1, the engine is able to perform `scenario_risk`
 and `scenario_damage` calculations starting from the GeoJSON feed for
@@ -134,3 +133,18 @@ Moreover, especially for old ShakeMaps, the USGS can provide them in a
 format that the engine cannot read.
 
 So you should not expect the functionality to work in 100% of the cases.
+
+### Notes
+
+On macOS make sure to run the script located under
+`/Applications/Python 3.6/Install Certificates.command`,
+after Python has been installed, to update the SSL certificates and to avoid
+SSL errors when dowbnloading the shakemaps from the USGS website
+[see FAQ](faq.md#Certificate-verification-on-macOS).
+
+***
+
+## Getting help
+If you need help or have questions/comments/feedback for us, you can:
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/#!forum/openquake-users
+  * Contact us on IRC: irc.freenode.net, channel #openquake
