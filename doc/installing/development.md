@@ -19,6 +19,8 @@ This guide may work also on other Linux releases/distributions.
 - macOS 10.13 (High Sierra)
 - macOS 10.14 (Mojave)
 
+See also the [FAQ about SSL certificate validation on macOS](../faq.md#ertificate-verification-on-macOS).
+
 ## Prerequisites
 
 Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.6/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
