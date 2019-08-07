@@ -93,7 +93,7 @@ Current stable version is the **OpenQuake Engine 3.6** 'Pak Topo'. The documenta
 
 A mirror of this repository, hosted in Pavia (Italy), is available at [https://mirror.openquake.org/git/GEM/oq-engine.git](https://mirror.openquake.org/git/GEM/oq-engine.git).
 
-The main download server ([https://downloads.openquake.org/](downloads.openquake.org) is hosted in Nürnberg (Germany).
+The main download server ([https://downloads.openquake.org/](downloads.openquake.org)) is hosted in Nürnberg (Germany).
 
 ### Running the OpenQuake Engine
 
