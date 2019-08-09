@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds parametric GMPE for cratonic regions in Europe
+
   [Michele Simionato]
   * In the agglosses output of scenario_risk the losses were incorrectly
     multiplied by the realization weight
