@@ -26,9 +26,9 @@ import operator
 import numpy
 import scipy.stats
 
-from openquake.hazardlib import pmf, contexts, const
+from openquake.hazardlib import pmf, contexts
 from openquake.baselib import hdf5, performance
-from openquake.baselib.general import pack, groupby, AccumDict
+from openquake.baselib.general import pack, groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -56,16 +56,16 @@ def _site_indices(sids_by_rup, N):
 
 
 def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
-                  pne_mon=performance.Monitor()):
+                  pne_mon=performance.Monitor(),
+                  gmf_mon=performance.Monitor()):
     # disaggregate (separate) PoE in different contributions
     # returns AccumDict with keys (poe, imt) and mags, dists, lons, lats
     [sid] = sitecol.sids
-    acc = AccumDict(accum=[], mags=[], dists=[], lons=[], lats=[],
-                    M=len(iml2.imts), P=len(iml2.poes_disagg))
+    acc = dict(pnes=[], mags=[], dists=[], lons=[], lats=[])
     try:
         gsim = cmaker.gsim_by_rlzi[iml2.rlzi]
     except KeyError:
-        return pack(acc, 'mags dists lons lats P M'.split())
+        return pack(acc, 'mags dists lons lats pnes'.split())
     maxdist = cmaker.maximum_distance(cmaker.trt)
     fildist = rupdata[cmaker.filter_distance + '_']
     for ridx, sidx in enumerate(indices):
@@ -76,9 +76,8 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
             continue
         elif gsim.minimum_distance and dist < gsim.minimum_distance:
             dist = gsim.minimum_distance
-        rctx = contexts.RuptureContext()
-        for par in rupdata:
-            setattr(rctx, par, rupdata[par][ridx])
+        rctx = contexts.RuptureContext(
+            (par, val[ridx]) for par, val in rupdata.items())
         dctx = contexts.DistancesContext(
             (param, getattr(rctx, param + '_')[[sidx]])
             for param in cmaker.REQUIRES_DISTANCES).roundup(
@@ -87,59 +86,49 @@ def _disaggregate(cmaker, sitecol, rupdata, indices, iml2, eps3,
         acc['lons'].append(rctx.lon_[sidx])
         acc['lats'].append(rctx.lat_[sidx])
         acc['dists'].append(dist)
+        with gmf_mon:
+            mean_std = gsim.get_mean_std(sitecol, rctx, dctx, iml2.imts)
         with pne_mon:
-            for m, imt in enumerate(iml2.imts):
-                for p, poe in enumerate(iml2.poes_disagg):
-                    iml = iml2[m, p]
-                    pne = disaggregate_pne(
-                        gsim, rctx, sitecol, dctx, imt, iml, *eps3)
-                    acc[p, m].append(pne)
-    return pack(acc, 'mags dists lons lats P M'.split())
+            iml = gsim.to_distribution_values(iml2)
+            pne = _disaggregate_pne(rctx, mean_std, iml, *eps3)
+            acc['pnes'].append(pne)
+    return pack(acc, 'mags dists lons lats pnes'.split())
 
 
-def disaggregate_pne(gsim, rupture, sctx, dctx, imt, iml, truncnorm,
-                     epsilons, eps_bands):
+def _disaggregate_pne(rupture, mean_std, imls, truncnorm, epsilons, eps_bands):
     """
     Disaggregate (separate) PoE of ``iml`` in different contributions
     each coming from ``epsilons`` distribution bins.
-
-    Other parameters are the same as for `gsim.get_poes`, with the
-    difference that ``truncation_level`` is required to be positive
-    and the site context must refer to a single site.
-
     :returns:
         Contribution to probability of exceedance of ``iml`` coming
         from different sigma bands in the form of a 2D numpy array of
         probabilities with shape (n_sites, n_epsilons)
     """
-    # compute mean and standard deviations
-    mean, [stddev] = gsim.get_mean_and_stddevs(sctx, rupture, dctx, imt,
-                                               [const.StdDev.TOTAL])
-
-    # compute iml value with respect to standard (mean=0, std=1)
-    # normal distributions
-    [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
-
-    # take the minimum epsilon larger than standard_iml
-    bin = numpy.searchsorted(epsilons, lvl)
     n_epsilons = len(epsilons) - 1
-    if bin == 0:
-        poes = eps_bands
-    elif bin > n_epsilons:
-        poes = numpy.zeros(n_epsilons)
-    else:
-        # for other cases (when ``lvl`` falls somewhere in the
-        # histogram):
-        poes = numpy.concatenate([
-            # take zeros for bins that are on the left hand side
-            # from the bin ``lvl`` falls into,
-            numpy.zeros(bin - 1),
-            # ... area of the portion of the bin containing ``lvl``
-            # (the portion is limited on the left hand side by
-            # ``lvl`` and on the right hand side by the bin edge),
-            [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
-            # ... and all bins on the right go unchanged.
-            eps_bands[bin:]])
+    poes = numpy.zeros(imls.shape + (n_epsilons,))
+    for (m, p), iml in numpy.ndenumerate(imls):
+        # compute iml value with respect to standard (mean=0, std=1)
+        # normal distributions
+        [lvl] = (iml - mean_std[0, :, m]) / mean_std[1, :, m]
+        # take the minimum epsilon larger than standard_iml
+        bin = numpy.searchsorted(epsilons, lvl)
+        if bin == 0:
+            poes[m, p] = eps_bands
+        elif bin > n_epsilons:
+            poes[m, p] = numpy.zeros(n_epsilons)
+        else:
+            # for other cases (when ``lvl`` falls somewhere in the
+            # histogram):
+            poes[m, p] = numpy.concatenate([
+                # take zeros for bins that are on the left hand side
+                # from the bin ``lvl`` falls into,
+                numpy.zeros(bin - 1),
+                # ... area of the portion of the bin containing ``lvl``
+                # (the portion is limited on the left hand side by
+                # ``lvl`` and on the right hand side by the bin edge),
+                [truncnorm.sf(lvl) - eps_bands[bin:].sum()],
+                # ... and all bins on the right go unchanged.
+                eps_bands[bin:]])
     return rupture.get_probability_no_exceedance(poes)
 
 
@@ -177,8 +166,8 @@ def _build_disagg_matrix(bdata, bins):
     :param bdata: a dictionary of probabilities of no exceedence
     :param bins: bin edges
     :param mon: a Monitor instance
-    :returns: a matrix of shape (P, M, #magbins, #distbins, #lonbins,
-                                       #latbins, #epsbins)
+    :returns: a 7D-matrix of shape (#magbins, #distbins, #lonbins,
+                                    #latbins, #imts, #poes, #epsbins)
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bins
     dim1, dim2, dim3, dim4, dim5 = shape = [len(b)-1 for b in bins]
@@ -203,36 +192,35 @@ def _build_disagg_matrix(bdata, bins):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
-    out = numpy.zeros([bdata.P, bdata.M] + shape)
-    for (p, m), pnes in bdata.items():
-        # pnes has shape (U, E)
-        mat = numpy.ones(shape)
-        for i_mag, i_dist, i_lon, i_lat, pne in zip(
-                mags_idx, dists_idx, lons_idx, lats_idx, pnes):
-            mat[i_mag, i_dist, i_lon, i_lat] *= pne
-        out[p, m] = 1. - mat
-    return out
+    U, M, P, E = bdata.pnes.shape
+    mat7D = numpy.ones(shape[:-1] + [M, P, E])
+    for i_mag, i_dist, i_lon, i_lat, pne in zip(
+            mags_idx, dists_idx, lons_idx, lats_idx, bdata.pnes):
+        mat7D[i_mag, i_dist, i_lon, i_lat] *= pne
+    return 1. - mat7D
 
 
 # called by the engine
-def build_matrices(rupdata, sitecol, cmaker, iml2s, trunclevel,
-                   num_epsilon_bins, bin_edges, pne_mon, mat_mon):
+def build_matrices(rupdata, sitecol, cmaker, iml2s,
+                   num_epsilon_bins, bin_edges,
+                   pne_mon, mat_mon, gmf_mon):
     """
     :yield: (sid, {poe, imt, rlz: matrix})
     """
     if len(sitecol) >= 32768:
         raise ValueError('You can disaggregate at max 32,768 sites')
     indices = _site_indices(rupdata['sid_'], len(sitecol))
-    eps3 = _eps3(trunclevel, num_epsilon_bins)  # this is slow
+    eps3 = _eps3(cmaker.trunclevel, num_epsilon_bins)  # this is slow
     for sid, iml2 in zip(sitecol.sids, iml2s):
         singlesitecol = sitecol.filtered([sid])
         bins = get_bins(bin_edges, sid)
         bdata = _disaggregate(cmaker, singlesitecol, rupdata,
-                              indices[sid], iml2, eps3, pne_mon)
-        with mat_mon:
-            mat = _build_disagg_matrix(bdata, bins)
-            if mat.any():  # nonzero
-                yield sid, mat
+                              indices[sid], iml2, eps3, pne_mon, gmf_mon)
+        if bdata.pnes.sum():
+            with mat_mon:
+                mat = _build_disagg_matrix(bdata, bins)
+                if mat.any():  # nonzero
+                    yield sid, mat
 
 
 def _digitize_lons(lons, lon_bins):
@@ -341,11 +329,13 @@ def disaggregation(
     eps3 = _eps3(truncation_level, n_epsilons)
     for trt, srcs in by_trt.items():
         cmaker = ContextMaker(
-            trt, rlzs_by_gsim, source_filter.integration_distance,
-            {'filter_distance': filter_distance})
+            trt, rlzs_by_gsim,
+            {'truncation_level': truncation_level,
+             'maximum_distance': source_filter.integration_distance,
+             'filter_distance': filter_distance, 'imtls': {str(imt): [iml]}})
         contexts.RuptureContext.temporal_occurrence_model = (
             srcs[0].temporal_occurrence_model)
-        rdata = contexts.RupData(cmaker, sitecol).from_srcs(srcs)
+        rdata = contexts.RupData(cmaker).from_srcs(srcs, sitecol)
         idxs = _site_indices(rdata['sid_'], 1)[0]
         bdata[trt] = _disaggregate(cmaker, sitecol, rdata, idxs, iml2, eps3)
 
@@ -381,7 +371,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        [[mat]] = _build_disagg_matrix(bdata[trt], bin_edges)
+        mat = _build_disagg_matrix(bdata[trt], bin_edges)[..., 0, 0, :]
         matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 

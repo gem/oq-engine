@@ -89,6 +89,12 @@ Current stable version is the **OpenQuake Engine 3.6** 'Pak Topo'. The documenta
 
 * [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
 
+#### Mirrors
+
+A mirror of this repository, hosted in Pavia (Italy), is available at [https://mirror.openquake.org/git/GEM/oq-engine.git](https://mirror.openquake.org/git/GEM/oq-engine.git).
+
+The main download server ([downloads.openquake.org](https://downloads.openquake.org/)) is hosted in Nürnberg (Germany).
+
 ### Running the OpenQuake Engine
 
 * [Using the command line](https://github.com/gem/oq-engine/blob/master/doc/running/unix.md)

@@ -3,8 +3,8 @@ Reduced Hazard Italy
 
 ============== ===================
 checksum32     1,879,307,037      
-date           2019-06-24T15:33:47
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:03:51
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 148, num_levels = 30, num_rlzs = ?
@@ -72,11 +72,10 @@ CR/CDN/H:3        1.00000 0.0     1   1   3         3
 
 Slowest sources
 ---------------
-====== ========== ==== ===== ===== ============ ========= ========= ====== =============
-grp_id source_id  code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
-====== ========== ==== ===== ===== ============ ========= ========= ====== =============
-0      AS_HRAS083 A    0     15    2,295        0.0       0.0       0.0    3,851,076,649
-====== ========== ==== ===== ===== ============ ========= ========= ====== =============
+========= ====== ==== ============ ========= ========= ====== =====
+source_id grp_id code num_ruptures calc_time num_sites weight speed
+========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ====== =====
 
 Computation times by source typology
 ------------------------------------
@@ -90,21 +89,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01942 NaN    0.01942 0.01942 1      
+read_source_models 0.01627 NaN    0.01627 0.01627 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=313 B fnames=110 B 2.86 KB 
+read_source_models converter=314 B fnames=103 B 2.85 KB 
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_15476               time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.01942  0.0       1     
-reading exposure         0.00262  0.0       1     
+total read_source_models 0.01627  0.0       1     
+reading exposure         0.00263  0.0       1     
 ======================== ======== ========= ======

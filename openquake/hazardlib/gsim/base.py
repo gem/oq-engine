@@ -277,30 +277,31 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         compute interim steps).
         """
 
-    def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
+    def get_mean_std(self, sctx, rctx, dctx, imts):
+        """
+        :returns: an array of shape (2, N, M) with means and stddevs
+        """
+        N = len(sctx.sids)
+        M = len(imts)
+        arr = numpy.zeros((2, N, M))
+        for m, imt in enumerate(imts):
+            mean, [std] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                    [const.StdDev.TOTAL])
+            arr[0, :, m] = mean
+            arr[1, :, m] = std
+        return arr
+
+    def get_poes(self, mean_std, imls, truncation_level):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
         for one or more pairs "site -- rupture".
 
-        :param sctx:
-            An instance of :class:`SitesContext` with sites information
-            to calculate PoEs on.
-        :param rctx:
-            An instance of :class:`RuptureContext` with a single rupture
-            information.
-        :param dctx:
-            An instance of :class:`DistancesContext` with information about
-            the distances between sites and a rupture.
-
-            All three contexts (``sctx``, ``rctx`` and ``dctx``) must conform
-            to each other. The easiest way to get them is to call
-            ContextMaker.make_contexts.
-        :param imt:
-            An intensity measure type object (that is, an instance of one
-            of classes from :mod:`openquake.hazardlib.imt`).
+        :param mean_std:
+            An array of shape (2, N) with mean and standard deviation for
+            the current intensity measure type
         :param imls:
-            List of interested intensity measure levels (of type ``imt``).
+            List of interested intensity measure levels
         :param truncation_level:
             Can be ``None``, which means that the distribution of intensity
             is treated as Gaussian distribution with possible values ranging
@@ -335,28 +336,19 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        self._check_imt(imt)
-
-        if truncation_level == 0:
-            # zero truncation mode, just compare imls to mean
-            imls = self.to_distribution_values(imls)
-            mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
-            mean = mean.reshape(mean.shape + (1, ))
+        mean, stddev = mean_std
+        mean = mean.reshape(mean.shape + (1, ))
+        stddev = stddev.reshape(stddev.shape + (1, ))
+        imls = self.to_distribution_values(imls)
+        if truncation_level == 0:  # just compare imls to mean
             return imls <= mean
+
+        # else use real normal distribution
+        values = (imls - mean) / stddev
+        if truncation_level is None:
+            return _norm_sf(values)
         else:
-            # use real normal distribution
-            assert (const.StdDev.TOTAL
-                    in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            imls = self.to_distribution_values(imls)
-            mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                       [const.StdDev.TOTAL])
-            mean = mean.reshape(mean.shape + (1, ))
-            stddev = stddev.reshape(stddev.shape + (1, ))
-            values = (imls - mean) / stddev
-            if truncation_level is None:
-                return _norm_sf(values)
-            else:
-                return _truncnorm_sf(truncation_level, values)
+            return _truncnorm_sf(truncation_level, values)
 
     @abc.abstractmethod
     def to_distribution_values(self, values):

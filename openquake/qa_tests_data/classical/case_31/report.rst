@@ -3,8 +3,8 @@ Classical PSHA with source specific logic tree (3**2 realizations)
 
 ============== ===================
 checksum32     283,798,826        
-date           2019-06-24T15:34:14
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:04:16
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 1, num_levels = 14, num_rlzs = 9
@@ -116,67 +116,54 @@ source_model.xml 17     Stable Continental Crust 1,040        1,040
 #TRT models   18    
 #eff_ruptures 12,150
 #tot_ruptures 12,150
-#tot_weight   12,150
 ============= ======
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight checksum     
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
-0      2         S    0     3     310          0.00551   1.00000   310    3,409,134,017
-4      2         S    14    17    310          0.00524   1.00000   310    65,619,892   
-2      2         S    7     10    310          0.00493   1.00000   310    4,144,056,248
-7      1         A    24    28    1,040        0.00262   1.00000   1,040  2,887,494,482
-13     1         A    45    49    1,040        0.00260   1.00000   1,040  65,516,461   
-1      1         A    3     7     1,040        0.00255   1.00000   1,040  3,127,488,846
-17     1         A    59    63    1,040        0.0       0.0       0.0    65,516,461   
-16     2         S    56    59    310          0.0       0.0       0.0    65,619,892   
-15     1         A    52    56    1,040        0.0       0.0       0.0    65,516,461   
-14     2         S    49    52    310          0.0       0.0       0.0    4,144,056,248
-12     2         S    42    45    310          0.0       0.0       0.0    3,409,134,017
-11     1         A    38    42    1,040        0.0       0.0       0.0    2,887,494,482
-10     2         S    35    38    310          0.0       0.0       0.0    65,619,892   
-9      1         A    31    35    1,040        0.0       0.0       0.0    2,887,494,482
-8      2         S    28    31    310          0.0       0.0       0.0    4,144,056,248
-6      2         S    21    24    310          0.0       0.0       0.0    3,409,134,017
-5      1         A    17    21    1,040        0.0       0.0       0.0    3,127,488,846
-3      1         A    10    14    1,040        0.0       0.0       0.0    3,127,488,846
-====== ========= ==== ===== ===== ============ ========= ========= ====== =============
+========= ====== ==== ============ ========= ========= ====== =======
+source_id grp_id code num_ruptures calc_time num_sites weight speed  
+========= ====== ==== ============ ========= ========= ====== =======
+1         1      A    1,040        0.01344   3.00000   3,120  232,161
+2         0      S    310          0.00987   3.00000   930    94,259 
+========= ====== ==== ============ ========= ========= ====== =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00777   9     
-S    0.01569   9     
+A    0.01344   9     
+S    0.00987   9     
 ==== ========= ======
+
+Duplicated sources
+------------------
+Found 0 unique sources and 6 duplicate sources with multiplicity 3.0: ['1' '1' '1' '2' '2' '2']
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-preclassical       0.00440 0.00143 0.00306 0.00601 6      
-read_source_models 0.02729 0.00556 0.02113 0.04024 9      
+preclassical       0.00433 0.00203 0.00244 0.00813 6      
+read_source_models 0.03369 0.01239 0.02083 0.06235 9      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================================== ========
 task               sent                                                     received
-preclassical       srcs=9.3 KB params=3.33 KB srcfilter=1.29 KB gsims=906 B 2.08 KB 
-read_source_models converter=2.75 KB fnames=963 B                           28.07 KB
+preclassical       srcs=9.3 KB params=3.56 KB srcfilter=1.29 KB gsims=906 B 2.06 KB 
+read_source_models converter=2.76 KB fnames=900 B                           28.01 KB
 ================== ======================================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_15522               time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.24559  0.0       9     
-total preclassical       0.02640  0.0       6     
-managing sources         0.00474  0.0       1     
-store source_info        0.00155  0.0       1     
-aggregate curves         0.00104  0.0       6     
+total read_source_models 0.30321  0.19531   9     
+total preclassical       0.02596  0.0       6     
+managing sources         0.01037  0.0       1     
+store source_info        0.00372  0.0       1     
+aggregate curves         0.00273  0.0       6     
 ======================== ======== ========= ======
