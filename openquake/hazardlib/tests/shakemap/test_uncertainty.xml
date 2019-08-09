@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="20100227063414" shakemap_id="20100227063414" shakemap_version="1" code_version="3.5.1586" process_timestamp="2018-03-12T21:09:49Z" shakemap_originator="us" map_status="RELEASED" shakemap_event_type="ACTUAL">
+<event event_id="20100227063414" magnitude="8.8" depth="35" lat="-35.908900" lon="-72.732700" event_timestamp="2010-02-27T06:34:14UTC" event_network="us" event_description="Maule, Chile" />
+<grid_specification lon_min="-77.232700" lat_min="-41.173900" lon_max="-64.232700" lat_max="-30.643900" nominal_lon_spacing="0.008333" nominal_lat_spacing="0.008331" nlon="1561" nlat="1265" />
+<event_specific_uncertainty name="pga" value="0.570978" numsta="327" />
+<event_specific_uncertainty name="pgv" value="0.676098" numsta="321" />
+<event_specific_uncertainty name="mi" value="0.956069" numsta="327" />
+<event_specific_uncertainty name="psa03" value="0.621158" numsta="319" />
+<event_specific_uncertainty name="psa10" value="0.718369" numsta="319" />
+<event_specific_uncertainty name="psa30" value="0.686980" numsta="319" />
+<grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="STDPGA" units="ln(pctg)" />
+<grid_field index="4" name="STDPGV" units="ln(cms)" />
+<grid_field index="5" name="STDMMI" units="intensity" />
+<grid_field index="6" name="STDPSA03" units="ln(pctg)" />
+<grid_field index="7" name="STDPSA10" units="ln(pctg)" />
+<grid_field index="8" name="STDPSA30" units="ln(pctg)" />
+<grid_field index="9" name="GMPE_INTER_STDPGA" units="ln(pctg)" />
+<grid_field index="10" name="GMPE_INTRA_STDPGA" units="ln(pctg)" />
+<grid_field index="11" name="GMPE_INTER_STDPGV" units="ln(cms)" />
+<grid_field index="12" name="GMPE_INTRA_STDPGV" units="ln(cms)" />
+<grid_field index="13" name="GMPE_INTER_STDMMI" units="intensity" />
+<grid_field index="14" name="GMPE_INTRA_STDMMI" units="intensity" />
+<grid_field index="15" name="GMPE_INTER_STDPSA03" units="ln(pctg)" />
+<grid_field index="16" name="GMPE_INTRA_STDPSA03" units="ln(pctg)" />
+<grid_field index="17" name="GMPE_INTER_STDPSA10" units="ln(pctg)" />
+<grid_field index="18" name="GMPE_INTRA_STDPSA10" units="ln(pctg)" />
+<grid_field index="19" name="GMPE_INTER_STDPSA30" units="ln(pctg)" />
+<grid_field index="20" name="GMPE_INTRA_STDPSA30" units="ln(pctg)" />
+<grid_data>
+0.0 0.0 0.6 0.66 0.75 0.67 0.66 0.67 0.31 0.6 0.33 0.66 0.21 0.75 0.28 0.67 0.33 0.66 0.34 0.67
+0.1 0.1 0.6 0.66 0.75 0.67 0.66 0.67 0.31 0.6 0.33 0.66 0.21 0.75 0.28 0.67 0.33 0.66 0.34 0.67
+0.0 0.1 0.6 0.66 0.75 0.67 0.66 0.67 0.31 0.6 0.33 0.66 0.21 0.75 0.28 0.67 0.33 0.66 0.34 0.67
+0.1 0.0 0.6 0.66 0.75 0.67 0.66 0.67 0.31 0.6 0.33 0.66 0.21 0.75 0.28 0.67 0.33 0.66 0.34 0.67
+</grid_data>
+
+</shakemap_grid>
