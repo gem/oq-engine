@@ -33,10 +33,17 @@ from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile,
 
 class SERA2019Craton(GMPE):
     """
-    A generalised base class for the implementation of a GMPE in which the
-    mean values are determined from tables (input by the user) and the standard
-    deviation model taken from Al Atik (2015). Should be common to all
-    NGA East ground motion models.
+    Implements a scalable backbone GMPE for application to stable cratonic
+    regions (primarily intended for cratonic Europe). The median ground motion
+    is determined by fitting a parametric model to an extensive set of ground
+    motion scenarios from the suite of NGA East ground motion models for 800
+    m/s site class. The form of the parametric model is based on that of
+    :class:`openquake.hazardlib.gsim.kotha_2019.KothaEtAl2019`, and the
+    scaling in terms of the number of standard deviations of the epistemic
+    uncertainty (sigma).
+
+    The aleatory uncertainty model is that of Al Atik (2015), which is common
+    to all NGA East ground motion models and configurable by the user.
 
     :param float epsilon:
         Number of standard deviations above or below the median to be applied
