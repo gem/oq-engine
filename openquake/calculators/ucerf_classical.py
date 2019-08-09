@@ -55,7 +55,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance, maxweight=1E10,
                      task_duration=1000)
-        self.calc_times = general.AccumDict(accum=np.zeros(2, np.float32))
+        self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
         [gsims] = sorted(self.csm.info.gsim_lt.values.values())
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         for sm in self.csm.source_models:  # one branch at the time

@@ -108,7 +108,7 @@ _depth = 8.0
 _probability = 0.5
 
 [areaSource.areaGeometry."gml:Polygon"."gml:exterior"."gml:LinearRing"]
-"gml:posList" = [ "-122.5", "37.5", "-121.5", "37.5", "-121.5", "38.5", "-122.5", "38.5",]
+"gml:posList" = [ -122.5, 37.5, -121.5, 37.5, -121.5, 38.5, -122.5, 38.5,]
 [simpleFaultSource]
 _id = "3"
 _name = "Mount Diablo Thrust"
@@ -292,7 +292,7 @@ magScaleRel = "PeerMSR"
 ruptAspectRatio = 1.0
 
 [multiPointSource.multiPointGeometry]
-"gml:posList" = [ "0.0", "1.0", "0.5", "1.0",]
+"gml:posList" = [ 0.0, 1.0, 0.5, 1.0,]
 upperSeismoDepth = 10.0
 lowerSeismoDepth = 20.0
 
@@ -328,7 +328,7 @@ magScaleRel = "PeerMSR"
 ruptAspectRatio = 1.0
 
 [multiPointSource.multiPointGeometry]
-"gml:posList" = [ "0.1", "1.1",]
+"gml:posList" = [ 0.1000000014901161, 1.100000023841858,]
 upperSeismoDepth = 5.0
 lowerSeismoDepth = 10.0
 

@@ -207,7 +207,7 @@ class EngineServerTestCase(unittest.TestCase):
         self.wait()
 
         # check that we get at least the following 6 outputs
-        # fullreport, input, hcurves, hmaps, realizations, sourcegroups
+        # fullreport, input, hcurves, hmaps, realizations, events
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
         self.assertGreaterEqual(len(results), 5)
@@ -250,8 +250,8 @@ class EngineServerTestCase(unittest.TestCase):
             sys.stderr.write('Empty traceback, please check!\n')
 
         self.post('%s/remove' % job_id)
-        # make sure job_id is no more in the list of relevant jobs
-        job_ids = [job['id'] for job in self.get('list', relevant=True)]
+        # make sure job_id is no more in the list of jobs
+        job_ids = [job['id'] for job in self.get('list')]
         self.assertFalse(job_id in job_ids)
 
     def test_err_2(self):

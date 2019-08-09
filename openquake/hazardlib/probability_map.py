@@ -280,6 +280,13 @@ class ProbabilityMap(dict):
             new[sid] = self.get(sid, 1) + prob
         return new
 
+    def __iadd__(self, other):
+        # this is used when composing mutually exclusive probabilities
+        for sid in other:
+            pcurve = self.setdefault(sid, 0)
+            pcurve += other[sid]
+        return self
+
     def __mul__(self, other):
         try:
             other.get

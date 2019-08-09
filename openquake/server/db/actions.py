@@ -70,8 +70,8 @@ def set_status(db, job_id, status):
     """
     assert status in (
         'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
-    ), status
-    if status in ('created', 'complete', 'failed', 'aborted'):
+        'deleted'), status
+    if status in ('created', 'complete', 'failed', 'aborted', 'deleted'):
         is_running = 0
     else:  # 'executing'
         is_running = 1
@@ -127,7 +127,8 @@ def delete_uncompleted_calculations(db, user):
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param user: user name
     """
-    db("DELETE FROM job WHERE user_name=?x AND status != 'complete'", user)
+    db("UPDATE job SET status = 'deleted' "
+       "WHERE user_name=?x AND status != 'complete'", user)
 
 
 def get_job(db, job_id, username=None):
@@ -154,9 +155,11 @@ def get_job(db, job_id, username=None):
     # else negative job_id
     if username:
         joblist = db('SELECT * FROM job WHERE user_name=?x '
-                     'ORDER BY id DESC LIMIT ?x', username, -job_id)
+                     "AND status != 'deleted' ORDER BY id DESC LIMIT ?x",
+                     username, -job_id)
     else:
-        joblist = db('SELECT * FROM job ORDER BY id DESC LIMIT ?x', -job_id)
+        joblist = db("SELECT * FROM job WHERE status != 'deleted' "
+                     'ORDER BY id DESC LIMIT ?x', -job_id)
     if not joblist:  # no jobs
         return
     else:
@@ -192,8 +195,8 @@ def list_calculations(db, job_type, user_name):
     :param user_name: an user name
     """
     jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
-              'AND job_type=?x ORDER BY start_time' % JOB_TYPE,
-              user_name, job_type)
+              "AND job_type=?x AND status != 'deleted' ORDER BY start_time"
+              % JOB_TYPE, user_name, job_type)
     out = []
     if len(jobs) == 0:
         out.append('None')
@@ -257,6 +260,7 @@ DISPLAY_NAME = {
     'dmg_by_event': 'Aggregate Event Damages',
     'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
+    'events': 'Events',
     'damages-rlzs': 'Asset Damage Distribution',
     'damages-stats': 'Asset Damage Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
@@ -276,7 +280,6 @@ DISPLAY_NAME = {
     'agglosses': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
-    'sourcegroups': 'Seismic Source Groups',
     'ruptures': 'Earthquake Ruptures',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
@@ -350,7 +353,7 @@ def del_calc(db, job_id, user, force=False):
         return {"error": 'Cannot delete calculation %d:'
                 ' ID does not exist' % job_id}
 
-    deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
+    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND user_name=?x",
                  job_id, user).rowcount
     if not deleted:
         return {"error": 'Cannot delete calculation %d: it belongs to '
@@ -540,10 +543,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         is_running = request_get_dict.get('is_running')
         filterdict['is_running'] = valid.boolean(is_running)
 
-    if 'relevant' in request_get_dict:
-        relevant = request_get_dict.get('relevant')
-        filterdict['relevant'] = valid.boolean(relevant)
-
     if 'limit' in request_get_dict:
         limit = int(request_get_dict.get('limit'))
     else:
@@ -560,8 +559,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s'
-              ' ORDER BY id DESC LIMIT %d'
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s '
+              "AND status != 'deleted' ORDER BY id DESC LIMIT %d"
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
