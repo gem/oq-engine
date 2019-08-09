@@ -451,12 +451,14 @@ def calc_run(request):
         together.
     """
     hazard_job_id = request.POST.get('hazard_job_id')
+    job_ini = request.POST.get('job_ini')
 
     if hazard_job_id:
         hazard_job_id = int(hazard_job_id)
-        candidates = ("job_risk.ini", "job.ini")
+        candidates = [job_ini] if job_ini else ("job_risk.ini", "job.ini")
     else:
-        candidates = ("job_hazard.ini", "job_haz.ini", "job.ini")
+        candidates = [job_ini] if job_ini else (
+            "job_hazard.ini", "job_haz.ini", "job.ini")
     result = safely_call(_prepare_job, (request, candidates))
     if result.tb_str:
         return HttpResponse(json.dumps(result.tb_str.splitlines()),

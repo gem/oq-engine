@@ -3,8 +3,8 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     372,210,909        
-date           2019-06-24T15:33:26
-engine_version 3.6.0-git4b6205639c
+date           2019-07-30T15:03:53
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 4, num_levels = 15, num_rlzs = 1
@@ -81,11 +81,12 @@ W        1.00000 0.0    1   1   2         2
 
 Slowest operations
 ------------------
-=================== ========= ========= ======
-operation           time_sec  memory_mb counts
-=================== ========= ========= ======
-saving gmfs         0.02733   0.75000   1     
-building riskinputs 0.01488   0.0       1     
-computing gmfs      0.00652   0.0       1     
-reading exposure    4.058E-04 0.0       1     
-=================== ========= ========= ======
+====================== ========= ========= ======
+calc_15487             time_sec  memory_mb counts
+====================== ========= ========= ======
+ScenarioCalculator.run 0.08486   0.12500   1     
+saving gmfs            0.02648   0.0       1     
+building riskinputs    0.01368   0.0       1     
+computing gmfs         0.00676   0.0       1     
+reading exposure       4.156E-04 0.0       1     
+====================== ========= ========= ======

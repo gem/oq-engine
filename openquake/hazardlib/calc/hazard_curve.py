@@ -54,10 +54,7 @@ efficient. Here we start a parallel computation per each realization,
 the engine manages all the realizations at once.
 """
 
-import sys
-import time
 import operator
-import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
@@ -68,12 +65,12 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
 
 
-def _cluster(param, tom, imtls, gsims, grp_ids, pmap):
+def _cluster(imtls, tom, gsims, pmap):
     """
     Computes the probability map in case of a cluster group
     """
-    pmapclu = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
-                         for grp_id in grp_ids})
+    L, G = len(imtls.array), len(gsims)
+    pmapclu = AccumDict(accum=ProbabilityMap(L, G))
     # Get temporal occurrence model
     # Number of occurrences for the cluster
     first = True
@@ -100,87 +97,41 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     :returns:
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
-        .eff_ruptures
     """
-    if not hasattr(src_filter, 'sitecol'):  # a sitecol was passed
+    if not hasattr(src_filter, 'sitecol'):  # do not filter
         src_filter = SourceFilter(src_filter, {})
 
     # Get the parameters assigned to the group
     src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
     rup_mutex = getattr(group, 'rup_interdep', None) == 'mutex'
     cluster = getattr(group, 'cluster', None)
-    # Compute the number of ruptures
-    grp_ids = set()
     trts = set()
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures is set when parsing the XML, but not when
             # the source is instantiated manually, so it is set here
             src.num_ruptures = src.count_ruptures()
-        # This sets the proper TOM in case of a cluster
+        # set the proper TOM in case of a cluster
         if cluster:
             src.temporal_occurrence_model = FatedTOM(time_span=1)
-        # Updating IDs
-        grp_ids.update(src.src_group_ids)
         trts.add(src.tectonic_region_type)
-    # Now preparing context
-    maxdist = src_filter.integration_distance
-    imtls = param['imtls']
-    trunclevel = param.get('truncation_level')
+
+    param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
-    cmaker = ContextMaker(trt, gsims, maxdist, param, monitor)
-    # Prepare the accumulator for the probability maps
-    pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
-                      for grp_id in grp_ids})
-    pmap.trt = trt
-    rup_data = AccumDict(accum=[])
-    # AccumDict of arrays with 2 elements weight, calc_time
-    calc_times = AccumDict(accum=numpy.zeros(2, numpy.float32))
-    eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
-    nsites = {}  # src.id -> num_sites
-    gids = []
-    # Computing hazard
-    for src, s_sites in src_filter(group):  # filter now
-        nsites[src.id] = src.nsites
-        t0 = time.time()
-        try:
-            poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
-                                    rup_indep=not rup_mutex)
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = '%s (source id=%s)' % (str(err), src.source_id)
-            raise etype(msg).with_traceback(tb)
-        if src_mutex:  # mutex sources, there is a single group
-            for sid in poemap:
-                pcurve = pmap[src.src_group_id].setdefault(sid, 0)
-                pcurve += poemap[sid] * src.mutex_weight
-        elif poemap:
-            for gid in src.src_group_ids:
-                pmap[gid] |= poemap
-        if len(cmaker.data):
-            nr = len(cmaker.data['sid_'])
-            for gid in src.src_group_ids:
-                gids.extend([gid] * nr)
-                for k, v in cmaker.data.items():
-                    rup_data[k].extend(v)
-        calc_times[src.id] += numpy.array([src.weight, time.time() - t0])
-        # storing the number of contributing ruptures too
-        eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
-                         for gid in src.src_group_ids}
-    # Updating the probability map in the case of mutually exclusive
-    # sources
+    cmaker = ContextMaker(trt, gsims, param, monitor)
+    pmap, rup_data, calc_times = cmaker.get_pmap_by_grp(
+        src_filter(group), src_mutex, rup_mutex)
+
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
         pmap[src.src_group_id] *= group_probability
-    # Processing cluster
+
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
-        pmap = _cluster(param, tom, imtls, gsims, grp_ids, pmap)
-    # Return results
-    rdata = {k: numpy.array(v) for k, v in rup_data.items()}
-    rdata['grp_id'] = numpy.uint16(gids)
-    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures,
-                nsites=nsites, rup_data=rdata)
+        pmap = _cluster(param['imtls'], tom, gsims, pmap)
+
+    return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
+                task_no=getattr(monitor, 'task_no', 0))
 
 
 def calc_hazard_curves(

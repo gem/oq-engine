@@ -2,9 +2,9 @@ Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
 ============== ===================
-checksum32     572,372,510        
-date           2019-06-24T15:33:23
-engine_version 3.6.0-git4b6205639c
+checksum32     2,644,086,889      
+date           2019-07-30T15:04:35
+engine_version 3.7.0-git3b3dff46da
 ============== ===================
 
 num_sites = 3, num_levels = 1, num_rlzs = 2
@@ -61,10 +61,3 @@ source_model grp_id trt eff_ruptures tot_ruptures
 ============ ====== === ============ ============
 scenario     0      *   1            0           
 ============ ====== === ============ ============
-
-Slowest operations
-------------------
-========= ======== ========= ======
-operation time_sec memory_mb counts
-========= ======== ========= ======
-========= ======== ========= ======

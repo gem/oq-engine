@@ -200,6 +200,11 @@ class ClassicalTestCase(CalculatorTestCase):
                           '0.145', '0.203', '0.284'))
 
     def test_case_14(self):
+        # test classical
+        self.assert_curves_ok([
+            'hazard_curve-rlz-000_PGA.csv', 'hazard_curve-rlz-001_PGA.csv'
+        ], case_14.__file__)
+
         # test preclassical and OQ_SAMPLE_SOURCES
         with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
             self.run_calc(
@@ -211,11 +216,6 @@ source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
 simple_fault.xml 0      Active Shallow Crust 447          447         
 ================ ====== ==================== ============ ============""")
-        # test classical
-        self.assert_curves_ok([
-            'hazard_curve-smltp_simple_fault-gsimltp_AbrahamsonSilva2008.csv',
-            'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008.csv'
-        ], case_14.__file__)
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -387,8 +387,6 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
             case_21.__file__, delta=1E-7)
-        [fname] = export(('sourcegroups', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/sourcegroups.csv', fname)
 
     def test_case_22(self):  # crossing date line calculation for Alaska
         # this also tests the splitting of the source model in two files
