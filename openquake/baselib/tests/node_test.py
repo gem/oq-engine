@@ -156,6 +156,37 @@ param=yyy
             # test deepcopy
             self.assertEqual(node, copy.deepcopy(node))
 
+    def test_duplicates_bad(self):
+        # this is the current behavior: the first rupture is lost
+        # we may want to raise an error instead
+        xmlfile = io.StringIO(u"""\
+<nonParametric>
+<singlePlaneRupture>1</singlePlaneRupture>
+<multiPlanesRupture>2</multiPlanesRupture>
+<singlePlaneRupture>3</singlePlaneRupture>
+</nonParametric>
+""")
+        node = n.node_from_xml(xmlfile)
+        dic = n.node_to_dict(node)
+        self.assertEqual(dic, {
+            'nonParametric':
+            {'singlePlaneRupture': '3', 'multiPlanesRupture': '2'}})
+
+    def test_duplicates_ok(self):
+        # sequential duplicate tags
+        xmlfile = io.StringIO(u"""\
+<nonParametric>
+<singlePlaneRupture>1</singlePlaneRupture>
+<singlePlaneRupture>3</singlePlaneRupture>
+<multiPlanesRupture>2</multiPlanesRupture>
+</nonParametric>
+""")
+        node = n.node_from_xml(xmlfile)
+        dic = n.node_to_dict(node)
+        self.assertEqual(dic, {
+            'nonParametric':
+            {'singlePlaneRupture': ['1', '3'], 'multiPlanesRupture': '2'}})
+
     def test_can_pickle(self):
         node = n.Node('tag')
         self.assertEqual(pickle.loads(pickle.dumps(node)), node)

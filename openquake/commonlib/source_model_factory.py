@@ -41,7 +41,7 @@ source_info_dt = numpy.dtype([
     ('num_ruptures', numpy.uint32),    # 6
     ('calc_time', numpy.float32),      # 7
     ('num_sites', numpy.float32),      # 8
-    ('weight', numpy.float32),         # 9
+    ('eff_ruptures', numpy.float32),   # 9
     ('checksum', numpy.uint32),        # 10
 ])
 
