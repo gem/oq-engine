@@ -17,6 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
@@ -108,28 +112,38 @@ class Abrahamson2014EtAlNonErgodicTestCase(BaseGSIMTestCase):
 
     GSIM_CLASS = AbrahamsonEtAl2014NonErgodic
 
-    #def test_mean(self):
-    #    self.check('ASK14/ASK14_ResMEAN_RegCAL.csv',
-    #               max_discrep_percentage=0.1)
-
     def test(self):
         # Input parameters
         mag = 6.0
         hyp_lon = -121.3
         hyp_lat = 37.9
-        # 
-        dummy = Dummy()
-        surface, hypo = dummy.get_surface(hyp_lon, hyp_lat, mag=mag, 
-                                          asp_ratio=2.0)
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL, const.StdDev.EPISTEMIC]
+        # Sites
         lons = numpy.array([-121.2, -121.3])
         lats = numpy.array([37.9, 38.2])
         mesh = Mesh(lons, lats)
+        sites = []
+        for lo, la in zip(lons, lats):
+            sites.append(Site(Point(lo, la), 800, 50, 1, vs30measured=True))
+        sites = SiteCollection(sites)
+        # Surface
+        dummy = Dummy()
+        surface, _ = dummy.get_surface(hyp_lon, hyp_lat, mag=mag,
+                                       asp_ratio=2.0, mesh_spacing=2.5)
+        # Rupture
         rup = Dummy.get_rupture(mag=6.0)
+        rup.dip = 90
+        rup.ztor = 0
+        # Distances
         dists = DistancesContext()
         dists.rrup = surface.get_min_distance(mesh)
         dists.rjb = surface.get_joyner_boore_distance(mesh)
         dists.ry0 = surface.get_ry0_distance(mesh)
         dists.rx = surface.get_rx_distance(mesh)
-        dists.azimuth = surface.
-        
-        pnts = surface.get_closest_points(mesh)
+        dists.azimuth_cp = surface.get_azimuth_of_closest_point(mesh)
+        # Computing ground-motion
+        gmm = AbrahamsonEtAl2014NonErgodic()
+        mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        expected = numpy.log(numpy.array([0.13692151, 0.05288651]))
+        numpy.testing.assert_almost_equal(mean, expected)

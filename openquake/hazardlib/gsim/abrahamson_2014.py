@@ -28,7 +28,9 @@ import copy
 import h5py
 import numpy as np
 
+from rtree import index
 from scipy import interpolate
+from openquake.baselib import hdf5
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -552,41 +554,70 @@ class AbrahamsonEtAl2014NonErgodic(AbrahamsonEtAl2014):
         The name of the .hdf5 file containing the anelastic coefficients
     """
 
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL,
+        const.StdDev.EPISTEMIC
+    ])
+
     # This version of ASK also requires azimuth
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ry0', 'azimuth'))
+    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ry0', 'azimuth_cp'))
 
     dirname = os.path.dirname(__file__)
     BASE_PATH = os.path.join(dirname, 'abrahamson_2014_tables')
     TABLENAME = os.path.join(BASE_PATH, 'kuehn_2019.hdf5')
-    SPATIAL_INDEX = os.path.join(BASE_PATH, 'kuehn_2019_sites_spatial_index')
+    fname = 'kuehn_2019_sites_spatial_index'
+    SPATIAL_INDEX_FILE = os.path.join(BASE_PATH, fname)
+    fname = 'kuehn_2019_inverted_file.hdf5'
+    INVERTED_FILE = os.path.join(BASE_PATH, fname)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean, stds = AbrahamsonEtAl2014().get_mean_and_stddevs(sites, rup,
-                                                               dists, imt,
-                                                               stddev_types)
+
+        ergodic_stdtype = [const.StdDev.TOTAL]
+        gmm = AbrahamsonEtAl2014()
+        mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt,
+                                              ergodic_stdtype)
         C = self.COEFFS[imt]
         # Tests are green without this modification
         mean -= C['a17']*dists.rrup
 
         # Open data file
         fle = h5py.File(self.TABLENAME, 'r')
+        inverted_fle = hdf5.File(self.INVERTED_FILE, 'r')
 
         # Find distance index
         distances = fle['distances'][:]['distance']
         i_distance = _get_closest_index(distances, dists.rrup)
 
-        # Find azimuth index
-        # TODO - Need to check if the azimuth is consistent with the value
-        # used to create the table
+        # Find azimuth index - The azimuth is from the site to the closest
+        # point on the rupture
         azimuths = fle['azimuths'][:]['azimuth']
-        i_azimuth = _get_closest_index(azimuths, dists.azimuth)
+        i_azimuth = _get_closest_index(azimuths, dists.azimuth_cp)
 
+        # Find site indexes
+        spatial_index = index.Rtree(self.SPATIAL_INDEX_FILE)
+        i_site = []
         for site in sites:
-            lo = site.longitude
+            lo = site.location.longitude
+            la = site.location.latitude
+            i_site.append(list(spatial_index.nearest((lo, la, lo, la), 1))[0])
+        spatial_index.close()
 
-
+        # Get mean and epistemic standard deviation
+        # key:  site id - dst id - azi id
+        tmpimt = '0.01'
+        for t_site, t_dst, t_azi in zip(i_site, i_distance, i_azimuth):
+            key = '{:d}_{:d}_{:d}'.format(t_site, t_dst, t_azi)
+            idx = inverted_fle['/'][key]
+            mean_anelastic = fle['mean'][:][tmpimt][idx]
+            std_epistemic = fle['std'][:][tmpimt][idx]
         fle.close()
-        return mean, stds
+        inverted_fle.close()
+        # Standard deviations. We return the total standard deviation and the
+        # epistemic standard deviation.
+        stdout = []
+        stdout.append(stds[0])
+        stdout.append(std_epistemic)
+        return mean+mean_anelastic, stds
 
 
 def _get_closest_index(reference, values):

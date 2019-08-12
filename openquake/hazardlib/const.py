@@ -75,7 +75,7 @@ class IMC(ConstantContainer):
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
     #: and is used for all the NGA GMPEs.
     RotD50 = 'Average Horizontal (RotD50)'
-    #: 
+    #:
     RotD100 = 'Horizontal Maximum Direction (RotD100)'
     #: A randomly chosen horizontal component.
     RANDOM_HORIZONTAL = 'Random horizontal'
@@ -112,3 +112,6 @@ class StdDev(ConstantContainer):
     #: (see
     #: :meth:`openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes`).
     TOTAL = 'Total'
+    #: Epistemic standard deviation as used in the non-ergodic model proposed
+    #: by Kuehn et al. (2019) - BSSA
+    EPISTEMIC = 'Epistemic'

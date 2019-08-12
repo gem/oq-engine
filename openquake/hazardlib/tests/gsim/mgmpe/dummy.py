@@ -48,9 +48,13 @@ class Dummy:
         return SiteCollection(sites)
 
     @classmethod
-    def get_surface(self, hyp_lon=0.0, hyp_lat=0.5, mag=None, asp_ratio=None):
+    def get_surface(self, hyp_lon=0.0, hyp_lat=0.5, mag=None, asp_ratio=None, **kwargs):
         """ """
         hyp = Line([Point(hyp_lon, hyp_lat)])
+        if 'mesh_spacing' in kwargs:
+            mesh_spacing = kwargs['mesh_spacing']
+        else:
+            mesh_spacing = 10.
         if mag is None:
             trc = Line([Point(0, 0), Point(0, 1)])
         else:
@@ -59,11 +63,12 @@ class Dummy:
             pnt1 = point_at(hyp_lon, hyp_lat, 180, len/2)
             pnt2 = point_at(hyp_lon, hyp_lat, 0, len/2)
             trc = Line([Point(pnt1[0], pnt1[1]), Point(pnt2[0], pnt2[1])])
+
         sfc = SimpleFaultSurface.from_fault_data(fault_trace=trc,
                                                  upper_seismogenic_depth=0,
                                                  lower_seismogenic_depth=15,
                                                  dip=90.,
-                                                 mesh_spacing=10.)
+                                                 mesh_spacing=mesh_spacing)
         return sfc, hyp
 
     @classmethod
@@ -84,7 +89,12 @@ class Dummy:
         else:
             trt = 0
         # Get surface
-        sfc, hyp = self.get_surface()
+        if 'surface' in kwargs:
+            sfc = kwargs['trt']
+        else:
+            sfc, hyp = self.get_surface()
+
+
         # Create rupture
         rup = BaseRupture(mag, rake, trt, hyp, sfc)
         # Set attributes
