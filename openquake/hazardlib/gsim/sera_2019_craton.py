@@ -25,10 +25,58 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile,
                                                get_phi_ss_at_quantile,
-                                               get_phi_s2ss_at_quantile,
                                                TAU_EXECUTION, TAU_SETUP,
                                                PHI_S2SS_MODEL, PHI_SETUP,
                                                get_phi_ss)
+
+
+#: Phi S2SS values for the global ergodic aleatory uncertainty model as
+#: retrieved from the US NSHMP software
+#: https://github.com/usgs/nshmp-haz/blob/master/src/gov/usgs/earthquake/nshmp/gmm/coeffs/nga-east-usgs-sigma-panel.csv
+PHI_S2SS_GLOBAL = CoeffsTable(sa_damping=5, table="""\
+imt      s2s1    s2s2
+pga     0.533   0.566
+0.010   0.533   0.566
+0.020   0.537   0.577
+0.030   0.542   0.598
+0.040   0.562   0.638
+0.050   0.583   0.653
+0.075   0.619   0.633
+0.100   0.623   0.590
+0.150   0.603   0.532
+0.200   0.578   0.461
+0.250   0.554   0.396
+0.300   0.527   0.373
+0.400   0.491   0.339
+0.500   0.472   0.305
+0.750   0.432   0.273
+1.000   0.431   0.257
+1.500   0.424   0.247
+2.000   0.423   0.239
+3.000   0.418   0.230
+4.000   0.412   0.221
+5.000   0.404   0.214
+7.500   0.378   0.201
+10.00   0.319   0.193
+""")
+
+
+def get_phi_s2s(imt, vs30):
+    """
+    Implementation of the phi_S2S model for the ergodic aleatory uncertainty
+    model of Eastern North America - as implemented in the US-NSHMP software
+    https://github.com/usgs/nshmp-haz/blob/master/src/gov/usgs/earthquake/nshmp/gmm/NgaEastUsgs_2017.java
+    """
+    C = PHI_S2SS_GLOBAL[imt]
+    phi_s2s = C["s2s1"] * np.ones(vs30.shape)
+    idx = vs30 >= 1500.0
+    if np.any(idx):
+        phi_s2s[idx] = C["s2s2"]
+    idx = np.logical_and(vs30 >= 1200., vs30 < 1500.)
+    if np.any(vs30):
+        phi_s2s[idx] = C["s2s1"] - ((C["s2s1"] - C["s2s2"]) /
+                                    (1500. - 1200.)) * (vs30[idx] - 1200.0)
+    return phi_s2s
 
 
 class SERA2019Craton(GMPE):
@@ -56,10 +104,6 @@ class SERA2019Craton(GMPE):
     :param str phi_model:
         Choice of model for the single-station intra-event standard deviation
         (phi_ss), selecting from "global" {default}, "cena" or "cena_constant"
-
-    :param str phi_s2ss_model:
-        Choice of station-term s2ss model. Can be either "cena" or None. When
-        None is input then the non-ergodic model is used
 
     :param TAU:
         Inter-event standard deviation model
@@ -121,9 +165,12 @@ class SERA2019Craton(GMPE):
     #: Required distance measure is Rrup
     REQUIRES_DISTANCES = set(('rrup', ))
 
+    #: Defined for a reference velocity of 800 m/s
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.0
+
     def __init__(self, epsilon=0.0, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None,
-                 phi_ss_quantile=None, phi_s2ss_quantile=None):
+                 ergodic=True, tau_quantile=0.5, phi_ss_quantile=0.5,
+                 phi_s2ss_quantile=None):
         """
         Instantiates the class with additional terms controlling both the
         epistemic uncertainty in the median and the preferred aleatory
@@ -134,14 +181,10 @@ class SERA2019Craton(GMPE):
         self.epsilon = epsilon
         self.tau_model = tau_model
         self.phi_model = phi_model
-        self.phi_s2ss_model = phi_s2ss_model
         self.TAU = None
         self.PHI_SS = None
         self.PHI_S2SS = None
-        if self.phi_s2ss_model:
-            self.ergodic = True
-        else:
-            self.ergodic = False
+        self.ergodic = ergodic
         self.tau_quantile = tau_quantile
         self.phi_ss_quantile = phi_ss_quantile
         self.phi_s2ss_quantile = phi_s2ss_quantile
@@ -159,11 +202,6 @@ class SERA2019Craton(GMPE):
         # setup phi
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
-        # if required setup phis2ss
-        if self.ergodic:
-            self.PHI_S2SS = get_phi_s2ss_at_quantile(
-                PHI_S2SS_MODEL[self.phi_s2ss_model],
-                self.phi_s2ss_quantile)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
@@ -207,7 +245,7 @@ class SERA2019Craton(GMPE):
         non-ergodic models
         """
         tau = self._get_tau(imt, mag)
-        phi = self._get_phi(imt, mag)
+        phi = self._get_phi(imt, mag, num_sites)
         sigma = np.sqrt(tau ** 2. + phi ** 2.)
         stddevs = []
         for stddev_type in stddev_types:
@@ -226,14 +264,18 @@ class SERA2019Craton(GMPE):
         """
         return TAU_EXECUTION[self.tau_model](imt, mag, self.TAU)
 
-    def _get_phi(self, imt, mag):
+    def _get_phi(self, imt, mag, num_sites):
         """
-        Returns the within-event standard deviation (phi)
+        Returns the within-event standard deviation (phi). If the ergodic
+        model is chosen the "global" phi_s2s model of Stewart et al. (2019)
+        is used.
         """
         phi = get_phi_ss(imt, mag, self.PHI_SS)
         if self.ergodic:
-            C = self.PHI_S2SS[imt]
-            phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
+            phi_s2s = get_phi_s2s(
+                imt, 
+                self.DEFINED_FOR_REFERENCE_VELOCITY + np.zeros(num_sites))
+            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
         return phi
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
