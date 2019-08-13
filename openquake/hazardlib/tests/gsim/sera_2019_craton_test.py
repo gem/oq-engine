@@ -31,7 +31,8 @@ class SERA2019CratonTestCaseMean(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check("sera_craton/SERA_CRATON_TOTAL_STDDEV_NONERGODIC.csv",
-                   max_discrep_percentage=MAX_DISCREP)
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
 
 
 class SERA2019CratonTestCasePlus1Sigma(BaseGSIMTestCase):
@@ -49,4 +50,4 @@ class SERA2019CratonErgodicTestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check("sera_craton/SERA_CRATON_TOTAL_STDDEV_ERGODIC.csv",
                    max_discrep_percentage=MAX_DISCREP,
-                   phi_s2ss_model="cena")
+                   ergodic=True)
