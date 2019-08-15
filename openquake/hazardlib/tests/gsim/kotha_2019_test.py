@@ -18,7 +18,8 @@
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.kotha_2019 import (KothaEtAl2019SERA,
                                                  KothaEtAl2019Site,
-                                                 KothaEtAl2019Slope)
+                                                 KothaEtAl2019Slope,
+                                                 KothaEtAl2019SERASlopeGeology)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 MAX_DISCREP = 0.01
@@ -171,4 +172,24 @@ class KothaEtAl2019SlopeTestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check("kotha19/KOTHA_2019_SLOPE_STDDEV_TOTAL.csv",
+                   max_discrep_percentage=MAX_DISCREP)
+
+
+class KothaEtAl2019SlopeGeologyTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERASlopeGeology
+
+    def test_mean(self):
+        self.check("kotha19/KOTHA_2019_SLOPE_GEOLOGY_MEAN.csv",
+                   max_discrep_percentage=MAX_DISCREP)
+
+    def test_std_intra(self):
+        self.check("kotha19/KOTHA_2019_SLOPE_GEOLOGY_INTRA_EVENT_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP)
+
+    def test_std_inter(self):
+        self.check("kotha19/KOTHA_2019_SLOPE_GEOLOGY_INTER_EVENT_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP)
+
+    def test_std_total(self):
+        self.check("kotha19/KOTHA_2019_SLOPE_GEOLOGY_TOTAL_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP)
