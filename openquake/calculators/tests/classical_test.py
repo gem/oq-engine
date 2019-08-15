@@ -510,3 +510,9 @@ hazard_uhs-std.csv
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
             'hazard_map-mean.csv'], case_39.__file__, delta=1E-5)
+
+    def test_case_40(self):
+        # SERA Site Amplification Models including EC8 Site Classes and Geology
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "hazard_curve-mean-SA(1.0).csv"],
+                              case_40.__file__)
