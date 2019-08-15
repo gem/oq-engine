@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Fixed bug in NGA East instantiation and added test
+  
   [Michele Simionato]
   * In the agglosses output of scenario_risk the losses were incorrectly
     multiplied by the realization weight
