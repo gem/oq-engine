@@ -25,9 +25,44 @@ PEER (2015) "NGA-East: Adjustments to Median Ground-Motion Models for Central
 and Eastern North America", Pacific Earthquake Engineering Research Center,
 Report Number 2015/08, University of California, Berkeley, August 2015
 """
-
+import h5py
+import unittest
+import numpy as np
 import openquake.hazardlib.gsim.nga_east as neb
+from openquake.hazardlib.imt import PGV, PGA, SA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+
+
+# Basic check to ensure GMPEs instantiate outside of hazardlib
+class NGAEastInstantiationTestCase(unittest.TestCase):
+    """
+    Verifies that arguements are parsed from the hdf5 upon instanstation
+    """
+    def setUp(self):
+        self.gmpe = neb.YenierAtkinson2015NGAEastTotalSigma()
+        self.fle = h5py.File(self.gmpe.NGA_EAST_TABLE, "r")
+
+    def test_data_instantiation(self):
+        # Check arrays are parsed
+        np.testing.assert_array_almost_equal(self.gmpe.distances,
+                                             self.fle["Distances"][:])
+        np.testing.assert_array_almost_equal(self.gmpe.m_w,
+                                             self.fle["Mw"][:])
+        for imt_str in ["PGA", "PGV", "SA", "T"]:
+            np.testing.assert_array_almost_equal(
+                self.gmpe.imls[imt_str],
+                self.fle["IMLs/{:s}".format(imt_str)][:])
+
+    def test_keys_imts(self):
+        # Check that the correct IMTs and required parameters are parsed
+        self.assertSetEqual(self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES,
+                            set((PGA, PGV, SA)))
+        self.assertSetEqual(self.gmpe.REQUIRES_DISTANCES, set(("rrup",)))
+        self.assertSetEqual(self.gmpe.REQUIRES_RUPTURE_PARAMETERS,
+                            set(("mag",)))
+
+    def tearDown(self):
+        self.fle.close()
 
 
 # A discrepancy of 0.1 % is tolerated

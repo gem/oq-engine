@@ -465,6 +465,7 @@ class NGAEastBaseGMPE(GMPETable):
         self.phi_s2ss_quantile = phi_s2ss_quantile
         self._setup_standard_deviations(fle=None)
         super().__init__(gmpe_table=gmpe_table)
+        super().init()
 
     def _setup_standard_deviations(self, fle):
         # setup tau
