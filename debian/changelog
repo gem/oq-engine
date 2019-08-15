@@ -1,3 +1,8 @@
+  [Graeme Weatherill]
+  * Updates Kotha et al. (2019) GMPE to July 2019 coefficients
+  * Adds subclasses to Kotha et al. (2019) to implement polynomial site
+    response models and geology+slope site response model
+  
   [Michele Simionato]
   * In the agglosses output of scenario_risk the losses were incorrectly
     multiplied by the realization weight
