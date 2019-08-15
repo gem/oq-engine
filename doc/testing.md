@@ -9,6 +9,7 @@ The OpenQuake code is automatically tested by Continuous integration systems, [J
 The full suite of tests for the OpenQuake Engine can be run using `pytest` from [**source code**](installing/development.md):
 
 ```bash
+$ oq dbserver start
 $ pytest -v openquake
 ```
 
@@ -27,6 +28,8 @@ $ pytest -vs openquake/server
 ```
 
 See the `pytest` [documentation](https://docs.pytest.org/en/latest/contents.html) for further information and command options.
+
+Some tests in specific packages do require the DbServer to be started first (`oq dbserver start`).
 
 ***
 
