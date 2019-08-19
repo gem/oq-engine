@@ -1482,7 +1482,7 @@ class GsimLogicTree(object):
                 try:
                     name = gsim.kwargs['gmpe_table']
                 except KeyError:
-                    gsim.init()
+                    gsim.init()  # name not passed, extracted from GMPE_TABLE
                 else:
                     gsim.init(dic[name])
             weight = object.__new__(ImtWeight)
