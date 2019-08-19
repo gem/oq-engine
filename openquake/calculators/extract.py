@@ -532,7 +532,7 @@ def extract_agg_losses(dstore, what):
     elif 'avg_losses' in dstore:  # ebrisk
         tags = ['kind=mean']
         stats = [b'mean']
-        losses = dstore['avg_losses'][:, L]
+        losses = dstore['avg_losses'][:, L].reshape(-1, 1)
     elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
         stats = dstore['avg_losses-stats'].attrs['stats']
         losses = dstore['avg_losses-stats'][:, :, L]
