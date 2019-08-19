@@ -27,7 +27,6 @@ Module exports :class:`NBCC2015_AA13_Base`,
 """
 import os
 import numpy as np
-from openquake.baselib import hdf5
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
