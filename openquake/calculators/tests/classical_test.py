@@ -512,7 +512,7 @@ hazard_uhs-std.csv
             'hazard_map-mean.csv'], case_39.__file__, delta=1E-5)
 
     def test_case_40(self):
-        # NGE East
+        # NGA East
         self.assert_curves_ok([
             'hazard_curve-mean-PGV.csv', 'hazard_map-mean.csv'],
                               case_40.__file__, delta=1E-6)
