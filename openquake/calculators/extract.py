@@ -529,7 +529,7 @@ def extract_agg_losses(dstore, what):
     if 'losses_by_asset' in dstore:  # scenario_risk
         stats = None
         losses = dstore['losses_by_asset'][:, :, L]['mean']
-    if 'avg_losses' in dstore:  # ebrisk
+    elif 'avg_losses' in dstore:  # ebrisk
         tags = ['kind=mean']
         stats = [b'mean']
         losses = dstore['avg_losses'][:, L]
