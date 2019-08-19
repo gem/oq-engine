@@ -311,7 +311,8 @@ class GMPETable(GMPE):
         if fle is None:
             fname = self.kwargs.get('gmpe_table', self.GMPE_TABLE)
             if fname is None:
-                raise ValueError('You forgot to set GMPETable.GMPE_TABLE!')
+                raise ValueError('You forgot to set %s.GMPE_TABLE!' %
+                                 self.__class__.__name__)
             elif os.path.isabs(fname):
                 self.GMPE_TABLE = fname
             else:
