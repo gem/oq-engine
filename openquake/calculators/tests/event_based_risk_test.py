@@ -115,7 +115,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+            self.assertEqualFiles(strip_calc_id(fname), fname)
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         numpy.testing.assert_equal(aw.stats, [b'mean', b'quantile-0.25'])
