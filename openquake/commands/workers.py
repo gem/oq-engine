@@ -33,4 +33,5 @@ def workers(cmd):
     print(getattr(master, cmd)())
 
 
-workers.arg('cmd', 'command', choices='start stop status restart'.split())
+workers.arg('cmd', 'command',
+            choices='start stop status restart inspect'.split())
