@@ -18,23 +18,28 @@ demonstrate a complete end-to-end demonstration of the workflow.
 An alternate file, job_eb.ini, is also included in this demo, to
 demonstrate the newer `ebrisk` calculator.
 
-**Hazard Calculation and Outputs**
-Expected runtime: 10 seconds
-Hazard Outputs: 
-		Realizations
-		Earthquake Ruptures
-		Events
-		Ground Motion Fields
-		Hazard Curves
 
-**Risk Calculation and Outputs**
-Expected runtime: 40 seconds
-Outputs:
-		Aggregate Event Losses
-		Aggregate Loss Curves
-		Aggregate Loss Curves Statistics
-		Asset Loss Curves Statistics
-		Asset Loss Maps
-		Asset Loss Maps Statistics
-		Average Asset Losses
-		Average Asset Losses Statistics
+**Expected Runtimes and Outputs**
+
+Expected runtime for hazard calculation: 10 seconds
+
+Hazard outputs:
+
+- Realizations
+- Earthquake Ruptures
+- Events
+- Ground Motion Fields
+- Hazard Curves
+
+Expected runtime for risk calculation: 40 seconds
+
+Risk outputs:
+
+- Aggregate Event Losses
+- Aggregate Loss Curves
+- Aggregate Loss Curves Statistics
+- Asset Loss Curves Statistics
+- Asset Loss Maps
+- Asset Loss Maps Statistics
+- Average Asset Losses
+- Average Asset Losses Statistics
