@@ -216,6 +216,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             msg = ('%s is experimental and may change in future versions - '
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, ExperimentalWarning)
+        self.init()
 
     def init(self):
         """
