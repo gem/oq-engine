@@ -314,6 +314,9 @@ class GMPETable(GMPE):
                              self.__class__.__name__)
         elif os.path.isabs(fname):
             self.GMPE_TABLE = fname
+        elif not hasattr(self, 'GMPE_DIR'):
+            # when called from GsimLogicTree.__fromh5__ GMPE_DIR is missing
+            return
         else:
             # NB: (hackish) GMPE_DIR must be set externally
             self.GMPE_TABLE = os.path.abspath(
