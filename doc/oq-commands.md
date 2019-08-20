@@ -109,7 +109,7 @@ optional arguments:
 
 The list of available exports (i.e. the datastore keys and the available export
 formats) can be extracted with the `oq info --exports`
-command; at the moment (engine 3.6) there are 53 exporters defined, but
+command; at the moment there are 52 exporters defined, but
 this number changes at each version:
 
 ```bash
@@ -133,10 +133,11 @@ damages-rlzs ['csv']
 damages-stats ['csv']
 disagg ['xml', 'csv']
 disagg_by_src ['csv']
-dmg_by_asset ['csv', 'npz']
+dmg_by_asset ['npz', 'csv']
 dmg_by_event ['csv']
+events ['csv']
 fullreport ['rst']
-gmf_data ['csv', 'npz']
+gmf_data ['npz', 'csv']
 hcurves ['csv', 'xml', 'npz']
 hmaps ['csv', 'xml', 'npz']
 input ['zip']
@@ -145,22 +146,20 @@ loss_curves-rlzs ['csv']
 loss_curves-stats ['csv']
 loss_maps-rlzs ['csv', 'npz']
 loss_maps-stats ['csv', 'npz']
-losses_by_asset ['csv', 'npz']
+losses_by_asset ['npz', 'csv']
 losses_by_event ['csv']
 losses_by_tag ['csv']
 realizations ['csv']
 rup_loss_table ['xml']
 ruptures ['xml', 'csv']
-events ['csv']
 uhs ['csv', 'xml', 'npz']
-There are 53 exporters defined.
+There are 52 exporters defined.
 ```
 
-At the present the supported export types are `xml`, `csv`, `rst`,
-`geojson`, `npz` and `hdf5`. `geojson` will likely disappear soon;
-`xml` will not disappear, but it is not recommended for large
-exports. For large exports, the recommended formats are `npz` (which is
-a binary format for numpy arrays) and `hdf5`. If you want the data for
+At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
+`hdf5`. `xml` has been deprecated for some outputs and is not the recommended 
+format for large exports. For large exports, the recommended formats are `npz` 
+(which is a binary format for numpy arrays) and `hdf5`. If you want the data for
 a specific realization (say the first one), you can use
 
 ```
@@ -350,7 +349,7 @@ optional arguments:
 ```
 
 Comparing hazard results
-------------------------------
+-------------------------
 
 If you are interested in sensitivity analysis, i.e. in how much the
 results of the engine change by tuning a parameter, the `oq compare`

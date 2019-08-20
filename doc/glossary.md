@@ -57,9 +57,7 @@
 
 * **NRML**
 
-  Natural hazards’ Risk Markup Language (NRML) is the officially supported input/output format for calculation artifacts. NRML includes custom set of XML schema definitions, as well as a number XML parsers and serializers for reading and writing NRML artifacts.
-
-  See https://github.com/gem/oq-nrmllib for more information.
+  Natural hazards’ Risk Markup Language (NRML) is the officially supported input/output format for calculation artifacts. NRML includes a custom set of XML schema definitions, as well as a number XML parsers and serializers for reading and writing NRML artifacts.
 
 * **OpenQuake Hazard Library**
 
@@ -67,4 +65,4 @@
 
 * **OpenQuake Risk Library**
 
-  The OpenQuake Hazard Library (`openquake.risklib`) is the Python library the OpenQuake team has developed to function as the core scientific library behind the OpenQuake Engine for Seismic Risk.
+  The OpenQuake Risk Library (`openquake.risklib`) is the Python library the OpenQuake team has developed to function as the core scientific library behind the OpenQuake Engine for Seismic Risk.
