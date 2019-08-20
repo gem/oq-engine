@@ -22,6 +22,7 @@ the number of ruptures, i.e.
 - investigation_time
 - ses_per_logic_tree_path
 - number_of_logic_tree_samples
+- minimum_magnitude
 
 For instance, if you have ``ses_per_logic_tree_path = 10,000`` reduce
 it to 10, run the calculation and you will see in the log something
@@ -37,10 +38,17 @@ will not run out of disk space, most likely you will run out of
 memory; even if you have enough memory to complete the hazard
 parte of the calculation, most likely the risk part will fail: 750 GB
 of GMFs are just too much for the current capabilities of the engine
-(I am writing around the time of version 3.3). You will have to reduce
-the calculation someway.
+You will have to reduce the calculation someway. The easiest way is
+to play with the parameters ``minimum_magnitude``, that allows to discard
+ruptures with a magnitude below the given threshould, and ``minimum_intensity``
+that allows to discard GMFs below the given threshould.
 
-The most common techniques to reduce a risk calculation involves
+``minimum_magnitude`` can be a scalar or a dictionary keyed by tectonic region
+type; ``minimum_intensity`` can be a scalar or a dictionary keyed by the
+intensity measure type. Playing with such parameters can reduce your
+computation a lot if there are several small ruptures/GMFs, which is the
+usual case. However, sometimes you need to reduce the calculation even more.
+In such a case, you should consider techniques like
 splitting the exposure in carefully chosen regions, aggregating the
 assets in such a way to reduce the number of hazard sites, and using
 the right hazard model for the task at hand.
