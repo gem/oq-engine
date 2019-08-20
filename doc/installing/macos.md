@@ -1,7 +1,7 @@
 # Installing the OpenQuake Engine on macOS
 The OpenQuake Engine is available for macOS in the form of **self-installable binary distribution**.
 
-- this distribution uses Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-366/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
+- this distribution uses Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-368/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
     - pip, numpy, scipy, h5py, django, shapely, and few more
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
