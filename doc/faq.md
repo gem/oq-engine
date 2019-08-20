@@ -78,7 +78,7 @@ MPI support may be added in the future if sponsored by someone. If you would lik
 
 ### Python scripts that import openquake
 
-On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must use a virtual environment and install al local copy of the Engine:
+On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must use a virtual environment and install a local copy of the Engine:
 
 ```
 $ python3 -m venv </path/to/myvenv>
