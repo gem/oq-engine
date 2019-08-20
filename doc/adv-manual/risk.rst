@@ -41,10 +41,9 @@ You will have to reduce the calculation someway. The easiest way is
 to play with the parameters ``minimum_magnitude`` and ``minimum_intensity``:
 
 - ``minimum_magnitude`` is a scalar or a dictionary keyed by tectonic region:
-  it allows to discard ruptures with a magnitude below the given threshould
-  type
+  it allows to discard ruptures with a magnitude below the given threshould;
 - ``minimum_intensity`` is a scalar or a dictionary keyed by the intensity
-  measure type; it allows to discard GMFs below the given threshould
+  measure type; it allows to discard GMFs below the given threshould.
 
 Playing with such parameters can reduce your computation a lot when
 there are several small ruptures or GMFs, which is the usual
