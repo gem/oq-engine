@@ -308,15 +308,15 @@ class GMPETable(GMPE):
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        if not hasattr(self, 'GMPE_DIR'):  # hack for GMPETable
-            # when called from GsimLogicTree.__fromh5__ GMPE_DIR is missing
-            return
         fname = self.kwargs.get('gmpe_table', self.GMPE_TABLE)
         if fname is None:
             raise ValueError('You forgot to set %s.GMPE_TABLE!' %
                              self.__class__.__name__)
         elif os.path.isabs(fname):
             self.GMPE_TABLE = fname
+        elif not hasattr(self, 'GMPE_DIR'):
+            # when called from GsimLogicTree.__fromh5__ GMPE_DIR is missing
+            return
         else:
             # NB: (hackish) GMPE_DIR must be set externally
             self.GMPE_TABLE = os.path.abspath(

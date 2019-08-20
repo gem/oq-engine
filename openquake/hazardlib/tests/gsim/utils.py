@@ -30,7 +30,6 @@ class BaseGSIMTestCase(unittest.TestCase):
 
     def check(self, filename, max_discrep_percentage, **kwargs):
         gsim = self.GSIM_CLASS(**kwargs)
-        gsim.init()
         filename = os.path.join(self.BASE_DATA_PATH, filename)
         errors, stats, sctx, rctx, dctx = check_gsim(
             gsim, open(filename), max_discrep_percentage)
