@@ -29,9 +29,7 @@ and 5.13
 For delta_s2s: Table 5.15
 """
 import os
-import inspect
 import unittest
-import numpy as np
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 from openquake.hazardlib.gsim.nga_east import DarraghEtAl2015NGAEast1CCSP
 
@@ -611,6 +609,5 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
                               tau_quantile=tau_quantile,
                               phi_ss_quantile=phi_quantile,
                               phi_s2ss_quantile=phi_s2ss_quantile)
-            gsim.init()
             # Run Checks
             self._test_uncertainty_model(gsim, filestem, MAX_DISC)
