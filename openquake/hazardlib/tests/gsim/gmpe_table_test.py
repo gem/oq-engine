@@ -416,10 +416,12 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests the case when the GMPE table file is missing
         """
         with self.assertRaises(ValueError) as err:
-            GMPETable(gmpe_table=None).init()
+            GMPETable(gmpe_table=None)
         self.assertEqual(str(err.exception),
                          "You forgot to set GMPETable.GMPE_TABLE!")
-        GMPETable(gmpe_table='/do/not/exists/table.hdf5')  # no error here
+        with self.assertRaises(OSError) as err:
+            GMPETable(gmpe_table='/do/not/exists/table.hdf5')
+        self.assertIn("No such file or directory", str(err.exception))
 
     def test_retreival_tables_good_no_interp(self):
         """
