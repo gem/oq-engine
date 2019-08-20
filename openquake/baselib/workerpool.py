@@ -4,6 +4,7 @@ import time
 import signal
 import subprocess
 import multiprocessing
+from multiprocessing.sharedctypes import Value
 from openquake.baselib import zeromq as z, general, parallel, config
 try:
     from setproctitle import setproctitle
@@ -142,6 +143,18 @@ class WorkerMaster(object):
                 killed.append(host)
         return 'killed %s' % killed
 
+    def inspect(self):
+        executing = []
+        for host, _ in self.host_cores:
+            if self.status(host)[0][1] == 'not-running':
+                print('%s not running' % host)
+                continue
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
+                n = sock.send('get_executing')
+                executing.append((host, n))
+        return executing
+
     def restart(self):
         """
         Stop and start again
@@ -165,6 +178,7 @@ class WorkerPool(object):
         self.task_server_url = task_server_url
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
+        self.executing = Value('i', 0)
         self.pid = os.getpid()
 
     def worker(self, sock):
@@ -174,7 +188,9 @@ class WorkerPool(object):
         setproctitle('oq-zworker')
         with sock:
             for cmd, args, taskno, mon in sock:
+                self.executing.value += 1
                 parallel.safely_call(cmd, args, taskno, mon)
+                self.executing.value -= 1
 
     def start(self):
         """
@@ -201,6 +217,8 @@ class WorkerPool(object):
                     ctrlsock.send(self.pid)
                 elif cmd == 'get_num_workers':
                     ctrlsock.send(self.num_workers)
+                elif cmd == 'get_executing':
+                    ctrlsock.send(self.executing.value)
 
     def stop(self):
         """
