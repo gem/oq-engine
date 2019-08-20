@@ -11,29 +11,35 @@ expected losses and loss maps for 10% and 2% probabilities of
 exceedance in 50 years, for the assets defined in the exposure model. 
 Aggregate loss cures are also computed for the entire portfolio.
 
-Note: This calculation demo consists of two parts: hazard and risk. 
-The hazard and risk calculations are defined in separate job c
-onfiguration (.ini) files and were designed to be run together to
- demonstrate a complete end-to-end demonstration of the workflow.
+Note: This demo consists of a single job configuration
+file (job.ini) that combines the hazard and risk calculations, to
+demonstrate a complete end-to-end demonstration of the workflow.
 
-**Hazard**
-Expected runtime: 30 seconds
-Outputs: 
-		Earthquake Ruptures
-		Ground Motion Fields
-		Hazard Curves
-		Realizations
-		Seismic Source Groups
+An alternate file, job_eb.ini, is also included in this demo, to
+demonstrate the newer `ebrisk` calculator.
 
-**Risk**
-Expected runtime: 40 seconds
-Outputs:
-		Aggregate Loss Curves
-		Aggregate Loss Curves Statistics
-		Aggregate Loss Table
-		Asset Loss Maps
-		Asset Loss Maps Statistics
-		Average Asset Losses
-		Average Asset Losses Statistics
-		Realizations
-		Seismic Source Groups
+
+**Expected Runtimes and Outputs**
+
+Expected runtime for hazard calculation: 10 seconds
+
+Hazard outputs:
+
+- Realizations
+- Earthquake Ruptures
+- Events
+- Ground Motion Fields
+- Hazard Curves
+
+Expected runtime for risk calculation: 40 seconds
+
+Risk outputs:
+
+- Aggregate Event Losses
+- Aggregate Loss Curves
+- Aggregate Loss Curves Statistics
+- Asset Loss Curves Statistics
+- Asset Loss Maps
+- Asset Loss Maps Statistics
+- Average Asset Losses
+- Average Asset Losses Statistics
