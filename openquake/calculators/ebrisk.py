@@ -100,8 +100,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
             continue
         num_events_per_sid += len(haz)
         if param['avg_losses']:
-            weights = getter.weights[
-                [getter.eid2rlz[eid] for eid in haz['eid']]]
+            rlzs = [getter.eid2rlz[eid] for eid in haz['eid']]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
@@ -125,8 +124,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     acc[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
-                        lba.losses_by_A[aid, loss_idx] += (
-                            losses @ weights * param['ses_ratio'])
+                        for rlz, loss in zip(rlzs, losses*param['ses_ratio']):
+                            lba.losses_by_A[aid, rlz, loss_idx] += loss
             times[sid] = time.time() - t0
     if hazard:
         num_events_per_sid /= len(hazard)
@@ -168,14 +167,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['assetcol'] = self.assetcol
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
-                          self.policy_name, self.policy_dict))
+                          self.policy_name, self.policy_dict, self.R))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['crmodel'] = self.crmodel
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
-        self.datastore.create_dset('avg_losses', F32, (A, L))
+        if oq.avg_losses:
+            self.datastore.create_dset('avg_losses-rlzs', F32, (A, self.R, L))
         if oq.asset_loss_table:
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
@@ -243,7 +243,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             for r, aggloss in dic['agg_losses'].items():
                 self.datastore['agg_losses-rlzs'][:, r] += aggloss
         with self.monitor('saving avg_losses', autoflush=True):
-            self.datastore['avg_losses'] += dic['losses_by_A']
+            self.datastore['avg_losses-rlzs'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eidx = dic['alt_eidx']
@@ -342,6 +342,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 if len(maps):  # conditional_loss_poes can be empty
                     self.datastore['agg_maps-rlzs'][:, r] = maps
         if self.R > 1:
+            if oq.avg_losses:
+                logging.info('Computing avg_losses-stats')
+                set_rlzs_stats(self.datastore, 'avg_losses')
             logging.info('Computing aggregate loss curves statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
             if oq.conditional_loss_poes:

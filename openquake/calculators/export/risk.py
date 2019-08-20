@@ -177,26 +177,6 @@ def export_agg_losses(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by ebrisk
-@export.add(('avg_losses', 'csv'))
-def export_avg_losses_ebrisk(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    name = ekey[0]
-    oq = dstore['oqparam']
-    dt = [(ln, F32) for ln in oq.loss_names]
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    assets = get_assets(dstore)
-    dest = dstore.build_fname(name, 'mean', 'csv')
-    array = numpy.zeros(len(assets), dt)
-    for li, ln in enumerate(oq.loss_names):
-        array[ln] = dstore[name][:, li]
-    writer.save(compose_arrays(assets, array), dest)
-    return writer.getsaved()
-
-
 # this is used by scenario_risk
 @export.add(('losses_by_asset', 'csv'))
 def export_losses_by_asset(ekey, dstore):

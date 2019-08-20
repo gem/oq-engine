@@ -1501,8 +1501,10 @@ class LossesByAsset(object):
     :param policy_name: the name of the policy field (can be empty)
     :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
-    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
+    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={},
+                 R=None):
         self.A = len(assetcol)
+        self.R = R
         self.policy_name = policy_name
         self.policy_dict = policy_dict
         self.loss_names = loss_names
@@ -1527,6 +1529,6 @@ class LossesByAsset(object):
     @cached_property
     def losses_by_A(self):
         """
-        :returns: an array of shape (A, L)
+        :returns: an array of shape (A, R, L)
         """
-        return numpy.zeros((self.A, len(self.loss_names)), F32)
+        return numpy.zeros((self.A, self.R, len(self.loss_names)), F32)
