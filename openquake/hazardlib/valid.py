@@ -91,7 +91,9 @@ def gsim(value):
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % gsim_name)
     gs = gsim_class(**kwargs)
-    gs.init()
+    if hasattr(gs, 'GMPE_DIR'):  # hack for GMPETable
+        # when called from GsimLogicTree.__fromh5__ GMPE_DIR is missing
+        gs.init()
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     gs.minimum_distance = minimum_distance
     return gs
