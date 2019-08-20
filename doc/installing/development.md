@@ -69,7 +69,7 @@ If Xcode is already installed on your machine, then there is no need to install 
 
 #### Python
 
-You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg
+You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.6.8/python-3.6.8-macosx10.9.pkg
 
 #### Encoding
 

@@ -1,4 +1,4 @@
-We are often asked to recommend hardware configurations for servers and clusters to run the OpenQuake engine.  Obviously this depends very much on the calculations one wishes to perform and the available budget, but here we attempt to provide some general advice, please remember "your milage may vary".
+We are often asked to recommend hardware configurations for servers and clusters to run the OpenQuake engine.  Obviously this depends very much on the calculations one wishes to perform and the available budget, but here we attempt to provide some general advice, please remember "your mileage may vary".
 
 A general rule is more GB of RAM and more GHz you have better is. The OpenQuake Engine is designed with a suggested amount of 2GB of RAM per worker core for classical, 4GB of RAM for event based computations. In the controller it is best to have more RAM.
 
