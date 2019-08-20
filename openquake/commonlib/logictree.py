@@ -1454,7 +1454,7 @@ class GsimLogicTree(object):
             dirname = os.path.dirname(self.filename)
             for gmpe_table in sorted(self.gmpe_tables):
                 dic[os.path.basename(gmpe_table)] = d = {}
-                with hdf5.File(gmpe_table, 'r') as f:
+                with hdf5.File(os.path.join(dirname, gmpe_table), 'r') as f:
                     for group, dset in f.items():
                         if hasattr(dset, 'shape'):  # dataset, not group
                             d[group] = dset[()]
