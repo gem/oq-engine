@@ -1,8 +1,6 @@
-We are often asked to recommend hardware configurations for servers and clusters to run the OpenQuake engine.  Obviously this depends very much on the calculations one wishes to perform and the available budget, but here we attempt to provide some general advice, please remember "your milage may vary".
+We are often asked to recommend hardware configurations for servers and clusters to run the OpenQuake engine.  Obviously this depends very much on the calculations one wishes to perform and the available budget, but here we attempt to provide some general advice, please remember "your mileage may vary".
 
-**All product and company names are trademarks™ or registered trademarks© of their respective holders.**
-
-A general rule is more GB of RAM and more GHz you have better is. The OpenQuake Engine is designed with an amount of 2GB of RAM per worker core in mind. In the controller it is best to have more RAM.
+A general rule is more GB of RAM and more GHz you have better is. The OpenQuake Engine is designed with a suggested amount of 2GB of RAM per worker core for classical, 4GB of RAM for event based computations. In the controller it is best to have more RAM.
 
 ### Single node configuration
 
@@ -29,6 +27,8 @@ Deployment can considered stateless (an "always-on" configuration isn't required
 Our users reported to have successfully deployed the OpenQuake Engine on [Amazon AWS](https://aws.amazon.com/), [Google GCE](https://cloud.google.com/compute/), [Microsoft Azure](https://azure.microsoft.com/), [OpenStack IaaS](https://www.openstack.org/) and many other providers or internal platforms.
 
 ***
+
+**All product and company names are trademarks™ or registered trademarks© of their respective holders.**
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
