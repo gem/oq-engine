@@ -397,46 +397,44 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     :param task_no: the task number
     :param mon: a monitor
     """
-    # disable OpenBLAS threads on the workers to avoid oversubscription
-    with mock.patch.dict(os.environ, OPENBLAS_NUM_THREADS='1'):
-        isgenfunc = inspect.isgeneratorfunction(func)
-        if hasattr(args[0], 'unpickle'):
-            # args is a list of Pickled objects
-            args = [a.unpickle() for a in args]
-        if mon is dummy_mon:  # in the DbServer
-            assert not isgenfunc, func
-            return Result.new(func, args, mon)
+    isgenfunc = inspect.isgeneratorfunction(func)
+    if hasattr(args[0], 'unpickle'):
+        # args is a list of Pickled objects
+        args = [a.unpickle() for a in args]
+    if mon is dummy_mon:  # in the DbServer
+        assert not isgenfunc, func
+        return Result.new(func, args, mon)
 
-        mon = mon.new(operation='total ' + func.__name__, measuremem=True)
-        mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-        mon.task_no = task_no
-        if mon.inject:
-            args += (mon,)
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
-            msg = check_mem_usage()  # warn if too much memory is used
-            if msg:
-                zsocket.send(Result(None, mon, msg=msg))
-            if inspect.isgeneratorfunction(func):
-                gfunc = func
-            else:
-                def gfunc(*args):
-                    yield func(*args)
-            gobj = gfunc(*args)
-            for count in itertools.count():
-                res = Result.new(next, (gobj,), mon, count=count)
-                # StopIteration -> TASK_ENDED
-                try:
-                    zsocket.send(res)
-                except Exception:  # like OverflowError
-                    _etype, exc, tb = sys.exc_info()
-                    err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
-                                 count=count)
-                    zsocket.send(err)
-                mon.duration = 0
-                mon.counts = 0
-                mon.children.clear()
-                if res.msg == 'TASK_ENDED':
-                    break
+    mon = mon.new(operation='total ' + func.__name__, measuremem=True)
+    mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
+    mon.task_no = task_no
+    if mon.inject:
+        args += (mon,)
+    with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+        msg = check_mem_usage()  # warn if too much memory is used
+        if msg:
+            zsocket.send(Result(None, mon, msg=msg))
+        if inspect.isgeneratorfunction(func):
+            gfunc = func
+        else:
+            def gfunc(*args):
+                yield func(*args)
+        gobj = gfunc(*args)
+        for count in itertools.count():
+            res = Result.new(next, (gobj,), mon, count=count)
+            # StopIteration -> TASK_ENDED
+            try:
+                zsocket.send(res)
+            except Exception:  # like OverflowError
+                _etype, exc, tb = sys.exc_info()
+                err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
+                             count=count)
+                zsocket.send(err)
+            mon.duration = 0
+            mon.counts = 0
+            mon.children.clear()
+            if res.msg == 'TASK_ENDED':
+                break
 
 
 if oq_distribute().startswith('celery'):
