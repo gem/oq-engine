@@ -37,13 +37,21 @@ will not run out of disk space, most likely you will run out of
 memory; even if you have enough memory to complete the hazard
 parte of the calculation, most likely the risk part will fail: 750 GB
 of GMFs are just too much for the current capabilities of the engine
-(I am writing around the time of version 3.3). You will have to reduce
-the calculation someway.
+You will have to reduce the calculation someway. The easiest way is
+to play with the parameters ``minimum_magnitude`` and ``minimum_intensity``:
 
-The most common techniques to reduce a risk calculation involves
-splitting the exposure in carefully chosen regions, aggregating the
-assets in such a way to reduce the number of hazard sites, and using
-the right hazard model for the task at hand.
+- ``minimum_magnitude`` is a scalar or a dictionary keyed by tectonic region:
+  it allows to discard ruptures with a magnitude below the given threshould;
+- ``minimum_intensity`` is a scalar or a dictionary keyed by the intensity
+  measure type; it allows to discard GMFs below the given threshould.
+
+Playing with such parameters can reduce your computation a lot when
+there are several small ruptures or GMFs, which is the usual
+situation. However, sometimes you need to reduce the calculation even
+more.  In such a case, you should consider techniques like splitting
+the exposure in carefully chosen regions, aggregating the assets in
+such a way to reduce the number of hazard sites, and using the right
+hazard model for the task at hand.
 
 Collapsing of branches
 ----------------------

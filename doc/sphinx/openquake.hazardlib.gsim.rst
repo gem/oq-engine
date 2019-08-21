@@ -756,6 +756,14 @@ sera_amplification_models
     :undoc-members:
     :show-inheritance:
 
+sera_2019_craton
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sera_2019_craton
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 shahjouei_pezeshk_2016
 --------------------------------------------
 

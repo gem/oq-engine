@@ -396,9 +396,6 @@ def export_hazard_npz(ekey, dstore):
     return [fname]
 
 
-Event = collections.namedtuple('Event', ['eid', 'ses_idx', 'indices', 'gmfa'])
-
-
 @export.add(('gmf_data', 'csv'))
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']

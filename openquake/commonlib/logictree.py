@@ -1453,9 +1453,8 @@ class GsimLogicTree(object):
         if hasattr(self, 'filename'):  # missing for fake logic trees
             dirname = os.path.dirname(self.filename)
             for gmpe_table in sorted(self.gmpe_tables):
-                dic[gmpe_table] = d = {}
-                filename = os.path.join(dirname, gmpe_table)
-                with hdf5.File(filename, 'r') as f:
+                dic[os.path.basename(gmpe_table)] = d = {}
+                with hdf5.File(os.path.join(dirname, gmpe_table), 'r') as f:
                     for group, dset in f.items():
                         if hasattr(dset, 'shape'):  # dataset, not group
                             d[group] = dset[()]
@@ -1478,13 +1477,6 @@ class GsimLogicTree(object):
                 gsim_ = branch['uncertainty']
             gsim = valid.gsim(gsim_)
             self.values[branch['trt']].append(gsim)
-            if isinstance(gsim, GMPETable):
-                try:
-                    name = gsim.kwargs['gmpe_table']
-                except KeyError:
-                    gsim.init()
-                else:
-                    gsim.init(dic[name])
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
             weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
@@ -1568,20 +1560,18 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = to_toml(branch.uncertaintyModel)
+                    if isinstance(self.filename, str):
+                        # a bit hackish: set the GMPE_DIR equal to the
+                        # directory where the gsim_logic_tree file is
+                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
                     try:
                         gsim = valid.gsim(uncertainty)
                     except Exception as exc:
                         raise ValueError(
                             "%s in file %s" % (exc, self.filename)) from exc
-                    if (isinstance(self.filename, str)
-                            and isinstance(gsim, GMPETable)):
-                        # a bit hackish: set the GMPE_DIR equal to the
-                        # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.filename)
-                    if isinstance(gsim, GMPETable):
-                        gsim.init()
-                        if 'gmpe_table' in gsim.kwargs:
-                            self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
+                    if (isinstance(gsim, GMPETable) and
+                            'gmpe_table' in gsim.kwargs):
+                        self.gmpe_tables.add(gsim.kwargs['gmpe_table'])
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.filename, gsim))

@@ -219,3 +219,4 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
             dstore[name][...] = compute_stats2(arrayNR, statfuncs, weights)
         else:
             dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
+            dstore.set_attrs(name, stats=statnames)
