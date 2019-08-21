@@ -280,7 +280,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 if i >= TWO32:
                     raise ValueError('There are more than %d events!' % i)
         events.sort(order='id')  # fast too
-        n_unique_events = len(numpy.unique(events['id']))
+        n_unique_events = len(numpy.unique(events['id']))  # sanity check
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
 
