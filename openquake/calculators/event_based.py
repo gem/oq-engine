@@ -263,8 +263,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Building associations event_id -> rlz_id for %d events',
-                     len(events))
+        logging.info('Building associations event_id -> rlz_id for %d events'
+                     ' and %d ruptures', len(events), len(rup_array))
         if len(events) < 1E5:
             it = map(RuptureGetter.get_eid_rlz, rgetters)
         else:
@@ -280,7 +280,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 if i >= TWO32:
                     raise ValueError('There are more than %d events!' % i)
         events.sort(order='id')  # fast too
-        n_unique_events = len(numpy.unique(events['id']))
+        n_unique_events = len(numpy.unique(events['id']))  # sanity check
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
 

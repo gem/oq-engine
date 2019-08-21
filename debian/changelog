@@ -5,6 +5,12 @@
   * Adds QA test to exercise all of the SERA site response calculators
 
   [Michele Simionato]
+  * Internal: there is not need to call ``gsim.init()`` anymore
+
+  [Graeme Weatherill]
+  * Adds parametric GMPE for cratonic regions in Europe
+
+  [Michele Simionato]
   * In the agglosses output of scenario_risk the losses were incorrectly
     multiplied by the realization weight
   * Removed the output `sourcegroups` and added the output `events`
