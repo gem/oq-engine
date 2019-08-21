@@ -20,12 +20,16 @@ import getpass
 from openquake.baselib import sap, config, workerpool
 
 
+ro_commands = ('status', 'inspect')
+
+
 @sap.script
 def workers(cmd):
     """
     start/stop/restart the workers, or return their status
     """
-    if config.dbserver.multi_user and getpass.getuser() != 'openquake':
+    if (cmd not in ro_commands and config.dbserver.multi_user and
+            getpass.getuser() != 'openquake'):
         sys.exit('oq workers only works in single user mode')
 
     master = workerpool.WorkerMaster(config.dbserver.host,
