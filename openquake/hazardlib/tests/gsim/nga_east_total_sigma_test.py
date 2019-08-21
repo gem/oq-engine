@@ -19,7 +19,6 @@
 
 """
 import os
-import numpy as np
 from openquake.hazardlib.gsim.nga_east import \
     DarraghEtAl2015NGAEast1CCSPTotalSigma
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
@@ -50,7 +49,6 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
 # Required the definition of a specific GMPE, doesn't matter which
 def DUMMY_GSIM(**kw):
     gsim = DarraghEtAl2015NGAEast1CCSPTotalSigma(**kw)
-    gsim.init()
     return gsim
 
 
