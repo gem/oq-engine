@@ -799,7 +799,7 @@ def split_task(func, *args, duration=1000,
     """
     elements = numpy.array(args[0])
     n = len(elements)
-    print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
+    # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
     if n < 10:
         yield func(*args)
