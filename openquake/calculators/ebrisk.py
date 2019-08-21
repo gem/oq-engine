@@ -41,10 +41,11 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     Launcher for ebrisk tasks
     """
     rupgetter.set_weights(srcfilter, param['num_taxonomies'])
-    if rupgetter.weights.sum() <= param['maxweight']:
+    maxweight = param['maxweight'] * param['num_ruptures']
+    if rupgetter.weights.sum() <= maxweight:
         yield ebrisk(rupgetter, srcfilter, param, monitor)
     else:
-        for rgetter in rupgetter.split(param['maxweight']):
+        for rgetter in rupgetter.split(maxweight):
             yield ebrisk, rgetter, srcfilter, param
 
 
@@ -188,11 +189,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def execute(self):
         oq = self.oqparam
-        self.set_param(
-            num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
-            epspath=cache_epsilons(
-                self.datastore, oq, self.assetcol, self.crmodel, self.E))
         parent = self.datastore.parent
         if parent:
             hdf5path = parent.filename
@@ -206,20 +202,25 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
+        self.set_param(
+            num_ruptures=nruptures,
+            num_taxonomies=self.assetcol.num_taxonomies_by_site(),
+            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
+            epspath=cache_epsilons(
+                self.datastore, oq, self.assetcol, self.crmodel, self.E))
         self.init_logic_tree(self.csm_info)
         smap = parallel.Starmap(
             self.core_task.__func__, hdf5path=self.datastore.filename)
         trt_by_grp = self.csm_info.grp_by("trt")
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
-        ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
         first_event = 0
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
-            for indices in general.block_splitter(
-                    range(start, stop), ruptures_per_block):
+            indices = list(range(start, stop))
+            if indices:
                 rgetter = getters.RuptureGetter(
-                    hdf5path, list(indices), grp_id,
+                    hdf5path, indices, grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     first_event)
                 first_event += rgetter.num_events
