@@ -41,12 +41,10 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     Launcher for ebrisk tasks
     """
     rupgetter.set_weights(srcfilter, param['num_taxonomies'])
-    maxweight = param['maxweight'] * param['num_ruptures']
-    if rupgetter.weights.sum() <= maxweight:
-        yield ebrisk(rupgetter, srcfilter, param, monitor)
-    else:
-        for rgetter in rupgetter.split(maxweight):
-            yield ebrisk, rgetter, srcfilter, param
+    rgetters = list(rupgetter.split(param['maxweight']))
+    for rgetter in rgetters[:-1]:
+        yield ebrisk, rgetter, srcfilter, param
+    yield ebrisk(rgetters[-1], srcfilter, param, monitor)
 
 
 def ebrisk(rupgetter, srcfilter, param, monitor):
@@ -203,9 +201,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
         self.set_param(
-            num_ruptures=nruptures,
             num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
+            maxweight=nruptures * oq.ebrisk_maxweight /
+            (oq.concurrent_tasks or 1),
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         self.init_logic_tree(self.csm_info)
