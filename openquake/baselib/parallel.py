@@ -796,13 +796,14 @@ def split_task(func, *args, duration=1000,
     """
     elements = numpy.array(args[0])
     n = len(elements)
+    # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
-    if n < 10:
+    if n <= 3:
         yield func(*args)
         return
     numpy.random.seed(42)
     ok = numpy.zeros(n, dtype=bool)
-    ok[numpy.random.choice(numpy.arange(n), 5, replace=False)] = True
+    ok[numpy.random.choice(numpy.arange(n), 3, replace=False)] = True
     sample = elements[ok]
     other = elements[~ok]
     sample_weight = sum(weight(el) for el in sample)

@@ -40,18 +40,16 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    rupgetter.set_weights(srcfilter, param['num_taxonomies'])
-    if rupgetter.weights.sum() <= param['maxweight']:
-        yield ebrisk(rupgetter, srcfilter, param, monitor)
-    else:
-        for rgetter in rupgetter.split(param['maxweight']):
-            yield ebrisk, rgetter, srcfilter, param
+    rupgetters = list(rupgetter.split(maxweight=param['maxweight']))
+    yield from parallel.split_task(
+        ebrisk, rupgetters, srcfilter, param, monitor,
+        duration=param['task_duration'])
 
 
-def ebrisk(rupgetter, srcfilter, param, monitor):
+def ebrisk(rupgetters, srcfilter, param, monitor):
     """
-    :param rupgetter:
-        a RuptureGetter instance
+    :param rupgetters:
+        a list of RuptureGetter instances
     :param srcfilter:
         a SourceFilter instance
     :param param:
@@ -59,19 +57,24 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
-        an ArrayWrapper with shape (E, L, T, ...)
+        a list of dictionaries with the results
     """
+    with monitor('getting assets', measuremem=False):
+        with datastore.read(srcfilter.filename) as dstore:
+            assetcol = dstore['assetcol']
+            assets_by_site = assetcol.assets_by_site()
+    return [_ebrisk(rupgetter, assets_by_site, assetcol.tagcol,
+                    srcfilter, param, monitor) for rupgetter in rupgetters]
+
+
+def _ebrisk(rupgetter, assets_by_site, tagcol, srcfilter, param, monitor):
     crmodel = param['crmodel']
     lba = param['lba']
     E = rupgetter.num_events
     L = len(lba.loss_names)
     N = len(srcfilter.sitecol.complete)
     e1 = rupgetter.first_event
-    with monitor('getting assets', measuremem=False):
-        with datastore.read(srcfilter.filename) as dstore:
-            assetcol = dstore['assetcol']
-        assets_by_site = assetcol.assets_by_site()
-    A = len(assetcol)
+    A = sum(len(assets) for assets in assets_by_site)
     getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
     with monitor('getting hazard'):
         getter.init()  # instantiate the computers
@@ -82,7 +85,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     # numpy.testing.assert_equal(events['eid'], sorted(events['eid']))
     eid2idx = dict(zip(events['eid'], range(e1, e1 + E)))
     tagnames = param['aggregate_by']
-    shape = assetcol.tagcol.agg_shape((E, L), tagnames)
+    shape = tagcol.agg_shape((E, L), tagnames)
     elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     if param['asset_loss_table']:
         alt = numpy.zeros((A, E, L), F32)
@@ -188,38 +191,35 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def execute(self):
         oq = self.oqparam
-        self.set_param(
-            num_taxonomies=self.assetcol.num_taxonomies_by_site(),
-            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
-            epspath=cache_epsilons(
-                self.datastore, oq, self.assetcol, self.crmodel, self.E))
         parent = self.datastore.parent
         if parent:
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
-            nruptures = len(parent['ruptures'])
         else:
             hdf5path = self.datastore.hdf5cache()
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
-            nruptures = len(self.datastore['ruptures'])
             with hdf5.File(hdf5path, 'r+') as cache:
                 self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
+        self.set_param(
+            maxweight=oq.ebrisk_maxweight,
+            task_duration=oq.task_duration or 300,  # 5min
+            epspath=cache_epsilons(
+                self.datastore, oq, self.assetcol, self.crmodel, self.E))
         self.init_logic_tree(self.csm_info)
         smap = parallel.Starmap(
             self.core_task.__func__, hdf5path=self.datastore.filename)
         trt_by_grp = self.csm_info.grp_by("trt")
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
-        ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
         first_event = 0
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
-            for indices in general.block_splitter(
-                    range(start, stop), ruptures_per_block):
+            indices = list(range(start, stop))
+            if indices:
                 rgetter = getters.RuptureGetter(
-                    hdf5path, list(indices), grp_id,
+                    hdf5path, indices, grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     first_event)
                 first_event += rgetter.num_events
@@ -230,28 +230,32 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
 
-    def agg_dicts(self, acc, dic):
+    def agg_dicts(self, acc, dics):
         """
         :param dummy: unused parameter
-        :param dic: a dictionary with keys eids, losses, losses_by_N
+        :param dics: dictionaries with keys eids, losses, losses_by_N
         """
         self.oqparam.ground_motion_fields = False  # hack
-        if len(dic['elt']):
-            with self.monitor('saving losses_by_event', autoflush=True):
-                self.datastore.extend('losses_by_event', dic['elt'])
-        with self.monitor('saving agg_losses-rlzs', autoflush=True):
-            for r, aggloss in dic['agg_losses'].items():
-                self.datastore['agg_losses-rlzs'][:, r] += aggloss
-        with self.monitor('saving avg_losses', autoflush=True):
-            self.datastore['avg_losses'] += dic['losses_by_A']
-        if self.oqparam.asset_loss_table:
-            with self.monitor('saving asset_loss_table', autoflush=True):
-                alt, eidx = dic['alt_eidx']
-                idx = numpy.argsort(eidx)
-                self.datastore['asset_loss_table'][:, eidx[idx]] = alt[:, idx]
-        self.events_per_sid.append(dic['events_per_sid'])
-        self.gmf_nbytes += dic['gmf_nbytes']
-        return acc + dic['times']
+        times = []
+        for dic in dics:
+            if len(dic['elt']):
+                with self.monitor('saving losses_by_event', autoflush=True):
+                    self.datastore.extend('losses_by_event', dic['elt'])
+            with self.monitor('saving agg_losses-rlzs', autoflush=True):
+                for r, aggloss in dic['agg_losses'].items():
+                    self.datastore['agg_losses-rlzs'][:, r] += aggloss
+            with self.monitor('saving avg_losses', autoflush=True):
+                self.datastore['avg_losses'] += dic['losses_by_A']
+            if self.oqparam.asset_loss_table:
+                with self.monitor('saving asset_loss_table', autoflush=True):
+                    alt, eidx = dic['alt_eidx']
+                    idx = numpy.argsort(eidx)
+                    self.datastore['asset_loss_table'][
+                        :, eidx[idx]] = alt[:, idx]
+            self.events_per_sid.append(dic['events_per_sid'])
+            self.gmf_nbytes += dic['gmf_nbytes']
+            times.append(dic['times'])
+        return numpy.concatenate(times)
 
     def get_shape(self, *sizes):
         """
