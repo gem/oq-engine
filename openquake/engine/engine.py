@@ -329,10 +329,9 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             del data  # save memory
 
         poll_queue(job_id, _PID, poll_time=15)
-        if OQ_DISTRIBUTE == 'zmq':  # start zworkers
-            master = w.WorkerMaster(config.dbserver.listen, **config.zworkers)
-            logs.dbcmd('start_zworkers', master)
-            logging.info('WorkerPool %s',  master.wait_pools(seconds=30))
+        if OQ_DISTRIBUTE == 'zmq':
+            logs.dbcmd('zmq_start')  # start zworkers
+            logs.dbcmd('zmq_wait')  # wait for them to go up
         if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
             set_concurrent_tasks_default(job_id)
         t0 = time.time()
@@ -365,7 +364,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate
         if OQ_DISTRIBUTE == 'zmq':  # stop zworkers
-            logs.dbcmd('stop_zworkers', master)
+            logs.dbcmd('zmq_stop')
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
                 celery_cleanup(TERMINATE)

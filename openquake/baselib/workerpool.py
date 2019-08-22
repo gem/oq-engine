@@ -62,9 +62,9 @@ class WorkerMaster(object):
         self.remote_python = remote_python or sys.executable
         self.task_server_url = 'tcp://%s:%d' % (
             master_host, self.ctrl_port + 1)
-        self.pids = []
+        self.popens = []
 
-    def wait_pools(self, seconds):
+    def wait(self, seconds=30):
         """
         Wait until all workerpools start
         """
@@ -109,8 +109,7 @@ class WorkerMaster(object):
             args += ['-m', 'openquake.baselib.workerpool',
                      ctrl_url, self.task_server_url, cores]
             starting.append(' '.join(args))
-            po = subprocess.Popen(args)
-            self.pids.append(po.pid)
+            self.popens.append(subprocess.Popen(args))
         return 'starting %s' % starting
 
     def stop(self):
@@ -126,6 +125,9 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('stop')
                 stopped.append(host)
+        for popen in self.popens:
+            popen.terminate()
+        self.popens = []
         return 'stopped %s' % stopped
 
     def kill(self):
@@ -141,6 +143,9 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('kill')
                 killed.append(host)
+        for popen in self.popens:
+            popen.kill()
+        self.popens = []
         return 'killed %s' % killed
 
     def inspect(self):
