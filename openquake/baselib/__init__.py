@@ -19,11 +19,11 @@
 import os
 import sys
 import configparser
-from unittest.mock import patch
-with patch.dict(os.environ, OPENBLAS_NUM_THREADS='1'):
-    # disable OpenBLAS threads before the first numpy import
-    # see https://github.com/numpy/numpy/issues/11826
-    from openquake.baselib.general import git_suffix
+
+# disable OpenBLAS threads before the first numpy import
+# see https://github.com/numpy/numpy/issues/11826
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
 __version__ = '3.7.0'
