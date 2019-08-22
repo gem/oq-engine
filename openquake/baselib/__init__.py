@@ -21,7 +21,7 @@ import sys
 import configparser
 from unittest.mock import patch
 with patch.dict(os.environ, OPENBLAS_NUM_THREADS='1'):
-    # before the first numpy import
+    # disable OpenBLAS threads before the first numpy import
     from openquake.baselib.general import git_suffix
 
 # the version is managed by packager.sh with a sed
