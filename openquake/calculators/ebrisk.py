@@ -214,7 +214,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
         self.set_param(
-            maxweight=oq.ebrisk_maxweight / (oq.concurrent_tasks or 1),
+            maxweight=oq.ebrisk_maxweight,
             task_duration=oq.task_duration or 300,  # 5min
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
@@ -266,7 +266,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.events_per_sid.append(dic['events_per_sid'])
             self.gmf_nbytes += dic['gmf_nbytes']
             times.append(dic['times'])
-        return numpy.concatenate(times)
+        return sum(times)
 
     def get_shape(self, *sizes):
         """
