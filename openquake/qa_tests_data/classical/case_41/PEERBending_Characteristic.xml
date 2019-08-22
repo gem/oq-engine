@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="PEER Set 3 Case 1 (West Dipping) as test case for SERA Site Response"
+    >
+       <sourceGroup
+       name="group 1"
+       tectonicRegion="Active Shallow Crust"
+       >
+            <characteristicFaultSource
+            id="PEERWestDipBendingFault"
+            name="PEER Set 3 Test 1 3a - West Dipping Bending Fault"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <surface>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -64.78365	-0.45236
+                                -64.80164	-0.45236
+                                -64.90498	-0.36564
+                                -65.00000	-0.16188
+                                -65.00000	 0.00000
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>60.0</dip>
+                        <upperSeismoDepth>0.0</upperSeismoDepth>
+                        <lowerSeismoDepth>12.0</lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </surface>
+                <arbitraryMFD>
+                    <magnitudes>6.75</magnitudes>
+                    <occurRates>0.01</occurRates>
+                </arbitraryMFD>
+                <rake>
+                    90.0
+                </rake>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
