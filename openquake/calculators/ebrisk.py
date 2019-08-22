@@ -67,20 +67,23 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
                     srcfilter, param, monitor) for rupgetter in rupgetters]
 
 
-def calc_risk(rupgetter, hazard, weights, eid2rlz, assets_by_site, param,
-              alt, acc, times, monitor):
-    mon_risk = monitor('computing risk', measuremem=False)
-    mon_agg = monitor('aggregating losses', measuremem=False)
+def calc_risk(rupgetter, srcfilter, assets_by_site, param,
+              alt, acc, times, mon_haz, mon_risk, mon_agg):
     gmf_nbytes = 0
     num_events_per_sid = 0
+    lba = param['lba']
     crmodel = param['crmodel']
     epspath = param['epspath']
+    tagnames = param['aggregate_by']
     e1 = rupgetter.first_event
     events = rupgetter.get_eid_rlz()
     # numpy.testing.assert_equal(events['eid'], sorted(events['eid']))
     eid2idx = dict(zip(events['eid'], range(e1, e1 + rupgetter.num_events)))
-    tagnames = param['aggregate_by']
-    lba = param['lba']
+    with mon_haz:
+        gmfgetter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+        gmfgetter.init()  # instantiate the computers
+        hazard = gmfgetter.get_hazard_by_sid()  # sid -> (sid, eid, gmv)
+
     for sid, haz in hazard.items():
         gmf_nbytes += haz.nbytes
         t0 = time.time()
@@ -89,7 +92,8 @@ def calc_risk(rupgetter, hazard, weights, eid2rlz, assets_by_site, param,
             continue
         num_events_per_sid += len(haz)
         if param['avg_losses']:
-            ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
+            ws = gmfgetter.weights[
+                [gmfgetter.eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
@@ -115,7 +119,7 @@ def calc_risk(rupgetter, hazard, weights, eid2rlz, assets_by_site, param,
                     if param['avg_losses']:
                         lba.losses_by_A[aid, loss_idx] += (
                             losses @ ws * param['ses_ratio'])
-            times[sid] = time.time() - t0
+        times[sid] = time.time() - t0
     if hazard:
         num_events_per_sid /= len(hazard)
     return events, eid2idx, num_events_per_sid, gmf_nbytes
@@ -126,10 +130,9 @@ def _ebrisk(rupgetter, assets_by_site, tagcol, srcfilter, param, monitor):
     L = len(param['lba'].loss_names)
     N = len(srcfilter.sitecol.complete)
     A = sum(len(assets) for assets in assets_by_site)
-    getter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
-    with monitor('getting hazard'):
-        getter.init()  # instantiate the computers
-        hazard = getter.get_hazard_by_sid()  # sid -> (sid, eid, gmv)
+    mon_haz = monitor('getting hazard')
+    mon_risk = monitor('computing risk', measuremem=False)
+    mon_agg = monitor('aggregating losses', measuremem=False)
     shape = tagcol.agg_shape((E, L), param['aggregate_by'])
     elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     alt = numpy.zeros((A, E, L), F32) if param['asset_loss_table'] else None
@@ -137,8 +140,8 @@ def _ebrisk(rupgetter, assets_by_site, tagcol, srcfilter, param, monitor):
     # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
     events, eid2idx, num_events_per_sid, gmf_nbytes = calc_risk(
-        rupgetter, hazard, getter.weights, getter.eid2rlz, assets_by_site,
-        param, alt, acc, times, monitor)
+        rupgetter, srcfilter, assets_by_site,
+        param, alt, acc, times, mon_haz, mon_risk, mon_agg)
     with monitor('building event loss table'):
         elt = numpy.fromiter(
             ((event['eid'], event['rlz'], losses)  # losses (L, T...)
