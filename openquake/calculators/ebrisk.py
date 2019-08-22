@@ -40,7 +40,7 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    rupgetters = list(rupgetter.split(maxweight=100))
+    rupgetters = list(rupgetter.split(maxweight=param['maxweight']))
     yield from parallel.split_task(
         ebrisk, rupgetters, srcfilter, param, monitor,
         duration=param['task_duration'])
@@ -203,6 +203,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
         self.set_param(
+            maxweight=oq.ebrisk_maxweight,
             task_duration=oq.task_duration or 300,  # 5min
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
