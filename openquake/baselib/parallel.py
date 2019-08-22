@@ -747,6 +747,7 @@ class Starmap(object):
         self.todo = len(self.tasks)
         while self.todo:
             res = next(isocket)
+            assert self.calc_id, self.calc_id
             if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
@@ -798,7 +799,7 @@ def split_task(func, *args, duration=1000,
     n = len(elements)
     # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
-    if n <= 5:
+    if n <= 3:
         yield func(*args)
         return
     numpy.random.seed(42)
