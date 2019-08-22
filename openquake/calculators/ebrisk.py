@@ -40,7 +40,7 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    rupgetters = list(rupgetter.split(maxweight=10))
+    rupgetters = list(rupgetter.split(maxweight=100))
     yield from parallel.split_task(
         ebrisk, rupgetters, srcfilter, param, monitor,
         duration=param['task_duration'])
