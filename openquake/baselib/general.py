@@ -35,7 +35,6 @@ import importlib
 import itertools
 import subprocess
 from collections.abc import Mapping, Container, MutableSequence
-
 import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
