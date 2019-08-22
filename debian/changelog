@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Changed the distribution mechanism in ebrisk to reduce the slow tasks
+
   [Graeme Weatherill]
   * Updates Kotha et al. (2019) GMPE to July 2019 coefficients
   * Adds subclasses to Kotha et al. (2019) to implement polynomial site
