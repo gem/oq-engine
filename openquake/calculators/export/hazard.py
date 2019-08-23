@@ -30,7 +30,7 @@ from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
-from openquake.commonlib import writers, hazard_writers, calc, util, source
+from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
