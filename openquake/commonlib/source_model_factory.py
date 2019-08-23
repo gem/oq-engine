@@ -276,6 +276,7 @@ class SourceModelFactory(object):
             smap = parallel.Starmap(
                 nrml.read_source_models, distribute=dist,
                 hdf5path=self.hdf5.filename if self.hdf5 else None)
+            # NB: hdf5path is None in logictree_test.py
             for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
                 for name in sm.names.split():
                     fname = os.path.abspath(os.path.join(smlt_dir, name))
