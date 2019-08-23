@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added some metadata to the CSV risk outputs
   * Changed the distribution mechanism in ebrisk to reduce the slow tasks
 
   [Graeme Weatherill]
