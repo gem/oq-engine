@@ -562,12 +562,12 @@ class RuptureGetter(object):
         :returns: RuptureGetters with weight <= maxweight
         """
         fe = self.first_event
-        items = zip(self.rup_indices, self.sids_by_rup)
+        items = zip(self.rup_indices, map(len, self.sids_by_rup))
         lst = []
         for block in general.block_splitter(
-                items, maxweight, lambda item: numpy.sqrt(len(item[1]))):
+                items, maxweight, lambda item: numpy.sqrt(item[1])):
             rup_indices = []
-            for ridx, sids in block:
+            for ridx, weight in block:
                 rup_indices.append(ridx)
             if rup_indices:
                 # some indices may have weight 0 and are discarded
@@ -576,6 +576,7 @@ class RuptureGetter(object):
                     self.trt, self.samples, self.rlzs_by_gsim, fe)
                 fe += rgetter.num_events
                 lst.append(rgetter)
+                # print(rgetter)  # uncomment to debug
         return lst
 
     def get_eid_rlz(self):
