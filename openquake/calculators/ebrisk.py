@@ -229,17 +229,20 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         first_event = 0
-        logging.info('There are %d source groups', len(rlzs_by_gsim_grp))
+        ngroups = 0
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             indices = list(range(start, stop))
             if indices:
+                ngroups += 1
                 rgetter = getters.RuptureGetter(
                     hdf5path, indices, grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     first_event)
                 first_event += rgetter.num_events
                 smap.submit(rgetter, self.src_filter, self.param)
+        logging.info('Found %d/%d source groups with ruptures',
+                     ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.gmf_nbytes = 0
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
