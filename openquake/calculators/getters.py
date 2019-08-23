@@ -565,7 +565,7 @@ class RuptureGetter(object):
         items = zip(self.rup_indices, map(len, self.sids_by_rup))
         lst = []
         for block in general.block_splitter(
-                items, maxweight, lambda item: numpy.sqrt(item[1])):
+                items, maxweight, lambda item: item[1]):
             rup_indices = []
             for ridx, weight in block:
                 rup_indices.append(ridx)
