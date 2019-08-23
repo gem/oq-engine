@@ -117,6 +117,7 @@ class DbServer(object):
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
         if ZMQ:
+            self.zmaster.stop()
             z.context.term()
         self.db.close()
 
