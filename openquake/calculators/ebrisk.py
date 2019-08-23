@@ -229,6 +229,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         first_event = 0
+        logging.info('There are %d source groups', len(rlzs_by_gsim_grp))
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             indices = list(range(start, stop))
