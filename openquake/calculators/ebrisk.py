@@ -48,7 +48,7 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     yield ebrisk(rupgetters[-1], srcfilter, param, monitor)
 
 
-def _calc(rupgetter, srcfilter, assets_by_site, param,
+def _calc(rupgetter, gmfgetter, srcfilter, assets_by_site, param,
           alt, acc, times, mon_haz, mon_risk, mon_agg):
     gmf_nbytes = 0
     num_events_per_sid = 0
@@ -61,8 +61,6 @@ def _calc(rupgetter, srcfilter, assets_by_site, param,
     # numpy.testing.assert_equal(events['eid'], sorted(events['eid']))
     eid2idx = dict(zip(events['eid'], range(e1, e1 + rupgetter.num_events)))
     with mon_haz:
-        gmfgetter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
-        gmfgetter.init()  # instantiate the computers
         hazard = gmfgetter.get_hazard_by_sid()  # sid -> (sid, eid, gmv)
 
     for sid, haz in hazard.items():
@@ -125,8 +123,12 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
     # NB: IMT-dependent weights are not supported in ebrisk
     times = numpy.zeros(N)  # risk time per site_id
+    with mon_haz:
+        gmfgetter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+        gmfgetter.task_no = monitor.task_no
+        gmfgetter.init()  # instantiate the computers
     events, eid2idx, num_events_per_sid, gmf_nbytes = _calc(
-        rupgetter, srcfilter, assets_by_site,
+        rupgetter, gmfgetter, srcfilter, assets_by_site,
         param, alt, acc, times, mon_haz, mon_risk, mon_agg)
     with mon_elt:
         elt = numpy.fromiter(
