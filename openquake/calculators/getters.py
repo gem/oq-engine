@@ -536,7 +536,7 @@ class RuptureGetter(object):
                 rlzi.append(rlz)
                 nr += 1
         self.rlzs = numpy.array(rlzi)
-        self.sids_by_rup = None  # overridden by the ebrisk calculator
+        self.sids_by_rup = None  # overridden by the calculator
 
     @general.cached_property
     def rup_array(self):
