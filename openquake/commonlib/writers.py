@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import ast
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
 from openquake.baselib.node import scientificformat
