@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import time
 import logging
+from functools import partial
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, general
@@ -41,6 +42,9 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     Launcher for ebrisk tasks
     """
     rupgetters = list(rupgetter.split(maxweight=param['maxweight']))
+    with monitor('filtering ruptures'):
+        for rupgetter in rupgetters:
+            rupgetter.set_weight(srcfilter)
     yield from parallel.split_task(
         ebrisk, rupgetters, srcfilter, param, monitor,
         duration=param['task_duration'])
