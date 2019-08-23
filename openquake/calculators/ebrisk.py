@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import time
 import logging
-from functools import partial
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, general
@@ -41,39 +40,12 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    rupgetters = list(rupgetter.split(maxweight=param['maxweight']))
     with monitor('filtering ruptures'):
-        for rupgetter in rupgetters:
-            rupgetter.set_weight(srcfilter)
-    yield from parallel.split_task(
-        ebrisk, rupgetters, srcfilter, param, monitor,
-        duration=param['task_duration'])
-
-
-def ebrisk(rupgetters, srcfilter, param, monitor):
-    """
-    :param rupgetters:
-        a list of RuptureGetter instances
-    :param srcfilter:
-        a SourceFilter instance
-    :param param:
-        a dictionary of parameters
-    :param monitor:
-        :class:`openquake.baselib.performance.Monitor` instance
-    :returns:
-        a list of dictionaries with the results
-    """
-    with monitor('getting assets', measuremem=False):
-        with datastore.read(srcfilter.filename) as dstore:
-            assetcol = dstore['assetcol']
-            assets_by_site = assetcol.assets_by_site()
-    mon_haz = monitor('getting hazard')
-    mon_risk = monitor('computing risk', measuremem=False)
-    mon_agg = monitor('aggregating losses', measuremem=False)
-    mon_elt = monitor('building event loss table')
-    return [_ebrisk(rupgetter, assets_by_site, assetcol.tagcol,
-                    srcfilter, param, mon_haz, mon_risk, mon_agg, mon_elt)
-            for rupgetter in rupgetters]
+        rupgetter.set_weight(srcfilter)
+        rupgetters = rupgetter.split(maxweight=param['maxweight'])
+    for rg in rupgetters[:-1]:
+        yield ebrisk, rg, srcfilter, param
+    yield ebrisk(rupgetters[-1], srcfilter, param, monitor)
 
 
 def _calc(rupgetter, srcfilter, assets_by_site, param,
@@ -134,13 +106,20 @@ def _calc(rupgetter, srcfilter, assets_by_site, param,
     return events, eid2idx, num_events_per_sid, gmf_nbytes
 
 
-def _ebrisk(rupgetter, assets_by_site, tagcol, srcfilter, param,
-            mon_haz, mon_risk, mon_agg, mon_elt):
+def ebrisk(rupgetter, srcfilter, param, monitor):
+    with monitor('getting assets', measuremem=False):
+        with datastore.read(srcfilter.filename) as dstore:
+            assetcol = dstore['assetcol']
+            assets_by_site = assetcol.assets_by_site()
+    mon_haz = monitor('getting hazard')
+    mon_risk = monitor('computing risk', measuremem=False)
+    mon_agg = monitor('aggregating losses', measuremem=False)
+    mon_elt = monitor('building event loss table')
     E = rupgetter.num_events
     L = len(param['lba'].loss_names)
     N = len(srcfilter.sitecol.complete)
     A = sum(len(assets) for assets in assets_by_site)
-    shape = tagcol.agg_shape((E, L), param['aggregate_by'])
+    shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])
     elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     alt = numpy.zeros((A, E, L), F32) if param['asset_loss_table'] else None
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
@@ -249,32 +228,29 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
 
-    def agg_dicts(self, acc, dics):
+    def agg_dicts(self, acc, dic):
         """
         :param dummy: unused parameter
         :param dics: dictionaries with keys eids, losses, losses_by_N
         """
         self.oqparam.ground_motion_fields = False  # hack
-        times = []
-        for dic in dics:
-            if len(dic['elt']):
-                with self.monitor('saving losses_by_event', autoflush=True):
-                    self.datastore.extend('losses_by_event', dic['elt'])
-            with self.monitor('saving agg_losses-rlzs', autoflush=True):
-                for r, aggloss in dic['agg_losses'].items():
-                    self.datastore['agg_losses-rlzs'][:, r] += aggloss
-            with self.monitor('saving avg_losses', autoflush=True):
-                self.datastore['avg_losses'] += dic['losses_by_A']
-            if self.oqparam.asset_loss_table:
-                with self.monitor('saving asset_loss_table', autoflush=True):
-                    alt, eidx = dic['alt_eidx']
-                    idx = numpy.argsort(eidx)
-                    self.datastore['asset_loss_table'][
-                        :, eidx[idx]] = alt[:, idx]
-            self.events_per_sid.append(dic['events_per_sid'])
-            self.gmf_nbytes += dic['gmf_nbytes']
-            times.append(dic['times'])
-        return sum(times)
+        if len(dic['elt']):
+            with self.monitor('saving losses_by_event', autoflush=True):
+                self.datastore.extend('losses_by_event', dic['elt'])
+        with self.monitor('saving agg_losses-rlzs', autoflush=True):
+            for r, aggloss in dic['agg_losses'].items():
+                self.datastore['agg_losses-rlzs'][:, r] += aggloss
+        with self.monitor('saving avg_losses', autoflush=True):
+            self.datastore['avg_losses'] += dic['losses_by_A']
+        if self.oqparam.asset_loss_table:
+            with self.monitor('saving asset_loss_table', autoflush=True):
+                alt, eidx = dic['alt_eidx']
+                idx = numpy.argsort(eidx)
+                self.datastore['asset_loss_table'][
+                    :, eidx[idx]] = alt[:, idx]
+        self.events_per_sid.append(dic['events_per_sid'])
+        self.gmf_nbytes += dic['gmf_nbytes']
+        return dic['times']
 
     def get_shape(self, *sizes):
         """

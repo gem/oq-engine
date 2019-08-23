@@ -559,17 +559,24 @@ class RuptureGetter(object):
 
     def split(self, maxweight):
         """
-        :yields: RuptureGetters with weight <= maxweight
+        :returns: RuptureGetters with weight <= maxweight
         """
         fe = self.first_event
-        for rup_indices in general.block_splitter(self.rup_indices, maxweight):
+        items = zip(self.rup_indices, self.sids_by_rup)
+        lst = []
+        for block in general.block_splitter(
+                items, maxweight, lambda item: numpy.sqrt(len(item[1]))):
+            rup_indices = []
+            for ridx, sids in block:
+                rup_indices.append(ridx)
             if rup_indices:
                 # some indices may have weight 0 and are discarded
                 rgetter = self.__class__(
                     self.filename, list(rup_indices), self.grp_id,
                     self.trt, self.samples, self.rlzs_by_gsim, fe)
                 fe += rgetter.num_events
-                yield rgetter
+                lst.append(rgetter)
+        return lst
 
     def get_eid_rlz(self):
         """
