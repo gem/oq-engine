@@ -570,7 +570,6 @@ def init_workers():
 
 
 class Starmap(object):
-    calc_id = None
     pids = ()
     running_tasks = []  # currently running tasks
 
@@ -647,11 +646,11 @@ class Starmap(object):
         self.task_func = task_func
         if hdf5path:
             match = re.search(r'(\d+)', os.path.basename(hdf5path))
-            calc_id = int(match.group(1))
+            self.calc_id = int(match.group(1))
         else:
-            calc_id = None
+            self.calc_id = None
         self.monitor = Monitor(task_func.__name__)
-        self.monitor.calc_id = calc_id
+        self.monitor.calc_id = self.calc_id
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
         self.progress = progress
@@ -748,7 +747,7 @@ class Starmap(object):
         self.todo = len(self.tasks)
         while self.todo:
             res = next(isocket)
-            if self.calc_id and self.calc_id != res.mon.calc_id:
+            if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
                 continue
@@ -797,13 +796,14 @@ def split_task(func, *args, duration=1000,
     """
     elements = numpy.array(args[0])
     n = len(elements)
+    # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
-    if n < 10:
+    if n <= 3:
         yield func(*args)
         return
     numpy.random.seed(42)
     ok = numpy.zeros(n, dtype=bool)
-    ok[numpy.random.choice(numpy.arange(n), 5, replace=False)] = True
+    ok[numpy.random.choice(numpy.arange(n), 3, replace=False)] = True
     sample = elements[ok]
     other = elements[~ok]
     sample_weight = sum(weight(el) for el in sample)

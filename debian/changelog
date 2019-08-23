@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Fixed a bug in the rupture CSV exporter: the boundaries of a GriddedRupture
+    were exported with lons and lats inverted
+  * Added some metadata to the CSV risk outputs
+  * Changed the distribution mechanism in ebrisk to reduce the slow tasks
+
   [Graeme Weatherill]
   * Updates Kotha et al. (2019) GMPE to July 2019 coefficients
   * Adds subclasses to Kotha et al. (2019) to implement polynomial site
