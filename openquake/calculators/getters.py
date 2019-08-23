@@ -322,10 +322,12 @@ class GmfGetter(object):
         """
         if hasattr(self, 'computers'):  # init already called
             return
+        if not hasattr(self.rupgetter, 'weight'):  # not already called
+            self.rupgetter.set_weight(self.srcfilter)
         with hdf5.File(self.rupgetter.filename, 'r') as parent:
             self.weights = parent['weights'][()]
         self.computers = []
-        for ebr in self.rupgetter.get_ruptures(self.srcfilter):
+        for ebr in self.rupgetter.get_ruptures():
             sitecol = self.sitecol.filtered(ebr.sids)
             try:
                 computer = calc.gmf.GmfComputer(
@@ -534,6 +536,7 @@ class RuptureGetter(object):
                 rlzi.append(rlz)
                 nr += 1
         self.rlzs = numpy.array(rlzi)
+        self.sids_by_rup = None  # overridden by the ebrisk calculator
 
     @general.cached_property
     def rup_array(self):
@@ -553,10 +556,6 @@ class RuptureGetter(object):
     @property
     def num_rlzs(self):
         return len(self.rlz2idx)
-
-    @property
-    def weight(self):
-        return len(self.rup_array)
 
     def split(self, maxweight):
         """
@@ -612,16 +611,25 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter=calc.filters.nofilter):
+    def set_weight(self, srcfilter):
+        # compute the weight of a RuptureGetter and set .sids_by_rup
+        self.weight = 0
+        self.sids_by_rup = []
+        for rec in self.rup_array:
+            sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
+            self.weight += numpy.sqrt(len(sids))
+            self.sids_by_rup.append(sids)
+
+    def get_ruptures(self):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
         ebrs = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for rec in self.rup_array:
-                if srcfilter.integration_distance:
-                    sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
+            for i, rec in enumerate(self.rup_array):
+                if self.sids_by_rup is not None:
+                    sids = self.sids_by_rup[i]
                     if len(sids) == 0:  # the rupture is far away
                         continue
                 else:
