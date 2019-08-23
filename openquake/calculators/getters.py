@@ -567,13 +567,16 @@ class RuptureGetter(object):
         for block in general.block_splitter(
                 items, maxweight, lambda item: item[1]):
             rup_indices = []
-            for ridx, weight in block:
+            weight = 0
+            for ridx, w in block:
                 rup_indices.append(ridx)
+                weight += w
             if rup_indices:
                 # some indices may have weight 0 and are discarded
                 rgetter = self.__class__(
                     self.filename, list(rup_indices), self.grp_id,
                     self.trt, self.samples, self.rlzs_by_gsim, fe)
+                rgetter.weight = weight
                 fe += rgetter.num_events
                 lst.append(rgetter)
                 # print(rgetter)  # uncomment to debug
