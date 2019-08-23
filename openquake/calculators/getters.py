@@ -18,7 +18,6 @@
 import collections
 import itertools
 import operator
-import logging
 import unittest.mock as mock
 import numpy
 from openquake.baselib import hdf5, datastore, general
@@ -482,7 +481,6 @@ def gen_rupture_getters(dstore, slc=slice(None),
                 hdf5cache or dstore.filename, numpy.array(block), grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id],
                 first_event)
-            rgetter.weight = getattr(block, 'weight', len(block))
             first_event += rgetter.num_events
             yield rgetter
             nr += len(block)
@@ -556,35 +554,22 @@ class RuptureGetter(object):
     def num_rlzs(self):
         return len(self.rlz2idx)
 
-    # used in ebrisk
-    def set_weights(self, src_filter, num_taxonomies_by_site):
-        """
-        :returns: the weights of the ruptures in the getter
-        """
-        weights = []
-        for rup in self.rup_array:
-            sids = src_filter.close_sids(rup, self.trt, rup['mag'])
-            weights.append(num_taxonomies_by_site[sids].sum())
-        self.weights = numpy.array(weights)
-        self.weight = self.weights.sum()
+    @property
+    def weight(self):
+        return len(self.rup_array)
 
     def split(self, maxweight):
         """
         :yields: RuptureGetters with weight <= maxweight
         """
-        # NB: can be called only after .set_weights() has been called
-        idx = {ri: i for i, ri in enumerate(self.rup_indices)}
         fe = self.first_event
-        for rup_indices in general.block_splitter(
-                self.rup_indices, maxweight, lambda ri: self.weights[idx[ri]]):
+        for rup_indices in general.block_splitter(self.rup_indices, maxweight):
             if rup_indices:
                 # some indices may have weight 0 and are discarded
                 rgetter = self.__class__(
                     self.filename, list(rup_indices), self.grp_id,
                     self.trt, self.samples, self.rlzs_by_gsim, fe)
                 fe += rgetter.num_events
-                rgetter.weight = sum([self.weights[idx[ri]]
-                                      for ri in rup_indices])
                 yield rgetter
 
     def get_eid_rlz(self):

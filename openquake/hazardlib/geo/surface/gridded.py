@@ -83,14 +83,14 @@ class GriddedSurface(BaseSurface):
         """
         :returns: (min_max lons, min_max lats)
         """
-        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
+        min_lon, max_lon, max_lat, min_lat = self.get_bounding_box()
         return [[min_lon, max_lon]], [[min_lat, max_lat]]
 
     def get_surface_boundaries_3d(self):
         """
         :returns: (min_max lons, min_max lats)
         """
-        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
+        min_lon, max_lon, max_lat, min_lat = self.get_bounding_box()
         return [[min_lon, max_lon]], [[min_lat, max_lat]], [[0, 0]]
 
     def get_rx_distance(self, mesh):
