@@ -42,6 +42,22 @@ TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
+def add_columns(table, **columns):
+    """
+    :param table: a list of rows, with the first row being an header
+    :param columns: a dictionary of functions producing the dynamic columns
+    """
+    fields, *rows = table
+    Ntuple = collections.namedtuple('nt', fields)
+    newtable = [fields + tuple(columns)]
+    for rec in itertools.starmap(Ntuple, rows):
+        newrow = list(rec)
+        for col in columns:
+            newrow.append(columns[col](rec))
+        newtable.append(newrow)
+    return newtable
+
+
 def get_rup_data(ebruptures):
     dic = {}
     for ebr in ebruptures:
@@ -248,6 +264,13 @@ def export_losses_by_event(ekey, dstore):
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time))
+    events = dstore['events']['id', 'rlz']
+    rlzdic = dict(events)
+    columns = dict(rup_id=lambda rec: int(rec.event_id) // TWO32,
+                   rlz_id=lambda rec: rlzdic[rec.event_id])
+    if oq.investigation_time:  # not scenario
+        year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
+        columns['year'] = lambda rec: year_of[rec.event_id]
     if (oq.calculation_mode.startswith('scenario') or
             oq.calculation_mode == 'ebrisk'):
         tagcol = dstore['assetcol/tagcol']
@@ -261,13 +284,12 @@ def export_losses_by_event(ekey, dstore):
         axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
         data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
         aw = hdf5.ArrayWrapper(data, dic, oq.loss_names)
-        writer.save(aw.to_table(), dest, comment=md)
+        table = add_columns(aw.to_table(), **columns)
+        writer.save(table, dest, comment=md)
     else:
         dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
                   ('year', U32)] + oq.loss_dt_list()
         eids = dstore['losses_by_event']['event_id']
-        events = dstore['events']
-        year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
         arr = numpy.zeros(len(dstore['losses_by_event']), dtlist)
         arr['event_id'] = eids
         arr['rup_id'] = arr['event_id'] / TWO32
