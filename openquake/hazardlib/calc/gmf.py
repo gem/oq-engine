@@ -20,6 +20,7 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
+import collections
 import numpy
 import scipy.stats
 
@@ -112,7 +113,19 @@ class GmfComputer(object):
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
 
+    def get_hazard(self, min_iml, rlzs_by_gsim, gmv_dt):
+        """
+        :returns: a dictionary site_id -> [(sid, eid, gmv), ...]
+        """
+        dd = collections.defaultdict(list)
+        for rec in self.compute_all(min_iml, rlzs_by_gsim, [], {}):
+            dd[rec[0]].append(rec)
+        return {sid: numpy.array(dd[sid], gmv_dt) for sid in dd}
+
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps, eid2rlz):
+        """
+        :returns: [(sid, eid, gmv), ...]
+        """
         rup = self.rupture
         sids = self.sids
         eids_by_rlz = rup.get_eids_by_rlz(rlzs_by_gsim)
