@@ -86,6 +86,7 @@ def _calc(rupgetter, srcfilter, assets_by_site, param,
     eid2idx = dict(zip(events['eid'], range(e1, e1 + rupgetter.num_events)))
     with mon_haz:
         gmfgetter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+        gmfgetter.task_no = mon_haz.task_no  # set for debugging
         gmfgetter.init()  # instantiate the computers
         hazard = gmfgetter.get_hazard_by_sid()  # sid -> (sid, eid, gmv)
 
