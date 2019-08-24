@@ -138,12 +138,15 @@ def export_avg_losses(ekey, dstore):
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats().items())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+                   risk_investigation_time=oq.risk_investigation_time))
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
         array = numpy.zeros(len(values), dt)
         for l, lt in enumerate(dt.names):
             array[lt] = values[:, l]
-        writer.save(compose_arrays(assets, array), dest)
+        writer.save(compose_arrays(assets, array), dest, comment=md)
     return writer.getsaved()
 
 
@@ -164,6 +167,9 @@ def export_agg_losses(ekey, dstore):
     tagnames = tuple(dstore['oqparam'].aggregate_by)
     header = ('loss_type',) + tagnames + (
         'loss_value', 'exposed_value', 'loss_ratio')
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+              risk_investigation_time=oq.risk_investigation_time))
     for r, tag in enumerate(tags):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
@@ -173,7 +179,7 @@ def export_agg_losses(ekey, dstore):
                 loss, evalue, loss / evalue)
             rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
-        writer.save(rows, dest, header)
+        writer.save(rows, dest, header, comment=md)
     return writer.getsaved()
 
 
@@ -191,9 +197,12 @@ def export_avg_losses_ebrisk(ekey, dstore):
     assets = get_assets(dstore)
     dest = dstore.build_fname(name, 'mean', 'csv')
     array = numpy.zeros(len(assets), dt)
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+                   risk_investigation_time=oq.risk_investigation_time))
     for li, ln in enumerate(oq.loss_names):
         array[ln] = dstore[name][:, li]
-    writer.save(compose_arrays(assets, array), dest)
+    writer.save(compose_arrays(assets, array), dest, comment=md)
     return writer.getsaved()
 
 
@@ -204,16 +213,20 @@ def export_losses_by_asset(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    loss_dt = dstore['oqparam'].loss_dt(stat_dt)
+    oq = dstore['oqparam']
+    loss_dt = oq.loss_dt(stat_dt)
     losses_by_asset = dstore[ekey[0]][()]
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+                   risk_investigation_time=oq.risk_investigation_time))
     for rlz in rlzs:
         losses = losses_by_asset[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
-        writer.save(data, dest)
+        writer.save(data, dest, comment=md)
     return writer.getsaved()
 
 
@@ -232,6 +245,9 @@ def export_losses_by_event(ekey, dstore):
     oq = dstore['oqparam']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+                   risk_investigation_time=oq.risk_investigation_time))
     if (oq.calculation_mode.startswith('scenario') or
             oq.calculation_mode == 'ebrisk'):
         tagcol = dstore['assetcol/tagcol']
@@ -245,7 +261,7 @@ def export_losses_by_event(ekey, dstore):
         axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
         data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
         aw = hdf5.ArrayWrapper(data, dic, oq.loss_names)
-        writer.save(aw.to_table(), dest)
+        writer.save(aw.to_table(), dest, comment=md)
     else:
         dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
                   ('year', U32)] + oq.loss_dt_list()
@@ -260,7 +276,7 @@ def export_losses_by_event(ekey, dstore):
         loss = dstore['losses_by_event']['loss'].T  # shape (L, E)
         for losses, loss_type in zip(loss, oq.loss_names):
             arr[loss_type] = losses
-        writer.save(arr, dest)
+        writer.save(arr, dest, comment=md)
     return writer.getsaved()
 
 
