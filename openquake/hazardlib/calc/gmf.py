@@ -20,6 +20,7 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
+import collections
 import numpy
 import scipy.stats
 
@@ -111,6 +112,56 @@ class GmfComputer(object):
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
+
+    def get_hazard(self, min_iml, rlzs_by_gsim, gmv_dt):
+        """
+        :returns: a dictionary site_id -> [(sid, eid, gmv), ...]
+        """
+        dd = collections.defaultdict(list)
+        for rec in self.compute_all(min_iml, rlzs_by_gsim, [], {}):
+            dd[rec[0]].append(rec)
+        return {sid: numpy.array(dd[sid], gmv_dt) for sid in dd}
+
+    def compute_all(self, min_iml, rlzs_by_gsim, sig_eps, eid2rlz):
+        """
+        :returns: [(sid, eid, gmv), ...]
+        """
+        rup = self.rupture
+        sids = self.sids
+        eids_by_rlz = rup.get_eids_by_rlz(rlzs_by_gsim)
+        data = []
+        for gs, rlzs in rlzs_by_gsim.items():
+            num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
+            if num_events == 0:
+                continue
+            # NB: the trick for performance is to keep the call to
+            # compute.compute outside of the loop over the realizations
+            # it is better to have few calls producing big arrays
+            array, sig, eps = self.compute(gs, num_events)
+            array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
+            for i, miniml in enumerate(min_iml):  # gmv < minimum
+                arr = array[:, i, :]
+                arr[arr < miniml] = 0
+            n = 0
+            for rlzi in rlzs:
+                eids = eids_by_rlz[rlzi]
+                e = len(eids)
+                if not e:
+                    continue
+                for ei, eid in enumerate(eids):
+                    gmf = array[:, :, n + ei]  # shape (N, M)
+                    tot = gmf.sum(axis=0)  # shape (M,)
+                    if not tot.sum():
+                        continue
+                    tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
+                                list(eps[:, n + ei]))
+                    sig_eps.append(tup)
+                    eid2rlz[eid] = rlzi
+                    for sid, gmv in zip(sids, gmf):
+                        if gmv.sum():
+                            data.append((sid, eid, gmv))
+                n += e
+        return data
 
     def compute(self, gsim, num_events, seed=None):
         """
