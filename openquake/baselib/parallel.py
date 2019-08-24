@@ -711,7 +711,9 @@ class Starmap(object):
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
-            self.sent += numpy.array([len(p) for p in args])
+            if len(args) == len(self.sent):
+                self.sent += numpy.array([len(p) for p in args])
+            # FIXME: manage subtasks with different number of arguments
         res = submit[dist](self, func, args, monitor)
         self.task_no += 1
         self.tasks.append(res)
