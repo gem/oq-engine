@@ -346,41 +346,8 @@ class GmfGetter(object):
         self.sig_eps = []
         self.eid2rlz = {}
         for computer in self.computers:
-            rup = computer.rupture
-            sids = computer.sids
-            eids_by_rlz = rup.get_eids_by_rlz(self.rlzs_by_gsim)
-            data = []
-            for gs, rlzs in self.rlzs_by_gsim.items():
-                num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
-                if num_events == 0:
-                    continue
-                # NB: the trick for performance is to keep the call to
-                # compute.compute outside of the loop over the realizations
-                # it is better to have few calls producing big arrays
-                array, sig, eps = computer.compute(gs, num_events)
-                array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-                for i, miniml in enumerate(self.min_iml):  # gmv < minimum
-                    arr = array[:, i, :]
-                    arr[arr < miniml] = 0
-                n = 0
-                for rlzi in rlzs:
-                    eids = eids_by_rlz[rlzi]
-                    e = len(eids)
-                    if not e:
-                        continue
-                    for ei, eid in enumerate(eids):
-                        gmf = array[:, :, n + ei]  # shape (N, M)
-                        tot = gmf.sum(axis=0)  # shape (M,)
-                        if not tot.sum():
-                            continue
-                        tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
-                                    list(eps[:, n + ei]))
-                        self.sig_eps.append(tup)
-                        self.eid2rlz[eid] = rlzi
-                        for sid, gmv in zip(sids, gmf):
-                            if gmv.sum():
-                                data.append((sid, eid, gmv))
-                    n += e
+            data = computer.compute_all(
+                self.min_iml, self.rlzs_by_gsim, self.sig_eps, self.eid2rlz)
             yield numpy.array(data, self.gmv_dt)
 
     def get_gmfdata(self):
