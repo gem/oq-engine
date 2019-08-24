@@ -91,7 +91,7 @@ def export_ruptures_csv(ekey, dstore):
     for rgetter in gen_rupture_getters(dstore):
         rups = rgetter.get_ruptures()
         rup_data = calc.RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
-        for r in rup_data.to_array(rups):
+        for r, rup in zip(rup_data.to_array(rups), rups):
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
