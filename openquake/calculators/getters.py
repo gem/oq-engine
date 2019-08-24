@@ -322,10 +322,12 @@ class GmfGetter(object):
         """
         if hasattr(self, 'computers'):  # init already called
             return
+        if not hasattr(self.rupgetter, 'weight'):  # not already called
+            self.rupgetter.set_weight(self.srcfilter)
         with hdf5.File(self.rupgetter.filename, 'r') as parent:
             self.weights = parent['weights'][()]
         self.computers = []
-        for ebr in self.rupgetter.get_ruptures(self.srcfilter):
+        for ebr in self.rupgetter.get_ruptures():
             sitecol = self.sitecol.filtered(ebr.sids)
             try:
                 computer = calc.gmf.GmfComputer(
@@ -501,6 +503,7 @@ class RuptureGetter(object):
                 rlzi.append(rlz)
                 nr += 1
         self.rlzs = numpy.array(rlzi)
+        self.sids_by_rup = None  # overridden by the calculator
 
     @general.cached_property
     def rup_array(self):
@@ -521,23 +524,31 @@ class RuptureGetter(object):
     def num_rlzs(self):
         return len(self.rlz2idx)
 
-    @property
-    def weight(self):
-        return len(self.rup_array)
-
     def split(self, maxweight):
         """
-        :yields: RuptureGetters with weight <= maxweight
+        :returns: RuptureGetters with weight <= maxweight
         """
         fe = self.first_event
-        for rup_indices in general.block_splitter(self.rup_indices, maxweight):
+        items = zip(self.rup_indices, self.sids_by_rup)
+        lst = []
+        for block in general.block_splitter(
+                items, maxweight, lambda item: len(item[1])):
+            rup_indices = []
+            sids_by_rup = []
+            for ridx, sids in block:
+                rup_indices.append(ridx)
+                sids_by_rup.append(sids)
             if rup_indices:
                 # some indices may have weight 0 and are discarded
                 rgetter = self.__class__(
                     self.filename, list(rup_indices), self.grp_id,
                     self.trt, self.samples, self.rlzs_by_gsim, fe)
+                rgetter.weight = block.weight
+                rgetter.sids_by_rup = sids_by_rup
                 fe += rgetter.num_events
-                yield rgetter
+                lst.append(rgetter)
+                # print(rgetter)  # uncomment to debug
+        return lst
 
     def get_eid_rlz(self):
         """
@@ -579,16 +590,25 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter=calc.filters.nofilter):
+    def set_weight(self, srcfilter):
+        # compute the weight of a RuptureGetter and set .sids_by_rup
+        self.weight = 0
+        self.sids_by_rup = []
+        for rec in self.rup_array:
+            sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
+            self.weight += len(sids)
+            self.sids_by_rup.append(sids)
+
+    def get_ruptures(self):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
         ebrs = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for rec in self.rup_array:
-                if srcfilter.integration_distance:
-                    sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
+            for i, rec in enumerate(self.rup_array):
+                if self.sids_by_rup is not None:
+                    sids = self.sids_by_rup[i]
                     if len(sids) == 0:  # the rupture is far away
                         continue
                 else:
