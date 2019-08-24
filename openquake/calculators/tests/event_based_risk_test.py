@@ -330,12 +330,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         minmag = self.calc.datastore['ruptures']['mag'].min()
         self.assertGreaterEqual(minmag, 5.2)
 
-        # check asset_loss_table
-        tot = self.calc.datastore['asset_loss_table'][()].sum()
-        self.assertEqual(tot, 15787827.0)
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
+        # check asset_loss_table
+        tot = self.calc.datastore['asset_loss_table'][()].sum()
+        self.assertEqual(tot, 15787827.0)
 
         # this is a case with exposure, site model and region_grid_spacing
         self.run_calc(case_miriam.__file__, 'job2.ini')
