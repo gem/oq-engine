@@ -29,6 +29,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.imt import from_string
 
+U64 = numpy.uint64
 F32 = numpy.float32
 
 
@@ -113,14 +114,15 @@ class GmfComputer(object):
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
 
-    def get_hazard(self, min_iml, rlzs_by_gsim, gmv_dt):
+    def get_hazard(self, min_iml, rlzs_by_gsim):
         """
-        :returns: a dictionary site_id -> [(sid, eid, gmv), ...]
+        :returns: a dictionary site_id -> [(eid, gmv), ...]
         """
+        dt = numpy.dtype([('eid', U64), ('gmv', (F32, (len(min_iml),)))])
         dd = collections.defaultdict(list)
         for rec in self.compute_all(min_iml, rlzs_by_gsim, [], {}):
             dd[rec[0]].append(rec)
-        return {sid: numpy.array(dd[sid], gmv_dt) for sid in dd}
+        return {sid: numpy.array(dd[sid], dt) for sid in dd}
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps, eid2rlz):
         """
