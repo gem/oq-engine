@@ -58,6 +58,11 @@ def supertask(text, monitor):
             yield get_length, k * v
 
 
+def countletters(text1, text2, monitor):
+    for block in general.block_splitter(text1 + text2, 5):
+        yield get_length, ''.join(block)
+
+
 class StarmapTestCase(unittest.TestCase):
     monitor = parallel.Monitor()
 
@@ -136,6 +141,11 @@ class StarmapTestCase(unittest.TestCase):
             self.assertGreater(len(h5['task_info/supertask']), 0)
         shutil.rmtree(tmpdir)
 
+    def test_countletters(self):
+        data = [('hello', 'world'), ('ciao', 'mondo')]
+        smap = parallel.Starmap(countletters, data)
+        self.assertEqual(smap.reduce(), {'n': 19})
+        
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()
