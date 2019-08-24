@@ -596,7 +596,7 @@ class RuptureGetter(object):
         self.sids_by_rup = []
         for rec in self.rup_array:
             sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
-            self.weight += numpy.sqrt(len(sids))
+            self.weight += len(sids)
             self.sids_by_rup.append(sids)
 
     def get_ruptures(self):
