@@ -102,7 +102,7 @@ def _calc(gmfgetter, assets_by_site, param,
         times[sid] = time.time() - t0
     if hazard:
         num_events_per_sid /= len(hazard)
-    return events, eid2idx, num_events_per_sid, gmf_nbytes
+    return events, num_events_per_sid, gmf_nbytes
 
 
 def ebrisk(rupgetter, srcfilter, param, monitor):
@@ -128,7 +128,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
         gmfgetter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
         gmfgetter.task_no = monitor.task_no
         gmfgetter.init()  # instantiate the computers
-    events, eid2idx, num_events_per_sid, gmf_nbytes = _calc(
+    events, num_events_per_sid, gmf_nbytes = _calc(
         gmfgetter, assets_by_site, param, alt, acc, times,
         mon_haz, mon_risk, mon_agg)
     with mon_elt:
@@ -142,8 +142,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
            'events_per_sid': num_events_per_sid, 'gmf_nbytes': gmf_nbytes}
     res['losses_by_A'] = param['lba'].losses_by_A
     if param['asset_loss_table']:
-        eidx = numpy.array([eid2idx[eid] for eid in events['eid']])
-        res['alt_eidx'] = alt, eidx
+        res['alt_eidx'] = alt, rupgetter.first_event + numpy.arange(E)
     return res
 
 
