@@ -71,8 +71,6 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     Compute GMFs and optionally hazard curves
     """
     getter = GmfGetter(rupgetter, srcfilter, param['oqparam'])
-    with monitor('getting ruptures'):
-        getter.init()
     return getter.compute_gmfs_curves(monitor)
 
 
