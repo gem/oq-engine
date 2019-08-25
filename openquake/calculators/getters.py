@@ -340,23 +340,16 @@ class GmfGetter(object):
                 continue
             self.computers.append(computer)
 
-    def gen_gmfs(self):
-        """
-        Compute the GMFs for the given realization and
-        yields arrays of the dtype (sid, eid, imti, gmv), one for rupture
-        """
-        self.sig_eps = []
-        self.eid2rlz = {}
-        for computer in self.computers:
-            data = computer.compute_all(
-                self.min_iml, self.rlzs_by_gsim, self.sig_eps, self.eid2rlz)
-            yield numpy.array(data, self.gmv_dt)
-
     def get_gmfdata(self):
         """
-        :returns: an array of the dtype (sid, eid, imti, gmv)
+        :returns: an array of the dtype (sid, eid, gmv)
         """
-        alldata = list(self.gen_gmfs())
+        alldata = []
+        self.sig_eps = []
+        for computer in self.computers:
+            data = computer.compute_all(
+                self.min_iml, self.rlzs_by_gsim, self.sig_eps)
+            alldata.append(numpy.array(data, self.gmv_dt))
         if not alldata:
             return numpy.zeros(0, self.gmv_dt)
         return numpy.concatenate(alldata)
@@ -372,19 +365,21 @@ class GmfGetter(object):
 
     def compute_gmfs_curves(self, monitor):
         """
+        :param eid2rlz: a dictionary event_id -> rlz_id
         :returns: a dict with keys gmfdata, indices, hcurves
         """
         oq = self.oqparam
-        with monitor('GmfGetter.init', measuremem=True):
+        with monitor('getting ruptures', measuremem=True):
             self.init()
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
             with monitor('building hazard', measuremem=True):
+                eid2rlz = dict(self.rupgetter.get_eid_rlz())
                 gmfdata = self.get_gmfdata()  # returned later
                 hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
-                dic = group_by_rlz(hazardr, self.eid2rlz)
+                dic = group_by_rlz(hazardr, eid2rlz)
                 for rlzi, array in dic.items():
                     with hc_mon:
                         gmvs = array['gmv']
