@@ -61,6 +61,7 @@ def _calc(gmfgetter, assets_by_site, param,
     # numpy.testing.assert_equal(events['eid'], sorted(events['eid']))
     eid2idx = dict(zip(events['eid'],
                        range(e1, e1 + gmfgetter.rupgetter.num_events)))
+    eid2rlz = dict(events)
     with mon_haz:
         hazard = gmfgetter.get_hazard_by_sid()  # sid -> (sid, eid, gmv)
 
@@ -72,8 +73,7 @@ def _calc(gmfgetter, assets_by_site, param,
             continue
         num_events_per_sid += len(haz)
         if param['avg_losses']:
-            ws = gmfgetter.weights[
-                [gmfgetter.eid2rlz[eid] for eid in haz['eid']]]
+            ws = gmfgetter.weights[[eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
         eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
         haz['eid'] = eidx + e1
