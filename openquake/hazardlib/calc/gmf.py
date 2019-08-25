@@ -120,11 +120,11 @@ class GmfComputer(object):
         """
         dt = numpy.dtype([('eid', U64), ('gmv', (F32, (len(min_iml),)))])
         dd = collections.defaultdict(list)
-        for rec in self.compute_all(min_iml, rlzs_by_gsim, [], {}):
+        for rec in self.compute_all(min_iml, rlzs_by_gsim, []):
             dd[rec[0]].append(rec)
         return {sid: numpy.array(dd[sid], dt) for sid in dd}
 
-    def compute_all(self, min_iml, rlzs_by_gsim, sig_eps, eid2rlz):
+    def compute_all(self, min_iml, rlzs_by_gsim, sig_eps):
         """
         :returns: [(sid, eid, gmv), ...]
         """
@@ -158,7 +158,6 @@ class GmfComputer(object):
                     tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
                                 list(eps[:, n + ei]))
                     sig_eps.append(tup)
-                    eid2rlz[eid] = rlzi
                     for sid, gmv in zip(sids, gmf):
                         if gmv.sum():
                             data.append((sid, eid, gmv))
