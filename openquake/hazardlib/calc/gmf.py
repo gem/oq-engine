@@ -134,8 +134,6 @@ class GmfComputer(object):
         data = []
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
-            if num_events == 0:
-                continue
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
@@ -148,8 +146,6 @@ class GmfComputer(object):
             for rlzi in rlzs:
                 eids = eids_by_rlz[rlzi]
                 e = len(eids)
-                if not e:
-                    continue
                 for ei, eid in enumerate(eids):
                     gmf = array[:, :, n + ei]  # shape (N, M)
                     tot = gmf.sum(axis=0)  # shape (M,)
