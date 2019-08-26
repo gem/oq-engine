@@ -800,18 +800,14 @@ def split_task(func, *args, duration=1000,
     n = len(elements)
     # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
-    if n <= 3:
+    if n == 1:
         yield func(*args)
         return
-    numpy.random.seed(42)
-    ok = numpy.zeros(n, dtype=bool)
-    ok[numpy.random.choice(numpy.arange(n), 3, replace=False)] = True
-    sample = elements[ok]
-    other = elements[~ok]
-    sample_weight = sum(weight(el) for el in sample)
+    first, *other = elements
+    first_weight = weight(first)
     t0 = time.time()
-    res = func(*(sample,) + args[1:])
-    dt = (time.time() - t0) / sample_weight  # time per unit of weight
+    res = func(*([first],) + args[1:])
+    dt = (time.time() - t0) / first_weight  # time per unit of weight
     yield res
     blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
     for block in blocks[:-1]:
