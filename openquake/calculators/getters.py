@@ -412,7 +412,7 @@ class GmfGetter(object):
 def group_by_rlz(data, rlzs):
     """
     :param data: a composite array of D elements with a field `eid`
-    :param eid2rlz: an array of E >= D elements
+    :param rlzs: an array of E >= D elements
     :returns: a dictionary rlzi -> data for each realization
     """
     acc = general.AccumDict(accum=[])
