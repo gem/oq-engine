@@ -56,11 +56,11 @@ def _calc(gmfgetter, assets_by_site, param,
     crmodel = param['crmodel']
     epspath = param['epspath']
     tagnames = param['aggregate_by']
-    e1 = gmfgetter.rupgetter.first_event
+    e0 = gmfgetter.rupgetter.e0[0]
     events = gmfgetter.rupgetter.get_eid_rlz()
     # numpy.testing.assert_equal(events['eid'], sorted(events['eid']))
     eid2idx = dict(zip(events['eid'],
-                       range(e1, e1 + gmfgetter.rupgetter.num_events)))
+                       range(e0, e0 + gmfgetter.rupgetter.num_events)))
     eid2rlz = dict(events)
     with mon_haz:
         hazard = gmfgetter.get_hazard_by_sid()  # sid -> (sid, eid, gmv)
@@ -75,8 +75,8 @@ def _calc(gmfgetter, assets_by_site, param,
         if param['avg_losses']:
             ws = gmfgetter.weights[[eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
-        eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e1
-        haz['eid'] = eidx + e1
+        eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e0
+        haz['eid'] = eidx + e0
         with mon_risk:
             out = get_output(crmodel, assets_by_taxo, haz)
         with mon_agg:
@@ -142,7 +142,7 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
            'events_per_sid': num_events_per_sid, 'gmf_nbytes': gmf_nbytes}
     res['losses_by_A'] = param['lba'].losses_by_A
     if param['asset_loss_table']:
-        res['alt_eidx'] = alt, rupgetter.first_event + numpy.arange(E)
+        res['alt_eidx'] = alt, rupgetter.e0[0] + numpy.arange(E)
     return res
 
 
@@ -214,8 +214,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         trt_by_grp = self.csm_info.grp_by("trt")
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
-        first_event = 0
         ngroups = 0
+        fe = 0
+        eslices = self.datastore['eslices']
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -226,8 +227,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 rgetter = getters.RuptureGetter(
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
-                    first_event)
-                first_event += rgetter.num_events
+                    eslices[fe:fe + len(indices), 0])
+                fe += len(indices)
                 smap.submit(rgetter, self.src_filter, self.param)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
