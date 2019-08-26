@@ -281,6 +281,9 @@ class EventBasedCalculator(base.HazardCalculator):
         n_unique_events = len(numpy.unique(events['id']))  # sanity check
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
+        eindices = get_indices(events['id'] // TWO32)
+        arr = numpy.array(list(eindices.values()))[:, 0, :]
+        self.datastore['eslices'] = arr  # shape (U, 2)
 
     def check_overflow(self):
         """
