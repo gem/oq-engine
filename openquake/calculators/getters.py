@@ -32,6 +32,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
+TWO32 = U64(2 ** 32)
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 
@@ -363,9 +364,9 @@ class GmfGetter(object):
             data = self.get_gmfdata()
         return general.group_array(data, 'sid')
 
-    def compute_gmfs_curves(self, monitor):
+    def compute_gmfs_curves(self, rlzs, monitor):
         """
-        :param eid2rlz: a dictionary event_id -> rlz_id
+        :param rlzs: an array of shapeE
         :returns: a dict with keys gmfdata, indices, hcurves
         """
         oq = self.oqparam
@@ -375,11 +376,10 @@ class GmfGetter(object):
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
             with monitor('building hazard', measuremem=True):
-                eid2rlz = dict(self.rupgetter.get_eid_rlz())
                 gmfdata = self.get_gmfdata()  # returned later
                 hazard = self.get_hazard_by_sid(data=gmfdata)
             for sid, hazardr in hazard.items():
-                dic = group_by_rlz(hazardr, eid2rlz)
+                dic = group_by_rlz(hazardr, rlzs)
                 for rlzi, array in dic.items():
                     with hc_mon:
                         gmvs = array['gmv']
@@ -409,15 +409,15 @@ class GmfGetter(object):
         return res
 
 
-def group_by_rlz(data, eid2rlz):
+def group_by_rlz(data, rlzs):
     """
     :param data: a composite array of D elements with a field `eid`
-    :param eid2rlz: an array of E >= D elements or a dictionary
+    :param rlzs: an array of E >= D elements
     :returns: a dictionary rlzi -> data for each realization
     """
     acc = general.AccumDict(accum=[])
     for rec in data:
-        acc[eid2rlz[rec['eid']]].append(rec)
+        acc[rlzs[rec['eid']]].append(rec)
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
@@ -426,6 +426,10 @@ def gen_rupture_getters(dstore, slc=slice(None),
     """
     :yields: RuptureGetters
     """
+    try:
+        e0s = dstore['eslices'][:, 0]
+    except KeyError:
+        e0s = None
     if dstore.parent:
         dstore = dstore.parent
     csm_info = dstore['csm_info']
@@ -441,9 +445,13 @@ def gen_rupture_getters(dstore, slc=slice(None),
             # in event_based_risk/case_3
             continue
         for block in general.block_splitter(arr, maxweight):
+            if e0s is None:
+                e0 = [TWO32 * U64(rec['serial']) for rec in block]
+            else:
+                e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
                 hdf5cache or dstore.filename, numpy.array(block), grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             yield rgetter
             nr += len(block)
             ne += rgetter.num_events
@@ -548,12 +556,12 @@ class RuptureGetter(object):
         :returns: a composite array with the associations eid->rlz
         """
         eid_rlz = []
-        for rup in self.rup_array:
+        for e0, rup in zip(self.e0, self.rup_array):
             ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
                             self.grp_id, rup['n_occ'], self.samples)
             for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
-                    eid_rlz.append((eid, rlz))
+                    eid_rlz.append((eid + e0, rlz))
         return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
 
     def get_rupdict(self):
@@ -642,7 +650,9 @@ class RuptureGetter(object):
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 ebr.sids = sids
-                if self.e0 is not None:
+                if self.e0 is None:
+                    ebr.e0 = TWO32 * U64(ebr.serial)
+                else:
                     ebr.e0 = self.e0[i]
                 ebrs.append(ebr)
         return ebrs
