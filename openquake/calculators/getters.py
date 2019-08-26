@@ -556,10 +556,9 @@ class RuptureGetter(object):
         :returns: a composite array with the associations eid->rlz
         """
         eid_rlz = []
-        for rup in self.rup_array:
+        for e0, rup in zip(self.e0, self.rup_array):
             ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
                             self.grp_id, rup['n_occ'], self.samples)
-            e0 = TWO32 * U64(ebr.serial)
             for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid + e0, rlz))
