@@ -434,7 +434,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     maxweight = numpy.ceil(len(rup_array) / (concurrent_tasks or 1))
-    nr, ne, first_event = 0, 0, 0
+    nr, ne = 0, 0
     for grp_id, arr in general.group_array(rup_array, 'grp_id').items():
         if not rlzs_by_gsim[grp_id]:
             # this may happen if a source model has no sources, like
@@ -443,9 +443,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
         for block in general.block_splitter(arr, maxweight):
             rgetter = RuptureGetter(
                 hdf5cache or dstore.filename, numpy.array(block), grp_id,
-                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id],
-                first_event)
-            first_event += rgetter.num_events
+                trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
             yield rgetter
             nr += len(block)
             ne += rgetter.num_events
@@ -477,7 +475,7 @@ class RuptureGetter(object):
         a list of rupture indices of the same group
     """
     def __init__(self, filename, rup_indices, grp_id, trt, samples,
-                 rlzs_by_gsim, first_event=0):
+                 rlzs_by_gsim, e0=None):
         self.filename = filename
         self.rup_indices = rup_indices
         if not isinstance(rup_indices, list):  # is a rup_array
@@ -487,7 +485,7 @@ class RuptureGetter(object):
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.first_event = first_event
+        self.e0 = e0
         self.rlz2idx = {}
         nr = 0
         rlzi = []
@@ -523,24 +521,24 @@ class RuptureGetter(object):
         """
         :returns: RuptureGetters with weight <= maxweight
         """
-        fe = self.first_event
-        items = zip(self.rup_indices, self.sids_by_rup)
+        items = zip(self.rup_indices, self.sids_by_rup, self.e0)
         lst = []
         for block in general.block_splitter(
                 items, maxweight, lambda item: len(item[1])):
             rup_indices = []
             sids_by_rup = []
-            for ridx, sids in block:
+            e0s = []
+            for ridx, sids, e0 in block:
                 rup_indices.append(ridx)
                 sids_by_rup.append(sids)
+                e0s.append(e0)
             if rup_indices:
                 # some indices may have weight 0 and are discarded
                 rgetter = self.__class__(
-                    self.filename, list(rup_indices), self.grp_id,
-                    self.trt, self.samples, self.rlzs_by_gsim, fe)
+                    self.filename, rup_indices, self.grp_id,
+                    self.trt, self.samples, self.rlzs_by_gsim, e0s)
                 rgetter.weight = block.weight
                 rgetter.sids_by_rup = sids_by_rup
-                fe += rgetter.num_events
                 lst.append(rgetter)
                 # print(rgetter)  # uncomment to debug
         return lst
