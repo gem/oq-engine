@@ -45,11 +45,12 @@ def start_ebrisk(gmfgetter, param, monitor):
             assets_by_site = assetcol.assets_by_site()
     with monitor('filtering ruptures'):
         gmfgetter.init()
-    yield from parallel.split_task(
-        ebrisk, gmfgetter.computers, gmfgetter.gmv_dt, gmfgetter.min_iml,
-        gmfgetter.rlzs_by_gsim, gmfgetter.weights,
-        assets_by_site, assetcol.tagcol, param, monitor,
-        duration=param['task_duration'])
+    if gmfgetter.computers:
+        yield from parallel.split_task(
+            ebrisk, gmfgetter.computers, gmfgetter.gmv_dt, gmfgetter.min_iml,
+            gmfgetter.rlzs_by_gsim, gmfgetter.weights,
+            assets_by_site, assetcol.tagcol, param, monitor,
+            duration=param['task_duration'])
 
 
 def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
@@ -92,10 +93,7 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
                     else:
                         losses = lratios * asset['value-' + lt]
                     if param['asset_loss_table']:
-                        try:
-                            alt[aid, eidx, lti] = losses
-                        except:
-                            import pdb; pdb.set_trace()
+                        alt[aid, eidx, lti] = losses
                     losses_by_lt[lt] = losses
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     acc[(eidx, loss_idx) + tagidxs] += losses
