@@ -565,7 +565,7 @@ class EBRupture(object):
                 j += n
         return dic
 
-    def get_events(self, rlzs_by_gsim):
+    def get_events(self, rlzs_by_gsim, e0=None):
         """
         :returns: an array of events with fields eid, rlz
         """
@@ -573,7 +573,7 @@ class EBRupture(object):
         for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
             all_eids.extend(eids)
             rlzs.extend([rlz] * len(eids))
-        evs = U64(all_eids) + U64(self.serial) * TWO32
+        evs = U64(all_eids) + (e0 if e0 is not None else self.e0)
         return numpy.fromiter(zip(evs, rlzs), events_dt)
 
     def get_eids(self, num_rlzs):
@@ -609,7 +609,7 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        events = self.get_events(rlzs_by_gsim)
+        events = self.get_events(rlzs_by_gsim, e0=TWO32 * self.serial)
         events_by_ses = self.get_events_by_ses(events, num_ses)
         new = ExportedRupture(self.serial, events_by_ses)
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
