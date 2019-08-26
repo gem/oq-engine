@@ -247,7 +247,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if len(elt):
             elt['event_id'] = self.event_ids[elt['event_id']]
             with self.monitor('saving losses_by_event', autoflush=True):
-                self.datastore.extend('losses_by_event', dic['elt'])
+                self.datastore.extend('losses_by_event', elt)
         with self.monitor('saving agg_losses-rlzs', autoflush=True):
             for r, aggloss in dic['agg_losses'].items():
                 self.datastore['agg_losses-rlzs'][:, r] += aggloss
