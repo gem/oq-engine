@@ -103,9 +103,11 @@ class GmfComputer(object):
         # `rupture` can be an EBRupture instance
         if hasattr(rupture, 'srcidx'):
             self.srcidx = rupture.srcidx  # the source the rupture comes from
+            self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:
             self.srcidx = '?'
+            self.e0 = 0
         try:
             self.sctx, self.dctx = rupture.sctx, rupture.dctx
         except AttributeError:
@@ -144,7 +146,7 @@ class GmfComputer(object):
                 arr[arr < miniml] = 0
             n = 0
             for rlzi in rlzs:
-                eids = eids_by_rlz[rlzi]
+                eids = eids_by_rlz[rlzi] + self.e0
                 e = len(eids)
                 for ei, eid in enumerate(eids):
                     gmf = array[:, :, n + ei]  # shape (N, M)
