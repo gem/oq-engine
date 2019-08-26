@@ -60,8 +60,8 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
     crmodel = param['crmodel']
     epspath = param['epspath']
     tagnames = param['aggregate_by']
-    e0 = computers[0].e0
     eid2rlz = dict(events)
+    eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
     with mon_haz:
         hazard = numpy.concatenate(
             [numpy.array(c.compute_all(min_iml, rlzs_by_gsim), gmv_dt)
@@ -76,7 +76,7 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
         if param['avg_losses']:
             ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
-        eidx = haz['eid'] - e0
+        eidx = [eid2idx[eid] for eid in haz['eid']]
         with mon_risk:
             out = get_output(crmodel, assets_by_taxo, haz)
         with mon_agg:
@@ -92,7 +92,10 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
                     else:
                         losses = lratios * asset['value-' + lt]
                     if param['asset_loss_table']:
-                        alt[aid, eidx, lti] = losses
+                        try:
+                            alt[aid, eidx, lti] = losses
+                        except:
+                            import pdb; pdb.set_trace()
                     losses_by_lt[lt] = losses
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     acc[(eidx, loss_idx) + tagidxs] += losses
