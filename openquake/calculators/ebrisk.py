@@ -46,13 +46,13 @@ def start_ebrisk(gmfgetter, param, monitor):
     with monitor('filtering ruptures'):
         gmfgetter.init()
     yield from parallel.split_task(
-        ebrisk, gmfgetter.computers, gmfgetter.min_iml,
+        ebrisk, gmfgetter.computers, gmfgetter.gmv_dt, gmfgetter.min_iml,
         gmfgetter.rlzs_by_gsim, gmfgetter.weights,
         assets_by_site, assetcol.tagcol, param, monitor,
         duration=param['task_duration'])
 
 
-def _calc(computers, events, min_iml, rlzs_by_gsim, weights,
+def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
           assets_by_site, param, alt, acc, mon_haz, mon_risk, mon_agg):
     gmf_nbytes = 0
     num_events_per_sid = 0
@@ -64,7 +64,8 @@ def _calc(computers, events, min_iml, rlzs_by_gsim, weights,
     eid2rlz = dict(events)
     with mon_haz:
         hazard = numpy.concatenate(
-            [c.compute_all(min_iml, rlzs_by_gsim) for c in computers])
+            [numpy.array(c.compute_all(min_iml, rlzs_by_gsim), gmv_dt)
+             for c in computers])
 
     for sid, haz in general.group_array(hazard, 'sid').items():
         gmf_nbytes += haz.nbytes
@@ -98,12 +99,12 @@ def _calc(computers, events, min_iml, rlzs_by_gsim, weights,
                     if param['avg_losses']:
                         lba.losses_by_A[aid, loss_idx] += (
                             losses @ ws * param['ses_ratio'])
-    if hazard:
+    if len(hazard):
         num_events_per_sid /= len(hazard)
     return num_events_per_sid, gmf_nbytes
 
 
-def ebrisk(computers, min_iml, rlzs_by_gsim, weights, assets_by_site,
+def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
            tagcol, param, monitor):
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
@@ -120,11 +121,11 @@ def ebrisk(computers, min_iml, rlzs_by_gsim, weights, assets_by_site,
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
     # NB: IMT-dependent weights are not supported in ebrisk
     num_events_per_sid, gmf_nbytes = _calc(
-        computers, events, min_iml, rlzs_by_gsim, weights,
+        computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
         assets_by_site, param, alt, acc, mon_haz, mon_risk, mon_agg)
     with mon_elt:
         elt = numpy.fromiter(
-            ((event['eid'], event['rlz'], losses)  # losses (L, T...)
+            ((event['id'], event['rlz'], losses)  # losses (L, T...)
              for event, losses in zip(events, acc) if losses.sum()), elt_dt)
         agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
         for rec in elt:
