@@ -553,8 +553,7 @@ class EBRupture(object):
         if self.samples == 1:  # full enumeration or akin to it
             for rlzs in rlzs_by_gsim.values():
                 for rlz in rlzs:
-                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U64) + (
-                        TWO32 * U64(self.serial))
+                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U32)
                     j += self.n_occ
         else:  # associated eids to the realizations
             rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
@@ -562,8 +561,7 @@ class EBRupture(object):
             histo = general.random_histogram(
                 self.n_occ, self.samples, self.serial)
             for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U64) + (
-                    TWO32 * U64(self.serial))
+                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
                 j += n
         return dic
 
@@ -575,7 +573,8 @@ class EBRupture(object):
         for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
             all_eids.extend(eids)
             rlzs.extend([rlz] * len(eids))
-        return numpy.fromiter(zip(all_eids, rlzs), events_dt)
+        evs = U64(all_eids) + U64(self.serial) * TWO32
+        return numpy.fromiter(zip(evs, rlzs), events_dt)
 
     def get_eids(self, num_rlzs):
         """
