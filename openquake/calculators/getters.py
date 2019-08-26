@@ -642,6 +642,8 @@ class RuptureGetter(object):
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 ebr.sids = sids
+                if self.e0 is not None:
+                    ebr.e0 = self.e0[i]
                 ebrs.append(ebr)
         return ebrs
 
