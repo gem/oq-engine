@@ -58,9 +58,6 @@ def _calc(gmfgetter, assets_by_site, param,
     tagnames = param['aggregate_by']
     e0 = gmfgetter.rupgetter.e0[0]
     events = gmfgetter.rupgetter.get_eid_rlz()
-    # numpy.testing.assert_equal(events['eid'], sorted(events['eid']))
-    eid2idx = dict(zip(events['eid'],
-                       range(e0, e0 + gmfgetter.rupgetter.num_events)))
     eid2rlz = dict(events)
     with mon_haz:
         hazard = gmfgetter.get_hazard_by_sid()  # sid -> (sid, eid, gmv)
@@ -75,8 +72,7 @@ def _calc(gmfgetter, assets_by_site, param,
         if param['avg_losses']:
             ws = gmfgetter.weights[[eid2rlz[eid] for eid in haz['eid']]]
         assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
-        eidx = numpy.array([eid2idx[eid] for eid in haz['eid']]) - e0
-        haz['eid'] = eidx + e0
+        eidx = haz['eid'] - e0
         with mon_risk:
             out = get_output(crmodel, assets_by_taxo, haz)
         with mon_agg:
@@ -141,6 +137,8 @@ def ebrisk(rupgetter, srcfilter, param, monitor):
     res = {'elt': elt, 'agg_losses': agg, 'times': times,
            'events_per_sid': num_events_per_sid, 'gmf_nbytes': gmf_nbytes}
     res['losses_by_A'] = param['lba'].losses_by_A
+    # NB: without resetting the cache the sequential avg_losses would be wrong!
+    del param['lba'].__dict__['losses_by_A']
     if param['asset_loss_table']:
         res['alt_eidx'] = alt, rupgetter.e0[0] + numpy.arange(E)
     return res
@@ -234,6 +232,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.gmf_nbytes = 0
+        self.event_ids = self.datastore['events']['id']
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
@@ -244,9 +243,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param dics: dictionaries with keys eids, losses, losses_by_N
         """
         self.oqparam.ground_motion_fields = False  # hack
-        if len(dic['elt']):
+        elt = dic['elt']
+        if len(elt):
+            elt['event_id'] = self.event_ids[elt['event_id']]
             with self.monitor('saving losses_by_event', autoflush=True):
-                self.datastore.extend('losses_by_event', dic['elt'])
+                self.datastore.extend('losses_by_event', elt)
         with self.monitor('saving agg_losses-rlzs', autoflush=True):
             for r, aggloss in dic['agg_losses'].items():
                 self.datastore['agg_losses-rlzs'][:, r] += aggloss
