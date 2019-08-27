@@ -734,16 +734,17 @@ class Starmap(object):
         return IterResult(self._loop(), self.name, self.argnames,
                           self.sent, self.hdf5path)
 
-    def reduce(self, agg=operator.add, acc=None):
+    def reduce(self, agg=operator.add, acc=None, ncores=None):
         """
         Submit all tasks and reduce the results
         """
-        return self.submit_all().reduce(agg, acc)
-
-    def reduce_queue(self, ncores, agg=operator.add, acc=None):
-        self.queue = list(self.task_args)
-        self.ncores = ncores
-        return self.get_results().reduce(agg, acc)
+        if ncores is None:  # submit all tasks
+            ires = self.submit_all()
+        else:  # sent at most ncores task
+            self.queue = list(self.task_args)
+            self.ncores = ncores
+            ires = self.get_results()
+        return ires.reduce(agg, acc)
 
     def __iter__(self):
         return iter(self.submit_all())
