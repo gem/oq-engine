@@ -128,7 +128,8 @@ def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
          for event, losses in zip(events, acc) if losses.sum()), elt_dt)
     res = {'elt': elt, 'events_per_sid': num_events_per_sid,
            'gmf_nbytes': gmf_nbytes}
-    res['losses_by_A'] = param['lba'].losses_by_A
+    if param['avg_losses']:
+        res['losses_by_A'] = param['lba'].losses_by_A
     # NB: without resetting the cache the sequential avg_losses would be wrong!
     del param['lba'].__dict__['losses_by_A']
     if param['asset_loss_table']:
