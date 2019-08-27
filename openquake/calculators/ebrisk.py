@@ -54,7 +54,8 @@ def start_ebrisk(gmfgetter, crmodel, param, monitor):
 
 
 def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
-          assets_by_site, crmodel, param, alt, acc, mon_haz, mon_risk, mon_agg):
+          assets_by_site, crmodel, param, alt, acc,
+          mon_haz, mon_risk, mon_agg):
     gmf_nbytes = 0
     num_events_per_sid = 0
     lba = param['lba']
@@ -109,7 +110,6 @@ def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    mon_elt = monitor('building event loss table')
     events = numpy.concatenate([c.rupture.get_events(rlzs_by_gsim)
                                 for c in computers])
     E = len(events)
@@ -123,17 +123,16 @@ def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
     num_events_per_sid, gmf_nbytes = _calc(
         computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
         assets_by_site, crmodel, param, alt, acc, mon_haz, mon_risk, mon_agg)
-    with mon_elt:
-        elt = numpy.fromiter(
-            ((event['id'], event['rlz'], losses)  # losses (L, T...)
-             for event, losses in zip(events, acc) if losses.sum()), elt_dt)
+    elt = numpy.fromiter(  # this is ultra-fast
+        ((event['id'], event['rlz'], losses)  # losses (L, T...)
+         for event, losses in zip(events, acc) if losses.sum()), elt_dt)
     res = {'elt': elt, 'events_per_sid': num_events_per_sid,
            'gmf_nbytes': gmf_nbytes}
     res['losses_by_A'] = param['lba'].losses_by_A
     # NB: without resetting the cache the sequential avg_losses would be wrong!
     del param['lba'].__dict__['losses_by_A']
     if param['asset_loss_table']:
-        res['alt_eidx'] = alt, events['id']
+        res['alt_eids'] = alt, events['id']
     return res
 
 
@@ -232,7 +231,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, acc, dic):
         """
         :param dummy: unused parameter
-        :param dics: dictionaries with keys elt, losses_by_A
+        :param dic: dictionary with keys elt, losses_by_A
         """
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
@@ -244,10 +243,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
-                alt, eidx = dic['alt_eidx']
-                idx = numpy.argsort(eidx)
-                self.datastore['asset_loss_table'][
-                    :, eidx[idx]] = alt[:, idx]
+                alt, eids = dic['alt_eids']
+                idx = numpy.argsort(eids)  # indices sorting the eids
+                self.datastore['asset_loss_table'][:, eids[idx]] = alt[:, idx]
         self.events_per_sid.append(dic['events_per_sid'])
         self.gmf_nbytes += dic['gmf_nbytes']
         return 1
