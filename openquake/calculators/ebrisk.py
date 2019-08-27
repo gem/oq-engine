@@ -39,17 +39,13 @@ def start_ebrisk(gmfgetter, crmodel, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    with monitor('getting assets', measuremem=False):
-        with datastore.read(gmfgetter.srcfilter.filename) as dstore:
-            assetcol = dstore['assetcol']
-            assets_by_site = assetcol.assets_by_site()
     with monitor('filtering ruptures'):
         gmfgetter.init()
     if gmfgetter.computers:
         yield from parallel.split_task(
             ebrisk, gmfgetter.computers, gmfgetter.gmv_dt, gmfgetter.min_iml,
             gmfgetter.rlzs_by_gsim, gmfgetter.weights,
-            assets_by_site, assetcol.tagcol, crmodel, param, monitor,
+            gmfgetter.srcfilter.filename, crmodel, param, monitor,
             duration=param['task_duration'])
 
 
@@ -105,17 +101,21 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
     return num_events_per_sid, gmf_nbytes
 
 
-def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
-           tagcol, crmodel, param, monitor):
+def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, filename,
+           crmodel, param, monitor):
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
+    with monitor('getting assets', measuremem=False):
+        with datastore.read(filename) as dstore:
+            assetcol = dstore['assetcol']
+            assets_by_site = assetcol.assets_by_site()
     events = numpy.concatenate([c.rupture.get_events(rlzs_by_gsim)
                                 for c in computers])
     E = len(events)
     L = len(param['lba'].loss_names)
     A = sum(len(assets) for assets in assets_by_site)
-    shape = tagcol.agg_shape((E, L), param['aggregate_by'])
+    shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])
     elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     alt = numpy.zeros((A, E, L), F32) if param['asset_loss_table'] else None
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
