@@ -54,7 +54,8 @@ def start_ebrisk(gmfgetter, crmodel, param, monitor):
 
 
 def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
-          assets_by_site, crmodel, param, alt, acc, mon_haz, mon_risk, mon_agg):
+          assets_by_site, crmodel, param, alt, acc,
+          mon_haz, mon_risk, mon_agg):
     gmf_nbytes = 0
     num_events_per_sid = 0
     lba = param['lba']
@@ -109,7 +110,6 @@ def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    mon_elt = monitor('building event loss table')
     events = numpy.concatenate([c.rupture.get_events(rlzs_by_gsim)
                                 for c in computers])
     E = len(events)
@@ -123,20 +123,16 @@ def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
     num_events_per_sid, gmf_nbytes = _calc(
         computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
         assets_by_site, crmodel, param, alt, acc, mon_haz, mon_risk, mon_agg)
-    with mon_elt:
-        elt = numpy.fromiter(
-            ((event['id'], event['rlz'], losses)  # losses (L, T...)
-             for event, losses in zip(events, acc) if losses.sum()), elt_dt)
-        agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
-        for rec in elt:
-            agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
-    res = {'elt': elt, 'agg_losses': agg,
-           'events_per_sid': num_events_per_sid, 'gmf_nbytes': gmf_nbytes}
+    elt = numpy.fromiter(  # this is ultra-fast
+        ((event['id'], event['rlz'], losses)  # losses (L, T...)
+         for event, losses in zip(events, acc) if losses.sum()), elt_dt)
+    res = {'elt': elt, 'events_per_sid': num_events_per_sid,
+           'gmf_nbytes': gmf_nbytes}
     res['losses_by_A'] = param['lba'].losses_by_A
     # NB: without resetting the cache the sequential avg_losses would be wrong!
     del param['lba'].__dict__['losses_by_A']
     if param['asset_loss_table']:
-        res['alt_eidx'] = alt, events['id']
+        res['alt_eids'] = alt, events['id']
     return res
 
 
@@ -201,14 +197,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         self.init_logic_tree(self.csm_info)
-        smap = parallel.Starmap(
-            self.core_task.__func__, hdf5path=self.datastore.filename)
         trt_by_grp = self.csm_info.grp_by("trt")
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         ngroups = 0
         fe = 0
         eslices = self.datastore['eslices']
+        allargs = []
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -220,22 +215,24 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
-                gmfgetter = getters.GmfGetter(rgetter, self.src_filter, oq)
+                ggetter = getters.GmfGetter(rgetter, self.src_filter, oq)
+                allargs.append((ggetter, self.crmodel, self.param))
                 fe += len(indices)
-                smap.submit(gmfgetter, self.crmodel, self.param)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.gmf_nbytes = 0
         self.event_ids = self.datastore['events']['id']
-        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
+        res = parallel.Starmap(
+            self.core_task.__func__, allargs, hdf5path=self.datastore.filename
+        ).reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
 
     def agg_dicts(self, acc, dic):
         """
         :param dummy: unused parameter
-        :param dics: dictionaries with keys elt, agg_losses, losses_by_A
+        :param dic: dictionary with keys elt, losses_by_A
         """
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
@@ -243,17 +240,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving losses_by_event', autoflush=True):
                 elt['event_id'] = self.event_ids[elt['event_id']]
                 self.datastore.extend('losses_by_event', elt)
-        with self.monitor('saving agg_losses-rlzs', autoflush=True):
-            for r, aggloss in dic['agg_losses'].items():
-                self.datastore['agg_losses-rlzs'][:, r] += aggloss
         with self.monitor('saving avg_losses', autoflush=True):
             self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
-                alt, eidx = dic['alt_eidx']
-                idx = numpy.argsort(eidx)
-                self.datastore['asset_loss_table'][
-                    :, eidx[idx]] = alt[:, idx]
+                alt, eids = dic['alt_eids']
+                idx = numpy.argsort(eids)  # indices sorting the eids
+                self.datastore['asset_loss_table'][:, eids[idx]] = alt[:, idx]
         self.events_per_sid.append(dic['events_per_sid'])
         self.gmf_nbytes += dic['gmf_nbytes']
         return 1
@@ -319,28 +312,28 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             dstore = self.datastore.parent
         else:
             dstore = self.datastore
-        allargs = [(dstore.filename, builder, rlzi) for rlzi in range(self.R)]
+        args = [(dstore.filename, builder, oq.ses_ratio, rlzi)
+                for rlzi in range(self.R)]
         h5 = hdf5.File(self.datastore.hdf5cache())
-        acc = list(parallel.Starmap(compute_loss_curves_maps, allargs,
-                                    hdf5path=h5.filename))
+        acc = list(parallel.Starmap(postprocess, args, hdf5path=h5.filename))
         # copy performance information from the cache to the datastore
         pd = h5['performance_data'][()]
         hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
         self.datastore['task_info/compute_loss_curves_and_maps'] = (
-            h5['task_info/compute_loss_curves_maps'][()])
+            h5['task_info/postprocess'][()])
         self.datastore.open('r+')
-        with self.monitor('saving loss_curves and maps', autoflush=True):
-            for r, (curves, maps) in acc:
-                if len(curves):  # some realization can give zero contribution
-                    self.datastore['agg_curves-rlzs'][:, r] = curves
-                if len(maps):  # conditional_loss_poes can be empty
-                    self.datastore['agg_maps-rlzs'][:, r] = maps
+        for r, (curves, maps), agg_losses in acc:
+            if len(curves):  # some realization can give zero contribution
+                self.datastore['agg_curves-rlzs'][:, r] = curves
+            if len(maps):  # conditional_loss_poes can be empty
+                self.datastore['agg_maps-rlzs'][:, r] = maps
+            self.datastore['agg_losses-rlzs'][:, r] = agg_losses
         if self.R > 1:
-            logging.info('Computing aggregate loss curves statistics')
+            logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
+            set_rlzs_stats(self.datastore, 'agg_losses')
             if oq.conditional_loss_poes:
-                logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')
 
         # sanity check with the asset_loss_table
@@ -373,15 +366,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 # 2) parallelizing by multi_index slows down everything with warnings
 # kernel:NMI watchdog: BUG: soft lockup - CPU#26 stuck for 21s!
 # due to excessive reading, and then we run out of memory
-def compute_loss_curves_maps(filename, builder, rlzi, monitor):
+def postprocess(filename, builder, ses_ratio, rlzi, monitor):
     """
     :param filename: path to the datastore
     :param builder: LossCurvesMapsBuilder instance
     :param rlzi: realization index
     :param monitor: Monitor instance
-    :returns: rlzi, (curves, maps)
+    :returns: rlzi, (curves, maps), agg_losses
     """
     with datastore.read(filename) as dstore:
         rlzs = dstore['losses_by_event']['rlzi']
         losses = dstore['losses_by_event'][rlzs == rlzi]['loss']
-    return rlzi, builder.build_curves_maps(losses, rlzi)
+    agg_losses = losses.sum(axis=0) * ses_ratio  # shape (L, T, ...)
+    return rlzi, builder.build_curves_maps(losses, rlzi), agg_losses
