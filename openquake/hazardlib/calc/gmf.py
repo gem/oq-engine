@@ -119,7 +119,7 @@ class GmfComputer(object):
     @property
     def weight(self):
         """The number of affected sites"""
-        return len(self.sids)
+        return numpy.sqrt(len(self.sids))
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
