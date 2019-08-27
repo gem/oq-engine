@@ -35,16 +35,15 @@ F64 = numpy.float64
 U64 = numpy.uint64
 
 
-def start_ebrisk(rupgetter, srcfilter, param, monitor):
+def start_ebrisk(gmfgetter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
     with monitor('getting assets', measuremem=False):
-        with datastore.read(srcfilter.filename) as dstore:
+        with datastore.read(gmfgetter.srcfilter.filename) as dstore:
             assetcol = dstore['assetcol']
             assets_by_site = assetcol.assets_by_site()
     with monitor('filtering ruptures'):
-        gmfgetter = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
         gmfgetter.init()
     if gmfgetter.computers:
         yield from parallel.split_task(
@@ -223,8 +222,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
+                gmfgetter = getters.GmfGetter(rgetter, self.src_filter, oq)
                 fe += len(indices)
-                smap.submit(rgetter, self.src_filter, self.param)
+                smap.submit(gmfgetter, self.param)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
