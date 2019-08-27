@@ -734,15 +734,15 @@ class Starmap(object):
         return IterResult(self._loop(), self.name, self.argnames,
                           self.sent, self.hdf5path)
 
-    def reduce(self, agg=operator.add, acc=None, ncores=None):
+    def reduce(self, agg=operator.add, acc=None, num_cores=None):
         """
         Submit all tasks and reduce the results
         """
-        if ncores is None:  # submit all tasks
+        if num_cores is None:  # submit all tasks
             ires = self.submit_all()
-        else:  # sent at most ncores task
+        else:  # sent at most num_cores task
             self.queue = list(self.task_args)
-            self.ncores = ncores
+            self.num_cores = num_cores
             ires = self.get_results()
         return ires.reduce(agg, acc)
 
@@ -751,8 +751,8 @@ class Starmap(object):
 
     def _loop(self):
         if self.queue:  # called from reduce_queue
-            first_args = self.queue[:self.ncores]
-            self.queue = self.queue[self.ncores:]
+            first_args = self.queue[:self.num_cores]
+            self.queue = self.queue[self.num_cores:]
             for args in first_args:
                 self.submit(*args)
         if not hasattr(self, 'socket'):  # no submit was ever made
