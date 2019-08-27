@@ -243,8 +243,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving losses_by_event', autoflush=True):
                 elt['event_id'] = self.event_ids[elt['event_id']]
                 self.datastore.extend('losses_by_event', elt)
-        with self.monitor('saving avg_losses', autoflush=True):
-            self.datastore['avg_losses'] += dic['losses_by_A']
+        if self.oqparam.avg_losses:
+            with self.monitor('saving avg_losses', autoflush=True):
+                self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eids = dic['alt_eids']
