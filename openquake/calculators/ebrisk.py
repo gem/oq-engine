@@ -35,7 +35,7 @@ F64 = numpy.float64
 U64 = numpy.uint64
 
 
-def start_ebrisk(gmfgetter, param, monitor):
+def start_ebrisk(gmfgetter, crmodel, param, monitor):
     """
     Launcher for ebrisk tasks
     """
@@ -49,16 +49,15 @@ def start_ebrisk(gmfgetter, param, monitor):
         yield from parallel.split_task(
             ebrisk, gmfgetter.computers, gmfgetter.gmv_dt, gmfgetter.min_iml,
             gmfgetter.rlzs_by_gsim, gmfgetter.weights,
-            assets_by_site, assetcol.tagcol, param, monitor,
+            assets_by_site, assetcol.tagcol, crmodel, param, monitor,
             duration=param['task_duration'])
 
 
 def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
-          assets_by_site, param, alt, acc, mon_haz, mon_risk, mon_agg):
+          assets_by_site, crmodel, param, alt, acc, mon_haz, mon_risk, mon_agg):
     gmf_nbytes = 0
     num_events_per_sid = 0
     lba = param['lba']
-    crmodel = param['crmodel']
     epspath = param['epspath']
     tagnames = param['aggregate_by']
     eid2rlz = dict(events)
@@ -106,7 +105,7 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
 
 
 def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
-           tagcol, param, monitor):
+           tagcol, crmodel, param, monitor):
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
@@ -123,7 +122,7 @@ def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
     # NB: IMT-dependent weights are not supported in ebrisk
     num_events_per_sid, gmf_nbytes = _calc(
         computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
-        assets_by_site, param, alt, acc, mon_haz, mon_risk, mon_agg)
+        assets_by_site, crmodel, param, alt, acc, mon_haz, mon_risk, mon_agg)
     with mon_elt:
         elt = numpy.fromiter(
             ((event['id'], event['rlz'], losses)  # losses (L, T...)
@@ -166,7 +165,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
-        self.param['crmodel'] = self.crmodel
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses', F32, (A, L))
@@ -199,8 +197,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Using %d ruptures per block (over %d)',
                      ruptures_per_block, nruptures)
         self.set_param(
-            maxweight=oq.ebrisk_maxweight,
-            task_duration=oq.task_duration or 300,  # 5min
+            task_duration=oq.task_duration or 600,  # 10min
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         self.init_logic_tree(self.csm_info)
@@ -225,7 +222,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     eslices[fe:fe + len(indices), 0])
                 gmfgetter = getters.GmfGetter(rgetter, self.src_filter, oq)
                 fe += len(indices)
-                smap.submit(gmfgetter, self.param)
+                smap.submit(gmfgetter, self.crmodel, self.param)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
