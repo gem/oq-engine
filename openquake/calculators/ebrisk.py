@@ -128,9 +128,10 @@ def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
          for event, losses in zip(events, acc) if losses.sum()), elt_dt)
     res = {'elt': elt, 'events_per_sid': num_events_per_sid,
            'gmf_nbytes': gmf_nbytes}
-    res['losses_by_A'] = param['lba'].losses_by_A
-    # NB: without resetting the cache the sequential avg_losses would be wrong!
-    del param['lba'].__dict__['losses_by_A']
+    if param['avg_losses']:
+        res['losses_by_A'] = param['lba'].losses_by_A
+        # without resetting the cache the sequential avg_losses would be wrong!
+        del param['lba'].__dict__['losses_by_A']
     if param['asset_loss_table']:
         res['alt_eids'] = alt, events['id']
     return res
@@ -223,9 +224,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = []
         self.gmf_nbytes = 0
         self.event_ids = self.datastore['events']['id']
-        res = parallel.Starmap(
-            self.core_task.__func__, allargs, hdf5path=self.datastore.filename
-        ).reduce(self.agg_dicts, numpy.zeros(self.N))
+        ncores = oq.__class__.concurrent_tasks.default // 2
+        smap = parallel.Starmap(
+            self.core_task.__func__, allargs, hdf5path=self.datastore.filename)
+        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N), ncores)
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
 
@@ -240,8 +242,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving losses_by_event', autoflush=True):
                 elt['event_id'] = self.event_ids[elt['event_id']]
                 self.datastore.extend('losses_by_event', elt)
-        with self.monitor('saving avg_losses', autoflush=True):
-            self.datastore['avg_losses'] += dic['losses_by_A']
+        if self.oqparam.avg_losses:
+            with self.monitor('saving avg_losses', autoflush=True):
+                self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eids = dic['alt_eids']
