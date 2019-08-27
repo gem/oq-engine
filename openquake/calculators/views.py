@@ -319,11 +319,10 @@ def view_job_info(token, dstore):
     data = [['task', 'sent', 'received']]
     for task in dstore['task_info']:
         dset = dstore['task_info/' + task]
-        if 'argnames' in dset.attrs:
-            argnames = dset.attrs['argnames'].split()
-            totsent = dset.attrs['sent']
-            sent = ['%s=%s' % (a, humansize(s))
-                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
+        if 'sent' in dset.attrs:
+            sent = sorted(ast.literal_eval(dset.attrs['sent']).items(),
+                          key=operator.itemgetter(1), reverse=True)
+            sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
             recv = dset['received'].sum()
             data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
