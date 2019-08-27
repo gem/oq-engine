@@ -655,6 +655,7 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.hdf5path = hdf5path or gettemp(suffix='.hdf5')
+        self.queue = []
         try:
             self.num_tasks = len(self.task_args)
         except TypeError:  # generators have no len
@@ -733,16 +734,27 @@ class Starmap(object):
         return IterResult(self._loop(), self.name, self.argnames,
                           self.sent, self.hdf5path)
 
-    def reduce(self, agg=operator.add, acc=None):
+    def reduce(self, agg=operator.add, acc=None, num_cores=None):
         """
         Submit all tasks and reduce the results
         """
-        return self.submit_all().reduce(agg, acc)
+        if num_cores is None:  # submit all tasks
+            ires = self.submit_all()
+        else:  # sent at most num_cores task
+            self.queue = list(self.task_args)
+            self.num_cores = num_cores
+            ires = self.get_results()
+        return ires.reduce(agg, acc)
 
     def __iter__(self):
         return iter(self.submit_all())
 
     def _loop(self):
+        if self.queue:  # called from reduce_queue
+            first_args = self.queue[:self.num_cores]
+            self.queue = self.queue[self.num_cores:]
+            for args in first_args:
+                self.submit(*args)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
         isocket = iter(self.socket)
@@ -755,7 +767,10 @@ class Starmap(object):
                 continue
             elif res.msg == 'TASK_ENDED':
                 self.log_percent()
-                self.todo -= 1
+                if self.queue:
+                    self.submit(*self.queue.pop())
+                else:
+                    self.todo -= 1
             elif res.msg:
                 logging.warning(res.msg)
             elif res.func_args:  # resubmit subtask

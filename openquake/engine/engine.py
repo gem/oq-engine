@@ -40,7 +40,7 @@ except ImportError:
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
-    parallel, general, config, __version__, zeromq as z, workerpool as w)
+    parallel, general, config, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, oqzip
 from openquake.calculators import base, views, export
