@@ -201,7 +201,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                      ruptures_per_block, nruptures)
         self.set_param(
             maxweight=oq.ebrisk_maxweight,
-            task_duration=oq.task_duration or 300,  # 5min
+            task_duration=oq.task_duration or 600,  # 10min
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         self.init_logic_tree(self.csm_info)
