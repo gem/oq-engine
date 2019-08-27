@@ -612,7 +612,8 @@ class Starmap(object):
     def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
-              distribute=None, progress=logging.info, hdf5path=None):
+              distribute=None, progress=logging.info, hdf5path=None,
+              num_cores=None):
         r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -628,6 +629,7 @@ class Starmap(object):
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
         :param hdf5path: an open hdf5.File where to store the performance info
+        :param num_cores: the number of available cores (or None)
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
@@ -638,10 +640,11 @@ class Starmap(object):
         else:  # split_in_blocks is eager
             taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(task, taskargs, distribute, progress, hdf5path).submit_all()
+        return cls(task, taskargs, distribute, progress, hdf5path,
+                   num_cores).submit_all()
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, hdf5path=None):
+                 progress=logging.info, hdf5path=None, num_cores=None):
         self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if hdf5path:
@@ -655,6 +658,7 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.hdf5path = hdf5path or gettemp(suffix='.hdf5')
+        self.num_cores = num_cores
         self.queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -723,8 +727,11 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        for args in self.task_args:
-            self.submit(*args)
+        if self.num_cores is None:  # submit all tasks
+            for args in self.task_args:
+                self.submit(*args)
+        else:  # submit at most num_cores task
+            self.queue = list(self.task_args)
         return self.get_results()
 
     def get_results(self):
@@ -734,17 +741,11 @@ class Starmap(object):
         return IterResult(self._loop(), self.name, self.argnames,
                           self.sent, self.hdf5path)
 
-    def reduce(self, agg=operator.add, acc=None, num_cores=None):
+    def reduce(self, agg=operator.add, acc=None):
         """
         Submit all tasks and reduce the results
         """
-        if num_cores is None:  # submit all tasks
-            ires = self.submit_all()
-        else:  # sent at most num_cores task
-            self.queue = list(self.task_args)
-            self.num_cores = num_cores
-            ires = self.get_results()
-        return ires.reduce(agg, acc)
+        return self.submit_all().reduce(agg, acc)
 
     def __iter__(self):
         return iter(self.submit_all())
