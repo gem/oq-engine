@@ -127,11 +127,8 @@ def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, assets_by_site,
         elt = numpy.fromiter(
             ((event['id'], event['rlz'], losses)  # losses (L, T...)
              for event, losses in zip(events, acc) if losses.sum()), elt_dt)
-        agg = general.AccumDict(accum=numpy.zeros(shape[1:], F32))  # rlz->agg
-        for rec in elt:
-            agg[rec['rlzi']] += rec['loss'] * param['ses_ratio']
-    res = {'elt': elt, 'agg_losses': agg,
-           'events_per_sid': num_events_per_sid, 'gmf_nbytes': gmf_nbytes}
+    res = {'elt': elt, 'events_per_sid': num_events_per_sid,
+           'gmf_nbytes': gmf_nbytes}
     res['losses_by_A'] = param['lba'].losses_by_A
     # NB: without resetting the cache the sequential avg_losses would be wrong!
     del param['lba'].__dict__['losses_by_A']
@@ -235,7 +232,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, acc, dic):
         """
         :param dummy: unused parameter
-        :param dics: dictionaries with keys elt, agg_losses, losses_by_A
+        :param dics: dictionaries with keys elt, losses_by_A
         """
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
@@ -243,9 +240,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving losses_by_event', autoflush=True):
                 elt['event_id'] = self.event_ids[elt['event_id']]
                 self.datastore.extend('losses_by_event', elt)
-        with self.monitor('saving agg_losses-rlzs', autoflush=True):
-            for r, aggloss in dic['agg_losses'].items():
-                self.datastore['agg_losses-rlzs'][:, r] += aggloss
         with self.monitor('saving avg_losses', autoflush=True):
             self.datastore['avg_losses'] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
@@ -319,7 +313,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             dstore = self.datastore.parent
         else:
             dstore = self.datastore
-        allargs = [(dstore.filename, builder, rlzi) for rlzi in range(self.R)]
+        allargs = [(dstore.filename, builder, oq.ses_ratio, rlzi)
+                   for rlzi in range(self.R)]
         h5 = hdf5.File(self.datastore.hdf5cache())
         acc = list(parallel.Starmap(compute_loss_curves_maps, allargs,
                                     hdf5path=h5.filename))
@@ -331,11 +326,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             h5['task_info/compute_loss_curves_maps'][()])
         self.datastore.open('r+')
         with self.monitor('saving loss_curves and maps', autoflush=True):
-            for r, (curves, maps) in acc:
+            for r, (curves, maps), agg_losses in acc:
                 if len(curves):  # some realization can give zero contribution
                     self.datastore['agg_curves-rlzs'][:, r] = curves
                 if len(maps):  # conditional_loss_poes can be empty
                     self.datastore['agg_maps-rlzs'][:, r] = maps
+                self.datastore['agg_losses-rlzs'][:, r] = agg_losses
         if self.R > 1:
             logging.info('Computing aggregate loss curves statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
@@ -373,7 +369,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 # 2) parallelizing by multi_index slows down everything with warnings
 # kernel:NMI watchdog: BUG: soft lockup - CPU#26 stuck for 21s!
 # due to excessive reading, and then we run out of memory
-def compute_loss_curves_maps(filename, builder, rlzi, monitor):
+def compute_loss_curves_maps(filename, builder, ses_ratio, rlzi, monitor):
     """
     :param filename: path to the datastore
     :param builder: LossCurvesMapsBuilder instance
@@ -384,4 +380,5 @@ def compute_loss_curves_maps(filename, builder, rlzi, monitor):
     with datastore.read(filename) as dstore:
         rlzs = dstore['losses_by_event']['rlzi']
         losses = dstore['losses_by_event'][rlzs == rlzi]['loss']
-    return rlzi, builder.build_curves_maps(losses, rlzi)
+    agg_losses = losses.sum(axis=0) * ses_ratio  # shape (L, T, ...)
+    return rlzi, builder.build_curves_maps(losses, rlzi), agg_losses
