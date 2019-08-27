@@ -503,7 +503,8 @@ class IterResult(object):
                 yield val
             else:
                 name = result.func_args[0].__name__
-            result.mon.save_task_info(temp, result, self.sent[name], mem_gb)
+            result.mon.save_task_info(
+                temp, result, name, self.sent[name], mem_gb)
             result.mon.flush(temp)
 
     def __iter__(self):
