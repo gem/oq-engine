@@ -224,10 +224,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = []
         self.gmf_nbytes = 0
         self.event_ids = self.datastore['events']['id']
-        ncores = oq.__class__.concurrent_tasks.default // 2
         smap = parallel.Starmap(
-            self.core_task.__func__, allargs, hdf5path=self.datastore.filename)
-        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N), ncores)
+            self.core_task.__func__, allargs, hdf5path=self.datastore.filename,
+            num_cores=oq.__class__.concurrent_tasks.default // 2)
+        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
 
