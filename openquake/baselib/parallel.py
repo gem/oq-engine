@@ -569,6 +569,16 @@ def init_workers():
         prctl.set_pdeathsig(signal.SIGKILL)
 
 
+def getargnames(task_func):
+    # a task can be a function, a class or an instance with a __call__
+    if inspect.isfunction(task_func):
+        return inspect.getfullargspec(task_func).args
+    elif inspect.isclass(task_func):
+        return inspect.getfullargspec(task_func.__init__).args[1:]
+    else:  # instance with a __call__ method
+        return inspect.getfullargspec(task_func.__call__).args[1:]
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
@@ -664,18 +674,12 @@ class Starmap(object):
             self.num_tasks = len(self.task_args)
         except TypeError:  # generators have no len
             self.num_tasks = None
-        # a task can be a function, a class or an instance with a __call__
-        if inspect.isfunction(task_func):
-            self.argnames = inspect.getfullargspec(task_func).args
-        elif inspect.isclass(task_func):
-            self.argnames = inspect.getfullargspec(task_func.__init__).args[1:]
-        else:  # instance with a __call__ method
-            self.argnames = inspect.getfullargspec(task_func.__call__).args[1:]
+        self.argnames = getargnames(task_func)
+        self.sent = numpy.zeros(len(self.argnames) - 1)
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
-        self.sent = numpy.zeros(len(self.argnames) - 1)
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
@@ -716,7 +720,7 @@ class Starmap(object):
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
-            if len(args) == len(self.sent):
+            if func.__name__ == self.task_func.__name__:
                 self.sent += numpy.array([len(p) for p in args])
             # FIXME: manage subtasks with different number of arguments
         res = submit[dist](self, func, args, monitor)
@@ -752,14 +756,17 @@ class Starmap(object):
 
     def _loop(self):
         if self.queue:  # called from reduce_queue
+            self.todo = len(self.queue)
             first_args = self.queue[:self.num_cores]
             self.queue = self.queue[self.num_cores:]
             for args in first_args:
                 self.submit(*args)
+        else:
+            self.todo = len(self.tasks)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
+
         isocket = iter(self.socket)
-        self.todo = len(self.tasks)
         while self.todo:
             res = next(isocket)
             if self.calc_id != res.mon.calc_id:
