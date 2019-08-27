@@ -235,13 +235,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, acc, dic):
         """
         :param dummy: unused parameter
-        :param dics: dictionaries with keys eids, losses, losses_by_N
+        :param dics: dictionaries with keys elt, agg_losses, losses_by_A
         """
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
         if len(elt):
-            elt['event_id'] = self.event_ids[elt['event_id']]
             with self.monitor('saving losses_by_event', autoflush=True):
+                elt['event_id'] = self.event_ids[elt['event_id']]
                 self.datastore.extend('losses_by_event', elt)
         with self.monitor('saving agg_losses-rlzs', autoflush=True):
             for r, aggloss in dic['agg_losses'].items():
