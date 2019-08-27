@@ -197,14 +197,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         self.init_logic_tree(self.csm_info)
-        smap = parallel.Starmap(
-            self.core_task.__func__, hdf5path=self.datastore.filename)
         trt_by_grp = self.csm_info.grp_by("trt")
         samples = self.csm_info.get_samples_by_grp()
         rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         ngroups = 0
         fe = 0
         eslices = self.datastore['eslices']
+        allargs = []
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -216,15 +215,17 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
-                gmfgetter = getters.GmfGetter(rgetter, self.src_filter, oq)
+                ggetter = getters.GmfGetter(rgetter, self.src_filter, oq)
+                allargs.append((ggetter, self.crmodel, self.param))
                 fe += len(indices)
-                smap.submit(gmfgetter, self.crmodel, self.param)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.gmf_nbytes = 0
         self.event_ids = self.datastore['events']['id']
-        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
+        res = parallel.Starmap(
+            self.core_task.__func__, allargs, hdf5path=self.datastore.filename
+        ).reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
 
