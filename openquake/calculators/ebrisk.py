@@ -311,30 +311,28 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             dstore = self.datastore.parent
         else:
             dstore = self.datastore
-        allargs = [(dstore.filename, builder, oq.ses_ratio, rlzi)
-                   for rlzi in range(self.R)]
+        args = [(dstore.filename, builder, oq.ses_ratio, rlzi)
+                for rlzi in range(self.R)]
         h5 = hdf5.File(self.datastore.hdf5cache())
-        acc = list(parallel.Starmap(compute_loss_curves_maps, allargs,
-                                    hdf5path=h5.filename))
+        acc = list(parallel.Starmap(postprocess, args, hdf5path=h5.filename))
         # copy performance information from the cache to the datastore
         pd = h5['performance_data'][()]
         hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
         self.datastore['task_info/compute_loss_curves_and_maps'] = (
-            h5['task_info/compute_loss_curves_maps'][()])
+            h5['task_info/postprocess'][()])
         self.datastore.open('r+')
-        with self.monitor('saving loss_curves and maps', autoflush=True):
-            for r, (curves, maps), agg_losses in acc:
-                if len(curves):  # some realization can give zero contribution
-                    self.datastore['agg_curves-rlzs'][:, r] = curves
-                if len(maps):  # conditional_loss_poes can be empty
-                    self.datastore['agg_maps-rlzs'][:, r] = maps
-                self.datastore['agg_losses-rlzs'][:, r] = agg_losses
+        for r, (curves, maps), agg_losses in acc:
+            if len(curves):  # some realization can give zero contribution
+                self.datastore['agg_curves-rlzs'][:, r] = curves
+            if len(maps):  # conditional_loss_poes can be empty
+                self.datastore['agg_maps-rlzs'][:, r] = maps
+            self.datastore['agg_losses-rlzs'][:, r] = agg_losses
         if self.R > 1:
-            logging.info('Computing aggregate loss curves statistics')
+            logging.info('Computing aggregate statistics')
             set_rlzs_stats(self.datastore, 'agg_curves')
+            set_rlzs_stats(self.datastore, 'agg_losses')
             if oq.conditional_loss_poes:
-                logging.info('Computing aggregate loss maps statistics')
                 set_rlzs_stats(self.datastore, 'agg_maps')
 
         # sanity check with the asset_loss_table
@@ -367,13 +365,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 # 2) parallelizing by multi_index slows down everything with warnings
 # kernel:NMI watchdog: BUG: soft lockup - CPU#26 stuck for 21s!
 # due to excessive reading, and then we run out of memory
-def compute_loss_curves_maps(filename, builder, ses_ratio, rlzi, monitor):
+def postprocess(filename, builder, ses_ratio, rlzi, monitor):
     """
     :param filename: path to the datastore
     :param builder: LossCurvesMapsBuilder instance
     :param rlzi: realization index
     :param monitor: Monitor instance
-    :returns: rlzi, (curves, maps)
+    :returns: rlzi, (curves, maps), agg_losses
     """
     with datastore.read(filename) as dstore:
         rlzs = dstore['losses_by_event']['rlzi']
