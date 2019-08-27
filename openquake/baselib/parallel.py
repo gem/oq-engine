@@ -500,12 +500,13 @@ class IterResult(object):
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func_args:  # not subtask
                 name = self.name
-                yield val
             else:
                 name = result.func_args[0].__name__
             result.mon.save_task_info(
                 temp, result, name, self.sent[name], mem_gb)
-            result.mon.flush(temp)
+            if not result.func_args:  # not subtask
+                result.mon.flush(temp)
+                yield val
 
     def __iter__(self):
         if self.iresults == ():
