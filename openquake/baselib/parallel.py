@@ -740,9 +740,9 @@ class Starmap(object):
         """
         return self.submit_all().reduce(agg, acc)
 
-    def reduce_queue(self, arglist, chunksize, agg=operator.add, acc=None):
-        self.queue = arglist
-        self.chunksize = chunksize
+    def reduce_queue(self, ncores, agg=operator.add, acc=None):
+        self.queue = list(self.task_args)
+        self.ncores = ncores
         return self.get_results().reduce(agg, acc)
 
     def __iter__(self):
@@ -750,8 +750,8 @@ class Starmap(object):
 
     def _loop(self):
         if self.queue:  # called from reduce_queue
-            first_args = self.queue[:self.chunksize]
-            self.queue = self.queue[self.chunksize:]
+            first_args = self.queue[:self.ncores]
+            self.queue = self.queue[self.ncores:]
             for args in first_args:
                 self.submit(*args)
         if not hasattr(self, 'socket'):  # no submit was ever made
