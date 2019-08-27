@@ -200,7 +200,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Using %d ruptures per block (over %d)',
                      ruptures_per_block, nruptures)
         self.set_param(
-            maxweight=oq.ebrisk_maxweight,
             task_duration=oq.task_duration or 600,  # 10min
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
