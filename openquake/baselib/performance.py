@@ -151,21 +151,19 @@ class Monitor(object):
         if hasattr(self, 'hdf5path'):
             self.flush(self.hdf5path)
 
-    def save_task_info(self, hdf5path, res, argnames, sent, mem_gb=0):
+    def save_task_info(self, hdf5path, res, name, sent, mem_gb=0):
         """
         Called by parallel.IterResult.
 
         :param hdf5path: where to save the info
         :param res: a :class:`Result` object
-        :param argnames: names of the task arguments
+        :param name: name of the task function
         :param sent: number of bytes sent
         :param mem_gb: memory consumption at the saving time (optional)
         """
-        name = self.operation[6:]  # strip 'total '
         t = (self.task_no, self.weight, self.duration, len(res.pik), mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend3(hdf5path, 'task_info/' + name, data,
-                     argnames=argnames, sent=sent)
+        hdf5.extend3(hdf5path, 'task_info/' + name, data, sent=str(sent))
 
     def reset(self):
         """
