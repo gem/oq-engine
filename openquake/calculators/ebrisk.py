@@ -39,8 +39,13 @@ def start_ebrisk(gmfgetter, crmodel, param, monitor):
     """
     Launcher for ebrisk tasks
     """
+    with hdf5.File(gmfgetter.srcfilter.filename, 'r') as cache:
+        num_taxonomies = cache['num_taxonomies'][()]
     with monitor('filtering ruptures'):
         gmfgetter.init()
+    # redefine gmcomputer.weight
+    for comp in gmfgetter.computers:
+        comp.weight = num_taxonomies[comp.sids].sum()
     if gmfgetter.computers:
         yield from parallel.split_task(
             ebrisk, gmfgetter.computers, gmfgetter.gmv_dt, gmfgetter.min_iml,
@@ -156,6 +161,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with hdf5.File(self.hdf5cache, 'w') as cache:
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
+            cache['num_taxonomies'] = U16(
+                self.assetcol.num_taxonomies_by_site())
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
