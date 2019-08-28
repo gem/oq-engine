@@ -279,7 +279,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     def get_mean_std(self, sctx, rctx, dctx, imts):
         """
-        :returns: an array of shape (2, N, M) with means and stddevs
+        :returns:
+            An array of shape (2, N, M) with mean and total standard
+            deviation. N is the number of sites and M is the number of
+            intensity measure types.
         """
         N = len(sctx.sids)
         M = len(imts)
