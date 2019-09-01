@@ -317,6 +317,14 @@ class GmfGetter(object):
     def imts(self):
         return list(self.oqparam.imtls)
 
+    @property
+    def weight(self):
+        """
+        :returns: the number of affected sites
+        """
+        self.init()
+        return sum(len(c.sids) for c in self.computers)
+
     def init(self):
         """
         Initialize the computers. Should be called on the workers
