@@ -35,18 +35,13 @@ F64 = numpy.float64
 U64 = numpy.uint64
 
 
-def start_ebrisk(gmfgetter, crmodel, param, monitor):
+def start_ebrisk(gmfgetters, crmodel, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    with monitor('filtering ruptures'):
-        gmfgetter.init()
-    if gmfgetter.computers:
-        yield from parallel.split_task(
-            ebrisk, gmfgetter.computers, gmfgetter.gmv_dt, gmfgetter.min_iml,
-            gmfgetter.rlzs_by_gsim, gmfgetter.weights,
-            gmfgetter.srcfilter.filename, crmodel, param, monitor,
-            duration=param['task_duration'])
+    yield from parallel.split_task(
+        ebrisk, gmfgetters, crmodel, param, monitor,
+        duration=param['task_duration'])
 
 
 def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
@@ -101,11 +96,18 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
     return num_events_per_sid, gmf_nbytes
 
 
-def ebrisk(computers, gmv_dt, min_iml, rlzs_by_gsim, weights, filename,
-           crmodel, param, monitor):
+def ebrisk(gmfgetters, crmodel, param, monitor):
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
+    computers = []
+    for gmfgetter in gmfgetters:
+        computers.extend(gmfgetter.computers)
+    gmv_dt = gmfgetter.gmv_dt
+    min_iml = gmfgetter.min_iml
+    rlzs_by_gsim = gmfgetter.rlzs_by_gsim
+    weights = gmfgetter.weights
+    filename = gmfgetter.rupgetter.filename
     with monitor('getting assets', measuremem=False):
         with datastore.read(filename) as dstore:
             assetcol = dstore['assetcol']
@@ -190,7 +192,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
-        ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
+        # ruptures_per_block = numpy.ceil(nruptures / (concurrent_tasks or 1))
+        ruptures_per_block = 10
         logging.info('Using %d ruptures per block (over %d rups, %d events)',
                      ruptures_per_block, nruptures, self.E)
         self.set_param(
@@ -204,7 +207,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         ngroups = 0
         fe = 0
         eslices = self.datastore['eslices']
-        allargs = []
+        gmfgetters = []
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -217,17 +220,18 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
                 ggetter = getters.GmfGetter(rgetter, self.src_filter, oq)
-                allargs.append((ggetter, self.crmodel, self.param))
+                gmfgetters.append(ggetter)
                 fe += len(indices)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.gmf_nbytes = 0
         self.event_ids = self.datastore['events']['id']
-        smap = parallel.Starmap(
-            self.core_task.__func__, allargs, hdf5path=self.datastore.filename,
-            num_cores=oq.__class__.concurrent_tasks.default // 2)
-        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
+        ires = parallel.Starmap.apply(
+            self.core_task.__func__, (gmfgetters, self.crmodel, self.param,
+                                      self.monitor()),
+            key=lambda g: g.rupgetter.grp_id)
+        res = ires.reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
 
