@@ -321,7 +321,7 @@ def get_mesh(oqparam):
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
-        return geo.Mesh.from_coords(c)
+        return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
