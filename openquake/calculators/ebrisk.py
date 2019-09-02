@@ -232,7 +232,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         ires = parallel.Starmap.apply(
             self.core_task.__func__,
             (rupgetters, self.src_filter, self.crmodel, self.param,
-             self.monitor()), key=lambda rg: rg.grp_id)
+             self.monitor()), key=lambda rg: rg.grp_id,
+            concurrent_tasks=oq.concurrent_tasks)
         res = ires.reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
