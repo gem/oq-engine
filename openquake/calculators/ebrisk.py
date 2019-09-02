@@ -40,9 +40,10 @@ def start_ebrisk(rupgetter, srcfilter, crmodel, param, monitor):
     Launcher for ebrisk tasks
     """
     rupgetters = rupgetter.split(srcfilter)
-    yield from parallel.split_task(
-        ebrisk, rupgetters, srcfilter, crmodel, param, monitor,
-        duration=param['task_duration'])
+    if rupgetters:
+        yield from parallel.split_task(
+            ebrisk, rupgetters, srcfilter, crmodel, param, monitor,
+            duration=param['task_duration'])
 
 
 def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,

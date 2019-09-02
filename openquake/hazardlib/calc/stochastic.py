@@ -113,19 +113,20 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         assert sy < TWO16, 'Too many multisurfaces: %d' % sy
         assert sz < TWO16, 'The rupture mesh spacing is too small'
         points = mesh.reshape(3, -1).T   # shape (n, 3)
-        minlon = points[:, 0].min()
-        minlat = points[:, 1].min()
-        maxlon = points[:, 0].max()
-        maxlat = points[:, 1].max()
-        if srcfilter.integration_distance and len(srcfilter.close_sids(
-                (minlon, minlat, maxlon, maxlat),
-                rup.tectonic_region_type, rup.mag)) == 0:
+        rec = numpy.zeros(1, rupture_dt)
+        rec['minlon'] = points[:, 0].min()
+        rec['minlat'] = points[:, 1].min()
+        rec['maxlon'] = points[:, 0].max()
+        rec['maxlat'] = points[:, 1].max()
+        rec['mag'] = rup.mag
+        if srcfilter.integration_distance and len(
+                srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat,
+               rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat'],
                hypo, offset, offset + len(points), sy, sz)
         offset += len(points)
         rups.append(tup)
