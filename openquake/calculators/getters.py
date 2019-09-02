@@ -508,8 +508,7 @@ class RuptureGetter(object):
             rg.samples = self.samples
             rg.rlzs_by_gsim = self.rlzs_by_gsim
             rg.e0 = numpy.array([self.e0[i]])
-            rg.weight = len(srcfilter.close_sids(
-                array[i], self.trt, array[i]['mag']))
+            rg.weight = len(srcfilter.close_sids(array[i], self.trt))
             if rg.weight:
                 out.append(rg)
         return out
@@ -578,7 +577,7 @@ class RuptureGetter(object):
             rupgeoms = dstore['rupgeoms']
             for e0, rec in zip(self.e0, self.rup_array):
                 if srcfilter.integration_distance:
-                    sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
+                    sids = srcfilter.close_sids(rec, self.trt)
                     if len(sids) == 0:  # the rupture is far away
                         continue
                 else:
