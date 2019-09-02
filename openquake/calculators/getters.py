@@ -575,7 +575,7 @@ class RuptureGetter(object):
         ebrs = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for e0, rec in zip(self.e0, self.rup_array):
+            for e0, rec, ri in zip(self.e0, self.rup_array, self.rup_indices):
                 if srcfilter.integration_distance:
                     sids = srcfilter.close_sids(rec, self.trt)
                     if len(sids) == 0:  # the rupture is far away
@@ -618,6 +618,7 @@ class RuptureGetter(object):
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 ebr.sids = sids
+                ebr.ridx = ri
                 if self.e0 is None:
                     ebr.e0 = TWO32 * U64(ebr.serial)
                 else:
