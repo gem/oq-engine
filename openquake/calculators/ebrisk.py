@@ -35,12 +35,11 @@ F64 = numpy.float64
 U64 = numpy.uint64
 
 
-def start_ebrisk(rupgetters, srcfilter, crmodel, param, monitor):
+def start_ebrisk(rupgetter, srcfilter, crmodel, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    for rg in rupgetters:
-        rg.set_weight(srcfilter)
+    rupgetters = rupgetter.split(srcfilter)
     yield from parallel.split_task(
         ebrisk, rupgetters, srcfilter, crmodel, param, monitor,
         duration=param['task_duration'])
@@ -194,8 +193,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
-        # ruptures_per_block = numpy.ceil(nruptures / (concurrent_tasks or 1))
-        ruptures_per_block = 10
+        ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
         logging.info('Using %d ruptures per block (over %d rups, %d events)',
                      ruptures_per_block, nruptures, self.E)
         self.set_param(
@@ -209,7 +207,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         ngroups = 0
         fe = 0
         eslices = self.datastore['eslices']
-        rupgetters = []
+        smap = parallel.Starmap(
+            self.core_task.__func__,
+            hdf5path=self.datastore.filename)
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -221,19 +221,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
-                rupgetters.append(rgetter)
+                smap.submit(rgetter, self.src_filter, self.crmodel, self.param)
                 fe += len(indices)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.gmf_nbytes = 0
         self.event_ids = self.datastore['events']['id']
-        ires = parallel.Starmap.apply(
-            self.core_task.__func__,
-            (rupgetters, self.src_filter, self.crmodel, self.param,
-             self.monitor()), key=lambda rg: rg.grp_id,
-            concurrent_tasks=oq.concurrent_tasks)
-        res = ires.reduce(self.agg_dicts, numpy.zeros(self.N))
+        res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
 
