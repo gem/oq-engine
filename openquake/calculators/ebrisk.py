@@ -99,16 +99,15 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
 
 
 def ebrisk(rupgetters, srcfilter, crmodel, param, monitor):
-    mon_rup = monitor('getting ruptures')
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     computers = []
-    for rupgetter in rupgetters:
-        gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
-        with mon_rup:
+    with monitor('getting ruptures'):
+        for rupgetter in rupgetters:
+            gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
             gg.init()
-        computers.extend(gg.computers)
+            computers.extend(gg.computers)
     if not computers:  # all filtered out
         return {}
     with monitor('getting assets', measuremem=False):
