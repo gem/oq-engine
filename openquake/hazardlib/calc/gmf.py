@@ -116,11 +116,6 @@ class GmfComputer(object):
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
 
-    @property
-    def weight(self):
-        """The number of affected sites"""
-        return len(self.sids)
-
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
         :returns: [(sid, eid, gmv), ...]
