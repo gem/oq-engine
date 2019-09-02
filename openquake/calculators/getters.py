@@ -492,14 +492,27 @@ class RuptureGetter(object):
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         self.e0 = e0
-        nr = 0
-        rlzi = []
-        for gsim, rlzs in rlzs_by_gsim.items():
-            assert not isinstance(gsim, str)
-            for rlz in rlzs:
-                rlzi.append(rlz)
-                nr += 1
-        self.rlzs = numpy.array(rlzi)
+
+    def split(self, srcfilter):
+        """
+        :returns: a list of RuptureGetters with 1 rupture each
+        """
+        out = []
+        array = self.rup_array
+        for i, ridx in enumerate(self.rup_indices):
+            rg = object.__new__(self.__class__)
+            rg.filename = self.filename
+            rg.rup_indices = [ridx]
+            rg.grp_id = self.grp_id
+            rg.trt = self.trt
+            rg.samples = self.samples
+            rg.rlzs_by_gsim = self.rlzs_by_gsim
+            rg.e0 = numpy.array([self.e0[i]])
+            rg.weight = len(srcfilter.close_sids(
+                array[i], self.trt, array[i]['mag']))
+            if rg.weight:
+                out.append(rg)
+        return out
 
     @general.cached_property
     def rup_array(self):
