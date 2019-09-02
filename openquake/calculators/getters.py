@@ -317,14 +317,6 @@ class GmfGetter(object):
     def imts(self):
         return list(self.oqparam.imtls)
 
-    @property
-    def weight(self):
-        """
-        :returns: the number of affected sites
-        """
-        self.init()
-        return sum(len(c.sids) for c in self.computers)
-
     def init(self):
         """
         Initialize the computers. Should be called on the workers
@@ -529,6 +521,15 @@ class RuptureGetter(object):
     @property
     def num_rlzs(self):
         return len(self.rlz2idx)
+
+    def set_weight(self, srcfilter):
+        """
+        :returns: the estimated number of affected sites
+        """
+        self.weight = 0
+        for rec in self.rup_array:
+            sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
+            self.weight += len(sids)
 
     def get_eid_rlz(self):
         """
