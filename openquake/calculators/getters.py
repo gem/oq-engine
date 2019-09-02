@@ -492,14 +492,6 @@ class RuptureGetter(object):
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         self.e0 = e0
-        nr = 0
-        rlzi = []
-        for gsim, rlzs in rlzs_by_gsim.items():
-            assert not isinstance(gsim, str)
-            for rlz in rlzs:
-                rlzi.append(rlz)
-                nr += 1
-        self.rlzs = numpy.array(rlzi)
 
     def split(self, srcfilter):
         """
@@ -516,7 +508,6 @@ class RuptureGetter(object):
             rg.samples = self.samples
             rg.rlzs_by_gsim = self.rlzs_by_gsim
             rg.e0 = numpy.array([self.e0[i]])
-            rg.rlzs = self.rlzs
             rg.weight = len(srcfilter.close_sids(
                 array[i], self.trt, array[i]['mag']))
             if rg.weight:
