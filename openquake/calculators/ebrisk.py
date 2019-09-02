@@ -35,12 +35,14 @@ F64 = numpy.float64
 U64 = numpy.uint64
 
 
-def start_ebrisk(gmfgetters, crmodel, param, monitor):
+def start_ebrisk(rupgetters, srcfilter, crmodel, param, monitor):
     """
     Launcher for ebrisk tasks
     """
+    for rg in rupgetters:
+        rg.set_weight(srcfilter)
     yield from parallel.split_task(
-        ebrisk, gmfgetters, crmodel, param, monitor,
+        ebrisk, rupgetters, srcfilter, crmodel, param, monitor,
         duration=param['task_duration'])
 
 
@@ -96,23 +98,20 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
     return num_events_per_sid, gmf_nbytes
 
 
-def ebrisk(gmfgetters, crmodel, param, monitor):
+def ebrisk(rupgetters, srcfilter, crmodel, param, monitor):
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     computers = []
-    for gmfgetter in gmfgetters:
-        computers.extend(gmfgetter.computers)
-    gmv_dt = gmfgetter.gmv_dt
-    min_iml = gmfgetter.min_iml
-    rlzs_by_gsim = gmfgetter.rlzs_by_gsim
-    weights = gmfgetter.weights
-    filename = gmfgetter.rupgetter.filename
+    for rupgetter in rupgetters:
+        gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+        gg.init()
+        computers.extend(gg.computers)
     with monitor('getting assets', measuremem=False):
-        with datastore.read(filename) as dstore:
+        with datastore.read(srcfilter.filename) as dstore:
             assetcol = dstore['assetcol']
             assets_by_site = assetcol.assets_by_site()
-    events = numpy.concatenate([c.rupture.get_events(rlzs_by_gsim)
+    events = numpy.concatenate([c.rupture.get_events(gg.rlzs_by_gsim)
                                 for c in computers])
     E = len(events)
     L = len(param['lba'].loss_names)
@@ -123,7 +122,7 @@ def ebrisk(gmfgetters, crmodel, param, monitor):
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
     # NB: IMT-dependent weights are not supported in ebrisk
     num_events_per_sid, gmf_nbytes = _calc(
-        computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
+        computers, gg.gmv_dt, events, gg.min_iml, gg.rlzs_by_gsim, gg.weights,
         assets_by_site, crmodel, param, alt, acc, mon_haz, mon_risk, mon_agg)
     elt = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz'], losses)  # losses (L, T...)
@@ -207,7 +206,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         ngroups = 0
         fe = 0
         eslices = self.datastore['eslices']
-        gmfgetters = []
+        rupgetters = []
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -219,8 +218,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
-                ggetter = getters.GmfGetter(rgetter, self.src_filter, oq)
-                gmfgetters.append(ggetter)
+                rupgetters.append(rgetter)
                 fe += len(indices)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
@@ -228,9 +226,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.gmf_nbytes = 0
         self.event_ids = self.datastore['events']['id']
         ires = parallel.Starmap.apply(
-            self.core_task.__func__, (gmfgetters, self.crmodel, self.param,
-                                      self.monitor()),
-            key=lambda g: g.rupgetter.grp_id)
+            self.core_task.__func__,
+            (rupgetters, self.src_filter, self.crmodel, self.param,
+             self.monitor()), key=lambda rg: rg.grp_id)
         res = ires.reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
