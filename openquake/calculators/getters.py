@@ -492,13 +492,11 @@ class RuptureGetter(object):
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         self.e0 = e0
-        self.rlz2idx = {}
         nr = 0
         rlzi = []
         for gsim, rlzs in rlzs_by_gsim.items():
             assert not isinstance(gsim, str)
             for rlz in rlzs:
-                self.rlz2idx[rlz] = nr
                 rlzi.append(rlz)
                 nr += 1
         self.rlzs = numpy.array(rlzi)
@@ -531,9 +529,6 @@ class RuptureGetter(object):
     def num_ruptures(self):
         return len(self.rup_indices)
 
-    @property
-    def num_rlzs(self):
-        return len(self.rlz2idx)
 
     def set_weight(self, srcfilter):
         """
@@ -544,7 +539,6 @@ class RuptureGetter(object):
             mag = rec['mag']
             sids = srcfilter.close_sids(rec, self.trt, mag)
             self.weight += len(sids) * 5 ** (mag - 5.)
-
     def get_eid_rlz(self):
         """
         :returns: a composite array with the associations eid->rlz
@@ -641,17 +635,6 @@ class RuptureGetter(object):
                     ebr.e0 = e0
                 ebrs.append(ebr)
         return ebrs
-
-    def E2R(self, array, rlzi):
-        """
-        :param array: an array of shape (E, ...)
-        :param rlzi: an array of E realization indices
-        :returns: an aggregated array of shape (R, ...)
-        """
-        z = numpy.zeros((self.num_rlzs,) + array.shape[1:], array.dtype)
-        for a, r in zip(array, rlzi):
-            z[self.rlz2idx[r]] += a
-        return z
 
     def __len__(self):
         return len(self.rup_indices)
