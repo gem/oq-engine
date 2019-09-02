@@ -99,14 +99,18 @@ def _calc(computers, gmv_dt, events, min_iml, rlzs_by_gsim, weights,
 
 
 def ebrisk(rupgetters, srcfilter, crmodel, param, monitor):
+    mon_rup = monitor('getting ruptures')
     mon_haz = monitor('getting hazard')
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     computers = []
     for rupgetter in rupgetters:
         gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
-        gg.init()
+        with mon_rup:
+            gg.init()
         computers.extend(gg.computers)
+    if not computers:  # all filtered out
+        return {}
     with monitor('getting assets', measuremem=False):
         with datastore.read(srcfilter.filename) as dstore:
             assetcol = dstore['assetcol']
@@ -238,6 +242,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         :param dummy: unused parameter
         :param dic: dictionary with keys elt, losses_by_A
         """
+        if not dic:
+            return 1
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
         if len(elt):
