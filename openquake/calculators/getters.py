@@ -503,6 +503,19 @@ class RuptureGetter(object):
                 nr += 1
         self.rlzs = numpy.array(rlzi)
 
+    def __iter__(self):
+        for i, ridx in enumerate(self.rup_indices):
+            rg = object.__new__(self.__class__)
+            rg.rup_indices = [ridx]
+            rg.filename = self.filename
+            rg.grp_id = self.grp_id
+            rg.trt = self.trt
+            rg.samples = self.samples
+            rg.rlzs_by_gsim = self.rlzs_by_gsim
+            rg.e0 = numpy.array([self.e0[i]])
+            rg.rlzs = self.rlzs
+            yield rg
+
     @general.cached_property
     def rup_array(self):
         with hdf5.File(self.filename, 'r') as h5:
