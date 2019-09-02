@@ -528,8 +528,9 @@ class RuptureGetter(object):
         """
         self.weight = 0
         for rec in self.rup_array:
-            sids = srcfilter.close_sids(rec, self.trt, rec['mag'])
-            self.weight += len(sids)
+            mag = rec['mag']
+            sids = srcfilter.close_sids(rec, self.trt, mag)
+            self.weight += len(sids) * 5 ** (mag - 5.)
 
     def get_eid_rlz(self):
         """
