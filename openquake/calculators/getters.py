@@ -501,18 +501,27 @@ class RuptureGetter(object):
                 nr += 1
         self.rlzs = numpy.array(rlzi)
 
-    def __iter__(self):
+    def split(self, srcfilter):
+        """
+        :returns: a list of RuptureGetters with 1 rupture each
+        """
+        out = []
+        array = self.rup_array
         for i, ridx in enumerate(self.rup_indices):
             rg = object.__new__(self.__class__)
-            rg.rup_indices = [ridx]
             rg.filename = self.filename
+            rg.rup_indices = [ridx]
             rg.grp_id = self.grp_id
             rg.trt = self.trt
             rg.samples = self.samples
             rg.rlzs_by_gsim = self.rlzs_by_gsim
             rg.e0 = numpy.array([self.e0[i]])
             rg.rlzs = self.rlzs
-            yield rg
+            rg.weight = len(srcfilter.close_sids(
+                array[i], self.trt, array[i]['mag']))
+            if rg.weight:
+                out.append(rg)
+        return out
 
     @general.cached_property
     def rup_array(self):
@@ -529,16 +538,6 @@ class RuptureGetter(object):
     def num_ruptures(self):
         return len(self.rup_indices)
 
-
-    def set_weight(self, srcfilter):
-        """
-        :returns: the estimated number of affected sites
-        """
-        self.weight = 0
-        for rec in self.rup_array:
-            mag = rec['mag']
-            sids = srcfilter.close_sids(rec, self.trt, mag)
-            self.weight += len(sids) * 5 ** (mag - 5.)
     def get_eid_rlz(self):
         """
         :returns: a composite array with the associations eid->rlz
