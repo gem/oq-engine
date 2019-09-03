@@ -509,7 +509,8 @@ class RuptureGetter(object):
             rg.samples = self.samples
             rg.rlzs_by_gsim = self.rlzs_by_gsim
             rg.e0 = numpy.array([self.e0[i]])
-            rg.weight = len(srcfilter.close_sids(array[i], self.trt))
+            n_occ = array[i]['n_occ']
+            rg.weight = len(srcfilter.close_sids(array[i], self.trt)) * n_occ
             if rg.weight:
                 out.append(rg)
         return out
