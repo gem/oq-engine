@@ -337,6 +337,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
+        self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz']
         iterargs = ((rgetter, self.src_filter, self.param)
