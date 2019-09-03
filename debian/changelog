@@ -1,11 +1,7 @@
   [Anirudh Rao]
   * Fixed a bug in the gmf CSV importer: the coordinates were being
-  sorted and new site_ids assigned even though the user input sites
-  csv file had site_ids defined
-  * Replaced the nonzero covs in test_case_2 in gmf_ebrisk_test to
-  ensure replicability of numbers
-  * Corrected the expected number for test_case_2 in gmf_ebrisk_test
-  based on hand calculations
+    sorted and new site_ids assigned even though the user input sites
+    csv file had site_ids defined
 
   [Michele Simionato]
   * Fixed a bug in the rupture CSV exporter: the boundaries of a GriddedRupture
