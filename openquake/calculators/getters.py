@@ -292,7 +292,6 @@ class GmfGetter(object):
         self.min_iml = oqparam.min_iml
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        self.gmv_dt = oqparam.gmf_data_dt()
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
         M32 = (F32, len(oqparam.imtls))
         self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U64)])
@@ -348,9 +347,9 @@ class GmfGetter(object):
         for computer in self.computers:
             data = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
-            alldata.append(numpy.array(data, self.gmv_dt))
+            alldata.append(data)
         if not alldata:
-            return numpy.zeros(0, self.gmv_dt)
+            return []
         return numpy.concatenate(alldata)
 
     def get_hazard_by_sid(self, data=None):
@@ -360,6 +359,8 @@ class GmfGetter(object):
         """
         if data is None:
             data = self.get_gmfdata()
+        if len(data) == 0:
+            return {}
         return general.group_array(data, 'sid')
 
     def compute_gmfs_curves(self, rlzs, monitor):
@@ -575,7 +576,7 @@ class RuptureGetter(object):
         ebrs = []
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for e0, rec in zip(self.e0, self.rup_array):
+            for e0, rec, ri in zip(self.e0, self.rup_array, self.rup_indices):
                 if srcfilter.integration_distance:
                     sids = srcfilter.close_sids(rec, self.trt)
                     if len(sids) == 0:  # the rupture is far away
@@ -618,6 +619,7 @@ class RuptureGetter(object):
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 ebr.sids = sids
+                ebr.ridx = ri
                 if self.e0 is None:
                     ebr.e0 = TWO32 * U64(ebr.serial)
                 else:
