@@ -502,6 +502,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                         raise ValueError('%s: %s' % (riskid, err))
                     riskdict[riskid][lt, kind] = rf
                 else:  # rf is a vulnerability function
+                    rf.seed = oqparam.master_seed
                     rf.init()
                     if lt.endswith('_retrofitted'):
                         # strip _retrofitted, since len('_retrofitted') = 12
@@ -566,7 +567,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'distribution_name'):
                     self.distributions.add(rf.distribution_name)
-                rf.seed = oqparam.master_seed  # setting the seed
+                if hasattr(rf, 'init'):  # vulnerability function
+                    rf.seed = oqparam.master_seed  # setting the seed
+                    rf.init()
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
                     self.covs += 1
