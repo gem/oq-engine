@@ -117,6 +117,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
             gg = getters.GmfGetter(rupgetter, srcfilter, oqparam)
             gg.init()
             computers.extend(gg.computers)
+    computers.sort(key=lambda c: c.rupture.ridx)
     if not computers:  # all filtered out
         return {}
     with monitor('getting assets'):
@@ -207,6 +208,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
+        num_cores = oq.__class__.concurrent_tasks.default // 2 or 1
         ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
         logging.info('Using %d ruptures per block (over %d rups, %d events)',
                      ruptures_per_block, nruptures, self.E)
@@ -242,8 +244,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.event_ids = self.datastore['events']['id']
         smap = parallel.Starmap(
             self.core_task.__func__, allargs,
-            num_cores=oq.__class__.concurrent_tasks.default // 2,
-            hdf5path=self.datastore.filename)
+            num_cores=num_cores, hdf5path=self.datastore.filename)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
         return res
