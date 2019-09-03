@@ -848,6 +848,6 @@ def split_task(func, *args, duration=1000,
     t0 = time.time()
     res = func(*([heaviest],) + args[1:])
     dt = (time.time() - t0) / weight(heaviest)  # time per unit of weight
-    yield from _split_task(func, before + args[1:], duration, weight, dt)
+    yield from _split_task(func, before + args[1:], duration / 2, weight, dt)
     yield res
-    yield from _split_task(func, after + args[1:], duration, weight, dt)
+    yield from _split_task(func, after + args[1:], duration / 2, weight, dt)
