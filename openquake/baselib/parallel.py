@@ -840,6 +840,9 @@ def split_task(func, *args, duration=1000,
     weights = numpy.fromiter(map(weight, elements), float)
     idx = weights.argmax()
     before = elements[:idx],
+    # it is essential to get the heaviest element to estimate the duration
+    # of the task; taking the first element will result in an inaccurate
+    # estimate, generating too many tasks and running out of memory
     heaviest = elements[idx]
     after = elements[idx + 1:],
     t0 = time.time()
