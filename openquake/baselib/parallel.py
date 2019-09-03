@@ -165,7 +165,6 @@ import itertools
 import traceback
 import collections
 import multiprocessing.dummy
-from unittest import mock
 import psutil
 import numpy
 try:
@@ -824,7 +823,8 @@ def split_task(func, *args, duration=1000,
     :param weight: weight function for the elements in args[0]
     :yields: a partial result, 0 or more task objects, 0 or 1 partial result
     """
-    elements = numpy.array(sorted(args[0], key=weight, reverse=True))
+    elements = args[0]  # must not be re-ordered
+    # in ebrisk elements are GmfComputers with a fixed order
     n = len(elements)
     # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
