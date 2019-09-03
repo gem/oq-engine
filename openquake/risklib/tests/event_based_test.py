@@ -74,6 +74,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
             [0.0] * 8, "LN")
+        self.vulnerability_function1.seed = 42
+        self.vulnerability_function1.init()
 
         self.exceeding_times = numpy.array([
             112, 46, 26, 18, 14, 12, 8, 7, 7, 6, 5, 4,
@@ -149,6 +151,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             'VF', 'PGA',
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
+        vf.seed = 42
+        vf.init()
 
         gmf = (
             0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
@@ -172,6 +176,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             'VF', 'PGA',
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
+        vuln_function.seed = 42
+        vuln_function.init()
 
         gmfs = (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 0.05, 0.9595)
@@ -190,6 +196,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = scientific.VulnerabilityFunction(
             'VF', 'PGA', imls, loss_ratios, covs, "LN")
+        vuln_function.seed = 42
+        vuln_function.init()
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
