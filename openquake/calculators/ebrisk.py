@@ -199,7 +199,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
         num_cores = oq.__class__.concurrent_tasks.default // 2 or 1
-        ruptures_per_block = numpy.ceil(nruptures / num_cores)
+        ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
         logging.info('Using %d ruptures per block (over %d rups, %d events)',
                      ruptures_per_block, nruptures, self.E)
         self.set_param(
