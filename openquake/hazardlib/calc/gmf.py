@@ -151,7 +151,9 @@ class GmfComputer(object):
                         if gmv.sum():
                             data.append((sid, eid, gmv))
                 n += e
-        return data
+        m = (len(min_iml),)
+        gmv_dt = [('sid', U32), ('eid', U32), ('gmv', (F32, m))]
+        return numpy.array(data, gmv_dt)
 
     def compute(self, gsim, num_events, seed=None):
         """
