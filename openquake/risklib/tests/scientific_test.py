@@ -96,6 +96,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.test_func = scientific.VulnerabilityFunction(
             self.ID, self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
             self.COVS_GOOD)
+        self.test_func.seed = 42
+        self.test_func.init()
 
     def test_vuln_func_constructor_raises_on_bad_imls(self):
         # This test attempts to invoke AssertionErrors by passing 3 different
@@ -197,11 +199,13 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # If a loss ratio is 0.0 and the corresponding CoV is > 0.0, we expect
         # a ValueError.
         with self.assertRaises(ValueError) as ar:
-            scientific.VulnerabilityFunction(
+            vf = scientific.VulnerabilityFunction(
                 self.ID, self.IMT, self.IMLS_GOOD,
                 [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
                 [0.001, 0.002, 0.003, 0.004, 0.005, 0.006],
             )
+            vf.seed = 42
+            vf.init()
         expected_error = (
             'It is not valid to define a loss ratio = 0.0 with a corresponding'
             ' coeff. of variation > 0.0'
@@ -221,6 +225,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.0, 0.0, 0.3, 0.2, 0.1],   # CoVs
             'LN'
         )
+        curve.seed = 42
+        curve.init()
         loss_ratios = tuple(curve.mean_loss_ratios_with_steps(5))
         lrem = curve.loss_ratio_exceedance_matrix(loss_ratios)
         expected_lrem = numpy.array([
@@ -259,6 +265,8 @@ class VulnerabilityFunctionBlockSizeTestCase(unittest.TestCase):
             'RM', 'PGA', [0.02, 0.3, 0.5, 0.9, 1.2],
             [0.05, 0.1, 0.2, 0.4, 0.8],
             [0.0001, 0.0001, 0.0001, 0.0001, 0.0001])
+        cls.vf.seed = 42
+        cls.vf.init()
 
     def test(self):
         # values passed as a single block produce the same losses when
@@ -303,6 +311,8 @@ class MeanLossTestCase(unittest.TestCase):
             'VF1', 'PGA', imls=[0.1, 0.2, 0.3, 0.5, 0.7],
             mean_loss_ratios=[0.0035, 0.07, 0.14, 0.28, 0.56],
             covs=[0.1, 0.2, 0.3, 0.4, 0.5])
+        vf.seed = 42
+        vf.init()
 
         epsilons = [0.98982371, 0.2776809, -0.44858935, 0.96196624,
                     -0.82757864, 0.53465707, 1.22838619]
@@ -370,8 +380,10 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
     def setUp(self):
         self.v1 = scientific.VulnerabilityFunction(
             'V1', self.IMT, [0, 1], [0.5, 0.7], [0, 0], "LN")
+        self.v1.seed = 41
         self.v2 = scientific.VulnerabilityFunction(
             'V2', self.IMT, [0, 1, 2], [0.25, 0.5, 0.75], [0, 0, 0], "LN")
+        self.v2.seed = 41
 
     def test_split_single_interval_with_no_steps_between(self):
         numpy.testing.assert_allclose(
@@ -405,6 +417,8 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         vf = scientific.VulnerabilityFunction(
             'VF', self.IMT, [0, 1, 2, 3, 4], [0.0, 0.1, 0.2, 0.4, 1.2],
             [0, 0, 0, 0, 0])
+        vf.seed = 42
+        vf.init()
 
         es_lrs = vf.mean_loss_ratios_with_steps(5)
         expected = [0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
@@ -417,6 +431,9 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
 
         vf = scientific.VulnerabilityFunction(
             'VF', self.IMT, [1, 2, 3, 4], [0.1, 0.2, 0.4, 1.2], [0, 0, 0, 0])
+        vf.seed = 42
+        vf.init()
+
         es_lrs = vf.mean_loss_ratios_with_steps(5)
         expected = [0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
                     0.2, 0.24000000000000002, 0.28, 0.32, 0.36, 0.4, 0.56,
@@ -426,6 +443,8 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
     def test__evenly_spaced_loss_ratios_append_1(self):
         vf = scientific.VulnerabilityFunction(
             'VF', self.IMT, [0, 1], [0.0, 0.5], [0, 0])
+        vf.seed = 42
+        vf.init()
         es_lrs = vf.mean_loss_ratios_with_steps(2)
         expected = [0.0, 0.25, 0.5, 0.75, 1.0]
         numpy.testing.assert_allclose(es_lrs, expected)
@@ -433,6 +452,8 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
     def test_strictly_increasing(self):
         vf = scientific.VulnerabilityFunction(
             'VF', self.IMT, [0, 1, 2, 3], [0.0, 0.5, 0.5, 1], [0, 0, 3, 4])
+        vf.seed = 42
+        vf.init()
         vfs = vf.strictly_increasing()
 
         numpy.testing.assert_allclose([0, 1, 3], vfs.imls)
@@ -443,6 +464,8 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
     def test_pickle(self):
         vf = scientific.VulnerabilityFunction(
             'VF', self.IMT, [0, 1, 2, 3], [0.0, 0.5, 0.5, 1], [0, 0, 3, 4])
+        vf.seed = 42
+        vf.init()
         pickle.loads(pickle.dumps(vf))
 
 
