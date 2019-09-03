@@ -138,12 +138,8 @@ class VulnerabilityFunction(object):
 
         self.distribution_name = distribution
 
-        # to be set in .init(), called also by __setstate__
-        (self.stddevs, self._mlr_i1d, self._covs_i1d,
-         self.distribution) = None, None, None, None
-        self.init()
-
     def init(self):
+        # called by CompositeRiskModel and by __setstate__
         self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
@@ -156,8 +152,7 @@ class VulnerabilityFunction(object):
             self.distribution = DegenerateDistribution()
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
-        if self.distribution_name == 'BT':
-            logging.error('The seed of %s is not set', self)
+        assert self.seed is not None, self
         numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
 
     def interpolate(self, gmvs):
