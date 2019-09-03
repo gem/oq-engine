@@ -188,7 +188,6 @@ class VulnerabilityFunction(object):
             return means
         self.set_distribution(epsilons)
         res = self.distribution.sample(means, covs, means * covs, idxs)
-        import pdb; pdb.set_trace()
         return res
 
     # this is used in the tests, not in the engine code base
