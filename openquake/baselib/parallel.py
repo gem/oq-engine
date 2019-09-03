@@ -814,15 +814,6 @@ def count(word, mon):
     return collections.Counter(word)
 
 
-def _split_task(func, args, duration, weight, dt):
-    blocks = list(block_splitter(args[0], duration, lambda e: weight(e) * dt))
-    if len(blocks) == 1:
-        yield func(*args)
-    else:
-        for block in blocks:
-            yield (func, block) + args[1:-1]
-
-
 def split_task(func, *args, duration=1000,
                weight=operator.attrgetter('weight')):
     """
@@ -832,22 +823,20 @@ def split_task(func, *args, duration=1000,
     :param weight: weight function for the elements in args[0]
     :yields: a partial result, 0 or more task objects, 0 or 1 partial result
     """
-    # in ebrisk elements are GmfComputers with a fixed order
-    elements = args[0]
+    elements = numpy.array(sorted(args[0], key=weight, reverse=True))
     n = len(elements)
     # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
-    weights = numpy.fromiter(map(weight, elements), float)
-    idx = weights.argmax()
-    before = elements[:idx],
-    # it is essential to get the heaviest element to estimate the duration
-    # of the task; taking the first element will result in an inaccurate
-    # estimate, generating too many tasks and running out of memory
-    heaviest = elements[idx]
-    after = elements[idx + 1:],
+    if n == 1:
+        yield func(*args)
+        return
+    first, *other = elements
+    first_weight = weight(first)
     t0 = time.time()
-    res = func(*([heaviest],) + args[1:])
-    dt = (time.time() - t0) / weight(heaviest)  # time per unit of weight
-    yield from _split_task(func, before + args[1:], duration / 2, weight, dt)
+    res = func(*([first],) + args[1:])
+    dt = (time.time() - t0) / first_weight  # time per unit of weight
     yield res
-    yield from _split_task(func, after + args[1:], duration / 2, weight, dt)
+    blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
+    for block in blocks[:-1]:
+        yield (func, block) + args[1:-1]
+    yield func(*(blocks[-1],) + args[1:])
