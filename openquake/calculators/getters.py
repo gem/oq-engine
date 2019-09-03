@@ -347,7 +347,6 @@ class GmfGetter(object):
         for computer in self.computers:
             data = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
-            # from eid 32 bit -> 64 bit
             alldata.append(data)
         if not alldata:
             return []
@@ -360,8 +359,8 @@ class GmfGetter(object):
         """
         if data is None:
             data = self.get_gmfdata()
-            if len(data) == 0:
-                return {}
+        if len(data) == 0:
+            return {}
         return general.group_array(data, 'sid')
 
     def compute_gmfs_curves(self, rlzs, monitor):
