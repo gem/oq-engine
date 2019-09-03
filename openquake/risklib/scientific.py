@@ -22,6 +22,7 @@ This module includes the scientific API of the oq-risklib
 import abc
 import copy
 import bisect
+import logging
 import warnings
 import itertools
 import collections
@@ -155,6 +156,8 @@ class VulnerabilityFunction(object):
             self.distribution = DegenerateDistribution()
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
+        if self.distribution_name == 'BT':
+            logging.error('The seed of %s is not set', self)
         numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
 
     def interpolate(self, gmvs):
@@ -269,7 +272,7 @@ class VulnerabilityFunction(object):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name)
+                self.covs, self.distribution_name, self.seed)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -278,6 +281,7 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = state[3]
         self.covs = state[4]
         self.distribution_name = state[5]
+        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
