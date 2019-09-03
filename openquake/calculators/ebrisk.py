@@ -112,6 +112,7 @@ def ebrisk(rupgetters, srcfilter, crmodel, param, monitor):
             gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
             gg.init()
             computers.extend(gg.computers)
+    computers.sort(key=lambda c: c.rupture.ridx)
     if not computers:  # all filtered out
         return {}
     with monitor('getting assets', measuremem=False):
