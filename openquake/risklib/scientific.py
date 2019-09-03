@@ -22,7 +22,6 @@ This module includes the scientific API of the oq-risklib
 import abc
 import copy
 import bisect
-import logging
 import warnings
 import itertools
 import collections
