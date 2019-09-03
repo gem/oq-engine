@@ -824,25 +824,23 @@ def split_task(func, *args, duration=1000,
     :yields: a partial result, 0 or more task objects, 0 or 1 partial result
     """
     # in ebrisk elements are GmfComputers with a fixed order
-    n = len(args[0])
+    elements = args[0]
+    n = len(elements)
     # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
     if n == 1:
         yield func(*args)
         return
-    weights = numpy.fromiter(map(weight, args[0]), float)
+    weights = numpy.fromiter(map(weight, elements), float)
     idx = weights.argmax()
-    before = args[0][:idx]
-    this = args[0][idx]
-    after = args[0][idx + 1:]
+    before = elements[:idx]
+    this = elements[idx]
+    after = elements[idx + 1:]
     t0 = time.time()
     res = func(*([this],) + args[1:])
     dt = (time.time() - t0) / weight(this)  # time per unit of weight
     for block in block_splitter(before, duration, lambda el: weight(el) * dt):
         yield (func, block) + args[1:-1]
     yield res
-    blocks = list(block_splitter(after, duration, lambda el: weight(el) * dt))
-    if blocks:
-        for block in blocks[:-1]:
-            yield (func, block) + args[1:-1]
-        yield func(*(blocks[-1],) + args[1:])
+    for block in block_splitter(after, duration, lambda el: weight(el) * dt):
+        yield (func, block) + args[1:-1]
