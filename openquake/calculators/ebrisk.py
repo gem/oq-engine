@@ -21,6 +21,7 @@ import numpy
 from openquake.baselib import hdf5, datastore, parallel, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.risklib import riskmodels
 from openquake.risklib.scientific import losses_by_period, LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
@@ -35,14 +36,14 @@ F64 = numpy.float64
 U64 = numpy.uint64
 
 
-def start_ebrisk(rupgetter, srcfilter, crmodel, param, monitor):
+def start_ebrisk(rupgetter, srcfilter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
     rupgetters = rupgetter.split(srcfilter)
     if rupgetters:
         yield from parallel.split_task(
-            ebrisk, rupgetters, srcfilter, crmodel, param, monitor,
+            ebrisk, rupgetters, srcfilter, param, monitor,
             duration=param['task_duration'])
 
 
@@ -102,22 +103,27 @@ def _calc(computers, events, min_iml, rlzs_by_gsim, weights,
     return gmftimes, num_events_per_sid, gmf_nbytes
 
 
-def ebrisk(rupgetters, srcfilter, crmodel, param, monitor):
+def ebrisk(rupgetters, srcfilter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=False)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
+    with monitor('getting crmodel'):
+        with datastore.read(srcfilter.filename) as dstore:
+            crmodel = riskmodels.CompositeRiskModel.read(dstore)
+            oqparam = dstore['oqparam']
     computers = []
     with monitor('getting ruptures'):
         for rupgetter in rupgetters:
-            gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
+            gg = getters.GmfGetter(rupgetter, srcfilter, oqparam)
             gg.init()
             computers.extend(gg.computers)
     if not computers:  # all filtered out
         return {}
-    with monitor('getting assets', measuremem=False):
+    with monitor('getting assets'):
         with datastore.read(srcfilter.filename) as dstore:
             assetcol = dstore['assetcol']
             assets_by_site = assetcol.assets_by_site()
+
     events = numpy.concatenate([c.rupture.get_events(gg.rlzs_by_gsim)
                                 for c in computers])
     E = len(events)
@@ -164,12 +170,15 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         with hdf5.File(self.hdf5cache, 'w') as cache:
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
+            cache['risk_model'] = self.crmodel  # reduced model
+            cache['oqparam'] = oq
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
+        self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
         self.datastore.create_dset('avg_losses', F32, (A, L))
@@ -224,8 +233,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     hdf5path, list(indices), grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
-                allargs.append((rgetter, self.src_filter, self.crmodel,
-                                self.param))
+                allargs.append((rgetter, self.src_filter, self.param))
                 fe += len(indices)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
