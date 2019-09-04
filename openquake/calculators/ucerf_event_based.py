@@ -32,7 +32,6 @@ from openquake.calculators.ucerf_base import (
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16

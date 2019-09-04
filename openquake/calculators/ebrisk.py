@@ -33,7 +33,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-U64 = numpy.uint64
 
 
 def start_ebrisk(rupgetter, srcfilter, param, monitor):
@@ -131,7 +130,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
     L = len(param['lba'].loss_names)
     A = sum(len(assets) for assets in assets_by_site)
     shape = assetcol.tagcol.agg_shape((E, L), param['aggregate_by'])
-    elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shape[1:]))]
+    elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     alt = numpy.zeros((A, E, L), F32) if param['asset_loss_table'] else None
     acc = numpy.zeros(shape, F32)  # shape (E, L, T...)
     # NB: IMT-dependent weights are not supported in ebrisk
@@ -186,7 +185,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if oq.asset_loss_table:
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
-        elt_dt = [('event_id', U64), ('rlzi', U16), ('loss', (F32, shp))]
+        elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shp))]
         if 'losses_by_event' not in self.datastore:
             self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
@@ -241,7 +240,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.gmf_nbytes = 0
-        self.event_ids = self.datastore['events']['id']
         smap = parallel.Starmap(
             self.core_task.__func__, allargs,
             num_cores=num_cores, hdf5path=self.datastore.filename)
@@ -261,7 +259,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.extend('gmftimes', dic['gmftimes'])
         if len(elt):
             with self.monitor('saving losses_by_event', autoflush=True):
-                elt['event_id'] = self.event_ids[elt['event_id']]
                 self.datastore.extend('losses_by_event', elt)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses', autoflush=True):

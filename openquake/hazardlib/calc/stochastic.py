@@ -36,7 +36,6 @@ TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
