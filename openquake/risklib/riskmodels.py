@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import re
+import ast
 import copy
 import functools
 import collections
@@ -510,7 +511,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                             lt[:-12], 'vulnerability_retrofitted'] = rf
                     else:
                         riskdict[riskid][lt, 'vulnerability'] = rf
-        return CompositeRiskModel(oqparam, riskdict)
+        crm = CompositeRiskModel(oqparam, riskdict)
+        crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
+        return crm
 
     def __init__(self, oqparam, riskdict):
         self.damage_states = []
@@ -684,7 +687,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
         dic = dict(covs=self.covs, loss_types=loss_types,
-                   limit_states=limit_states)
+                   limit_states=limit_states,
+                   tmap=repr(getattr(self, 'tmap', [])))
         rf = next(iter(self.values()))
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
