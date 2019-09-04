@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Numpy 1.16, Scipy 1.3 and h5py 2.9 are now required
+
   [Michele Simionato]
   * Changed the ebrisk calculator to read the CompositeRiskModel directly
     from the datastore, which means 20x less data transfer for Canada
