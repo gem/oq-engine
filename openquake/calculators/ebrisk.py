@@ -240,7 +240,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.gmf_nbytes = 0
-        self.event_ids = self.datastore['events']['id']
         smap = parallel.Starmap(
             self.core_task.__func__, allargs,
             num_cores=num_cores, hdf5path=self.datastore.filename)
@@ -260,7 +259,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.extend('gmftimes', dic['gmftimes'])
         if len(elt):
             with self.monitor('saving losses_by_event', autoflush=True):
-                elt['event_id'] = self.event_ids[elt['event_id']]
                 self.datastore.extend('losses_by_event', elt)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses', autoflush=True):
