@@ -32,8 +32,6 @@ from openquake.commonlib.calc import _gmvs_to_haz_curve
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-U64 = numpy.uint64
-TWO32 = U64(2 ** 32)
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 
@@ -42,7 +40,7 @@ def sig_eps_dt(imts):
     """
     :returns: a composite data type for the sig_eps output
     """
-    lst = [('eid', U64), ('rlzi', U16)]
+    lst = [('eid', U32), ('rlzi', U16)]
     for imt in imts:
         lst.append(('sig_' + imt, F32))
     for imt in imts:
@@ -295,7 +293,7 @@ class GmfGetter(object):
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
         M32 = (F32, len(oqparam.imtls))
-        self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U64)])
+        self.gmv_eid_dt = numpy.dtype([('gmv', M32), ('eid', U32)])
         md = (calc.filters.IntegrationDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
@@ -446,7 +444,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
             continue
         for block in general.block_splitter(arr, maxweight):
             if e0s is None:
-                e0 = [TWO32 * U64(rec['rup_id']) for rec in block]
+                e0 = numpy.zeros(len(block), U32)
             else:
                 e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
@@ -623,10 +621,7 @@ class RuptureGetter(object):
                 # not implemented: rupture_slip_direction
                 ebr.sids = sids
                 ebr.ridx = ri
-                if self.e0 is None:
-                    ebr.e0 = TWO32 * U64(ebr.rup_id)
-                else:
-                    ebr.e0 = e0
+                ebr.e0 = 0 if self.e0 is None else e0
                 ebrs.append(ebr)
         return ebrs
 

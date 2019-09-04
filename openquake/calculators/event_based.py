@@ -41,10 +41,9 @@ from openquake.engine import engine
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-TWO32 = U64(2 ** 32)
+TWO32 = numpy.float64(2 ** 32)
 by_grp = operator.attrgetter('src_group_id')
 
 
@@ -271,6 +270,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # sanity check
         n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
+        events['id'] = numpy.arange(len(events))
         self.datastore['events'] = events
         eindices = get_indices(events['rup_id'])
         arr = numpy.array(list(eindices.values()))[:, 0, :]

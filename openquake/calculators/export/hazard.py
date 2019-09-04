@@ -37,7 +37,6 @@ F64 = numpy.float64
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 TWO32 = 2 ** 32
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -596,7 +595,7 @@ def export_realizations(ekey, dstore):
 def export_events(ekey, dstore):
     ev = dstore['events'][()]
     events = numpy.zeros(
-        len(ev), [('event_id', U64), ('rup_id', U32), ('rlz_id', U16)])
+        len(ev), [('event_id', U32), ('rup_id', U32), ('rlz_id', U16)])
     events['event_id'] = ev['id']
     events['rup_id'] = ev['id'] // TWO32
     events['rlz_id'] = ev['rlz_id']
