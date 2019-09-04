@@ -165,8 +165,8 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        try:  # read the seed from self.rupture.serial
-            seed = seed or self.rupture.serial
+        try:  # read the seed from self.rupture.rup_id
+            seed = seed or self.rupture.rup_id
         except AttributeError:
             pass
         if seed is not None:

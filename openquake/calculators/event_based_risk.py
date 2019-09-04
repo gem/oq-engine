@@ -43,7 +43,7 @@ def build_loss_tables(dstore):
     oq = dstore['oqparam']
     L = len(oq.loss_dt().names)
     R = dstore['csm_info'].get_num_rlzs()
-    serials = dstore['ruptures']['serial']
+    serials = dstore['ruptures']['rup_id']
     idx_by_ser = dict(zip(serials, range(len(serials))))
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
