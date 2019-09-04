@@ -20,7 +20,7 @@ from openquake.risklib import scientific
 from openquake.calculators import base
 
 U16 = numpy.uint16
-U64 = numpy.uint64
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -121,7 +121,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # consequence distributions
         if result['c_asset']:
-            dtlist = [('event_id', U64), ('rlzi', U16), ('loss', (F32, (L,)))]
+            dtlist = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
             stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
             c_asset = numpy.zeros((N, R, L), stat_dt)
             for (l, r, a, stat) in result['c_asset']:

@@ -37,7 +37,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
@@ -263,7 +262,7 @@ def export_losses_by_event(ekey, dstore):
         aw = hdf5.ArrayWrapper(data, dic, oq.loss_names)
         writer.save(aw.to_table(), dest, comment=md)
     else:
-        dtlist = [('event_id', U64), ('rlz_id', U16), ('rup_id', U32),
+        dtlist = [('event_id', U32), ('rlz_id', U16), ('rup_id', U32),
                   ('year', U32)] + oq.loss_dt_list()
         eids = dstore['losses_by_event']['event_id']
         events = dstore['events']

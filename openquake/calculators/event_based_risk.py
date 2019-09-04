@@ -31,7 +31,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
 
 
@@ -276,7 +275,7 @@ class EbrCalculator(base.RiskCalculator):
         """
         logging.info('Saving event loss table')
         elt_dt = numpy.dtype(
-            [('event_id', U64), ('rlzi', U16), ('loss', (F32, (self.L,)))])
+            [('event_id', U32), ('rlzi', U16), ('loss', (F32, (self.L,)))])
         with self.monitor('saving event loss table', measuremem=True):
             agglosses = numpy.fromiter(
                 ((eid, rlz, losses)
