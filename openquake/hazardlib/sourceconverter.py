@@ -31,7 +31,6 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
 
 U32 = numpy.uint32
-U64 = numpy.uint64
 F32 = numpy.float32
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
