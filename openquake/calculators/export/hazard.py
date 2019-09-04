@@ -97,7 +97,7 @@ def export_ruptures_csv(ekey, dstore):
                  r['lon'], r['lat'], r['depth'],
                  rgetter.trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
-    rows.sort()  # by rupture serial
+    rows.sort()  # by rupture rup_id
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
@@ -599,7 +599,7 @@ def export_events(ekey, dstore):
         len(ev), [('event_id', U64), ('rup_id', U32), ('rlz_id', U16)])
     events['event_id'] = ev['id']
     events['rup_id'] = ev['id'] // TWO32
-    events['rlz_id'] = ev['rlz']
+    events['rlz_id'] = ev['rlz_id']
     path = dstore.export_path('events.csv')
     writers.write_csv(path, events, fmt='%s')
     return [path]

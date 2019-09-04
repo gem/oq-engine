@@ -43,7 +43,7 @@ def build_loss_tables(dstore):
     oq = dstore['oqparam']
     L = len(oq.loss_dt().names)
     R = dstore['csm_info'].get_num_rlzs()
-    serials = dstore['ruptures']['serial']
+    serials = dstore['ruptures']['rup_id']
     idx_by_ser = dict(zip(serials, range(len(serials))))
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
@@ -162,9 +162,9 @@ class EbrCalculator(base.RiskCalculator):
         self.A = len(self.assetcol)
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.events = parent['events'][('id', 'rlz')]
+            self.events = parent['events'][('id', 'rlz_id')]
         else:
-            self.events = self.datastore['events'][('id', 'rlz')]
+            self.events = self.datastore['events'][('id', 'rlz_id')]
         if oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
