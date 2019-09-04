@@ -232,7 +232,7 @@ def export_losses_by_asset(ekey, dstore):
 
 def get_rlz_ids(events, eids):
     d = {e: i for i, e in enumerate(events['id'])}
-    return events['rlz'][[d[e] for e in eids]]
+    return events['rlz_id'][[d[e] for e in eids]]
 
 
 # this is used by scenario_risk, event_based_risk and ebrisk
@@ -430,7 +430,7 @@ def export_dmg_by_event(ekey, dstore):
     dt_list = [('event_id', numpy.uint64), ('rlzi', numpy.uint16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
     all_losses = dstore[ekey[0]][()]  # shape (E, R, LI)
-    events_by_rlz = group_array(dstore['events'], 'rlz')
+    events_by_rlz = group_array(dstore['events'], 'rlz_id')
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.build_fname('dmg_by_event', '', 'csv')

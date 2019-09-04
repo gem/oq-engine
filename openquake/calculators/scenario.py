@@ -67,7 +67,7 @@ class ScenarioCalculator(base.HazardCalculator):
         events = numpy.zeros(E * R, events_dt)
         for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             events[rlz * E: rlz * E + E]['id'] = eids + ebr.e0
-            events[rlz * E: rlz * E + E]['rlz'] = rlz
+            events[rlz * E: rlz * E + E]['rlz_id'] = rlz
         self.datastore['events'] = self.events = events
         rupser = calc.RuptureSerializer(self.datastore)
         rup_array = get_rup_array([ebr], self.src_filter)

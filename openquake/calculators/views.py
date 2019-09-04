@@ -392,7 +392,7 @@ def view_portfolio_losses(token, dstore):
     loss_dt = oq.loss_dt()
     data = portfolio_loss(dstore).view(loss_dt)[:, 0]
     rlzids = [str(r) for r in range(len(data))]
-    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
+    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
 
@@ -447,7 +447,7 @@ def view_exposure_info(token, dstore):
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
     num_events = len(dstore['events'])
-    events_by_rlz = countby(dstore['events'][()], 'rlz')
+    events_by_rlz = countby(dstore['events'][()], 'rlz_id')
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),
