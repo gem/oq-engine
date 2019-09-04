@@ -599,7 +599,7 @@ def export_events(ekey, dstore):
         len(ev), [('event_id', U64), ('rup_id', U32), ('rlz_id', U16)])
     events['event_id'] = ev['id']
     events['rup_id'] = ev['id'] // TWO32
-    events['rlz_id'] = ev['rlz']
+    events['rlz_id'] = ev['rlz_id']
     path = dstore.export_path('events.csv')
     writers.write_csv(path, events, fmt='%s')
     return [path]
