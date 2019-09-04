@@ -34,6 +34,7 @@ from scipy import interpolate, stats, random
 from openquake.baselib.general import CallableDict, cached_property
 from openquake.hazardlib.stats import compute_stats2
 
+F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
 
@@ -76,7 +77,7 @@ def fine_graining(points, steps):
 
 
 class VulnerabilityFunction(object):
-    dtype = numpy.dtype([('iml', F32), ('loss_ratio', F32), ('cov', F32)])
+    dtype = numpy.dtype([('iml', F64), ('loss_ratio', F64), ('cov', F64)])
     seed = None  # to be overridden
 
     def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
