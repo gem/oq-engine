@@ -271,6 +271,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # sanity check
         n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
+        events['id'] = numpy.arange(len(events))
         self.datastore['events'] = events
         eindices = get_indices(events['rup_id'])
         arr = numpy.array(list(eindices.values()))[:, 0, :]

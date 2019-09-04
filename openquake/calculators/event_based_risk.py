@@ -22,7 +22,6 @@ import numpy
 from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.hazardlib.calc.stochastic import TWO32
 from openquake.risklib import riskinput, riskmodels
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -44,12 +43,13 @@ def build_loss_tables(dstore):
     L = len(oq.loss_dt().names)
     R = dstore['csm_info'].get_num_rlzs()
     serials = dstore['ruptures']['rup_id']
-    idx_by_ser = dict(zip(serials, range(len(serials))))
+    ridx_by = dict(zip(serials, range(len(serials))))
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
+    rupid = dstore['events']['rup_id']
     for rec in dstore['losses_by_event'][()]:  # call .value for speed
-        idx = idx_by_ser[rec['event_id'] // TWO32]
-        tbl[idx] += rec['loss']
+        ridx = ridx_by[rupid[rec['event_id']]]
+        tbl[ridx] += rec['loss']
         lbr[rec['rlzi']] += rec['loss']
     return tbl, lbr
 
