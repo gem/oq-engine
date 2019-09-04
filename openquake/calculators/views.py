@@ -805,7 +805,7 @@ def view_act_ruptures_by_src(token, dstore):
     """
     Display the actual number of ruptures by source in event based calculations
     """
-    data = dstore['ruptures'][('srcidx', 'serial')]
+    data = dstore['ruptures'][('srcidx', 'rup_id')]
     counts = sorted(countby(data, 'srcidx').items(),
                     key=operator.itemgetter(1), reverse=True)
     src_info = dstore['source_info'][('grp_id', 'source_id')]

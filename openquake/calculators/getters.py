@@ -445,7 +445,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
             continue
         for block in general.block_splitter(arr, maxweight):
             if e0s is None:
-                e0 = [TWO32 * U64(rec['serial']) for rec in block]
+                e0 = [TWO32 * U64(rec['rup_id']) for rec in block]
             else:
                 e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
@@ -536,7 +536,7 @@ class RuptureGetter(object):
         """
         eid_rlz = []
         for e0, rup in zip(self.e0, self.rup_array):
-            ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
+            ebr = EBRupture(mock.Mock(rup_id=rup['rup_id']), rup['srcidx'],
                             self.grp_id, rup['n_occ'], self.samples)
             for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
@@ -565,7 +565,7 @@ class RuptureGetter(object):
             dic['occurrence_rate'] = rec['occurrence_rate']
             dic['grp_id'] = rec['grp_id']
             dic['n_occ'] = rec['n_occ']
-            dic['serial'] = rec['serial']
+            dic['rup_id'] = rec['rup_id']
             dic['mag'] = rec['mag']
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
@@ -592,7 +592,7 @@ class RuptureGetter(object):
                 mesh[2] = geom['depth']
                 rupture_cls, surface_cls = code2cls[rec['code']]
                 rupture = object.__new__(rupture_cls)
-                rupture.serial = rec['serial']
+                rupture.rup_id = rec['rup_id']
                 rupture.surface = object.__new__(surface_cls)
                 rupture.mag = rec['mag']
                 rupture.rake = rec['rake']
@@ -622,7 +622,7 @@ class RuptureGetter(object):
                 ebr.sids = sids
                 ebr.ridx = ri
                 if self.e0 is None:
-                    ebr.e0 = TWO32 * U64(ebr.serial)
+                    ebr.e0 = TWO32 * U64(ebr.rup_id)
                 else:
                     ebr.e0 = e0
                 ebrs.append(ebr)
