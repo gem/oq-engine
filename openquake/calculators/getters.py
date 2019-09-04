@@ -24,7 +24,8 @@ from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import EBRupture, BaseRupture
+from openquake.hazardlib.source.rupture import (
+    EBRupture, BaseRupture, events_dt)
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -243,7 +244,7 @@ class GmfDataGetter(collections.abc.Mapping):
             self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
-        self.rlzs = self.dstore['events']['rlz']
+        self.rlzs = self.dstore['events']['rlz_id']
         self.data = self[self.sids[0]]
         if not self.data:  # no GMVs, return 0, counted in no_damage
             self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
@@ -445,7 +446,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
             continue
         for block in general.block_splitter(arr, maxweight):
             if e0s is None:
-                e0 = [TWO32 * U64(rec['serial']) for rec in block]
+                e0 = [TWO32 * U64(rec['rup_id']) for rec in block]
             else:
                 e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
@@ -536,12 +537,13 @@ class RuptureGetter(object):
         """
         eid_rlz = []
         for e0, rup in zip(self.e0, self.rup_array):
-            ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
+            rup_id = rup['rup_id']
+            ebr = EBRupture(mock.Mock(rup_id=rup_id), rup['srcidx'],
                             self.grp_id, rup['n_occ'], self.samples)
-            for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
+            for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
-                    eid_rlz.append((eid + e0, rlz))
-        return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
+                    eid_rlz.append((eid + e0, rup_id, rlz_id))
+        return numpy.array(eid_rlz, events_dt)
 
     def get_rupdict(self):
         """
@@ -565,7 +567,7 @@ class RuptureGetter(object):
             dic['occurrence_rate'] = rec['occurrence_rate']
             dic['grp_id'] = rec['grp_id']
             dic['n_occ'] = rec['n_occ']
-            dic['serial'] = rec['serial']
+            dic['rup_id'] = rec['rup_id']
             dic['mag'] = rec['mag']
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
@@ -592,7 +594,7 @@ class RuptureGetter(object):
                 mesh[2] = geom['depth']
                 rupture_cls, surface_cls = code2cls[rec['code']]
                 rupture = object.__new__(rupture_cls)
-                rupture.serial = rec['serial']
+                rupture.rup_id = rec['rup_id']
                 rupture.surface = object.__new__(surface_cls)
                 rupture.mag = rec['mag']
                 rupture.rake = rec['rake']
@@ -622,7 +624,7 @@ class RuptureGetter(object):
                 ebr.sids = sids
                 ebr.ridx = ri
                 if self.e0 is None:
-                    ebr.e0 = TWO32 * U64(ebr.serial)
+                    ebr.e0 = TWO32 * U64(ebr.rup_id)
                 else:
                     ebr.e0 = e0
                 ebrs.append(ebr)
