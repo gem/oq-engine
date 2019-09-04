@@ -97,7 +97,7 @@ def export_ruptures_csv(ekey, dstore):
                  r['lon'], r['lat'], r['depth'],
                  rgetter.trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
-    rows.sort()  # by rupture serial
+    rows.sort()  # by rupture rup_id
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
