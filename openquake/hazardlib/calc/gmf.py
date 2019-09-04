@@ -28,7 +28,6 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.imt import from_string
 
-U64 = numpy.uint64
 U32 = numpy.uint32
 F32 = numpy.float32
 

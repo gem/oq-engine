@@ -25,7 +25,7 @@ from openquake.risklib import scientific, riskinput
 from openquake.calculators import base
 
 U16 = numpy.uint16
-U64 = numpy.uint64
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
@@ -121,7 +121,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         loss_dt = self.oqparam.loss_dt()
         L = len(loss_dt.names)
-        dtlist = [('event_id', U64), ('rlzi', U16), ('loss', (F32, (L,)))]
+        dtlist = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         R = self.R
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
