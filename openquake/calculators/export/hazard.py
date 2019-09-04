@@ -593,12 +593,7 @@ def export_realizations(ekey, dstore):
 
 @export.add(('events', 'csv'))
 def export_events(ekey, dstore):
-    ev = dstore['events'][()]
-    events = numpy.zeros(
-        len(ev), [('event_id', U32), ('rup_id', U32), ('rlz_id', U16)])
-    events['event_id'] = ev['id']
-    events['rup_id'] = ev['id'] // TWO32
-    events['rlz_id'] = ev['rlz_id']
+    events = dstore['events'][()]
     path = dstore.export_path('events.csv')
     writers.write_csv(path, events, fmt='%s')
     return [path]
