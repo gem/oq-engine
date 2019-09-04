@@ -1,2 +1,3 @@
+# generated_by='OpenQuake engine 3.7.0-git33f1998e79', start_date='2019-09-04T13:30:21', checksum=953727144, investigation_time=1.0, risk_investigation_time=50.0
 event_id,rlz_id,rup_id,year,structural
-2250562863104,0,524,1,1.68142E+02
+0,0,524,1,1.68142E+02

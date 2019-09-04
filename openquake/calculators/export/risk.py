@@ -270,7 +270,7 @@ def export_losses_by_event(ekey, dstore):
         year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
         arr = numpy.zeros(len(dstore['losses_by_event']), dtlist)
         arr['event_id'] = eids
-        arr['rup_id'] = arr['event_id'] / TWO32
+        arr['rup_id'] = events['rup_id'][eids]
         arr['rlz_id'] = get_rlz_ids(events, eids)
         arr['year'] = [year_of[eid] for eid in eids]
         loss = dstore['losses_by_event']['loss'].T  # shape (L, E)
