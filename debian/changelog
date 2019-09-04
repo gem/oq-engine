@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Replaced the 64 bit event IDs in event based and scenario calculations
+    with 32 bit integers, for the happiness of Excel users
+
   [Daniele Viganò]
   * Numpy 1.16, Scipy 1.3 and h5py 2.9 are now required
 

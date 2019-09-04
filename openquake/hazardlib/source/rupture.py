@@ -38,11 +38,10 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
-TWO16 = U64(2 ** 16)
-TWO32 = U64(2 ** 32)
+TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
-events_dt = numpy.dtype([('id', U64), ('rup_id', U32), ('rlz_id', U16)])
+events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
 
 
 def to_checksum(cls1, cls2):
@@ -515,7 +514,7 @@ def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
         samples = samples_by_grp[grp_id]
         num_rlzs = num_rlzs_by_grp[grp_id]
         num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
-        eids = TWO32 * U64(rup['rup_id']) + numpy.arange(num_events, dtype=U64)
+        eids = numpy.arange(num_events, dtype=U32)
         all_eids.append(eids)
     return numpy.concatenate(all_eids)
 
@@ -573,7 +572,7 @@ class EBRupture(object):
         for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
             all_eids.extend(eids)
             rlzs.extend([rlz] * len(eids))
-        evs = U64(all_eids) + (e0 if e0 is not None else self.e0)
+        evs = U32(all_eids) + (e0 if e0 is not None else self.e0)
         rupids = [self.rup_id] * len(evs)
         return numpy.fromiter(zip(evs, rupids, rlzs), events_dt)
 
@@ -583,7 +582,7 @@ class EBRupture(object):
         :returns: an array of event IDs
         """
         num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
-        return TWO32 * U64(self.rup_id) + numpy.arange(num_events, dtype=U64)
+        return numpy.arange(num_events, dtype=U32)
 
     def get_events_by_ses(self, events, num_ses):
         """
