@@ -24,7 +24,8 @@ from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import EBRupture, BaseRupture
+from openquake.hazardlib.source.rupture import (
+    EBRupture, BaseRupture, events_dt)
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -536,12 +537,13 @@ class RuptureGetter(object):
         """
         eid_rlz = []
         for e0, rup in zip(self.e0, self.rup_array):
-            ebr = EBRupture(mock.Mock(rup_id=rup['rup_id']), rup['srcidx'],
+            rup_id = rup['rup_id']
+            ebr = EBRupture(mock.Mock(rup_id=rup_id), rup['srcidx'],
                             self.grp_id, rup['n_occ'], self.samples)
-            for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
+            for rlz_id, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
-                    eid_rlz.append((eid + e0, rlz))
-        return numpy.array(eid_rlz, [('eid', U64), ('rlz_id', U16)])
+                    eid_rlz.append((eid + e0, rup_id, rlz_id))
+        return numpy.array(eid_rlz, events_dt)
 
     def get_rupdict(self):
         """

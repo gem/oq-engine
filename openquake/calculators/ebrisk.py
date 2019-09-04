@@ -55,7 +55,7 @@ def _calc(computers, events, min_iml, rlzs_by_gsim, weights,
     lba = param['lba']
     epspath = param['epspath']
     tagnames = param['aggregate_by']
-    eid2rlz = dict(events)
+    eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
     gmfs = []
     gmftimes = []

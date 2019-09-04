@@ -42,7 +42,7 @@ U64 = numpy.uint64
 TWO16 = U64(2 ** 16)
 TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
-events_dt = numpy.dtype([('id', U64), ('rlz_id', U16)])
+events_dt = numpy.dtype([('id', U64), ('rup_id', U32), ('rlz_id', U16)])
 
 
 def to_checksum(cls1, cls2):
@@ -574,7 +574,8 @@ class EBRupture(object):
             all_eids.extend(eids)
             rlzs.extend([rlz] * len(eids))
         evs = U64(all_eids) + (e0 if e0 is not None else self.e0)
-        return numpy.fromiter(zip(evs, rlzs), events_dt)
+        rupids = [self.rup_id] * len(evs)
+        return numpy.fromiter(zip(evs, rupids, rlzs), events_dt)
 
     def get_eids(self, num_rlzs):
         """
