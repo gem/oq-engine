@@ -42,7 +42,7 @@ U64 = numpy.uint64
 TWO16 = U64(2 ** 16)
 TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
-events_dt = numpy.dtype([('id', U64), ('rlz', U16)])
+events_dt = numpy.dtype([('id', U64), ('rlz_id', U16)])
 
 
 def to_checksum(cls1, cls2):

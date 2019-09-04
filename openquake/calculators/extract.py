@@ -646,7 +646,7 @@ def extract_gmf_scenario_npz(dstore, what):
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
     data = dstore['gmf_data/data'][()]
-    rlz = dstore['events']['rlz']
+    rlz = dstore['events']['rlz_id']
     for rlzi in sorted(set(rlz)):
         idx = rlz[data['eid']] == rlzi
         gmfa = _gmf_scenario(data[idx], n, oq.imtls)
@@ -847,7 +847,7 @@ def extract_event_info(dstore, eidx):
     ridx = list(dstore['ruptures']['rup_id']).index(rup_id)
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
-    rlzi = event['rlz']
+    rlzi = event['rlz_id']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     gsim = rlzs_assoc.gsim_by_trt[rlzi][rupdict['trt']]
     for key, val in rupdict.items():

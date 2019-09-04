@@ -139,7 +139,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         computers, events, gg.min_iml, gg.rlzs_by_gsim, gg.weights,
         assets_by_site, crmodel, param, alt, acc, mon_haz, mon_risk, mon_agg)
     elt = numpy.fromiter(  # this is ultra-fast
-        ((event['id'], event['rlz'], losses)  # losses (L, T...)
+        ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, acc) if losses.sum()), elt_dt)
     res = {'elt': elt, 'events_per_sid': num_events_per_sid,
            'gmf_nbytes': gmf_nbytes, 'gmftimes': gmftimes}
@@ -372,7 +372,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             # sanity check on the loss curves for simple tag aggregation
             arr = self.assetcol.aggregate_by(oq.aggregate_by, alt)
             # shape (T, E, L)
-            rlzs = self.datastore['events']['rlz']
+            rlzs = self.datastore['events']['rlz_id']
             curves = numpy.zeros((P, self.R, self.L, T))
             for t in range(T):
                 for r in range(self.R):
