@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the ebrisk calculator to read the CompositeRiskModel directly
+    from the datastore, which means 20x less data transfer for Canada
+
   [Anirudh Rao]
   * Fixed a bug in the gmf CSV importer: the coordinates were being
     sorted and new site_ids assigned even though the user input sites
