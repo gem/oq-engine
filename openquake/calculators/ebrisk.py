@@ -108,9 +108,9 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     with monitor('getting crmodel'):
-        with datastore.read(srcfilter.filename) as dstore:
-            crmodel = riskmodels.CompositeRiskModel.read(dstore)
-            oqparam = dstore['oqparam']
+        with datastore.read(srcfilter.filename) as cache:
+            crmodel = riskmodels.CompositeRiskModel.read(cache)
+            oqparam = cache['oqparam']
     computers = []
     with monitor('getting ruptures'):
         for rupgetter in rupgetters:
