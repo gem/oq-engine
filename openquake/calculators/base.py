@@ -957,19 +957,6 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
 
 
-def get_idxs(data, eid2idx):
-    """
-    Convert from event IDs to event indices.
-
-    :param data: an array with a field eid
-    :param eid2idx: a dictionary eid -> idx
-    :returns: the array of event indices
-    """
-    uniq, inv = numpy.unique(data['eid'], return_inverse=True)
-    idxs = numpy.array([eid2idx[eid] for eid in uniq])[inv]
-    return idxs
-
-
 def import_gmfs(dstore, fname, sids):
     """
     Import in the datastore a ground motion field CSV file.
@@ -997,7 +984,6 @@ def import_gmfs(dstore, fname, sids):
     eids = numpy.unique(array['eid'])
     eids.sort()
     E = len(eids)
-    eid2idx = dict(zip(eids, range(E)))
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = eids
     dstore['events'] = events
@@ -1011,7 +997,6 @@ def import_gmfs(dstore, fname, sids):
         if n:
             offset += n
             gmvs = dic[sid]
-            gmvs['eid'] = get_idxs(gmvs, eid2idx)
             dstore.extend('gmf_data/data', gmvs)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
