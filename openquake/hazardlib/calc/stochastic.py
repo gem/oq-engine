@@ -86,7 +86,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
+    ('rup_id', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
     ('n_occ', U16), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
     ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
@@ -124,7 +124,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             continue
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
+        tup = (ebrupture.rup_id, ebrupture.srcidx, ebrupture.grp_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
                rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat'],
                hypo, offset, offset + len(points), sy, sz)
@@ -154,7 +154,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
         dictionaries with keys rup_array, calc_times, eff_ruptures
     """
     eb_ruptures = []
-    numpy.random.seed(sources[0].serial)
+    numpy.random.seed(sources[0].rup_id)
     [grp_id] = set(src.src_group_id for src in sources)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))

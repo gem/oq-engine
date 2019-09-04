@@ -481,11 +481,11 @@ class CompositeSourceModel(collections.abc.Sequence):
         This should be called only in event based calculators
         """
         sources = self.get_sources()
-        serial = ses_seed
+        rup_id = ses_seed
         for src in sources:
             nr = src.num_ruptures
-            src.serial = serial
-            serial += nr
+            src.rup_id = rup_id
+            rup_id += nr
 
     def get_maxweight(self, trt_sources, weight, concurrent_tasks,
                       minweight=MINWEIGHT):
