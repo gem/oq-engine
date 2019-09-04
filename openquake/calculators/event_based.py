@@ -22,8 +22,7 @@ import collections
 import operator
 import numpy
 
-from openquake.baselib import hdf5, datastore
-from openquake.baselib.python3compat import zip
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, cached_property, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
@@ -268,11 +267,12 @@ class EventBasedCalculator(base.HazardCalculator):
                 i += 1
                 if i >= TWO32:
                     raise ValueError('There are more than %d events!' % i)
-        events.sort(order='id')  # fast too
-        n_unique_events = len(numpy.unique(events['id']))  # sanity check
+        events.sort(order='rup_id')  # fast too
+        # sanity check
+        n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
         self.datastore['events'] = events
-        eindices = get_indices(events['id'] // TWO32)
+        eindices = get_indices(events['rup_id'])
         arr = numpy.array(list(eindices.values()))[:, 0, :]
         self.datastore['eslices'] = arr  # shape (U, 2)
 
