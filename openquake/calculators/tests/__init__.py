@@ -206,7 +206,7 @@ class CalculatorTestCase(unittest.TestCase):
         Check the distribution of the events by realization index
         """
         n_events = numpy.zeros(self.calc.R, int)
-        dic = general.group_array(self.calc.datastore['events'][()], 'rlz')
+        dic = general.group_array(self.calc.datastore['events'][()], 'rlz_id')
         for rlzi, events in dic.items():
             n_events[rlzi] = len(events)
         numpy.testing.assert_equal(n_events, events_by_rlz)

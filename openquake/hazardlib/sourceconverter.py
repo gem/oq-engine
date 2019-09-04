@@ -521,7 +521,7 @@ class RuptureConverter(object):
             coll[grp_id] = ebrs = []
             for node in grpnode:
                 rup = self.convert_node(node)
-                rup.serial = int(node['id'])
+                rup.rup_id = int(node['id'])
                 sesnodes = node.stochasticEventSets
                 n = 0  # number of events
                 for sesnode in sesnodes:
