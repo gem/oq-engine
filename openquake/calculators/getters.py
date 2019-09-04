@@ -243,7 +243,7 @@ class GmfDataGetter(collections.abc.Mapping):
             self.imts = self.dstore['gmf_data/imts'][()].split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
-        self.rlzs = self.dstore['events']['rlz']
+        self.rlzs = self.dstore['events']['rlz_id']
         self.data = self[self.sids[0]]
         if not self.data:  # no GMVs, return 0, counted in no_damage
             self.data = {rlzi: 0 for rlzi in range(self.num_rlzs)}
@@ -541,7 +541,7 @@ class RuptureGetter(object):
             for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid + e0, rlz))
-        return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
+        return numpy.array(eid_rlz, [('eid', U64), ('rlz_id', U16)])
 
     def get_rupdict(self):
         """

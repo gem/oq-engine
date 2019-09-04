@@ -339,7 +339,7 @@ class EventBasedCalculator(base.HazardCalculator):
                               oq.inputs['job_ini'])
         self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
         if oq.hazard_curves_from_gmfs:
-            self.param['rlz_by_event'] = self.datastore['events']['rlz']
+            self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
         iterargs = ((rgetter, self.src_filter, self.param)
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
