@@ -263,34 +263,19 @@ def export_losses_by_event(ekey, dstore):
     if oq.investigation_time:  # not scenario
         year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
         columns['year'] = lambda rec: year_of[rec.event_id]
-    if (oq.calculation_mode.startswith('scenario') or
-            oq.calculation_mode == 'ebrisk'):
-        tagcol = dstore['assetcol/tagcol']
-        lbe = dstore['losses_by_event'][()]
-        lbe.sort(order='event_id')
-        dic = dict(tagnames=['event_id'] + oq.aggregate_by)
-        for tagname in oq.aggregate_by:
-            dic[tagname] = getattr(tagcol, tagname)
-        dic['event_id'] = ['?'] + list(lbe['event_id'])
-        # example (0, 1, 2, 3) -> (0, 2, 3, 1)
-        axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
-        data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
-        aw = hdf5.ArrayWrapper(data, dic, oq.loss_names)
-        table = add_columns(aw.to_table(), **columns)
-        writer.save(table, dest, comment=md)
-    else:
-        dtlist = [('event_id', U32), ('rlz_id', U16), ('rup_id', U32),
-                  ('year', U32)] + oq.loss_dt_list()
-        eids = dstore['losses_by_event']['event_id']
-        arr = numpy.zeros(len(dstore['losses_by_event']), dtlist)
-        arr['event_id'] = eids
-        arr['rup_id'] = events['rup_id'][eids]
-        arr['rlz_id'] = events['rlz_id'][eids]
-        arr['year'] = [year_of[eid] for eid in eids]
-        loss = dstore['losses_by_event']['loss'].T  # shape (L, E)
-        for losses, loss_type in zip(loss, oq.loss_names):
-            arr[loss_type] = losses
-        writer.save(arr, dest, comment=md)
+    tagcol = dstore['assetcol/tagcol']
+    lbe = dstore['losses_by_event'][()]
+    lbe.sort(order='event_id')
+    dic = dict(tagnames=['event_id'] + oq.aggregate_by)
+    for tagname in oq.aggregate_by:
+        dic[tagname] = getattr(tagcol, tagname)
+    dic['event_id'] = ['?'] + list(lbe['event_id'])
+    # example (0, 1, 2, 3) -> (0, 2, 3, 1)
+    axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
+    data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
+    aw = hdf5.ArrayWrapper(data, dic, oq.loss_names)
+    table = add_columns(aw.to_table(), **columns)
+    writer.save(table, dest, comment=md)
     return writer.getsaved()
 
 
