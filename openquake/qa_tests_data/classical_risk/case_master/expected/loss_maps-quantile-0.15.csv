@@ -1,4 +1,4 @@
-# generated_by='OpenQuake engine 3.5.0-gitd83c42cda6', start_date='2019-05-12T07:12:01', checksum=2021923137, kind='quantile-0.15', risk_investigation_time=50.0
+#,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:13:22', checksum=2856913760, kind='quantile-0.15', risk_investigation_time=50.0"
 id,taxonomy,lon,lat,business_interruption~poe-0.02,business_interruption~poe-0.1,contents~poe-0.02,contents~poe-0.1,nonstructural~poe-0.02,nonstructural~poe-0.1,occupants~poe-0.02,occupants~poe-0.1,structural~poe-0.02,structural~poe-0.1
 "a3","tax1",-122.57000,38.11300,1.63066E+02,7.54936E+01,1.29605E+03,4.69958E+02,1.47683E+03,7.04936E+02,3.26132E-03,1.50987E-03,4.76249E+02,3.51295E+02
 "a2","tax2",-122.11400,38.11300,3.61612E+02,1.95725E+02,5.00000E+03,3.84450E+03,8.71801E+03,4.55615E+03,7.23224E-03,3.91449E-03,8.40150E+02,4.87328E+02

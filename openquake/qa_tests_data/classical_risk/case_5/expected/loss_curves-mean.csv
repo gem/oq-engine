@@ -1,4 +1,4 @@
-# kind='mean', risk_investigation_time=None
+#,,,"kind='mean', risk_investigation_time=None"
 asset,loss_type,loss,poe
 a6,structural,0.00000E+00,1.23495E-04
 a6,structural,4.98090E+00,1.23495E-04
