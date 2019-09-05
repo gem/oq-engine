@@ -258,10 +258,10 @@ def export_losses_by_event(ekey, dstore):
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time))
     events = dstore['events'][()]
-    columns = dict(rup_id=lambda rec: events[rec.event_id]['rup_id'],
-                   rlz_id=lambda rec: events[rec.event_id]['rlz_id'])
+    columns = dict(rlz_id=lambda rec: events[rec.event_id]['rlz_id'])
     if oq.investigation_time:  # not scenario
         year_of = year_dict(events['id'], oq.investigation_time, oq.ses_seed)
+        columns['rup_id'] = lambda rec: events[rec.event_id]['rup_id']
         columns['year'] = lambda rec: year_of[rec.event_id]
     tagcol = dstore['assetcol/tagcol']
     lbe = dstore['losses_by_event'][()]
