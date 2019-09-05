@@ -619,6 +619,8 @@ def parse_comment(comment):
     [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
     """
     names, vals = [], []
+    if comment.startswith('"'):
+        comment = comment[1:-1]
     pieces = comment.split('=')
     for i, piece in enumerate(pieces):
         if i == 0:  # first line
@@ -663,7 +665,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
         while True:
             first = next(f)
             if first.startswith('#'):
-                attrs = dict(parse_comment(first[1:]))
+                attrs = dict(parse_comment(first.strip('#,\n')))
                 continue
             break
         header = first.strip().split(sep)

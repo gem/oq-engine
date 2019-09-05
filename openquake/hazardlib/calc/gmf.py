@@ -28,6 +28,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.imt import from_string
 
+U32 = numpy.uint32
 F32 = numpy.float32
 
 
@@ -101,9 +102,11 @@ class GmfComputer(object):
         # `rupture` can be an EBRupture instance
         if hasattr(rupture, 'srcidx'):
             self.srcidx = rupture.srcidx  # the source the rupture comes from
+            self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:
             self.srcidx = '?'
+            self.e0 = 0
         try:
             self.sctx, self.dctx = rupture.sctx, rupture.dctx
         except AttributeError:
@@ -111,6 +114,45 @@ class GmfComputer(object):
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
+
+    def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
+        """
+        :returns: [(sid, eid, gmv), ...]
+        """
+        rup = self.rupture
+        sids = self.sids
+        eids_by_rlz = rup.get_eids_by_rlz(rlzs_by_gsim)
+        data = []
+        for gs, rlzs in rlzs_by_gsim.items():
+            num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
+            # NB: the trick for performance is to keep the call to
+            # compute.compute outside of the loop over the realizations
+            # it is better to have few calls producing big arrays
+            array, sig, eps = self.compute(gs, num_events)
+            array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
+            for i, miniml in enumerate(min_iml):  # gmv < minimum
+                arr = array[:, i, :]
+                arr[arr < miniml] = 0
+            n = 0
+            for rlzi in rlzs:
+                eids = eids_by_rlz[rlzi] + self.e0
+                e = len(eids)
+                for ei, eid in enumerate(eids):
+                    gmf = array[:, :, n + ei]  # shape (N, M)
+                    tot = gmf.sum(axis=0)  # shape (M,)
+                    if not tot.sum():
+                        continue
+                    if sig_eps is not None:
+                        tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
+                                    list(eps[:, n + ei]))
+                        sig_eps.append(tup)
+                    for sid, gmv in zip(sids, gmf):
+                        if gmv.sum():
+                            data.append((sid, eid, gmv))
+                n += e
+        m = (len(min_iml),)
+        gmv_dt = [('sid', U32), ('eid', U32), ('gmv', (F32, m))]
+        return numpy.array(data, gmv_dt)
 
     def compute(self, gsim, num_events, seed=None):
         """
@@ -122,8 +164,8 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        try:  # read the seed from self.rupture.serial
-            seed = seed or self.rupture.serial
+        try:  # read the seed from self.rupture.rup_id
+            seed = seed or self.rupture.rup_id
         except AttributeError:
             pass
         if seed is not None:
