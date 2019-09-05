@@ -24,7 +24,7 @@ import unittest
 import itertools
 import tempfile
 import numpy
-from openquake.baselib import parallel, general, hdf5, config, workerpool
+from openquake.baselib import parallel, general, hdf5, workerpool
 
 try:
     import celery
@@ -56,6 +56,11 @@ def supertask(text, monitor):
         # for instance items = [('a', 4), ('e', 4), ('i', 2)]
         for k, v in items:
             yield get_length, k * v
+
+
+def countletters(text1, text2, monitor):
+    for block in general.block_splitter(text1 + text2, 5):
+        yield get_length, ''.join(block)
 
 
 class StarmapTestCase(unittest.TestCase):
@@ -131,10 +136,15 @@ class StarmapTestCase(unittest.TestCase):
         with hdf5.File(tmp, 'r') as h5:
             num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
-            self.assertEqual(num[b'total supertask'], 5)  # outputs
+            self.assertEqual(num[b'total supertask'], 22)  # outputs
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
             self.assertGreater(len(h5['task_info/supertask']), 0)
         shutil.rmtree(tmpdir)
+
+    def test_countletters(self):
+        data = [('hello', 'world'), ('ciao', 'mondo')]
+        smap = parallel.Starmap(countletters, data)
+        self.assertEqual(smap.reduce(), {'n': 19})
 
     @classmethod
     def tearDownClass(cls):

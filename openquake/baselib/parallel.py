@@ -165,7 +165,6 @@ import itertools
 import traceback
 import collections
 import multiprocessing.dummy
-from unittest import mock
 import psutil
 import numpy
 try:
@@ -498,11 +497,12 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
+            name = result.mon.operation[6:]  # strip 'total '
+            result.mon.save_task_info(
+                temp, result, name, self.sent[name], mem_gb)
+            result.mon.flush(temp)
             if not result.func_args:  # not subtask
                 yield val
-                result.mon.save_task_info(
-                    temp, result, self.argnames, self.sent, mem_gb)
-                result.mon.flush(temp)
 
     def __iter__(self):
         if self.iresults == ():
@@ -569,6 +569,16 @@ def init_workers():
         prctl.set_pdeathsig(signal.SIGKILL)
 
 
+def getargnames(task_func):
+    # a task can be a function, a class or an instance with a __call__
+    if inspect.isfunction(task_func):
+        return inspect.getfullargspec(task_func).args
+    elif inspect.isclass(task_func):
+        return inspect.getfullargspec(task_func.__init__).args[1:]
+    else:  # instance with a __call__ method
+        return inspect.getfullargspec(task_func.__call__).args[1:]
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
@@ -612,7 +622,8 @@ class Starmap(object):
     def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
-              distribute=None, progress=logging.info, hdf5path=None):
+              distribute=None, progress=logging.info, hdf5path=None,
+              num_cores=None):
         r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -628,6 +639,7 @@ class Starmap(object):
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
         :param hdf5path: an open hdf5.File where to store the performance info
+        :param num_cores: the number of available cores (or None)
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
@@ -638,10 +650,11 @@ class Starmap(object):
         else:  # split_in_blocks is eager
             taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(task, taskargs, distribute, progress, hdf5path).submit_all()
+        return cls(task, taskargs, distribute, progress, hdf5path,
+                   num_cores).submit_all()
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, hdf5path=None):
+                 progress=logging.info, hdf5path=None, num_cores=None):
         self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if hdf5path:
@@ -655,22 +668,18 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.hdf5path = hdf5path or gettemp(suffix='.hdf5')
+        self.num_cores = num_cores
+        self.queue = []
         try:
             self.num_tasks = len(self.task_args)
         except TypeError:  # generators have no len
             self.num_tasks = None
-        # a task can be a function, a class or an instance with a __call__
-        if inspect.isfunction(task_func):
-            self.argnames = inspect.getfullargspec(task_func).args
-        elif inspect.isclass(task_func):
-            self.argnames = inspect.getfullargspec(task_func.__init__).args[1:]
-        else:  # instance with a __call__ method
-            self.argnames = inspect.getfullargspec(task_func.__call__).args[1:]
+        self.argnames = getargnames(task_func)
+        self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
-        self.sent = numpy.zeros(len(self.argnames) - 1)
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
@@ -686,10 +695,12 @@ class Starmap(object):
         total = len(self.tasks)
         done = total - self.todo
         percent = int(float(done) / total * 100)
+        fname = self.task_func.__name__
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
+            nbytes = sum(self.sent[fname].values())
             self.progress('Sent %s of data in %d %s task(s)',
-                          humansize(self.sent.sum()), total, self.name)
+                          humansize(nbytes), total, self.name)
         elif percent > self.prev_percent:
             self.progress('%s %3d%% [of %d tasks]',
                           self.name, percent, len(self.tasks))
@@ -711,7 +722,13 @@ class Starmap(object):
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
-            self.sent += numpy.array([len(p) for p in args])
+            if func is None:
+                fname = self.task_func.__name__
+                argnames = self.argnames[:-1]
+            else:
+                fname = func.__name__
+                argnames = getargnames(func)[:-1]
+            self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
         res = submit[dist](self, func, args, monitor)
         self.task_no += 1
         self.tasks.append(res)
@@ -720,8 +737,11 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        for args in self.task_args:
-            self.submit(*args)
+        if self.num_cores is None:  # submit all tasks
+            for args in self.task_args:
+                self.submit(*args)
+        else:  # submit at most num_cores task
+            self.queue = list(self.task_args)
         return self.get_results()
 
     def get_results(self):
@@ -741,8 +761,14 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def _loop(self):
+        if self.queue:  # called from reduce_queue
+            first_args = self.queue[:self.num_cores]
+            self.queue = self.queue[self.num_cores:]
+            for args in first_args:
+                self.submit(*args)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
+
         isocket = iter(self.socket)
         self.todo = len(self.tasks)
         while self.todo:
@@ -753,7 +779,10 @@ class Starmap(object):
                 continue
             elif res.msg == 'TASK_ENDED':
                 self.log_percent()
-                self.todo -= 1
+                if self.queue:
+                    self.submit(*self.queue.pop())
+                else:
+                    self.todo -= 1
             elif res.msg:
                 logging.warning(res.msg)
             elif res.func_args:  # resubmit subtask
@@ -794,22 +823,18 @@ def split_task(func, *args, duration=1000,
     :param weight: weight function for the elements in args[0]
     :yields: a partial result, 0 or more task objects, 0 or 1 partial result
     """
-    elements = numpy.array(args[0])
+    elements = numpy.array(sorted(args[0], key=weight, reverse=True))
     n = len(elements)
     # print('task_no=%d, num_elements=%d' % (args[-1].task_no, n))
     assert n > 0, 'Passed an empty sequence!'
-    if n <= 3:
+    if n == 1:
         yield func(*args)
         return
-    numpy.random.seed(42)
-    ok = numpy.zeros(n, dtype=bool)
-    ok[numpy.random.choice(numpy.arange(n), 3, replace=False)] = True
-    sample = elements[ok]
-    other = elements[~ok]
-    sample_weight = sum(weight(el) for el in sample)
+    first, *other = elements
+    first_weight = weight(first)
     t0 = time.time()
-    res = func(*(sample,) + args[1:])
-    dt = (time.time() - t0) / sample_weight  # time per unit of weight
+    res = func(*([first],) + args[1:])
+    dt = (time.time() - t0) / first_weight  # time per unit of weight
     yield res
     blocks = list(block_splitter(other, duration, lambda el: weight(el) * dt))
     for block in blocks[:-1]:

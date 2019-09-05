@@ -204,7 +204,7 @@ class ContextMaker(object):
                 sites, distances = sites.filter(mask), distances[mask]
             else:
                 raise FarAwayRupture(
-                    '%d: %d km' % (rupture.serial, distances.min()))
+                    '%d: %d km' % (rupture.rup_id, distances.min()))
         return sites, DistancesContext([(self.filter_distance, distances)])
 
     def add_rup_params(self, rupture):

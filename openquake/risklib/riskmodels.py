@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import re
+import ast
 import copy
 import functools
 import collections
@@ -502,6 +503,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                         raise ValueError('%s: %s' % (riskid, err))
                     riskdict[riskid][lt, kind] = rf
                 else:  # rf is a vulnerability function
+                    rf.seed = oqparam.master_seed
                     rf.init()
                     if lt.endswith('_retrofitted'):
                         # strip _retrofitted, since len('_retrofitted') = 12
@@ -509,7 +511,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                             lt[:-12], 'vulnerability_retrofitted'] = rf
                     else:
                         riskdict[riskid][lt, 'vulnerability'] = rf
-        return CompositeRiskModel(oqparam, riskdict)
+        crm = CompositeRiskModel(oqparam, riskdict)
+        crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
+        return crm
 
     def __init__(self, oqparam, riskdict):
         self.damage_states = []
@@ -566,7 +570,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'distribution_name'):
                     self.distributions.add(rf.distribution_name)
-                rf.seed = oqparam.master_seed  # setting the seed
+                if hasattr(rf, 'init'):  # vulnerability function
+                    rf.seed = oqparam.master_seed  # setting the seed
+                    rf.init()
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
                     self.covs += 1
@@ -681,7 +687,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
         dic = dict(covs=self.covs, loss_types=loss_types,
-                   limit_states=limit_states)
+                   limit_states=limit_states,
+                   tmap=repr(getattr(self, 'tmap', [])))
         rf = next(iter(self.values()))
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:

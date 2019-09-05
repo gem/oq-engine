@@ -1,4 +1,4 @@
-# generated_by='OpenQuake engine 3.6.0-gitc18b5d90a7', start_date='2019-06-19T14:28:26', checksum=2896463652, investigation_time=50.0, ses_per_logic_tree_path=1
+#,,,,,,,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:17:22', checksum=2896463652, investigation_time=50.0, ses_per_logic_tree_path=1"
 rupid	multiplicity	mag	centroid_lon	centroid_lat	centroid_depth	trt	strike	dip	rake	boundary
 43	1	5.100000E+00	1.459040E+02	4.339700E+01	5.200000E+01	Subduction Interface - North East Correction	2.417376E+02	3.441956E+01	9.000000E+01	MULTIPOLYGON(((145.90408 43.39699 51.997,145.90398 43.39695 51.997,145.90392 43.39701 52.003,145.90402 43.39705 52.003,145.90408 43.39699 51.997)))
-68	1	7.900000E+00	1.460250E+02	4.289000E+01	2.580000E+01	Subduction Interface - North East Correction	NAN	NAN	9.000000E+01	MULTIPOLYGON(((145.03600 146.88300 0.000,43.38200 42.38200 0.000)))
+68	1	7.900000E+00	1.460250E+02	4.289000E+01	2.580000E+01	Subduction Interface - North East Correction	NAN	NAN	9.000000E+01	MULTIPOLYGON(((145.03600 42.38200 0.000,146.88300 43.38200 0.000)))
