@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added rlz_id, rup_id and year to the losses_by_event output for ebrisk
   * Fixed a bug in the ruptures XML exporter: the multiplicity was multiplied
     (incorrectly) by the number of realizations
   * Fixed the pre-header of the CSV outputs to get proper CSV files
