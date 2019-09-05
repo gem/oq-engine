@@ -29,10 +29,12 @@ import numpy
 
 from openquake.calculators import base
 from openquake.baselib import datastore, general
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, writers
 
 
 NOT_DARWIN = sys.platform != 'darwin'
+OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
+OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')
 
 
 class DifferentFiles(Exception):
@@ -79,6 +81,18 @@ def open8(fname, mode='r'):
     return orig_open(fname, mode, encoding='utf-8')
 
 
+collect_csv = {}  # outputname -> lines
+orig_write_csv = writers.write_csv
+
+
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
+    fname = orig_write_csv(dest, data, sep, fmt, header, comment)
+    lines = open(fname).readlines()[:3]
+    name, calc_id = os.path.basename(fname).rsplit('_', 1)
+    collect_csv[name] = lines
+    return fname
+
+
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
@@ -87,6 +101,8 @@ class CalculatorTestCase(unittest.TestCase):
     def setUpClass(cls):
         builtins.open = check_open
         cls.duration = general.AccumDict()
+        if OQ_CALC_OUTPUTS:
+            writers.write_csv = write_csv
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -228,3 +244,10 @@ class CalculatorTestCase(unittest.TestCase):
     def tearDownClass(cls):
         print('durations =', cls.duration)
         builtins.open = orig_open
+        if OQ_CALC_OUTPUTS:
+            if not os.path.exists(OUTPUTS):
+                os.mkdir(OUTPUTS)
+            for name, lines in collect_csv.items():
+                fname = os.path.join(OUTPUTS, name + '.csv')
+                with open(fname, 'w') as f:
+                    f.write(''.join(lines))
