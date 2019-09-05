@@ -1,4 +1,4 @@
-# kind='rlz-000', risk_investigation_time=50.0
+#,,,"kind='rlz-000', risk_investigation_time=50.0"
 asset,loss_type,loss,period
 a0,nonstructural,NAN,30
 a0,nonstructural,0.00000E+00,60
