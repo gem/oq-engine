@@ -1,4 +1,4 @@
-# kind='b2~b11_@_b22', risk_investigation_time=50.0
+#,,,,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:16:57', checksum=1634090954, kind='b2~b11_@_b22', risk_investigation_time=50.0"
 cresta,id,occupancy,state,taxonomy,lon,lat,business_interruption~poe-0.02,business_interruption~poe-0.1,contents~poe-0.02,contents~poe-0.1,nonstructural~poe-0.02,nonstructural~poe-0.1,occupants~poe-0.02,occupants~poe-0.1,structural~poe-0.02,structural~poe-0.1
 "0.21","a3","Com","02","tax1",-122.57000,38.11300,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 "0.12","a2","Res","01","tax2",-122.11400,38.11300,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
