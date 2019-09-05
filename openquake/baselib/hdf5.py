@@ -620,7 +620,7 @@ def parse_comment(comment):
     """
     names, vals = [], []
     if comment.startswith('"'):
-        comment = comment.strip('"')
+        comment = comment[1:-1]
     pieces = comment.split('=')
     for i, piece in enumerate(pieces):
         if i == 0:  # first line
