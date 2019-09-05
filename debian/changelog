@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in the ruptures XML exporter: the multiplicity was multiplied
+    (incorrectly) by the number of realizations
   * Fixed the pre-header of the CSV outputs to get proper CSV files
   * Replaced the 64 bit event IDs in event based and scenario calculations
     with 32 bit integers, for the happiness of Excel users
