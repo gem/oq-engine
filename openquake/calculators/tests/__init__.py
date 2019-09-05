@@ -88,7 +88,7 @@ orig_write_csv = writers.write_csv
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     fname = orig_write_csv(dest, data, sep, fmt, header, comment)
     lines = open(fname).readlines()[:3]
-    name, calc_id = os.path.basename(fname).rsplit('_', 1)
+    name = re.sub(r'\d', 'X', strip_calc_id(fname))
     collect_csv[name] = lines
     return fname
 
@@ -248,6 +248,6 @@ class CalculatorTestCase(unittest.TestCase):
             if not os.path.exists(OUTPUTS):
                 os.mkdir(OUTPUTS)
             for name, lines in collect_csv.items():
-                fname = os.path.join(OUTPUTS, name + '.csv')
+                fname = os.path.join(OUTPUTS, name)
                 with open(fname, 'w') as f:
                     f.write(''.join(lines))
