@@ -37,7 +37,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
-TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
