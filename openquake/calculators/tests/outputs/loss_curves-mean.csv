@@ -1,0 +1,3 @@
+#,,,"kind='mean', risk_investigation_time=50.0"
+asset,loss_type,loss,period
+a0,nonstructural,NAN,30
