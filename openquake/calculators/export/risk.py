@@ -229,11 +229,6 @@ def export_losses_by_asset(ekey, dstore):
     return writer.getsaved()
 
 
-def get_rlz_ids(events, eids):
-    d = {e: i for i, e in enumerate(events['id'])}
-    return events['rlz_id'][[d[e] for e in eids]]
-
-
 # this is used by scenario_risk, event_based_risk and ebrisk
 @export.add(('losses_by_event', 'csv'))
 def export_losses_by_event(ekey, dstore):
@@ -270,7 +265,7 @@ def export_losses_by_event(ekey, dstore):
         arr = numpy.zeros(len(dstore['losses_by_event']), dtlist)
         arr['event_id'] = eids
         arr['rup_id'] = events['rup_id'][eids]
-        arr['rlz_id'] = get_rlz_ids(events, eids)
+        arr['rlz_id'] = events['rlz_id'][eids]
         arr['year'] = [year_of[eid] for eid in eids]
         loss = dstore['losses_by_event']['loss'].T  # shape (L, E)
         for losses, loss_type in zip(loss, oq.loss_names):
