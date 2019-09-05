@@ -167,7 +167,7 @@ class CalculatorTestCase(unittest.TestCase):
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
         expected_lines = [line for line in open8(expected)
-                          if not line.startswith('#')]
+                          if not line.startswith('#,')]
         comments = []
         actual_lines = []
         for line in open8(actual).readlines()[:lastline]:
