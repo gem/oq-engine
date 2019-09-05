@@ -30,7 +30,7 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     oq = dstore['oqparam']
     weights = dstore['weights'][()]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = countby(dstore['events'][()], 'rlz')
+    num_events = countby(dstore['events'][()], 'rlz_id')
     periods = return_periods or oq.return_periods or scientific.return_periods(
         eff_time, max(num_events.values()))
     return scientific.LossCurvesMapsBuilder(
