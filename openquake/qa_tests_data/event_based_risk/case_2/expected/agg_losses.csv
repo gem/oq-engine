@@ -1,9 +1,9 @@
-#,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:16:52', checksum=2115243534, investigation_time=50.0, risk_investigation_time=50.0"
-event_id,rlz_id,rup_id,year,structural
-0,0,42,39,2.35503E+02
-1,0,42,29,6.61698E+02
-2,0,42,15,2.74907E+02
-3,0,42,43,5.97396E+02
-4,0,45,8,2.39994E+03
-5,0,49,21,1.11997E+03
-6,0,51,39,2.30390E+02
+#,,,,"generated_by='OpenQuake engine 3.7.0-git7edde9a95f', start_date='2019-09-05T16:24:43', checksum=2115243534, investigation_time=50.0, risk_investigation_time=50.0"
+event_id,structural,rup_id,rlz_id,year
+0,2.35503E+02,42,0,39
+1,6.61698E+02,42,0,29
+2,2.74907E+02,42,0,15
+3,5.97396E+02,42,0,43
+4,2.39994E+03,45,0,8
+5,1.11997E+03,49,0,21
+6,2.30390E+02,51,0,39
