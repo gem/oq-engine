@@ -496,8 +496,9 @@ class ExportedRupture(object):
     :param events_by_ses: dictionary ses_idx -> event records
     :param indices: site indices
     """
-    def __init__(self, rupid, events_by_ses, indices=None):
+    def __init__(self, rupid, n_occ, events_by_ses, indices=None):
         self.rupid = rupid
+        self.n_occ = n_occ
         self.events_by_ses = events_by_ses
         self.indices = indices
 
@@ -611,7 +612,7 @@ class EBRupture(object):
         rupture = self.rupture
         events = self.get_events(rlzs_by_gsim, e0=TWO32 * self.rup_id)
         events_by_ses = self.get_events_by_ses(events, num_ses)
-        new = ExportedRupture(self.rup_id, events_by_ses)
+        new = ExportedRupture(self.rup_id, self.n_occ, events_by_ses)
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):
