@@ -23,7 +23,6 @@ import operator
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, cached_property, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
@@ -42,10 +41,9 @@ from openquake.engine import engine
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-TWO32 = U64(2 ** 32)
+TWO32 = numpy.float64(2 ** 32)
 by_grp = operator.attrgetter('src_group_id')
 
 
@@ -70,10 +68,9 @@ def compute_gmfs(rupgetter, srcfilter, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    getter = GmfGetter(rupgetter, srcfilter, param['oqparam'])
-    with monitor('getting ruptures'):
-        getter.init()
-    return getter.compute_gmfs_curves(monitor)
+    oq = param['oqparam']
+    getter = GmfGetter(rupgetter, srcfilter, oq)
+    return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
 
 
 @base.calculators.add('event_based')
@@ -174,8 +171,8 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Reordering the ruptures and storing the events')
         attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures')[()]
-        # order the ruptures by serial
-        sorted_ruptures.sort(order='serial')
+        # order the ruptures by rup_id
+        sorted_ruptures.sort(order='rup_id')
         ngroups = len(self.csm.info.trt_by_grp)
         grp_indices = numpy.zeros((ngroups, 2), U32)
         grp_ids = sorted_ruptures['grp_id']
@@ -205,13 +202,6 @@ class EventBasedCalculator(base.HazardCalculator):
         if self.datastore.parent:
             self.datastore.parent.close()
 
-    @cached_property
-    def eid2idx(self):
-        """
-        :returns: a dict eid -> index in the events table
-        """
-        return dict(zip(self.datastore['events']['id'], range(self.E)))
-
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
@@ -222,11 +212,8 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
-                idxs = base.get_idxs(data, self.eid2idx)  # this has to be fast
-                data['eid'] = idxs  # replace eid with idx
                 self.datastore.extend('gmf_data/data', data)
                 sig_eps = result.pop('sig_eps')
-                sig_eps['eid'] = base.get_idxs(sig_eps, self.eid2idx)
                 self.datastore.extend('gmf_data/sigma_epsilon', sig_eps)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -279,10 +266,15 @@ class EventBasedCalculator(base.HazardCalculator):
                 i += 1
                 if i >= TWO32:
                     raise ValueError('There are more than %d events!' % i)
-        events.sort(order='id')  # fast too
-        n_unique_events = len(numpy.unique(events['id']))  # sanity check
+        events.sort(order='rup_id')  # fast too
+        # sanity check
+        n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
+        events['id'] = numpy.arange(len(events))
         self.datastore['events'] = events
+        eindices = get_indices(events['rup_id'])
+        arr = numpy.array(list(eindices.values()))[:, 0, :]
+        self.datastore['eslices'] = arr  # shape (U, 2)
 
     def check_overflow(self):
         """
@@ -345,6 +337,9 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.imtls:
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
+        self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
+        if oq.hazard_curves_from_gmfs:
+            self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
         iterargs = ((rgetter, self.src_filter, self.param)
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel

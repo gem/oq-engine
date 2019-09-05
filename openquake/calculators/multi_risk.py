@@ -25,7 +25,6 @@ from openquake.calculators import base
 from openquake.calculators.extract import extract
 
 U16 = numpy.uint16
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 

@@ -319,11 +319,10 @@ def view_job_info(token, dstore):
     data = [['task', 'sent', 'received']]
     for task in dstore['task_info']:
         dset = dstore['task_info/' + task]
-        if 'argnames' in dset.attrs:
-            argnames = dset.attrs['argnames'].split()
-            totsent = dset.attrs['sent']
-            sent = ['%s=%s' % (a, humansize(s))
-                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
+        if 'sent' in dset.attrs:
+            sent = sorted(ast.literal_eval(dset.attrs['sent']).items(),
+                          key=operator.itemgetter(1), reverse=True)
+            sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
             recv = dset['received'].sum()
             data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
@@ -393,7 +392,7 @@ def view_portfolio_losses(token, dstore):
     loss_dt = oq.loss_dt()
     data = portfolio_loss(dstore).view(loss_dt)[:, 0]
     rlzids = [str(r) for r in range(len(data))]
-    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
+    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
 
@@ -448,7 +447,7 @@ def view_exposure_info(token, dstore):
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
     num_events = len(dstore['events'])
-    events_by_rlz = countby(dstore['events'][()], 'rlz')
+    events_by_rlz = countby(dstore['events'][()], 'rlz_id')
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),
@@ -806,7 +805,7 @@ def view_act_ruptures_by_src(token, dstore):
     """
     Display the actual number of ruptures by source in event based calculations
     """
-    data = dstore['ruptures'][('srcidx', 'serial')]
+    data = dstore['ruptures'][('srcidx', 'rup_id')]
     counts = sorted(countby(data, 'srcidx').items(),
                     key=operator.itemgetter(1), reverse=True)
     src_info = dstore['source_info'][('grp_id', 'source_id')]
