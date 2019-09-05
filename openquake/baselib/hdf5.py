@@ -663,7 +663,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
         while True:
             first = next(f)
             if first.startswith('#'):
-                attrs = dict(parse_comment(first[1:]))
+                attrs = dict(parse_comment(first.strip('#,')))
                 continue
             break
         header = first.strip().split(sep)
