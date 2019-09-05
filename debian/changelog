@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the pre-header of the CSV outputs to get proper CSV files
   * Replaced the 64 bit event IDs in event based and scenario calculations
     with 32 bit integers, for the happiness of Excel users
 
