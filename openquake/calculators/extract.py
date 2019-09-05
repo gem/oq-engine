@@ -197,7 +197,8 @@ def extract_realizations(dstore, dummy):
     arr['weight'] = rlzs['weight']
     if scenario:
         gsims = dstore['csm_info/gsim_lt/branches']['uncertainty']
-        arr['branch_path'] = [repr(gsim) for gsim in gsims]
+        arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')
+                              for gsim in gsims]  # quotes Excel-friendly
     else:
         arr['branch_path'] = rlzs['branch_path']
     return arr
