@@ -124,10 +124,10 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     else:
         autoheader = build_header(data.dtype)
 
-    nfields = len(data[0])
+    nfields = len(autoheader) or len(data[0])
     if comment:
         comment = comment.replace('"', '""')  # escape quotes
-        com = '"#"%s"%s"\n' % (',' * (nfields - 1), comment)
+        com = '#%s"%s"\n' % (',' * (nfields - 1), comment)
         dest.write(encode(com))
 
     someheader = header or autoheader
