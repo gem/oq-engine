@@ -497,11 +497,11 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            name = result.mon.operation[6:]  # strip 'total '
-            result.mon.save_task_info(
-                temp, result, name, self.sent[name], mem_gb)
-            result.mon.flush(temp)
-            if not result.func_args:  # not subtask
+            if not result.func_args:  # real output
+                name = result.mon.operation[6:]  # strip 'total '
+                result.mon.save_task_info(
+                    temp, result, name, self.sent[name], mem_gb)
+                result.mon.flush(temp)
                 yield val
 
     def __iter__(self):
