@@ -289,7 +289,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         aggregate_by = {'aggregate_by': oq.aggregate_by}
         for tagname in oq.aggregate_by:
             aggregate_by[tagname] = getattr(self.assetcol.tagcol, tagname)[1:]
-        units = self.datastore['cost_calculator'].get_units(loss_types.split())
+        units = self.datastore['cost_calculator'].get_units(loss_types)
         shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
         shape_descr = (['return_periods', 'stats', 'loss_types'] +
                        oq.aggregate_by)
