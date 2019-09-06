@@ -95,6 +95,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     table = add_columns(
         rows, loss_ratio=get_loss_ratio,
         annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
+    table[0] = [c[:-1] if c.endswith('s') else c for c in table[0]]
     writer.save(table, fname, comment=md)
     return writer.getsaved()
 
