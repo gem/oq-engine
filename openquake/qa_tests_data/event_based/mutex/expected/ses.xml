@@ -18,37 +18,37 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="872"
                     >
-                        4578435137536
+                        0
                     </SES>
                     <SES
                     id="954"
                     >
-                        4578435137537
+                        1
                     </SES>
                     <SES
                     id="1164"
                     >
-                        4578435137538
+                        2
                     </SES>
                     <SES
                     id="1876"
                     >
-                        4578435137539
+                        3
                     </SES>
                     <SES
                     id="1364"
                     >
-                        4578435137540
+                        4
                     </SES>
                     <SES
                     id="1886"
                     >
-                        4578435137541
+                        5
                     </SES>
                     <SES
                     id="1524"
                     >
-                        4578435137542
+                        6
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -1276,17 +1276,17 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="538"
                     >
-                        4582730104832
+                        0
                     </SES>
                     <SES
                     id="1904"
                     >
-                        4582730104833
+                        1
                     </SES>
                     <SES
                     id="696"
                     >
-                        4582730104834
+                        2
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -3699,57 +3699,57 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="515"
                     >
-                        4587025072128
+                        0
                     </SES>
                     <SES
                     id="1037"
                     >
-                        4587025072129
+                        1
                     </SES>
                     <SES
                     id="1130"
                     >
-                        4587025072130
+                        2
                     </SES>
                     <SES
                     id="922"
                     >
-                        4587025072131
+                        3
                     </SES>
                     <SES
                     id="1246"
                     >
-                        4587025072132
+                        4
                     </SES>
                     <SES
                     id="106"
                     >
-                        4587025072133
+                        5
                     </SES>
                     <SES
                     id="460"
                     >
-                        4587025072134
+                        6
                     </SES>
                     <SES
                     id="487"
                     >
-                        4587025072135
+                        7
                     </SES>
                     <SES
                     id="1869"
                     >
-                        4587025072136
+                        8
                     </SES>
                     <SES
                     id="1389"
                     >
-                        4587025072137
+                        9
                     </SES>
                     <SES
                     id="691"
                     >
-                        4587025072138
+                        10
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -5303,7 +5303,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="229"
                     >
-                        4591320039424
+                        0
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -8717,7 +8717,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="253"
                     >
-                        4604204941312
+                        0
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -13560,7 +13560,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1403"
                     >
-                        4608499908608
+                        0
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -19730,32 +19730,32 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1740"
                     >
-                        4612794875904
+                        0
                     </SES>
                     <SES
                     id="1938"
                     >
-                        4612794875905
+                        1
                     </SES>
                     <SES
                     id="1455"
                     >
-                        4612794875906
+                        2
                     </SES>
                     <SES
                     id="349"
                     >
-                        4612794875907
+                        3
                     </SES>
                     <SES
                     id="1387"
                     >
-                        4612794875908
+                        4
                     </SES>
                     <SES
                     id="887"
                     >
-                        4612794875909
+                        5
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
