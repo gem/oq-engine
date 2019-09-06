@@ -418,7 +418,7 @@ class ArrayWrapper(object):
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
     """
     @classmethod
-    def from_(cls, obj):
+    def from_(cls, obj, extra='value'):
         if isinstance(obj, cls):  # it is already an ArrayWrapper
             return obj
         elif inspect.isgenerator(obj):
@@ -432,7 +432,7 @@ class ArrayWrapper(object):
                 attrs[descr] = ['?'] + list(attrs[descr])
         else:  # assume obj is an array
             array, attrs = obj, {}
-        return cls(array, attrs)
+        return cls(array, attrs, (extra,))
 
     def __init__(self, array, attrs, extra=('value',)):
         vars(self).update(attrs)
@@ -537,11 +537,12 @@ class ArrayWrapper(object):
                 raise ValueError(
                     'There are %d extra-fields but %d dimensions in %s' %
                     (len(self._extra), shape[-1], self))
-        fields = tuple(self.shape_descr) + self._extra
+        shape_descr = tuple(decode(d) for d in self.shape_descr)
+        fields = shape_descr + self._extra
         out = []
         tags = []
         idxs = []
-        for i, tagname in enumerate(map(decode, self.shape_descr)):
+        for i, tagname in enumerate(shape_descr):
             values = getattr(self, tagname)[1:]
             if len(values) != shape[i]:
                 raise ValueError(
