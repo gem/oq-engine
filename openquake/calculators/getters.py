@@ -497,6 +497,8 @@ class RuptureGetter(object):
         """
         :returns: a list of RuptureGetters with 1 rupture each
         """
+        with hdf5.File(srcfilter.filename, 'r') as cache:
+            num_taxonomies = cache['num_taxonomies'][()]
         out = []
         array = self.rup_array
         for i, ridx in enumerate(self.rup_indices):
@@ -509,7 +511,8 @@ class RuptureGetter(object):
             rg.rlzs_by_gsim = self.rlzs_by_gsim
             rg.e0 = numpy.array([self.e0[i]])
             n_occ = array[i]['n_occ']
-            rg.weight = len(srcfilter.close_sids(array[i], self.trt)) * n_occ
+            sids = srcfilter.close_sids(array[i], self.trt)
+            rg.weight = num_taxonomies[sids].sum() * n_occ
             if rg.weight:
                 out.append(rg)
         return out

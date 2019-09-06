@@ -172,6 +172,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
             cache['risk_model'] = self.crmodel  # reduced model
+            cache['num_taxonomies'] = U16(
+                self.assetcol.num_taxonomies_by_site())
             cache['oqparam'] = oq
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
