@@ -1,4 +1,4 @@
-# mean, investigation_time=200.0
+#,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:19:18', checksum=87673300, kind='mean', investigation_time=200.0"
 lon,lat,PGA-0.02,PGA-0.2
 -123.01707,38.81340,1.193288E-01,0.000000E+00
 -122.91556,38.51995,1.010084E-01,0.000000E+00

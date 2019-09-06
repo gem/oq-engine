@@ -154,7 +154,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['rupture_class'],
                          'ParametricProbabilisticRupture')
         self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['serial'], 1066)
+        self.assertEqual(einfo['rup_id'], 1066)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
@@ -199,9 +199,13 @@ class EventBasedTestCase(CalculatorTestCase):
                                   delta=1E-6)
 
     def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
-        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        [f, _, _] = out['gmf_data', 'csv']
+        self.run_calc(case_3.__file__, 'job.ini')
+        [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', f)
+
+        # check the rupture multiplicity
+        [f] = export(('ruptures', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.xml', f)
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
