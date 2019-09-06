@@ -66,18 +66,34 @@ def get_rup_data(ebruptures):
 # ############################### exporters ############################## #
 
 
+def tag2idx(tags):
+    return {tag: i for i, tag in enumerate(tags)}
+
+
 # this is used by event_based_risk and ebrisk
-# TODO: use ArrayWrapper.to_table()
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    aggvalue = assetcol.agg_value(oq.loss_names, *oq.aggregate_by)
+    lti = tag2idx(oq.loss_names)
+    tagi = {tagname: tag2idx(getattr(assetcol.tagcol, tagname))
+            for tagname in oq.aggregate_by}
+
+    def get_loss_ratio(rec):
+        idxs = tuple(tagi[tagname][getattr(rec, tagname)] - 1
+                     for tagname in oq.aggregate_by) + (lti[rec.loss_types],)
+        return rec.value / aggvalue[idxs]
+
+    # shape (T1, T2, ..., L)
     md = dstore.metadata
     md.update(dict(
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     rows = hdf5.ArrayWrapper.from_(dstore[ekey[0]]).to_table()
-    writer.save(rows, fname, comment=md)
+    table = add_columns(rows, loss_ratio=get_loss_ratio)
+    writer.save(table, fname, comment=md)
     return writer.getsaved()
 
 
