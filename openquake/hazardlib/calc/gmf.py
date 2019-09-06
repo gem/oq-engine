@@ -112,7 +112,6 @@ class GmfComputer(object):
         except AttributeError:
             self.sctx, self.dctx = cmaker.make_contexts(sitecol, rupture)
         self.sids = self.sctx.sids
-        self.weight = self.sids.sum()
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
 
