@@ -1,5 +1,5 @@
-#,,,,,,"generated_by='OpenQuake engine 3.7.0-gitff4ae64275', start_date='2019-09-06T10:57:17', checksum=1634090954, kind='agg_curves-stats', risk_investigation_time=50.0"
-return_periods,stats,loss_types,id,loss_value,loss_ratio,annual_frequency_of_exceedence
+#,,,,,,"generated_by='OpenQuake engine 3.7.0-git58d5a429e0', start_date='2019-09-06T16:38:44', checksum=1634090954, kind='agg_curves-stats', risk_investigation_time=50.0"
+return_period,stat,loss_type,id,loss_value,loss_ratio,annual_frequency_of_exceedence
 2,mean,business_interruption,a1,1.18023E+01,5.90114E-03,5.00000E-01
 2,mean,business_interruption,a2,7.92220E+00,3.96110E-03,5.00000E-01
 2,mean,business_interruption,a4,6.32140E+00,3.16070E-03,5.00000E-01
