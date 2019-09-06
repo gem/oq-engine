@@ -322,11 +322,15 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['agg_curves-rlzs'] = array  # shape (P, R, L)
             self.datastore.set_attrs(
                 'agg_curves-rlzs',
+                shape_descr=['return_periods', 'rlzs', 'loss_types'],
                 return_periods=b.return_periods,
+                rlzs=numpy.arange(self.R),
                 loss_types=loss_types, units=units)
         if arr_stats is not None:
             self.datastore['agg_curves-stats'] = arr_stats  # shape (P, S, L)
             self.datastore.set_attrs(
-                'agg_curves-stats', return_periods=b.return_periods,
+                'agg_curves-stats',
+                shape_descr=['return_periods', 'stats', 'loss_types'],
+                return_periods=b.return_periods,
                 stats=[encode(name) for (name, func) in stats],
                 loss_types=loss_types, units=units)
