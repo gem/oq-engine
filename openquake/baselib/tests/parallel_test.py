@@ -120,7 +120,7 @@ class StarmapTestCase(unittest.TestCase):
 
     def test_supertask(self):
         # this test has 4 supertasks generating 4 + 5 + 3 + 5 = 17 subtasks
-        # and 18 outputs (1 output does not produce a subtask)
+        # and 5 real outputs (one from the yield {})
         allargs = [('aaaaeeeeiii',),
                    ('uuuuaaaaeeeeiii',),
                    ('aaaaaaaaeeeeiii',),
@@ -136,7 +136,7 @@ class StarmapTestCase(unittest.TestCase):
         with hdf5.File(tmp, 'r') as h5:
             num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
-            self.assertEqual(num[b'total supertask'], 22)  # outputs
+            self.assertEqual(num[b'total supertask'], 5)  # outputs
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
             self.assertGreater(len(h5['task_info/supertask']), 0)
         shutil.rmtree(tmpdir)
