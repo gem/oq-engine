@@ -425,6 +425,11 @@ class ArrayWrapper(object):
             array, attrs = (), dict(obj)
         elif hasattr(obj, '__toh5__'):
             return obj
+        elif hasattr(obj, 'attrs'):  # is a dataset
+            array, attrs = obj[()], dict(obj.attrs)
+            shape_descr = attrs.get('shape_descr', [])
+            for descr in map(decode, shape_descr):
+                attrs[descr] = ['?'] + list(attrs[descr])
         else:  # assume obj is an array
             array, attrs = obj, {}
         return cls(array, attrs)
@@ -520,7 +525,7 @@ class ArrayWrapper(object):
         out = []
         tags = []
         idxs = []
-        for i, tagname in enumerate(self.shape_descr):
+        for i, tagname in enumerate(map(decode, self.shape_descr)):
             values = getattr(self, tagname)[1:]
             if len(values) != shape[i]:
                 raise ValueError(
