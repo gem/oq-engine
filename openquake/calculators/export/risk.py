@@ -92,7 +92,9 @@ def export_agg_curve_rlzs(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     rows = hdf5.ArrayWrapper.from_(dstore[ekey[0]]).to_table()
-    table = add_columns(rows, loss_ratio=get_loss_ratio)
+    table = add_columns(
+        rows, loss_ratio=get_loss_ratio,
+        annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
     writer.save(table, fname, comment=md)
     return writer.getsaved()
 
