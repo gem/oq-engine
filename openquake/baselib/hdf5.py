@@ -497,10 +497,11 @@ class ArrayWrapper(object):
         """
         Reduce the underlying array by summing on the given dimensions
         """
-        tag2idx = {tag: i for i, tag in enumerate(self.tagnames)}
+        tag2idx = {tag: i for i, tag in enumerate(self.shape_descr)}
         array = self.array.sum(axis=tuple(tag2idx[tag] for tag in tags))
         attrs = vars(self).copy()
-        attrs['tagnames'] = [tag for tag in self.tagnames if tag not in tags]
+        attrs['shape_descr'] = [tag for tag in self.shape_descr
+                                if tag not in tags]
         return self.__class__(array, attrs)
 
     def to_table(self):
