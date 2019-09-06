@@ -521,11 +521,12 @@ class ArrayWrapper(object):
                 raise ValueError(
                     'There are %d extra-fields but %d dimensions in %s' %
                     (len(self._extra), shape[-1], self))
-        fields = tuple(self.shape_descr) + self._extra
+        shape_descr = tuple(decode(d) for d in self.shape_descr)
+        fields = shape_descr + self._extra
         out = []
         tags = []
         idxs = []
-        for i, tagname in enumerate(map(decode, self.shape_descr)):
+        for i, tagname in enumerate(shape_descr):
             values = getattr(self, tagname)[1:]
             if len(values) != shape[i]:
                 raise ValueError(
