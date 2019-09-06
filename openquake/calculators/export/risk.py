@@ -67,6 +67,7 @@ def get_rup_data(ebruptures):
 
 
 # this is used by event_based_risk and ebrisk
+# TODO: use ArrayWrapper.to_table()
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
