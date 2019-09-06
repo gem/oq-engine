@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
+import operator
 import numpy
 
 from openquake.baselib import hdf5, datastore, parallel, general
@@ -33,6 +34,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+get_n_occ = operator.itemgetter(1)
 
 
 def start_ebrisk(rupgetter, srcfilter, param, monitor):
@@ -201,19 +203,19 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if parent:
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
-            nruptures = len(parent['ruptures'])
+            n_occ = parent['ruptures']['n_occ']
         else:
             hdf5path = self.datastore.hdf5cache()
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
-            nruptures = len(self.datastore['ruptures'])
+            n_occ = self.datastore['ruptures']['n_occ']
             with hdf5.File(hdf5path, 'r+') as cache:
                 self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
         num_cores = oq.__class__.concurrent_tasks.default // 2 or 1
-        ruptures_per_block = numpy.ceil(nruptures / (oq.concurrent_tasks or 1))
-        logging.info('Using %d ruptures per block (over %d rups, %d events)',
-                     ruptures_per_block, nruptures, self.E)
+        per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
+        logging.info('Using %d occurrences per block (over %d occurrences, '
+                     '%d events)', per_block, n_occ.sum(), self.E)
         self.set_param(
             task_duration=oq.task_duration or 600,  # 10min
             epspath=cache_epsilons(
@@ -226,15 +228,17 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         fe = 0
         eslices = self.datastore['eslices']
         allargs = []
+        pairs = list(enumerate(n_occ))
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
                 continue
             ngroups += 1
-            for indices in general.block_splitter(
-                    range(start, stop), ruptures_per_block):
+            for p in general.block_splitter(
+                    pairs[start:stop], per_block, weight=get_n_occ):
+                indices = [i for i, n in p]
                 rgetter = getters.RuptureGetter(
-                    hdf5path, list(indices), grp_id,
+                    hdf5path, indices, grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
                 allargs.append((rgetter, self.src_filter, self.param))
