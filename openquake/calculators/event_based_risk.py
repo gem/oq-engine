@@ -282,7 +282,7 @@ class EbrCalculator(base.RiskCalculator):
                  for (eid, rlz), losses in zip(self.events, self.agglosses)
                  if losses.any()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
-            loss_types = ' '.join(self.oqparam.loss_dt().names)
+            loss_types = self.oqparam.loss_dt().names
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         self.postproc()
 
@@ -316,8 +316,8 @@ class EbrCalculator(base.RiskCalculator):
             lbr = group_array(dstore['losses_by_event'][()], 'rlzi')
             dic = {r: arr['loss'] for r, arr in lbr.items()}
             array, arr_stats = b.build(dic, stats)
-        loss_types = ' '.join(oq.loss_dt().names)
-        units = self.datastore['cost_calculator'].get_units(loss_types.split())
+        loss_types = oq.loss_dt().names
+        units = self.datastore['cost_calculator'].get_units(loss_types)
         if oq.individual_curves or self.R == 1:
             self.datastore['agg_curves-rlzs'] = array  # shape (P, R, L)
             self.datastore.set_attrs(

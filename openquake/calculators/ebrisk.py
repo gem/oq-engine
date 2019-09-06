@@ -285,7 +285,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         S = len(stats)
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
-        loss_types = ' '.join(self.crmodel.loss_types)
+        loss_types = self.crmodel.loss_types
         aggregate_by = {'aggregate_by': oq.aggregate_by}
         for tagname in oq.aggregate_by:
             aggregate_by[tagname] = getattr(self.assetcol.tagcol, tagname)[1:]
