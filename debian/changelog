@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the agg_curves exporter to export all realizations in a single file
+    and all statistics in a single file
   * Added rlz_id, rup_id and year to the losses_by_event output for ebrisk
   * Fixed a bug in the ruptures XML exporter: the multiplicity was multiplied
     (incorrectly) by the number of realizations
