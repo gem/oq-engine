@@ -589,7 +589,7 @@ def extract_aggregate(dstore, what):
                           loss_types)
     for tagname in tagnames:
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
-    aw.tagnames = encode(tagnames)
+    aw.shape_descr = tagnames
     return aw
 
 
