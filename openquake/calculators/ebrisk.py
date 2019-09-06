@@ -291,7 +291,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             aggregate_by[tagname] = getattr(self.assetcol.tagcol, tagname)[1:]
         units = self.datastore['cost_calculator'].get_units(loss_types)
         shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
-        shape_descr = (['return_periods', 'stats', 'loss_types'] +
+        shape_descr = (['return_periods', 'rlzs', 'loss_types'] +
                        oq.aggregate_by)
         self.datastore.create_dset('agg_curves-rlzs', F32, shp)
         self.datastore.set_attrs(
@@ -302,6 +302,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             shp = self.get_shape(C, self.R, self.L)  # shape C, R, L, T...
             self.datastore.create_dset('agg_maps-rlzs', F32, shp)
         if self.R > 1:
+            shape_descr = (['return_periods', 'stats', 'loss_types'] +
+                           oq.aggregate_by)
             shp = self.get_shape(P, S, self.L)  # shape P, S, L, T...
             self.datastore.create_dset('agg_curves-stats', F32, shp)
             self.datastore.set_attrs(
