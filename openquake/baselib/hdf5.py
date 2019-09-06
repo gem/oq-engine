@@ -418,7 +418,7 @@ class ArrayWrapper(object):
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
     """
     @classmethod
-    def from_(cls, obj):
+    def from_(cls, obj, extra='value'):
         if isinstance(obj, cls):  # it is already an ArrayWrapper
             return obj
         elif inspect.isgenerator(obj):
@@ -432,7 +432,7 @@ class ArrayWrapper(object):
                 attrs[descr] = ['?'] + list(attrs[descr])
         else:  # assume obj is an array
             array, attrs = obj, {}
-        return cls(array, attrs)
+        return cls(array, attrs, (extra,))
 
     def __init__(self, array, attrs, extra=('value',)):
         vars(self).update(attrs)

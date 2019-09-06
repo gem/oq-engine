@@ -83,7 +83,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     def get_loss_ratio(rec):
         idxs = tuple(tagi[tagname][getattr(rec, tagname)] - 1
                      for tagname in oq.aggregate_by) + (lti[rec.loss_types],)
-        return rec.value / aggvalue[idxs]
+        return rec.loss_value / aggvalue[idxs]
 
     # shape (T1, T2, ..., L)
     md = dstore.metadata
@@ -91,7 +91,7 @@ def export_agg_curve_rlzs(ekey, dstore):
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    rows = hdf5.ArrayWrapper.from_(dstore[ekey[0]]).to_table()
+    rows = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value').to_table()
     table = add_columns(
         rows, loss_ratio=get_loss_ratio,
         annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
