@@ -67,6 +67,7 @@ def get_rup_data(ebruptures):
 
 
 # this is used by event_based_risk and ebrisk
+# TODO: use ArrayWrapper.to_table()
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
@@ -127,7 +128,7 @@ def export_agg_maps_csv(ekey, dstore):
     kinds = (['rlz-%03d' % r for r in range(R)] if ekey[0].endswith('-rlzs')
              else list(oq.hazard_stats()))
     clp = [str(p) for p in oq.conditional_loss_poes]
-    dic = dict(tagnames=['clp', 'kind', 'loss_type'] + oq.aggregate_by,
+    dic = dict(shape_descr=['clp', 'kind', 'loss_type'] + oq.aggregate_by,
                clp=['?'] + clp, kind=['?'] + kinds,
                loss_type=('?',) + oq.loss_dt().names)
     for tagname in oq.aggregate_by:
@@ -266,7 +267,7 @@ def export_losses_by_event(ekey, dstore):
     tagcol = dstore['assetcol/tagcol']
     lbe = dstore['losses_by_event'][()]
     lbe.sort(order='event_id')
-    dic = dict(tagnames=['event_id'] + oq.aggregate_by)
+    dic = dict(shape_descr=['event_id'] + oq.aggregate_by)
     for tagname in oq.aggregate_by:
         dic[tagname] = getattr(tagcol, tagname)
     dic['event_id'] = ['?'] + list(lbe['event_id'])

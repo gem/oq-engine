@@ -149,7 +149,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                            self.oqparam.number_of_ground_motion_fields)
             lbe['loss'] = res
             self.datastore['losses_by_event'] = lbe
-            loss_types = ' '.join(self.oqparam.loss_dt().names)
+            loss_types = self.oqparam.loss_dt().names
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
 
             # all losses
