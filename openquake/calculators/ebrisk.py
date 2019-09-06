@@ -297,7 +297,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.set_attrs(
             'agg_curves-rlzs', return_periods=builder.return_periods,
             shape_descr=shape_descr, loss_types=loss_types, units=units,
-            **aggregate_by)
+            rlzs=numpy.arange(self.R), **aggregate_by)
         if oq.conditional_loss_poes:
             shp = self.get_shape(C, self.R, self.L)  # shape C, R, L, T...
             self.datastore.create_dset('agg_maps-rlzs', F32, shp)
