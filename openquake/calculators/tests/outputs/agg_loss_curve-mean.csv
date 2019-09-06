@@ -1,0 +1,3 @@
+#,,,,,"generated_by='OpenQuake engine 3.7.0-git128cabfeed', start_date='2019-09-05T18:45:13', checksum=1634090954, kind='mean', risk_investigation_time=50.0"
+annual_frequency_of_exceedence,return_period,loss_type,id,loss_value,loss_ratio
+5.00000E-01,2,business_interruption,a1,1.18023E+01,5.90114E-03

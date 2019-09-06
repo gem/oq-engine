@@ -29,10 +29,12 @@ import numpy
 
 from openquake.calculators import base
 from openquake.baselib import datastore, general
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, writers
 
 
 NOT_DARWIN = sys.platform != 'darwin'
+OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
+OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')
 
 
 class DifferentFiles(Exception):
@@ -79,6 +81,18 @@ def open8(fname, mode='r'):
     return orig_open(fname, mode, encoding='utf-8')
 
 
+collect_csv = {}  # outputname -> lines
+orig_write_csv = writers.write_csv
+
+
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
+    fname = orig_write_csv(dest, data, sep, fmt, header, comment)
+    lines = open(fname).readlines()[:3]
+    name = re.sub(r'\d', 'X', strip_calc_id(fname))
+    collect_csv[name] = lines
+    return fname
+
+
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
@@ -87,6 +101,8 @@ class CalculatorTestCase(unittest.TestCase):
     def setUpClass(cls):
         builtins.open = check_open
         cls.duration = general.AccumDict()
+        if OQ_CALC_OUTPUTS:
+            writers.write_csv = write_csv
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -167,7 +183,7 @@ class CalculatorTestCase(unittest.TestCase):
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
         expected_lines = [line for line in open8(expected)
-                          if not line.startswith('#')]
+                          if not line.startswith('#,')]
         comments = []
         actual_lines = []
         for line in open8(actual).readlines()[:lastline]:
@@ -206,7 +222,7 @@ class CalculatorTestCase(unittest.TestCase):
         Check the distribution of the events by realization index
         """
         n_events = numpy.zeros(self.calc.R, int)
-        dic = general.group_array(self.calc.datastore['events'][()], 'rlz')
+        dic = general.group_array(self.calc.datastore['events'][()], 'rlz_id')
         for rlzi, events in dic.items():
             n_events[rlzi] = len(events)
         numpy.testing.assert_equal(n_events, events_by_rlz)
@@ -228,3 +244,10 @@ class CalculatorTestCase(unittest.TestCase):
     def tearDownClass(cls):
         print('durations =', cls.duration)
         builtins.open = orig_open
+        if OQ_CALC_OUTPUTS:
+            if not os.path.exists(OUTPUTS):
+                os.mkdir(OUTPUTS)
+            for name, lines in collect_csv.items():
+                fname = os.path.join(OUTPUTS, name)
+                with open(fname, 'w') as f:
+                    f.write(''.join(lines))
