@@ -496,7 +496,7 @@ class ArrayWrapper(object):
         length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
-        >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
+        >>> dic = dict(shape_descr=['taxonomy', 'occupancy'],
         ...            taxonomy=['?', 'RC', 'WOOD'],
         ...            occupancy=['?', 'RES', 'IND', 'COM'])
         >>> arr = numpy.zeros((2, 3))
@@ -516,13 +516,11 @@ class ArrayWrapper(object):
                 raise ValueError(
                     'There are %d extra-fields but %d dimensions in %s' %
                     (len(self._extra), shape[-1], self))
-        tagnames = decode_array(self.tagnames)
-        # the tagnames are bytestrings so they must be decoded
-        fields = tuple(tagnames) + self._extra
+        fields = tuple(self.shape_descr) + self._extra
         out = []
         tags = []
         idxs = []
-        for i, tagname in enumerate(tagnames):
+        for i, tagname in enumerate(self.shape_descr):
             values = getattr(self, tagname)[1:]
             if len(values) != shape[i]:
                 raise ValueError(
