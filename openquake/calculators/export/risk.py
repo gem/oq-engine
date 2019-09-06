@@ -71,32 +71,13 @@ def get_rup_data(ebruptures):
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
-    R = len(dstore['weights'])
-    agg_curve = dstore[ekey[0]]
-    tags = (['rlz-%03d' % r for r in range(R)] if ekey[0].endswith('-rlzs')
-            else oq.hazard_stats())
-    periods = agg_curve.attrs['return_periods']
-    L = len(oq.loss_names)
-    tagnames = tuple(dstore['oqparam'].aggregate_by)
-    assetcol = dstore['assetcol']
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    header = ('annual_frequency_of_exceedence', 'return_period',
-              'loss_type') + tagnames + ('loss_value', 'loss_ratio')
-    expvalue = assetcol.agg_value(oq.loss_names, *oq.aggregate_by)
-    # shape (T1, T2, ..., L)
     md = dstore.metadata
-    for r, tag in enumerate(tags):
-        rows = []
-        for multi_idx, loss in numpy.ndenumerate(agg_curve[:, r]):  # (P, L)
-            p, l, *tagidxs = multi_idx
-            evalue = expvalue[tuple(tagidxs) + (l % L,)]
-            row = assetcol.tagcol.get_tagvalues(tagnames, tagidxs) + (
-                loss, loss / evalue)
-            rows.append((1 / periods[p], periods[p], oq.loss_names[l]) + row)
-        dest = dstore.build_fname('agg_loss_curve', tag, 'csv')
-        md.update(dict(
-            kind=tag, risk_investigation_time=oq.risk_investigation_time))
-        writer.save(rows, dest, header, comment=md)
+    md.update(dict(
+        kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    rows = hdf5.ArrayWrapper.from_(dstore[ekey[0]]).to_table()
+    writer.save(rows, fname, comment=md)
     return writer.getsaved()
 
 
