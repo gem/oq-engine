@@ -37,12 +37,6 @@ F64 = numpy.float64
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
-TWO32 = 2 ** 32
-
-GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
-GMF_WARNING = '''\
-There are a lot of ground motion fields; the export will be slow.
-Consider canceling the operation and accessing directly %s.'''
 
 # with compression you can save 60% of space by losing only 10% of saving time
 savez = numpy.savez_compressed
