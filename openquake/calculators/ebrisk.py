@@ -61,9 +61,10 @@ def _calc(computers, events, min_iml, rlzs_by_gsim, weights,
     for c in computers:
         with mon_haz:
             gmfs.append(c.compute_all(min_iml, rlzs_by_gsim))
-        gmftimes.append((c.rupture.ridx, mon_haz.dt))
+        gmftimes.append((c.rupture.ridx, len(c.sids), mon_haz.dt))
     gmfs = numpy.concatenate(gmfs)
-    gmftimes = numpy.array(gmftimes, [('ridx', U32), ('dt', F32)])
+    gmftimes = numpy.array(
+        gmftimes, [('ridx', U32), ('nsites', U16), ('dt', F32)])
 
     for sid, haz in general.group_array(gmfs, 'sid').items():
         gmf_nbytes += haz.nbytes
@@ -171,6 +172,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
             cache['risk_model'] = self.crmodel  # reduced model
+            cache['num_taxonomies'] = U16(
+                self.assetcol.num_taxonomies_by_site())
             cache['oqparam'] = oq
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
@@ -284,23 +287,25 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         S = len(stats)
         P = len(builder.return_periods)
         C = len(oq.conditional_loss_poes)
-        loss_types = ' '.join(self.crmodel.loss_types)
+        loss_types = self.crmodel.loss_types
         aggregate_by = {'aggregate_by': oq.aggregate_by}
         for tagname in oq.aggregate_by:
             aggregate_by[tagname] = getattr(self.assetcol.tagcol, tagname)[1:]
-        units = self.datastore['cost_calculator'].get_units(loss_types.split())
+        units = self.datastore['cost_calculator'].get_units(loss_types)
         shp = self.get_shape(P, self.R, self.L)  # shape P, R, L, T...
-        shape_descr = (['return_periods', 'stats', 'loss_types'] +
+        shape_descr = (['return_periods', 'rlzs', 'loss_types'] +
                        oq.aggregate_by)
         self.datastore.create_dset('agg_curves-rlzs', F32, shp)
         self.datastore.set_attrs(
             'agg_curves-rlzs', return_periods=builder.return_periods,
             shape_descr=shape_descr, loss_types=loss_types, units=units,
-            **aggregate_by)
+            rlzs=numpy.arange(self.R), **aggregate_by)
         if oq.conditional_loss_poes:
             shp = self.get_shape(C, self.R, self.L)  # shape C, R, L, T...
             self.datastore.create_dset('agg_maps-rlzs', F32, shp)
         if self.R > 1:
+            shape_descr = (['return_periods', 'stats', 'loss_types'] +
+                           oq.aggregate_by)
             shp = self.get_shape(P, S, self.L)  # shape P, S, L, T...
             self.datastore.create_dset('agg_curves-stats', F32, shp)
             self.datastore.set_attrs(
