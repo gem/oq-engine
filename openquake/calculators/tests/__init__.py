@@ -88,7 +88,7 @@ orig_write_csv = writers.write_csv
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     fname = orig_write_csv(dest, data, sep, fmt, header, comment)
     lines = open(fname).readlines()[:3]
-    name = re.sub(r'\d', 'X', strip_calc_id(fname))
+    name = re.sub(r'[\d\.]+', '.', strip_calc_id(fname))
     collect_csv[name] = lines
     return fname
 
