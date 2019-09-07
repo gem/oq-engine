@@ -63,11 +63,15 @@ def _calc(computers, events, min_iml, rlzs_by_gsim, weights,
     for c in computers:
         with mon_haz:
             gmfs.append(c.compute_all(min_iml, rlzs_by_gsim))
+        ntaxos = 0
+        for sid in c.sids:
+            ntaxos += len(set(a['taxonomy'] for a in assets_by_site[sid]))
         gmftimes.append(
-            (c.rupture.ridx, mon_haz.task_no, len(c.sids), mon_haz.dt))
+            (c.rupture.ridx, mon_haz.task_no, len(c.sids), ntaxos, mon_haz.dt))
     gmfs = numpy.concatenate(gmfs)
-    gmftimes = numpy.array(gmftimes, [('ridx', U32), ('task_no', U16),
-                                      ('nsites', U16), ('dt', F32)])
+    gmftimes = numpy.array(
+        gmftimes, [('ridx', U32), ('task_no', U16),
+                   ('nsites', U16), ('ntaxos', U16), ('dt', F32)])
 
     for sid, haz in general.group_array(gmfs, 'sid').items():
         gmf_nbytes += haz.nbytes
