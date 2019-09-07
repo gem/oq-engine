@@ -20,6 +20,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import group_array,  deprecated
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
@@ -104,12 +105,14 @@ def _get_data(dstore, dskey, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':
         weights = dstore['weights'][()]
-        tags, stats = zip(*stats)
         if dskey in set(dstore):  # precomputed
+            tags = [decode(s) for s in dstore.get_attr(dskey, 'stats')]
+            statfuncs = [stats[tag] for tag in tags]
             value = dstore[dskey][()]  # shape (A, S, LI)
         else:  # computed on the fly
+            tags, statfuncs = zip(*stats.items())
             value = compute_stats2(
-                dstore[name + '-rlzs'][()], stats, weights)
+                dstore[name + '-rlzs'][()], statfuncs, weights)
     else:  # rlzs
         value = dstore[dskey][()]  # shape (A, R, LI)
         R = value.shape[1]
@@ -149,8 +152,8 @@ def export_avg_losses(ekey, dstore):
     """
     dskey = ekey[0]
     oq = dstore['oqparam']
-    dt = oq.loss_dt()
-    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats().items())
+    dt = [(ln, F32) for ln in oq.loss_names]
+    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
     md = dstore.metadata
@@ -159,8 +162,8 @@ def export_avg_losses(ekey, dstore):
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
         array = numpy.zeros(len(values), dt)
-        for l, lt in enumerate(dt.names):
-            array[lt] = values[:, l]
+        for li, ln in enumerate(oq.loss_names):
+            array[ln] = values[:, li]
         writer.save(compose_arrays(assets, array), dest, comment=md)
     return writer.getsaved()
 
@@ -174,7 +177,7 @@ def export_agg_losses(ekey, dstore):
     """
     dskey = ekey[0]
     oq = dstore['oqparam']
-    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats().items())
+    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assetcol = dstore['assetcol']
     expvalue = assetcol.agg_value(oq.loss_names, *oq.aggregate_by)
@@ -195,29 +198,6 @@ def export_agg_losses(ekey, dstore):
             rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
         writer.save(rows, dest, header, comment=md)
-    return writer.getsaved()
-
-
-# this is used by ebrisk
-@export.add(('avg_losses', 'csv'))
-def export_avg_losses_ebrisk(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    name = ekey[0]
-    oq = dstore['oqparam']
-    dt = [(ln, F32) for ln in oq.loss_names]
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    assets = get_assets(dstore)
-    dest = dstore.build_fname(name, 'mean', 'csv')
-    array = numpy.zeros(len(assets), dt)
-    md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
-    for li, ln in enumerate(oq.loss_names):
-        array[ln] = dstore[name][:, li]
-    writer.save(compose_arrays(assets, array), dest, comment=md)
     return writer.getsaved()
 
 
