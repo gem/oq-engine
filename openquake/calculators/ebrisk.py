@@ -187,7 +187,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
-        self.datastore.create_dset('avg_losses', F32, (A, L))
+        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
         if oq.asset_loss_table:
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
@@ -270,7 +270,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.extend('losses_by_event', elt)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses', autoflush=True):
-                self.datastore['avg_losses'] += dic['losses_by_A']
+                self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
                 alt, eids = dic['alt_eids']
@@ -332,6 +332,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
+        if oq.avg_losses:
+            self.datastore['avg_losses-stats'].attrs['stats'] = [b'mean']
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
