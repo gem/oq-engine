@@ -136,10 +136,11 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         return {}
     computers.sort(key=lambda c: c.rupture.ridx)
     with monitor('getting assets'):
-        param['hdf5cache'] = srcfilter.filename
         with datastore.read(srcfilter.filename) as dstore:
             assetcol = dstore['assetcol']
             assets_by_site = assetcol.assets_by_site()
+    param['hdf5cache'] = srcfilter.filename
+    del param['oqparam']
     gmfs = []
     events = []
     gmftimes = []
