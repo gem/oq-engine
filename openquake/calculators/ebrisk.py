@@ -48,8 +48,7 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
             duration=param['task_duration'])
 
 
-def _calc_risk(gmfs, events, tagcol, weights,
-               assets_by_site, crmodel, param, mon_haz, mon_risk, mon_agg):
+def _calc_risk(gmfs, events, tagcol, assets_by_site, param, mon_risk, mon_agg):
     E = len(events)
     L = len(param['lba'].loss_names)
     A = sum(len(assets) for assets in assets_by_site)
@@ -65,6 +64,11 @@ def _calc_risk(gmfs, events, tagcol, weights,
     tagnames = param['aggregate_by']
     eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
+    with mon_risk('getting crmodel'):
+        with datastore.read(param['hdf5cache']) as cache:
+            crmodel = riskmodels.CompositeRiskModel.read(cache)
+            weights = cache['weights'][()]
+
     for sid, haz in general.group_array(gmfs, 'sid').items():
         acc['gmf_nbytes'] += haz.nbytes
         assets_on_sid = assets_by_site[sid]
@@ -122,20 +126,17 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=False)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    with monitor('getting crmodel'):
-        with datastore.read(srcfilter.filename) as cache:
-            crmodel = riskmodels.CompositeRiskModel.read(cache)
-            oqparam = cache['oqparam']
     computers = []
     with monitor('getting ruptures'):
         for rupgetter in rupgetters:
-            gg = getters.GmfGetter(rupgetter, srcfilter, oqparam)
+            gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'])
             gg.init()
             computers.extend(gg.computers)
     if not computers:  # all filtered out
         return {}
     computers.sort(key=lambda c: c.rupture.ridx)
     with monitor('getting assets'):
+        param['hdf5cache'] = srcfilter.filename
         with datastore.read(srcfilter.filename) as dstore:
             assetcol = dstore['assetcol']
             assets_by_site = assetcol.assets_by_site()
@@ -157,8 +158,8 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         gmftimes, [('ridx', U32), ('task_no', U16),
                    ('nsites', U16), ('ntaxos', U16), ('dt', F32)])
     acc = _calc_risk(
-        gmfs, events, assetcol.tagcol, gg.weights, assets_by_site, crmodel,
-        param, mon_haz, mon_risk, mon_agg)
+        gmfs, events, assetcol.tagcol, assets_by_site, param,
+        mon_risk, mon_agg)
     acc['gmftimes'] = gmftimes
     return acc
 
