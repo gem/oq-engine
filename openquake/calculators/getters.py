@@ -321,8 +321,6 @@ class GmfGetter(object):
         """
         if hasattr(self, 'computers'):  # init already called
             return
-        with hdf5.File(self.rupgetter.filename, 'r') as parent:
-            self.weights = parent['weights'][()]
         self.computers = []
         for ebr in self.rupgetter.get_ruptures(self.srcfilter):
             sitecol = self.sitecol.filtered(ebr.sids)
