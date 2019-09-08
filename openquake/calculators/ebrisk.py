@@ -48,40 +48,23 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
             duration=param['task_duration'])
 
 
-def _calc(computers, tagcol, min_iml, rlzs_by_gsim, weights,
-          assets_by_site, crmodel, param, mon_haz, mon_risk, mon_agg):
-    events = numpy.concatenate([c.rupture.get_events(rlzs_by_gsim)
-                                for c in computers])
+def _calc_risk(gmfs, events, tagcol, weights,
+               assets_by_site, crmodel, param, mon_haz, mon_risk, mon_agg):
     E = len(events)
     L = len(param['lba'].loss_names)
     A = sum(len(assets) for assets in assets_by_site)
     shape = tagcol.agg_shape((E, L), param['aggregate_by'])
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shape[1:]))]
-    acc = dict(arr=numpy.zeros(shape, F32),  # shape (E, L, T...)
+    acc = dict(elt=numpy.zeros(shape, F32),  # shape (E, L, T...)
                alt=numpy.zeros((A, E, L), F32) if param['asset_loss_table']
                else None, gmftimes=[], events_per_sid=0, gmf_nbytes=0)
-    arr = acc['arr']
+    arr = acc['elt']
     alt = acc['alt']
     lba = param['lba']
     epspath = param['epspath']
     tagnames = param['aggregate_by']
     eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
-    gmfs = []
-    gmftimes = []
-    for c in computers:
-        with mon_haz:
-            gmfs.append(c.compute_all(min_iml, rlzs_by_gsim))
-        ntaxos = 0
-        for sid in c.sids:
-            ntaxos += len(set(a['taxonomy'] for a in assets_by_site[sid]))
-        gmftimes.append(
-            (c.rupture.ridx, mon_haz.task_no, len(c.sids), ntaxos, mon_haz.dt))
-    gmfs = numpy.concatenate(gmfs)
-    acc['gmftimes'] = numpy.array(
-        gmftimes, [('ridx', U32), ('task_no', U16),
-                   ('nsites', U16), ('ntaxos', U16), ('dt', F32)])
-
     for sid, haz in general.group_array(gmfs, 'sid').items():
         acc['gmf_nbytes'] += haz.nbytes
         assets_on_sid = assets_by_site[sid]
@@ -116,10 +99,9 @@ def _calc(computers, tagcol, min_iml, rlzs_by_gsim, weights,
                             losses @ ws * param['ses_ratio'])
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
-    elt = numpy.fromiter(  # this is ultra-fast
+    acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
-    acc['elt'] = elt
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -130,6 +112,13 @@ def _calc(computers, tagcol, min_iml, rlzs_by_gsim, weights,
 
 
 def ebrisk(rupgetters, srcfilter, param, monitor):
+    """
+    :param rupgetters: RuptureGetters with 1 rupture each
+    :param srcfilter: a SourceFilter
+    :param param: dictionary of parameters coming from oqparam
+    :param monitor: a Monitor instance
+    :returns: a dictionary with keys elt, alt, ...
+    """
     mon_haz = monitor('getting hazard', measuremem=False)
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
@@ -143,16 +132,35 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
             gg = getters.GmfGetter(rupgetter, srcfilter, oqparam)
             gg.init()
             computers.extend(gg.computers)
-    computers.sort(key=lambda c: c.rupture.ridx)
     if not computers:  # all filtered out
         return {}
+    computers.sort(key=lambda c: c.rupture.ridx)
     with monitor('getting assets'):
         with datastore.read(srcfilter.filename) as dstore:
             assetcol = dstore['assetcol']
             assets_by_site = assetcol.assets_by_site()
-    return _calc(
-        computers, assetcol.tagcol, gg.min_iml, gg.rlzs_by_gsim, gg.weights,
-        assets_by_site, crmodel, param, mon_haz, mon_risk, mon_agg)
+    gmfs = []
+    events = []
+    gmftimes = []
+    for c in computers:
+        with mon_haz:
+            gmfs.append(c.compute_all(gg.min_iml, gg.rlzs_by_gsim))
+            events.append(c.rupture.get_events(gg.rlzs_by_gsim))
+        ntaxos = 0
+        for sid in c.sids:
+            ntaxos += len(set(a['taxonomy'] for a in assets_by_site[sid]))
+        gmftimes.append(
+            (c.rupture.ridx, mon_haz.task_no, len(c.sids), ntaxos, mon_haz.dt))
+    gmfs = numpy.concatenate(gmfs)
+    events = numpy.concatenate(events)
+    gmftimes = numpy.array(
+        gmftimes, [('ridx', U32), ('task_no', U16),
+                   ('nsites', U16), ('ntaxos', U16), ('dt', F32)])
+    acc = _calc_risk(
+        gmfs, events, assetcol.tagcol, gg.weights, assets_by_site, crmodel,
+        param, mon_haz, mon_risk, mon_agg)
+    acc['gmftimes'] = gmftimes
+    return acc
 
 
 @base.calculators.add('ebrisk')
