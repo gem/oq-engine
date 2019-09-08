@@ -664,9 +664,9 @@ def view_task_ebrisk(token, dstore):
     tbl = rst_table(util.compose_arrays(rups, extra))
     codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
              if it[0] in codeset]
-    return '%s\n%s\nTotal hazard time for task %d: %d s, n_occ=%d, w=%d' % (
+    return '%s\n%s\nHazard time for task %d: %d/%d s, n_occ=%d, w=%d' % (
         tbl, '\n'.join(codes), info['taskno'],
-        extra['dt'].sum(), rups['n_occ'].sum(),
+        extra['dt'].sum(), info['duration'], rups['n_occ'].sum(),
         (rups['n_occ'] * extra['ntaxos']).sum())
 
 
