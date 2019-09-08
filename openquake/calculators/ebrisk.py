@@ -48,7 +48,9 @@ def start_ebrisk(rupgetter, srcfilter, param, monitor):
             duration=param['task_duration'])
 
 
-def _calc_risk(gmfs, events, param, monitor):
+def _calc_risk(hazard, param, monitor):
+    gmfs = numpy.concatenate(hazard['gmfs'])
+    events = numpy.concatenate(hazard['events'])
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     with datastore.read(param['hdf5cache']) as cache:
@@ -108,6 +110,9 @@ def _calc_risk(gmfs, events, param, monitor):
                             losses @ ws * param['ses_ratio'])
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
+    acc['gmftimes'] = numpy.array(
+        hazard['gmftimes'], [('ridx', U32), ('task_no', U16),
+                             ('nsites', U16), ('dt', F32)])
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
@@ -139,21 +144,14 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         return {}
     computers.sort(key=lambda c: c.rupture.ridx)
     param['hdf5cache'] = srcfilter.filename
-    gmfs = []
-    events = []
-    gmftimes = []
+    acc = dict(gmfs=[], events=[], gmftimes=[])
     for c in computers:
         with mon_haz:
-            gmfs.append(c.compute_all(gg.min_iml, gg.rlzs_by_gsim))
-            events.append(c.rupture.get_events(gg.rlzs_by_gsim))
-        gmftimes.append(
+            acc['gmfs'].append(c.compute_all(gg.min_iml, gg.rlzs_by_gsim))
+            acc['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
+        acc['gmftimes'].append(
             (c.rupture.ridx, mon_haz.task_no, len(c.sids), mon_haz.dt))
-    gmfs = numpy.concatenate(gmfs)
-    events = numpy.concatenate(events)
-    gmftimes = numpy.array(gmftimes, [('ridx', U32), ('task_no', U16),
-                                      ('nsites', U16), ('dt', F32)])
-    acc = _calc_risk(gmfs, events, param, monitor)
-    acc['gmftimes'] = gmftimes
+    acc = _calc_risk(acc, param, monitor)
     return acc
 
 
