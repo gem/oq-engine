@@ -43,10 +43,7 @@ import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.contexts import ContextMaker
-from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf, site
-from openquake.hazardlib.source.point import make_rupture
-from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
