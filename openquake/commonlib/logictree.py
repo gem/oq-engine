@@ -1602,6 +1602,31 @@ class GsimLogicTree(object):
             [trt] = self.values
         return sorted(self.values[trt])
 
+    def sample(self, n, seed):
+        """
+        :param n: number of samples
+        :param seed: random seed
+        :returns: Realization objects
+        """
+        rlzs = []
+        groups = [[b for b in self.branches if b.trt == trt]
+                  for trt in self.values]
+        for i in range(n):
+            weight = 1
+            lt_path = []
+            lt_uid = []
+            value = []
+            for group in groups:
+                [branch] = sample(group, 1, seed + i)
+                lt_path.append(branch.id)
+                lt_uid.append(branch.id if branch.effective else '@')
+                weight *= branch.weight
+                value.append(branch.gsim)
+            rlz = Realization(tuple(value), weight, tuple(lt_path),
+                              i, tuple(lt_uid))
+            rlzs.append(rlz)
+        return rlzs
+
     def __iter__(self):
         """
         Yield :class:`openquake.commonlib.logictree.Realization` instances
