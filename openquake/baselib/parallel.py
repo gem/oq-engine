@@ -776,7 +776,6 @@ class Starmap(object):
             if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
-                continue
             elif res.msg == 'TASK_ENDED':
                 self.log_percent()
                 if self.queue:
@@ -788,7 +787,6 @@ class Starmap(object):
             elif res.func_args:  # resubmit subtask
                 func, *args = res.func_args
                 self.submit(*args, func=func, monitor=res.mon)
-                yield res
                 self.todo += 1
             else:
                 yield res
