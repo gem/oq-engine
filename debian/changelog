@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Accepted also geometry files without quotes in the multi_risk calculator
+  * Raised clear errors for geometry files without quotes or with the wrong
+    header in the multi_risk calculator
   * Changed the realizations.csv exporter to export '[FromShakeMap]' instead
     of '[FromFile]' when needed
   * Changed the agg_curves exporter to export all realizations in a single file
