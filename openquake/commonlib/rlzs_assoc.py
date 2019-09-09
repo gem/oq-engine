@@ -254,10 +254,10 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                 # i.e. when called with sm_lt_path in store_rlz_info
                 logging.warning('Reducing the logic tree of %s from %d to %d '
                                 'realizations', smodel.name, before, after)
-            rlzs = cinfo._get_rlzs(smodel, list(gsim_lt), cinfo.seed + offset)
+            rlzs = cinfo._get_rlzs(smodel, gsim_lt, cinfo.seed + offset)
             all_trts = list(gsim_lt.values)
         else:
-            rlzs = cinfo._get_rlzs(smodel, list(cinfo.gsim_lt), cinfo.seed + offset)
+            rlzs = cinfo._get_rlzs(smodel, cinfo.gsim_lt, cinfo.seed + offset)
             all_trts = list(cinfo.gsim_lt.values)
 
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
