@@ -781,8 +781,10 @@ class Starmap(object):
                 if self.queue:
                     func, *args = self.queue.pop()
                     self.submit(*args, func=func)
+                    logging.debug('%d tasks in queue', len(self.queue))
                 else:
                     self.todo -= 1
+                    logging.debug('%d tasks to do', self.todo)
             elif res.msg:
                 logging.warning(res.msg)
             elif res.func_args:  # add subtask
