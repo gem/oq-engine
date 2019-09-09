@@ -741,7 +741,7 @@ class Starmap(object):
             for args in self.task_args:
                 self.submit(*args)
         else:  # submit at most num_cores task
-            self.queue = list(self.task_args)
+            self.queue = [(self.task_func,) + args for args in self.task_args]
         return self.get_results()
 
     def get_results(self):
@@ -764,8 +764,8 @@ class Starmap(object):
         if self.queue:  # called from reduce_queue
             first_args = self.queue[:self.num_cores]
             self.queue = self.queue[self.num_cores:]
-            for args in first_args:
-                self.submit(*args)
+            for func, *args in first_args:
+                self.submit(*args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
 
@@ -779,15 +779,16 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 self.log_percent()
                 if self.queue:
-                    self.submit(*self.queue.pop())
+                    func, *args = self.queue.pop()
+                    self.submit(*args, func=func)
+                    logging.debug('%d tasks in queue', len(self.queue))
                 else:
                     self.todo -= 1
+                    logging.debug('%d tasks to do', self.todo)
             elif res.msg:
                 logging.warning(res.msg)
-            elif res.func_args:  # resubmit subtask
-                func, *args = res.func_args
-                self.submit(*args, func=func, monitor=res.mon)
-                self.todo += 1
+            elif res.func_args:  # add subtask
+                self.queue.append(res.func_args)
             else:
                 yield res
         self.log_percent()
