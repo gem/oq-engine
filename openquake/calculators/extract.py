@@ -187,7 +187,8 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
-    scenario = 'scenario' in dstore['oqparam'].calculation_mode
+    oq = dstore['oqparam']
+    scenario = 'scenario' in oq.calculation_mode
     rlzs = dstore['csm_info'].rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
@@ -197,6 +198,8 @@ def extract_realizations(dstore, dummy):
     arr['weight'] = rlzs['weight']
     if scenario:
         gsims = dstore['csm_info/gsim_lt/branches']['uncertainty']
+        if 'shakemap' in oq.inputs:
+            gsims = ["[FromShakeMap]"]
         arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
     else:
