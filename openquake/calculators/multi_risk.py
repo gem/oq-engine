@@ -144,7 +144,7 @@ def wkt2peril(fname, name, sitecol):
                              (fname, header))
         wkt = f.read()
         if not wkt.startswith('"'):
-            raise ValueError('The geometry must be quoted in %s: "%s..."' %
+            raise ValueError('The geometry must be quoted in %s : "%s..."' %
                              (fname, wkt.split('(')[0]))
         geom = shapely.wkt.loads(wkt.strip('"'))  # strip quotes
     peril = numpy.zeros(len(sitecol), float)
