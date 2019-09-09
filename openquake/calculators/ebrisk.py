@@ -67,7 +67,7 @@ def _calc_risk(hazard, param, monitor):
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     acc = dict(elt=numpy.zeros(shape, F32),  # shape (E, L, T...)
                alt=numpy.zeros((A, E, L), F32) if param['asset_loss_table']
-               else None, gmftimes=[], events_per_sid=0, gmf_nbytes=0)
+               else None, gmf_info=[], events_per_sid=0)
     arr = acc['elt']
     alt = acc['alt']
     lba = param['lba']
@@ -77,7 +77,6 @@ def _calc_risk(hazard, param, monitor):
     eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
 
     for sid, haz in general.group_array(gmfs, 'sid').items():
-        acc['gmf_nbytes'] += haz.nbytes
         assets_on_sid = assets_by_site[sid]
         if len(assets_on_sid) == 0:
             continue
@@ -110,9 +109,9 @@ def _calc_risk(hazard, param, monitor):
                             losses @ ws * param['ses_ratio'])
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
-    acc['gmftimes'] = numpy.array(
-        hazard['gmftimes'], [('ridx', U32), ('task_no', U16),
-                             ('nsites', U16), ('dt', F32)])
+    acc['gmf_info'] = numpy.array(
+        hazard['gmf_info'], [('ridx', U32), ('task_no', U16),
+                             ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
@@ -144,13 +143,15 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         return {}
     computers.sort(key=lambda c: c.rupture.ridx)
     param['hdf5cache'] = srcfilter.filename
-    acc = dict(gmfs=[], events=[], gmftimes=[])
+    acc = dict(gmfs=[], events=[], gmf_info=[])
     for c in computers:
         with mon_haz:
-            acc['gmfs'].append(c.compute_all(gg.min_iml, gg.rlzs_by_gsim))
+            data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
+            acc['gmfs'].append(data)
             acc['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
-        acc['gmftimes'].append(
-            (c.rupture.ridx, mon_haz.task_no, len(c.sids), mon_haz.dt))
+        acc['gmf_info'].append(
+            (c.rupture.ridx, mon_haz.task_no, len(c.sids),
+             data.nbytes, mon_haz.dt))
     acc = _calc_risk(acc, param, monitor)
     return acc
 
@@ -247,12 +248,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
-        self.gmf_nbytes = 0
         smap = parallel.Starmap(
             self.core_task.__func__, allargs,
             num_cores=num_cores, hdf5path=self.datastore.filename)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
-        logging.info('Produced %s of GMFs', general.humansize(self.gmf_nbytes))
+        gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
+        logging.info('Produced %s of GMFs', general.humansize(gmf_bytes))
         return res
 
     def agg_dicts(self, acc, dic):
@@ -264,7 +265,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             return 1
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
-        self.datastore.extend('gmftimes', dic['gmftimes'])
+        self.datastore.extend('gmf_info', dic['gmf_info'])
         if len(elt):
             with self.monitor('saving losses_by_event', autoflush=True):
                 self.datastore.extend('losses_by_event', elt)
@@ -277,7 +278,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 idx = numpy.argsort(eids)  # indices sorting the eids
                 self.datastore['asset_loss_table'][:, eids[idx]] = alt[:, idx]
         self.events_per_sid.append(dic['events_per_sid'])
-        self.gmf_nbytes += dic['gmf_nbytes']
         return 1
 
     def get_shape(self, *sizes):
