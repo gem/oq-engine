@@ -139,7 +139,7 @@ def wkt2peril(fname, name, sitecol):
     """
     with open(fname) as f:
         next(f)  # skip header
-        geom = shapely.wkt.loads(f.read()[1:-1])  # strip quotes
+        geom = shapely.wkt.loads(f.read().strip('"'))  # strip quotes
     peril = numpy.zeros(len(sitecol), float)
     for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
         peril[sid] = shapely.geometry.Point(lon, lat).within(geom)
