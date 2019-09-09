@@ -656,18 +656,21 @@ def view_task_ebrisk(token, dstore):
     task_info = dstore['task_info/ebrisk'][()]
     task_info.sort(order='duration')
     info = task_info[idx]
-    times = get_array(dstore['gmftimes'][()], task_no=info['taskno'])
-    extra = times[['nsites', 'ntaxos', 'dt']]
+    times = get_array(dstore['gmf_info'][()], task_no=info['taskno'])
+    extra = times[['nsites', 'gmfbytes', 'dt']]
     ds = dstore.parent if dstore.parent else dstore
     rups = ds['ruptures']['rup_id', 'code', 'n_occ', 'mag'][times['ridx']]
     codeset = set('code_%d' % code for code in numpy.unique(rups['code']))
     tbl = rst_table(util.compose_arrays(rups, extra))
     codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
              if it[0] in codeset]
-    return '%s\n%s\nHazard time for task %d: %d/%d s, n_occ=%d, w=%d' % (
-        tbl, '\n'.join(codes), info['taskno'],
-        extra['dt'].sum(), info['duration'], rups['n_occ'].sum(),
-        (rups['n_occ'] * extra['ntaxos']).sum())
+    msg = '%s\n%s\nHazard time for task %d: %d of %d s, ' % (
+        tbl, '\n'.join(codes), info['taskno'], extra['dt'].sum(),
+        info['duration'])
+    msg += 'gmfbytes=%s, w=%d' % (
+        humansize(extra['gmfbytes'].sum()),
+        (rups['n_occ'] * extra['nsites']).sum())
+    return msg
 
 
 @view.add('hmap')
