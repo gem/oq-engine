@@ -138,7 +138,10 @@ def wkt2peril(fname, name, sitecol):
     Converts a WKT file into a peril array of length N
     """
     with open(fname) as f:
-        next(f)  # skip header
+        header = next(f)  # skip header
+        if header != 'geom\n':
+            raise ValueError('%s has header %r, should be geom instead' %
+                             (fname, header))
         geom = shapely.wkt.loads(f.read().strip('"'))  # strip quotes
     peril = numpy.zeros(len(sitecol), float)
     for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
