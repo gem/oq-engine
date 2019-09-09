@@ -154,8 +154,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
             (c.rupture.ridx, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
     computers.clear()
-    acc = _calc_risk(acc, param, monitor)
-    return acc
+    return _calc_risk(acc, param, monitor)
 
 
 @base.calculators.add('ebrisk')
