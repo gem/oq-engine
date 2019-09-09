@@ -144,17 +144,18 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
     rupgetters.clear()
     computers.sort(key=lambda c: c.rupture.ridx)
     param['hdf5cache'] = srcfilter.filename
-    acc = dict(gmfs=[], events=[], gmf_info=[])
+    hazard = dict(gmfs=[], events=[], gmf_info=[])
     for c in computers:
         with mon_haz:
             data = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
-            acc['gmfs'].append(data)
-            acc['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
-        acc['gmf_info'].append(
+            hazard['gmfs'].append(data)
+            hazard['events'].append(c.rupture.get_events(gg.rlzs_by_gsim))
+        hazard['gmf_info'].append(
             (c.rupture.ridx, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
     computers.clear()
-    return _calc_risk(acc, param, monitor)
+    acc = _calc_risk(hazard, param, monitor)
+    return acc
 
 
 @base.calculators.add('ebrisk')
