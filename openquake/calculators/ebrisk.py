@@ -141,6 +141,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
             computers.extend(gg.computers)
     if not computers:  # all filtered out
         return {}
+    rupgetters.clear()
     computers.sort(key=lambda c: c.rupture.ridx)
     param['hdf5cache'] = srcfilter.filename
     acc = dict(gmfs=[], events=[], gmf_info=[])
@@ -152,6 +153,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         acc['gmf_info'].append(
             (c.rupture.ridx, mon_haz.task_no, len(c.sids),
              data.nbytes, mon_haz.dt))
+    computers.clear()
     acc = _calc_risk(acc, param, monitor)
     return acc
 
@@ -216,6 +218,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('rupgeoms', cache)
         num_cores = oq.__class__.concurrent_tasks.default // 2 or 1
         per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
+        if per_block > 5000:
+            per_block = 5000
         logging.info('Using %d occurrences per block (over %d occurrences, '
                      '%d events)', per_block, n_occ.sum(), self.E)
         self.set_param(
