@@ -327,7 +327,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     'agg_maps-stats',
                     stats=[encode(name) for (name, func) in stats],
                     loss_types=loss_types, units=units)
-     
+
     def post_execute(self, dummy):
         """
         Compute and store average losses from the losses_by_event dataset,
