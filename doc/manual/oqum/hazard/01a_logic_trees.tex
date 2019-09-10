@@ -28,17 +28,12 @@ following:
     weights/probabilities assigned to the set  of branches always correspond
     to one.
 
-    \item[branching level]: it is the largest container. It is not used in
-	modelling uncertainty, but it is useful in maintaining a logic and an
-	order in the structure of the tree.
-
 \end{description}
 
 Below we provide a simple schema illustrating the skeleton of xml file
 containing the desciption of a logic tree:
 
 \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-<logicTreeBranchingLevel branchingLevelID=ID>
     <logicTreeBranchSet branchSetID=ID
                         uncertaintyType=TYPE>
         <logicTreeBranch>
@@ -46,22 +41,21 @@ containing the desciption of a logic tree:
             <uncertaintyWeight>WEIGHT</uncertaintyWeight>
         </logicTreeBranch>
     </logicTreeBranchSet>
-</logicTreeBranchingLevel>
 \end{minted}
 
 As it appears from this example, the structure of a logic tree is a set of
 nested elements.
 
 A schematic representation of the elemental components of a logic tree
-structure is provided in Figure~\ref{glts}. A branching level identifies the
-position where branching occurs while  a branch set identifies a collection of
+structure is provided in Figure~\ref{glts}.
+A branch set identifies a collection of
 branches (i.e. individual branches)  whose weights sum to 1.
 
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=13cm]{figures/hazard/GenericLogicTreeStructure.pdf}
-\caption{Generic Logic Tree structure as described in terms of branching
-levels, branch sets, and individual branches.}
+\caption{Generic Logic Tree structure as described in terms of branch sets,
+and individual branches.}
 \label{glts}
 \end{figure}
 
@@ -76,36 +70,16 @@ In the NRML schema, a logic tree structure is defined through the
 </logicTree>
 \end{minted}
 
-A \Verb+logicTree+ contains as a sequence of \Verb+logicTreeBranchingLevel+ elements. The position in the sequence of a \Verb+logicTreeBranchingLevel+ specifies the level of the tree where it is located. That is, the first \texttt{logicTreeBranchingLevel} element in the sequence represents  the first level in the tree, the second element the second level in the tree, and so on.
+A \Verb+logicTree+ contains as a sequence of \Verb+logicTreeBranchSet+ elements.
 
-\begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-<logicTree logicTreeID="ID">
-	<logicTreeBranchingLevel branchingLevelID="ID_1">
-		...
-	</logicTreeBranchingLevel>
-	<logicTreeBranchingLevel branchingLevelID="ID_2">
-		...
-	</logicTreeBranchingLevel>
-	....
-	<logicTreeBranchingLevel branchingLevelID="ID_N">
-		...
-	</logicTreeBranchingLevel>
-</logicTree>
-\end{minted}
+There are no restrictions on the number of branch set that can be defined.
 
-There are no restrictions on the number of tree levels that can be defined.
-
-A \Verb+logicTreeBranchingLevel+ is defined as a sequence of
-\Verb+logicTreeBranchSet+ elements where each \Verb+logicTreeBranchSet+
-defines a particular epistemic uncertainty inside a branching level.
-
-A branch set has two required attributes: \Verb+branchSetID+ and
+Each \Verb+logicTreeBranchSet+
+has two required attributes: \Verb+branchSetID+ and
 \Verb+uncertaintyType+. The latter defines the type of epistemic uncertainty this branch set is describing.
 
 \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
 <logicTree logicTreeID="ID">
-...
-	<logicTreeBranchingLevel branchingLevelID="ID_#">
 		<logicTreeBranchSet branchSetID="ID_1"
 			uncertaintyType="UNCERTAINTY_TYPE">
 			...
@@ -119,7 +93,6 @@ A branch set has two required attributes: \Verb+branchSetID+ and
 			uncertaintyType="UNCERTAINTY_TYPE">
 			...
 		</logicTreeBranchSet>
-	</logicTreeBranchingLevel>
 ...
 </logicTree>
 \end{minted}
@@ -162,8 +135,6 @@ Possible values for the \Verb+uncertaintyType+ attribute are:
 
 \end{itemize}
 
-There are no restrictions on the number of branch sets that can be defined inside a branching level.
-
 A \Verb+branchSet+ is defined as a sequence of \Verb+logicTreeBranch+
 elements, each specified by an \Verb+uncertaintyModel+ element (a string
 identifying an uncertainty model; the content of the string varies with the \texttt{uncertaintyType} attribute value of the branchSet element) and the \texttt{uncertaintyWeight} element (specifying the probability/weight associated to the uncertaintyModel):
@@ -171,8 +142,7 @@ identifying an uncertainty model; the content of the string varies with the \tex
 \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
 < logicTree  logicTreeID="ID">
 ...
-	< logicTreeBranchingLevel  branchingLevelID="ID_#">
-		...
+
 		< logicTreeBranchSet  branchSetID="ID_#"
 				uncertaintyType="UNCERTAINTY_TYPE">
 			< logicTreeBranch  branchID="ID_1">
@@ -193,8 +163,6 @@ identifying an uncertainty model; the content of the string varies with the \tex
 				</uncertaintyWeight>
 			</logicTreeBranch>
 		</logicTreeBranchSet>
-		...
-	</logicTreeBranchingLevel>
 ...
 </logicTree >
 \end{minted}
@@ -292,7 +260,7 @@ attributes allowing for complex tree definitions:
 \begin{itemize}
 
     \item \Verb+applyToBranches+: specifies to which \Verb+logicTreeBranch+
-	elements (one or more), in the previous branching level, the branch set
+	elements (one or more), in the previous branch sets, the branch set
 	is linked to. The linking is established by defining the IDs of the
 	branches to link to:
 
@@ -301,7 +269,7 @@ attributes allowing for complex tree definitions:
 	\end{Verbatim}
 
     The default is the keyword ALL, which means that a branch set is by
-    default linked to all branches in the previous branching level. By
+    default linked to all branches in the previous branch set. By
     specifying one or  more branches to which the branch set links to, non-
     symmetric logic trees can be defined.
 
