@@ -777,7 +777,6 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
-                self.log_percent()
                 if self.queue:
                     func, *args = self.queue.pop()
                     self.submit(*args, func=func)
@@ -789,6 +788,7 @@ class Starmap(object):
                 else:
                     self.todo -= 1
                     logging.debug('%d tasks to do', self.todo)
+                self.log_percent()
             elif res.msg:
                 logging.warning(res.msg)
             elif res.func_args:  # add subtask
