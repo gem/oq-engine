@@ -331,7 +331,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def save_exposed_values(self):
         """
-        Store n arrays where n is the number of tagNames. For instance with
+        Store 2^n arrays where n is the number of tagNames. For instance with
         the tags country, occupancy it stores 2^2 = 4 arrays:
 
         exposed_values/agg_country_occupancy
