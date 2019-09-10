@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the sampling algorithm for the GMPE logic trees: now it does
+    require building the full tree in memory anymore
   * Raised clear errors for geometry files without quotes or with the wrong
     header in the multi_risk calculator
   * Changed the realizations.csv exporter to export '[FromShakeMap]' instead

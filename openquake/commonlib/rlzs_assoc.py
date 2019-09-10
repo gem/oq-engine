@@ -20,6 +20,7 @@ import logging
 import operator
 import collections
 import numpy
+from openquake.commonlib.logictree import get_effective_rlzs
 
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
@@ -254,10 +255,12 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                 # i.e. when called with sm_lt_path in store_rlz_info
                 logging.warning('Reducing the logic tree of %s from %d to %d '
                                 'realizations', smodel.name, before, after)
-            rlzs = cinfo._get_rlzs(smodel, gsim_lt, cinfo.seed + offset)
+            rlzs = _get_rlzs(cinfo.num_samples, smodel, gsim_lt,
+                             cinfo.seed + offset)
             all_trts = list(gsim_lt.values)
         else:
-            rlzs = cinfo._get_rlzs(smodel, cinfo.gsim_lt, cinfo.seed + offset)
+            rlzs = _get_rlzs(cinfo.num_samples, smodel, cinfo.gsim_lt,
+                             cinfo.seed + offset)
             all_trts = list(cinfo.gsim_lt.values)
 
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
@@ -266,3 +269,11 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
     if assoc.realizations:
         assoc._init()
     return assoc
+
+
+def _get_rlzs(num_samples, smodel, gsim_lt, seed):
+    if num_samples:
+        rlzs = gsim_lt.sample(smodel.samples, seed)
+    else:  # full enumeration
+        rlzs = get_effective_rlzs(gsim_lt)
+    return rlzs
