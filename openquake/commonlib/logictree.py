@@ -1606,11 +1606,11 @@ class GsimLogicTree(object):
         """
         :param n: number of samples
         :param seed: random seed
-        :returns: Realization objects
+        :returns: n Realization objects
         """
-        rlzs = []
         brlists = [sample([b for b in self.branches if b.trt == trt],
                           n, seed + i) for i, trt in enumerate(self.values)]
+        rlzs = []
         for i in range(n):
             weight = 1
             lt_path = []
