@@ -725,11 +725,9 @@ class HazardCalculator(BaseCalculator):
         # compute exposure stats
         num_assets = list(
             general.countby(self.assetcol.array, 'site_id').values())
-        self.datastore.set_attrs(
-            'assetcol', assets_by_site=get_stats(num_assets))
+        self.datastore['assets_by_site'] = get_stats(num_assets)
         num_taxos = self.assetcol.num_taxonomies_by_site()
-        self.datastore.set_attrs(
-            'assetcol', taxonomies_by_site=get_stats(num_taxos))
+        self.datastore['taxonomies_by_site'] = get_stats(num_taxos)
 
     def save_cache(self, **kw):
         """
