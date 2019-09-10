@@ -649,8 +649,6 @@ class HazardCalculator(BaseCalculator):
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['cost_calculator'] = exposure.cost_calculator
-            self.datastore['assetcol/num_taxonomies'] = (
-                self.assetcol.num_taxonomies_by_site())
             if hasattr(readinput.exposure, 'exposures'):
                 self.datastore['assetcol/exposures'] = (
                     numpy.array(exposure.exposures, hdf5.vstr))
@@ -673,8 +671,6 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
-                self.datastore['assetcol/num_taxonomies'] = (
-                    self.assetcol.num_taxonomies_by_site())
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             else:
@@ -723,11 +719,12 @@ class HazardCalculator(BaseCalculator):
                           avg_losses=oq.avg_losses)
 
         # compute exposure stats
-        num_assets = list(
-            general.countby(self.assetcol.array, 'site_id').values())
-        self.datastore['assets_by_site'] = get_stats(num_assets)
-        num_taxos = self.assetcol.num_taxonomies_by_site()
-        self.datastore['taxonomies_by_site'] = get_stats(num_taxos)
+        if hasattr(self, 'assetcol'):
+            arr = self.assetcol.array
+            num_assets = list(general.countby(arr, 'site_id').values())
+            self.datastore['assets_by_site'] = get_stats(num_assets)
+            num_taxos = self.assetcol.num_taxonomies_by_site()
+            self.datastore['taxonomies_by_site'] = get_stats(num_taxos)
 
     def save_cache(self, **kw):
         """
