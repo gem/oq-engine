@@ -328,25 +328,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     'agg_maps-stats',
                     stats=[encode(name) for (name, func) in stats],
                     loss_types=loss_types, units=units)
-
-    def save_exposed_values(self):
-        """
-        Store 2^n arrays where n is the number of tagNames. For instance with
-        the tags country, occupancy it stores 2^2 = 4 arrays:
-
-        exposed_values/agg_country_occupancy
-        exposed_values/agg_country
-        exposed_values/agg_occupancy
-        exposed_values/agg_
-        """
-        tagnames = self.oqparam.aggregate_by
-        for n in range(len(tagnames) + 1):
-            for names in itertools.combinations(tagnames, n):
-                name = 'exposed_values/agg_' + '_'.join(names)
-                logging.info('Storing %s', name)
-                arr = self.assetcol.agg_value(self.oqparam.loss_names, *names)
-                self.datastore[name] = arr
-        
+     
     def post_execute(self, dummy):
         """
         Compute and store average losses from the losses_by_event dataset,
@@ -355,7 +337,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         if oq.avg_losses:
             self.datastore['avg_losses-stats'].attrs['stats'] = [b'mean']
-        self.save_exposed_values()
+        base.save_exposed_values(
+            self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))

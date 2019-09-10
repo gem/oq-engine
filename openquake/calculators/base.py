@@ -21,6 +21,7 @@ import abc
 import pdb
 import logging
 import operator
+import itertools
 import traceback
 from datetime import datetime
 from shapely import wkt
@@ -1001,3 +1002,20 @@ def import_gmfs(dstore, fname, sids):
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['weights'] = numpy.ones(1)
     return eids
+
+
+def save_exposed_values(dstore, assetcol, lossnames, tagnames):
+    """
+    Store 2^n arrays where n is the number of tagNames. For instance with
+    the tags country, occupancy it stores 2^2 = 4 arrays:
+
+    exposed_values/agg_country_occupancy
+    exposed_values/agg_country
+    exposed_values/agg_occupancy
+    exposed_values/agg_
+    """
+    for n in range(len(tagnames) + 1):
+        for names in itertools.combinations(tagnames, n):
+            name = 'exposed_values/agg_' + '_'.join(names)
+            logging.info('Storing %s', name)
+            dstore[name] = assetcol.agg_value(lossnames, *names)
