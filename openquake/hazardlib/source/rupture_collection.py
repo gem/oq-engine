@@ -54,8 +54,11 @@ class RuptureCollectionSource(ParametricSeismicSource):
         Bounding box containing all the hypocenters, enlarged by the
         maximum distance
         """
-        locations = [rup.hypocenter for rup in self.ruptures]
-        return get_bounding_box(locations, maxdist)
+        locations = []
+        for rup in self.ruptures:
+            locations.extend(rup.surface.mesh)
+        bbox = get_bounding_box(locations, maxdist)
+        return bbox
 
 
 def split(src, chunksize=MINWEIGHT):
