@@ -1609,15 +1609,15 @@ class GsimLogicTree(object):
         :returns: Realization objects
         """
         rlzs = []
-        groups = [[b for b in self.branches if b.trt == trt]
-                  for trt in self.values]
+        brlists = [sample([b for b in self.branches if b.trt == trt],
+                          n, seed + i) for i, trt in enumerate(self.values)]
         for i in range(n):
             weight = 1
             lt_path = []
             lt_uid = []
             value = []
-            for group in groups:
-                [branch] = sample(group, 1, seed + i)
+            for brlist in brlists:  # there is branch list for each TRT
+                branch = brlist[i]
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight
