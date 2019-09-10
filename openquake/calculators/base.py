@@ -53,6 +53,15 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
+stats_dt = numpy.dtype([('mean', F32), ('std', F32),
+                        ('min', F32), ('max', F32), ('len', U16)])
+
+
+def get_stats(seq):
+    std = numpy.nan if len(seq) == 1 else numpy.std(seq, ddof=1)
+    tup = (numpy.mean(seq), std, numpy.min(seq), numpy.max(seq), len(seq))
+    return numpy.array(tup, stats_dt)
+
 
 class InvalidCalculationID(Exception):
     """
@@ -712,6 +721,15 @@ class HazardCalculator(BaseCalculator):
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
                           avg_losses=oq.avg_losses)
+
+        # compute exposure stats
+        num_assets = list(
+            general.countby(self.assetcol.array, 'site_id').values())
+        self.datastore.set_attrs(
+            'assetcol', assets_by_site=get_stats(num_assets))
+        num_taxos = self.assetcol.num_taxonomies_by_site()
+        self.datastore.set_attrs(
+            'assetcol', taxonomies_by_site=get_stats(num_taxos))
 
     def save_cache(self, **kw):
         """
