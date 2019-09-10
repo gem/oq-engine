@@ -514,6 +514,33 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
+@extract.add('agg_curves')
+def extract_agg_curves(dstore, what):
+    """
+    Aggregate loss curves from the ebrisk calculator:
+
+    /extract/agg_curves?
+    kind=rlz-0&loss=absolute&tagName=occupancy&loss_type=occupants
+
+    Returns an array of shape P, T...
+    """
+    qdic = parse(what, get_info(dstore))
+    k = qdic['k']  # rlz or stat index
+    [l] = qdic['loss_type']  # loss type index
+    if qdic['rlzs']:
+        arr = dstore['agg_curves-rlzs'][:, k, l]  # shape P, T...
+    else:
+        arr = dstore['agg_curves-stats'][:, k, l]  # shape P, T...
+    tagnames = qdic['tagName']
+    if qdic['loss'] == ['absolute']:
+        return arr
+    elif qdic['loss'] == ['relative']:
+        evalue = dstore['exposed_values/agg_' + '_'.join(tagnames)][l]
+        return arr / evalue  # shape (P, T...) / T...
+    else:
+        raise ValueError('loss must be "absolute" or "relative"')
+
+
 @extract.add('agg_losses')
 def extract_agg_losses(dstore, what):
     """
