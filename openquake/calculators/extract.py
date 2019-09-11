@@ -520,25 +520,38 @@ def extract_agg_curves(dstore, what):
     Aggregate loss curves from the ebrisk calculator:
 
     /extract/agg_curves?
-    kind=rlz-0&loss=absolute&tagName=occupancy&loss_type=occupants
+    kind=stats&absolute=1&loss_type=occupants&occupancy=RES
 
-    Returns an array of shape P, T...
+    Returns an array of shape (P, S) or (P, R)
     """
-    qdic = parse(what, get_info(dstore))
+    info = get_info(dstore)
+    qdic = parse(what, info)
     k = qdic['k']  # rlz or stat index
     [l] = qdic['loss_type']  # loss type index
     if qdic['rlzs']:
+        cols = ['rlz-%d' % r for r in k]
         arr = dstore['agg_curves-rlzs'][:, k, l]  # shape P, T...
+        rps = dstore.get_attr('agg_curves-rlzs', 'return_periods')
     else:
+        cols = list(info['stats'])
         arr = dstore['agg_curves-stats'][:, k, l]  # shape P, T...
-    tagnames = qdic['tagName']
-    if qdic['loss'] == ['absolute']:
-        return arr
-    elif qdic['loss'] == ['relative']:
-        evalue = dstore['exposed_values/agg_' + '_'.join(tagnames)][l]
-        return arr / evalue  # shape (P, T...) / T...
+        rps = dstore.get_attr('agg_curves-stats', 'return_periods')
+    tagnames = sorted(set(qdic) - {'kind', 'loss_type', 'absolute',
+                                   'k', 'rlzs'})
+    if qdic['absolute'] == [1]:
+        pass
+    elif qdic['absolute'] == [0]:
+        aggname = '_'.join(['agg'] + tagnames)
+        evalue = dstore['exposed_values/' + aggname][l]  # shape T...
+        arr /= evalue
     else:
-        raise ValueError('loss must be "absolute" or "relative"')
+        raise ValueError('"absolute" must be 0 or 1 in %s' % what)
+    dtlist = [('return_period', U32)] + [(col, F32) for col in cols]
+    new = numpy.zeros(len(arr), dtlist)
+    new['return_period'] = rps
+    for i, col in enumerate(cols):
+        new[col] = arr[:, i]
+    return ArrayWrapper(new, {})
 
 
 @extract.add('agg_losses')
