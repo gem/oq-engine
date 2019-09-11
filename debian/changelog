@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug with a binning when disaggregating around the date line
   * Fixed a prefiltering bug with complex fault sources: in some cases, blocks
     ruptures were incorrectly discarded
   * Changed the sampling algorithm for the GMPE logic trees: now it does
