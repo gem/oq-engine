@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixed a bug in the ndk parser
+  
   [Michele Simionato]
   * Fixed a bug with the binning when disaggregating around the date line
   * Fixed a prefiltering bug with complex fault sources: in some cases, blocks
