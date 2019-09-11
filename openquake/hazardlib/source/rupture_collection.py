@@ -57,8 +57,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
         locations = []
         for rup in self.ruptures:
             locations.extend(rup.surface.mesh)
-        bbox = get_bounding_box(locations, maxdist)
-        return bbox
+        return get_bounding_box(locations, maxdist)
 
 
 def split(src, chunksize=MINWEIGHT):
