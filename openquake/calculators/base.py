@@ -1025,10 +1025,10 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
     exposed_values/agg_country_occupancy
     exposed_values/agg_country
     exposed_values/agg_occupancy
-    exposed_values/agg_
+    exposed_values/agg
     """
     for n in range(len(tagnames) + 1):
         for names in itertools.combinations(tagnames, n):
-            name = 'exposed_values/agg_' + '_'.join(names)
+            name = 'exposed_values/' + '_'.join(('agg',) + names)
             logging.info('Storing %s', name)
             dstore[name] = assetcol.agg_value(lossnames, *names)

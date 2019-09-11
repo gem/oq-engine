@@ -76,7 +76,8 @@ def tag2idx(tags):
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    aggvalue = dstore['exposed_values/agg_' + '_'.join(oq.aggregate_by)][()]
+    name = '_'.join(['agg'] + oq.aggregate_by)
+    aggvalue = dstore['exposed_values/' + name][()]
 
     lti = tag2idx(oq.loss_names)
     tagi = {tagname: tag2idx(getattr(assetcol.tagcol, tagname))
@@ -181,7 +182,8 @@ def export_agg_losses(ekey, dstore):
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assetcol = dstore['assetcol']
-    expvalue = dstore['exposed_values/agg_' + '_'.join(oq.aggregate_by)][()]
+    aggname = '_'.join(['agg'] + oq.aggregate_by)
+    expvalue = dstore['exposed_values/' + aggname][()]
     # shape (T1, T2, ..., L)
     tagnames = tuple(dstore['oqparam'].aggregate_by)
     header = ('loss_type',) + tagnames + (
