@@ -63,7 +63,8 @@ def get_info(dstore):
     num_rlzs = dstore['csm_info'].get_num_rlzs()
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
-                poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt())
+                poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
+                tagnames=oq.aggregate_by)
 
 
 def _normalize(kinds, info):
@@ -187,7 +188,8 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
-    scenario = 'scenario' in dstore['oqparam'].calculation_mode
+    oq = dstore['oqparam']
+    scenario = 'scenario' in oq.calculation_mode
     rlzs = dstore['csm_info'].rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
@@ -197,7 +199,10 @@ def extract_realizations(dstore, dummy):
     arr['weight'] = rlzs['weight']
     if scenario:
         gsims = dstore['csm_info/gsim_lt/branches']['uncertainty']
-        arr['branch_path'] = [repr(gsim) for gsim in gsims]
+        if 'shakemap' in oq.inputs:
+            gsims = ["[FromShakeMap]"]
+        arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')
+                              for gsim in gsims]  # quotes Excel-friendly
     else:
         arr['branch_path'] = rlzs['branch_path']
     return arr
@@ -510,6 +515,49 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
+@extract.add('agg_curves')
+def extract_agg_curves(dstore, what):
+    """
+    Aggregate loss curves from the ebrisk calculator:
+
+    /extract/agg_curves?
+    kind=stats&absolute=1&loss_type=occupants&tagname=occupancy&tagvalue=RES
+
+    Returns an array of shape (P, S, T...) or (P, R, T...)
+    """
+    info = get_info(dstore)
+    qdic = parse(what, info)
+    k = qdic['k']  # rlz or stat index
+    [l] = qdic['loss_type']  # loss type index
+    if qdic['rlzs']:
+        kinds = ['rlz-%d' % r for r in k]
+        arr = dstore['agg_curves-rlzs'][:, k, l]  # shape P, T...
+        rps = dstore.get_attr('agg_curves-rlzs', 'return_periods')
+    else:
+        kinds = list(info['stats'])
+        arr = dstore['agg_curves-stats'][:, k, l]  # shape P, T...
+        rps = dstore.get_attr('agg_curves-stats', 'return_periods')
+    tagnames = qdic.get('tagname', [])
+    if set(tagnames) != set(info['tagnames']):
+        raise ValueError('Expected tagnames=%s, got %s' %
+                         (info['tagnames'], tagnames))
+    tagvalues = qdic.get('tagvalue', [])
+    if qdic['absolute'] == [1]:
+        pass
+    elif qdic['absolute'] == [0]:
+        aggname = '_'.join(['agg'] + tagnames)
+        evalue = dstore['exposed_values/' + aggname][l]  # shape T...
+        arr /= evalue
+    else:
+        raise ValueError('"absolute" must be 0 or 1 in %s' % what)
+    attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
+    attrs['return_period'] = [numpy.nan] + list(rps)
+    attrs['kind'] = ['?'] + kinds
+    for tagname, tagvalue in zip(tagnames, tagvalues):
+        attrs[tagname] = [tagvalue]
+    return ArrayWrapper(arr, attrs)
+
+
 @extract.add('agg_losses')
 def extract_agg_losses(dstore, what):
     """
@@ -588,7 +636,7 @@ def extract_aggregate(dstore, what):
                           loss_types)
     for tagname in tagnames:
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
-    aw.tagnames = encode(tagnames)
+    aw.shape_descr = tagnames
     return aw
 
 
@@ -646,7 +694,7 @@ def extract_gmf_scenario_npz(dstore, what):
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
     data = dstore['gmf_data/data'][()]
-    rlz = dstore['events']['rlz']
+    rlz = dstore['events']['rlz_id']
     for rlzi in sorted(set(rlz)):
         idx = rlz[data['eid']] == rlzi
         gmfa = _gmf_scenario(data[idx], n, oq.imtls)
@@ -751,7 +799,7 @@ def extract_mfd(dstore, what):
 #     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
 #     weights = [rlz.weight['default'] for rlz in rlzs]
 #     duration = oq.investigation_time * oq.ses_per_logic_tree_path
-#     mag = dict(dstore['ruptures']['serial', 'mag'])
+#     mag = dict(dstore['ruptures']['rup_id', 'mag'])
 #     mags = numpy.unique(dstore['ruptures']['mag'])
 #     mags.sort()
 #     magidx = {mag: idx for idx, mag in enumerate(mags)}
@@ -824,13 +872,13 @@ def _get(dstore, name):
 
 
 @extract.add('rupture')
-def extract_rupture(dstore, serial):
+def extract_rupture(dstore, rup_id):
     """
     Extract information about the given event index.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/rupture/1066
     """
-    ridx = list(dstore['ruptures']['serial']).index(int(serial))
+    ridx = list(dstore['ruptures']['rup_id']).index(int(rup_id))
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     yield from getter.get_rupdict().items()
 
@@ -843,11 +891,11 @@ def extract_event_info(dstore, eidx):
     http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
     """
     event = dstore['events'][int(eidx)]
-    serial = int(event['id'] // TWO32)
-    ridx = list(dstore['ruptures']['serial']).index(serial)
+    rup_id = event['rup_id']
+    ridx = list(dstore['ruptures']['rup_id']).index(rup_id)
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
-    rlzi = event['rlz']
+    rlzi = event['rlz_id']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     gsim = rlzs_assoc.gsim_by_trt[rlzi][rupdict['trt']]
     for key, val in rupdict.items():
@@ -884,8 +932,11 @@ def extract_source_geom(dstore, srcidxs):
         yield rec['source_id'], geom
 
 
-def disagg_key(imt, sid, poe_id):
-    return '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
+def disagg_output(dstore, imt, sid, poe_id):
+    key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
+    for name, out in dstore['disagg'].items():
+        if name.endswith(key):
+            return out
 
 
 @extract.add('disagg')
@@ -901,7 +952,7 @@ def extract_disagg(dstore, what):
     imt = qdict['imt'][0]
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    dset = dstore['disagg/' + disagg_key(imt, sid, poe_idx)]
+    dset = disagg_output(dstore, imt, sid, poe_idx)
     matrix = dset[label][()]
 
     # adapted from the nrml_converters
@@ -938,7 +989,7 @@ def extract_disagg_layer(dstore, what):
     [label] = qdict['kind']
     [imt] = qdict['imt']
     poe_id = int(qdict['poe_id'][0])
-    grp = dstore['disagg/' + disagg_key(imt, 0, poe_id)]
+    grp = disagg_output(dstore, imt, 0, poe_id)
     dset = grp[label]
     edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
     dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
@@ -949,7 +1000,7 @@ def extract_disagg_layer(dstore, what):
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         if sid > 0:
-            grp = dstore['disagg/' + disagg_key(imt, sid, poe_id)]
+            grp = disagg_output(dstore, imt, sid, poe_id)
             rec['site_id'] = sid
             rec['lon'] = lon
             rec['lat'] = lat
