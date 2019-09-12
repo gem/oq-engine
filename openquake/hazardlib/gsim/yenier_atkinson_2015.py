@@ -19,7 +19,6 @@
 """
 Module exports :class:`YenierAtkinson2015BSSA`
 """
-
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -64,13 +63,13 @@ class YenierAtkinson2015BSSA(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     #: Required site parameter is Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30'))
+    REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(['mag'])
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
     #: Required distance measures is Rrup
-    REQUIRES_DISTANCES = set(['rrup'])
+    REQUIRES_DISTANCES = set(('rrup',))
 
     def __init__(self, focal_depth=None, region='CENA'):
         self.focal_depth = focal_depth
