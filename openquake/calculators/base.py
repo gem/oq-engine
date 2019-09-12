@@ -725,6 +725,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assets_by_site'] = get_stats(num_assets)
             num_taxos = self.assetcol.num_taxonomies_by_site()
             self.datastore['taxonomies_by_site'] = get_stats(num_taxos)
+            save_exposed_values(
+                self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
     def save_cache(self, **kw):
         """
@@ -1022,13 +1024,18 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
     Store 2^n arrays where n is the number of tagNames. For instance with
     the tags country, occupancy it stores 2^2 = 4 arrays:
 
-    exposed_values/agg_country_occupancy
-    exposed_values/agg_country
-    exposed_values/agg_occupancy
-    exposed_values/agg
+    exposed_values/agg_country_occupancy  # shape (T1, T2, L)
+    exposed_values/agg_country            # shape (T1, L)
+    exposed_values/agg_occupancy          # shape (T2, L)
+    exposed_values/agg                    # shape (L,)
     """
     for n in range(len(tagnames) + 1):
         for names in itertools.combinations(tagnames, n):
             name = 'exposed_values/' + '_'.join(('agg',) + names)
             logging.info('Storing %s', name)
             dstore[name] = assetcol.agg_value(lossnames, *names)
+            attrs = dict(shape_descr=names + ('loss_name',),
+                         loss_name=lossnames)
+            for tagname in tagnames:
+                attrs[tagname] = getattr(assetcol.tagcol, tagname)[1:]
+            dstore.set_attrs(name, **attrs)
