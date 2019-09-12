@@ -418,16 +418,21 @@ class ArrayWrapper(object):
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
     """
     @classmethod
-    def from_(cls, obj):
+    def from_(cls, obj, extra='value'):
         if isinstance(obj, cls):  # it is already an ArrayWrapper
             return obj
         elif inspect.isgenerator(obj):
             array, attrs = (), dict(obj)
         elif hasattr(obj, '__toh5__'):
             return obj
+        elif hasattr(obj, 'attrs'):  # is a dataset
+            array, attrs = obj[()], dict(obj.attrs)
+            shape_descr = attrs.get('shape_descr', [])
+            for descr in map(decode, shape_descr):
+                attrs[descr] = ['?'] + list(attrs[descr])
         else:  # assume obj is an array
             array, attrs = obj, {}
-        return cls(array, attrs)
+        return cls(array, attrs, (extra,))
 
     def __init__(self, array, attrs, extra=('value',)):
         vars(self).update(attrs)
@@ -488,6 +493,17 @@ class ArrayWrapper(object):
             for k, v in extra.items():
                 f.attrs[k] = maybe_encode(v)
 
+    def sum_all(self, *tags):
+        """
+        Reduce the underlying array by summing on the given dimensions
+        """
+        tag2idx = {tag: i for i, tag in enumerate(self.shape_descr)}
+        array = self.array.sum(axis=tuple(tag2idx[tag] for tag in tags))
+        attrs = vars(self).copy()
+        attrs['shape_descr'] = [tag for tag in self.shape_descr
+                                if tag not in tags]
+        return self.__class__(array, attrs)
+
     def to_table(self):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
@@ -496,18 +512,23 @@ class ArrayWrapper(object):
         length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
-        >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
+        >>> dic = dict(shape_descr=['taxonomy', 'occupancy'],
         ...            taxonomy=['?', 'RC', 'WOOD'],
         ...            occupancy=['?', 'RES', 'IND', 'COM'])
         >>> arr = numpy.zeros((2, 3))
         >>> arr[0, 0] = 2000
         >>> arr[0, 1] = 5000
         >>> arr[1, 0] = 500
-        >>> pprint(ArrayWrapper(arr, dic).to_table())
+        >>> aw = ArrayWrapper(arr, dic)
+        >>> pprint(aw.to_table())
         [('taxonomy', 'occupancy', 'value'),
          ('RC', 'RES', 2000.0),
          ('RC', 'IND', 5000.0),
          ('WOOD', 'RES', 500.0)]
+        >>> pprint(aw.sum_all('taxonomy').to_table())
+        [('occupancy', 'value'), ('RES', 2500.0), ('IND', 5000.0)]
+        >>> pprint(aw.sum_all('occupancy').to_table())
+        [('taxonomy', 'value'), ('RC', 7000.0), ('WOOD', 500.0)]
         """
         shape = self.shape
         tup = len(self._extra) > 1
@@ -516,18 +537,17 @@ class ArrayWrapper(object):
                 raise ValueError(
                     'There are %d extra-fields but %d dimensions in %s' %
                     (len(self._extra), shape[-1], self))
-        tagnames = decode_array(self.tagnames)
-        # the tagnames are bytestrings so they must be decoded
-        fields = tuple(tagnames) + self._extra
+        shape_descr = tuple(decode(d) for d in self.shape_descr)
+        fields = shape_descr + self._extra
         out = []
         tags = []
         idxs = []
-        for i, tagname in enumerate(tagnames):
+        for i, tagname in enumerate(shape_descr):
             values = getattr(self, tagname)[1:]
             if len(values) != shape[i]:
                 raise ValueError(
-                    'The tag %s[%d] with %d values is inconsistent with %s'
-                    % (tagname, i, len(values), self))
+                    'The tag %s with %d values is inconsistent with %s'
+                    % (tagname, len(values), self))
             tags.append(decode_array(values))
             idxs.append(range(len(values)))
         for idx, values in zip(itertools.product(*idxs),
@@ -619,6 +639,8 @@ def parse_comment(comment):
     [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
     """
     names, vals = [], []
+    if comment.startswith('"'):
+        comment = comment[1:-1]
     pieces = comment.split('=')
     for i, piece in enumerate(pieces):
         if i == 0:  # first line
@@ -663,7 +685,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=','):
         while True:
             first = next(f)
             if first.startswith('#'):
-                attrs = dict(parse_comment(first[1:]))
+                attrs = dict(parse_comment(first.strip('#,\n')))
                 continue
             break
         header = first.strip().split(sep)

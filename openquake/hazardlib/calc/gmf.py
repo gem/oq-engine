@@ -28,7 +28,6 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.imt import from_string
 
-U64 = numpy.uint64
 U32 = numpy.uint32
 F32 = numpy.float32
 
@@ -116,11 +115,6 @@ class GmfComputer(object):
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
 
-    @property
-    def weight(self):
-        """The number of affected sites"""
-        return len(self.sids)
-
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
         :returns: [(sid, eid, gmv), ...]
@@ -156,7 +150,9 @@ class GmfComputer(object):
                         if gmv.sum():
                             data.append((sid, eid, gmv))
                 n += e
-        return data
+        m = (len(min_iml),)
+        gmv_dt = [('sid', U32), ('eid', U32), ('gmv', (F32, m))]
+        return numpy.array(data, gmv_dt)
 
     def compute(self, gsim, num_events, seed=None):
         """
@@ -168,8 +164,8 @@ class GmfComputer(object):
             two arrays with shape (num_imts, num_events): sig for stddev_inter
             and eps for the random part
         """
-        try:  # read the seed from self.rupture.serial
-            seed = seed or self.rupture.serial
+        try:  # read the seed from self.rupture.rup_id
+            seed = seed or self.rupture.rup_id
         except AttributeError:
             pass
         if seed is not None:

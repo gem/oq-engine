@@ -1,2 +1,3 @@
+#,,,,,,,"generated_by='OpenQuake engine 3.7.0-git32c45d90c9', start_date='2019-09-10T03:56:55', checksum=3351128348, investigation_time=5.0, risk_investigation_time=50.0"
 cresta,id,occupancy,state,taxonomy,lon,lat,structural
-"0.11","a1","Res","01","tax1",-122.00000,38.11300,1.09696E+03
+"0.11","a1","Res","01","tax1",-122.00000,38.11300,2.54883E+03

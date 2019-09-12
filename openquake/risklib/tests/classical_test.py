@@ -147,7 +147,8 @@ class ClassicalTestCase(unittest.TestCase):
 
         vf = scientific.VulnerabilityFunction(
             'VF', 'PGA', self.imls, self.mean_loss_ratios, self.covs, "BT")
-
+        vf.seed = 42
+        vf.init()
         loss_ratios = tuple(vf.mean_loss_ratios_with_steps(5))
         lrem = vf.loss_ratio_exceedance_matrix(loss_ratios)
         numpy.testing.assert_allclose(
@@ -175,6 +176,8 @@ class ClassicalTestCase(unittest.TestCase):
 
         vulnerability_function = scientific.VulnerabilityFunction(
             'VF', 'PGA', imls, loss_ratios, covs, "LN")
+        vulnerability_function.seed = 42
+        vulnerability_function.init()
         ratios = tuple(vulnerability_function.mean_loss_ratios_with_steps(2))
 
         loss_ratio_curve = scientific.classical(

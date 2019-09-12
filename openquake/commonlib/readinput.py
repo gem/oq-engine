@@ -321,7 +321,7 @@ def get_mesh(oqparam):
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
              else sorted(coords[start:stop]))
-        return geo.Mesh.from_coords(c)
+        return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
@@ -530,7 +530,7 @@ def get_rupture(oqparam):
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.serial = oqparam.random_seed
+    rup.rup_id = oqparam.random_seed
     return rup
 
 
@@ -630,7 +630,7 @@ def get_composite_source_model(oqparam, h5=None, in_memory=True,
         return csm
 
     if oqparam.is_event_based():
-        # initialize the rupture serial numbers before splitting/filtering; in
+        # initialize the rupture rup_id numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
 

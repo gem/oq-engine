@@ -1,4 +1,4 @@
-# generated_by='OpenQuake engine 3.6.0-gitc18b5d90a7', start_date='2019-06-19T14:30:32', checksum=87673300, investigation_time=200.0, ses_per_logic_tree_path=3
+#,,,,,,,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:19:17', checksum=87673300, investigation_time=200.0, ses_per_logic_tree_path=3"
 rupid	multiplicity	mag	centroid_lon	centroid_lat	centroid_depth	trt	strike	dip	rake	boundary
 1067	1	5.850000E+00	-1.222000E+02	3.690000E+01	6.000000E+00	Active Shallow Crust	4.497391E+01	9.000000E+01	0.000000E+00	MULTIPOLYGON(((-122.24072 36.86742 2.585,-122.15924 36.93257 2.585,-122.15924 36.93257 9.415,-122.24072 36.86742 9.415,-122.24072 36.86742 2.585)))
 66604	1	5.550000E+00	-1.218000E+02	3.730000E+01	3.000000E+00	Active Shallow Crust	0.000000E+00	9.000000E+01	0.000000E+00	MULTIPOLYGON(((-121.80000 37.26624 0.497,-121.80000 37.33376 0.497,-121.80000 37.33376 5.503,-121.80000 37.26624 5.503,-121.80000 37.26624 0.497)))

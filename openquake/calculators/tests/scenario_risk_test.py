@@ -208,3 +208,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
         [fname] = export(('agglosses', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
+
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)

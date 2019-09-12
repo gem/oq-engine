@@ -29,7 +29,7 @@ def reduce_sm(calc_id):
     with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'][()]
-        ok = info['weight'] > 0
+        ok = info['calc_time'] > 0
         source_ids = set(info[ok]['source_id'])
     if ok.sum() == 0:
         raise RuntimeError('All sources were filtered away!')
