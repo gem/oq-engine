@@ -1038,7 +1038,7 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
             aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
         elif lt in assetcol.fields:
             aval[array['ordinal'], lti] = array['value-' + lt]
-    for n in range(len(tagnames) + 1):
+    for n in range(len(tagnames) + 1, -1, -1):
         for names in itertools.combinations(tagnames, n):
             name = 'exposed_values/' + '_'.join(('agg',) + names)
             logging.info('Storing %s', name)
