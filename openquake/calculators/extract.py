@@ -63,7 +63,8 @@ def get_info(dstore):
     num_rlzs = dstore['csm_info'].get_num_rlzs()
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
-                poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt())
+                poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
+                tagnames=oq.aggregate_by)
 
 
 def _normalize(kinds, info):
@@ -520,24 +521,27 @@ def extract_agg_curves(dstore, what):
     Aggregate loss curves from the ebrisk calculator:
 
     /extract/agg_curves?
-    kind=stats&absolute=1&loss_type=occupants&occupancy=RES
+    kind=stats&absolute=1&loss_type=occupants&tagname=occupancy&tagvalue=RES
 
-    Returns an array of shape (P, S) or (P, R)
+    Returns an array of shape (P, S, T...) or (P, R, T...)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
     k = qdic['k']  # rlz or stat index
     [l] = qdic['loss_type']  # loss type index
     if qdic['rlzs']:
-        cols = ['rlz-%d' % r for r in k]
+        kinds = ['rlz-%d' % r for r in k]
         arr = dstore['agg_curves-rlzs'][:, k, l]  # shape P, T...
         rps = dstore.get_attr('agg_curves-rlzs', 'return_periods')
     else:
-        cols = list(info['stats'])
+        kinds = list(info['stats'])
         arr = dstore['agg_curves-stats'][:, k, l]  # shape P, T...
         rps = dstore.get_attr('agg_curves-stats', 'return_periods')
-    tagnames = sorted(set(qdic) - {'kind', 'loss_type', 'absolute',
-                                   'k', 'rlzs'})
+    tagnames = qdic.get('tagname', [])
+    if set(tagnames) != set(info['tagnames']):
+        raise ValueError('Expected tagnames=%s, got %s' %
+                         (info['tagnames'], tagnames))
+    tagvalues = qdic.get('tagvalue', [])
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
@@ -546,12 +550,12 @@ def extract_agg_curves(dstore, what):
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
-    dtlist = [('return_period', U32)] + [(col, F32) for col in cols]
-    new = numpy.zeros(len(arr), dtlist)
-    new['return_period'] = rps
-    for i, col in enumerate(cols):
-        new[col] = arr[:, i]
-    return ArrayWrapper(new, {})
+    attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
+    attrs['return_period'] = [numpy.nan] + list(rps)
+    attrs['kind'] = ['?'] + kinds
+    for tagname, tagvalue in zip(tagnames, tagvalues):
+        attrs[tagname] = [tagvalue]
+    return ArrayWrapper(arr, attrs)
 
 
 @extract.add('agg_losses')
