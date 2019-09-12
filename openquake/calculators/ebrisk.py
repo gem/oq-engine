@@ -336,8 +336,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         if oq.avg_losses:
             self.datastore['avg_losses-stats'].attrs['stats'] = [b'mean']
-        base.save_exposed_values(
-            self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))

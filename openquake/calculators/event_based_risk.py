@@ -275,8 +275,6 @@ class EbrCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         loss_types = oq.loss_dt().names
-        base.save_exposed_values(
-            self.datastore, self.assetcol, loss_types, oq.aggregate_by)
         logging.info('Saving event loss table')
         elt_dt = numpy.dtype(
             [('event_id', U32), ('rlzi', U16), ('loss', (F32, (self.L,)))])

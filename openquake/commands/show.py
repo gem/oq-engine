@@ -20,10 +20,10 @@ import os
 import logging
 
 from openquake.baselib import sap
-from openquake.baselib import datastore
+from openquake.baselib import datastore, hdf5
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib import util
-from openquake.calculators.views import view
+from openquake.calculators.views import view, rst_table
 from openquake.calculators.extract import extract
 
 
@@ -69,11 +69,15 @@ def show(what='contents', calc_id=-1, extra=()):
     elif what.split('/', 1)[0] in extract:
         print(extract(ds, what, *extra))
     elif what in ds:
-        obj = ds[what]
+        obj = ds.getitem(what)
         if hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
         else:  # is a single dataset
-            print(write_csv(io.BytesIO(), obj[()]).decode('utf8'))
+            aw = hdf5.ArrayWrapper.from_(obj)
+            if hasattr(aw, 'shape_descr'):
+                print(rst_table(aw.to_table()))
+            else:
+                print(write_csv(io.BytesIO(), aw.array).decode('utf8'))
     else:
         print('%s not found' % what)
 
