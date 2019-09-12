@@ -136,22 +136,22 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # extract agg_curves
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1')
-        tmp = gettemp(rst_table(aw))
+        tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves1.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
                      'loss_type=structural&absolute=1')
-        tmp = gettemp(rst_table(aw))
+        tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves2.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=0')
-        tmp = gettemp(rst_table(aw))
+        tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves3.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
                      'loss_type=structural&absolute=0')
-        tmp = gettemp(rst_table(aw))
+        tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves4.csv', tmp)
 
         # TODO: fix extract agg_curves for insured types
