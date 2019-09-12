@@ -873,6 +873,20 @@ def group_array(array, *kfields):
     return groupby(array, operator.itemgetter(*kfields), _reducerecords)
 
 
+class FastAgg(object):
+    def __init__(self, keys):
+        self.uniq, self.inv = numpy.unique(keys, return_inverse=True)
+
+    def __call__(self, values):
+        assert len(values) == len(self.inv), (len(values), len(self.inv))
+        shp = values.shape[1:]
+        res = numpy.zeros((len(self.uniq),) + shp, values.dtype)
+        for idx, _ in numpy.ndenumerate(numpy.zeros(shp)):
+            tup = (slice(None),) + idx
+            res[tup] = numpy.bincount(self.inv, values[tup])
+        return res
+
+
 def count(groupiter):
     return sum(1 for row in groupiter)
 
