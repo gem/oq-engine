@@ -2,17 +2,17 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.5">
     <logicTree logicTreeID="lt1">
-            <logicTreeBranchSet uncertaintyType="gmpeModel"
-                    branchSetID="bs1"
-                    applyToTectonicRegionType="Active Shallow Crust">
-
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>
-                    ChiouYoungs2008
-                    </uncertaintyModel>
+			ssm/shallow/shallow_faults.xml
+			</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
-
             </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
     </logicTree>
 </nrml>
+
