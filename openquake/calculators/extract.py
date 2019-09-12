@@ -888,8 +888,11 @@ def extract_source_geom(dstore, srcidxs):
         yield rec['source_id'], geom
 
 
-def disagg_key(imt, sid, poe_id):
-    return '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
+def disagg_output(dstore, imt, sid, poe_id):
+    key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
+    for name, out in dstore['disagg'].items():
+        if name.endswith(key):
+            return out
 
 
 @extract.add('disagg')
@@ -905,7 +908,7 @@ def extract_disagg(dstore, what):
     imt = qdict['imt'][0]
     poe_idx = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    dset = dstore['disagg/' + disagg_key(imt, sid, poe_idx)]
+    dset = disagg_output(dstore, imt, sid, poe_idx)
     matrix = dset[label][()]
 
     # adapted from the nrml_converters
@@ -942,7 +945,7 @@ def extract_disagg_layer(dstore, what):
     [label] = qdict['kind']
     [imt] = qdict['imt']
     poe_id = int(qdict['poe_id'][0])
-    grp = dstore['disagg/' + disagg_key(imt, 0, poe_id)]
+    grp = disagg_output(dstore, imt, 0, poe_id)
     dset = grp[label]
     edges = {k: grp.attrs[k] for k in grp.attrs if k.endswith('_edges')}
     dt = [('site_id', U32), ('lon', F32), ('lat', F32), ('rlz', U32),
@@ -953,7 +956,7 @@ def extract_disagg_layer(dstore, what):
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         if sid > 0:
-            grp = dstore['disagg/' + disagg_key(imt, sid, poe_id)]
+            grp = disagg_output(dstore, imt, sid, poe_id)
             rec['site_id'] = sid
             rec['lon'] = lon
             rec['lat'] = lat
