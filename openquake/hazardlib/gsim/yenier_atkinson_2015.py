@@ -19,7 +19,6 @@
 """
 Module exports :class:`YenierAtkinson2015BSSA`
 """
-
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -64,13 +63,13 @@ class YenierAtkinson2015BSSA(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     #: Required site parameter is Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30'))
+    REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(['mag'])
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
     #: Required distance measures is Rrup
-    REQUIRES_DISTANCES = set(['rrup'])
+    REQUIRES_DISTANCES = set(('rrup',))
 
     def __init__(self, focal_depth=None, region='CENA'):
         self.focal_depth = focal_depth
@@ -79,7 +78,8 @@ class YenierAtkinson2015BSSA(GMPE):
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         # Compute focal depth if not set at the initialization level
         if self.focal_depth is None:
-            self.focal_depth = rctx.hypocenter.depth
+            self.focal_depth = 10
+#            self.focal_depth = rctx.hypocenter.depth
         mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
         stddevs = np.zeros_like(sctx.vs30)
         return mean, stddevs
@@ -162,19 +162,19 @@ class YenierAtkinson2015BSSA(GMPE):
         # Pseudo depth - see eq. 6 at page 1991
         pseudo_depth = 10**(-0.405+0.235*m)
         # Effective distance - see eq. 5 at page 1991
-        effr = (rrup**2+pseudo_depth**2)**0.5
+        reff = (rrup**2+pseudo_depth**2)**0.5
         # The transition_distance is 50 km as defined just below eq. 8
         transition_dst = 50.
         # Geometrical spreading rates
         b1 = -1.3
         b2 = -0.5
         # Geometrical attenuation
-        z = effr**b1
-        ratio_a = effr / transition_dst
-        z[effr > transition_dst] *= (transition_dst**b1 *
-                                     ratio_a[effr > transition_dst]**b2)
+        z = reff**b1
+        ratio_a = reff / transition_dst
+        z[reff > transition_dst] = (transition_dst**b1 *
+                                     (ratio_a[reff > transition_dst])**b2)
         # Compute geometrical spreading function
-        ratio_b = effr / (1.+pseudo_depth**2)**0.5
+        ratio_b = reff / (1.+pseudo_depth**2)**0.5
         return np.log(z) + (C['b3'] + C['b4']*m)*np.log(ratio_b)
 
     def _get_f_gamma(self, C, imt, rrup):
@@ -220,14 +220,14 @@ class YenierAtkinson2015BSSA(GMPE):
         """
         region = self.region
         if region == 'CENA':
-            # See equation 23 page 2003 of Yenier and Atkinson
+            # See equations 24 and 25 page 2003 of Yenier and Atkinson
             if str(imt) == 'PGA':
                 delta_b3 = 0.030
             elif str(imt) == 'PGV':
                 delta_b3 = 0.052
             elif imt.period <= 10.:
                 tmp = 0.095*np.log(imt.period/0.065)
-                delta_b3 = np.min([0.095, 0.030*np.max([0, tmp])])
+                delta_b3 = np.min([0.095, 0.030+np.max([0, tmp])])
             else:
                 msg = 'This region is not supported by the Ce calibration term'
                 raise ValueError(msg)
