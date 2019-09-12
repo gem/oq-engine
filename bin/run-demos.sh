@@ -44,6 +44,10 @@ oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
 
 # run ebrisk
 oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
+oq show exposed_values/agg_NAME_1_taxonomy
+oq show exposed_values/agg_NAME_1
+oq show exposed_values/agg_taxonomy
+oq show exposed_values/agg
 
 # display the calculations
 oq db find %
