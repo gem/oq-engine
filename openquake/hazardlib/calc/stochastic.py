@@ -36,7 +36,6 @@ TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
@@ -86,7 +85,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
+    ('rup_id', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
     ('n_occ', U16), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
     ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
@@ -113,19 +112,20 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         assert sy < TWO16, 'Too many multisurfaces: %d' % sy
         assert sz < TWO16, 'The rupture mesh spacing is too small'
         points = mesh.reshape(3, -1).T   # shape (n, 3)
-        minlon = points[:, 0].min()
-        minlat = points[:, 1].min()
-        maxlon = points[:, 0].max()
-        maxlat = points[:, 1].max()
-        if srcfilter.integration_distance and len(srcfilter.close_sids(
-                (minlon, minlat, maxlon, maxlat),
-                rup.tectonic_region_type, rup.mag)) == 0:
+        rec = numpy.zeros(1, rupture_dt)
+        rec['minlon'] = points[:, 0].min()
+        rec['minlat'] = points[:, 1].min()
+        rec['maxlon'] = points[:, 0].max()
+        rec['maxlat'] = points[:, 1].max()
+        rec['mag'] = rup.mag
+        if srcfilter.integration_distance and len(
+                srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
+        tup = (ebrupture.rup_id, ebrupture.srcidx, ebrupture.grp_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat,
+               rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat'],
                hypo, offset, offset + len(points), sy, sz)
         offset += len(points)
         rups.append(tup)
