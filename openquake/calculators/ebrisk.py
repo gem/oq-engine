@@ -257,10 +257,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             num_cores=num_cores, hdf5path=self.datastore.filename)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
-        self.datastore.set_attrs('gmf_info', events_per_sid=self.events_per_sid)
-        logging.info('Produced %s of GMFs', general.humansize(gmf_bytes))
-        logging.info('Produced %s of losses',
-                     general.humansize(self.lossbytes))
+        self.datastore.set_attrs(
+            'gmf_info', events_per_sid=self.events_per_sid)
+        logging.info(
+            'Produced %s of GMFs', general.humansize(gmf_bytes))
+        logging.info(
+            'Produced %s of losses', general.humansize(self.lossbytes))
         return res
 
     def agg_dicts(self, acc, dic):
