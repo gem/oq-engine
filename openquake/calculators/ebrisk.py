@@ -102,7 +102,7 @@ def _calc_risk(hazard, param, monitor):
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
                     losses_by_lt[lt] = losses
-                    acc['lossbytes'] += losses.nbytes
+                    acc['lossbytes'] += losses.nbytes + 8 * len(losses)
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     arr[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
