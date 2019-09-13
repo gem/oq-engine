@@ -39,8 +39,10 @@ import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 
 
 def duplicated(items):
@@ -871,6 +873,65 @@ def group_array(array, *kfields):
     Convert an array into a dict kfields -> array
     """
     return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+
+
+def multi_index(shape, axis=None):
+    """
+    :param shape: a shape of lenght L with P = S1 * S2 * ... * SL
+    :param axis: None or an integer in the range 0 .. L -1
+    :yields: tuples of indices containing a slice(None) at the axis position
+    """
+    if any(s > TWO16 for s in shape):
+        raise ValueError('Shape too big: ' + str(shape))
+    ranges = (range(s) for s in shape)
+    if axis is None:
+        yield from itertools.product(*ranges)
+    for tup in itertools.product(*ranges):
+        lst = list(tup)
+        lst.insert(axis, slice(None))
+        yield tuple(lst)
+
+
+def fast_agg(values, indices, axis=0):
+    """
+    :param values: N values (can be arrays)
+    :param indices: N indices in the range 0 ... M - 1 with M < N
+    :returns: M aggregated values (can be arrays)
+
+    >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
+    >>> fast_agg(values, [0, 1, 1, 0])
+    array([[0.5 , 0.55],
+           [0.5 , 0.55]])
+    """
+    N = len(values)
+    if len(indices) != N:
+        raise ValueError('There are %d values but %d indices' %
+                         (N, len(indices)))
+    shp = values.shape[1:]
+    if not shp:
+        return numpy.bincount(indices, values)
+    M = max(indices) + 1
+    lst = list(shp)
+    lst.insert(axis, M)
+    res = numpy.zeros(lst, values.dtype)
+    for mi in multi_index(shp, axis):
+        res[mi] = numpy.bincount(indices, values[mi])
+    return res
+
+
+def fast_agg2(values, tags, axis=0):
+    """
+    :param values: N values (can be arrays)
+    :param tags: N non-unique tags out of M
+    :returns: (M unique tags, M aggregated values)
+
+    >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
+    >>> fast_agg2(values, ['A', 'B', 'B', 'A'])
+    (array(['A', 'B'], dtype='<U1'), array([[0.5 , 0.55],
+           [0.5 , 0.55]]))
+    """
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    return uniq, fast_agg(values, indices, axis)
 
 
 class FastAgg(object):
