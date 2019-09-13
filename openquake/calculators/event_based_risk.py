@@ -57,6 +57,7 @@ def build_loss_tables(dstore):
     tbl['rup_id'] = rupids
     for li, name in enumerate(oq.loss_names):
         tbl[name] = losses_by_rupid[:, li]
+    tbl.sort(order=oq.loss_names[0])
     dstore['rup_loss_table'] = tbl
 
 
