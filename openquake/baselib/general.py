@@ -928,9 +928,14 @@ def fast_agg2(tags, values=None, axis=0):
     :returns: (M unique tags, M aggregated values)
 
     >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
-    >>> fast_agg2(values, ['A', 'B', 'B', 'A'])
+    >>> fast_agg2(['A', 'B', 'B', 'A'], values)
     (array(['A', 'B'], dtype='<U1'), array([[0.5 , 0.55],
            [0.5 , 0.55]]))
+
+    It can also be used to count the number of tags:
+
+    >>> fast_agg2(['A', 'B', 'B', 'A', 'A'])
+    (array(['A', 'B'], dtype='<U1'), array([3., 2.]))
     """
     uniq, indices = numpy.unique(tags, return_inverse=True)
     return uniq, fast_agg(indices, values, axis)
