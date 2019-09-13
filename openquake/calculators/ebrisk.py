@@ -67,7 +67,7 @@ def _calc_risk(hazard, param, monitor):
     elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shape[1:]))]
     acc = dict(elt=numpy.zeros(shape, F32),  # shape (E, L, T...)
                alt=numpy.zeros((A, E, L), F32) if param['asset_loss_table']
-               else None, gmf_info=[], events_per_sid=0)
+               else None, gmf_info=[], events_per_sid=0, lossbytes=0)
     arr = acc['elt']
     alt = acc['alt']
     lba = param['lba']
@@ -102,6 +102,7 @@ def _calc_risk(hazard, param, monitor):
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
                     losses_by_lt[lt] = losses
+                    acc['lossbytes'] += losses.nbytes
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     arr[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
@@ -250,12 +251,18 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
+        self.lossbytes = 0
         smap = parallel.Starmap(
             self.core_task.__func__, allargs,
             num_cores=num_cores, hdf5path=self.datastore.filename)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
-        logging.info('Produced %s of GMFs', general.humansize(gmf_bytes))
+        self.datastore.set_attrs(
+            'gmf_info', events_per_sid=self.events_per_sid)
+        logging.info(
+            'Produced %s of GMFs', general.humansize(gmf_bytes))
+        logging.info(
+            'Produced %s of losses', general.humansize(self.lossbytes))
         return res
 
     def agg_dicts(self, acc, dic):
@@ -280,6 +287,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 idx = numpy.argsort(eids)  # indices sorting the eids
                 self.datastore['asset_loss_table'][:, eids[idx]] = alt[:, idx]
         self.events_per_sid.append(dic['events_per_sid'])
+        self.lossbytes += dic['lossbytes']
         return 1
 
     def get_shape(self, *sizes):
