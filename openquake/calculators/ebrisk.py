@@ -102,12 +102,12 @@ def _calc_risk(hazard, param, monitor):
                     if param['asset_loss_table']:
                         alt[aid, eidx, lti] = losses
                     losses_by_lt[lt] = losses
-                    acc['lossbytes'] += losses.nbytes + 8 * len(losses)
                 for loss_idx, losses in lba.compute(asset, losses_by_lt):
                     arr[(eidx, loss_idx) + tagidxs] += losses
                     if param['avg_losses']:
                         lba.losses_by_A[aid, loss_idx] += (
                             losses @ ws * param['ses_ratio'])
+                    acc['lossbytes'] += losses.nbytes
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['gmf_info'] = numpy.array(
