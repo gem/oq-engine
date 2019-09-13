@@ -879,7 +879,8 @@ def multi_index(shape, axis=None):
     """
     :param shape: a shape of lenght L with P = S1 * S2 * ... * SL
     :param axis: None or an integer in the range 0 .. L -1
-    :yields: tuples of indices containing a slice(None) at the axis position
+    :yields:
+        P tuples of indices with a slice(None) at the axis position (if any)
     """
     if any(s >= TWO16 for s in shape):
         raise ValueError('Shape too big: ' + str(shape))
