@@ -546,8 +546,8 @@ class ArrayWrapper(object):
             values = getattr(self, tagname)[1:]
             if len(values) != shape[i]:
                 raise ValueError(
-                    'The tag %s[%d] with %d values is inconsistent with %s'
-                    % (tagname, i, len(values), self))
+                    'The tag %s with %d values is inconsistent with %s'
+                    % (tagname, len(values), self))
             tags.append(decode_array(values))
             idxs.append(range(len(values)))
         for idx, values in zip(itertools.product(*idxs),
