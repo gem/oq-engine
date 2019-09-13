@@ -1038,6 +1038,8 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
             aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
         elif lt in assetcol.fields:
             aval[array['ordinal'], lti] = array['value-' + lt]
+    import time
+    t0 = time.time()
     for n in range(len(tagnames) + 1, -1, -1):
         for names in itertools.combinations(tagnames, n):
             name = 'exposed_values/' + '_'.join(('agg',) + names)
@@ -1048,3 +1050,4 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
             for tagname in tagnames:
                 attrs[tagname] = getattr(assetcol.tagcol, tagname)[1:]
             dstore.set_attrs(name, **attrs)
+    logging.info('Stored in %.1f seconds', time.time()-t0)
