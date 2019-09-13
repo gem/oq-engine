@@ -663,8 +663,8 @@ def intensity_measure_types(value):
     Traceback (most recent call last):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
-    >>> intensity_measure_types('SA(1), PGA')
-    ['PGA', 'SA(1.0)']
+    >>> intensity_measure_types('PGV, SA(1), PGA')
+    ['PGA', 'PGV', 'SA(1.0)']
     """
     if not value:
         return []
