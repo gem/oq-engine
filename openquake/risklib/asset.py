@@ -431,13 +431,13 @@ class AssetCollection(object):
         elif len(tagnames) == 1:
             # fast track for single-tag aggregation
             # for the Canada exposure it is 30x faster
-            # fast_agg(values, assets['taxonomy'])  => 47.6 ms
-            # fast_agg2(values, assets[['taxonomy']]) => 1.4 s
+            # fast_agg(assets['taxonomy'], values)  => 47.6 ms
+            # fast_agg2(assets[['taxonomy']], values) => 1.4 s
             [tagname] = tagnames
-            avalues = general.fast_agg(array, self.array[tagname])[1:]
+            avalues = general.fast_agg(self.array[tagname], array)[1:]
             tags = [(i + 1,) for i in range(len(avalues))]
         else:  # multi-tag aggregation
-            tags, avalues = general.fast_agg2(array, self.array[tagnames])
+            tags, avalues = general.fast_agg2(self.array[tagnames], array)
         shape = [len(getattr(self.tagcol, tagname))-1 for tagname in tagnames]
         arr = numpy.zeros(shape, (F32, tuple(shp)) if shp else F32)
         for tag, aval in zip(tags, avalues):
