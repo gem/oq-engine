@@ -75,5 +75,7 @@ class Dummy:
         sfc, hyp = self.get_surface()
         # Create rupture
         rup = BaseRupture(mag, rake, trt, hyp, sfc)
+        for key in kwargs:
+            setattr(rup, key, kwargs[key])
         # Set attributes
         return rup
