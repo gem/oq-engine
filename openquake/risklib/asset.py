@@ -428,12 +428,12 @@ class AssetCollection(object):
                              (len(self), A))
         if not tagnames:
             return array.sum(axis=0)
-        fast_agg = general.FastAgg(self.array[tagnames])
+        tags, avalues = general.fast_agg2(array, self.array[tagnames])
         shape = [len(getattr(self.tagcol, tagname))-1 for tagname in tagnames]
-        acc = numpy.zeros(shape, (F32, tuple(shp)) if shp else F32)
-        for idx, agg in zip(fast_agg.uniq, fast_agg(array)):
-            acc[tuple(i - 1 for i in idx)] = agg
-        return acc
+        arr = numpy.zeros(shape, (F32, tuple(shp)) if shp else F32)
+        for tag, aval in zip(tags, avalues):
+            arr[tuple(i - 1 for i in tag)] = aval
+        return arr
 
     def agg_value(self, loss_types, *tagnames):
         """
