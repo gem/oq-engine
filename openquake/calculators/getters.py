@@ -453,21 +453,6 @@ def gen_rupture_getters(dstore, slc=slice(None),
             ne += rgetter.num_events
 
 
-def get_maxloss_rupture(dstore, loss_type):
-    """
-    :param dstore: a DataStore instance
-    :param loss_type: a loss type string
-    :returns:
-        EBRupture instance corresponding to the maximum loss for the
-        given loss type
-    """
-    lti = dstore['oqparam'].lti[loss_type]
-    ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [rgetter] = gen_rupture_getters(dstore, slice(ridx, ridx + 1))
-    [ebr] = rgetter.get_ruptures()
-    return ebr
-
-
 # this is never called directly; gen_rupture_getters is used instead
 class RuptureGetter(object):
     """

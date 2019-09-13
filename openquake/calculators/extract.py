@@ -825,11 +825,9 @@ def extract_src_loss_table(dstore, loss_type):
     order. Example:
     http://127.0.0.1:8800/v1/calc/30/extract/src_loss_table/structural
     """
-    oq = dstore['oqparam']
-    li = oq.lti[loss_type]
     source_ids = dstore['source_info']['source_id']
     idxs = dstore['ruptures'][('srcidx', 'grp_id')]
-    losses = dstore['rup_loss_table'][:, li]
+    losses = dstore['rup_loss_table'][loss_type]
     slt = numpy.zeros(len(source_ids), [('grp_id', U32), (loss_type, F32)])
     for loss, (srcidx, grp_id) in zip(losses, idxs):
         slt[srcidx][loss_type] += loss
