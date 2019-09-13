@@ -892,17 +892,19 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
-def fast_agg(values, indices, axis=0):
+def fast_agg(indices, values=None, axis=0):
     """
-    :param values: N values (can be arrays)
     :param indices: N indices in the range 0 ... M - 1 with M < N
+    :param values: N values (can be arrays)
     :returns: M aggregated values (can be arrays)
 
     >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
-    >>> fast_agg(values, [0, 1, 1, 0])
+    >>> fast_agg([0, 1, 1, 0], values)
     array([[0.5 , 0.55],
            [0.5 , 0.55]])
     """
+    if values is None:
+        values = numpy.ones_like(indices)
     N = len(values)
     if len(indices) != N:
         raise ValueError('There are %d values but %d indices' %
@@ -919,10 +921,10 @@ def fast_agg(values, indices, axis=0):
     return res
 
 
-def fast_agg2(values, tags, axis=0):
+def fast_agg2(tags, values=None, axis=0):
     """
-    :param values: N values (can be arrays)
     :param tags: N non-unique tags out of M
+    :param values: N values (can be arrays)
     :returns: (M unique tags, M aggregated values)
 
     >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
@@ -931,21 +933,7 @@ def fast_agg2(values, tags, axis=0):
            [0.5 , 0.55]]))
     """
     uniq, indices = numpy.unique(tags, return_inverse=True)
-    return uniq, fast_agg(values, indices, axis)
-
-
-class FastAgg(object):
-    def __init__(self, keys):
-        self.uniq, self.inv = numpy.unique(keys, return_inverse=True)
-
-    def __call__(self, values):
-        assert len(values) == len(self.inv), (len(values), len(self.inv))
-        shp = values.shape[1:]
-        res = numpy.zeros((len(self.uniq),) + shp, values.dtype)
-        for idx, _ in numpy.ndenumerate(numpy.zeros(shp)):
-            tup = (slice(None),) + idx
-            res[tup] = numpy.bincount(self.inv, values[tup])
-        return res
+    return uniq, fast_agg(indices, values, axis)
 
 
 def count(groupiter):
