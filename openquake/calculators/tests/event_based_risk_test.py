@@ -97,13 +97,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         tmp = gettemp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', tmp)
 
-        # test the rup_loss_table exporter
-        fnames = export(('rup_loss_table', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                  fname)
-
         # test the src_loss_table extractor
         arr = extract(self.calc.datastore, 'src_loss_table/structural')
         tmp = gettemp(rst_table(arr))
