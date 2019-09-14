@@ -19,10 +19,9 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib.general import AccumDict, group_array, fast_agg2
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.hazardlib.calc.stochastic import TWO32
 from openquake.risklib import riskinput, riskmodels
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -32,7 +31,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
 
 
@@ -41,17 +39,26 @@ def build_loss_tables(dstore):
     Compute the total losses by rupture and losses by rlzi.
     """
     oq = dstore['oqparam']
-    L = len(oq.loss_dt().names)
     R = dstore['csm_info'].get_num_rlzs()
-    serials = dstore['ruptures']['serial']
-    idx_by_ser = dict(zip(serials, range(len(serials))))
-    tbl = numpy.zeros((len(serials), L), F32)
-    lbr = numpy.zeros((R, L), F32)  # losses by rlz
-    for rec in dstore['losses_by_event'][()]:  # call .value for speed
-        idx = idx_by_ser[rec['event_id'] // TWO32]
-        tbl[idx] += rec['loss']
-        lbr[rec['rlzi']] += rec['loss']
-    return tbl, lbr
+    lbe = dstore['losses_by_event'][()]
+    loss = lbe['loss']
+    shp = (R,) + lbe.dtype['loss'].shape
+    lbr = numpy.zeros(shp, F32)  # losses by rlz
+    rlzs, losses_by_rlz = fast_agg2(lbe['rlzi'], loss)
+    lbr[rlzs] = losses_by_rlz
+    dstore['losses_by_rlzi'] = lbr
+
+    rup_id = dstore['events']['rup_id']
+    if len(shp) > 2:
+        loss = loss.sum(axis=tuple(range(1, len(shp) - 1)))
+    rupids, losses_by_rupid = fast_agg2(rup_id[lbe['event_id']], loss)
+    lst = [('rup_id', U32)] + [(name, F32) for name in oq.loss_names]
+    tbl = numpy.zeros(len(rupids), lst)
+    tbl['rup_id'] = rupids
+    for li, name in enumerate(oq.loss_names):
+        tbl[name] = losses_by_rupid[:, li]
+    tbl.sort(order=oq.loss_names[0])
+    dstore['rup_loss_table'] = tbl
 
 
 def event_based_risk(riskinputs, crmodel, param, monitor):
@@ -162,9 +169,9 @@ class EbrCalculator(base.RiskCalculator):
         self.A = len(self.assetcol)
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.events = parent['events'][('id', 'rlz')]
+            self.events = parent['events'][('id', 'rlz_id')]
         else:
-            self.events = self.datastore['events'][('id', 'rlz')]
+            self.events = self.datastore['events'][('id', 'rlz_id')]
         if oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -274,16 +281,17 @@ class EbrCalculator(base.RiskCalculator):
         """
         Save risk data and build the aggregate loss curves
         """
+        oq = self.oqparam
+        loss_types = oq.loss_dt().names
         logging.info('Saving event loss table')
         elt_dt = numpy.dtype(
-            [('event_id', U64), ('rlzi', U16), ('loss', (F32, (self.L,)))])
+            [('event_id', U32), ('rlzi', U16), ('loss', (F32, (self.L,)))])
         with self.monitor('saving event loss table', measuremem=True):
             agglosses = numpy.fromiter(
                 ((eid, rlz, losses)
                  for (eid, rlz), losses in zip(self.events, self.agglosses)
                  if losses.any()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
-            loss_types = ' '.join(self.oqparam.loss_dt().names)
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         self.postproc()
 
@@ -304,30 +312,28 @@ class EbrCalculator(base.RiskCalculator):
             return
         if dstore.parent:
             dstore.parent.open('r')  # to read the ruptures
-        if 'ruptures' in self.datastore and len(self.datastore['ruptures']):
-            logging.info('Building loss tables')
-            with self.monitor('building loss tables', measuremem=True):
-                rlt, lbr = build_loss_tables(dstore)
-                dstore['rup_loss_table'] = rlt
-                dstore['losses_by_rlzi'] = lbr
-                ridx = [rlt[:, lti].argmax() for lti in range(self.L)]
-                dstore.set_attrs('rup_loss_table', ridx=ridx)
+        logging.info('Building loss tables')
+        build_loss_tables(dstore)
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
             lbr = group_array(dstore['losses_by_event'][()], 'rlzi')
             dic = {r: arr['loss'] for r, arr in lbr.items()}
             array, arr_stats = b.build(dic, stats)
-        loss_types = ' '.join(oq.loss_dt().names)
-        units = self.datastore['cost_calculator'].get_units(loss_types.split())
+        loss_types = oq.loss_dt().names
+        units = self.datastore['cost_calculator'].get_units(loss_types)
         if oq.individual_curves or self.R == 1:
             self.datastore['agg_curves-rlzs'] = array  # shape (P, R, L)
             self.datastore.set_attrs(
                 'agg_curves-rlzs',
+                shape_descr=['return_periods', 'rlzs', 'loss_types'],
                 return_periods=b.return_periods,
+                rlzs=numpy.arange(self.R),
                 loss_types=loss_types, units=units)
         if arr_stats is not None:
             self.datastore['agg_curves-stats'] = arr_stats  # shape (P, S, L)
             self.datastore.set_attrs(
-                'agg_curves-stats', return_periods=b.return_periods,
+                'agg_curves-stats',
+                shape_descr=['return_periods', 'stats', 'loss_types'],
+                return_periods=b.return_periods,
                 stats=[encode(name) for (name, func) in stats],
                 loss_types=loss_types, units=units)

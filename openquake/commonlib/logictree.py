@@ -43,10 +43,7 @@ import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.contexts import ContextMaker
-from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf, site
-from openquake.hazardlib.source.point import make_rupture
-from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
@@ -1604,6 +1601,31 @@ class GsimLogicTree(object):
         if trt == '*' or trt == b'*':  # fake logictree
             [trt] = self.values
         return sorted(self.values[trt])
+
+    def sample(self, n, seed):
+        """
+        :param n: number of samples
+        :param seed: random seed
+        :returns: n Realization objects
+        """
+        brlists = [sample([b for b in self.branches if b.trt == trt],
+                          n, seed + i) for i, trt in enumerate(self.values)]
+        rlzs = []
+        for i in range(n):
+            weight = 1
+            lt_path = []
+            lt_uid = []
+            value = []
+            for brlist in brlists:  # there is branch list for each TRT
+                branch = brlist[i]
+                lt_path.append(branch.id)
+                lt_uid.append(branch.id if branch.effective else '@')
+                weight *= branch.weight
+                value.append(branch.gsim)
+            rlz = Realization(tuple(value), weight, tuple(lt_path),
+                              i, tuple(lt_uid))
+            rlzs.append(rlz)
+        return rlzs
 
     def __iter__(self):
         """

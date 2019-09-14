@@ -21,6 +21,7 @@ import abc
 import pdb
 import logging
 import operator
+import itertools
 import traceback
 from datetime import datetime
 from shapely import wkt
@@ -48,10 +49,18 @@ get_imt = operator.attrgetter('imt')
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
+
+stats_dt = numpy.dtype([('mean', F32), ('std', F32),
+                        ('min', F32), ('max', F32), ('len', U16)])
+
+
+def get_stats(seq):
+    std = numpy.nan if len(seq) == 1 else numpy.std(seq, ddof=1)
+    tup = (numpy.mean(seq), std, numpy.min(seq), numpy.max(seq), len(seq))
+    return numpy.array(tup, stats_dt)
 
 
 class InvalidCalculationID(Exception):
@@ -640,8 +649,6 @@ class HazardCalculator(BaseCalculator):
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['cost_calculator'] = exposure.cost_calculator
-            self.datastore['assetcol/num_taxonomies'] = (
-                self.assetcol.num_taxonomies_by_site())
             if hasattr(readinput.exposure, 'exposures'):
                 self.datastore['assetcol/exposures'] = (
                     numpy.array(exposure.exposures, hdf5.vstr))
@@ -664,8 +671,6 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
-                self.datastore['assetcol/num_taxonomies'] = (
-                    self.assetcol.num_taxonomies_by_site())
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             else:
@@ -712,6 +717,16 @@ class HazardCalculator(BaseCalculator):
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
                           avg_losses=oq.avg_losses)
+
+        # compute exposure stats
+        if hasattr(self, 'assetcol'):
+            arr = self.assetcol.array
+            num_assets = list(general.countby(arr, 'site_id').values())
+            self.datastore['assets_by_site'] = get_stats(num_assets)
+            num_taxos = self.assetcol.num_taxonomies_by_site()
+            self.datastore['taxonomies_by_site'] = get_stats(num_taxos)
+            save_exposed_values(
+                self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
     def save_cache(self, **kw):
         """
@@ -935,7 +950,7 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     if len(events) == 0:
         E = gmfs.shape[1]
         events = numpy.zeros(E, rupture.events_dt)
-        events['id'] = numpy.arange(E, dtype=U64)
+        events['id'] = numpy.arange(E, dtype=U32)
     dstore['events'] = events
     offset = 0
     # convert an array of shape (N, E, M) into an array of type gmv_data_dt
@@ -957,19 +972,6 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
 
 
-def get_idxs(data, eid2idx):
-    """
-    Convert from event IDs to event indices.
-
-    :param data: an array with a field eid
-    :param eid2idx: a dictionary eid -> idx
-    :returns: the array of event indices
-    """
-    uniq, inv = numpy.unique(data['eid'], return_inverse=True)
-    idxs = numpy.array([eid2idx[eid] for eid in uniq])[inv]
-    return idxs
-
-
 def import_gmfs(dstore, fname, sids):
     """
     Import in the datastore a ground motion field CSV file.
@@ -979,7 +981,7 @@ def import_gmfs(dstore, fname, sids):
     :param sids: the site IDs (complete)
     :returns: event_ids, num_rlzs
     """
-    array = hdf5.read_csv(fname, {'sid': U32, 'eid': U64, None: F32}).array
+    array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32}).array
     names = array.dtype.names
     if names[0] == 'rlzi':  # backward compatbility
         names = names[1:]  # discard the field rlzi
@@ -997,7 +999,6 @@ def import_gmfs(dstore, fname, sids):
     eids = numpy.unique(array['eid'])
     eids.sort()
     E = len(eids)
-    eid2idx = dict(zip(eids, range(E)))
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = eids
     dstore['events'] = events
@@ -1011,9 +1012,39 @@ def import_gmfs(dstore, fname, sids):
         if n:
             offset += n
             gmvs = dic[sid]
-            gmvs['eid'] = get_idxs(gmvs, eid2idx)
             dstore.extend('gmf_data/data', gmvs)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['weights'] = numpy.ones(1)
     return eids
+
+
+def save_exposed_values(dstore, assetcol, lossnames, tagnames):
+    """
+    Store 2^n arrays where n is the number of tagNames. For instance with
+    the tags country, occupancy it stores 2^2 = 4 arrays:
+
+    exposed_values/agg_country_occupancy  # shape (T1, T2, L)
+    exposed_values/agg_country            # shape (T1, L)
+    exposed_values/agg_occupancy          # shape (T2, L)
+    exposed_values/agg                    # shape (L,)
+    """
+    aval = numpy.zeros((len(assetcol), len(lossnames)), F32)  # (A, L)
+    array = assetcol.array
+    for lti, lt in enumerate(lossnames):
+        if lt == 'occupants':
+            aval[array['ordinal'], lti] = array[lt + '_None']
+        elif lt.endswith('_ins'):
+            aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
+        elif lt in assetcol.fields:
+            aval[array['ordinal'], lti] = array['value-' + lt]
+    for n in range(len(tagnames) + 1, -1, -1):
+        for names in itertools.combinations(tagnames, n):
+            name = 'exposed_values/' + '_'.join(('agg',) + names)
+            logging.info('Storing %s', name)
+            dstore[name] = assetcol.aggregate_by(list(names), aval)
+            attrs = dict(shape_descr=names + ('loss_name',),
+                         loss_name=lossnames)
+            for tagname in tagnames:
+                attrs[tagname] = getattr(assetcol.tagcol, tagname)[1:]
+            dstore.set_attrs(name, **attrs)

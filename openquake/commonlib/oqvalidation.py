@@ -224,9 +224,6 @@ class OqParam(valid.ParamSet):
         self._risk_files = get_risk_files(self.inputs)
 
         self.check_source_model()
-        if (self.hazard_calculation_id and
-                self.calculation_mode == 'ucerf_risk'):
-            raise ValueError('You cannot use the --hc option with ucerf_risk')
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'debug')
             self.check_missing('gsim_logic_tree', 'debug')
@@ -562,8 +559,7 @@ class OqParam(valid.ParamSet):
 
     def hazard_stats(self):
         """
-        Return a list of item with the statistical functions defined for the
-        hazard calculation
+        Return a dictionary stat_name -> stat_func
         """
         names = []  # name of statistical functions
         funcs = []  # statistical functions of kind func(values, weights)
