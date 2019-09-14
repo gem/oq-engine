@@ -330,8 +330,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
 
         poll_queue(job_id, _PID, poll_time=15)
         if OQ_DISTRIBUTE.endswith('pool'):
-            logs.LOG.warn('Using %d cores on %s',
-                          parallel.cpu_count, platform.node())
+            logs.LOG.warning('Using %d cores on %s',
+                             parallel.cpu_count, platform.node())
         if OQ_DISTRIBUTE == 'zmq':
             logs.dbcmd('zmq_start')  # start zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up

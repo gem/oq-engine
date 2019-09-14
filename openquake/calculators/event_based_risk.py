@@ -273,6 +273,8 @@ class EbrCalculator(base.RiskCalculator):
         """
         Save risk data and build the aggregate loss curves
         """
+        oq = self.oqparam
+        loss_types = oq.loss_dt().names
         logging.info('Saving event loss table')
         elt_dt = numpy.dtype(
             [('event_id', U32), ('rlzi', U16), ('loss', (F32, (self.L,)))])
@@ -282,7 +284,6 @@ class EbrCalculator(base.RiskCalculator):
                  for (eid, rlz), losses in zip(self.events, self.agglosses)
                  if losses.any()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
-            loss_types = self.oqparam.loss_dt().names
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         self.postproc()
 
