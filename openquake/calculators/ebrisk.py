@@ -27,6 +27,7 @@ from openquake.risklib.scientific import losses_by_period, LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.calculators import base, event_based, getters
+from openquake.calculators.event_based_risk import build_loss_tables
 from openquake.calculators.export.loss_curves import get_loss_builder
 
 U8 = numpy.uint8
@@ -344,6 +345,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         if oq.avg_losses:
             self.datastore['avg_losses-stats'].attrs['stats'] = [b'mean']
+        logging.info('Building loss tables')
+        build_loss_tables(self.datastore)
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
