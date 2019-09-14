@@ -17,12 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`RietbrockEdwards2019`
+Module exports :class:`RietbrockEdwards2019Mean`,
+               :class:`RietbrockEdwards2019Low`,
+               :class:`RietbrockEdwards2019Up`
 """
 
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
@@ -81,10 +81,10 @@ class RietbrockEdwards2019Mean(GMPE):
         C = self.COEFFS[imt]
         imean = C["c1"] + (self._get_magnitude_term(C, rup.mag) +
                            self._get_distance_term(C, dists.rjb, rup.mag))
-        # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
-        # is already in cm/s) and also convert from base 10 to base e.
+        # Converting from log10 to log
         if imt.name in "SA PGA":
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
+            #mean = np.log(10.0**(imean - 2.0)/9.8066)
+            mean = np.log(10.0**(imean)/980.66)
         else:
             mean = np.log(10 ** imean)
 
