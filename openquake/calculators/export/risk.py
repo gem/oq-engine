@@ -236,8 +236,9 @@ def export_losses_by_event(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
     md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
+    if 'scenario' not in oq.calculation_mode:
+        md.update(dict(investigation_time=oq.investigation_time,
+                       risk_investigation_time=oq.risk_investigation_time))
     events = dstore['events'][()]
     columns = dict(rlz_id=lambda rec: events[rec.event_id]['rlz_id'])
     if oq.investigation_time:  # not scenario
