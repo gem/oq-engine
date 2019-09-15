@@ -418,7 +418,7 @@ def group_by_rlz(data, rlzs):
 
 
 def gen_rupture_getters(dstore, slc=slice(None),
-                        concurrent_tasks=1, hdf5cache=None):
+                        concurrent_tasks=1, cachepath=None):
     """
     :yields: RuptureGetters
     """
@@ -446,7 +446,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
             else:
                 e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
-                hdf5cache or dstore.filename, numpy.array(block), grp_id,
+                cachepath or dstore.filename, numpy.array(block), grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             yield rgetter
             nr += len(block)
