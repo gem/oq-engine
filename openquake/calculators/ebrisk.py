@@ -54,7 +54,7 @@ def _calc_risk(hazard, param, monitor):
     events = numpy.concatenate(hazard['events'])
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    with datastore.read(param['hdf5cache']) as cache:
+    with datastore.read(param['cachepath']) as cache:
         with monitor('getting assets'):
             assetcol = cache['assetcol']
             assets_by_site = assetcol.assets_by_site()
@@ -145,7 +145,7 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         return {}
     rupgetters.clear()
     computers.sort(key=lambda c: c.rupture.ridx)
-    param['hdf5cache'] = srcfilter.filename
+    param['cachepath'] = srcfilter.filename
     hazard = dict(gmfs=[], events=[], gmf_info=[])
     for c in computers:
         with mon_haz:
@@ -174,9 +174,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         oq.ground_motion_fields = False
         super().pre_execute()
-        # save a copy of the assetcol in hdf5cache
-        self.hdf5cache = self.datastore.hdf5cache()
-        with hdf5.File(self.hdf5cache, 'w') as cache:
+        # save a copy of the assetcol in cachepath
+        self.cachepath = self.datastore.cachepath()
+        with hdf5.File(self.cachepath, 'w') as cache:
             cache['sitecol'] = self.sitecol.complete
             cache['assetcol'] = self.assetcol
             cache['risk_model'] = self.crmodel  # reduced model
@@ -211,7 +211,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             grp_indices = parent['ruptures'].attrs['grp_indices']
             n_occ = parent['ruptures']['n_occ']
         else:
-            hdf5path = self.datastore.hdf5cache()
+            hdf5path = self.datastore.cachepath()
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
             n_occ = self.datastore['ruptures']['n_occ']
             with hdf5.File(hdf5path, 'r+') as cache:
@@ -360,7 +360,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             dstore = self.datastore
         args = [(dstore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
-        h5 = hdf5.File(self.datastore.hdf5cache())
+        h5 = hdf5.File(self.datastore.cachepath())
         try:
             acc = list(
                 parallel.Starmap(postprocess, args, hdf5path=h5.filename))
