@@ -189,16 +189,16 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        hdf5cache = dstore.hdf5cache()
-        mode = 'r+' if os.path.exists(hdf5cache) else 'w'
-        with hdf5.File(hdf5cache, mode) as cache:
+        cachepath = dstore.cachepath()
+        mode = 'r+' if os.path.exists(cachepath) else 'w'
+        with hdf5.File(cachepath, mode) as cache:
             if 'ruptures' not in cache:
                 dstore.hdf5.copy('ruptures', cache)
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         yield from gen_rupture_getters(
             dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            hdf5cache=hdf5cache)
+            cachepath=cachepath)
         if self.datastore.parent:
             self.datastore.parent.close()
 
