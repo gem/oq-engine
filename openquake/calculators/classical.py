@@ -327,11 +327,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
 
-            # save a copy of the poes in hdf5cache
-            with hdf5.File(self.hdf5cache) as cache:
+            # save a copy of the poes in cachepath
+            with hdf5.File(self.cachepath) as cache:
                 cache['oqparam'] = oq
                 self.datastore.hdf5.copy('poes', cache)
-            self.calc_stats(self.hdf5cache)
+            self.calc_stats(self.cachepath)
 
     def calc_stats(self, parent):
         oq = self.oqparam

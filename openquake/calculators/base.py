@@ -365,11 +365,11 @@ class HazardCalculator(BaseCalculator):
         :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
-        self.hdf5cache = self.datastore.hdf5cache()
+        self.cachepath = self.datastore.cachepath()
         sitecol = self.sitecol.complete if self.sitecol else None
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
-        return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
+            return UcerfFilter(sitecol, oq.maximum_distance, self.cachepath)
+        return SourceFilter(sitecol, oq.maximum_distance, self.cachepath)
 
     @property
     def E(self):
@@ -732,8 +732,8 @@ class HazardCalculator(BaseCalculator):
         """
         A shortcut method to store data in the hdf5 cache file, if any
         """
-        if hasattr(self, 'hdf5cache'):  # no scenario
-            with hdf5.File(self.hdf5cache, 'r+') as cache:
+        if hasattr(self, 'cachepath'):  # no scenario
+            with hdf5.File(self.cachepath, 'r+') as cache:
                 for k, v in kw.items():
                     cache[k] = v
 
@@ -877,9 +877,9 @@ class RiskCalculator(HazardCalculator):
         :param sid: a site ID
         :returns: a PmapGetter or GmfDataGetter
         """
-        hdf5cache = getattr(self, 'hdf5cache', None)
-        if hdf5cache:
-            dstore = hdf5cache
+        cachepath = getattr(self, 'cachepath', None)
+        if cachepath:
+            dstore = cachepath
         elif (self.oqparam.hazard_calculation_id and
               'gmf_data' not in self.datastore):
             # 'gmf_data' in self.datastore happens for ShakeMap calculations
