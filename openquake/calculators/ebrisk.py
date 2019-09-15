@@ -361,14 +361,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         args = [(dstore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
         h5 = hdf5.File(self.datastore.hdf5cache())
-        acc = list(parallel.Starmap(postprocess, args, hdf5path=h5.filename))
-        # copy performance information from the cache to the datastore
-        pd = h5['performance_data'][()]
-        hdf5.extend3(self.datastore.filename, 'performance_data', pd)
+        try:
+            acc = list(
+                parallel.Starmap(postprocess, args, hdf5path=h5.filename))
+        finally:
+            # copy performance information from the cache to the datastore
+            pd = h5['performance_data'][()]
+            hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
-        self.datastore['task_info/compute_loss_curves_and_maps'] = (
-            h5['task_info/postprocess'][()])
-        self.datastore.open('r+')
+        self.datastore['task_info/postprocess'] = h5[
+            'task_info/postprocess'][()]
         for r, (curves, maps), agg_losses in acc:
             if len(curves):  # some realization can give zero contribution
                 self.datastore['agg_curves-rlzs'][:, r] = curves
