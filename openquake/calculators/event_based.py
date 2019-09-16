@@ -172,7 +172,7 @@ class EventBasedCalculator(base.HazardCalculator):
         attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures')[()]
         # order the ruptures by rup_id
-        sorted_ruptures.sort(order='rup_id')
+        sorted_ruptures.sort(order='serial')
         ngroups = len(self.csm.info.trt_by_grp)
         grp_indices = numpy.zeros((ngroups, 2), U32)
         grp_ids = sorted_ruptures['grp_id']
