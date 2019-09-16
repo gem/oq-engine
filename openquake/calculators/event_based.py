@@ -179,6 +179,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for grp_id, [startstop] in get_indices(grp_ids).items():
             grp_indices[grp_id] = startstop
         self.datastore['ruptures'] = sorted_ruptures
+        self.datastore['ruptures']['id'] = numpy.arange(len(sorted_ruptures))
         self.datastore.set_attrs('ruptures', grp_indices=grp_indices, **attrs)
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
