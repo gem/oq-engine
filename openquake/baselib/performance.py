@@ -29,9 +29,9 @@ from openquake.baselib import hdf5
 perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 task_info_dt = numpy.dtype(
-    [('taskno', numpy.uint32), ('weight', numpy.float32),
-     ('duration', numpy.float32), ('received', numpy.int64),
-     ('mem_gb', numpy.float32)])
+    [('taskname', hdf5.vstr), ('taskno', numpy.uint32),
+     ('weight', numpy.float32), ('duration', numpy.float32),
+     ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
 
 def _pairs(items):
@@ -161,9 +161,11 @@ class Monitor(object):
         :param sent: number of bytes sent
         :param mem_gb: memory consumption at the saving time (optional)
         """
-        t = (self.task_no, self.weight, self.duration, len(res.pik), mem_gb)
+        t = (name, self.task_no, self.weight, self.duration, len(res.pik),
+             mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend3(hdf5path, 'task_info/' + name, data, sent=str(sent))
+        hdf5.extend3(hdf5path, 'task_info', data,
+                     **{'sent_' + name: str(sent)})
 
     def reset(self):
         """
@@ -238,12 +240,11 @@ def dump(temppath, perspath):
     with hdf5.File(temppath, 'r') as h, hdf5.File(perspath, 'r+') as h5:
         if 'performance_data' not in h5:
             hdf5.create(h5, 'performance_data', perf_dt)
+        if 'task_info' not in h5:
+            hdf5.create(h5, 'task_info', task_info_dt)
         hdf5.extend(h5['performance_data'], h['performance_data'][()])
-        for name, dset in h['task_info'].items():
-            fullname = 'task_info/' + name
-            if fullname not in h5:
-                hdf5.create(h5, fullname, task_info_dt)
-            hdf5.extend(h5[fullname], dset[()])
-            for k, v in dset.attrs.items():
-                h5[fullname].attrs[k] = v
+        hdf5.extend(h5['task_info'], h['task_info'][()])
+        for k, v in h['task_info'].attrs.items():
+            h5['task_info'].attrs[k] = v
+
     os.remove(temppath)
