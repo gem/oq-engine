@@ -318,10 +318,12 @@ def view_job_info(token, dstore):
     to the workers and back in a classical calculation.
     """
     data = [['task', 'sent', 'received']]
-    for task in dstore['task_info']:
-        dset = dstore['task_info/' + task]
-        if 'sent' in dset.attrs:
-            sent = sorted(ast.literal_eval(dset.attrs['sent']).items(),
+    dset = dstore['task_info']
+    tasks = set(dset['taskname'])
+    for task in sorted(tasks):
+        sent = 'sent_' + task
+        if sent in dset.attrs:
+            sent = sorted(ast.literal_eval(dset.attrs[sent]).items(),
                           key=operator.itemgetter(1), reverse=True)
             sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
             recv = dset['received'].sum()
@@ -344,17 +346,6 @@ def avglosses_data_transfer(token, dstore):
     return (
         '%d asset(s) x %d realization(s) x %d loss type(s) losses x '
         '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
-
-
-@view.add('ebr_data_transfer')
-def ebr_data_transfer(token, dstore):
-    """
-    Display the data transferred in an event based risk calculation
-    """
-    attrs = dstore['losses_by_event'].attrs
-    sent = humansize(attrs['sent'])
-    received = humansize(attrs['tot_received'])
-    return 'Event Based Risk: sent %s, received %s' % (sent, received)
 
 
 # for scenario_risk
@@ -576,15 +567,15 @@ def view_task_info(token, dstore):
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
         [task] = args
-        array = dstore['task_info/' + task][()]
+        array = get_array(dstore['task_info'][()], taskname=task)
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
         return rst_table(data)
 
     data = ['operation-duration mean stddev min max outputs'.split()]
-    for task in dstore['task_info']:
-        val = dstore['task_info/' + task]['duration']
+    for task, arr in group_array(dstore['task_info'][()], 'taskname').items():
+        val = arr['duration']
         if len(val):
             data.append(stats(task, val))
     if len(data) == 1:
@@ -600,7 +591,7 @@ def view_task_durations(token, dstore):
       $ oq show task_durations:classical
     """
     task = token.split(':')[1]  # called as task_duration:task_name
-    array = dstore['task_info/' + task]['duration']
+    array = get_array(dstore['task_info'][()], taskname=task)['duration']
     return '\n'.join(map(str, array))
 
 
@@ -615,7 +606,7 @@ def view_task_hazard(token, dstore):
     _, name, index = token.split(':')
     if 'sources_by_task' not in dstore:
         return 'Missing sources_by_task'
-    data = dstore['task_info/' + name][()]
+    data = get_array(dstore['task_info'][()], taskname=name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['taskno']
@@ -627,24 +618,6 @@ def view_task_hazard(token, dstore):
     return res
 
 
-@view.add('task_risk')
-def view_task_risk(token, dstore):
-    """
-    Display info about a given risk task. Here are a few examples of usage::
-
-     $ oq show task_risk:0  # the fastest task
-     $ oq show task_risk:-1  # the slowest task
-    """
-    [key] = dstore['task_info']
-    data = dstore['task_info/' + key][()]
-    data.sort(order='duration')
-    rec = data[int(token.split(':')[1])]
-    taskno = rec['taskno']
-    res = 'taskno=%d, weight=%d, duration=%d s' % (
-        taskno, rec['weight'], rec['duration'])
-    return res
-
-
 @view.add('task_ebrisk')
 def view_task_ebrisk(token, dstore):
     """
@@ -653,7 +626,7 @@ def view_task_ebrisk(token, dstore):
     $ oq show task_ebrisk:-1  # the slowest task
     """
     idx = int(token.split(':')[1])
-    task_info = dstore['task_info/ebrisk'][()]
+    task_info = get_array(dstore['task_info'][()], taskname='ebrisk')
     task_info.sort(order='duration')
     info = task_info[idx]
     times = get_array(dstore['gmf_info'][()], task_no=info['taskno'])
