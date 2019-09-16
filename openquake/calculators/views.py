@@ -567,7 +567,7 @@ def view_task_info(token, dstore):
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
         [task] = args
-        array = get_array(dstore['task_info/' + task][()],  task)
+        array = get_array(dstore['task_info'][()], taskname=task)
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
@@ -591,7 +591,7 @@ def view_task_durations(token, dstore):
       $ oq show task_durations:classical
     """
     task = token.split(':')[1]  # called as task_duration:task_name
-    array = dstore['task_info/' + task]['duration']
+    array = get_array(dstore['task_info'][()], taskname=task)['duration']
     return '\n'.join(map(str, array))
 
 
@@ -606,7 +606,7 @@ def view_task_hazard(token, dstore):
     _, name, index = token.split(':')
     if 'sources_by_task' not in dstore:
         return 'Missing sources_by_task'
-    data = dstore['task_info/' + name][()]
+    data = get_array(dstore['task_info'][()], taskname=name)
     data.sort(order='duration')
     rec = data[int(index)]
     taskno = rec['taskno']
@@ -618,24 +618,6 @@ def view_task_hazard(token, dstore):
     return res
 
 
-@view.add('task_risk')
-def view_task_risk(token, dstore):
-    """
-    Display info about a given risk task. Here are a few examples of usage::
-
-     $ oq show task_risk:0  # the fastest task
-     $ oq show task_risk:-1  # the slowest task
-    """
-    [key] = dstore['task_info']
-    data = dstore['task_info/' + key][()]
-    data.sort(order='duration')
-    rec = data[int(token.split(':')[1])]
-    taskno = rec['taskno']
-    res = 'taskno=%d, weight=%d, duration=%d s' % (
-        taskno, rec['weight'], rec['duration'])
-    return res
-
-
 @view.add('task_ebrisk')
 def view_task_ebrisk(token, dstore):
     """
@@ -644,7 +626,7 @@ def view_task_ebrisk(token, dstore):
     $ oq show task_ebrisk:-1  # the slowest task
     """
     idx = int(token.split(':')[1])
-    task_info = dstore['task_info/ebrisk'][()]
+    task_info = get_array(dstore['task_info'][()], taskname='ebrisk')
     task_info.sort(order='duration')
     info = task_info[idx]
     times = get_array(dstore['gmf_info'][()], task_no=info['taskno'])
