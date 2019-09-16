@@ -19,7 +19,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.general import AccumDict, group_array, fast_agg2
+from openquake.baselib.general import AccumDict, group_array, fast_agg
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput, riskmodels
@@ -44,17 +44,17 @@ def build_loss_tables(dstore):
     loss = lbe['loss']
     shp = (R,) + lbe.dtype['loss'].shape
     lbr = numpy.zeros(shp, F32)  # losses by rlz
-    rlzs, losses_by_rlz = fast_agg2(lbe['rlzi'], loss)
-    lbr[rlzs] = losses_by_rlz
+    losses_by_rlz = fast_agg(lbe['rlzi'], loss)
+    lbr[:len(losses_by_rlz)] = losses_by_rlz
     dstore['losses_by_rlzi'] = lbr
 
     rup_id = dstore['events']['rup_id']
     if len(shp) > 2:
         loss = loss.sum(axis=tuple(range(1, len(shp) - 1)))
-    rupids, losses_by_rupid = fast_agg2(rup_id[lbe['event_id']], loss)
+    losses_by_rupid = fast_agg(rup_id[lbe['event_id']], loss)
     lst = [('rup_id', U32)] + [(name, F32) for name in oq.loss_names]
-    tbl = numpy.zeros(len(rupids), lst)
-    tbl['rup_id'] = rupids
+    tbl = numpy.zeros(len(losses_by_rupid), lst)
+    tbl['rup_id'] = numpy.arange(len(tbl))
     for li, name in enumerate(oq.loss_names):
         tbl[name] = losses_by_rupid[:, li]
     tbl.sort(order=oq.loss_names[0])
