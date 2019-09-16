@@ -369,8 +369,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             pd = h5['performance_data'][()]
             hdf5.extend3(self.datastore.filename, 'performance_data', pd)
         self.datastore.open('r+')  # reopen
-        self.datastore['task_info/postprocess'] = h5[
-            'task_info/postprocess'][()]
         for r, (curves, maps), agg_losses in acc:
             if len(curves):  # some realization can give zero contribution
                 self.datastore['agg_curves-rlzs'][:, r] = curves
