@@ -890,8 +890,7 @@ def extract_event_info(dstore, eidx):
     http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
     """
     event = dstore['events'][int(eidx)]
-    rup_id = event['rup_id']
-    ridx = list(dstore['ruptures']['rup_id']).index(rup_id)
+    ridx = event['rup_id']
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']
