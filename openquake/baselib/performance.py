@@ -34,6 +34,20 @@ task_info_dt = numpy.dtype(
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
 
+def init_performance(hdf5file):
+    """
+    :param hdf5file: file name of hdf5.File instance
+    """
+    fname = isinstance(hdf5file, str)
+    h5 = hdf5.File(hdf5file) if fname else hdf5file
+    if 'performance_data' not in h5:
+        hdf5.create(h5, 'performance_data', perf_dt)
+    if 'task_info' not in h5:
+        hdf5.create(h5, 'task_info', task_info_dt)
+    if fname:
+        h5.close()
+
+
 def _pairs(items):
     lst = []
     for name, value in items:
@@ -190,9 +204,7 @@ class Monitor(object):
         if len(data) == 0:  # no information
             return
         elif not os.path.exists(hdf5path):
-            with hdf5.File(hdf5path, 'w') as h5:
-                hdf5.create(h5, 'performance_data', perf_dt)
-                hdf5.create(h5, 'task_info', task_info_dt)
+            init_performance(hdf5path)
         hdf5.extend3(hdf5path, 'performance_data', data)
         self.reset()
 
@@ -238,10 +250,7 @@ def dump(temppath, perspath):
     :param perspath: the persistent file
     """
     with hdf5.File(temppath, 'r') as h, hdf5.File(perspath, 'r+') as h5:
-        if 'performance_data' not in h5:
-            hdf5.create(h5, 'performance_data', perf_dt)
-        if 'task_info' not in h5:
-            hdf5.create(h5, 'task_info', task_info_dt)
+        init_performance(h5)
         hdf5.extend(h5['performance_data'], h['performance_data'][()])
         hdf5.extend(h5['task_info'], h['task_info'][()])
         for k, v in h['task_info'].attrs.items():
