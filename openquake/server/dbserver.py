@@ -71,7 +71,9 @@ class DbServer(object):
                     sock.send(self.pid)
                     continue
                 elif cmd.startswith('zmq_') and self.zmaster:
-                    sock.send(getattr(self.zmaster, cmd[4:])())
+                    msg = getattr(self.zmaster, cmd[4:])()
+                    logging.info(msg)
+                    sock.send(msg)
                     continue
                 try:
                     func = getattr(actions, cmd)

@@ -1,4 +1,4 @@
-# kind='b1~b1', risk_investigation_time=1.0
+#,,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:17:15', checksum=687330760, kind='b1~b1', risk_investigation_time=1.0"
 id,taxonomy,lon,lat,occupants~poe-0.01,occupants~poe-0.02
 "a3","tax1",-122.57000,38.11300,6.28599E-04,0.00000E+00
 "a2","tax1",-122.11400,38.11300,1.35207E-03,0.00000E+00

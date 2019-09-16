@@ -78,7 +78,7 @@ if OQ_DISTRIBUTE == 'zmq':
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
-    import celery.task.control
+    import celery.task.control  # noqa: E402
 
     def set_concurrent_tasks_default(job_id):
         """
@@ -329,6 +329,9 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             del data  # save memory
 
         poll_queue(job_id, _PID, poll_time=15)
+        if OQ_DISTRIBUTE.endswith('pool'):
+            logs.LOG.warning('Using %d cores on %s',
+                             parallel.cpu_count, platform.node())
         if OQ_DISTRIBUTE == 'zmq':
             logs.dbcmd('zmq_start')  # start zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
