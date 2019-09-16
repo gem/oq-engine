@@ -344,14 +344,12 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
-    def close_sids(self, rec, trt, mag):
+    def close_sids(self, rec, trt):
         """
         :param rec:
-           a record with fields minlon, minlat, maxlon, maxlat
+           a record with fields mag, minlon, minlat, maxlon, maxlat
         :param trt:
            tectonic region type string
-        :param mag:
-           magnitude
         :returns:
            the site indices within the bounding box enlarged by the integration
            distance for the given TRT and magnitude
@@ -364,7 +362,7 @@ class SourceFilter(object):
             bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
         else:
             bbox = rec  # assume it is a 4-tuple
-        maxdist = self.integration_distance(trt, mag)
+        maxdist = self.integration_distance(trt, rec['mag'])
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
         bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1

@@ -1,4 +1,4 @@
-# generated_by='OpenQuake engine 3.6.0-gitd095d1207d', start_date='2019-07-15T15:28:42', checksum=801826835, kind='mean', risk_investigation_time=50.0
+#,,,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:16:49', checksum=1503171782, kind='mean', risk_investigation_time=50.0"
 id,policy,taxonomy,lon,lat,nonstructural~poe-0.1,structural~poe-0.1
 "a0","A","RM",81.29850,29.10980,6.43756E+02,9.57275E+02
 "a1","A","RC",83.08230,27.90060,6.68213E+01,1.88733E+02

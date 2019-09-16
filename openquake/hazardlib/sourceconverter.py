@@ -31,7 +31,6 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
 
 U32 = numpy.uint32
-U64 = numpy.uint64
 F32 = numpy.float32
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
@@ -521,7 +520,7 @@ class RuptureConverter(object):
             coll[grp_id] = ebrs = []
             for node in grpnode:
                 rup = self.convert_node(node)
-                rup.serial = int(node['id'])
+                rup.rup_id = int(node['id'])
                 sesnodes = node.stochasticEventSets
                 n = 0  # number of events
                 for sesnode in sesnodes:

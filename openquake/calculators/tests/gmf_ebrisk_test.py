@@ -52,7 +52,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 3)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 0.46601775)
+        aae(totloss, 1.82, decimal=4)
 
     def test_case_3(self):
         # case with 13 sites, 10 eids, and several 0 values
