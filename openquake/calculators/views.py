@@ -26,7 +26,8 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, countby, AccumDict, CallableDict, group_array)
+    humansize, groupby, countby, AccumDict, CallableDict,
+    get_array, group_array)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid
@@ -392,7 +393,7 @@ def view_portfolio_losses(token, dstore):
     loss_dt = oq.loss_dt()
     data = portfolio_loss(dstore).view(loss_dt)[:, 0]
     rlzids = [str(r) for r in range(len(data))]
-    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
+    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
 
@@ -447,7 +448,7 @@ def view_exposure_info(token, dstore):
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
     num_events = len(dstore['events'])
-    events_by_rlz = countby(dstore['events'][()], 'rlz')
+    events_by_rlz = countby(dstore['events'][()], 'rlz_id')
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),
@@ -644,6 +645,34 @@ def view_task_risk(token, dstore):
     return res
 
 
+@view.add('task_ebrisk')
+def view_task_ebrisk(token, dstore):
+    """
+    Display info about ebrisk tasks:
+
+    $ oq show task_ebrisk:-1  # the slowest task
+    """
+    idx = int(token.split(':')[1])
+    task_info = dstore['task_info/ebrisk'][()]
+    task_info.sort(order='duration')
+    info = task_info[idx]
+    times = get_array(dstore['gmf_info'][()], task_no=info['taskno'])
+    extra = times[['nsites', 'gmfbytes', 'dt']]
+    ds = dstore.parent if dstore.parent else dstore
+    rups = ds['ruptures']['rup_id', 'code', 'n_occ', 'mag'][times['ridx']]
+    codeset = set('code_%d' % code for code in numpy.unique(rups['code']))
+    tbl = rst_table(util.compose_arrays(rups, extra))
+    codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
+             if it[0] in codeset]
+    msg = '%s\n%s\nHazard time for task %d: %d of %d s, ' % (
+        tbl, '\n'.join(codes), info['taskno'], extra['dt'].sum(),
+        info['duration'])
+    msg += 'gmfbytes=%s, w=%d' % (
+        humansize(extra['gmfbytes'].sum()),
+        (rups['n_occ'] * extra['nsites']).sum())
+    return msg
+
+
 @view.add('hmap')
 def view_hmap(token, dstore):
     """
@@ -805,7 +834,7 @@ def view_act_ruptures_by_src(token, dstore):
     """
     Display the actual number of ruptures by source in event based calculations
     """
-    data = dstore['ruptures'][('srcidx', 'serial')]
+    data = dstore['ruptures'][('srcidx', 'rup_id')]
     counts = sorted(countby(data, 'srcidx').items(),
                     key=operator.itemgetter(1), reverse=True)
     src_info = dstore['source_info'][('grp_id', 'source_id')]
