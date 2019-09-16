@@ -357,7 +357,8 @@ class AmeriEtAl2017RjbStressDrop(AmeriEtAl2017Rjb):
     #: Required rupture parameters are magnitude and rake (eq. 1).
     REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
 
-    def __init__(self, norm_stress_drop):
+    def __init__(self, norm_stress_drop, adjustment_factor=1.0):
+        super().__init__(adjustment_factor=adjustment_factor)
         self.norm_stress_drop = norm_stress_drop
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -514,7 +515,8 @@ class AmeriEtAl2017RepiStressDrop(AmeriEtAl2017Repi):
     """
     REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
 
-    def __init__(self, norm_stress_drop):
+    def __init__(self, norm_stress_drop, adjustment_factor=1.0):
+        super().__init__(adjustment_factor=adjustment_factor)
         self.norm_stress_drop = norm_stress_drop
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
