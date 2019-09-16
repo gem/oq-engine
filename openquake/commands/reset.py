@@ -45,6 +45,7 @@ def reset(yes):
         for calc_id in logs.dbcmd('get_calc_ids', user):
             purge_one(calc_id, user, force=True)
         if os.access(dbpath, os.W_OK):   # single user mode
+            purge_all(user)  # calculations in oqdata not in the db
             # stop the dbserver first
             pid = logs.dbcmd('getpid')
             os.kill(pid, signal.SIGTERM)
@@ -54,7 +55,6 @@ def reset(yes):
             # remove the database
             os.remove(dbpath)
             print('Removed %s' % dbpath)
-            purge_all(user)  # calculations in oqdata not in the db
     else:
         sys.exit('The dbserver is not running')
 
