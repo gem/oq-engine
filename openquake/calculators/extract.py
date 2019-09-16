@@ -457,7 +457,7 @@ def extract_task_info(dstore, what):
         name = parse(what)['kind'][0]
         yield name, dic[name]
         return
-    for name in dstore['task_info']:
+    for name in dic:
         yield name, dic[name]
 
 
