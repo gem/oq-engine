@@ -32,7 +32,6 @@ from openquake.calculators.ucerf_base import (
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
@@ -42,7 +41,7 @@ def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
     """
     Generates the event set corresponding to a particular branch
     """
-    serial = seed + ses_idx * TWO16
+    rup_id = seed + ses_idx * TWO16
     # get rates from file
     with h5py.File(ucerf.source_file, 'r') as hdf5:
         occurrences = ucerf.tom.sample_number_of_occurrences(ucerf.rate, seed)
@@ -56,8 +55,8 @@ def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
         for iloc, n_occ in zip(indices, occurrences[indices]):
             ucerf_rup = ucerf.get_ucerf_rupture(iloc, src_filter)
             if ucerf_rup:
-                ucerf_rup.serial = serial
-                serial += 1
+                ucerf_rup.rup_id = rup_id
+                rup_id += 1
                 ruptures.append(ucerf_rup)
                 rupture_occ.append(n_occ)
 
@@ -67,8 +66,8 @@ def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
             background_sids, ucerf.min_mag, ucerf.npd, ucerf.hdd, ucerf.usd,
             ucerf.lsd, ucerf.msr, ucerf.aspect, ucerf.tectonic_region_type)
         for i, brup in enumerate(background_ruptures):
-            brup.serial = serial
-            serial += 1
+            brup.rup_id = rup_id
+            rup_id += 1
             ruptures.append(brup)
         rupture_occ.extend(background_n_occ)
 

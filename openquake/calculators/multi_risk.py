@@ -25,7 +25,6 @@ from openquake.calculators import base
 from openquake.calculators.extract import extract
 
 U16 = numpy.uint16
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -139,8 +138,15 @@ def wkt2peril(fname, name, sitecol):
     Converts a WKT file into a peril array of length N
     """
     with open(fname) as f:
-        next(f)  # skip header
-        geom = shapely.wkt.loads(f.read()[1:-1])  # strip quotes
+        header = next(f)  # skip header
+        if header != 'geom\n':
+            raise ValueError('%s has header %r, should be geom instead' %
+                             (fname, header))
+        wkt = f.read()
+        if not wkt.startswith('"'):
+            raise ValueError('The geometry must be quoted in %s : "%s..."' %
+                             (fname, wkt.split('(')[0]))
+        geom = shapely.wkt.loads(wkt.strip('"'))  # strip quotes
     peril = numpy.zeros(len(sitecol), float)
     for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
         peril[sid] = shapely.geometry.Point(lon, lat).within(geom)

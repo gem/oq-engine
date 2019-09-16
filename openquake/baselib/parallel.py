@@ -165,7 +165,6 @@ import itertools
 import traceback
 import collections
 import multiprocessing.dummy
-from unittest import mock
 import psutil
 import numpy
 try:
@@ -498,11 +497,11 @@ class IterResult(object):
             else:
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
-            name = result.mon.operation[6:]  # strip 'total '
-            result.mon.save_task_info(
-                temp, result, name, self.sent[name], mem_gb)
-            result.mon.flush(temp)
-            if not result.func_args:  # not subtask
+            if not result.func_args:  # real output
+                name = result.mon.operation[6:]  # strip 'total '
+                result.mon.save_task_info(
+                    temp, result, name, self.sent[name], mem_gb)
+                result.mon.flush(temp)
                 yield val
 
     def __iter__(self):
@@ -742,7 +741,7 @@ class Starmap(object):
             for args in self.task_args:
                 self.submit(*args)
         else:  # submit at most num_cores task
-            self.queue = list(self.task_args)
+            self.queue = [(self.task_func,) + args for args in self.task_args]
         return self.get_results()
 
     def get_results(self):
@@ -765,8 +764,8 @@ class Starmap(object):
         if self.queue:  # called from reduce_queue
             first_args = self.queue[:self.num_cores]
             self.queue = self.queue[self.num_cores:]
-            for args in first_args:
-                self.submit(*args)
+            for func, *args in first_args:
+                self.submit(*args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
 
@@ -777,20 +776,23 @@ class Starmap(object):
             if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
-                continue
             elif res.msg == 'TASK_ENDED':
-                self.log_percent()
                 if self.queue:
-                    self.submit(*self.queue.pop())
+                    func, *args = self.queue.pop()
+                    self.submit(*args, func=func)
+                    if self.queue:
+                        func, *args = self.queue.pop()
+                        self.submit(*args, func=func)
+                        self.todo += 1
+                    logging.debug('%d tasks in queue', len(self.queue))
                 else:
                     self.todo -= 1
+                    logging.debug('%d tasks to do', self.todo)
+                self.log_percent()
             elif res.msg:
                 logging.warning(res.msg)
-            elif res.func_args:  # resubmit subtask
-                func, *args = res.func_args
-                self.submit(*args, func=func, monitor=res.mon)
-                yield res
-                self.todo += 1
+            elif res.func_args:  # add subtask
+                self.queue.append(res.func_args)
             else:
                 yield res
         self.log_percent()
