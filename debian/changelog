@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed `oq reset --yes` to remove oqdata/user only in single-user mode
   * Now the engine automatically sorts the user-provided intensity_measure_types
   * Optimized the aggregation by tag
   * Fixed a bug with the binning when disaggregating around the date line
