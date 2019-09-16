@@ -24,24 +24,28 @@ from openquake.baselib import general, hdf5
 class Hdf5TestCase(unittest.TestCase):
     def setUp(self):
         self.tmp = general.gettemp(suffix='.hdf5')
+        with hdf5.File(self.tmp, 'w') as h5:
+            hdf5.create(h5, 'dset1', float)
+            hdf5.create(h5, 'dset2', hdf5.vfloat32)
+            hdf5.create(h5, 'dset3', hdf5.vfloat32)
 
     def test_extend3(self):
-        nrows = hdf5.extend3(self.tmp, 'dset', numpy.zeros(3))
+        nrows = hdf5.extend3(self.tmp, 'dset1', numpy.zeros(3))
         self.assertEqual(nrows, 3)
 
     def test_extend3_vlen(self):
         data = numpy.array([[], [1, 2], [3]], hdf5.vfloat32)
-        nrows = hdf5.extend3(self.tmp, 'dset', data)
+        nrows = hdf5.extend3(self.tmp, 'dset2', data)
         self.assertEqual(nrows, 3)
         with hdf5.File(self.tmp, 'r') as f:
-            print(f['dset'][()])
+            print(f['dset2'][()])
 
     def test_extend3_vlen_same_len(self):
         data = numpy.array([[4, 1], [1, 2], [3, 1]], hdf5.vfloat32)
-        nrows = hdf5.extend3(self.tmp, 'dset', data)
+        nrows = hdf5.extend3(self.tmp, 'dset3', data)
         self.assertEqual(nrows, 3)
         with hdf5.File(self.tmp, 'r') as f:
-            print(f['dset'][()])
+            print(f['dset3'][()])
 
     def tearDown(self):
         os.remove(self.tmp)
