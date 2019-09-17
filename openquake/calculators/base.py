@@ -406,6 +406,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+        if hasattr(self, 'sitecol'):
+            self.save_cache(sitecol=self.sitecol)
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
@@ -732,10 +734,11 @@ class HazardCalculator(BaseCalculator):
         """
         A shortcut method to store data in the hdf5 cache file, if any
         """
-        if hasattr(self, 'cachepath'):  # no scenario
-            with hdf5.File(self.cachepath, 'r+') as cache:
-                for k, v in kw.items():
+        with hdf5.File(self.datastore.cachepath(), libver='latest') as cache:
+            for k, v in kw.items():
+                if v is not None:
                     cache[k] = v
+            cache.swmr_mode = True
 
     def store_rlz_info(self, eff_ruptures=None):
         """
