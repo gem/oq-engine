@@ -460,6 +460,12 @@ class ArrayWrapper(object):
         self.__init__(array, attrs)
 
     def __repr__(self):
+        if hasattr(self, 'shape_descr'):
+            assert len(self.shape) == len(self.shape_descr), (
+                self.shape_descr, self.shape)
+            lst = ['%s=%d' % (descr, size)
+                   for descr, size in zip(self.shape_descr, self.shape)]
+            return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
         return '<%s%s>' % (self.__class__.__name__, self.shape)
 
     @property
