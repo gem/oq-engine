@@ -22,7 +22,7 @@ import getpass
 import collections
 import h5py
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, performance
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
@@ -83,6 +83,7 @@ def hdf5new(datadir=None):
     fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
     new = hdf5.File(fname, 'w')
     new.path = fname
+    performance.init_performance(new)
     return new
 
 
@@ -182,6 +183,8 @@ class DataStore(collections.abc.MutableMapping):
             raise IOError('File not found: %s' % self.filename)
         self.hdf5 = ()  # so that `key in self.hdf5` is valid
         self.open(self.mode)
+        if 'w' in self.mode or '+' in self.mode:
+            performance.init_performance(self.hdf5)
 
     def open(self, mode):
         """
