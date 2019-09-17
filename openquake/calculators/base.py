@@ -737,6 +737,7 @@ class HazardCalculator(BaseCalculator):
         with hdf5.File(self.datastore.cachepath(), libver='latest') as cache:
             for k, v in kw.items():
                 cache[k] = v
+            cache.swmr_mode = True
 
     def store_rlz_info(self, eff_ruptures=None):
         """
