@@ -175,7 +175,8 @@ except ImportError:
 
 from openquake.baselib import config, workerpool
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.performance import Monitor, memory_rss, dump
+from openquake.baselib.performance import (
+    Monitor, memory_rss, dump, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp)
@@ -511,6 +512,7 @@ class IterResult(object):
         self.received = []
         self.nbytes = AccumDict()
         temp = self.hdf5path + '~'
+        init_performance(temp)
         try:
             yield from self._iter(temp)
             if self.received:
@@ -523,8 +525,9 @@ class IterResult(object):
                 if self.nbytes:
                     nb = {k: humansize(v) for k, v in self.nbytes.items()}
                     logging.info('Received %s', nb)
-                # collect performance info
-                dump(temp, self.hdf5path)
+                if 'calc_' in self.hdf5path:
+                    # collect performance info
+                    dump(temp, self.hdf5path)
         finally:
             if os.path.exists(temp):
                 os.remove(temp)
