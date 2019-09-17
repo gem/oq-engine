@@ -646,7 +646,7 @@ def extract_aggregate(dstore, what):
         aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {},
                           loss_types)
     for tagname in tagnames:
-        setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
+        setattr(aw, tagname, getattr(assetcol.tagcol, tagname)[1:])
     aw.shape_descr = tagnames
     return aw
 
