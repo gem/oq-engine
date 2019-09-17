@@ -415,6 +415,8 @@ class HazardCalculator(BaseCalculator):
                          'ruptures')
             if res:
                 logging.info(res)
+        with hdf5.File(self.datastore.cachepath(), 'w', libver='latest') as c:
+            c['sitecol'] = self.sitecol
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
