@@ -113,7 +113,10 @@ def extend3(filename, key, array, **attrs):
     """
     with h5py.File(filename) as h5:
         dset = h5[key]
-        length = extend(dset, array)
+        try:
+            length = extend(dset, array)
+        except ValueError as exc:
+            raise ValueError('%s in %s' % (exc, filename))
         for key, val in attrs.items():
             dset.attrs[key] = val
     return length
