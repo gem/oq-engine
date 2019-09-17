@@ -112,18 +112,10 @@ def extend3(filename, key, array, **attrs):
     Extend an HDF5 file dataset with the given array
     """
     with h5py.File(filename) as h5:
-        try:
-            dset = h5[key]
-        except KeyError:
-            if array.dtype.name == 'object':  # vlen array
-                shape = (None,) + preshape(array[0])
-            else:
-                shape = (None,) + array.shape[1:]
-            dset = create(h5, key, array.dtype, shape)
+        dset = h5[key]
         length = extend(dset, array)
         for key, val in attrs.items():
             dset.attrs[key] = val
-        h5.flush()
     return length
 
 
