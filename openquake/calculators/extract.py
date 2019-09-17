@@ -522,19 +522,22 @@ def extract_agg_curves(dstore, what):
     Aggregate loss curves from the ebrisk calculator:
 
     /extract/agg_curves?
-    kind=stats&absolute=1&loss_type=occupants&tagname=occupancy&tagvalue=RES
+    kind=stats&absolute=1&loss_type=occupants&occupancy=RES
 
     Returns an array of shape (P, S, 1...) or (P, R, 1...)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
+    tagdict = qdic.copy()
+    for a in ('k', 'rlzs', 'kind', 'loss_type', 'absolute'):
+        del tagdict[a]
     k = qdic['k']  # rlz or stat index
     [l] = qdic['loss_type']  # loss type index
-    tagnames = qdic.get('tagname', [])
+    tagnames = sorted(tagdict)
     if set(tagnames) != set(info['tagnames']):
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
-    tagvalues = qdic.get('tagvalue', [])
+    tagvalues = [tagdict[t][0] for t in tagnames]
     tagidx = []
     if tagnames:
         tagcol = dstore['assetcol/tagcol']
