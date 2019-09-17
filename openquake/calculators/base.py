@@ -406,6 +406,9 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+        with hdf5.File(self.datastore.cachepath(), 'w', libver='latest') as c:
+            if hasattr(self, 'sitecol'):
+                c['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
@@ -415,8 +418,6 @@ class HazardCalculator(BaseCalculator):
                          'ruptures')
             if res:
                 logging.info(res)
-        with hdf5.File(self.datastore.cachepath(), 'w', libver='latest') as c:
-            c['sitecol'] = self.sitecol
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
