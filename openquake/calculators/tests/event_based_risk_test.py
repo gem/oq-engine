@@ -155,30 +155,22 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
-                     'loss_type=structural&absolute=1&'
-                     'tagname=policy&tagvalue=A&'
-                     'tagname=taxonomy&tagvalue=RC')
+                     'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
         tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves5.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
-                     'loss_type=structural&absolute=1&'
-                     'tagname=policy&tagvalue=A&'
-                     'tagname=taxonomy&tagvalue=RC')
+                     'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
         tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves6.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
-                     'loss_type=structural&absolute=0&'
-                     'tagname=policy&tagvalue=A&'
-                     'tagname=taxonomy&tagvalue=RC')
+                     'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
         tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves7.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
-                     'loss_type=structural&absolute=0&'
-                     'tagname=policy&tagvalue=A&'
-                     'tagname=taxonomy&tagvalue=RC')
+                     'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
         tmp = gettemp(rst_table(aw.to_table()))
         self.assertEqualFiles('expected/agg_curves8.csv', tmp)
 
