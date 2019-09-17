@@ -116,7 +116,7 @@ def extend3(filename, key, array, **attrs):
         try:
             length = extend(dset, array)
         except ValueError as exc:
-            raise ValueError('%s in %s' % (exc, filename))
+            raise ValueError('%s %s' % (exc, filename))
         for key, val in attrs.items():
             dset.attrs[key] = val
     return length
