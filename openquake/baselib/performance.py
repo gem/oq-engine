@@ -248,10 +248,8 @@ def dump(temppath, perspath):
     :param perspath: the persistent file
     """
     with hdf5.File(temppath, 'r') as h, hdf5.File(perspath, 'r+') as h5:
-        init_performance(h5)
         hdf5.extend(h5['performance_data'], h['performance_data'][()])
         hdf5.extend(h5['task_info'], h['task_info'][()])
         for k, v in h['task_info'].attrs.items():
             h5['task_info'].attrs[k] = v
-
     os.remove(temppath)
