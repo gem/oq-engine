@@ -524,7 +524,7 @@ def extract_agg_curves(dstore, what):
     /extract/agg_curves?
     kind=stats&absolute=1&loss_type=occupants&tagname=occupancy&tagvalue=RES
 
-    Returns an array of shape (P, S, T...) or (P, R, T...)
+    Returns an array of shape (P, S, 1...) or (P, R, 1...)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
@@ -544,11 +544,11 @@ def extract_agg_curves(dstore, what):
     tup = tuple([slice(None), k, l] + tagidx)
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
-        arr = dstore['agg_curves-rlzs'][tup]  # shape P, T...
+        arr = dstore['agg_curves-rlzs'][tup].T  # shape R, P
         rps = dstore.get_attr('agg_curves-rlzs', 'return_periods')
     else:
         kinds = list(info['stats'])
-        arr = dstore['agg_curves-stats'][tup]  # shape P, T...
+        arr = dstore['agg_curves-stats'][tup].T  # shape S, P
         rps = dstore.get_attr('agg_curves-stats', 'return_periods')
     if qdic['absolute'] == [1]:
         pass
@@ -559,7 +559,7 @@ def extract_agg_curves(dstore, what):
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
-    attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
+    attrs = dict(shape_descr=['kind', 'return_period'] + tagnames)
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
     for tagname, tagvalue in zip(tagnames, tagvalues):
