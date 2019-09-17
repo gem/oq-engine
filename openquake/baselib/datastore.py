@@ -83,6 +83,7 @@ def hdf5new(datadir=None):
     fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
     new = hdf5.File(fname, 'w')
     new.path = fname
+    performance.init_performance(new)
     return new
 
 
