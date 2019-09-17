@@ -203,8 +203,6 @@ class Monitor(object):
             data = numpy.concatenate(lst)
         if len(data) == 0:  # no information
             return
-        elif not os.path.exists(hdf5path):
-            init_performance(hdf5path)
         hdf5.extend3(hdf5path, 'performance_data', data)
         self.reset()
 
