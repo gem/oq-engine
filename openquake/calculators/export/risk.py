@@ -132,8 +132,7 @@ def export_agg_maps_csv(ekey, dstore):
              else list(oq.hazard_stats()))
     clp = [str(p) for p in oq.conditional_loss_poes]
     dic = dict(shape_descr=['clp', 'kind', 'loss_type'] + oq.aggregate_by,
-               clp=['?'] + clp, kind=['?'] + kinds,
-               loss_type=('?',) + oq.loss_dt().names)
+               clp=clp, kind=kinds, loss_type=oq.loss_dt().names)
     for tagname in oq.aggregate_by:
         dic[tagname] = getattr(tagcol, tagname)
     aw = hdf5.ArrayWrapper(agg_maps, dic)
@@ -252,7 +251,7 @@ def export_losses_by_event(ekey, dstore):
     dic = dict(shape_descr=['event_id'] + oq.aggregate_by)
     for tagname in oq.aggregate_by:
         dic[tagname] = getattr(tagcol, tagname)
-    dic['event_id'] = ['?'] + list(lbe['event_id'])
+    dic['event_id'] = list(lbe['event_id'])
     # example (0, 1, 2, 3) -> (0, 2, 3, 1)
     axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
     data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
