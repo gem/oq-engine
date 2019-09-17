@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib.general import (
     humansize, groupby, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg2)
+    get_array, group_array, fast_agg)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid
@@ -318,15 +318,14 @@ def view_job_info(token, dstore):
     to the workers and back in a classical calculation.
     """
     data = [['task', 'sent', 'received']]
-    dset = dstore['task_info']
-    tasks = set(dset['taskname'])
-    for task in sorted(tasks):
+    task_info = dstore['task_info']
+    for task, array in group_array(task_info[()], 'taskname').items():
         sent = 'sent_' + task
-        if sent in dset.attrs:
-            sent = sorted(ast.literal_eval(dset.attrs[sent]).items(),
+        if sent in task_info.attrs:
+            sent = sorted(ast.literal_eval(task_info.attrs[sent]).items(),
                           key=operator.itemgetter(1), reverse=True)
             sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
-            recv = dset['received'].sum()
+            recv = array['received'].sum()
             data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
@@ -913,8 +912,8 @@ def view_events_by_mag(token, dstore):
     Show how many events there are for each magnitude
     """
     rups = dstore['ruptures'][()]
-    num_evs = dict(zip(*fast_agg2(dstore['events']['rup_id'])))
+    num_evs = fast_agg(dstore['events']['rup_id'])
     counts = {}
     for mag, grp in group_array(rups, 'mag').items():
-        counts[mag] = sum(num_evs[rup_id] for rup_id in grp['rup_id'])
+        counts[mag] = sum(num_evs[rup_id] for rup_id in grp['id'])
     return rst_table(counts.items(), ['mag', 'num_events'])
