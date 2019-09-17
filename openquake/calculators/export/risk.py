@@ -134,7 +134,7 @@ def export_agg_maps_csv(ekey, dstore):
     dic = dict(shape_descr=['clp', 'kind', 'loss_type'] + oq.aggregate_by,
                clp=clp, kind=kinds, loss_type=oq.loss_dt().names)
     for tagname in oq.aggregate_by:
-        dic[tagname] = getattr(tagcol, tagname)
+        dic[tagname] = getattr(tagcol, tagname)[1:]
     aw = hdf5.ArrayWrapper(agg_maps, dic)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.export_path('%s.%s' % ekey)
@@ -250,7 +250,7 @@ def export_losses_by_event(ekey, dstore):
     lbe.sort(order='event_id')
     dic = dict(shape_descr=['event_id'] + oq.aggregate_by)
     for tagname in oq.aggregate_by:
-        dic[tagname] = getattr(tagcol, tagname)
+        dic[tagname] = getattr(tagcol, tagname)[1:]
     dic['event_id'] = list(lbe['event_id'])
     # example (0, 1, 2, 3) -> (0, 2, 3, 1)
     axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
