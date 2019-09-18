@@ -933,7 +933,7 @@ class RiskCalculator(HazardCalculator):
             self.core_task.__func__,
             (self.riskinputs, self.crmodel, self.param, self.monitor()),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            weight=get_weight, hdf5path=self.datastore.filename
+            weight=get_weight, h5=self.datastore.hdf5
         ).reduce(self.combine)
         return res
 
