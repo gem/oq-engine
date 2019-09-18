@@ -87,8 +87,8 @@ class MorikawaFujiwara2013(GMPE):
                 self._get_shallow_amplification_term(C, sites.vs30) +
                 self._get_intensity_correction_term(C, self.region, sites.xvf,
                                                     rup.hypo_depth))
-
-        return mean
+        std = 0
+        return mean, std
 
     def _get_magnitude_term(self, C, mag, rrup):
         mw01 = self.CONSTS["Mw01"]
@@ -99,10 +99,12 @@ class MorikawaFujiwara2013(GMPE):
 
     def _get_basin_term(self, C, z1pt4):
         d0 = self.CONSTS["Mw1"]
-        return C['pd'] * np.log(np.max([C['Dlmin'], z1pt4])/d0)
+        tmp = np.ones_like(z1pt4) * C['Dlmin']
+        return C['pd'] * np.log(np.maximum(tmp, z1pt4)/d0)
 
     def _get_shallow_amplification_term(self, C, vs30):
-        return C['ps'] * np.log(np.max([C['Vsmax'], vs30])/C['V0'])
+        tmp = np.ones_like(vs30) * C['Vsmax']
+        return C['ps'] * np.log(np.maximum(tmp, vs30)/C['V0'])
 
     def _get_intensity_correction_term(self, C, region, xvf, focal_depth):
         if region == 'NE':
