@@ -309,7 +309,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                                     self.iml2s, trti, self.bin_edges))
         self.datastore.close()
         results = parallel.Starmap(
-            compute_disagg, allargs, hdf5path=self.datastore.filename
+            compute_disagg, allargs, h5=self.datastore.hdf5
         ).reduce(self.agg_result, AccumDict(accum={}))
         return results  # sid -> trti-> 7D array
 
