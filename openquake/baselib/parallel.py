@@ -163,7 +163,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config, workerpool
+from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_rss, dump, init_performance)
@@ -500,9 +500,9 @@ class IterResult(object):
         t0 = time.time()
         self.received = []
         self.nbytes = AccumDict()
-        temp = self.hdf5path + '~'
-        init_performance(temp, swmr=True)
+        temp = hdf5.File(self.hdf5path + '~', 'w')
         try:
+            init_performance(temp, swmr=True)
             yield from self._iter(temp)
             if self.received:
                 tot = sum(self.received)
@@ -514,12 +514,12 @@ class IterResult(object):
                 if self.nbytes:
                     nb = {k: humansize(v) for k, v in self.nbytes.items()}
                     logging.info('Received %s', nb)
-                if 'calc_' in self.hdf5path:
-                    # collect performance info
-                    dump(temp, self.hdf5path, self.sent)
         finally:
-            if os.path.exists(temp):
-                os.remove(temp)
+            if os.path.basename(self.hdf5path).startswith('calc_'):
+                dump(temp, self.hdf5path, self.sent)
+            temp.close()
+            if os.path.exists(self.hdf5path + '~'):
+                os.remove(self.hdf5path + '~')
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
