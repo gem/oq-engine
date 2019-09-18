@@ -128,9 +128,10 @@ class StarmapTestCase(unittest.TestCase):
         numchars = sum(len(arg) for arg, in allargs)  # 61
         tmpdir = tempfile.mkdtemp()
         tmp = os.path.join(tmpdir, 'calc_1.hdf5')
-        performance.init_performance(tmp)
-        smap = parallel.Starmap(supertask, allargs, hdf5path=tmp)
+        performance.init_performance(tmp, swmr=True)
+        smap = parallel.Starmap(supertask, allargs, h5=hdf5.File(tmp, 'a'))
         res = smap.reduce()
+        smap.h5.close()
         self.assertEqual(res, {'n': numchars})
         # check that the correct information is stored in the hdf5 file
         with hdf5.File(tmp, 'r') as h5:
