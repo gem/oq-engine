@@ -196,7 +196,6 @@ class DataStore(collections.abc.MutableMapping):
             except OSError as exc:
                 if os.path.exists(self.filename + '~'):  # temporary file
                     self.hdf5 = hdf5.File(self.filename + '~', 'r')
-                    print(self.hdf5)
                 else:
                     raise OSError('%s in %s' % (exc, self.filename))
 
