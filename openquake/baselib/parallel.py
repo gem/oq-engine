@@ -452,7 +452,7 @@ class IterResult(object):
     :param progress:
         a logging function for the progress report
     :param hdf5path:
-        an open hdf5.File where to store persistently the performance info
+        a path where to store persistently the performance info
      """
     def __init__(self, iresults, taskname, argnames, sent, hdf5path):
         self.iresults = iresults
@@ -614,7 +614,7 @@ class Starmap(object):
     def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
-              distribute=None, progress=logging.info, hdf5path=None,
+              distribute=None, progress=logging.info, h5=None,
               num_cores=None):
         r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
@@ -630,7 +630,7 @@ class Starmap(object):
         :param key: function to extract the kind of an item in arg0
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
-        :param hdf5path: an open hdf5.File where to store the performance info
+        :param h5: an open hdf5.File where to store the performance info
         :param num_cores: the number of available cores (or None)
         :returns: an :class:`IterResult` object
         """
@@ -642,24 +642,26 @@ class Starmap(object):
         else:  # split_in_blocks is eager
             taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(task, taskargs, distribute, progress, hdf5path,
-                   num_cores).submit_all()
+        return cls(
+            task, taskargs, distribute, progress, h5, num_cores
+        ).submit_all()
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, hdf5path=None, num_cores=None):
+                 progress=logging.info, h5=None, num_cores=None):
         self.__class__.init(distribute=distribute)
         self.task_func = task_func
-        if hdf5path:
-            match = re.search(r'(\d+)', os.path.basename(hdf5path))
+        if h5:
+            match = re.search(r'(\d+)', os.path.basename(h5.filename))
             self.calc_id = int(match.group(1))
         else:
             self.calc_id = None
+            h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
         self.monitor = Monitor(task_func.__name__)
         self.monitor.calc_id = self.calc_id
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
         self.progress = progress
-        self.hdf5path = hdf5path or gettemp(suffix='.hdf5')
+        self.h5 = h5
         self.num_cores = num_cores
         self.queue = []
         try:
@@ -741,7 +743,7 @@ class Starmap(object):
         :returns: an :class:`IterResult` instance
         """
         return IterResult(self._loop(), self.name, self.argnames,
-                          self.sent, self.hdf5path)
+                          self.sent, self.h5.filename)
 
     def reduce(self, agg=operator.add, acc=None):
         """
