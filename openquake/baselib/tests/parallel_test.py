@@ -163,3 +163,41 @@ class ThreadPoolTestCase(unittest.TestCase):
                 self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
             finally:
                 parallel.Starmap.shutdown()
+
+
+def sum_chunk(slc, hdf5path):
+    with hdf5.File(hdf5path, 'r') as f:
+        return f['array'][slc].sum()
+
+
+def pool_starmap(func, allargs, h5):
+    import multiprocessing
+    with multiprocessing.get_context('spawn').Pool() as pool:
+        for i, res in enumerate(pool.starmap(func, allargs)):
+            perf = numpy.array([(func.__name__, 0, 0, i)], performance.perf_dt)
+            hdf5.extend(h5['performance_data'], perf)
+            yield res
+
+
+class SWMRTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        tmpdir = tempfile.mkdtemp()
+        cls.tmp = os.path.join(tmpdir, 'calc_1.hdf5')
+        with hdf5.File(cls.tmp, 'w') as h:
+            h['array'] = numpy.arange(100)
+        performance.init_performance(cls.tmp, swmr=True)
+
+    def test(self):
+        allargs = []
+        for s in range(0, 100, 10):
+            allargs.append((slice(s, s + 10), self.tmp))
+        with hdf5.File(self.tmp, 'a') as h5:
+            h5.swmr_mode = True
+            tot = sum(pool_starmap(sum_chunk, allargs, h5))
+        self.assertEqual(tot, 4950)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(os.path.dirname(cls.tmp))
