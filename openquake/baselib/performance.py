@@ -34,7 +34,7 @@ task_info_dt = numpy.dtype(
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
 
-def init_performance(hdf5file):
+def init_performance(hdf5file, swmr=False):
     """
     :param hdf5file: file name of hdf5.File instance
     """
@@ -44,6 +44,11 @@ def init_performance(hdf5file):
         hdf5.create(h5, 'performance_data', perf_dt)
     if 'task_info' not in h5:
         hdf5.create(h5, 'task_info', task_info_dt)
+    if swmr:
+        try:
+            h5.swmr_mode = True
+        except ValueError as exc:
+            raise ValueError('%s: %s' % (hdf5file, exc))
     if fname:
         h5.close()
 
