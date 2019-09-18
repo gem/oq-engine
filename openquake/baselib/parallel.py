@@ -448,7 +448,7 @@ class IterResult(object):
     :param done_total:
         a function returning the number of done tasks and the total
     :param sent:
-        the number of bytes sent (0 if OQ_DISTRIBUTE=no)
+        a nested dictionary name -> {argname: number of bytes sent}
     :param progress:
         a logging function for the progress report
     :param hdf5path:
@@ -490,8 +490,7 @@ class IterResult(object):
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func_args:  # real output
                 name = result.mon.operation[6:]  # strip 'total '
-                result.mon.save_task_info(
-                    temp, result, name, self.sent[name], mem_gb)
+                result.mon.save_task_info(temp, result, name, mem_gb)
                 result.mon.flush(temp)
                 yield val
 
@@ -502,7 +501,7 @@ class IterResult(object):
         self.received = []
         self.nbytes = AccumDict()
         temp = self.hdf5path + '~'
-        init_performance(temp)
+        init_performance(temp, swmr=True)
         try:
             yield from self._iter(temp)
             if self.received:
@@ -517,7 +516,7 @@ class IterResult(object):
                     logging.info('Received %s', nb)
                 if 'calc_' in self.hdf5path:
                     # collect performance info
-                    dump(temp, self.hdf5path)
+                    dump(temp, self.hdf5path, self.sent)
         finally:
             if os.path.exists(temp):
                 os.remove(temp)
