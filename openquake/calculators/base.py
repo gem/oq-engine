@@ -131,8 +131,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
         self._monitor = Monitor(
-            '%s.run' % self.__class__.__name__, measuremem=True)
-        self._monitor.hdf5path = self.datastore.filename  # autoflush
+            '%s.run' % self.__class__.__name__, measuremem=True,
+            hdf5path=self.datastore.filename)
         self.oqparam = oqparam
 
     def monitor(self, operation='', **kw):
@@ -140,7 +140,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         :returns: a new Monitor instance
         """
         mon = self._monitor(operation)
-        mon.hdf5path = self.datastore.filename  # flushable monitor
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
@@ -548,7 +547,7 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        with self.monitor('reading exposure', autoflush=True):
+        with self.monitor('reading exposure', hdf5path=self.datastore.filename):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
                     oq, haz_sitecol, self.crmodel.loss_types))
@@ -868,7 +867,7 @@ class RiskCalculator(HazardCalculator):
             _, self.crmodel.tmap = logictree.taxonomy_mapping(
                 self.oqparam.inputs.get('taxonomy_mapping'),
                 self.assetcol.tagcol.taxonomy)
-        with self.monitor('building riskinputs', autoflush=True):
+        with self.monitor('building riskinputs', hdf5path=self.datastore.filename):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
