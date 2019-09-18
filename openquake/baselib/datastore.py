@@ -230,6 +230,8 @@ class DataStore(collections.abc.MutableMapping):
         """
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
         """
+        if self.hdf5.swmr_mode:
+            return 0
         return self.hdf5.set_nbytes(key, nbytes)
 
     def set_attrs(self, key, **kw):
