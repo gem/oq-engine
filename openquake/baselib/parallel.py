@@ -94,18 +94,8 @@ Monitoring
 =============================
 
 A major feature of the Starmap API is the ability to monitor the time spent
-in each task and the memory allocated. Such information is written into a
-temporary HDF5 file and can be accessed after the last task output is
-returned:
-
->>> import h5py
->>> with h5py.File(smap.hdf5path, 'r') as f:
-...     f['performance_data'].dtype.names
-('operation', 'time_sec', 'memory_mb', 'counts')
-
-The user can also specify an explicit value for `hdf5path`, corresponding
-to an existing HDF5 file; in such a case the performance info will be appended
-there.
+in each task and the memory allocated. Such information is written into an
+HDF5 file properly prepared with the function `init_performance`.
 
 The engine provides a command `oq show performance` to print the performance
 information stored in the HDF5 file in a nice way.
