@@ -97,10 +97,12 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='', measuremem=False, inner_loop=False):
+    def __init__(self, operation='', measuremem=False, inner_loop=False,
+                 hdf5path=None):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
+        self.hdf5path = hdf5path
         self.mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()
@@ -158,11 +160,7 @@ class Monitor(object):
         self._stop_time = time.time()
         self.duration += self._stop_time - self._start_time
         self.counts += 1
-        self.on_exit()
-
-    def on_exit(self):
-        "To be overridden in subclasses"
-        if hasattr(self, 'hdf5path'):
+        if self.hdf5path:
             self.flush(self.hdf5path)
 
     def save_task_info(self, hdf5path, res, name, sent, mem_gb=0):

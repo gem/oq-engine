@@ -128,7 +128,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, rup_data
         """
-        with self.monitor('aggregate curves', autoflush=True):
+        with self.monitor('aggregate curves', hdf5path=self.datastore.filename):
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
             srcids = []
@@ -199,7 +199,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats(parent)  # post-processing
             return {}
 
-        with self.monitor('managing sources', autoflush=True):
+        with self.monitor('managing sources', hdf5path=self.datastore.filename):
             smap = parallel.Starmap(
                 self.core_task.__func__, hdf5path=self.datastore.filename)
             self.submit_sources(smap)
@@ -208,7 +208,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc = smap.reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
         finally:
-            with self.monitor('store source_info', autoflush=True):
+            with self.monitor('store source_info', hdf5path=self.datastore.filename):
                 self.store_source_info(self.calc_times)
             if self.sources_by_task:
                 num_tasks = max(self.sources_by_task) + 1
@@ -275,7 +275,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
-        with self.monitor('saving statistics', autoflush=True):
+        with self.monitor('saving statistics', hdf5path=self.datastore.filename):
             for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
                 pmaps = pmap_by_kind[kind]
                 if kind == 'rlz_by_sid':  # pmaps is actually a rlz_by_sid
@@ -310,7 +310,7 @@ class ClassicalCalculator(base.HazardCalculator):
         grp_name = {grp.id: grp.name for sm in csm_info.source_models
                     for grp in sm.src_groups}
         data = []
-        with self.monitor('saving probability maps', autoflush=True):
+        with self.monitor('saving probability maps', hdf5path=self.datastore.filename):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
