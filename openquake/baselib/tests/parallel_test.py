@@ -185,7 +185,7 @@ class SWMRTestCase(unittest.TestCase):
     def setUpClass(cls):
         tmpdir = tempfile.mkdtemp()
         cls.tmp = os.path.join(tmpdir, 'calc_1.hdf5')
-        with hdf5.File(cls.tmp, 'w', libver='latest') as h:
+        with hdf5.File(cls.tmp, 'w') as h:
             h['array'] = numpy.arange(100)
         performance.init_performance(cls.tmp, swmr=True)
 
