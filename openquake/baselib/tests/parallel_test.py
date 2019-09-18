@@ -166,8 +166,17 @@ class ThreadPoolTestCase(unittest.TestCase):
 
 
 def sum_chunk(slc, hdf5path):
-    with hdf5.File(hdf5path, 'r', libver='latest') as f:
+    with hdf5.File(hdf5path, 'r') as f:
         return f['array'][slc].sum()
+
+
+def pool_starmap(func, allargs, h5):
+    import multiprocessing
+    pool = multiprocessing.get_context('spawn').Pool()
+    for i, res in enumerate(pool.starmap(func, allargs)):
+        perf = numpy.array([(func.__name__, 0, 0, i)], performance.perf_dt)
+        hdf5.extend(h5['performance_data'], perf)
+        yield res
 
 
 class SWMRTestCase(unittest.TestCase):
@@ -178,14 +187,15 @@ class SWMRTestCase(unittest.TestCase):
         cls.tmp = os.path.join(tmpdir, 'calc_1.hdf5')
         with hdf5.File(cls.tmp, 'w', libver='latest') as h:
             h['array'] = numpy.arange(100)
-            h.swmr_mode = True
         performance.init_performance(cls.tmp, swmr=True)
 
     def test(self):
         allargs = []
         for s in range(0, 100, 10):
             allargs.append((slice(s, s + 10), self.tmp))
-        tot = sum(parallel.Starmap(sum_chunk, allargs, hdf5path=self.tmp))
+        with hdf5.File(self.tmp, 'a') as h5:
+            h5.swmr_mode = True
+            tot = sum(pool_starmap(sum_chunk, allargs, h5))
         self.assertEqual(tot, 4950)
 
     @classmethod
