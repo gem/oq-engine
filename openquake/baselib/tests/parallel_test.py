@@ -172,11 +172,11 @@ def sum_chunk(slc, hdf5path):
 
 def pool_starmap(func, allargs, h5):
     import multiprocessing
-    pool = multiprocessing.get_context('spawn').Pool()
-    for i, res in enumerate(pool.starmap(func, allargs)):
-        perf = numpy.array([(func.__name__, 0, 0, i)], performance.perf_dt)
-        hdf5.extend(h5['performance_data'], perf)
-        yield res
+    with multiprocessing.get_context('spawn').Pool() as pool:
+        for i, res in enumerate(pool.starmap(func, allargs)):
+            perf = numpy.array([(func.__name__, 0, 0, i)], performance.perf_dt)
+            hdf5.extend(h5['performance_data'], perf)
+            yield res
 
 
 class SWMRTestCase(unittest.TestCase):
