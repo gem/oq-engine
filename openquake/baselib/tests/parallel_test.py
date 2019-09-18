@@ -163,3 +163,31 @@ class ThreadPoolTestCase(unittest.TestCase):
                 self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
             finally:
                 parallel.Starmap.shutdown()
+
+
+def sum_chunk(slc, hdf5path):
+    with hdf5.File(hdf5path, 'r', libver='latest') as f:
+        return f['array'][slc].sum()
+
+
+class SWMRTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        tmpdir = tempfile.mkdtemp()
+        cls.tmp = os.path.join(tmpdir, 'calc_1.hdf5')
+        with hdf5.File(cls.tmp, 'w', libver='latest') as h:
+            h['array'] = numpy.arange(100)
+            h.swmr_mode = True
+        performance.init_performance(cls.tmp, swmr=True)
+
+    def test(self):
+        allargs = []
+        for s in range(0, 100, 10):
+            allargs.append((slice(s, s + 10), self.tmp))
+        tot = sum(parallel.Starmap(sum_chunk, allargs, hdf5path=self.tmp))
+        self.assertEqual(tot, 4950)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(os.path.dirname(cls.tmp))
