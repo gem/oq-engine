@@ -111,7 +111,7 @@ def extend3(filename, key, array, **attrs):
     """
     Extend an HDF5 file dataset with the given array
     """
-    with h5py.File(filename) as h5:
+    with h5py.File(filename, 'a') as h5:
         dset = h5[key]
         try:
             length = extend(dset, array)
@@ -272,6 +272,14 @@ class File(h5py.File):
     3
     >>> f.close()
     """
+    def __init__(self, name, mode=None, driver=None, libver='latest',
+                 userblock_size=None, swmr=True, rdcc_nslots=None,
+                 rdcc_nbytes=None, rdcc_w0=None, track_order=None,
+                 **kwds):
+        super().__init__(name, mode, driver, libver,
+                         userblock_size, swmr, rdcc_nslots,
+                         rdcc_nbytes, rdcc_w0, track_order, **kwds)
+
     @classmethod
     def temporary(cls):
         """
