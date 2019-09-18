@@ -33,6 +33,8 @@ task_info_dt = numpy.dtype(
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
+task_sent_dt = numpy.dtype([('taskname', hdf5.vstr), ('sent', hdf5.vstr)])
+
 
 def init_performance(hdf5file, swmr=False):
     """
@@ -44,6 +46,8 @@ def init_performance(hdf5file, swmr=False):
         hdf5.create(h5, 'performance_data', perf_dt)
     if 'task_info' not in h5:
         hdf5.create(h5, 'task_info', task_info_dt)
+    if 'task_sent' not in h5:
+        hdf5.create(h5, 'task_sent', task_sent_dt)
     if swmr:
         try:
             h5.swmr_mode = True
@@ -168,21 +172,19 @@ class Monitor(object):
         if self.hdf5path:
             self.flush(self.hdf5path)
 
-    def save_task_info(self, hdf5path, res, name, sent, mem_gb=0):
+    def save_task_info(self, hdf5path, res, name, mem_gb=0):
         """
         Called by parallel.IterResult.
 
         :param hdf5path: where to save the info
         :param res: a :class:`Result` object
         :param name: name of the task function
-        :param sent: number of bytes sent
         :param mem_gb: memory consumption at the saving time (optional)
         """
         t = (name, self.task_no, self.weight, self.duration, len(res.pik),
              mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend3(hdf5path, 'task_info', data,
-                     **{'sent_' + name: str(sent)})
+        hdf5.extend3(hdf5path, 'task_info', data)
 
     def reset(self):
         """
@@ -242,17 +244,20 @@ class Monitor(object):
             return '<%s>' % msg
 
 
-def dump(temppath, perspath):
+def dump(temppath, perspath, sent):
     """
     Dump the performance info into a persistent file,
     then remove the temporary file.
 
     :param temppath: the temporary file
     :param perspath: the persistent file
+    :param sent: dictionary taskname -> argname -> nbytes
     """
+    sent_data = numpy.array(list(sent.items()), task_sent_dt)
     with hdf5.File(temppath, 'r') as h, hdf5.File(perspath, 'r+') as h5:
         hdf5.extend(h5['performance_data'], h['performance_data'][()])
         hdf5.extend(h5['task_info'], h['task_info'][()])
+        hdf5.extend(h5['task_sent'], sent_data)
         for k, v in h['task_info'].attrs.items():
             h5['task_info'].attrs[k] = v
     os.remove(temppath)
