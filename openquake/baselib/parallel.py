@@ -463,7 +463,6 @@ class IterResult(object):
         self.hdf5path = hdf5path
 
     def _iter(self, temp):
-        # temp = self.hdf5path
         first_time = True
         for result in self.iresults:
             msg = check_mem_usage()
