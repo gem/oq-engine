@@ -24,6 +24,8 @@ import tempfile
 import numpy
 from openquake.baselib.datastore import DataStore, read
 
+perf_tables = ['performance_data', 'task_info', 'task_sent']
+
 
 class DataStoreTestCase(unittest.TestCase):
     def setUp(self):
@@ -34,14 +36,13 @@ class DataStoreTestCase(unittest.TestCase):
 
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
-        self.assertEqual(len(self.dstore), 2)  # performance_data, task_info
+        self.assertEqual(len(self.dstore), len(perf_tables))
+        # performance_data, task_info, task_sent
         self.dstore['/key1'] = value1 = numpy.array(['a', 'b'], dtype=bytes)
         self.dstore['/key2'] = numpy.array([1, 2])
-        self.assertEqual(list(self.dstore),
-                         ['key1', 'key2', 'performance_data', 'task_info'])
+        self.assertEqual(list(self.dstore), ['key1', 'key2'] + perf_tables)
         del self.dstore['/key2']
-        self.assertEqual(list(self.dstore),
-                         ['key1', 'performance_data', 'task_info'])
+        self.assertEqual(list(self.dstore), ['key1'] + perf_tables)
         numpy.testing.assert_equal(self.dstore['key1'], value1)
 
         self.assertGreater(self.dstore.getsize('key1'), 0)
