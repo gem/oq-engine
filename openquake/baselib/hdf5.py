@@ -111,7 +111,7 @@ def extend3(filename, key, array, **attrs):
     """
     Extend an HDF5 file dataset with the given array
     """
-    with h5py.File(filename, 'a', libver='latest') as h5:
+    with h5py.File(filename, 'a', libver='latest', swmr=True) as h5:
         dset = h5[key]
         try:
             length = extend(dset, array)
