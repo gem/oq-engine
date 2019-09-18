@@ -188,6 +188,7 @@ class Monitor(object):
             hdf5.extend3(hdf5path, 'task_info', data)
         else:
             hdf5.extend(hdf5path['task_info'], data)
+            hdf5path['task_info'].flush()  # notify the reader
 
     def reset(self):
         """
@@ -215,6 +216,7 @@ class Monitor(object):
             hdf5.extend3(hdf5path, 'performance_data', data)
         else:
             hdf5.extend(hdf5path['performance_data'], data)
+            hdf5path['performance_data'].flush()  # notify the reader
         self.reset()
 
     # TODO: rename this as spawn; see what will break

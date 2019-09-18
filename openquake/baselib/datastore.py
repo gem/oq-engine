@@ -191,12 +191,12 @@ class DataStore(collections.abc.MutableMapping):
         Open the underlying .hdf5 file and the parent, if any
         """
         if self.hdf5 == ():  # not already open
-            kw = dict(mode=mode)
             try:
-                self.hdf5 = hdf5.File(self.filename, **kw)
+                self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
                 if os.path.exists(self.filename + '~'):  # temporary file
-                    self.hdf5 = hdf5.File(self.filename + '~', **kw)
+                    self.hdf5 = hdf5.File(self.filename + '~', 'r')
+                    print(self.hdf5)
                 else:
                     raise OSError('%s in %s' % (exc, self.filename))
 
