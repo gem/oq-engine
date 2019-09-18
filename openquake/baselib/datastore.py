@@ -191,16 +191,13 @@ class DataStore(collections.abc.MutableMapping):
         Open the underlying .hdf5 file and the parent, if any
         """
         if self.hdf5 == ():  # not already open
-            kw = dict(mode=mode)
             try:
-                self.hdf5 = hdf5.File(self.filename, **kw)
+                self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
-                raise OSError('%s in %s' % (exc, self.filename))
-                # TODO: restore the line below when SWMR mode will be on
-                # if os.path.exists(self.filename + '~'):  # temporary file
-                #     self.hdf5 = hdf5.File(self.filename + '~', **kw)
-                # else:
-                #     raise OSError('%s in %s' % (exc, self.filename))
+                if os.path.exists(self.filename + '~'):  # temporary file
+                    self.hdf5 = hdf5.File(self.filename + '~', 'r')
+                else:
+                    raise OSError('%s in %s' % (exc, self.filename))
 
     @property
     def export_dir(self):
