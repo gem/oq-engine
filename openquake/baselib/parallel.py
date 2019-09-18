@@ -502,7 +502,7 @@ class IterResult(object):
         self.received = []
         self.nbytes = AccumDict()
         temp = self.hdf5path + '~'
-        init_performance(temp)
+        init_performance(temp, swmr=True)
         try:
             yield from self._iter(temp)
             if self.received:
