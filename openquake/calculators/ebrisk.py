@@ -255,7 +255,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.lossbytes = 0
         smap = parallel.Starmap(
             self.core_task.__func__, allargs,
-            num_cores=num_cores, hdf5path=self.datastore.filename)
+            num_cores=num_cores, h5=self.datastore.hdf5)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         self.datastore.set_attrs(
@@ -361,7 +361,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         args = [(dstore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
         acc = list(parallel.Starmap(postprocess, args,
-                                    hdf5path=self.datastore.filename))
+                                    h5=self.datastore.hdf5))
         self.datastore.open('r+')  # reopen
         for r, (curves, maps), agg_losses in acc:
             if len(curves):  # some realization can give zero contribution

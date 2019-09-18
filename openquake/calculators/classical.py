@@ -201,7 +201,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         with self.monitor('managing sources'):
             smap = parallel.Starmap(
-                self.core_task.__func__, hdf5path=self.datastore.filename)
+                self.core_task.__func__, h5=self.datastore.hdf5)
             self.submit_sources(smap)
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
@@ -361,8 +361,7 @@ class ClassicalCalculator(base.HazardCalculator):
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
         parallel.Starmap(build_hazard, allargs,
-                         hdf5path=self.datastore.filename).reduce(
-                             self.save_hazard)
+                         h5=self.datastore.hdf5).reduce(self.save_hazard)
 
 
 @base.calculators.add('preclassical')
