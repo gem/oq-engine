@@ -123,7 +123,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         L = len(loss_dt.names)
         dtlist = [('event_id', U32), ('rlzi', U16), ('loss', (F32, (L,)))]
         R = self.R
-        with self.monitor('saving outputs', autoflush=True):
+        with self.monitor('saving outputs', hdf5path=self.datastore.filename):
             A = len(self.assetcol)
 
             # agg losses
