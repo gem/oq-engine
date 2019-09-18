@@ -514,10 +514,9 @@ class IterResult(object):
                 if self.nbytes:
                     nb = {k: humansize(v) for k, v in self.nbytes.items()}
                     logging.info('Received %s', nb)
-                if 'calc_' in self.hdf5path:
-                    # collect performance info
-                    dump(temp, self.hdf5path, self.sent)
         finally:
+            if os.path.basename(self.hdf5path).startswith('calc_'):
+                dump(temp, self.hdf5path, self.sent)
             temp.close()
             if os.path.exists(self.hdf5path + '~'):
                 os.remove(self.hdf5path + '~')
