@@ -184,7 +184,11 @@ class Monitor(object):
         t = (name, self.task_no, self.weight, self.duration, len(res.pik),
              mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend3(hdf5path, 'task_info', data)
+        if isinstance(hdf5path, str):
+            hdf5.extend3(hdf5path, 'task_info', data)
+        else:
+            hdf5.extend(hdf5path['task_info'], data)
+            hdf5path['task_info'].flush()  # notify the reader
 
     def reset(self):
         """
@@ -208,7 +212,11 @@ class Monitor(object):
             data = numpy.concatenate(lst)
         if len(data) == 0:  # no information
             return
-        hdf5.extend3(hdf5path, 'performance_data', data)
+        if isinstance(hdf5path, str):
+            hdf5.extend3(hdf5path, 'performance_data', data)
+        else:
+            hdf5.extend(hdf5path['performance_data'], data)
+            hdf5path['performance_data'].flush()  # notify the reader
         self.reset()
 
     # TODO: rename this as spawn; see what will break
@@ -244,20 +252,20 @@ class Monitor(object):
             return '<%s>' % msg
 
 
-def dump(temppath, perspath, sent):
+def dump(h, perspath, sent):
     """
     Dump the performance info into a persistent file,
     then remove the temporary file.
 
-    :param temppath: the temporary file
+    :param h: the temporary file
     :param perspath: the persistent file
     :param sent: dictionary taskname -> argname -> nbytes
     """
     sent_data = numpy.array(list(sent.items()), task_sent_dt)
-    with hdf5.File(temppath, 'r') as h, hdf5.File(perspath, 'r+') as h5:
+    with hdf5.File(perspath, 'r+') as h5:
         hdf5.extend(h5['performance_data'], h['performance_data'][()])
         hdf5.extend(h5['task_info'], h['task_info'][()])
         hdf5.extend(h5['task_sent'], sent_data)
         for k, v in h['task_info'].attrs.items():
             h5['task_info'].attrs[k] = v
-    os.remove(temppath)
+
