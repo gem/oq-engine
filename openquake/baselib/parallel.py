@@ -501,8 +501,8 @@ class IterResult(object):
         self.received = []
         self.nbytes = AccumDict()
         temp = hdf5.File(self.hdf5path + '~', 'w')
-        init_performance(temp, swmr=True)
         try:
+            init_performance(temp, swmr=True)
             yield from self._iter(temp)
             if self.received:
                 tot = sum(self.received)
