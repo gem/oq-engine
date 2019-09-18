@@ -277,13 +277,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         elt = dic['elt']
         self.datastore.extend('gmf_info', dic['gmf_info'])
         if len(elt):
-            with self.monitor('saving losses_by_event', hdf5path=self.datastore.filename):
+            with self.monitor('saving losses_by_event'):
                 self.datastore.extend('losses_by_event', elt)
         if self.oqparam.avg_losses:
-            with self.monitor('saving avg_losses', hdf5path=self.datastore.filename):
+            with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         if self.oqparam.asset_loss_table:
-            with self.monitor('saving asset_loss_table', hdf5path=self.datastore.filename):
+            with self.monitor('saving asset_loss_table'):
                 alt, eids = dic['alt']
                 idx = numpy.argsort(eids)  # indices sorting the eids
                 self.datastore['asset_loss_table'][:, eids[idx]] = alt[:, idx]
