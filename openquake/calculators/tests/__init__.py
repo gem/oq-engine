@@ -130,6 +130,7 @@ class CalculatorTestCase(unittest.TestCase):
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
             result = self.calc.run(export_dir=self.edir)
+        self.calc.datastore.close()
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id

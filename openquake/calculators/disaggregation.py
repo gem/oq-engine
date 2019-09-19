@@ -307,10 +307,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for slc in gen_slices(start, stop, blocksize):
                     allargs.append((self.datastore, slc, cmaker,
                                     self.iml2s, trti, self.bin_edges))
-        self.datastore.close()
+        self.datastore.swmr_on()
         results = parallel.Starmap(
             compute_disagg, allargs, h5=self.datastore.hdf5
         ).reduce(self.agg_result, AccumDict(accum={}))
+        self.datastore.open('r+')
         return results  # sid -> trti-> 7D array
 
     def agg_result(self, acc, result):

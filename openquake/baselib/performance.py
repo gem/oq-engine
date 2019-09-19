@@ -107,11 +107,11 @@ class Monitor(object):
     calc_id = None
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
-                 hdf5path=None):
+                 h5=None):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
-        self.hdf5path = hdf5path
+        self.h5 = h5
         self.mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()
@@ -169,14 +169,14 @@ class Monitor(object):
         self._stop_time = time.time()
         self.duration += self._stop_time - self._start_time
         self.counts += 1
-        if self.hdf5path:
-            self.flush(self.hdf5path)
+        if self.h5:
+            self.flush(self.h5)
 
-    def save_task_info(self, hdf5path, res, name, mem_gb=0):
+    def save_task_info(self, h5, res, name, mem_gb=0):
         """
         Called by parallel.IterResult.
 
-        :param hdf5path: where to save the info
+        :param h5: where to save the info
         :param res: a :class:`Result` object
         :param name: name of the task function
         :param mem_gb: memory consumption at the saving time (optional)
@@ -184,11 +184,8 @@ class Monitor(object):
         t = (name, self.task_no, self.weight, self.duration, len(res.pik),
              mem_gb)
         data = numpy.array([t], task_info_dt)
-        if isinstance(hdf5path, str):
-            hdf5.extend3(hdf5path, 'task_info', data)
-        else:
-            hdf5.extend(hdf5path['task_info'], data)
-            hdf5path['task_info'].flush()  # notify the reader
+        hdf5.extend(h5['task_info'], data)
+        h5['task_info'].flush()  # notify the reader
 
     def reset(self):
         """
@@ -198,7 +195,7 @@ class Monitor(object):
         self.mem = 0
         self.counts = 0
 
-    def flush(self, hdf5path):
+    def flush(self, h5):
         """
         Save the measurements on the performance file
         """
@@ -212,11 +209,8 @@ class Monitor(object):
             data = numpy.concatenate(lst)
         if len(data) == 0:  # no information
             return
-        if isinstance(hdf5path, str):
-            hdf5.extend3(hdf5path, 'performance_data', data)
-        else:
-            hdf5.extend(hdf5path['performance_data'], data)
-            hdf5path['performance_data'].flush()  # notify the reader
+        hdf5.extend(h5['performance_data'], data)
+        h5['performance_data'].flush()  # notify the reader
         self.reset()
 
     # TODO: rename this as spawn; see what will break
