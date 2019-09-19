@@ -35,7 +35,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, gen_rupture_getters)
+    GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -49,11 +49,6 @@ by_grp = operator.attrgetter('src_group_id')
 
 
 # ######################## GMF calculator ############################ #
-
-def update_nbytes(dstore, key, array):
-    nbytes = dstore.get_attr(key, 'nbytes', 0)
-    dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
-
 
 def get_mean_curves(dstore):
     """
@@ -211,12 +206,9 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
-                self.datastore.extend('gmf_data/data', data)
+                hdf5.extend(self.datastore['gmf_data/data'], data)
                 sig_eps = result.pop('sig_eps')
-                self.datastore.extend('gmf_data/sigma_epsilon', sig_eps)
-                # it is important to save the number of bytes while the
-                # computation is going, to see the progress
-                update_nbytes(self.datastore, 'gmf_data/data', data)
+                hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 for sid, start, stop in result['indices']:
                     self.indices[sid, 0].append(start + self.offset)
                     self.indices[sid, 1].append(stop + self.offset)
@@ -323,7 +315,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.set_param()
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        if oq.hazard_calculation_id and 'ruptures' in self.datastore:
+        if oq.hazard_calculation_id:
             # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
@@ -341,6 +333,8 @@ class EventBasedCalculator(base.HazardCalculator):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
         self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
+        self.datastore.create_dset('gmf_data/sigma_epsilon',
+                                   sig_eps_dt(oq.imtls))
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
         iterargs = ((rgetter, srcfilter, self.param)
