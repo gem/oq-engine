@@ -385,17 +385,6 @@ class File(h5py.File):
         # make the file pickleable
         return {'_id': 0}
 
-    def set_nbytes(self, key, nbytes=None):
-        """
-        Set the `nbytes` attribute on the HDF5 object identified by `key`.
-        """
-        obj = super().__getitem__(key)
-        if nbytes is not None:  # size set from outside
-            obj.attrs['nbytes'] = nbytes
-        else:  # recursively determine the size of the datagroup
-            obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
-        return nbytes
-
     def getitem(self, name):
         """
         Return a dataset by using h5py.File.__getitem__
