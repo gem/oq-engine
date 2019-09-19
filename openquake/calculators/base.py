@@ -351,11 +351,10 @@ class HazardCalculator(BaseCalculator):
         :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
-        self.cachepath = self.datastore.cachepath()
         sitecol = self.sitecol.complete if self.sitecol else None
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(sitecol, oq.maximum_distance, self.cachepath)
-        return SourceFilter(sitecol, oq.maximum_distance, self.cachepath)
+            return UcerfFilter(sitecol, oq.maximum_distance)
+        return SourceFilter(sitecol, oq.maximum_distance)
 
     @property
     def E(self):
@@ -392,8 +391,6 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
-        if hasattr(self, 'sitecol'):
-            self.save_cache(sitecol=self.sitecol)
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
