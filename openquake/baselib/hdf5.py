@@ -107,22 +107,6 @@ def extend(dset, array, **attrs):
     return newlength
 
 
-def extend3(filename, key, array, **attrs):
-    """
-    Extend an HDF5 file dataset with the given array
-    """
-    1/0
-    with h5py.File(filename, 'a') as h5:
-        dset = h5[key]
-        try:
-            length = extend(dset, array)
-        except ValueError as exc:
-            raise ValueError('%s %s' % (exc, filename))
-        for key, val in attrs.items():
-            dset.attrs[key] = val
-    return length
-
-
 class LiteralAttrs(object):
     """
     A class to serialize a set of parameters in HDF5 format. The goal is to
