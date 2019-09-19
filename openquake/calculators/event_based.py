@@ -26,6 +26,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, cached_property, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
@@ -193,13 +194,10 @@ class EventBasedCalculator(base.HazardCalculator):
         cachepath = dstore.cachepath()
         mode = 'r+' if os.path.exists(cachepath) else 'w'
         with hdf5.File(cachepath, mode) as cache:
-            if 'ruptures' not in cache:
-                dstore.hdf5.copy('ruptures', cache)
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         yield from gen_rupture_getters(
-            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            cachepath=cachepath)
+            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1)
         if self.datastore.parent:
             self.datastore.parent.close()
 
@@ -329,8 +327,12 @@ class EventBasedCalculator(base.HazardCalculator):
             # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
+            srcfilter = SourceFilter(
+                self.sitecol, oq.maximum_distance,
+                self.datastore.parent.filename)
         else:
             # from sources
+            srcfilter = self.src_filter
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
@@ -341,7 +343,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
-        iterargs = ((rgetter, self.src_filter, self.param)
+        iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
