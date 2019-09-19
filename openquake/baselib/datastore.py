@@ -226,21 +226,14 @@ class DataStore(collections.abc.MutableMapping):
         """
         return h5py.File.__getitem__(self.hdf5, name)
 
-    def set_nbytes(self, key, nbytes=None):
-        """
-        Set the `nbytes` attribute on the HDF5 object identified by `key`.
-        """
-        if self.hdf5.swmr_mode:
-            return 0
-        return self.hdf5.set_nbytes(key, nbytes)
-
     def swmr_on(self):
         """
         Enable the SWMR mode on the underlying HDF5 file
         """
-        for key in self:
-            self.set_nbytes(key)
-        self.hdf5.swmr_mode = True
+        try:
+            self.hdf5.swmr_mode = True
+        except ValueError:  # already set
+            pass
 
     def set_attrs(self, key, **kw):
         """
