@@ -192,7 +192,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         yield from gen_rupture_getters(
-            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1)
+            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            filename=cachepath)
         if self.datastore.parent:
             self.datastore.parent.close()
 
