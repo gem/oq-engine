@@ -34,7 +34,6 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, fmt='xml', delta=None):
         self.run_calc(test_dir, 'job.ini', calculation_mode='classical')
-        self.calc.datastore.close()
         hc_id = self.calc.datastore.calc_id
         out = self.run_calc(test_dir, 'job.ini', exports=fmt,
                             hazard_calculation=str(hc_id))
