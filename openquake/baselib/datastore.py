@@ -226,6 +226,15 @@ class DataStore(collections.abc.MutableMapping):
         """
         return h5py.File.__getitem__(self.hdf5, name)
 
+    def swmr_on(self):
+        """
+        Enable the SWMR mode on the underlying HDF5 file
+        """
+        try:
+            self.hdf5.swmr_mode = True
+        except ValueError:  # already set
+            pass
+
     def set_attrs(self, key, **kw):
         """
         Set the HDF5 attributes of the given key
