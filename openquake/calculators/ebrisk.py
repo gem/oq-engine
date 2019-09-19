@@ -145,7 +145,6 @@ def ebrisk(rupgetters, srcfilter, param, monitor):
         return {}
     rupgetters.clear()
     computers.sort(key=lambda c: c.rupture.ridx)
-    param['cachepath'] = srcfilter.filename
     hazard = dict(gmfs=[], events=[], gmf_info=[])
     for c in computers:
         with mon_haz:
@@ -189,6 +188,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
+        self.param['cachepath'] = self.cachepath
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
