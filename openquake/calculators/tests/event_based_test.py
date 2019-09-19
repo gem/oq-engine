@@ -149,7 +149,6 @@ class EventBasedTestCase(CalculatorTestCase):
                             exports='csv')
 
         # testing event_info
-        '''
         einfo = dict(extract(self.calc.datastore, 'event_info/0'))
         self.assertEqual(einfo['trt'], 'active shallow crust')
         self.assertEqual(einfo['rupture_class'],
@@ -163,7 +162,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['grp_id'], 0)
         self.assertEqual(einfo['occurrence_rate'], 1.0)
         self.assertEqual(list(einfo['hypo']), [0., 0., 4.])
-        '''
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
