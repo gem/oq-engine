@@ -417,8 +417,7 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None),
-                        concurrent_tasks=1, cachepath=None):
+def gen_rupture_getters(dstore, slc=slice(None), concurrent_tasks=1):
     """
     :yields: RuptureGetters
     """
@@ -446,7 +445,7 @@ def gen_rupture_getters(dstore, slc=slice(None),
             else:
                 e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
-                cachepath or dstore.filename, numpy.array(block), grp_id,
+                numpy.array(block), grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             yield rgetter
             nr += len(block)
@@ -458,23 +457,20 @@ class RuptureGetter(object):
     """
     Iterable over ruptures.
 
-    :param filename:
-        path to an HDF5 file with a dataset names `ruptures`
-    :param rup_indices:
-        a list of rupture indices of the same group
+    :param rup_array:
+        an array of ruptures of the same group
     """
-    def __init__(self, filename, rup_indices, grp_id, trt, samples,
+    def __init__(self, rup_array, grp_id, trt, samples,
                  rlzs_by_gsim, e0=None):
-        self.filename = filename
-        self.rup_indices = rup_indices
-        if not isinstance(rup_indices, list):  # is a rup_array
-            self.__dict__['rup_array'] = rup_indices
-            self.__dict__['num_events'] = int(rup_indices['n_occ'].sum())
+        self.rup_array = rup_array
         self.grp_id = grp_id
         self.trt = trt
         self.samples = samples
         self.rlzs_by_gsim = rlzs_by_gsim
         self.e0 = e0
+        n_occ = int(rup_array['n_occ'].sum())
+        self.num_events = n_occ if samples > 1 else n_occ * sum(
+            len(rlzs) for rlzs in rlzs_by_gsim.values())
 
     def split(self, srcfilter):
         """
@@ -482,10 +478,9 @@ class RuptureGetter(object):
         """
         out = []
         array = self.rup_array
-        for i, ridx in enumerate(self.rup_indices):
+        for i, ridx in enumerate(array['id']):
             rg = object.__new__(self.__class__)
-            rg.filename = self.filename
-            rg.rup_indices = [ridx]
+            rg.rup_array = [array[i]]
             rg.grp_id = self.grp_id
             rg.trt = self.trt
             rg.samples = self.samples
@@ -498,20 +493,9 @@ class RuptureGetter(object):
                 out.append(rg)
         return out
 
-    @general.cached_property
-    def rup_array(self):
-        with hdf5.File(self.filename, 'r') as h5:
-            return h5['ruptures'][self.rup_indices]  # must be a list
-
-    @general.cached_property
-    def num_events(self):
-        n_occ = self.rup_array['n_occ'].sum()
-        ne = n_occ if self.samples > 1 else n_occ * len(self.rlzs)
-        return int(ne)
-
     @property
     def num_ruptures(self):
-        return len(self.rup_indices)
+        return len(self.rup_array)
 
     def get_eid_rlz(self):
         """
@@ -526,6 +510,7 @@ class RuptureGetter(object):
                     eid_rlz.append((eid + e0, rup['id'], rlz_id))
         return numpy.array(eid_rlz, events_dt)
 
+    # TODO: restore this method and the test for event_info
     def get_rupdict(self):
         """
         :returns: a dictionary with the parameters of the rupture
@@ -553,14 +538,14 @@ class RuptureGetter(object):
             dic['srcid'] = source_ids[rec['srcidx']]
         return dic
 
-    def get_ruptures(self, srcfilter=calc.filters.nofilter):
+    def get_ruptures(self, srcfilter):
         """
         :returns: a list of EBRuptures filtered by bounding box
         """
         ebrs = []
-        with datastore.read(self.filename) as dstore:
+        with datastore.read(srcfilter.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
-            for e0, rec, ri in zip(self.e0, self.rup_array, self.rup_indices):
+            for e0, rec in zip(self.e0, self.rup_array):
                 if srcfilter.integration_distance:
                     sids = srcfilter.close_sids(rec, self.trt)
                     if len(sids) == 0:  # the rupture is far away
@@ -603,15 +588,15 @@ class RuptureGetter(object):
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 ebr.sids = sids
-                ebr.ridx = ri
+                ebr.ridx = rec['id']
                 ebr.e0 = 0 if self.e0 is None else e0
                 ebrs.append(ebr)
         return ebrs
 
     def __len__(self):
-        return len(self.rup_indices)
+        return len(self.rup_array)
 
     def __repr__(self):
         wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
         return '<%s grp_id=%d, %d rupture(s)%s>' % (
-            self.__class__.__name__, self.grp_id, len(self.rup_indices), wei)
+            self.__class__.__name__, self.grp_id, len(self), wei)
