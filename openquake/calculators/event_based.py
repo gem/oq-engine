@@ -456,7 +456,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
-            self.cl.run(close=False)
+            self.cl.run()
             engine.expose_outputs(self.cl.datastore)
             cl_mean_curves = get_mean_curves(self.cl.datastore)
             eb_mean_curves = get_mean_curves(self.datastore)
