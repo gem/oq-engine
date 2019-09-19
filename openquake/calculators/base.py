@@ -991,13 +991,15 @@ def import_gmfs(dstore, fname, sids):
     dic = general.group_array(arr, 'sid')
     lst = []
     offset = 0
+    gmvlst = []
     for sid in sids:
         n = len(dic.get(sid, []))
         lst.append((offset, offset + n))
         if n:
             offset += n
             gmvs = dic[sid]
-            dstore.extend('gmf_data/data', gmvs)
+            gmvlst.append(gmvs)
+    dstore['gmf_data/data'] = numpy.concatenate(gmvlst)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['weights'] = numpy.ones(1)
