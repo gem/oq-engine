@@ -210,6 +210,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             hdf5path = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             n_occ = parent['ruptures']['n_occ']
+            dstore = parent
         else:
             hdf5path = self.datastore.cachepath()
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
@@ -218,6 +219,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore.hdf5.copy('weights', cache)
                 self.datastore.hdf5.copy('ruptures', cache)
                 self.datastore.hdf5.copy('rupgeoms', cache)
+            dstore = self.datastore
         num_cores = oq.__class__.concurrent_tasks.default // 2 or 1
         per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
         logging.info('Using %d occurrences per block (over %d occurrences, '
@@ -243,8 +245,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             for pairs in general.block_splitter(
                     allpairs[start:stop], per_block, weight=get_n_occ):
                 indices = [i for i, n in pairs]
+                rup_array = dstore['ruptures'][indices]
                 rgetter = getters.RuptureGetter(
-                    hdf5path, indices, grp_id,
+                    rup_array, grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
                 allargs.append((rgetter, self.src_filter, self.param))
