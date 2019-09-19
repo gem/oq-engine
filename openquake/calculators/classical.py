@@ -323,7 +323,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         for sid in pmap)
                     data.append((grp_id, grp_name[grp_id], extreme))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
-            self.datastore.set_nbytes('poes')
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
 
