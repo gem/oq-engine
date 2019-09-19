@@ -148,8 +148,6 @@ def build_report(job_ini, output_dir=None):
     calc.pre_execute()
     if oq.calculation_mode == 'preclassical':
         calc.execute()
-    for key in calc.datastore:
-        calc.datastore.set_nbytes(key)
     logging.info('Making the .rst report')
     rw = ReportWriter(calc.datastore)
     rw.make_report()

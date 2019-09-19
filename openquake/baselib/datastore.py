@@ -226,12 +226,6 @@ class DataStore(collections.abc.MutableMapping):
         """
         return h5py.File.__getitem__(self.hdf5, name)
 
-    def set_nbytes(self, key, nbytes=None):
-        """
-        Set the `nbytes` attribute on the HDF5 object identified by `key`.
-        """
-        return self.hdf5.set_nbytes(key, nbytes)
-
     def set_attrs(self, key, **kw):
         """
         Set the HDF5 attributes of the given key
