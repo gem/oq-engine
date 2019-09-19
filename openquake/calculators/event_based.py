@@ -50,10 +50,6 @@ by_grp = operator.attrgetter('src_group_id')
 
 # ######################## GMF calculator ############################ #
 
-def update_nbytes(dstore, key, array):
-    nbytes = dstore.get_attr(key, 'nbytes', 0)
-    dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
-
 
 def get_mean_curves(dstore):
     """
@@ -209,9 +205,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.datastore.extend('gmf_data/data', data)
                 sig_eps = result.pop('sig_eps')
                 self.datastore.extend('gmf_data/sigma_epsilon', sig_eps)
-                # it is important to save the number of bytes while the
-                # computation is going, to see the progress
-                update_nbytes(self.datastore, 'gmf_data/data', data)
                 for sid, start, stop in result['indices']:
                     self.indices[sid, 0].append(start + self.offset)
                     self.indices[sid, 1].append(stop + self.offset)
@@ -349,7 +342,8 @@ class EventBasedCalculator(base.HazardCalculator):
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
-        #self.datastore.swmr_on()
+        if oq.hazard_calculation_id:
+            self.datastore.swmr_on()
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5
         ).reduce(self.agg_dicts, self.acc0())
