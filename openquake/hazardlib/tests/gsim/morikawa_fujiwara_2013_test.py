@@ -24,12 +24,10 @@ from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import \
         MorikawaFujiwara2013
+from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class MorikawaFujiwara2013Test(unittest.TestCase):
-    """
-    """
-
+class MorikawaFujiwara2013BaseTest(unittest.TestCase):
     def test_instantiation(self):
         dists = DistancesContext()
         dists.rrup = np.array([10., 50., 100.])
@@ -41,3 +39,10 @@ class MorikawaFujiwara2013Test(unittest.TestCase):
         stdt = [const.StdDev.TOTAL]
         gmm = MorikawaFujiwara2013(model='model1', region=None)
         mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+
+
+class MorikawaFujiwara2013Test(BaseGSIMTestCase):
+    GSIM_CLASS = MorikawaFujiwara2013
+
+    def test_mean(self):
+        self.check('MF13/mean.csv', max_discrep_percentage=0.1)
