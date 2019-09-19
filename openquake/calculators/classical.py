@@ -325,14 +325,9 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
+            self.calc_stats()
 
-            # save a copy of the poes in cachepath
-            with hdf5.File(self.cachepath) as cache:
-                cache['oqparam'] = oq
-                self.datastore.hdf5.copy('poes', cache)
-            self.calc_stats(self.cachepath)
-
-    def calc_stats(self, parent):
+    def calc_stats(self):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         # initialize datasets
@@ -356,7 +351,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         allargs = [  # this list is very fast to generate
-            (getters.PmapGetter(parent, weights, t.sids, oq.poes),
+            (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
         self.datastore.swmr_on()
