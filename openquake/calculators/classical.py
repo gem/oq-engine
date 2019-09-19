@@ -360,7 +360,7 @@ class ClassicalCalculator(base.HazardCalculator):
             (getters.PmapGetter(parent, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
-        #self.datastore.swmr_on()
+        self.datastore.swmr_on()
         parallel.Starmap(build_hazard, allargs,
                          h5=self.datastore.hdf5).reduce(self.save_hazard)
 
