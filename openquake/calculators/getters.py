@@ -417,7 +417,8 @@ def group_by_rlz(data, rlzs):
     return {rlzi: numpy.array(recs) for rlzi, recs in acc.items()}
 
 
-def gen_rupture_getters(dstore, slc=slice(None), concurrent_tasks=1):
+def gen_rupture_getters(dstore, slc=slice(None), concurrent_tasks=1,
+                        filename=None):
     """
     :yields: RuptureGetters
     """
@@ -445,7 +446,7 @@ def gen_rupture_getters(dstore, slc=slice(None), concurrent_tasks=1):
             else:
                 e0 = e0s[nr: nr + len(block)]
             rgetter = RuptureGetter(
-                numpy.array(block), grp_id,
+                numpy.array(block), filename or dstore.filename, grp_id,
                 trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim[grp_id], e0)
             yield rgetter
             nr += len(block)
@@ -455,14 +456,23 @@ def gen_rupture_getters(dstore, slc=slice(None), concurrent_tasks=1):
 # this is never called directly; gen_rupture_getters is used instead
 class RuptureGetter(object):
     """
-    Iterable over ruptures.
-
     :param rup_array:
         an array of ruptures of the same group
+    :param filename:
+        path to the HDF5 file containing a 'rupgeoms' dataset
+    :param grp_id:
+        source group index
+    :param trt:
+        tectonic region type string
+    :param samples:
+        number of samples of the group
+    :param rlzs_by_gsim:
+        dictionary gsim -> rlzs for the group
     """
-    def __init__(self, rup_array, grp_id, trt, samples,
+    def __init__(self, rup_array, filename, grp_id, trt, samples,
                  rlzs_by_gsim, e0=None):
         self.rup_array = rup_array
+        self.filename = filename
         self.grp_id = grp_id
         self.trt = trt
         self.samples = samples
@@ -481,6 +491,7 @@ class RuptureGetter(object):
         for i, ridx in enumerate(array['id']):
             rg = object.__new__(self.__class__)
             rg.rup_array = array[i: i+1]
+            rg.filename= self.filename
             rg.grp_id = self.grp_id
             rg.trt = self.trt
             rg.samples = self.samples
@@ -510,7 +521,6 @@ class RuptureGetter(object):
                     eid_rlz.append((eid + e0, rup['id'], rlz_id))
         return numpy.array(eid_rlz, events_dt)
 
-    # TODO: restore this method and the test for event_info
     def get_rupdict(self):
         """
         :returns: a dictionary with the parameters of the rupture
@@ -543,7 +553,7 @@ class RuptureGetter(object):
         :returns: a list of EBRuptures filtered by bounding box
         """
         ebrs = []
-        with datastore.read(srcfilter.filename) as dstore:
+        with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             for e0, rec in zip(self.e0, self.rup_array):
                 if srcfilter.integration_distance:
