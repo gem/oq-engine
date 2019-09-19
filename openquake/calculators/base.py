@@ -317,10 +317,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             for sg in sm.src_groups:
                 assert sg.eff_ruptures != -1, sg
 
-        for key in self.datastore:
-            self.datastore.set_nbytes(key)
-        self.datastore.flush()
-
 
 def check_time_event(oqparam, occupancy_periods):
     """
