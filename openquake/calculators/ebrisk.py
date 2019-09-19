@@ -182,8 +182,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['num_taxonomies'] = U16(
                 self.assetcol.num_taxonomies_by_site())
             cache['oqparam'] = oq
-        self.src_filter.filename = self.cachepath
-        del self.src_filter.__dict__['sitecol']
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
@@ -239,6 +237,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         eslices = self.datastore['eslices']
         allargs = []
         allpairs = list(enumerate(n_occ))
+        srcfilter = self.src_filter(self.cachepath)
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -252,7 +251,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                     rup_array, grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
-                allargs.append((rgetter, self.src_filter, self.param))
+                allargs.append((rgetter, srcfilter, self.param))
                 fe += len(indices)
         logging.info('Found %d/%d source groups with ruptures',
                      ngroups, len(rlzs_by_gsim_grp))
