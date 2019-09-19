@@ -608,6 +608,7 @@ class HazardCalculator(BaseCalculator):
         self.datastore['risk_model'] = rm = self.crmodel
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
+        self.datastore.flush()  # for SWMR mode
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
