@@ -339,8 +339,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             set_concurrent_tasks_default(job_id)
         t0 = time.time()
         calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id,
-                 close=False, **kw)
+                 hazard_calculation_id=hazard_calculation_id, **kw)
         logs.LOG.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         duration = time.time() - t0
