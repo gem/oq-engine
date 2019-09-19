@@ -480,7 +480,7 @@ class RuptureGetter(object):
         array = self.rup_array
         for i, ridx in enumerate(array['id']):
             rg = object.__new__(self.__class__)
-            rg.rup_array = [array[i]]
+            rg.rup_array = array[i: i+1]
             rg.grp_id = self.grp_id
             rg.trt = self.trt
             rg.samples = self.samples
