@@ -349,8 +349,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if self.indices:
             logging.info('Saving gmf_data/indices')
-            with self.monitor('saving gmf_data/indices', measuremem=True,
-                              autoflush=True):
+            with self.monitor('saving gmf_data/indices', measuremem=True):
                 self.datastore['gmf_data/imts'] = ' '.join(oq.imtls)
                 for sid in self.sitecol.complete.sids:
                     start = numpy.array(self.indices[sid, 0])
@@ -358,12 +357,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     dset[sid, 0] = start
                     dset[sid, 1] = stop
                     num_evs[sid] = (stop - start).sum()
-                num_evs = num_evs[()]
-                avg_events_by_sid = num_evs.sum() / N
-                logging.info('Found ~%d GMVs per site', avg_events_by_sid)
-                #self.datastore.set_attrs(
-                #    'gmf_data', avg_events_by_sid=avg_events_by_sid,
-                #    max_events_by_sid=num_evs.max())
+            avg_events_by_sid = num_evs[()].sum() / N
+            logging.info('Found ~%d GMVs per site', avg_events_by_sid)
         elif oq.ground_motion_fields:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
