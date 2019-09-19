@@ -252,13 +252,13 @@ class ClassicalCalculator(base.HazardCalculator):
             heavy_sources = []
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
-                smap.submit(sources, self.src_filter, gsims, param,
+                smap.submit(sources, self.src_filter(), gsims, param,
                             func=classical)
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
                     if block.weight > maxweight:
                         heavy_sources.extend(block)
-                    smap.submit(block, self.src_filter, gsims, param)
+                    smap.submit(block, self.src_filter(), gsims, param)
 
             # heavy source are split on the master node
             if heavy_sources:

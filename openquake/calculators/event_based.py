@@ -332,8 +332,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with hdf5.File(cachepath, mode) as cache:
                 if self.sitecol is not None:
                     cache['sitecol'] = self.sitecol
-            srcfilter = SourceFilter(
-                self.sitecol, oq.maximum_distance, cachepath)
+            srcfilter = self.src_filter(cachepath)
             self.build_events_from_sources(srcfilter)
             with hdf5.File(cachepath, 'a') as cache:
                 if 'rupgeoms' not in cache:

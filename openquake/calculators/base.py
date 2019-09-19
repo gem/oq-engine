@@ -345,16 +345,15 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Using maxweight=%d', self.maxweight)
         return general.block_splitter(sources, self.maxweight, weight, key)
 
-    @general.cached_property
-    def src_filter(self):
+    def src_filter(self, filename=None):
         """
         :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
         sitecol = self.sitecol.complete if self.sitecol else None
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(sitecol, oq.maximum_distance)
-        return SourceFilter(sitecol, oq.maximum_distance)
+            return UcerfFilter(sitecol, oq.maximum_distance, filename)
+        return SourceFilter(sitecol, oq.maximum_distance, filename)
 
     @property
     def E(self):
@@ -394,7 +393,7 @@ class HazardCalculator(BaseCalculator):
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
-                oq, self.datastore.hdf5, srcfilter=self.src_filter)
+                oq, self.datastore.hdf5, srcfilter=self.src_filter())
             res = views.view('dupl_sources', self.datastore)
             logging.info(f'The composite source model has {res.val:,d} '
                          'ruptures')
