@@ -19,7 +19,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import hdf5, datastore, parallel, general
+from openquake.baselib import datastore, parallel, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskmodels
@@ -54,13 +54,13 @@ def _calc_risk(hazard, param, monitor):
     events = numpy.concatenate(hazard['events'])
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
-    with datastore.read(param['cachepath']) as cache:
-        with monitor('getting assets'):
-            assetcol = cache['assetcol']
-            assets_by_site = assetcol.assets_by_site()
-        with monitor('getting crmodel'):
-            crmodel = riskmodels.CompositeRiskModel.read(cache)
-            weights = cache['weights'][()]
+    dstore = datastore.read(param['hdf5path'])
+    with monitor('getting assets'):
+        assetcol = dstore['assetcol']
+        assets_by_site = assetcol.assets_by_site()
+    with monitor('getting crmodel'):
+        crmodel = riskmodels.CompositeRiskModel.read(dstore)
+        weights = dstore['weights'][()]
     E = len(events)
     L = len(param['lba'].loss_names)
     A = sum(len(assets) for assets in assets_by_site)
@@ -173,22 +173,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         oq.ground_motion_fields = False
         super().pre_execute()
-        # save a copy of the assetcol in cachepath
-        self.cachepath = self.datastore.cachepath()
-        with hdf5.File(self.cachepath, 'w') as cache:
-            cache['sitecol'] = self.sitecol.complete
-            cache['assetcol'] = self.assetcol
-            cache['risk_model'] = self.crmodel  # reduced model
-            cache['num_taxonomies'] = U16(
-                self.assetcol.num_taxonomies_by_site())
-            cache['oqparam'] = oq
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['asset_loss_table'] = oq.asset_loss_table
-        self.param['cachepath'] = self.cachepath
         self.param.pop('oqparam', None)  # unneeded
         self.L = L = len(lba.loss_names)
         A = len(self.assetcol)
@@ -207,18 +197,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         parent = self.datastore.parent
         if parent:
-            hdf5path = parent.filename
+            self.param['hdf5path'] = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             n_occ = parent['ruptures']['n_occ']
             dstore = parent
         else:
-            hdf5path = self.datastore.cachepath()
+            self.param['hdf5path'] = self.datastore.filename
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
             n_occ = self.datastore['ruptures']['n_occ']
-            with hdf5.File(hdf5path, 'r+') as cache:
-                self.datastore.hdf5.copy('weights', cache)
-                self.datastore.hdf5.copy('ruptures', cache)
-                self.datastore.hdf5.copy('rupgeoms', cache)
             dstore = self.datastore
         num_cores = oq.__class__.concurrent_tasks.default // 2 or 1
         per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
@@ -237,7 +223,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         eslices = self.datastore['eslices']
         allargs = []
         allpairs = list(enumerate(n_occ))
-        srcfilter = self.src_filter(self.cachepath)
+        srcfilter = self.src_filter(dstore.filename)
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -257,13 +243,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                      ngroups, len(rlzs_by_gsim_grp))
         self.events_per_sid = []
         self.lossbytes = 0
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, allargs,
             num_cores=num_cores, h5=self.datastore.hdf5)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
-        self.datastore.set_attrs(
-            'gmf_info', events_per_sid=self.events_per_sid)
+        #self.datastore.set_attrs(
+        #    'gmf_info', events_per_sid=self.events_per_sid)
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
         logging.info(
