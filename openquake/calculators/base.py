@@ -132,14 +132,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self.datastore = datastore.DataStore(calc_id)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            hdf5path=self.datastore.filename)
+            hdf5path=self.datastore)
         self.oqparam = oqparam
 
     def monitor(self, operation='', **kw):
         """
         :returns: a new Monitor instance
         """
-        mon = self._monitor(operation, hdf5path=self.datastore.filename)
+        mon = self._monitor(operation, hdf5path=self.datastore)
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
@@ -178,7 +178,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
+    def run(self, pre_execute=True, concurrent_tasks=None, **kw):
         """
         Run the calculation and return the exported outputs.
         """
@@ -222,15 +222,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-
-                if close:  # in the engine we close later
-                    self.result = None
-                    try:
-                        self.datastore.close()
-                    except (RuntimeError, ValueError):
-                        # sometimes produces errors but they are difficult to
-                        # reproduce
-                        logging.warning('', exc_info=True)
 
         return getattr(self, 'exported', {})
 
