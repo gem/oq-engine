@@ -331,28 +331,27 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
         self.datastore.create_dset('gmf_data/sigma_epsilon',
                                    sig_eps_dt(oq.imtls))
+        N = len(self.sitecol.complete)
+        dset = self.datastore.create_dset(
+            'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
+        num_evs = self.datastore.create_dset(
+            'gmf_data/events_by_sid', U32, (N,))
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
-        # call compute_gmfs in parallel
         if not oq.hazard_calculation_id:
             self.datastore.swmr_on()
+        # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5
         ).reduce(self.agg_dicts, self.acc0())
 
         if self.indices:
-            N = len(self.sitecol.complete)
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
                 self.datastore['gmf_data/imts'] = ' '.join(oq.imtls)
-                dset = self.datastore.create_dset(
-                    'gmf_data/indices', hdf5.vuint32,
-                    shape=(N, 2), fillvalue=None)
-                num_evs = self.datastore.create_dset(
-                    'gmf_data/events_by_sid', U32, (N,))
                 for sid in self.sitecol.complete.sids:
                     start = numpy.array(self.indices[sid, 0])
                     stop = numpy.array(self.indices[sid, 1])
@@ -362,9 +361,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 num_evs = num_evs[()]
                 avg_events_by_sid = num_evs.sum() / N
                 logging.info('Found ~%d GMVs per site', avg_events_by_sid)
-                self.datastore.set_attrs(
-                    'gmf_data', avg_events_by_sid=avg_events_by_sid,
-                    max_events_by_sid=num_evs.max())
+                #self.datastore.set_attrs(
+                #    'gmf_data', avg_events_by_sid=avg_events_by_sid,
+                #    max_events_by_sid=num_evs.max())
         elif oq.ground_motion_fields:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
