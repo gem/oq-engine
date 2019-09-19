@@ -865,11 +865,8 @@ class RiskCalculator(HazardCalculator):
         :param sid: a site ID
         :returns: a PmapGetter or GmfDataGetter
         """
-        cachepath = getattr(self, 'cachepath', None)
-        if cachepath:
-            dstore = cachepath
-        elif (self.oqparam.hazard_calculation_id and
-              'gmf_data' not in self.datastore):
+        if (self.oqparam.hazard_calculation_id and
+                'gmf_data' not in self.datastore):
             # 'gmf_data' in self.datastore happens for ShakeMap calculations
             self.datastore.parent.close()  # make sure it is closed
             dstore = self.datastore.parent
