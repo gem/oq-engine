@@ -184,11 +184,8 @@ class Monitor(object):
         t = (name, self.task_no, self.weight, self.duration, len(res.pik),
              mem_gb)
         data = numpy.array([t], task_info_dt)
-        if isinstance(hdf5path, str):
-            hdf5.extend3(hdf5path, 'task_info', data)
-        else:
-            hdf5.extend(hdf5path['task_info'], data)
-            hdf5path['task_info'].flush()  # notify the reader
+        hdf5.extend(hdf5path['task_info'], data)
+        hdf5path['task_info'].flush()  # notify the reader
 
     def reset(self):
         """
@@ -212,11 +209,8 @@ class Monitor(object):
             data = numpy.concatenate(lst)
         if len(data) == 0:  # no information
             return
-        if isinstance(hdf5path, str):
-            hdf5.extend3(hdf5path, 'performance_data', data)
-        else:
-            hdf5.extend(hdf5path['performance_data'], data)
-            hdf5path['performance_data'].flush()  # notify the reader
+        hdf5.extend(hdf5path['performance_data'], data)
+        hdf5path['performance_data'].flush()  # notify the reader
         self.reset()
 
     # TODO: rename this as spawn; see what will break
