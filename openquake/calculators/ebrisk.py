@@ -269,7 +269,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         if len(elt):
             with self.monitor('saving losses_by_event'):
-                hdf5.extend(self.datastore.getitem('losses_by_event'), elt)
+                hdf5.extend(self.datastore['losses_by_event'], elt)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
