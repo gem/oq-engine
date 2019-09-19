@@ -161,7 +161,14 @@ class ClassicalCalculator(base.HazardCalculator):
                     if vlen:
                         self.datastore.hdf5.save_vlen('rup/' + k, v)
                     else:
-                        self.datastore.extend('rup/' + k, v)
+                        # NB: creating dataset on the fly is ugly
+                        try:
+                            dset = self.datastore['rup/' + k]
+                        except KeyError:
+                            dset = self.datastore.create_dset(
+                                'rup/' + k, v.dtype,
+                                shape=(None,) + v.shape[1:])
+                        hdf5.extend(dset, v)
         return acc
 
     def acc0(self):
