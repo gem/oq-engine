@@ -182,6 +182,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             cache['num_taxonomies'] = U16(
                 self.assetcol.num_taxonomies_by_site())
             cache['oqparam'] = oq
+        self.src_filter.filename = self.cachepath
+        del self.src_filter.__dict__['sitecol']
         self.param['lba'] = lba = (
             LossesByAsset(self.assetcol, oq.loss_names,
                           self.policy_name, self.policy_dict))
