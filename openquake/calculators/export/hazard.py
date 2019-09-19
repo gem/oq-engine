@@ -55,8 +55,8 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    sf = filters.SourceFilter(
-        dstore['sitecol'], oq.maximum_distance, dstore.filename)
+    sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance,
+                              dstore.filename)
     num_ses = oq.ses_per_logic_tree_path
     ruptures_by_grp = {}
     for rgetter in gen_rupture_getters(dstore):
@@ -83,8 +83,8 @@ def export_ruptures_csv(ekey, dstore):
     header = ('rupid multiplicity mag centroid_lon centroid_lat '
               'centroid_depth trt strike dip rake boundary').split()
     rows = []
-    sf = filters.SourceFilter(
-        dstore['sitecol'], oq.maximum_distance, dstore.filename)
+    sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance,
+                              dstore.filename)
     for rgetter in gen_rupture_getters(dstore):
         rups = rgetter.get_ruptures(sf)
         rup_data = calc.RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)

@@ -119,7 +119,7 @@ class EventBasedCalculator(base.HazardCalculator):
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    def build_events_from_sources(self):
+    def build_events_from_sources(self, srcfilter):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -139,17 +139,17 @@ class EventBasedCalculator(base.HazardCalculator):
                 par = self.param.copy()
                 par['gsims'] = gsims_by_trt[sg.trt]
                 if sg.atomic:  # do not split the group
-                    smap.submit(sg, self.src_filter, par)
+                    smap.submit(sg, srcfilter, par)
                 else:  # traditional groups
                     for block in self.block_splitter(sg.sources, key=by_grp):
                         if 'ucerf' in oq.calculation_mode:
                             for i in range(oq.ses_per_logic_tree_path):
                                 par['ses_seeds'] = [
                                     (ses_idx, oq.ses_seed + i + 1)]
-                                smap.submit(block, self.src_filter, par)
+                                smap.submit(block, srcfilter, par)
                                 ses_idx += 1
                         else:
-                            smap.submit(block, self.src_filter, par)
+                            smap.submit(block, srcfilter, par)
         mon = self.monitor('saving ruptures')
         for dic in smap:
             if dic['calc_times']:
@@ -191,11 +191,6 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        cachepath = dstore.cachepath()
-        mode = 'r+' if os.path.exists(cachepath) else 'w'
-        with hdf5.File(cachepath, mode) as cache:
-            if 'rupgeoms' not in cache:
-                dstore.hdf5.copy('rupgeoms', cache)
         yield from gen_rupture_getters(
             dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1)
         if self.datastore.parent:
@@ -323,17 +318,26 @@ class EventBasedCalculator(base.HazardCalculator):
         self.set_param()
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        if oq.hazard_calculation_id and 'ruptures' in self.datastore:
-            # from ruptures
+        if oq.hazard_calculation_id:
+            # from ruptures, do not transfer sitecol
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
             srcfilter = SourceFilter(
                 self.sitecol, oq.maximum_distance,
                 self.datastore.parent.filename)
         else:
-            # from sources
-            srcfilter = self.src_filter
-            self.build_events_from_sources()
+            # from sources, transfer sitecol
+            cachepath = self.datastore.cachepath()
+            mode = 'r+' if os.path.exists(cachepath) else 'w'
+            with hdf5.File(cachepath, mode) as cache:
+                if self.sitecol is not None:
+                    cache['sitecol'] = self.sitecol
+            srcfilter = SourceFilter(
+                self.sitecol, oq.maximum_distance, cachepath)
+            self.build_events_from_sources(srcfilter)
+            with hdf5.File(cachepath, 'a') as cache:
+                if 'rupgeoms' not in cache:
+                    self.datastore.hdf5.copy('rupgeoms', cache)
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
@@ -346,6 +350,7 @@ class EventBasedCalculator(base.HazardCalculator):
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
+        #self.datastore.swmr_on()
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5
         ).reduce(self.agg_dicts, self.acc0())
