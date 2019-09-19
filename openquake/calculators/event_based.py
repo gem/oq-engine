@@ -320,16 +320,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.datastore.parent.filename)
         else:
             # from sources, transfer sitecol
-            cachepath = self.datastore.cachepath()
-            mode = 'r+' if os.path.exists(cachepath) else 'w'
-            with hdf5.File(cachepath, mode) as cache:
-                if self.sitecol is not None:
-                    cache['sitecol'] = self.sitecol
-            srcfilter = self.src_filter(cachepath)
+            srcfilter = self.src_filter()
             self.build_events_from_sources(srcfilter)
-            with hdf5.File(cachepath, 'a') as cache:
-                if 'rupgeoms' not in cache:
-                    self.datastore.hdf5.copy('rupgeoms', cache)
+            srcfilter.filename = self.datastore.filename
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
@@ -342,7 +335,7 @@ class EventBasedCalculator(base.HazardCalculator):
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
         # call compute_gmfs in parallel
-        if oq.hazard_calculation_id:
+        if not oq.hazard_calculation_id:
             self.datastore.swmr_on()
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5
