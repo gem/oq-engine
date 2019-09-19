@@ -290,24 +290,6 @@ class DataStore(collections.abc.MutableMapping):
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 
-    def extend(self, key, array, **attrs):
-        """
-        Extend the dataset associated to the given key; create it if needed
-
-        :param key: name of the dataset
-        :param array: array to store
-        :param attrs: a dictionary of attributes
-        """
-        try:
-            dset = self.hdf5[key]
-        except KeyError:
-            dset = hdf5.create(self.hdf5, key, array.dtype,
-                               shape=(None,) + array.shape[1:])
-        hdf5.extend(dset, array)
-        for k, v in attrs.items():
-            dset.attrs[k] = v
-        return dset
-
     def save(self, key, kw):
         """
         Update the object associated to `key` with the `kw` dictionary;
