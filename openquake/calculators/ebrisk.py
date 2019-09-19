@@ -19,7 +19,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import datastore, parallel, general
+from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskmodels
@@ -36,6 +36,9 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 get_n_occ = operator.itemgetter(1)
+
+gmf_info_dt = numpy.dtype([('ridx', U32), ('task_no', U16),
+                           ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
 def start_ebrisk(rupgetter, srcfilter, param, monitor):
@@ -111,9 +114,7 @@ def _calc_risk(hazard, param, monitor):
                     acc['lossbytes'] += losses.nbytes
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
-    acc['gmf_info'] = numpy.array(
-        hazard['gmf_info'], [('ridx', U32), ('task_no', U16),
-                             ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
+    acc['gmf_info'] = numpy.array(hazard['gmf_info'], gmf_info_dt)
     acc['elt'] = numpy.fromiter(  # this is ultra-fast
         ((event['id'], event['rlz_id'], losses)  # losses (L, T...)
          for event, losses in zip(events, arr) if losses.sum()), elt_dt)
@@ -187,11 +188,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore.create_dset('asset_loss_table', F32, (A, self.E, L))
         shp = self.get_shape(L)  # shape L, T...
         elt_dt = [('event_id', U32), ('rlzi', U16), ('loss', (F32, shp))]
-        if 'losses_by_event' not in self.datastore:
-            self.datastore.create_dset('losses_by_event', elt_dt)
+        self.datastore.create_dset('losses_by_event', elt_dt)
         self.zerolosses = numpy.zeros(shp, F32)  # to get the multi-index
         shp = self.get_shape(self.L, self.R)  # shape L, R, T...
         self.datastore.create_dset('agg_losses-rlzs', F32, shp)
+        self.datastore.create_dset('gmf_info', gmf_info_dt)
 
     def execute(self):
         oq = self.oqparam
@@ -250,8 +251,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             num_cores=num_cores, h5=self.datastore.hdf5)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
-        #self.datastore.set_attrs(
-        #    'gmf_info', events_per_sid=self.events_per_sid)
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
         logging.info(
@@ -267,10 +266,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             return 1
         self.oqparam.ground_motion_fields = False  # hack
         elt = dic['elt']
-        self.datastore.extend('gmf_info', dic['gmf_info'])
+        hdf5.extend(self.datastore['gmf_info'], dic['gmf_info'])
         if len(elt):
             with self.monitor('saving losses_by_event'):
-                self.datastore.extend('losses_by_event', elt)
+                hdf5.extend(self.datastore.getitem('losses_by_event'), elt)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
