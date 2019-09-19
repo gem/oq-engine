@@ -116,7 +116,6 @@ def compute_disagg(dstore, slc, cmaker, iml2s, trti, bin_edges, monitor):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     rupdata = {k: dstore['rup/' + k][slc] for k in dstore['rup']}
-    dstore.close()
     result = {'trti': trti}
     # all the time is spent in collect_bin_data
     RuptureContext.temporal_occurrence_model = PoissonTOM(
