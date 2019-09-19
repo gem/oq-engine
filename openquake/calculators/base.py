@@ -308,10 +308,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             for sg in sm.src_groups:
                 assert sg.eff_ruptures != -1, sg
 
-        for key in self.datastore:
-            self.datastore.set_nbytes(key)
-        self.datastore.flush()
-
 
 def check_time_event(oqparam, occupancy_periods):
     """
@@ -612,7 +608,6 @@ class HazardCalculator(BaseCalculator):
         self.datastore['risk_model'] = rm = self.crmodel
         attrs = self.datastore.getitem('risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
-        self.datastore.set_nbytes('risk_model')
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
