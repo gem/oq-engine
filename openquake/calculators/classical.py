@@ -205,7 +205,6 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
-        self.datastore.swmr_on()
         with self.monitor('managing sources'):
             smap = parallel.Starmap(
                 self.core_task.__func__, h5=self.datastore.hdf5)
@@ -256,10 +255,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('ruptures_per_task = %(maxweight)d, '
                      'task_duration = %(task_duration)ds', param)
 
-        if oq.read_sitecol:
-            srcfilter = self.src_filter(self.datastore.filename)
-        else:
-            srcfilter = self.src_filter()
+        srcfilter = self.src_filter()
         for trt, sources in trt_sources:
             heavy_sources = []
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
