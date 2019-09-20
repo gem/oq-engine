@@ -321,7 +321,6 @@ class EventBasedCalculator(base.HazardCalculator):
             # from sources, transfer sitecol
             srcfilter = self.src_filter()
             self.build_events_from_sources(srcfilter)
-            srcfilter.filename = self.datastore.filename
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
@@ -340,8 +339,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
-        if oq.hazard_calculation_id is None:
-            self.datastore.swmr_on()
+        self.datastore.swmr_on()
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5
