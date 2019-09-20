@@ -30,7 +30,7 @@ import numpy
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
@@ -130,6 +130,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
     def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
+        init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore.hdf5)
@@ -222,7 +223,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-
         return getattr(self, 'exported', {})
 
     def core_task(*args):
