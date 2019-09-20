@@ -210,6 +210,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.core_task.__func__, h5=self.datastore.hdf5)
             self.submit_sources(smap)
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.datastore.swmr_on()
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
