@@ -256,7 +256,10 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('ruptures_per_task = %(maxweight)d, '
                      'task_duration = %(task_duration)ds', param)
 
-        srcfilter = self.src_filter(self.datastore.filename)
+        if oq.read_sitecol:
+            srcfilter = self.src_filter(self.datastore.filename)
+        else:
+            srcfilter = self.src_filter()
         for trt, sources in trt_sources:
             heavy_sources = []
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
