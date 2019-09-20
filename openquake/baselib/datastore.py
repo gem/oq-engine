@@ -183,8 +183,6 @@ class DataStore(collections.abc.MutableMapping):
             raise IOError('File not found: %s' % self.filename)
         self.hdf5 = ()  # so that `key in self.hdf5` is valid
         self.open(self.mode)
-        if 'w' in self.mode or '+' in self.mode:
-            performance.init_performance(self.hdf5)
 
     def open(self, mode):
         """
@@ -194,10 +192,7 @@ class DataStore(collections.abc.MutableMapping):
             try:
                 self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
-                if os.path.exists(self.filename + '~'):  # temporary file
-                    self.hdf5 = hdf5.File(self.filename + '~', 'r')
-                else:
-                    raise OSError('%s in %s' % (exc, self.filename))
+                raise OSError('%s in %s' % (exc, self.filename))
 
     @property
     def export_dir(self):
