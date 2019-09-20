@@ -26,6 +26,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, cached_property, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
@@ -34,7 +35,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, logs
 from openquake.calculators import base, extract
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, gen_rupture_getters)
+    GmfGetter, RuptureGetter, gen_rupture_getters, sig_eps_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -48,11 +49,6 @@ by_grp = operator.attrgetter('src_group_id')
 
 
 # ######################## GMF calculator ############################ #
-
-def update_nbytes(dstore, key, array):
-    nbytes = dstore.get_attr(key, 'nbytes', 0)
-    dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
-
 
 def get_mean_curves(dstore):
     """
@@ -126,7 +122,7 @@ class EventBasedCalculator(base.HazardCalculator):
         gsims_by_trt = self.csm.gsim_lt.values
         logging.info('Building ruptures')
         smap = parallel.Starmap(
-            self.build_ruptures.__func__, hdf5path=self.datastore.filename)
+            self.build_ruptures.__func__, h5=self.datastore.hdf5)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         ses_idx = 0
@@ -166,19 +162,20 @@ class EventBasedCalculator(base.HazardCalculator):
         # logic tree reduction, must be called before storing the events
         self.store_rlz_info(eff_ruptures)
         self.init_logic_tree(self.csm.info)
-        with self.monitor('store source_info', autoflush=True):
+        with self.monitor('store source_info'):
             self.store_source_info(calc_times)
         logging.info('Reordering the ruptures and storing the events')
         attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures')[()]
         # order the ruptures by rup_id
-        sorted_ruptures.sort(order='rup_id')
+        sorted_ruptures.sort(order='serial')
         ngroups = len(self.csm.info.trt_by_grp)
         grp_indices = numpy.zeros((ngroups, 2), U32)
         grp_ids = sorted_ruptures['grp_id']
         for grp_id, [startstop] in get_indices(grp_ids).items():
             grp_indices[grp_id] = startstop
         self.datastore['ruptures'] = sorted_ruptures
+        self.datastore['ruptures']['id'] = numpy.arange(len(sorted_ruptures))
         self.datastore.set_attrs('ruptures', grp_indices=grp_indices, **attrs)
         with self.monitor('saving events'):
             self.save_events(sorted_ruptures)
@@ -189,16 +186,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        hdf5cache = dstore.hdf5cache()
-        mode = 'r+' if os.path.exists(hdf5cache) else 'w'
-        with hdf5.File(hdf5cache, mode) as cache:
-            if 'ruptures' not in cache:
-                dstore.hdf5.copy('ruptures', cache)
-            if 'rupgeoms' not in cache:
-                dstore.hdf5.copy('rupgeoms', cache)
         yield from gen_rupture_getters(
-            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            hdf5cache=hdf5cache)
+            dstore, concurrent_tasks=self.oqparam.concurrent_tasks or 1)
         if self.datastore.parent:
             self.datastore.parent.close()
 
@@ -212,12 +201,9 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
-                self.datastore.extend('gmf_data/data', data)
+                hdf5.extend(self.datastore['gmf_data/data'], data)
                 sig_eps = result.pop('sig_eps')
-                self.datastore.extend('gmf_data/sigma_epsilon', sig_eps)
-                # it is important to save the number of bytes while the
-                # computation is going, to see the progress
-                update_nbytes(self.datastore, 'gmf_data/data', data)
+                hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 for sid, start, stop in result['indices']:
                     self.indices[sid, 0].append(start + self.offset)
                     self.indices[sid, 1].append(stop + self.offset)
@@ -258,7 +244,7 @@ class EventBasedCalculator(base.HazardCalculator):
             it = parallel.Starmap(RuptureGetter.get_eid_rlz,
                                   ((rgetter,) for rgetter in rgetters),
                                   progress=logging.debug,
-                                  hdf5path=self.datastore.filename)
+                                  h5=self.datastore.hdf5)
         i = 0
         for eid_rlz in it:
             for er in eid_rlz:
@@ -324,12 +310,16 @@ class EventBasedCalculator(base.HazardCalculator):
         self.set_param()
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        if oq.hazard_calculation_id and 'ruptures' in self.datastore:
+        if oq.hazard_calculation_id:
             # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
+            srcfilter = SourceFilter(
+                self.sitecol, oq.maximum_distance,
+                self.datastore.parent.filename)
         else:
             # from sources
+            srcfilter = self.src_filter
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
@@ -338,13 +328,16 @@ class EventBasedCalculator(base.HazardCalculator):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
         self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
+        self.datastore.create_dset('gmf_data/sigma_epsilon',
+                                   sig_eps_dt(oq.imtls))
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
-        iterargs = ((rgetter, self.src_filter, self.param)
+        iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
+        self.datastore.swmr_on()
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
-            self.core_task.__func__, iterargs, hdf5path=self.datastore.filename
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5
         ).reduce(self.agg_dicts, self.acc0())
 
         if self.indices:
@@ -455,7 +448,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
-            self.cl.run(close=False)
+            self.cl.run()
             engine.expose_outputs(self.cl.datastore)
             cl_mean_curves = get_mean_curves(self.cl.datastore)
             eb_mean_curves = get_mean_curves(self.datastore)

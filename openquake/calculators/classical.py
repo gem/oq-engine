@@ -128,7 +128,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param dic: dict with keys pmap, calc_times, rup_data
         """
-        with self.monitor('aggregate curves', autoflush=True):
+        with self.monitor('aggregate curves'):
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
             srcids = []
@@ -161,7 +161,14 @@ class ClassicalCalculator(base.HazardCalculator):
                     if vlen:
                         self.datastore.hdf5.save_vlen('rup/' + k, v)
                     else:
-                        self.datastore.extend('rup/' + k, v)
+                        # NB: creating dataset on the fly is ugly
+                        try:
+                            dset = self.datastore['rup/' + k]
+                        except KeyError:
+                            dset = self.datastore.create_dset(
+                                'rup/' + k, v.dtype,
+                                shape=(None,) + v.shape[1:])
+                        hdf5.extend(dset, v)
         return acc
 
     def acc0(self):
@@ -193,22 +200,22 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         if oq.hazard_calculation_id and not oq.compare_with_classical:
-            parent = util.read(self.oqparam.hazard_calculation_id)
-            self.csm_info = parent['csm_info']
-            parent.close()
-            self.calc_stats(parent)  # post-processing
+            with util.read(self.oqparam.hazard_calculation_id) as parent:
+                self.csm_info = parent['csm_info']
+            self.calc_stats()  # post-processing
             return {}
 
-        with self.monitor('managing sources', autoflush=True):
+        with self.monitor('managing sources'):
             smap = parallel.Starmap(
-                self.core_task.__func__, hdf5path=self.datastore.filename)
+                self.core_task.__func__, h5=self.datastore.hdf5)
             self.submit_sources(smap)
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        self.datastore.swmr_on()
         try:
             acc = smap.reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
         finally:
-            with self.monitor('store source_info', autoflush=True):
+            with self.monitor('store source_info'):
                 self.store_source_info(self.calc_times)
             if self.sources_by_task:
                 num_tasks = max(self.sources_by_task) + 1
@@ -275,7 +282,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
-        with self.monitor('saving statistics', autoflush=True):
+        with self.monitor('saving statistics'):
             for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
                 pmaps = pmap_by_kind[kind]
                 if kind == 'rlz_by_sid':  # pmaps is actually a rlz_by_sid
@@ -310,7 +317,7 @@ class ClassicalCalculator(base.HazardCalculator):
         grp_name = {grp.id: grp.name for sm in csm_info.source_models
                     for grp in sm.src_groups}
         data = []
-        with self.monitor('saving probability maps', autoflush=True):
+        with self.monitor('saving probability maps'):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
@@ -323,17 +330,11 @@ class ClassicalCalculator(base.HazardCalculator):
                         for sid in pmap)
                     data.append((grp_id, grp_name[grp_id], extreme))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
-            self.datastore.set_nbytes('poes')
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
+            self.calc_stats()
 
-            # save a copy of the poes in hdf5cache
-            with hdf5.File(self.hdf5cache) as cache:
-                cache['oqparam'] = oq
-                self.datastore.hdf5.copy('poes', cache)
-            self.calc_stats(self.hdf5cache)
-
-    def calc_stats(self, parent):
+    def calc_stats(self):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         # initialize datasets
@@ -357,12 +358,12 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         allargs = [  # this list is very fast to generate
-            (getters.PmapGetter(parent, weights, t.sids, oq.poes),
+            (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
+        self.datastore.swmr_on()
         parallel.Starmap(build_hazard, allargs,
-                         hdf5path=self.datastore.filename).reduce(
-                             self.save_hazard)
+                         h5=self.datastore.hdf5).reduce(self.save_hazard)
 
 
 @base.calculators.add('preclassical')
