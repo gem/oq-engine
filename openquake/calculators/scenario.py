@@ -108,7 +108,7 @@ class ScenarioCalculator(base.HazardCalculator):
     def post_execute(self, gmfa):
         if len(gmfa) == 0:  # no rupture_model
             return
-        with self.monitor('saving gmfs', autoflush=True):
+        with self.monitor('saving gmfs'):
             base.save_gmf_data(
                 self.datastore, self.sitecol, gmfa,
                 self.oqparam.imtls, self.events)

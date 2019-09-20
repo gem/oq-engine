@@ -186,7 +186,7 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     if oq.ignore_covs or not crmodel.covs or 'LN' not in crmodel.distributions:
         return
     A = len(assetcol)
-    hdf5path = dstore.hdf5cache()
+    hdf5path = dstore.cachepath()
     logging.info('Storing the epsilon matrix in %s', hdf5path)
     if oq.calculation_mode == 'scenario_risk':
         eps = make_eps(assetcol.array, E, oq.master_seed, oq.asset_correlation)
