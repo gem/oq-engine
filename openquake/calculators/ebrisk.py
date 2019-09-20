@@ -195,6 +195,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dset('gmf_info', gmf_info_dt)
 
     def execute(self):
+        self.datastore.flush()  # just to be sure
         oq = self.oqparam
         parent = self.datastore.parent
         if parent:
@@ -336,6 +337,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.datastore['avg_losses-stats'].attrs['stats'] = [b'mean']
         logging.info('Building loss tables')
         build_loss_tables(self.datastore)
+        self.datastore.flush()  # just to be sure
         shp = self.get_shape(self.L)  # (L, T...)
         text = ' x '.join(
             '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
