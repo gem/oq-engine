@@ -744,7 +744,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore['weights'] = arr = build_weights(
                 self.rlzs_assoc.realizations, self.oqparam.imt_dt())
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
-            self.save_cache(weights=arr)
 
         if ('event_based' in self.oqparam.calculation_mode and R >= TWO16
                 or R >= TWO32):
