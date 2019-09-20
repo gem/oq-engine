@@ -360,6 +360,9 @@ class ClassicalCalculator(base.HazardCalculator):
         ct = oq.concurrent_tasks
         logging.info('Building hazard statistics with %d concurrent_tasks', ct)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        for grp in self.datastore['poes'].values():
+            for dset in grp.values():
+                dset.flush()  # for the readers
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
