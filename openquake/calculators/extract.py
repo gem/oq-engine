@@ -452,12 +452,13 @@ def extract_task_info(dstore, what):
     """
     Extracts the task distribution. Use it as /extract/task_info?kind=classical
     """
+    dic = group_array(dstore['task_info'][()], 'taskname')
     if 'kind' in what:
         name = parse(what)['kind'][0]
-        yield name, dstore['task_info/' + name][()]
+        yield name, dic[name]
         return
-    for name in dstore['task_info']:
-        yield name, dstore['task_info/' + name][()]
+    for name in dic:
+        yield name, dic[name]
 
 
 def _agg(losses, idxs):
@@ -825,11 +826,9 @@ def extract_src_loss_table(dstore, loss_type):
     order. Example:
     http://127.0.0.1:8800/v1/calc/30/extract/src_loss_table/structural
     """
-    oq = dstore['oqparam']
-    li = oq.lti[loss_type]
     source_ids = dstore['source_info']['source_id']
     idxs = dstore['ruptures'][('srcidx', 'grp_id')]
-    losses = dstore['rup_loss_table'][:, li]
+    losses = dstore['rup_loss_table'][loss_type]
     slt = numpy.zeros(len(source_ids), [('grp_id', U32), (loss_type, F32)])
     for loss, (srcidx, grp_id) in zip(losses, idxs):
         slt[srcidx][loss_type] += loss
@@ -891,8 +890,7 @@ def extract_event_info(dstore, eidx):
     http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
     """
     event = dstore['events'][int(eidx)]
-    rup_id = event['rup_id']
-    ridx = list(dstore['ruptures']['rup_id']).index(rup_id)
+    ridx = event['rup_id']
     [getter] = getters.gen_rupture_getters(dstore, slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']

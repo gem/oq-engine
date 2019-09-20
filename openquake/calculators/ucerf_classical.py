@@ -69,7 +69,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                 (srcs, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
-                hdf5path=self.datastore.filename
+                h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
@@ -78,7 +78,7 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                 classical, (srcs, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
-                hdf5path=self.datastore.filename
+                h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
         self.store_rlz_info(acc.eff_ruptures)
         self.store_source_info(self.calc_times)

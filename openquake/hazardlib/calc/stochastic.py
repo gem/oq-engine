@@ -85,8 +85,9 @@ def stochastic_event_set(sources, source_site_filter=nofilter):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('rup_id', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
-    ('n_occ', U16), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+    ('id', U32), ('serial', U32), ('srcidx', U16), ('grp_id', U16),
+    ('code', U8), ('n_occ', U16), ('mag', F32), ('rake', F32),
+    ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
     ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
     ('sy', U16), ('sz', U16)])
@@ -123,7 +124,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             continue
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (ebrupture.rup_id, ebrupture.srcidx, ebrupture.grp_id,
+        tup = (0, ebrupture.rup_id, ebrupture.srcidx, ebrupture.grp_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
                rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat'],
                hypo, offset, offset + len(points), sy, sz)

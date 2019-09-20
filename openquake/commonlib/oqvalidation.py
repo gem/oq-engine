@@ -559,8 +559,7 @@ class OqParam(valid.ParamSet):
 
     def hazard_stats(self):
         """
-        Return a list of item with the statistical functions defined for the
-        hazard calculation
+        Return a dictionary stat_name -> stat_func
         """
         names = []  # name of statistical functions
         funcs = []  # statistical functions of kind func(values, weights)

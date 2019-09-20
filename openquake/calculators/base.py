@@ -30,7 +30,7 @@ import numpy
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source import rupture
@@ -130,17 +130,17 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
     def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
+        init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
-            '%s.run' % self.__class__.__name__, measuremem=True)
-        self._monitor.hdf5path = self.datastore.filename  # autoflush
+            '%s.run' % self.__class__.__name__, measuremem=True,
+            h5=self.datastore.hdf5)
         self.oqparam = oqparam
 
     def monitor(self, operation='', **kw):
         """
         :returns: a new Monitor instance
         """
-        mon = self._monitor(operation)
-        mon.hdf5path = self.datastore.filename  # flushable monitor
+        mon = self._monitor(operation, h5=self.datastore.hdf5)
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
@@ -179,7 +179,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
+    def run(self, pre_execute=True, concurrent_tasks=None, **kw):
         """
         Run the calculation and return the exported outputs.
         """
@@ -223,16 +223,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-
-                if close:  # in the engine we close later
-                    self.result = None
-                    try:
-                        self.datastore.close()
-                    except (RuntimeError, ValueError):
-                        # sometimes produces errors but they are difficult to
-                        # reproduce
-                        logging.warning('', exc_info=True)
-
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -318,10 +308,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             for sg in sm.src_groups:
                 assert sg.eff_ruptures != -1, sg
 
-        for key in self.datastore:
-            self.datastore.set_nbytes(key)
-        self.datastore.flush()
-
 
 def check_time_event(oqparam, occupancy_periods):
     """
@@ -365,11 +351,11 @@ class HazardCalculator(BaseCalculator):
         :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
-        self.hdf5cache = self.datastore.hdf5cache()
+        self.cachepath = self.datastore.cachepath()
         sitecol = self.sitecol.complete if self.sitecol else None
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
-        return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
+            return UcerfFilter(sitecol, oq.maximum_distance, self.cachepath)
+        return SourceFilter(sitecol, oq.maximum_distance, self.cachepath)
 
     @property
     def E(self):
@@ -406,6 +392,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+        if hasattr(self, 'sitecol'):
+            self.save_cache(sitecol=self.sitecol)
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
@@ -447,6 +435,7 @@ class HazardCalculator(BaseCalculator):
                     oq.number_of_ground_motion_fields = E
             else:
                 self.save_multi_peril()
+            self.save_crmodel()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
@@ -459,6 +448,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
             self.datastore['rlzs_by_grp'] = self.rlzs_assoc.by_grp()
+            self.save_crmodel()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
@@ -491,6 +481,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
                     ', '.join(missing_imts))
+            self.save_crmodel()
         elif self.__class__.precalc:
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
@@ -501,7 +492,6 @@ class HazardCalculator(BaseCalculator):
                     setattr(self, name, getattr(calc, name))
         else:
             self.read_inputs()
-        if self.crmodel:
             self.save_crmodel()
 
     def init(self):
@@ -546,7 +536,7 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        with self.monitor('reading exposure', autoflush=True):
+        with self.monitor('reading exposure'):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
                     oq, haz_sitecol, self.crmodel.loss_types))
@@ -617,10 +607,10 @@ class HazardCalculator(BaseCalculator):
         """
         Save the risk models in the datastore
         """
-        self.datastore['risk_model'] = rm = self.crmodel
-        attrs = self.datastore.getitem('risk_model').attrs
-        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
-        self.datastore.set_nbytes('risk_model')
+        if len(self.crmodel):
+            self.datastore['risk_model'] = rm = self.crmodel
+            attrs = self.datastore.getitem('risk_model').attrs
+            attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
@@ -732,10 +722,11 @@ class HazardCalculator(BaseCalculator):
         """
         A shortcut method to store data in the hdf5 cache file, if any
         """
-        if hasattr(self, 'hdf5cache'):  # no scenario
-            with hdf5.File(self.hdf5cache, 'r+') as cache:
-                for k, v in kw.items():
+        with hdf5.File(self.datastore.cachepath(), libver='latest') as cache:
+            for k, v in kw.items():
+                if v is not None:
                     cache[k] = v
+            cache.swmr_mode = True
 
     def store_rlz_info(self, eff_ruptures=None):
         """
@@ -865,7 +856,7 @@ class RiskCalculator(HazardCalculator):
             _, self.crmodel.tmap = logictree.taxonomy_mapping(
                 self.oqparam.inputs.get('taxonomy_mapping'),
                 self.assetcol.tagcol.taxonomy)
-        with self.monitor('building riskinputs', autoflush=True):
+        with self.monitor('building riskinputs'):
             riskinputs = list(self._gen_riskinputs(kind))
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
@@ -877,11 +868,8 @@ class RiskCalculator(HazardCalculator):
         :param sid: a site ID
         :returns: a PmapGetter or GmfDataGetter
         """
-        hdf5cache = getattr(self, 'hdf5cache', None)
-        if hdf5cache:
-            dstore = hdf5cache
-        elif (self.oqparam.hazard_calculation_id and
-              'gmf_data' not in self.datastore):
+        if (self.oqparam.hazard_calculation_id and
+                'gmf_data' not in self.datastore):
             # 'gmf_data' in self.datastore happens for ShakeMap calculations
             self.datastore.parent.close()  # make sure it is closed
             dstore = self.datastore.parent
@@ -931,7 +919,7 @@ class RiskCalculator(HazardCalculator):
             self.core_task.__func__,
             (self.riskinputs, self.crmodel, self.param, self.monitor()),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            weight=get_weight, hdf5path=self.datastore.filename
+            weight=get_weight, h5=self.datastore.hdf5
         ).reduce(self.combine)
         return res
 
@@ -1006,13 +994,15 @@ def import_gmfs(dstore, fname, sids):
     dic = general.group_array(arr, 'sid')
     lst = []
     offset = 0
+    gmvlst = []
     for sid in sids:
         n = len(dic.get(sid, []))
         lst.append((offset, offset + n))
         if n:
             offset += n
             gmvs = dic[sid]
-            dstore.extend('gmf_data/data', gmvs)
+            gmvlst.append(gmvs)
+    dstore['gmf_data/data'] = numpy.concatenate(gmvlst)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['weights'] = numpy.ones(1)
@@ -1038,7 +1028,7 @@ def save_exposed_values(dstore, assetcol, lossnames, tagnames):
             aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
         elif lt in assetcol.fields:
             aval[array['ordinal'], lti] = array['value-' + lt]
-    for n in range(len(tagnames) + 1):
+    for n in range(len(tagnames) + 1, -1, -1):
         for names in itertools.combinations(tagnames, n):
             name = 'exposed_values/' + '_'.join(('agg',) + names)
             logging.info('Storing %s', name)
