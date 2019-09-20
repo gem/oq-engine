@@ -489,8 +489,8 @@ class HazardCalculator(BaseCalculator):
                     setattr(self, name, getattr(calc, name))
         else:
             self.read_inputs()
-        if self.crmodel:
-            self.save_crmodel()
+            if self.crmodel:
+                self.save_crmodel()
 
     def init(self):
         """
