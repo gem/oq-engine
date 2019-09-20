@@ -198,12 +198,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         parent = self.datastore.parent
         if parent:
-            self.param['hdf5path'] = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             n_occ = parent['ruptures']['n_occ']
             dstore = parent
         else:
-            self.param['hdf5path'] = self.datastore.filename
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
             n_occ = self.datastore['ruptures']['n_occ']
             dstore = self.datastore
@@ -212,6 +210,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Using %d occurrences per block (over %d occurrences, '
                      '%d events)', per_block, n_occ.sum(), self.E)
         self.set_param(
+            hdf5path=self.datastore.filename,
             task_duration=oq.task_duration or 600,  # 10min
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
@@ -343,16 +342,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
-        self.datastore.close()
-        if 'losses_by_event' in self.datastore.parent:
-            dstore = self.datastore.parent
-        else:
-            dstore = self.datastore
-        args = [(dstore.filename, builder, oq.ses_ratio, rlzi)
+        self.datastore.flush()  # so that the readers see the data
+        args = [(self.datastore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
         acc = list(parallel.Starmap(postprocess, args,
                                     h5=self.datastore.hdf5))
-        self.datastore.open('r+')  # reopen
         for r, (curves, maps), agg_losses in acc:
             if len(curves):  # some realization can give zero contribution
                 self.datastore['agg_curves-rlzs'][:, r] = curves
