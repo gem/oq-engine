@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from scipy.stats import norm
 from scipy.constants import pi
 
 
@@ -69,9 +68,9 @@ def get_coeff(m_mu, sigma, sigma_mu, imls):
     assert sigma.shape == sigma_mu.shape
 
     az = -1*sigma_mu**2/(2*sigma**2)-0.5
-    bz = (numpy.log(imls) - m_mu) * sigma_mu / sigma**2
+    bz = (numpy.log(imls) - m_mu) * sigma_mu / (sigma**2)
     cz = -1*(numpy.log(imls) - m_mu)**2 / (2*sigma**2)
-    alpha = sigma_mu/(2*sigma*numpy.sqrt(pi))*numpy.exp(cz-bz**2/(4*az))
+    alpha = sigma_mu/(2*sigma*pi)*numpy.sqrt(pi)*numpy.exp(cz-bz**2/(4*az))
     #
     coeff = []
     # c1
@@ -91,7 +90,7 @@ def get_coeff(m_mu, sigma, sigma_mu, imls):
     den = 16*(-az)**4.5
     coeff.append(alpha/120 * num / den)
     # c6
-    num = bz*(60*az**2*(1+2*az))**2-20*az*(1+2*az)*bz**2+bz**4
+    num = bz*(60*az**2*(1+2*az)**2-20*az*(1+2*az)*bz**2+bz**4)
     den = 32*(-az)**5.5
     coeff.append(alpha/720 * num / den)
 

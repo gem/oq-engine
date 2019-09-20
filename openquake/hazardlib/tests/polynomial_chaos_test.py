@@ -95,7 +95,6 @@ class ScenarioTest(unittest.TestCase):
         # deviation - This is PC coeff 0
         self.poes_comb = self.gsim.get_poes(mean_std, self.imls,
                                             truncation_level=None)
-
         # Sample the epistemic epistemic uncertainty distribution
         num_realisations = 400
         np.random.seed(1)
@@ -123,7 +122,7 @@ class ScenarioTest(unittest.TestCase):
         # ---- REMOVE this
         if 0:
             import matplotlib.pyplot as plt
-            fig = plt.figure()
+            _ = plt.figure()
             plt.plot(self.imls, mean_epi)
             plt.plot(self.imls, np.squeeze(self.poes_comb))
             plt.xscale('log')
@@ -147,22 +146,22 @@ class ScenarioTest(unittest.TestCase):
         pc_coef = get_coeff(m_mu, self.mean_std[1, :, 0], sigma_mu, self.imls)
 
         import matplotlib.pyplot as plt
-        fig = plt.figure()
+        _ = plt.figure()
         for deg in range(0, 6):
             plt.plot(np.log(self.imls), pc_coef[deg-1, :])
         plt.show()
 
         # Compute samples of the Hermite polynomial
-        num_samples = 10
+        num_samples = 50
         csi = np.random.normal(loc=0.0, scale=self.epistemic_std,
                                size=num_samples)
         xx = get_hermite(csi)
 
-        fig = plt.figure()
+        _ = plt.figure()
         curves = np.zeros((num_samples, len(self.imls)))
         for rlz in range(0, num_samples):
             curves[rlz, :] = self.poes_comb
-            for deg in range(1, 4):
+            for deg in range(1, 5):
                 curves[rlz, :] += pc_coef[deg-1, :] * xx[deg, rlz]
             plt.plot(self.imls, curves[rlz, :], '--')
         plt.plot(self.imls, mean_epi)
