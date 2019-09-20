@@ -235,7 +235,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 indices = [i for i, n in pairs]
                 rup_array = dstore['ruptures'][indices]
                 rgetter = getters.RuptureGetter(
-                    rup_array, grp_id,
+                    rup_array, dstore.filename, grp_id,
                     trt_by_grp[grp_id], samples[grp_id], rlzs_by_gsim,
                     eslices[fe:fe + len(indices), 0])
                 allargs.append((rgetter, srcfilter, self.param))
