@@ -313,7 +313,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # from ruptures, do not transfer sitecol
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
-            srcfilter = self.src_filter(self.datastore.parent.filename)
+            srcfilter = self.src_filter(self.datastore.filename)
         else:
             # from sources, transfer sitecol
             srcfilter = self.src_filter()
