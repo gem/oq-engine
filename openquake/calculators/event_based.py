@@ -26,7 +26,6 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, cached_property, get_indices
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
@@ -314,9 +313,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # from ruptures, do not transfer sitecol
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
-            srcfilter = SourceFilter(
-                self.sitecol, oq.maximum_distance,
-                self.datastore.parent.filename)
+            srcfilter = self.src_filter(self.datastore.parent.filename)
         else:
             # from sources, transfer sitecol
             srcfilter = self.src_filter()
