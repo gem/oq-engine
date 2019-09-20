@@ -739,8 +739,6 @@ class HazardCalculator(BaseCalculator):
         R = len(self.rlzs_assoc.realizations)
         logging.info('There are %d realization(s)', R)
         rlzs_by_grp = self.rlzs_assoc.by_grp()
-        if rlzs_by_grp:
-            self.save_cache(rlzs_by_grp=rlzs_by_grp)
 
         if self.oqparam.imtls:
             self.datastore['weights'] = arr = build_weights(
@@ -762,7 +760,8 @@ class HazardCalculator(BaseCalculator):
         # save a composite array with fields (grp_id, gsim_id, rlzs)
         if rlzs_by_grp:
             self.datastore['rlzs_by_grp'] = rlzs_by_grp
-        self.datastore.flush()
+            for dset in self.datastore['rlzs_by_grp'].values():
+                dset.flush()  # for the readers
 
     def store_source_info(self, calc_times):
         """
