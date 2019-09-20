@@ -431,6 +431,7 @@ class HazardCalculator(BaseCalculator):
                     oq.number_of_ground_motion_fields = E
             else:
                 self.save_multi_peril()
+            self.save_crmodel()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
@@ -443,6 +444,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
             self.datastore['rlzs_by_grp'] = self.rlzs_assoc.by_grp()
+            self.save_crmodel()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
@@ -475,6 +477,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation is missing the IMT(s) %s' %
                     ', '.join(missing_imts))
+            self.save_crmodel()
         elif self.__class__.precalc:
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
@@ -485,7 +488,6 @@ class HazardCalculator(BaseCalculator):
                     setattr(self, name, getattr(calc, name))
         else:
             self.read_inputs()
-        if self.crmodel:
             self.save_crmodel()
 
     def init(self):
@@ -601,9 +603,10 @@ class HazardCalculator(BaseCalculator):
         """
         Save the risk models in the datastore
         """
-        self.datastore['risk_model'] = rm = self.crmodel
-        attrs = self.datastore.getitem('risk_model').attrs
-        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
+        if len(self.crmodel):
+            self.datastore['risk_model'] = rm = self.crmodel
+            attrs = self.datastore.getitem('risk_model').attrs
+            attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
