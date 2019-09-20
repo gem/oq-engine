@@ -166,7 +166,7 @@ except ImportError:
 from openquake.baselib import config, hdf5, workerpool
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
-    Monitor, memory_rss, dump, init_performance)
+    Monitor, memory_rss, task_sent_dt)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp)
@@ -454,15 +454,15 @@ class IterResult(object):
     :param hdf5path:
         a path where to store persistently the performance info
      """
-    def __init__(self, iresults, taskname, argnames, sent, hdf5path):
+    def __init__(self, iresults, taskname, argnames, sent, h5):
         self.iresults = iresults
         self.name = taskname
         self.argnames = ' '.join(argnames)
         self.sent = sent
         self.received = []
-        self.hdf5path = hdf5path
+        self.h5 = h5
 
-    def _iter(self, temp):
+    def _iter(self):
         first_time = True
         for result in self.iresults:
             msg = check_mem_usage()
@@ -490,8 +490,8 @@ class IterResult(object):
                 mem_gb = memory_rss(os.getpid()) / GB
             if not result.func_args:  # real output
                 name = result.mon.operation[6:]  # strip 'total '
-                result.mon.save_task_info(temp, result, name, mem_gb)
-                result.mon.flush(temp)
+                result.mon.save_task_info(self.h5, result, name, mem_gb)
+                result.mon.flush(self.h5)
                 yield val
 
     def __iter__(self):
@@ -500,26 +500,20 @@ class IterResult(object):
         t0 = time.time()
         self.received = []
         self.nbytes = AccumDict()
-        temp = hdf5.File(self.hdf5path + '~', 'w')
         try:
-            init_performance(temp, swmr=True)
-            yield from self._iter(temp)
-            if self.received:
-                tot = sum(self.received)
-                max_per_output = max(self.received)
-                logging.info(
-                    'Received %s in %d seconds, biggest '
-                    'output=%s', humansize(tot), time.time() - t0,
-                    humansize(max_per_output))
-                if self.nbytes:
-                    nb = {k: humansize(v) for k, v in self.nbytes.items()}
-                    logging.info('Received %s', nb)
+            yield from self._iter()
         finally:
-            if os.path.basename(self.hdf5path).startswith('calc_'):
-                dump(temp, self.hdf5path, self.sent)
-            temp.close()
-            if os.path.exists(self.hdf5path + '~'):
-                os.remove(self.hdf5path + '~')
+            sent = numpy.array(list(self.sent.items()), task_sent_dt)
+            hdf5.extend(self.h5['task_sent'], sent)
+            tot = sum(self.received)
+            max_per_output = max(self.received) if self.received else 0
+            logging.info(
+                'Received %s in %d seconds, biggest '
+                'output=%s', humansize(tot), time.time() - t0,
+                humansize(max_per_output))
+            if self.nbytes:
+                nb = {k: humansize(v) for k, v in self.nbytes.items()}
+                logging.info('Received %s', nb)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -743,7 +737,7 @@ class Starmap(object):
         :returns: an :class:`IterResult` instance
         """
         return IterResult(self._loop(), self.name, self.argnames,
-                          self.sent, self.h5.filename)
+                          self.sent, self.h5)
 
     def reduce(self, agg=operator.add, acc=None):
         """

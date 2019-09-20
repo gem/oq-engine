@@ -344,16 +344,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
-        self.datastore.close()
-        if 'losses_by_event' in self.datastore.parent:
-            dstore = self.datastore.parent
-        else:
-            dstore = self.datastore
-        args = [(dstore.filename, builder, oq.ses_ratio, rlzi)
+        self.datastore.flush()  # so that the readers see the data
+        args = [(self.datastore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
         acc = list(parallel.Starmap(postprocess, args,
                                     h5=self.datastore.hdf5))
-        self.datastore.open('r+')  # reopen
         for r, (curves, maps), agg_losses in acc:
             if len(curves):  # some realization can give zero contribution
                 self.datastore['agg_curves-rlzs'][:, r] = curves
