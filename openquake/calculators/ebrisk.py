@@ -198,12 +198,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         parent = self.datastore.parent
         if parent:
-            self.param['hdf5path'] = parent.filename
             grp_indices = parent['ruptures'].attrs['grp_indices']
             n_occ = parent['ruptures']['n_occ']
             dstore = parent
         else:
-            self.param['hdf5path'] = self.datastore.filename
             grp_indices = self.datastore['ruptures'].attrs['grp_indices']
             n_occ = self.datastore['ruptures']['n_occ']
             dstore = self.datastore
@@ -212,6 +210,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Using %d occurrences per block (over %d occurrences, '
                      '%d events)', per_block, n_occ.sum(), self.E)
         self.set_param(
+            hdf5path=self.datastore.filename,
             task_duration=oq.task_duration or 600,  # 10min
             epspath=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
