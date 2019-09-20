@@ -118,7 +118,6 @@ class OqParam(valid.ParamSet):
     poes_disagg = valid.Param(valid.probabilities, [])
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    read_sitecol = valid.Param(valid.boolean, False)
     reference_depth_to_1pt0km_per_sec = valid.Param(
         valid.positivefloat, numpy.nan)
     reference_depth_to_2pt5km_per_sec = valid.Param(
