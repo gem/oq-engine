@@ -205,7 +205,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
-        self.datastore.swmr_on()
+        #self.datastore.swmr_on()
         with self.monitor('managing sources'):
             smap = parallel.Starmap(
                 self.core_task.__func__, h5=self.datastore.hdf5)
