@@ -22,15 +22,13 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import group_array,  deprecated
-from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
-from openquake.calculators import getters
-from openquake.commonlib import writers, hazard_writers
+from openquake.commonlib import writers
 from openquake.commonlib.util import get_assets, compose_arrays
 
 Output = collections.namedtuple('Output', 'ltype path array')
@@ -239,8 +237,9 @@ def export_losses_by_event(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
     md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
+    if 'scenario' not in oq.calculation_mode:
+        md.update(dict(investigation_time=oq.investigation_time,
+                       risk_investigation_time=oq.risk_investigation_time))
     events = dstore['events'][()]
     columns = dict(rlz_id=lambda rec: events[rec.event_id]['rlz_id'])
     if oq.investigation_time:  # not scenario
@@ -271,27 +270,6 @@ def _compact(array):
     for name in dt.names:
         lst.append((name, (dt[name], e)))
     return array.view(numpy.dtype(lst)).reshape(a)
-
-
-@export.add(('rup_loss_table', 'xml'))
-def export_maxloss_ruptures(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    oq = dstore['oqparam']
-    rlzs_by_gsim = dstore['csm_info'].get_rlzs_by_gsim_grp()
-    num_ses = oq.ses_per_logic_tree_path
-    fnames = []
-    for loss_type in oq.loss_dt().names:
-        ebr = getters.get_maxloss_rupture(dstore, loss_type)
-        root = hazard_writers.rupture_to_element(
-            ebr.export(rlzs_by_gsim[ebr.grp_id], num_ses))
-        dest = dstore.export_path('rupture-%s.xml' % loss_type)
-        with open(dest, 'wb') as fh:
-            nrml.write(list(root), fh)
-        fnames.append(dest)
-    return fnames
 
 
 def year_dict(eids, investigation_time, ses_seed):

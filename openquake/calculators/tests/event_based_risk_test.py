@@ -75,7 +75,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # make sure the agg_curves-stats has the right attrs
         self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
         self.check_attr('units', [b'EUR', b'EUR'])
-        self.check_attr('nbytes', 96)
 
         # test the loss curves exporter
         [f1] = export(('loss_curves/rlz-0', 'csv'), self.calc.datastore)
@@ -96,13 +95,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # test portfolio loss
         tmp = gettemp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', tmp)
-
-        # test the rup_loss_table exporter
-        fnames = export(('rup_loss_table', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                  fname)
 
         # test the src_loss_table extractor
         arr = extract(self.calc.datastore, 'src_loss_table/structural')
@@ -224,10 +216,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='csv', concurrent_tasks='4')
 
-        # test the number of bytes saved in the rupture records
-        nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 3180)
-
         # test postprocessing
         self.calc.datastore.close()
         hc_id = self.calc.datastore.calc_id
@@ -308,7 +296,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         self.check_multi_tag(self.calc.datastore)
 
-        # ------------------------- ebrisk calculator ---------------------- #
+    def test_case_master_eb(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
                       aggregate_by='id')
