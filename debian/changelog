@@ -1,3 +1,7 @@
+  [Kris Vanneste]
+  * Updated the coefficients table for the atkinson_2015 to the actual
+    values in the paper.
+
   [Michele Simionato]
   * Changed `oq reset --yes` to remove oqdata/user only in single-user mode
   * Now the engine automatically sorts the user-provided intensity_measure_types
