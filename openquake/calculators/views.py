@@ -318,9 +318,12 @@ def view_job_info(token, dstore):
     to the workers and back in a classical calculation.
     """
     data = [['task', 'sent', 'received']]
-    task_info = dstore['task_info'][()]
-    task_sent = dict(dstore['task_sent'][()])
-    for task, array in group_array(task_info, 'taskname').items():
+    task_info = dstore['task_info']
+    task_info.refresh()
+    task_sent = dstore['task_sent']
+    task_sent.refresh()
+    task_sent = dict(task_sent[()])
+    for task, array in group_array(task_info[()], 'taskname').items():
         sent = sorted(ast.literal_eval(task_sent[task]).items(),
                       key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
@@ -460,7 +463,9 @@ def performance_view(dstore, add_calc_id=True):
     """
     Returns the performance view as a numpy array.
     """
-    data = sorted(dstore['performance_data'], key=operator.itemgetter(0))
+    pdata = dstore['performance_data']
+    pdata.refresh()
+    data = sorted(pdata[()], key=operator.itemgetter(0))
     out = []
     for operation, group in itertools.groupby(data, operator.itemgetter(0)):
         counts = 0
@@ -562,17 +567,19 @@ def view_task_info(token, dstore):
 
       $ oq show task_info:classical
     """
+    task_info = dstore['task_info']
+    task_info.refresh()
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
         [task] = args
-        array = get_array(dstore['task_info'][()], taskname=task)
+        array = get_array(task_info[()], taskname=task)
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
         return rst_table(data)
 
     data = ['operation-duration mean stddev min max outputs'.split()]
-    for task, arr in group_array(dstore['task_info'][()], 'taskname').items():
+    for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
             data.append(stats(task, val))
