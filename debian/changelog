@@ -3,6 +3,8 @@
     values in the paper.
 
   [Michele Simionato]
+  * Added an `/extract/agg_curves` API to extract both absolute and relative
+    loss curves from an ebrisk calculation
   * Changed `oq reset --yes` to remove oqdata/user only in single-user mode
   * Now the engine automatically sorts the user-provided intensity_measure_types
   * Optimized the aggregation by tag
