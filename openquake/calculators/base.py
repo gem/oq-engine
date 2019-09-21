@@ -224,9 +224,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.gmfs = None
                 readinput.eids = None
 
-        # remove epsilons, if any
-        if os.path.exists(self.datastore.filename[:-4] + 'eps.hdf5'):
-            os.remove(self.datastore.filename[:-4] + 'eps.hdf5')
+                # cleanup epsilons, if any
+                if os.path.exists(self.datastore.filename[:-4] + 'eps.hdf5'):
+                    os.remove(self.datastore.filename[:-4] + 'eps.hdf5')
         return getattr(self, 'exported', {})
 
     def core_task(*args):
