@@ -714,16 +714,6 @@ class HazardCalculator(BaseCalculator):
             save_exposed_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
-    def save_cache(self, **kw):
-        """
-        A shortcut method to store data in the hdf5 cache file, if any
-        """
-        with hdf5.File(self.datastore.cachepath(), libver='latest') as cache:
-            for k, v in kw.items():
-                if v is not None:
-                    cache[k] = v
-            cache.swmr_mode = True
-
     def store_rlz_info(self, eff_ruptures=None):
         """
         Save info about the composite source model inside the csm_info dataset
