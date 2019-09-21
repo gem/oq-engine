@@ -344,7 +344,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
-        self.datastore.flush()  # so that the readers see the data
+        self.datastore.close()  # so that the readers see the data
+        self.datastore.open('r+')
+        self.datastore.swmr_on()
         args = [(self.datastore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]
         acc = list(parallel.Starmap(postprocess, args,

@@ -205,6 +205,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
+        self.datastore.swmr_on()
         with self.monitor('managing sources'):
             smap = parallel.Starmap(
                 self.core_task.__func__, h5=self.datastore.hdf5)
@@ -331,6 +332,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
+            self.datastore.close()  # for SWMR safety
+            self.datastore.open('r+')
             self.calc_stats()
 
     def calc_stats(self):
