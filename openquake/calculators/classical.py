@@ -238,7 +238,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         N, L = len(self.sitecol), len(oq.imtls.array)
-        trt_sources = self.csm.get_trt_sources()
+        trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks), 1E6)
         if oq.task_duration is None:  # inferred
