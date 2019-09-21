@@ -73,6 +73,7 @@ def show(what='contents', calc_id=-1, extra=()):
         if hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
         else:  # is a single dataset
+            obj.refresh()  # for SWMR mode
             aw = hdf5.ArrayWrapper.from_(obj)
             if hasattr(aw, 'shape_descr'):
                 print(rst_table(aw.to_table()))
