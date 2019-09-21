@@ -429,9 +429,8 @@ class CompositeSourceModel(collections.abc.Sequence):
                         sources.append(src)
         return sources
 
-    def get_trt_sources(self, optimize_dupl=False):
+    def get_trt_sources(self):
         """
-        :param optimize_dupl: if True change src_group_id to a list
         :returns: a list of pairs [(trt, group of sources)]
         """
         atomic = []
@@ -444,7 +443,7 @@ class CompositeSourceModel(collections.abc.Sequence):
                     acc[grp.trt].extend(grp)
         if not acc:
             return atomic
-        elif not hasattr(grp.sources[0], 'checksum') or not optimize_dupl:
+        elif not hasattr(grp.sources[0], 'checksum'):
             # for UCERF or for event_based
             return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
