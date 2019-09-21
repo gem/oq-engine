@@ -223,6 +223,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
+
+                # cleanup epsilons, if any
+                if os.path.exists(self.datastore.filename[:-4] + 'eps.hdf5'):
+                    os.remove(self.datastore.filename[:-4] + 'eps.hdf5')
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -713,16 +717,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore['taxonomies_by_site'] = get_stats(num_taxos)
             save_exposed_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
-
-    def save_cache(self, **kw):
-        """
-        A shortcut method to store data in the hdf5 cache file, if any
-        """
-        with hdf5.File(self.datastore.cachepath(), libver='latest') as cache:
-            for k, v in kw.items():
-                if v is not None:
-                    cache[k] = v
-            cache.swmr_mode = True
 
     def store_rlz_info(self, eff_ruptures=None):
         """
