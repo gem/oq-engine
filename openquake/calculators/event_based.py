@@ -311,14 +311,12 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.set_param()
         self.offset = 0
+        srcfilter = self.src_filter(self.datastore.filename)
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        if oq.hazard_calculation_id:
-            # from ruptures, do not transfer sitecol
+        if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
-            srcfilter = self.src_filter(self.datastore.filename)
-        else:
-            # from sources, transfer sitecol
+        else:  # from sources
             srcfilter = self.src_filter()
             self.build_events_from_sources(srcfilter)
             if (oq.ground_motion_fields is False and
@@ -331,10 +329,9 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.create_dset('gmf_data/sigma_epsilon',
                                    sig_eps_dt(oq.imtls))
         N = len(self.sitecol.complete)
-        dset = self.datastore.create_dset(
+        self.datastore.create_dset(
             'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
-        num_evs = self.datastore.create_dset(
-            'gmf_data/events_by_sid', U32, (N,))
+        self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
         iterargs = ((rgetter, srcfilter, self.param)
@@ -347,6 +344,8 @@ class EventBasedCalculator(base.HazardCalculator):
         ).reduce(self.agg_dicts, self.acc0())
 
         if self.indices:
+            dset = self.datastore['gmf_data/indices']
+            num_evs = self.datastore['gmf_data/events_by_sid']
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True):
                 self.datastore['gmf_data/imts'] = ' '.join(oq.imtls)
