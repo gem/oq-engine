@@ -655,7 +655,7 @@ class Starmap(object):
         self.progress = progress
         self.h5 = h5
         self.num_cores = num_cores
-        self.queue = []
+        self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
         except TypeError:  # generators have no len
@@ -727,7 +727,8 @@ class Starmap(object):
             for args in self.task_args:
                 self.submit(*args)
         else:  # submit at most num_cores task
-            self.queue = [(self.task_func,) + args for args in self.task_args]
+            self.task_queue = [(self.task_func,) + args
+                               for args in self.task_args]
         return self.get_results()
 
     def get_results(self):
@@ -747,9 +748,9 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def _loop(self):
-        if self.queue:  # called from reduce_queue
-            first_args = self.queue[:self.num_cores]
-            self.queue = self.queue[self.num_cores:]
+        if self.task_queue:  # called from reduce_queue
+            first_args = self.task_queue[:self.num_cores]
+            self.task_queue = self.task_queue[self.num_cores:]
             for func, *args in first_args:
                 self.submit(*args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -763,14 +764,14 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
-                if self.queue:
-                    func, *args = self.queue.pop()
+                if self.task_queue:
+                    func, *args = self.task_queue.pop()
                     self.submit(*args, func=func)
-                    if self.queue:
-                        func, *args = self.queue.pop()
+                    if self.task_queue:
+                        func, *args = self.task_queue.pop()
                         self.submit(*args, func=func)
                         self.todo += 1
-                    logging.debug('%d tasks in queue', len(self.queue))
+                    logging.debug('%d tasks in queue', len(self.task_queue))
                 else:
                     self.todo -= 1
                     logging.debug('%d tasks to do', self.todo)
@@ -778,7 +779,7 @@ class Starmap(object):
             elif res.msg:
                 logging.warning(res.msg)
             elif res.func_args:  # add subtask
-                self.queue.append(res.func_args)
+                self.task_queue.append(res.func_args)
             else:
                 yield res
         self.log_percent()
