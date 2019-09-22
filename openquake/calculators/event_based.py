@@ -342,7 +342,8 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
-            self.core_task.__func__, iterargs, h5=self.datastore.hdf5
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
+            num_cores=oq.num_cores
         ).reduce(self.agg_dicts, self.acc0())
 
         if self.indices:
