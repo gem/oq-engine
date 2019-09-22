@@ -334,10 +334,11 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
         if oq.hazard_curves_from_gmfs:
             self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
+
+        # compute_gmfs in parallel
+        self.datastore.swmr_on()
         iterargs = ((rgetter, srcfilter, self.param)
                     for rgetter in self.gen_rupture_getters())
-        self.datastore.swmr_on()
-        # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores
