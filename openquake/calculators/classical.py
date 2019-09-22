@@ -210,7 +210,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.core_task.__func__, h5=self.datastore.hdf5,
             num_cores=oq.num_cores)
         with self.monitor('managing sources'):
-            smap.task_queue = list(self.task_queue())
+            smap.task_queue = list(self.gen_task_queue())
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
@@ -234,7 +234,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def task_queue(self):
+    def gen_task_queue(self):
         """
         Build a task queue to be attached to the Starmap instance
         """

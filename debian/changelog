@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Extended the task queue to most calculators
+  * Removed the `cache_XXX.hdf5` files by using the SWMR mode of h5py
+
   [Kris Vanneste]
   * Updated the coefficients table for the atkinson_2015 to the actual
     values in the paper.
