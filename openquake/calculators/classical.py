@@ -257,7 +257,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('ruptures_per_task = %(maxweight)d, '
                      'task_duration = %(task_duration)ds', param)
 
-        srcfilter = self.src_filter()
+        srcfilter = self.src_filter(self.datastore.filename)
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
@@ -327,8 +327,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
-            self.datastore.close()  # for SWMR safety
-            self.datastore.open('r+')
             self.calc_stats()
 
     def calc_stats(self):
