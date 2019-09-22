@@ -773,11 +773,7 @@ class Starmap(object):
                 if queue:
                     func, *args = queue.pop()
                     self.submit(*args, func=func)
-                    if queue:
-                        func, *args = queue.pop()
-                        self.submit(*args, func=func)
-                        self.todo += 1
-                        logging.debug('%d tasks in queue', len(queue))
+                    logging.debug('%d tasks in queue', len(queue))
                 else:
                     self.todo -= 1
                     logging.debug('%d tasks to do', self.todo)
