@@ -137,6 +137,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     for block in self.block_splitter(sg.sources, key=by_grp):
                         if 'ucerf' in oq.calculation_mode:
                             for i in range(oq.ses_per_logic_tree_path):
+                                par = par.copy()  # avoid mutating the dict
                                 par['ses_seeds'] = [
                                     (ses_idx, oq.ses_seed + i + 1)]
                                 allargs.append((block, srcfilter, par))
