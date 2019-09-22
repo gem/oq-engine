@@ -145,7 +145,7 @@ class EventBasedCalculator(base.HazardCalculator):
                             allargs.append((block, srcfilter, par))
         smap = parallel.Starmap(
             self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5,
-            num_cores=oq.__class__.concurrent_tasks.default // 2 or 1)
+            num_cores=oq.num_cores)
         mon = self.monitor('saving ruptures')
         for dic in smap:
             if dic['calc_times']:
