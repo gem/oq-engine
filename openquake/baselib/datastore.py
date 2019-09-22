@@ -219,6 +219,8 @@ class DataStore(collections.abc.MutableMapping):
         """
         Enable the SWMR mode on the underlying HDF5 file
         """
+        self.close()  # flush everything
+        self.open('r+')
         try:
             self.hdf5.swmr_mode = True
         except ValueError:  # already set
