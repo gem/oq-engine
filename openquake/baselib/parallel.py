@@ -682,17 +682,20 @@ class Starmap(object):
         done = total - self.todo
         percent = int(float(done) / total * 100)
         fname = self.task_func.__name__
+        ltq = len(self.task_queue)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
+            self.prev_ltq = 0
             nbytes = sum(self.sent[fname].values())
             self.progress('Sent %s of data in %d %s task(s)',
                           humansize(nbytes), total, self.name)
-            if self.task_queue:
-                self.progress('%d task(s) in queue', len(self.task_queue))
         elif percent > self.prev_percent:
             self.progress('%s %3d%% [of %d tasks]',
                           self.name, percent, len(self.tasks))
             self.prev_percent = percent
+        if ltq and ltq > self.prev_ltq:
+            self.progress('%d task(s) in queue', ltq)
+            self.prev_ltq = ltq
         return done
 
     def submit(self, *args, func=None, monitor=None):
