@@ -694,7 +694,7 @@ class Starmap(object):
                           self.name, percent, len(self.tasks))
             self.prev_percent = percent
         if ltq and ltq > self.prev_ltq:
-            self.progress('%d task(s) in queue', ltq)
+            self.progress('Got %d task(s) in queue', ltq)
             self.prev_ltq = ltq
         return done
 
