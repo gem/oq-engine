@@ -206,13 +206,14 @@ class ClassicalCalculator(base.HazardCalculator):
             return {}
 
         self.datastore.swmr_on()
+        smap = parallel.Starmap(
+            self.core_task.__func__, h5=self.datastore.hdf5,
+            num_cores=oq.num_cores)
         with self.monitor('managing sources'):
-            smap = parallel.Starmap(
-                self.core_task.__func__, h5=self.datastore.hdf5)
-            self.submit_sources(smap)
+            smap.task_queue = list(self.gen_task_queue())
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
-            acc = smap.reduce(self.agg_dicts, self.acc0())
+            acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
             self.store_rlz_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info'):
@@ -233,9 +234,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def submit_sources(self, smap):
+    def gen_task_queue(self):
         """
-        Send the sources split in tasks
+        Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
         N, L = len(self.sitecol), len(oq.imtls.array)
@@ -258,20 +259,14 @@ class ClassicalCalculator(base.HazardCalculator):
 
         srcfilter = self.src_filter()
         for trt, sources in trt_sources:
-            heavy_sources = []
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
-                smap.submit(sources, srcfilter, gsims, param, func=classical)
+                # do not split atomic groups
+                yield classical, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
-                    if block.weight > maxweight:
-                        heavy_sources.extend(block)
-                    smap.submit(block, srcfilter, gsims, param)
-
-            # heavy source are split on the master node
-            if heavy_sources:
-                logging.info('Found %d heavy sources %s, ...',
-                             len(heavy_sources), heavy_sources[0])
+                    yield (classical_split_filter, block, srcfilter,
+                           gsims, param)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
