@@ -191,7 +191,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rparams = sorted(rparams)
         self.sources_by_task = {}  # task_no => src_ids
         return zd
-        
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -261,6 +261,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
+                # do not split atomic groups
                 yield classical, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
