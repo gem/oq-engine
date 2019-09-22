@@ -148,13 +148,13 @@ class ScenarioTest(unittest.TestCase):
         import matplotlib.pyplot as plt
         _ = plt.figure()
         for deg in range(0, 6):
-            plt.plot(np.log(self.imls), pc_coef[deg-1, :])
+            label = 'PC {:d}'.format(deg)
+            plt.plot(np.log(self.imls), pc_coef[deg-1, :], label=label)
         plt.show()
 
         # Compute samples of the Hermite polynomial
-        num_samples = 50
-        csi = np.random.normal(loc=0.0, scale=self.epistemic_std,
-                               size=num_samples)
+        num_samples = 500
+        csi = np.random.normal(loc=0.0, scale=1.0, size=num_samples)
         xx = get_hermite(csi)
 
         _ = plt.figure()
@@ -162,10 +162,13 @@ class ScenarioTest(unittest.TestCase):
         for rlz in range(0, num_samples):
             curves[rlz, :] = self.poes_comb
             for deg in range(1, 5):
-                curves[rlz, :] += pc_coef[deg-1, :] * xx[deg, rlz]
-            plt.plot(self.imls, curves[rlz, :], '--')
-        plt.plot(self.imls, mean_epi)
-        plt.plot(self.imls, np.squeeze(self.poes_comb), lw=3)
+                curves[rlz, :] += pc_coef[deg, :] * xx[deg, rlz]
+            plt.plot(self.imls, curves[rlz, :], ':', alpha=0.5, color='grey')
+        plt.plot(self.imls, mean_epi, label='Mean classical approach')
+        plt.plot(self.imls, np.squeeze(self.poes_comb), lw=3,
+                 label='PC coeff 0')
+        plt.plot(self.imls, np.mean(curves, axis=0), '.g', lw=3,
+                 label='Mean PC')
         plt.xscale('log')
         plt.yscale('log')
         plt.xlabel('IMLs')

@@ -86,7 +86,7 @@ def get_coeff(m_mu, sigma, sigma_mu, imls):
     den = 8 * (-az)**3.5
     coeff.append(alpha/24 * num / den)
     # c5
-    num = 12*az**2*(1 + 2*az)**2 - 12*az*(1 + 2*az)*bz**2 + bz**4
+    num = 12*az**2*(1 + 2*az)**2 - 12*az*(1 + 2*az)*bz**2+bz**4
     den = 16*(-az)**4.5
     coeff.append(alpha/120 * num / den)
     # c6
