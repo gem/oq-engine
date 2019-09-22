@@ -311,7 +311,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             compute_disagg, allargs, h5=self.datastore.hdf5,
             num_cores=oq.num_cores
         ).reduce(self.agg_result, AccumDict(accum={}))
-        self.datastore.open('r+')
         return results  # sid -> trti-> 7D array
 
     def agg_result(self, acc, result):
@@ -358,7 +357,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         :param results:
             a dictionary sid -> trti -> disagg matrix
         """
-        self.datastore.open('r+')
         T = len(self.trts)
         # build a dictionary sid -> 8D matrix of shape (T, ..., M, P)
         results = {sid: _8d_matrix(dic, T) for sid, dic in results.items()}
