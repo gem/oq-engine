@@ -502,6 +502,8 @@ class IterResult(object):
         finally:
             sent = numpy.array(list(self.sent.items()), task_sent_dt)
             hdf5.extend(self.h5['task_sent'], sent)
+            self.h5['task_sent'].flush()
+            self.h5.flush()
             tot = sum(self.received)
             max_per_output = max(self.received) if self.received else 0
             logging.info(
