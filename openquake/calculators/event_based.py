@@ -120,11 +120,10 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.csm.gsim_lt.values
         logging.info('Building ruptures')
-        smap = parallel.Starmap(
-            self.build_ruptures.__func__, h5=self.datastore.hdf5)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         ses_idx = 0
+        allargs = []
         for sm_id, sm in enumerate(self.csm.source_models):
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
@@ -133,17 +132,20 @@ class EventBasedCalculator(base.HazardCalculator):
                 par = self.param.copy()
                 par['gsims'] = gsims_by_trt[sg.trt]
                 if sg.atomic:  # do not split the group
-                    smap.submit(sg, srcfilter, par)
+                    allargs.append((sg, srcfilter, par))
                 else:  # traditional groups
                     for block in self.block_splitter(sg.sources, key=by_grp):
                         if 'ucerf' in oq.calculation_mode:
                             for i in range(oq.ses_per_logic_tree_path):
                                 par['ses_seeds'] = [
                                     (ses_idx, oq.ses_seed + i + 1)]
-                                smap.submit(block, srcfilter, par)
+                                allargs.append((block, srcfilter, par))
                                 ses_idx += 1
                         else:
-                            smap.submit(block, srcfilter, par)
+                            allargs.append((block, srcfilter, par))
+        smap = parallel.Starmap(
+            self.build_ruptures.__func__, allargs, h5=self.datastore.hdf5,
+            num_cores=oq.__class__.concurrent_tasks.default // 2 or 1)
         mon = self.monitor('saving ruptures')
         for dic in smap:
             if dic['calc_times']:
