@@ -74,6 +74,7 @@ if OQ_DISTRIBUTE == 'zmq':
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
+        OqParam.num_cores.default = num_workers
         OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
@@ -91,6 +92,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.dbcmd('finish', job_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        OqParam.num_cores.default = ncores
         OqParam.concurrent_tasks.default = ncores * 2
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 

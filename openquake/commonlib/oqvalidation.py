@@ -113,6 +113,7 @@ class OqParam(valid.ParamSet):
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
+    num_cores = valid.Param(valid.positiveint, multiprocessing.cpu_count())
     num_epsilon_bins = valid.Param(valid.positiveint)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
