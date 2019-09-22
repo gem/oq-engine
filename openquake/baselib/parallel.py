@@ -688,7 +688,7 @@ class Starmap(object):
             self.progress('Sent %s of data in %d %s task(s)',
                           humansize(nbytes), total, self.name)
             if self.task_queue:
-                self.progress('%d tasks in queue', len(self.task_queue))
+                self.progress('%d task(s) in queue', len(self.task_queue))
         elif percent > self.prev_percent:
             self.progress('%s %3d%% [of %d tasks]',
                           self.name, percent, len(self.tasks))
