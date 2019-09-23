@@ -260,6 +260,12 @@ class SourceFilter(object):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
+    @classmethod
+    def from_(cls, filename):
+        h5 = hdf5.File(filename, 'r')
+        self = cls(h5['sitecol'], h5['oqparam'].maximum_distance, filename)
+        return self
+
     def __init__(self, sitecol, integration_distance, filename=None):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
