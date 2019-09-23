@@ -207,8 +207,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             n_occ = self.datastore['ruptures']['n_occ']
             dstore = self.datastore
         per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
-        logging.info('Using %d occurrences per block (over %d occurrences, '
-                     '%d events)', per_block, n_occ.sum(), self.E)
         self.set_param(
             hdf5path=self.datastore.filename,
             task_duration=oq.task_duration or 600,  # 10min
