@@ -397,7 +397,8 @@ class HazardCalculator(BaseCalculator):
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
-                oq, self.datastore.hdf5, srcfilter=self.src_filter())
+                oq, self.datastore.hdf5,
+                srcfilter=self.src_filter(self.datastore.filename))
             res = views.view('dupl_sources', self.datastore)
             logging.info(f'The composite source model has {res.val:,d} '
                          'ruptures')
