@@ -670,7 +670,8 @@ class HazardCalculator(BaseCalculator):
         else:  # no exposure
             self.sitecol = haz_sitecol
             if self.sitecol:
-                logging.info('Read %d hazard sites', len(self.sitecol))
+                logging.info('Read N=%d hazard sites and L=%d hazard levels',
+                             len(self.sitecol), len(oq.imtls.array))
 
         if oq_hazard:
             parent = self.datastore.parent
