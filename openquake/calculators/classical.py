@@ -245,7 +245,8 @@ class ClassicalCalculator(base.HazardCalculator):
             trt_sources, weight, oq.concurrent_tasks), 1E6)
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 9 hours
-            td = max((maxweight * N * L) ** numpy.log10(4) / 2000, 60)
+            factor = (max(oq.maximum_distance.values()) / 200) ** 2
+            td = factor * max((maxweight * N * L) ** numpy.log10(4) / 2000, 60)
         else:  # user given
             td = oq.task_duration
         param = dict(
