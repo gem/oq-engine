@@ -253,9 +253,10 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
+            max_dist=max(oq.maximum_distance.values()),
             max_sites_disagg=oq.max_sites_disagg,
             task_duration=td, maxweight=maxweight)
-        logging.info('ruptures_per_task = %(maxweight)d, '
+        logging.info('ruptures_per_task = %(maxweight)d, max_dist = %d'
                      'task_duration = %(task_duration)ds', param)
 
         srcfilter = self.src_filter()
