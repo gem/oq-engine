@@ -133,7 +133,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore.hdf5)
+            h5=self.datastore)
+        # NB: using h5=self.datastore.hdf5 would mean losing the performance
+        # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
 
     def monitor(self, operation='', **kw):
