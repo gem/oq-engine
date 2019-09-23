@@ -29,7 +29,7 @@ import numpy
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
-from openquake.baselib.python3compat import encode
+from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
 
@@ -592,13 +592,13 @@ def extract_agg_losses(dstore, what):
         stats = None
         losses = dstore['losses_by_asset'][:, :, L]['mean']
     elif 'avg_losses' in dstore:  # ebrisk
-        stats = [b'mean']
+        stats = ['mean']
         losses = dstore['avg_losses'][:, L].reshape(-1, 1)
     elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
-        stats = dstore['avg_losses-stats'].attrs['stats']
+        stats = decode(dstore['avg_losses-stats'].attrs['stats'])
         losses = dstore['avg_losses-stats'][:, :, L]
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
-        stats = [b'mean']
+        stats = ['mean']
         losses = dstore['avg_losses-rlzs'][:, :, L]
     else:
         raise KeyError('No losses found in %s' % dstore)
@@ -668,7 +668,7 @@ def extract_losses_by_asset(dstore, what):
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
         avg_losses = dstore['avg_losses-stats'][()]
-        stats = dstore['avg_losses-stats'].attrs['stats']
+        stats = decode(dstore['avg_losses-stats'].attrs['stats'])
         for s, stat in enumerate(stats):
             losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
@@ -878,7 +878,7 @@ def crm_attrs(dstore, what):
 def _get(dstore, name):
     try:
         dset = dstore[name + '-stats']
-        return dset, [b.decode('utf8') for b in dset.attrs['stats']]
+        return dset, decode(dset.attrs['stats'])
     except KeyError:  # single realization
         return dstore[name + '-rlzs'], ['mean']
 
