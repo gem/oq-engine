@@ -244,8 +244,8 @@ class ClassicalCalculator(base.HazardCalculator):
         maxweight = min(self.csm.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks), 1E6)
         if oq.task_duration is None:  # inferred
-            # from 1 minute up to 6 hours
-            td = max((maxweight * N * L) ** numpy.log10(4) / 3000, 60)
+            # from 1 minute up to 9 hours
+            td = max((maxweight * N * L) ** numpy.log10(4) / 2000, 60)
         else:  # user given
             td = oq.task_duration
         param = dict(
