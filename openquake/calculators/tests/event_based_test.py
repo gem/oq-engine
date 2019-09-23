@@ -205,7 +205,10 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check the rupture multiplicity
         [f] = export(('ruptures', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.xml', f)
+        self.assertEqualFiles('expected/ses.xml', f)
+
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', f)
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
