@@ -59,10 +59,10 @@ class MorikawaFujiwara2013(GMPE):
     ])
 
     #: Required site parameters is Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt4', 'xvf'))
 
     #: Required rupture parameters are magnitude, and rake.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
 
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = set(('rrup', ))
@@ -87,6 +87,12 @@ class MorikawaFujiwara2013(GMPE):
                 self._get_shallow_amplification_term(C, sites.vs30) +
                 self._get_intensity_correction_term(C, self.region, sites.xvf,
                                                     rup.hypo_depth))
+        print(10**mag_term,
+              10**self._get_basin_term(C, sites.z1pt4),
+              10**self._get_shallow_amplification_term(C, sites.vs30),
+              10**self._get_intensity_correction_term(C, self.region, sites.xvf,
+                                                    rup.hypo_depth))
+        mean = np.log(10**mean/980.665)
         std = 0
         return mean, std
 
@@ -95,16 +101,16 @@ class MorikawaFujiwara2013(GMPE):
         mw1 = self.CONSTS["Mw1"]
         mw1prime = np.min([mag, mw01])
         return (C['a']*(mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
-                np.log(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
+                np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
     def _get_basin_term(self, C, z1pt4):
         d0 = self.CONSTS["Mw1"]
         tmp = np.ones_like(z1pt4) * C['Dlmin']
-        return C['pd'] * np.log(np.maximum(tmp, z1pt4)/d0)
+        return C['pd'] * np.log10(np.maximum(tmp, z1pt4)/d0)
 
     def _get_shallow_amplification_term(self, C, vs30):
         tmp = np.ones_like(vs30) * C['Vsmax']
-        return C['ps'] * np.log(np.maximum(tmp, vs30)/C['V0'])
+        return C['ps'] * np.log10(np.maximum(tmp, vs30)/C['V0'])
 
     def _get_intensity_correction_term(self, C, region, xvf, focal_depth):
         if region == 'NE':
