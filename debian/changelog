@@ -1,3 +1,6 @@
+  [Guillaume Daniel]
+  * Implemented Ameri (2017) GMPE
+
   [Michele Simionato]
   * Added a check forbidding `aggregate_by` for non-ebrisk calculators
   * Extended the task queue to most calculators
