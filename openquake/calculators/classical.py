@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.contexts import ContextMaker
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib.calc.filters import split_sources, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
@@ -69,12 +69,13 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
+def classical_split_filter(srcs, gsims, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
+    srcfilter = SourceFilter.from_(params['hdf5path'])
     # first check if we are sampling the sources
     ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     if ss:
@@ -252,10 +253,10 @@ class ClassicalCalculator(base.HazardCalculator):
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
+            hdf5path=self.datastore.filename,
             task_duration=td, maxweight=maxweight)
         logging.info('ruptures_per_task = %(maxweight)d, '
                      'task_duration = %(task_duration)ds', param)
-
         srcfilter = self.src_filter(self.datastore.filename)
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
@@ -264,8 +265,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield classical, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
-                    yield (classical_split_filter, block, srcfilter,
-                           gsims, param)
+                    yield classical_split_filter, block, gsims, param
 
     def save_hazard(self, acc, pmap_by_kind):
         """
