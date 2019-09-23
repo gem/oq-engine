@@ -207,9 +207,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()
         smap = parallel.Starmap(self.core_task.__func__,
+                                h5=self.datastore.hdf5,
                                 num_cores=oq.num_cores)
         smap.task_queue = list(self.gen_task_queue())
-        smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
