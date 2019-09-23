@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check forbidding `aggregate_by` for non-ebrisk calculators
   * Extended the task queue to most calculators
   * Removed the `cache_XXX.hdf5` files by using the SWMR mode of h5py
 

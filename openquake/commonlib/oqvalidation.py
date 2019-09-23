@@ -608,6 +608,15 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
+    def is_valid_aggregate_by(self):
+        """
+        aggregate_by is implemented only for the ebrisk calculator
+        """
+        if self.aggregate_by:
+            return self.calculation_mode == 'ebrisk'
+        else:
+            return True
+
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
