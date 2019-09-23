@@ -135,6 +135,12 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     if header != 'no-header' and someheader:
         dest.write(encode(sep.join(someheader) + u'\n'))
 
+    def format(val):
+        col = scientificformat(val, fmt)
+        if sep in col:
+            return '"%s"' % col
+        return col
+
     if autoheader:
         all_fields = [col.split(':', 1)[0].split('~')
                       for col in autoheader]
@@ -145,12 +151,11 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
                 if fields[0] in ('lon', 'lat', 'depth'):
                     row.append('%.5f' % val)
                 else:
-                    row.append(scientificformat(val, fmt))
-            dest.write(encode(sep.join(row) + u'\n'))
+                    row.append(format(val))
+            dest.write(encode(sep.join(row) + '\n'))
     else:
         for row in data:
-            dest.write(encode(sep.join(scientificformat(col, fmt)
-                                       for col in row) + u'\n'))
+            dest.write(encode(sep.join(format(col) for col in row) + '\n'))
     if hasattr(dest, 'getvalue'):
         return dest.getvalue()[:-1]  # a newline is strangely added
     elif close:
