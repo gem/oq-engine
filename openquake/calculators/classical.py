@@ -273,8 +273,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield classical, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
-                    yield (classical_split_filter, block, srcfilter,
-                           gsims, param)
+                    yield (self.core_task.__func__, block, srcfilter, gsims,
+                           param)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
