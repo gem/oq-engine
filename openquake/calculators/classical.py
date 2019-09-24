@@ -262,8 +262,8 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
             task_duration=td, maxweight=maxweight)
-        logging.info(f'ruptures_per_task = {maxweight}, '
-                     f'maxdist = {maxdist} km, task_duration = {td} s')
+        logging.info(f'ruptures_per_task={maxweight}, '
+                     f'maxdist={maxdist} km, task_duration={td} s')
 
         srcfilter = self.src_filter()
         for trt, sources in trt_sources:
