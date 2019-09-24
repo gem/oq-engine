@@ -137,6 +137,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
+        if oqparam.num_cores:
+            Starmap.num_cores = oqparam.num_cores
 
     def monitor(self, operation='', **kw):
         """
