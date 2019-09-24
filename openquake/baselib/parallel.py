@@ -608,7 +608,7 @@ class Starmap(object):
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info, h5=None,
-              num_cores=None):
+              num_cores=multiprocessing.cpu_count()):
         r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -624,7 +624,7 @@ class Starmap(object):
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
         :param h5: an open hdf5.File where to store the performance info
-        :param num_cores: the number of available cores (or None)
+        :param num_cores: the number of available cores
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
@@ -640,7 +640,8 @@ class Starmap(object):
         ).submit_all()
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, h5=None, num_cores=None):
+                 progress=logging.info, h5=None,
+                 num_cores=multiprocessing.cpu_count()):
         self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if h5:
@@ -727,12 +728,8 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        if self.num_cores is None:  # submit all tasks
-            for args in self.task_args:
-                self.submit(*args)
-        else:  # submit at most num_cores task
-            self.task_queue = [(self.task_func,) + args
-                               for args in self.task_args]
+        self.task_queue = [(self.task_func,) + args
+                           for args in self.task_args]
         return self.get_results()
 
     def get_results(self):
@@ -779,7 +776,7 @@ class Starmap(object):
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
                 self._submit_many(
-                    queue, max(self.num_cores or 0 - self.todo, 1))
+                    queue, max(self.num_cores - self.todo, 1))
                 self.todo -= 1
                 self.log_percent()
             elif res.msg:
