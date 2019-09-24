@@ -3,8 +3,8 @@ QA test for disaggregation case_2
 
 ============== ===================
 checksum32     2,473,169,806      
-date           2019-07-30T15:03:56
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:20:59
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = 4
@@ -83,47 +83,47 @@ source_model_2.xml 2      Active Shallow Crust 1,420        1,420
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =========
-source_id grp_id code num_ruptures calc_time num_sites weight speed    
-========= ====== ==== ============ ========= ========= ====== =========
-2         0      A    1,815        0.00612   2.00000   3,235  528,845  
-1         1      A    1,815        0.00177   1.00000   1,815  1,027,211
-3         1      A    1,815        0.00169   1.00000   1,815  1,071,602
-========= ====== ==== ============ ========= ========= ====== =========
+========= ====== ==== ============ ========= ========= ============ =========
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
+========= ====== ==== ============ ========= ========= ============ =========
+2         0      A    1,815        0.00401   2.00000   3,235        806,405  
+1         1      A    1,815        3.052E-04 1.00000   1,815        5,947,392
+3         1      A    1,815        2.720E-04 1.00000   1,815        6,671,921
+========= ====== ==== ============ ========= ========= ============ =========
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00958   3     
+A    0.00459   3     
 S    0.0       1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-preclassical       0.00283 0.00147 0.00205 0.00504 4      
-read_source_models 0.02265 0.02203 0.00708 0.03822 2      
-================== ======= ======= ======= ======= =======
+================== ======= ======= ========= ======= =======
+operation-duration mean    stddev  min       max     outputs
+preclassical       0.00177 0.00167 7.463E-04 0.00425 4      
+read_source_models 0.03539 0.02512 0.01763   0.05315 2      
+================== ======= ======= ========= ======= =======
 
 Data transfer
 -------------
-================== ======================================================= ========
-task               sent                                                    received
-preclassical       srcs=6.94 KB params=1.97 KB gsims=973 B srcfilter=880 B 1.34 KB 
-read_source_models converter=628 B fnames=196 B                            5.41 KB 
-================== ======================================================= ========
+================== ============================================ ========
+task               sent                                         received
+preclassical       srcs=6.96 KB srcfilter=2.8 KB params=1.97 KB 1.34 KB 
+read_source_models converter=628 B fnames=210 B                 5.42 KB 
+================== ============================================ ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15507               time_sec  memory_mb counts
+calc_1742                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.04530   0.0       2     
-total preclassical       0.01134   0.0       4     
-managing sources         0.00563   0.0       1     
-store source_info        0.00201   0.0       1     
-aggregate curves         6.974E-04 0.0       4     
+total read_source_models 0.07078   0.0       2     
+total preclassical       0.00709   0.0       4     
+store source_info        0.00205   0.0       1     
+aggregate curves         0.00102   0.0       4     
+managing sources         3.288E-04 0.0       1     
 ======================== ========= ========= ======

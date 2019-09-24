@@ -3,8 +3,8 @@ Disaggregation with sampling
 
 ============== ===================
 checksum32     1,553,247,118      
-date           2019-07-30T15:03:56
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:20:59
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 38, num_rlzs = 2
@@ -72,49 +72,49 @@ source_model.xml 0      Active Shallow Crust 1,619        2,236
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =========
-source_id grp_id code num_ruptures calc_time num_sites weight speed    
-========= ====== ==== ============ ========= ========= ====== =========
-4         0      C    164          0.00257   1.00000   164    63,934   
-1         0      P    15           0.00169   1.00000   15     8,859    
-2         0      A    1,440        0.00128   1.00000   1,440  1,124,730
-========= ====== ==== ============ ========= ========= ====== =========
+========= ====== ==== ============ ========= ========= ============ =========
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
+========= ====== ==== ============ ========= ========= ============ =========
+4         0      C    164          0.00161   1.00000   164          101,831  
+1         0      P    15           3.424E-04 1.00000   15           43,812   
+2         0      A    1,440        2.615E-04 1.00000   1,440        5,505,741
+========= ====== ==== ============ ========= ========= ============ =========
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00128   1     
-C    0.00257   1     
-P    0.00169   1     
+A    2.615E-04 1     
+C    0.00161   1     
+P    3.424E-04 1     
 S    0.0       1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-preclassical       0.00274 0.00128 0.00156 0.00448 4      
-read_source_models 0.03085 NaN     0.03085 0.03085 1      
-================== ======= ======= ======= ======= =======
+================== ======= ======= ========= ======= =======
+operation-duration mean    stddev  min       max     outputs
+preclassical       0.00192 0.00163 7.491E-04 0.00422 4      
+read_source_models 0.04901 NaN     0.04901   0.04901 1      
+================== ======= ======= ========= ======= =======
 
 Data transfer
 -------------
-================== ======================================================= ========
-task               sent                                                    received
-preclassical       srcs=5.33 KB params=3.43 KB srcfilter=880 B gsims=620 B 1.29 KB 
-read_source_models converter=314 B fnames=96 B                             3.74 KB 
-================== ======================================================= ========
+================== ============================================ ========
+task               sent                                         received
+preclassical       srcs=5.35 KB params=3.43 KB srcfilter=2.8 KB 1.29 KB 
+read_source_models converter=314 B fnames=103 B                 3.74 KB 
+================== ============================================ ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15506               time_sec  memory_mb counts
+calc_1738                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.03085   0.0       1     
-total preclassical       0.01098   0.0       4     
-managing sources         0.00539   0.0       1     
-store source_info        0.00198   0.0       1     
-aggregate curves         5.004E-04 0.0       4     
+total read_source_models 0.04901   0.49609   1     
+total preclassical       0.00767   0.0       4     
+store source_info        0.00269   0.0       1     
+aggregate curves         0.00156   0.0       4     
+managing sources         4.125E-04 0.0       1     
 ======================== ========= ========= ======
