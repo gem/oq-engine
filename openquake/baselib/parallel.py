@@ -566,7 +566,7 @@ def getargnames(task_func):
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
-    cpu_count = multiprocessing.cpu_count()
+    num_cores = multiprocessing.cpu_count()
 
     @classmethod
     def init(cls, poolsize=None, distribute=None):
@@ -656,7 +656,7 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
-        self.num_cores = num_cores or self.__class__.cpu_count
+        self.num_cores = num_cores or self.__class__.num_cores
         self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -789,7 +789,7 @@ class Starmap(object):
         self.tasks.clear()
 
 
-def sequential_apply(task, args, concurrent_tasks=Starmap.cpu_count * 2,
+def sequential_apply(task, args, concurrent_tasks=Starmap.num_cores * 2,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks
