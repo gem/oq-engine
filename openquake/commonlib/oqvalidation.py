@@ -599,6 +599,15 @@ class OqParam(valid.ParamSet):
         """
         return self.hazard_calculation_id if self.shakemap_id else True
 
+    def is_valid_truncation_level(self):
+        """
+        In presence of a correlation model the truncation level must be nonzero
+        """
+        if self.ground_motion_correlation_model:
+            return self.truncation_level != 0
+        else:
+            return True
+
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
