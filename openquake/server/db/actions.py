@@ -352,8 +352,8 @@ def del_calc(db, job_id, user, force=False):
         return {"error": 'Cannot delete calculation %d:'
                 ' ID does not exist' % job_id}
 
-    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND user_name=?x",
-                 job_id, user).rowcount
+    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND "
+                 "user_name=?x", job_id, user).rowcount
     if not deleted:
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
