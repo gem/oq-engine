@@ -7,7 +7,7 @@
   [Michele Simionato]
   * Changed the ruptures CSV exporter to use commas instead of tabs
   * Added a check forbidding `aggregate_by` for non-ebrisk calculators
-  * Extended the task queue to most calculators
+  * Introduced a task queue
   * Removed the `cache_XXX.hdf5` files by using the SWMR mode of h5py
 
   [Kris Vanneste]
