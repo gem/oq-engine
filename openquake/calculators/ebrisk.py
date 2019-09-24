@@ -243,8 +243,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.lossbytes = 0
         self.datastore.swmr_on()
         smap = parallel.Starmap(
-            self.core_task.__func__, allargs,
-            num_cores=oq.num_cores, h5=self.datastore.hdf5)
+            self.core_task.__func__, allargs, h5=self.datastore.hdf5)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
