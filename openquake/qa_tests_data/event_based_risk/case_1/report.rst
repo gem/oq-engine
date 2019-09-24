@@ -3,8 +3,8 @@ Event Based Risk QA Test 1
 
 ============== ===================
 checksum32     1,503,171,782      
-date           2019-07-30T15:04:38
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:13
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 3, num_levels = 25, num_rlzs = 2
@@ -76,7 +76,7 @@ source_model.xml 0      Active Shallow Crust 3            18
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-4 asset(s) x 2 realization(s) x 2 loss type(s) losses x 8 bytes x 8 tasks = 1 KB
+4 asset(s) x 2 realization(s) x 2 loss type(s) losses x 8 bytes x 20 tasks = 2.5 KB
 
 Exposure model
 --------------
@@ -95,48 +95,48 @@ W        1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ======= ======
-source_id grp_id code num_ruptures calc_time num_sites weight  speed 
-========= ====== ==== ============ ========= ========= ======= ======
-1         0      P    6            0.00204   1.00000   4.00000 1,965 
-2         0      P    6            0.00127   1.00000   2.00000 1,572 
-3         0      P    6            7.548E-04 1.00000   8.00000 10,598
-========= ====== ==== ============ ========= ========= ======= ======
+========= ====== ==== ============ ========= ========= ============ ======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
+========= ====== ==== ============ ========= ========= ============ ======
+1         0      P    6            0.00136   1.00000   4.00000      2,944 
+2         0      P    6            0.00127   1.00000   2.00000      1,576 
+3         0      P    6            7.942E-04 1.00000   8.00000      10,073
+========= ====== ==== ============ ========= ========= ============ ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.00406   3     
+P    0.00342   3     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00131 NaN    0.00131 0.00131 1      
-sample_ruptures    0.00717 NaN    0.00717 0.00717 1      
+read_source_models 0.00138 NaN    0.00138 0.00138 1      
+sample_ruptures    0.00494 NaN    0.00494 0.00494 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================= ========
-task               sent                                          received
-read_source_models converter=314 B fnames=106 B                  2.27 KB 
-sample_ruptures    param=3.96 KB sources=1.94 KB srcfilter=220 B 1.96 KB 
-================== ============================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=314 B fnames=113 B 2.28 KB 
+sample_ruptures                                 2 KB    
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_15568               time_sec memory_mb counts
+calc_1805                time_sec memory_mb counts
 ======================== ======== ========= ======
-EventBasedCalculator.run 0.16969  0.76953   1     
-saving events            0.01075  0.0       1     
-total sample_ruptures    0.00717  0.0       1     
-store source_info        0.00387  0.0       1     
-saving ruptures          0.00332  0.0       1     
-reading exposure         0.00197  0.0       1     
-total read_source_models 0.00131  0.0       1     
+EventBasedCalculator.run 0.07199  0.25781   1     
+saving events            0.00591  0.0       1     
+total sample_ruptures    0.00494  0.0       1     
+store source_info        0.00206  0.0       1     
+saving ruptures          0.00167  0.0       1     
+total read_source_models 0.00138  0.0       1     
+reading exposure         0.00130  0.0       1     
 ======================== ======== ========= ======
