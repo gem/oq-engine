@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import psutil
+import getpass
 import operator
 from datetime import datetime
 
@@ -98,7 +99,7 @@ def create_job(db, datadir):
     """
     calc_id = get_calc_id(db, datadir) + 1
     job = dict(id=calc_id, is_running=1, description='just created',
-               user_name='openquake', calculation_mode='to be set',
+               user_name=getpass.getuser(), calculation_mode='to be set',
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     return db('INSERT INTO job (?S) VALUES (?X)',
               job.keys(), job.values()).lastrowid
@@ -351,8 +352,8 @@ def del_calc(db, job_id, user, force=False):
         return {"error": 'Cannot delete calculation %d:'
                 ' ID does not exist' % job_id}
 
-    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND user_name=?x",
-                 job_id, user).rowcount
+    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND "
+                 "user_name=?x", job_id, user).rowcount
     if not deleted:
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
