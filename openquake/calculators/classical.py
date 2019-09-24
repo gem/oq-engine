@@ -214,8 +214,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()
         smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores)
+            self.core_task.__func__, h5=self.datastore.hdf5)
         with self.monitor('managing sources'):
             smap.task_queue = list(self.gen_task_queue())
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -368,8 +367,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for t in self.sitecol.split_in_tiles(ct)]
         self.datastore.swmr_on()
         parallel.Starmap(
-            build_hazard, allargs,
-            h5=self.datastore.hdf5, num_cores=oq.num_cores,
+            build_hazard, allargs, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
 
 
