@@ -29,7 +29,7 @@ from openquake.baselib import hdf5
 perf_dt = numpy.dtype([('operation', '<S50'), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 task_info_dt = numpy.dtype(
-    [('taskname', 'S50'), ('taskno', numpy.uint32),
+    [('taskname', '<S50'), ('taskno', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
