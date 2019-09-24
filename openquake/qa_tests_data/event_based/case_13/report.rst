@@ -3,8 +3,8 @@ Event Based QA Test, Case 13
 
 ============== ===================
 checksum32     3,389,862,408      
-date           2019-07-30T15:03:49
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:05
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -41,10 +41,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -56,22 +56,22 @@ P    0.0       1
 
 Information about the tasks
 ---------------------------
-================== ========= ====== ========= ========= =======
-operation-duration mean      stddev min       max       outputs
-read_source_models 6.633E-04 NaN    6.633E-04 6.633E-04 1      
-================== ========= ====== ========= ========= =======
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.00123 NaN    0.00123 0.00123 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=314 B fnames=102 B 1.56 KB 
+read_source_models converter=314 B fnames=109 B 1.57 KB 
 ================== ============================ ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_15464               time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 6.633E-04 0.0       1     
-======================== ========= ========= ======
+======================== ======== ========= ======
+calc_1788                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.00123  0.0       1     
+======================== ======== ========= ======

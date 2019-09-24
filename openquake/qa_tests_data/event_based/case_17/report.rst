@@ -3,8 +3,8 @@ Event Based Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     2,756,942,605      
-date           2019-07-30T15:03:50
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:04
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -41,10 +41,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -56,22 +56,22 @@ P    0.0       2
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =======
-operation-duration mean      stddev    min       max       outputs
-read_source_models 7.129E-04 8.935E-05 6.497E-04 7.761E-04 2      
-================== ========= ========= ========= ========= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.00132 3.340E-04 0.00108 0.00155 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=628 B fnames=208 B 3.39 KB 
+read_source_models converter=628 B fnames=222 B 3.41 KB 
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_15469               time_sec memory_mb counts
+calc_1782                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.00143  0.0       2     
+total read_source_models 0.00263  0.0       2     
 ======================== ======== ========= ======

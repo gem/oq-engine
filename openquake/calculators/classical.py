@@ -273,8 +273,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield classical, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
-                    yield (classical_split_filter, block, srcfilter,
-                           gsims, param)
+                    yield (self.core_task.__func__, block, srcfilter, gsims,
+                           param)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
@@ -367,8 +367,10 @@ class ClassicalCalculator(base.HazardCalculator):
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
         self.datastore.swmr_on()
-        parallel.Starmap(build_hazard, allargs,
-                         h5=self.datastore.hdf5).reduce(self.save_hazard)
+        parallel.Starmap(
+            build_hazard, allargs,
+            h5=self.datastore.hdf5, num_cores=oq.num_cores,
+        ).reduce(self.save_hazard)
 
 
 @base.calculators.add('preclassical')

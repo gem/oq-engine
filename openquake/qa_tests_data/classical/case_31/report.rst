@@ -3,8 +3,8 @@ Classical PSHA with source specific logic tree (3**2 realizations)
 
 ============== ===================
 checksum32     283,798,826        
-date           2019-07-30T15:04:16
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:20
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 14, num_rlzs = 9
@@ -120,20 +120,20 @@ source_model.xml 17     Stable Continental Crust 1,040        1,040
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =======
-source_id grp_id code num_ruptures calc_time num_sites weight speed  
-========= ====== ==== ============ ========= ========= ====== =======
-1         1      A    1,040        0.01344   3.00000   3,120  232,161
-2         0      S    310          0.00987   3.00000   930    94,259 
-========= ====== ==== ============ ========= ========= ====== =======
+========= ====== ==== ============ ========= ========= ============ =========
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
+========= ====== ==== ============ ========= ========= ============ =========
+2         0      S    310          0.00887   3.00000   930          104,798  
+1         1      A    1,040        4.668E-04 3.00000   3,120        6,683,467
+========= ====== ==== ============ ========= ========= ============ =========
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.01344   9     
-S    0.00987   9     
+A    4.668E-04 9     
+S    0.00887   9     
 ==== ========= ======
 
 Duplicated sources
@@ -142,28 +142,28 @@ Found 0 unique sources and 6 duplicate sources with multiplicity 3.0: ['1' '1' '
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-preclassical       0.00433 0.00203 0.00244 0.00813 6      
-read_source_models 0.03369 0.01239 0.02083 0.06235 9      
-================== ======= ======= ======= ======= =======
+================== ======= ======= ========= ======= =======
+operation-duration mean    stddev  min       max     outputs
+preclassical       0.00194 0.00164 3.397E-04 0.00372 6      
+read_source_models 0.02511 0.00302 0.01784   0.02819 9      
+================== ======= ======= ========= ======= =======
 
 Data transfer
 -------------
-================== ======================================================== ========
-task               sent                                                     received
-preclassical       srcs=9.3 KB params=3.56 KB srcfilter=1.29 KB gsims=906 B 2.06 KB 
-read_source_models converter=2.76 KB fnames=900 B                           28.01 KB
-================== ======================================================== ========
+================== ============================================= ========
+task               sent                                          received
+preclassical       srcs=9.34 KB srcfilter=3.79 KB params=3.56 KB 2.06 KB 
+read_source_models converter=2.76 KB fnames=963 B                28.07 KB
+================== ============================================= ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_15522               time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.30321  0.19531   9     
-total preclassical       0.02596  0.0       6     
-managing sources         0.01037  0.0       1     
-store source_info        0.00372  0.0       1     
-aggregate curves         0.00273  0.0       6     
-======================== ======== ========= ======
+======================== ========= ========= ======
+calc_1833                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.22597   0.0       9     
+total preclassical       0.01165   0.0       6     
+store source_info        0.00246   0.0       1     
+aggregate curves         0.00187   0.0       6     
+managing sources         3.746E-04 0.0       1     
+======================== ========= ========= ======
