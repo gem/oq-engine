@@ -244,7 +244,7 @@ def job_from_file(job_ini, job_id, username, **kw):
     try:
         oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
     except Exception:
-        logs.dbcmd('finish', job_id, 'failed')
+        logs.dbcmd('finish', job_id, 'deleted')
         raise
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
