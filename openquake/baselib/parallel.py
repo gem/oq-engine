@@ -168,7 +168,6 @@ from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp)
 
-cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
 submit = CallableDict()
 
@@ -567,6 +566,7 @@ def getargnames(task_func):
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
+    num_cores = multiprocessing.cpu_count()
 
     @classmethod
     def init(cls, poolsize=None, distribute=None):
@@ -604,11 +604,11 @@ class Starmap(object):
             del cls.dask_client
 
     @classmethod
-    def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
+    def apply(cls, task, args, concurrent_tasks=None,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info, h5=None,
-              num_cores=multiprocessing.cpu_count()):
+              num_cores=None):
         r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -633,6 +633,8 @@ class Starmap(object):
             taskargs = ((blk,) + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
+            if concurrent_tasks is None:
+                concurrent_tasks = cls.num_cores * 2
             taskargs = [(blk,) + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(
@@ -640,8 +642,7 @@ class Starmap(object):
         ).submit_all()
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, h5=None,
-                 num_cores=multiprocessing.cpu_count()):
+                 progress=logging.info, h5=None, num_cores=None):
         self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if h5:
@@ -657,7 +658,7 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
-        self.num_cores = num_cores
+        self.num_cores = num_cores or self.__class__.num_cores
         self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -790,7 +791,7 @@ class Starmap(object):
         self.tasks.clear()
 
 
-def sequential_apply(task, args, concurrent_tasks=cpu_count * 2,
+def sequential_apply(task, args, concurrent_tasks=Starmap.num_cores * 2,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks
