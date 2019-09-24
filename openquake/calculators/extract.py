@@ -455,10 +455,10 @@ def extract_task_info(dstore, what):
     dic = group_array(dstore['task_info'][()], 'taskname')
     if 'kind' in what:
         name = parse(what)['kind'][0]
-        yield name, dic[name]
+        yield name, dic[encode(name)]
         return
     for name in dic:
-        yield name, dic[name]
+        yield decode(name), dic[name]
 
 
 def _agg(losses, idxs):
