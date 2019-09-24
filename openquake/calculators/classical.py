@@ -42,6 +42,13 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
+def estimate_duration(rups_per_task, maxdist, N):
+    """
+    Estimate the task duration with an heuristic formula
+    """
+    return (rups_per_task * N) ** .33 * (maxdist / 200) ** 2
+
+
 def get_src_ids(sources):
     """
     :returns:
@@ -239,15 +246,14 @@ class ClassicalCalculator(base.HazardCalculator):
         Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
-        N, L = len(self.sitecol), len(oq.imtls.array)
+        N = len(self.sitecol)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks), 1E6)
         maxdist = int(max(oq.maximum_distance.values()))
         if oq.task_duration is None:  # inferred
-            # from 1 minute up to 9 hours
-            factor = (maxdist / 200) ** 2 / 1E4
-            td = int(max((maxweight * N * L) ** numpy.log10(4) * factor, 60))
+            # from 1 minute up to 1 day
+            td = int(max(estimate_duration(maxweight, maxdist, N), 60))
         else:  # user given
             td = int(oq.task_duration)
         param = dict(
