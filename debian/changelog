@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Hiding calculations that fail before the pre-execute phase (for instance,
+    because of missing files); they already give a clear error
   * Added an early check on truncation_level in presence of correlation model
 
   [Guillaume Daniel]
