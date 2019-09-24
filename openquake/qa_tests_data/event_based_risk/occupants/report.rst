@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     687,330,760        
-date           2019-07-30T15:04:39
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:08
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -75,7 +75,7 @@ source_model.xml 0      Active Shallow Crust 1            482
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 8 tasks = 448 B
+7 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 20 tasks = 1.09 KB
 
 Exposure model
 --------------
@@ -91,46 +91,46 @@ tax1     1.00000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ======= =====
-source_id grp_id code num_ruptures calc_time num_sites weight  speed
-========= ====== ==== ============ ========= ========= ======= =====
-1         0      S    482          0.08442   7.00000   2.00000 23   
-========= ====== ==== ============ ========= ========= ======= =====
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+1         0      S    482          0.05587   7.00000   2.00000      35   
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.08442   1     
+S    0.05587   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00463 NaN    0.00463 0.00463 1      
-sample_ruptures    0.11145 NaN    0.11145 0.11145 1      
+read_source_models 0.00818 NaN    0.00818 0.00818 1      
+sample_ruptures    0.09005 NaN    0.09005 0.09005 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================= ========
-task               sent                                          received
-read_source_models converter=306 B fnames=109 B                  1.49 KB 
-sample_ruptures    param=2.77 KB sources=1.14 KB srcfilter=220 B 68.7 KB 
-================== ============================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=306 B fnames=116 B 1.5 KB  
+sample_ruptures                                 69.7 KB 
+================== ============================ ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_15569               time_sec memory_mb counts
-======================== ======== ========= ======
-EventBasedCalculator.run 0.26630  1.33594   1     
-total sample_ruptures    0.11145  0.0       1     
-saving events            0.02316  0.04688   1     
-total read_source_models 0.00463  0.0       1     
-saving ruptures          0.00411  0.0       1     
-store source_info        0.00205  0.0       1     
-reading exposure         0.00117  0.0       1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+calc_1796                time_sec  memory_mb counts
+======================== ========= ========= ======
+EventBasedCalculator.run 0.18834   0.16016   1     
+total sample_ruptures    0.09005   0.16016   1     
+saving events            0.02817   0.0       1     
+total read_source_models 0.00818   0.0       1     
+saving ruptures          0.00275   0.0       1     
+store source_info        0.00253   0.0       1     
+reading exposure         5.958E-04 0.0       1     
+======================== ========= ========= ======
