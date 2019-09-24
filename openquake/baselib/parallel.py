@@ -775,9 +775,9 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
+                self.todo -= 1
                 self._submit_many(
                     queue, max(self.num_cores - self.todo, 1))
-                self.todo -= 1
                 self.log_percent()
             elif res.msg:
                 logging.warning(res.msg)
