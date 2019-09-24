@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.rietbrock_edwards_2019 import \
     RietbrockEdwards2019Mean, RietbrockEdwards2019Low, RietbrockEdwards2019Up
 
 # Discrepency percentages to be applied to all tests
-MEAN_DISCREP = 1.8
+MEAN_DISCREP = 0.1
 
 
 class RietbrockEdwards2019LowTestCase(BaseGSIMTestCase):
