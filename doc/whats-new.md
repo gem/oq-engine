@@ -181,13 +181,14 @@ IT
 
 There were three major IT projects in this release.
 
-1. There was a lot of work on the *zmq distribution mechanism* which now
-works correctly on clusters. It is still in an experimental status and
-there a few minor features to be tuned, but we are already running
-our production calculations with it, with many advantages with respect
-to using the celery/rabbitmq combo. In the future we plan to abandon
-celery/rabbitmq in favor of the pure zmq mechanism.  You can
-already already use the new approach by following the documentation.
+1. There was a substantial amount of work on the *zmq distribution
+mechanism* which now works correctly on clusters. It is still in an
+experimental status and there a few minor features to be tuned, but we
+are already running our production calculations with it, with many
+advantages with respect to using the celery/rabbitmq combo. In the
+future we plan to abandon celery/rabbitmq in favor of the pure zmq
+mechanism.  You can already already use the new approach by following
+the documentation.
 
 2. Extra-large classical calculations (i.e. Australia) are always been prone to
 run out of memory, due to the sheer amount of data to transfer.  The
