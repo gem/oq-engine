@@ -751,6 +751,15 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
+    def _submit_many(self, queue, howmany):
+        for _ in range(howmany):
+            if queue:
+                func, *args = queue.pop()
+                self.submit(*args, func=func)
+                self.todo += 1
+                logging.debug('%d tasks todo, %d in queue',
+                              self.todo, len(queue))
+
     def _loop(self):
         queue = self.task_queue
         if queue:
@@ -769,13 +778,9 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
-                if queue:
-                    func, *args = queue.pop()
-                    self.submit(*args, func=func)
-                    logging.debug('%d tasks in queue', len(queue))
-                else:
-                    self.todo -= 1
-                    logging.debug('%d tasks to do', self.todo)
+                self._submit_many(
+                    queue, max(self.num_cores or 0 - self.todo, 1))
+                self.todo -= 1
                 self.log_percent()
             elif res.msg:
                 logging.warning(res.msg)
