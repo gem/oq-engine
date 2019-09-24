@@ -3,8 +3,8 @@ British Columbia With Vs30
 
 ============== ===================
 checksum32     226,163,923        
-date           2019-07-30T15:03:51
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:05
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -57,10 +57,10 @@ RES1-W1-LC 1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -78,21 +78,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05991 0.01025 0.05320 0.07804 5      
+read_source_models 0.05476 0.01166 0.04512 0.07208 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================== ========
 task               sent                           received
-read_source_models converter=1.74 KB fnames=550 B 13.94 KB
+read_source_models converter=1.74 KB fnames=585 B 13.98 KB
 ================== ============================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_15478               time_sec memory_mb counts
+calc_1784                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.29954  0.0       5     
+total read_source_models 0.27380  0.0       5     
 reading exposure         0.00154  0.0       1     
 ======================== ======== ========= ======

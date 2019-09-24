@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     2,348,158,649      
-date           2019-07-30T15:03:50
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:02
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 4, num_rlzs = ?
@@ -41,10 +41,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -58,20 +58,20 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.37688 NaN    0.37688 0.37688 1      
+read_source_models 0.48851 NaN    0.48851 0.48851 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=314 B fnames=104 B 9.44 KB 
+read_source_models converter=314 B fnames=111 B 9.45 KB 
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_15472               time_sec memory_mb counts
+calc_1770                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.37688  0.0       1     
+total read_source_models 0.48851  0.19531   1     
 ======================== ======== ========= ======
