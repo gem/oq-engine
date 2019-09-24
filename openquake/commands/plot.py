@@ -204,7 +204,8 @@ def make_figure_memory(extractors, what):
     start = 0
     for task_name in task_info:
         mem = task_info[task_name]['mem_gb']
-        ax.plot(range(start, start + len(mem)), mem, label=task_name)
+        ax.plot(range(start, start + len(mem)), mem,
+                label=task_name)
         start += len(mem)
     ax.legend()
     return plt
