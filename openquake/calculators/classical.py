@@ -367,8 +367,10 @@ class ClassicalCalculator(base.HazardCalculator):
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
         self.datastore.swmr_on()
-        parallel.Starmap(build_hazard, allargs,
-                         h5=self.datastore.hdf5).reduce(self.save_hazard)
+        parallel.Starmap(
+            build_hazard, allargs,
+            h5=self.datastore.hdf5, num_cores=oq.num_cores,
+        ).reduce(self.save_hazard)
 
 
 @base.calculators.add('preclassical')
