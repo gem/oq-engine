@@ -1,4 +1,4 @@
-This is a major release features several important fixes and
+This is a major release featuring several important fixes and
 improvements, especially to the event based and disaggregation
 calculators, plus a new task queue. More than 220 pull requests were merged.
 
@@ -12,55 +12,60 @@ Disaggregation
 We fixed a bug in disaggregation calculations with nonparametric sources:
 they were being incorrectly discarded.
 
-We fixed a bug in disaggregation calculations around the international
+We fixed a bug in disaggregation calculations crossing the international
 date line: the lon-lat bins were incorrectly computed.
 
-We fixed the disaggregation calculation by discarding far away ruptures
-(over the integration distance) that were not discarded before.
+We fixed the filtering procedure by discarding ruptures
+over the integration distance that were not discarded before.
 
-We implemented various optimizations in the disaggregation calculator 
-to make it possible to run calculation with many sites
-(where many means < 1000).
+We implemented various optimizations to make it possible to run
+calculation with many sites (where many means less than a thousand).
 
-We added an experimental API extract/disagg_layer to extract the
-disaggregation outputs for multiple sites at once.
-
-We changed the `disagg_by_src` exporter to export filenames
+We changed the exporter for `disagg_by_src` to export filenames
 containing the site ID and not longitude and latitude, consistently
 with the other disaggregation exporters.
 
-Now we generate the output `disagg_by_src` during disaggregation even in the
-case of multiple realizations (only the chosen realization is considered).
+Now we generate the output `disagg_by_src` even in the
+case of multiple realizations, even only the chosen realization is considered.
 
 There is a new configuration parameter `max_sites_disagg` which can be used
 to constraint the maximum number of disaggregation sites (the default is 10).
+
+We added an experimental API `extract/disagg_layer` to extract the
+disaggregation outputs for multiple sites at once.
 
 Event based
 -----------
 
 There was a crucial change in the event based calculators: we moved
 from 64 bit event IDs to 32 bit event IDs. The change was necessary to
-accomodate Excel users: the issue is that Excel silently converts 64
+accomodate Excel users, because Excel silently converts 64
 bit integers to floats, thus causing the IDs to be not unique.
 
-All power users taking advantage of the relation `rupture_ID = event_ID //
+Users taking advantage of the relation `rupture_ID = event_ID //
 2 ** 32` will have to change their scripts and extract the rupture_ID
 from the events table instead, since the relation does not hold true
-anymore. Regular users will not see any change, except that the event
-IDs in their event loss table will become smaller numbers. Moreover,
-when exporting the event loss table a new field rupture_id will be
-visible. We also added a new output `Events` which is a CSV with
+anymore. The others will not see any change, except that the event
+IDs in their event loss table will be smaller numbers.
+
+When exporting the event loss table a new field rupture_id will be
+visible.
+
+We also added a new output `Events` which is a CSV with
 fields id, rup_id, rlz_id where `id` is the 32 bit event ID, `rup_id`
 is the rupture ID and `rlz_id` is the realization ID.
  
-We fixed the multiplicity value when exported in the ses.xml file:
-now it is consistent with value exported in the ruptures.csv file
-and with the value in the datastore even in the case of full enumeration.
+We fixed the multiplicity value exported in the `ses.xml` file:
+now it is consistent with value exported in the `ruptures.csv` file
+even in the case of full enumeration.
 
-The ruptures CSV exporter has been changed to use a comma as separator and
+We fixed a bug which was causing a wrong bounding box to be exported
+in the `ruptures.csv` file (with a lon<->lat inversion).
+
+The `ruptures.csv` exporter has been changed to use a comma as separator and
 not a tab, to be consistent with all other exporters.
 
-We extended the computation of the ruptures loss table to the `ebrisk`
+We extended the computation of the rupture loss table to the `ebrisk`
 calculator.
 
 We changed `ebrisk` to produce an output `avg_losses-stats`, consistently
@@ -85,7 +90,7 @@ Hazardlib
 Graeme Weatherill contributed a few updates of the Kotha et al. (2019)
 GMPE with new coefficients using a robust linear mixed regression
 analysis. There are three new subclasses for modelling site amplifications:
-see https://github.com/gem/oq-engine/pull/4957 for the details.Two-segment linear model based on slope conditional upon geological era
+see https://github.com/gem/oq-engine/pull/4957 for the details.
 
 Greame also contributed four site amplification models for SERA (see
 https://github.com/gem/oq-engine/pull/4968 for the details) and a
@@ -101,14 +106,10 @@ rupture.
 
 There were some internal changes to the GMPE instantiation mechanism,
 so that now users of hazardlib do not need to call the `.init()` method
-manually anymore.
-
-We fixed a bug in `GriddedRupture.get_surface_boundaries_3d` which was
-causing a wrong bounding box to be exported in the `ruptures.csv` file
-(with a lon<->lat inversion).
+manually.
 
 Richard Styron fixed a bug in the Youngs and Coppersmith (1985)
-GMPE: due to numerical issues, the classmethod
+GMPE: due to numerical issues, instantiating the GMPE with the classmethod
 `YoungsCoppersmith1985MFD.from_total_moment_rate` was producing wrong
 numbers.
 
@@ -116,26 +117,27 @@ Other Hazard
 ------------
 
 There was a subtle bug introduced in engine 3.3 that went unnoticed for
-nearly a year: due to a change to the prefiltering mechanism
-in some circumstances (for complex fault sources producing large ruptures)
+nearly a year: due to a change to the prefiltering mechanism,
+for complex fault sources producing large ruptures,
 some ruptures could be incorrectly discarded, thus producing a lower hazard.
 This was discovered in the South America model, where there are complex
-fault sources with magnitudes up to 9.65 and it has been fixed.
+fault sources with magnitudes up to 9.65.
 
-There was a memory issue in the GMPE logic tree sampling, visibile
+There was a memory issue in the GMPE logic tree sampling procedure, visibile
 for logic trees with billions of branches, like in the SERA model. This
-has been fixed, by not keep the full tree in memory.
+has been fixed, by not keeping the full tree in memory, similarly to
+the implementation for the source model logic tree.
 
-We added a clearer error message when the user try to use a correlation
-model with truncation_level = 0.
-
-The source weighting algorithm was improved, thus reducing even more the
+The source weighting algorithm has been improved, thus reducing even more the
 issue of slow tasks in classical calculations. There was also some
 refactoring of the internals of classical calculations
 
-There were spurious `RuntimeWarning: invalid value encountered in greater`
-introduced by some debug code in engine 3.6 for calculations
-with a site model; they have been removed.
+There were spurious warnings of kind `RuntimeWarning: invalid value
+encountered in greater` introduced by some debug code in engine 3.6
+for calculations with a site model; they have been removed.
+
+We added a clearer error message when the user try to use a correlation
+model with truncation_level = 0.
 
 We removed the output `sourcegroups.csv` which was of little interest to the
 final users.
@@ -144,20 +146,17 @@ Risk
 ----
 
 We restored the ability to accept loss ratios > 1, but only for
-vulnerability functions of kind LN, i.e. for the LogNormal distribution.
+vulnerability functions of kind LN, i.e. using the LogNormal distribution.
 
-We fixed a bug for vulnerability functions of kind BT, i.e. Beta
+We fixed a bug for vulnerability functions of kind BT, i.e. using the Beta
 distribution: the seed was not set properly and the results were not
-reproducible. It has been fixed now.
+reproducible.
 
 There was a bug when importing the GMFs from a CSV file, if the sites were
 not ordered by lon, lat, causing the wrong risk to be computed.
 
 There was a bug in the `realizations` exporter for scenarios with
 parametric GSIMs, where newlines were not quoted.
-
-When exporting the realizations the `branch_path` field will have the
-value `FromShakemap` instead of `FromFile`
 
 We added some metadata to the risk CSV exporters, in particular the
 `risk_investigation_time`.
@@ -176,6 +175,10 @@ this is necessary for the ShakeMap calculator since recent USGS
 ShakeMaps are taking into account the site effects already and we need
 to avoid overamplification.
 
+When exporting the realizations from a ShakeMap risk calculation the
+`branch_path` field has now the value `FromShakemap` instead of
+`FromFile`.
+
 IT
 --
 
@@ -192,7 +195,7 @@ the documentation.
 
 2. Extra-large classical calculations (i.e. Australia) are always been prone to
 run out of memory, due to the sheer amount of data to transfer.  The
-solution was the introduction of a *task queue* acting before the
+solution has been the introduction of a *task queue* acting before the
 rabbitmq/zmq queue. For instance, in a cluster with celery instead of
 sending 10,000 tasks to rabbitmq at once, causing the system to go out
 of memory, the engine sends the tasks to the task queue, from which
@@ -208,7 +211,7 @@ calc_XXX.hdf5 and cache_XXX.hdf5 for each calculation. The *cache file*
 has been finally removed. It was introduced as a hack to work around some
 limitations of HDF5, causing a lot of data duplication. It is not neeeded
 anymore, since we are now using the SWMR feature of h5py properly. This
-apparently minor change required around 25 pull requests to be completed.
+was a major effort requiring nearly 25 pull requests to be completed.
 
 There were also a few minor fixes/changes.
 
@@ -220,7 +223,7 @@ now actually only hides the calculation from the user, but it is kept
 in the database and can be restored.
 
 It is still possible to really delete the calculations of an user with
-the command `oq reset`, but it has been made safer and only datastores
+the command `oq reset`. Still, it has been made safer and only datastores
 corresponding to calculations in the database are removed.
 
 We fixed/changed several APIs for interacting with the QGIS plugin.
