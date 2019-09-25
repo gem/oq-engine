@@ -102,16 +102,9 @@ class AbrahamsonEtAl2018SInter(GMPE):
         C_PGA = self.COEFFS[PGA()]
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
-        pga1000 = np.exp(self._compute_pga_rock(C_PGA, rup, dists) + 
+        pga1000 = np.exp(self._compute_pga_rock(C_PGA, rup, dists) +
                          C_PGA[self.CASCADIA_ADJUSTMENT])
-        #print(pga1000)
         # Get full model
-        #print(self.compute_base_term(C) +
-        #      self.compute_distance_term(C, dists.rrup, rup.mag))
-        #print(self.compute_magnitude_term(C, rup.mag))
-        #print(self.compute_depth_term(C, rup))
-
-        #print(self.compute_site_term(C, sites.vs30, pga1000))
         mean = (self.compute_base_term(C) +
                 self.compute_magnitude_term(C, rup.mag) +
                 self.compute_depth_term(C, rup) +
@@ -342,6 +335,13 @@ class AbrahamsonEtAl2018SSlab(AbrahamsonEtAl2018SInter):
         return C["a1"] + C["a4"] * (self.CONSTANTS["C1slab"] - C["C1inter"]) +\
             self.CONSTANTS["a10"]
 
+    def _get_magnitude_scale(self, C, mag):
+        """
+        Returns the magnitude scaling term that modifies the distance
+        attenuation
+        """
+        return C["a2"] + C["a14"] + self.CONSTANTS["a3"] * (mag - 7.8)
+
     def compute_magnitude_term(self, C, mag):
         """
         Returns the magnitude scaling term, this time using the constant
@@ -361,7 +361,7 @@ class AbrahamsonEtAl2018SSlab(AbrahamsonEtAl2018SInter):
         if rup.ztor <= 100.0:
             return C["a11"] * (rup.ztor - 60.0)
         else:
-            return C["a11"] * (60.0 - rup.ztor)
+            return C["a11"] * (100.0 - 60.0)
 
 
 class AbrahamsonEtAl2018SSlabHigh(AbrahamsonEtAl2018SSlab):
