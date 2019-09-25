@@ -4,14 +4,44 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <singlePlaneRupture
-    id="15"
-    multiplicity="1"
+    id="56"
+    multiplicity="8"
     >
         <stochasticEventSets>
             <SES
+            id="5"
+            >
+                0 7
+            </SES>
+            <SES
+            id="16"
+            >
+                1
+            </SES>
+            <SES
             id="1"
             >
-                64424509440
+                2
+            </SES>
+            <SES
+            id="3"
+            >
+                3
+            </SES>
+            <SES
+            id="12"
+            >
+                4
+            </SES>
+            <SES
+            id="15"
+            >
+                5
+            </SES>
+            <SES
+            id="10"
+            >
+                6
             </SES>
         </stochasticEventSets>
         <magnitude>

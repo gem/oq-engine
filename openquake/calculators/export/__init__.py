@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,7 +35,7 @@ def export_csv(ekey, dstore):
     """
     name = ekey[0] + '.csv'
     try:
-        array = dstore[ekey[0]].value
+        array = dstore[ekey[0]][()]
     except AttributeError:
         # this happens if the key correspond to a HDF5 group
         return []  # write a custom exporter in this case
@@ -46,7 +46,7 @@ def export_csv(ekey, dstore):
 
 def keyfunc(ekey):
     """
-    Extract the name before the colons:
+    Extract the name before the slash:
 
     >>> keyfunc(('agg_loss_table', 'csv'))
     ('agg_loss_table', 'csv')
@@ -64,14 +64,14 @@ export = CallableDict(keyfunc)
 export.from_db = False  # overridden when exporting from db
 
 
-@export.add(('input_zip', 'zip'))
+@export.add(('input', 'zip'))
 def export_input_zip(ekey, dstore):
     """
     Export the data in the `input_zip` dataset as a .zip file
     """
     dest = dstore.export_path('input.zip')
-    nbytes = dstore.get_attr('input_zip', 'nbytes')
-    zbytes = dstore['input_zip'].value
+    nbytes = dstore.get_attr('input/zip', 'nbytes')
+    zbytes = dstore['input/zip'][()]
     # when reading input_zip some terminating null bytes are truncated (for
     # unknown reasons) therefore they must be restored
     zbytes += b'\x00' * (nbytes - len(zbytes))

@@ -1,12 +1,21 @@
+# README and related stuff
 include README.md LICENSE CONTRIBUTORS.txt
+# OpenQuake config file
 include openquake/engine/openquake.cfg
+
+# OpenQuake server config examples
 include openquake/server/local_settings.py.pam
 include openquake/server/local_settings.py.standalone
-
+# OpenQuake server data
 recursive-include openquake/server/db *.sql
 recursive-include openquake/server *.html *.css *.png *.js *.map *.ttf
-
-recursive-include openquake/*/tests *.* README
-recursive-include openquake/qa_tests_data *.* README
-
+# HMTK data
+include openquake/hmtk/seismicity/occurrence/README.md
+include openquake/hmtk/strain/regionalisation/kreemer_polygons_area.txt
+# Hazardlib data
+recursive-include openquake/hazardlib/gsim *.csv *.hdf5
+# NRML sample data
 recursive-include openquake/commonlib/nrml_examples *.xml *.csv *.geojson
+# QA tests data
+recursive-include openquake/qa_tests_data *.* README
+recursive-exclude openquake/qa_tests_data *.pyc

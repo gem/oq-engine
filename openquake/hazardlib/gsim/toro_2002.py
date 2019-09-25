@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ from openquake.hazardlib.imt import PGA, SA
 
 class ToroEtAl2002(GMPE):
     """
-    Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Sneider
+    Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Schneider
     and published in "Model of Strong Ground Motions from Earthquakes in
     Central and Eastern North America: Best Estimates and Uncertainties"
     (Seismological Research Letters, Volume 68, Number 1, 1997) and
@@ -172,6 +172,9 @@ class ToroEtAl2002SHARE(ToroEtAl2002):
 
     #: Required rupture parameters are magnitude and rake
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

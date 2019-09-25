@@ -1,0 +1,8 @@
+#,,,,,,"generated_by='OpenQuake engine 3.7.0-git58d5a429e0', start_date='2019-09-06T16:38:32', checksum=119195320, kind='agg_curves-rlzs', risk_investigation_time=1.0"
+return_period,rlz,loss_type,NAME_1,loss_value,loss_ratio,annual_frequency_of_exceedence
+50,0,structural,RegionA,6.13490E+02,3.06745E-02,2.00000E-02
+50,0,structural,RegionB,9.63000E+02,1.92600E-02,2.00000E-02
+100,0,structural,RegionA,1.39906E+03,6.99532E-02,1.00000E-02
+100,0,structural,RegionB,1.25622E+03,2.51244E-02,1.00000E-02
+200,0,structural,RegionA,1.79093E+03,8.95464E-02,5.00000E-03
+200,0,structural,RegionB,1.61874E+03,3.23747E-02,5.00000E-03

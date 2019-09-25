@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -147,8 +147,10 @@ class ClassicalTestCase(unittest.TestCase):
 
         vf = scientific.VulnerabilityFunction(
             'VF', 'PGA', self.imls, self.mean_loss_ratios, self.covs, "BT")
-
-        loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(5)
+        vf.seed = 42
+        vf.init()
+        loss_ratios = tuple(vf.mean_loss_ratios_with_steps(5))
+        lrem = vf.loss_ratio_exceedance_matrix(loss_ratios)
         numpy.testing.assert_allclose(
             expected_lrem, lrem, rtol=0.0, atol=0.0005)
 
@@ -174,9 +176,12 @@ class ClassicalTestCase(unittest.TestCase):
 
         vulnerability_function = scientific.VulnerabilityFunction(
             'VF', 'PGA', imls, loss_ratios, covs, "LN")
+        vulnerability_function.seed = 42
+        vulnerability_function.init()
+        ratios = tuple(vulnerability_function.mean_loss_ratios_with_steps(2))
 
         loss_ratio_curve = scientific.classical(
-            vulnerability_function, hazard_imls, hazard_curve, 2)
+            vulnerability_function, hazard_imls, hazard_curve, ratios)
 
         expected_curve = [
             (0.0, 0.96), (0.025, 0.96),

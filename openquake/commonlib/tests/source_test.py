@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,21 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
 import unittest
 from io import BytesIO
 
 import numpy
 from numpy.testing import assert_allclose
 
+from openquake.baselib.general import assert_close
 from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.filters import context
 from openquake.commonlib import tests, readinput
 from openquake.commonlib.source import CompositionInfo
 from openquake.hazardlib import nrml
-from openquake.baselib.general import assert_close
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(htests.__file__)
@@ -624,11 +622,11 @@ class AreaToPointsTestCase(unittest.TestCase):
 
 class SourceGroupTestCase(unittest.TestCase):
     SITES = [
-        site.Site(geo.Point(-121.0, 37.0), 0.1, True, 3, 4),
-        site.Site(geo.Point(-121.1, 37.0), 1, True, 3, 4),
-        site.Site(geo.Point(-121.0, -37.15), 2, True, 3, 4),
-        site.Site(geo.Point(-121.0, 37.49), 3, True, 3, 4),
-        site.Site(geo.Point(-121.0, -37.5), 4, True, 3, 4),
+        site.Site(geo.Point(-121.0, 37.0), 0.1, 3, 4),
+        site.Site(geo.Point(-121.1, 37.0), 1, 3, 4),
+        site.Site(geo.Point(-121.0, -37.15), 2, 3, 4),
+        site.Site(geo.Point(-121.0, 37.49), 3, 3, 4),
+        site.Site(geo.Point(-121.0, -37.5), 4, 3, 4),
     ]
 
     @classmethod
@@ -652,16 +650,6 @@ class SourceGroupTestCase(unittest.TestCase):
         self.assertEqual(
             trts, ['Active Shallow Crust', 'Stable Continental Crust',
                    'Subduction Interface', 'Volcanic'])
-
-        self.check('Volcanic', 'max_mag', 6.5)
-        self.check('Subduction Interface', 'max_mag', 6.5)
-        self.check('Stable Continental Crust', 'max_mag', 6.5)
-        self.check('Active Shallow Crust', 'max_mag', 6.95)
-
-        self.check('Volcanic', 'min_mag', 5.0)
-        self.check('Subduction Interface', 'min_mag', 5.5)
-        self.check('Stable Continental Crust', 'min_mag', 5.5)
-        self.check('Active Shallow Crust', 'min_mag', 5.0)
 
     def test_repr(self):
         self.assertEqual(
@@ -734,26 +722,23 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         for grp in csm.src_groups:
             self.assertEqual(grp.src_interdep, 'indep')
             self.assertEqual(grp.rup_interdep, 'indep')
-
         self.assertEqual(repr(csm.gsim_lt), '''\
 <GsimLogicTree
-Active Shallow Crust,b1,SadighEtAl1997(),w=0.5
-Active Shallow Crust,b2,ChiouYoungs2008(),w=0.5
-Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
+Active Shallow Crust,b1,[SadighEtAl1997],w=0.5
+Active Shallow Crust,b2,[ChiouYoungs2008],w=0.5
+Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         assoc = csm.info.get_rlzs_assoc()
         [rlz] = assoc.realizations
         self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
-                         {'Subduction Interface': 'SadighEtAl1997()',
-                          'Active Shallow Crust': 'ChiouYoungs2008()'})
+                         {'Subduction Interface': '[SadighEtAl1997]',
+                          'Active Shallow Crust': '[ChiouYoungs2008]'})
         # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz.ordinal, 0)
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
-        self.assertEqual(rlz.weight, 1.)
+        self.assertEqual(rlz.weight['default'], 1.)
         self.assertEqual(
-            str(assoc),
-            "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997(): "
-            "[0]\n1,ChiouYoungs2008(): [0]>")
+            str(assoc), "<RlzsAssoc(size=2, rlzs=1)>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -766,7 +751,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         rlzs_assoc = csm.info.get_rlzs_assoc()
         rlzs = rlzs_assoc.realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        # counting the sources in each TRT model (unsplit)
+        # counting the sources in each TRT model (after splitting)
         self.assertEqual(
             [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
             list(map(len, csm.src_groups)))
@@ -779,17 +764,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
                 return 1
         csm.info.update_eff_ruptures(count_ruptures)
         assoc = csm.info.get_rlzs_assoc()
-        expected_assoc = """\
-<RlzsAssoc(size=9, rlzs=9)
-0,SadighEtAl1997(): [0]
-2,SadighEtAl1997(): [1]
-4,SadighEtAl1997(): [2]
-6,SadighEtAl1997(): [3]
-8,SadighEtAl1997(): [4]
-10,SadighEtAl1997(): [5]
-12,SadighEtAl1997(): [6]
-14,SadighEtAl1997(): [7]
-16,SadighEtAl1997(): [8]>"""
+        expected_assoc = "<RlzsAssoc(size=9, rlzs=9)>"
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -804,11 +779,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         csm = readinput.get_composite_source_model(oq)
         csm.info.update_eff_ruptures(lambda tm: 1)
         assoc = csm.info.get_rlzs_assoc()
-        self.assertEqual(
-            str(assoc),
-            "<RlzsAssoc(size=2, rlzs=5)\n"
-            "0,SadighEtAl1997(): [0 1 2]\n"
-            "1,SadighEtAl1997(): [3 4]>")
+        self.assertEqual(str(assoc), "<RlzsAssoc(size=2, rlzs=5)>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -323,21 +323,25 @@ class BaseSurface:
         """
         return self.mesh.get_middle_point()
 
+    def _boundaries(self, name):
+        # name is one of lons, lats, mesh
+        arr = getattr(self.mesh, name)
+        return numpy.concatenate(
+            (arr[0, :], arr[1:, -1], arr[-1, :-1][::-1],  arr[:-1, 0][::-1]))
+
     def get_surface_boundaries(self):
         """
         Returns the boundaries in the same format as a multiplanar
         surface, with two one-element lists of lons and lats
         """
-        mesh = self.mesh
-        lons = numpy.concatenate((mesh.lons[0, :],
-                                  mesh.lons[1:, -1],
-                                  mesh.lons[-1, :-1][::-1],
-                                  mesh.lons[:-1, 0][::-1]))
-        lats = numpy.concatenate((mesh.lats[0, :],
-                                  mesh.lats[1:, -1],
-                                  mesh.lats[-1, :-1][::-1],
-                                  mesh.lats[:-1, 0][::-1]))
-        return [lons], [lats]
+        return [self._boundaries('lons')], [self._boundaries('lats')]
+
+    def get_surface_boundaries_3d(self):
+        """
+        Returns the boundaries as three one-element lists of lons, lats, depths
+        """
+        return ([self._boundaries('lons')], [self._boundaries('lats')],
+                [self._boundaries('depths')])
 
     def get_resampled_top_edge(self, angle_var=0.1):
         """
@@ -436,3 +440,17 @@ class BaseSurface:
         # Compute the azimuth from the fault strike
         rel_azi = (azim - strike) % 360
         return rel_azi
+
+    def get_azimuth_of_closest_point(self, mesh):
+        """
+        Compute the azimuth between point in `mesh` and the corresponding
+        closest point on the rupture surface.
+
+        :param mesh:
+            An instance of  :class:`openquake.hazardlib.geo.mesh`
+        :return:
+            An :class:`numpy.ndarray` instance with the azimuth values.
+        """
+        mesh_closest = self.get_closest_points(mesh)
+        return geodetic.azimuth(mesh.lons, mesh.lats, mesh_closest.lons,
+                                mesh_closest.lats)

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -152,7 +152,7 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]), 1.0, 6.0,
                                                      89.9, 1.0)
 
-        self.assertAlmostEquals(45.0, surface.get_strike(), delta=1e-4)
+        self.assertAlmostEqual(45.0, surface.get_strike(), delta=1e-4)
 
     def test_get_strike_2(self):
         p1 = Point(0.0, 0.0)
@@ -162,12 +162,12 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]), 1.0,
                                                      6.0, 89.9, 1.0)
 
-        self.assertAlmostEquals(40.0, surface.get_strike(), delta=0.02)
+        self.assertAlmostEqual(40.0, surface.get_strike(), delta=0.02)
 
     def test_get_strike_along_meridian(self):
         line = Line([Point(0, 0), Point(1e-5, 1e-3), Point(0, 2e-3)])
         surface = SimpleFaultSurface.from_fault_data(line, 1.0, 6.0, 89.9, 0.1)
-        self.assertAlmostEquals(0, surface.get_strike(), delta=6e-2)
+        self.assertAlmostEqual(0, surface.get_strike(), delta=6e-2)
 
 
 class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
@@ -179,7 +179,7 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]), 1.0,
                                                      6.0, 90.0, 1.0)
 
-        self.assertAlmostEquals(90.0, surface.get_dip(), delta=1e-6)
+        self.assertAlmostEqual(90.0, surface.get_dip(), delta=1e-6)
 
     def test_get_dip_2(self):
         p1 = Point(0.0, 0.0)
@@ -188,7 +188,7 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]), 1.0, 6.0,
                                                      30.0, 1.0)
 
-        self.assertAlmostEquals(30.0, surface.get_dip(), 1)
+        self.assertAlmostEqual(30.0, surface.get_dip(), 1)
 
     def test_get_dip_5(self):
         p1 = Point(0.0, 0.0)
@@ -213,7 +213,7 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
             (mid_area * sin(mid_dip) + 2 * (side_area * sin(side_dip))) / 3.0,
             (mid_area * cos(mid_dip) + 2 * (side_area * cos(side_dip))) / 3.0
         ))
-        self.assertAlmostEquals(surface.get_dip(), expected_dip, delta=1e-3)
+        self.assertAlmostEqual(surface.get_dip(), expected_dip, delta=1e-3)
 
 
 class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,16 +18,23 @@
 
 import os
 import sys
-import collections
 import configparser
-from openquake.baselib.general import git_suffix
+
+# disable OpenBLAS threads before the first numpy import
+# see https://github.com/numpy/numpy/issues/11826
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.2.0'
+__version__ = '3.7.0'
 __version__ += git_suffix(__file__)
 
 
-class DotDict(collections.OrderedDict):
+class InvalidFile(Exception):
+    """Raised from custom file validators"""
+
+
+class DotDict(dict):
     """
     A string-valued dictionary that can be accessed with the "." notation
     """
@@ -73,7 +80,7 @@ def read(*paths, **validators):
     by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
     paths = config.paths + list(paths)
-    parser = configparser.SafeConfigParser()
+    parser = configparser.ConfigParser()
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
     if not found:
         raise IOError('No configuration file found in %s' % str(paths))
@@ -99,11 +106,20 @@ def boolean(flag):
         return False
     raise ValueError('Unknown flag %r' % s)
 
+
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
-            multi_user=boolean)
+            multi_user=boolean, multi_node=boolean,
+            serialize_jobs=boolean, strict=boolean, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
+
+multi_node = config.distribution.get('multi_node', False)
+
+if config.distribution.oq_distribute == 'celery' and not multi_node:
+    sys.stderr.write(
+        'oq_distribute is celery but you are not in a cluster? '
+        'probably you forgot to set `multi_node=true` in openquake.cfg\n')

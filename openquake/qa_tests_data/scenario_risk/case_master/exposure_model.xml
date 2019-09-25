@@ -79,7 +79,7 @@
       <tags state="02" cresta="0.22" />
     </asset>
     
-    <asset id="a5" number="1" area="100" taxonomy="tax1">
+    <asset id="a5" number="1" area="100" taxonomy="tax4">
       <location lon="-122.000" lat="37.910" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />

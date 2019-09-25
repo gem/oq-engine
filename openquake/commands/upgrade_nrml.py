@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -105,7 +105,7 @@ def upgrade_file(path, multipoint):
                             nodes=srcs)
                        for i, (trt, srcs) in enumerate(dic.items(), 1)]
         if multipoint:
-            sourceconverter.update_source_model(node0)
+            sourceconverter.update_source_model(node0, path + '.bak')
     with open(path, 'wb') as f:
         nrml.write([node0], f, gml=gml)
 
@@ -113,7 +113,7 @@ def upgrade_file(path, multipoint):
 # NB: this works only for migrations from NRML version 0.4 to 0.5
 # we will implement a more general solution when we will need to pass
 # to version 0.6
-@sap.Script
+@sap.script
 def upgrade_nrml(directory, dry_run, multipoint):
     """
     Upgrade all the NRML files contained in the given directory to the latest
@@ -135,7 +135,7 @@ def upgrade_nrml(directory, dry_run, multipoint):
                     if 'sourceModel' in tag and multipoint:
                         print('upgrading to multiPointSources', path)
                         node0 = nrml.read(path)[0]
-                        sourceconverter.update_source_model(node0)
+                        sourceconverter.update_source_model(node0, path)
                         with open(path, 'wb') as f:
                             nrml.write([node0], f, gml=True)
                 elif 'nrml/0.4' in xmlns and (

@@ -1,0 +1,527 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+	xmlns="http://openquake.org/xmlns/nrml/0.4">
+<sourceModel name="Source Model Kar 1">
+
+<complexFaultSource id="1" name ="MFT"
+			tectonicRegion="Subduction Interface">
+<complexFaultGeometry>	
+	<faultTopEdge>
+		<gml:LineString>
+		<gml:posList>
+   95.0000   27.8000         0
+   93.3000   26.8000         0
+   89.2000   26.7300         0
+   88.8000   26.8700         0
+   87.8000   26.7000         0
+   87.2000   26.7700         0
+   86.8000   26.6700         0
+   85.7000   27.0700         0
+   84.7500   27.3000         0
+   84.0000   27.4400         0
+   83.2000   27.7000         0
+   82.4000   27.7700         0
+   81.0000   28.7500         0
+   79.8000   29.1000         0
+   79.4000   29.3000         0
+   78.6000   29.6000         0
+   78.4000   29.8000         0
+   77.0000   30.7000         0
+   76.0000   31.7000         0
+   75.6000   32.3000         0
+   75.0000   32.7000         0
+		</gml:posList>
+		</gml:LineString>
+	</faultTopEdge>
+	<intermediateEdge>
+        	<gml:LineString>
+        	<gml:posList>
+   94.9566   27.8553    5.0000
+   93.2520   26.8652    5.0000
+   89.1983   26.8081    5.0000
+   88.8316   26.9428    5.0000
+   87.7838   26.7768    5.0000
+   87.2112   26.8475    5.0000
+   86.7767   26.7453    5.0000
+   85.7327   27.1425    5.0000
+   84.7728   27.3755    5.0000
+   84.0179   27.5165    5.0000
+   83.2300   27.7734    5.0000
+   82.4086   27.8478    5.0000
+   81.0548   28.8114    5.0000
+   79.8279   29.1742    5.0000
+   79.4440   29.3679    5.0000
+   78.6351   29.6719    5.0000
+   78.4674   29.8515    5.0000
+   77.0536   30.7629    5.0000
+   76.0691   31.7511    5.0000
+   75.6799   32.3387    5.0000
+   75.0570   32.7615    5.0000
+		</gml:posList>
+             	</gml:LineString>
+ 	</intermediateEdge>
+     	<intermediateEdge>
+             	<gml:LineString>
+         	<gml:posList>
+   94.4635   28.2020  14.2000
+   94.2670   28.0659  14.2000
+   94.0936   27.8687  14.2000
+   93.9824   27.7354  14.2000
+   93.9267   27.4764  14.2000
+   93.8001   27.3442  14.2000
+   93.7298   27.2623  14.2000
+   93.6835   27.1837  14.2000
+   93.5660   27.1630  14.2000
+   93.5079   27.1526  14.2000
+   93.3943   27.2194  14.2000
+   93.2757   27.2767  14.2000
+   93.2388   27.2856  14.2000
+   93.0775   27.3482  14.2000
+   92.8340   27.4294  14.2000
+   92.2500   27.4500  14.2000
+   92.0000   27.3400  14.2000
+   91.7500   27.3400  14.2000
+   91.5000   27.3500  14.2000
+   91.2500   27.4500  14.2000
+   89.1839   27.4849  14.2000
+   89.1070   27.5734  14.2000
+   87.6428   27.4418  14.2000
+   87.3088   27.5187  14.2000
+   86.5736   27.3973  14.2000
+   86.0178   27.7697  14.2000
+   84.9716   28.0287  14.2000
+   84.1738   28.1790  14.2000
+   83.4916   28.4092  14.2000
+   82.4834   28.5213  14.2000
+   81.5320   29.3427  14.2000
+   80.0713   29.8165  14.2000
+   79.8280   29.9556  14.2000
+   78.9413   30.2937  14.2000
+   77.5206   31.3069  14.2000
+   76.6706   32.1923  14.2000
+   76.3744   32.6719  14.2000
+   75.5537   33.2928  14.2000
+		</gml:posList>
+             	</gml:LineString>
+ 	</intermediateEdge>
+     	<faultBottomEdge>
+          	<gml:LineString>
+            	<gml:posList>
+   94.3774   28.6518  25.1000
+   92.6656   27.6547  25.1000
+   89.1781   27.7556  25.1000
+   87.5859   27.7078  25.1000
+   87.3482   27.7872  25.1000
+   86.4916   27.6580  25.1000
+   86.1327   28.0204  25.1000
+   85.0518   28.2900  25.1000
+   84.2368   28.4439  25.1000
+   83.5971   28.6634  25.1000
+   82.5136   28.7907  25.1000
+   81.7242   29.5546  25.1000
+   80.1696   30.0732  25.1000
+   79.9828   30.1904  25.1000
+   79.0649   30.5422  25.1000
+   77.7089   31.5240  25.1000
+   76.9128   32.3679  25.1000
+   76.6536   32.8041  25.1000
+   75.7540   33.5047  25.1000
+		</gml:posList>
+		</gml:LineString>
+    	</faultBottomEdge>
+</complexFaultGeometry>
+
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="6" bValue="1"
+				minMag="5" maxMag="9.2" />
+<rake>90</rake>
+</complexFaultSource>
+
+
+<simpleFaultSource id="2" name ="KAR1"
+			tectonicRegion="Active Shallow Crust">
+<simpleFaultGeometry>	
+		<gml:LineString>
+		<gml:posList>
+
+   	82.3346   30.6063
+   	82.2085   30.6748
+   	82.0851   30.7269
+   	81.9973   30.7571
+   	81.8877   30.7571
+   	81.6655   30.8065
+   	81.5531   30.8476
+   	81.4516   30.8750
+   	81.2789   30.9792
+  	81.1500   31.0341
+  	81.0650   31.0971
+  	80.9882   31.1492
+   	80.8813   31.1931
+   	80.7551   31.2507
+   	80.6180   31.3604
+
+	80.5275   31.4207 
+	78.5825   33.6086
+	75.3903   37.3053
+
+		</gml:posList>
+		</gml:LineString>
+<dip>90.0</dip>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</simpleFaultGeometry>
+
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.222" bValue="1"
+				minMag="5" maxMag="8" />
+<rake>180</rake>
+</simpleFaultSource>
+
+<simpleFaultSource id="3" name ="KAR2"
+			tectonicRegion="Active Shallow Crust">
+<simpleFaultGeometry>	
+		<gml:LineString>
+		<gml:posList>
+
+   	82.0851   30.4269
+   	81.9973   30.4821
+   	81.8877   30.5071
+   	81.6655   30.5815
+   	81.5531   30.6476
+   	81.4516   30.7000
+   	81.2789   30.8292
+   	81.1500   30.9091
+   	81.0650   30.9971
+   	80.9882   31.0742
+   	80.8813   31.1431
+   	80.7551   31.2257
+   	80.6180   31.3604
+
+	80.5275   31.4207 
+	78.5825   33.6086
+	75.3903   37.3053
+
+		</gml:posList>
+		</gml:LineString>
+<dip>90.0</dip>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</simpleFaultGeometry>
+
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.222" bValue="1"
+				minMag="5" maxMag="8" />
+<rake>180</rake>
+</simpleFaultSource>
+
+<simpleFaultSource id="4" name ="KAR3"
+			tectonicRegion="Active Shallow Crust">
+<simpleFaultGeometry>	
+		<gml:LineString>
+		<gml:posList>
+
+   	81.1500   30.5841
+   	81.0650   30.7371
+   	80.9882   30.8792
+   	80.8813   31.0131
+   	80.7551   31.1607
+   	80.6180   31.3604
+
+	80.5275   31.4207 
+	78.5825   33.6086
+	75.3903   37.3053
+
+		</gml:posList>
+		</gml:LineString>
+<dip>90.0</dip>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</simpleFaultGeometry>
+
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.222" bValue="1"
+				minMag="5" maxMag="8" />
+<rake>180</rake>
+</simpleFaultSource>
+
+
+
+
+<areaSource id="5" name ="NGrab1"
+			tectonicRegion="Active Shallow Crust">
+<areaGeometry>	
+	<gml:Polygon>
+		<gml:exterior>
+			<gml:LinearRing>
+				<gml:posList>
+   84.2648   29.7805
+   84.1995   29.1283
+   83.9387   28.5153
+   83.6387   28.2153
+   83.3387   28.5153
+   83.3517   28.6587
+   83.5995   29.1283
+   83.6648   29.7805
+   83.9648   30.0805
+   84.2648   29.7805
+				</gml:posList>
+			</gml:LinearRing>
+		</gml:exterior>
+	</gml:Polygon>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</areaGeometry>
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.27" bValue="1"
+				minMag="5" maxMag="7.1" />
+<nodalPlaneDist>
+	<nodalPlane probability = "0.5" strike = "0" dip = "45" rake = "-90" />
+	<nodalPlane probability = "0.5" strike = "180" dip = "45" rake = "-90" />
+</nodalPlaneDist>
+<hypoDepthDist>
+<hypoDepth probability = "1" depth = "15" />
+</hypoDepthDist>
+</areaSource>
+
+<areaSource id="6" name ="NGrab2"
+			tectonicRegion="Active Shallow Crust">
+<areaGeometry>	
+	<gml:Polygon>
+		<gml:exterior>
+			<gml:LinearRing>
+				<gml:posList>
+   88.2861   29.0703
+   88.1557   28.6268
+   87.9600   28.1312
+   87.6600   27.8312
+   87.4050   27.8600
+   87.1050   28.1600
+   87.1050   28.2700
+   87.5700   28.6900
+   87.6000   29.0000
+   87.6861   29.0703
+   87.9861   29.3703
+   88.2861   29.0703
+				</gml:posList>
+			</gml:LinearRing>
+		</gml:exterior>
+	</gml:Polygon>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</areaGeometry>
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.27" bValue="1"
+				minMag="5" maxMag="7.1" />
+<nodalPlaneDist>
+	<nodalPlane probability = "0.5" strike = "0" dip = "45" rake = "-90" />
+	<nodalPlane probability = "0.5" strike = "180" dip = "45" rake = "-90" />
+</nodalPlaneDist>
+<hypoDepthDist>
+<hypoDepth probability = "1" depth = "15" />
+</hypoDepthDist>
+</areaSource>
+
+<areaSource id="7" name ="NGrab3"
+			tectonicRegion="Active Shallow Crust">
+<areaGeometry>	
+	<gml:Polygon>
+		<gml:exterior>
+			<gml:LinearRing>
+				<gml:posList>
+   86.7062   29.2116
+   86.9117   28.6039
+   86.9597   28.4028
+   86.8854   28.2279
+   86.5854   27.9279
+   86.2854   28.2279
+   86.2155   28.6345
+   86.1062   29.1548
+   86.1062   29.2116
+   86.4062   29.5116
+   86.7062   29.2116
+				</gml:posList>
+			</gml:LinearRing>
+		</gml:exterior>
+	</gml:Polygon>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</areaGeometry>
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.27" bValue="1"
+				minMag="5" maxMag="7.1" />
+<nodalPlaneDist>
+	<nodalPlane probability = "0.5" strike = "0" dip = "45" rake = "-90" />
+	<nodalPlane probability = "0.5" strike = "180" dip = "45" rake = "-90" />
+</nodalPlaneDist>
+<hypoDepthDist>
+<hypoDepth probability = "1" depth = "15" />
+</hypoDepthDist>
+</areaSource>
+
+
+<areaSource id="8" name ="NGrab4"
+			tectonicRegion="Active Shallow Crust">
+<areaGeometry>	
+	<gml:Polygon>
+		<gml:exterior>
+			<gml:LinearRing>
+				<gml:posList>
+
+
+   86.0035   28.4703
+   85.8861   28.8616
+   86.0557   29.2660
+   85.7557   29.5660
+   85.4557   29.2660
+   85.2861   29.0442
+   85.2800   28.7000
+   85.4035   28.4703
+   85.7035   28.1703
+   86.0035   28.4703
+				</gml:posList>
+			</gml:LinearRing>
+		</gml:exterior>
+	</gml:Polygon>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</areaGeometry>
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.27" bValue="1"
+				minMag="5" maxMag="7.1" />
+<nodalPlaneDist>
+	<nodalPlane probability = "0.5" strike = "0" dip = "45" rake = "-90" />
+	<nodalPlane probability = "0.5" strike = "180" dip = "45" rake = "-90" />
+</nodalPlaneDist>
+<hypoDepthDist>
+<hypoDepth probability = "1" depth = "15" />
+</hypoDepthDist>
+</areaSource>
+
+<areaSource id="9" name ="Sikkim"
+			tectonicRegion="Stable Continental Interior">
+<areaGeometry>	
+	<gml:Polygon>
+		<gml:exterior>
+			<gml:LinearRing>
+				<gml:posList>
+   88.2000   26.5000
+   87.0000   27.8000
+   85.9000   28.4000
+   86.4000   29.2000
+   88.0000   28.5500
+   89.8000   27.2000
+   90.1000   26.6000
+   88.2000   26.5000
+				</gml:posList>
+			</gml:LinearRing>
+		</gml:exterior>
+	</gml:Polygon>
+<upperSeismoDepth>15</upperSeismoDepth>
+<lowerSeismoDepth>80</lowerSeismoDepth>
+</areaGeometry>
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="5.213" bValue="1"
+				minMag="5" maxMag="7.2" />
+<nodalPlaneDist>
+	<nodalPlane probability = "1" strike = "315" dip = "90" rake = "180" />
+</nodalPlaneDist>
+<hypoDepthDist>
+<hypoDepth probability = "0.5" depth = "50" />
+<hypoDepth probability = "0.5" depth = "80" />
+</hypoDepthDist>
+</areaSource>
+
+
+<areaSource id="10" name ="North West"
+			tectonicRegion="Active Shallow Crust">
+<areaGeometry>	
+	<gml:Polygon>
+		<gml:exterior>
+			<gml:LinearRing>
+				<gml:posList>
+   82.5000   29.0000
+   82.0000   29.2000
+   81.0000   30.0000
+   81.0000   30.5000
+   81.5000   30.8000
+   82.0000   30.6000
+   82.0000   30.0000
+   82.4500   29.2500
+   82.5000   29.0000
+				</gml:posList>
+			</gml:LinearRing>
+		</gml:exterior>
+	</gml:Polygon>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</areaGeometry>
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.504" bValue="1"
+				minMag="5" maxMag="7.1" />
+<nodalPlaneDist>
+	<nodalPlane probability = "0.5"  strike = "315" dip = "90" rake = "180" />
+	<nodalPlane probability = "0.25" strike = "180" dip = "45" rake = "-90" />
+	<nodalPlane probability = "0.25" strike = "0"   dip = "45" rake = "-90" />	
+</nodalPlaneDist>
+<hypoDepthDist>
+<hypoDepth probability = "1" depth = "15" />
+</hypoDepthDist>
+</areaSource>
+
+
+
+<areaSource id="11" name ="Random"
+			tectonicRegion="Active Shallow Crust">
+<areaGeometry>	
+	<gml:Polygon>
+		<gml:exterior>
+			<gml:LinearRing>
+				<gml:posList>
+   79 26
+   89 26
+   89 31
+   79 31
+   79 26   
+				</gml:posList>
+			</gml:LinearRing>
+		</gml:exterior>
+	</gml:Polygon>
+<upperSeismoDepth>0</upperSeismoDepth>
+<lowerSeismoDepth>15</lowerSeismoDepth>
+</areaGeometry>
+<magScaleRel>WC1994</magScaleRel>
+<ruptAspectRatio>1.5</ruptAspectRatio>
+<truncGutenbergRichterMFD	aValue="4.5" bValue="1" 
+				minMag="5" maxMag="7.5" />
+<nodalPlaneDist>
+	<nodalPlane probability = "0.0625" strike = "315" dip = "90" rake = "180"  />
+	<nodalPlane probability = "0.0625" strike = "135" dip = "90" rake = "0" />
+	<nodalPlane probability = "0.0625" strike = "45 " dip = "90" rake = "0" />
+	<nodalPlane probability = "0.0625" strike = "225" dip = "90" rake = "180"  />
+	<nodalPlane probability = "0.2500" strike = "90"  dip = "10" rake = "90"   />
+	<nodalPlane probability = "0.2500" strike = "90"  dip = "45" rake = "90"   />
+	<nodalPlane probability = "0.0625" strike = "90"  dip = "45" rake = "-90"  />
+	<nodalPlane probability = "0.0625" strike = "270" dip = "45" rake = "-90"  />
+	<nodalPlane probability = "0.0625" strike = "180" dip = "45" rake = "-90"  />
+	<nodalPlane probability = "0.0625" strike = "0"   dip = "45" rake = "-90"  />	
+</nodalPlaneDist>
+<hypoDepthDist>
+<hypoDepth probability = "1" depth = "15" />
+</hypoDepthDist>
+</areaSource>
+
+
+</sourceModel>
+
+</nrml> 
+

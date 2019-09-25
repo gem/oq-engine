@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -75,6 +75,11 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
         tmp = general.gettemp(suffix='.hdf5')
         with hdf5.File(tmp, 'w') as f:
             f[mps.source_id] = mps
-
         with hdf5.File(tmp, 'r') as f:
             f[mps.source_id]
+
+        # test the bounding box
+        bbox = mps.get_bounding_box(maxdist=100)
+        numpy.testing.assert_almost_equal(
+            (-0.8994569916564479, -0.39932, 1.8994569916564479, 1.89932),
+            bbox)

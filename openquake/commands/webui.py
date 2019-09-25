@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2018 GEM Foundation
+# Copyright (C) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,7 @@ commands = ['start', 'migrate', 'createsuperuser', 'collectstatic']
 
 def rundjango(subcmd, hostport=None, skip_browser=False):
     args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
-    if subcmd == 'start':
+    if subcmd == 'runserver':
         # the reload functionality of the Django development server interferes
         # with SIGCHLD and causes zombies, thus it is disabled
         args.append('--noreload')
@@ -47,7 +47,7 @@ def rundjango(subcmd, hostport=None, skip_browser=False):
         sys.exit(p.returncode)
 
 
-@sap.Script
+@sap.script
 def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
     """
     start the webui server in foreground or perform other operation on the
@@ -62,6 +62,7 @@ def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
         rundjango('runserver', hostport, skip_browser)
     elif cmd in commands:
         rundjango(cmd)
+
 
 webui.arg('cmd', 'webui command', choices=commands)
 webui.arg('hostport', 'a string of the form <hostname:port>')

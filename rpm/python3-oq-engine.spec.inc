@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: syntax=spec
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -57,7 +57,7 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: oq-python3 python3-oq-libs >= 2.2.0
+Requires: oq-python3 python3-oq-libs >= 2.4.0
 Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
@@ -69,7 +69,7 @@ Provides: python-oq-hazardlib python-oq-engine
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2018 GEM Foundation
+Copyright (C) 2010-2019 GEM Foundation
 
 %package master
 Summary: OpenQuake Engine multi-node cluster support (master node)
@@ -84,7 +84,7 @@ OpenQuake Engine multi-node cluster support (master node)
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2018 GEM Foundation
+Copyright (C) 2010-2019 GEM Foundation
 
 %package worker
 Summary: OpenQuake Engine multi-node cluster support (worker node)
@@ -99,7 +99,7 @@ OpenQuake Engine multi-node cluster support (worker node)
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2018 GEM Foundation
+Copyright (C) 2010-2019 GEM Foundation
 
 %prep
 %setup -n %{oqformat}
@@ -108,9 +108,6 @@ Copyright (C) 2010-2018 GEM Foundation
 
 %build
 %{__python3} setup.py build
-
-%check
-#nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.engine
 
 %pre
 getent group %{oquser} >/dev/null || groupadd -r %{oquser}
@@ -139,9 +136,9 @@ mkdir -p %{buildroot}%{_unitdir}
 install -m 644 openquake/engine/openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
 install -m 644 debian/desktop/oq-engine-webui.desktop %{buildroot}%{_datadir}/applications
 install -m 644 debian/desktop/openquake.png %{buildroot}%{_datadir}/pixmaps
-install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
-install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
-install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
+install -m 644 debian/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
+install -m 644 debian/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
+install -m 644 debian/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
 cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 # Make a zipped copy of each demo
 helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
@@ -201,6 +198,7 @@ fi
 ) >/dev/null || true
 
 %files master
+%doc openquake/engine/openquake.cfg.cluster-sample
 
 %post worker
 %systemd_post openquake-celery.service
@@ -212,6 +210,7 @@ fi
 %systemd_postun_with_restart openquake-celery.service
 
 %files worker
+%doc openquake/engine/openquake.cfg.cluster-sample
 %{_unitdir}/openquake-celery.service
 
 %changelog

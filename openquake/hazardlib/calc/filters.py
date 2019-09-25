@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,25 +15,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 import os
 import sys
-import logging
+import time
 import operator
-import collections
+import collections.abc
 from contextlib import contextmanager
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
 from scipy.interpolate import interp1d
-from openquake.baselib import hdf5, config
-from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import gettemp, groupby
+
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 src_group_id = operator.attrgetter('src_group_id')
@@ -89,7 +83,7 @@ class Piecewise(object):
         return self.y[idx]
 
 
-class IntegrationDistance(collections.Mapping):
+class IntegrationDistance(collections.abc.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type. The integration distances can be scalars or
@@ -109,27 +103,25 @@ class IntegrationDistance(collections.Mapping):
     400
     >>> maxdist('Some TRT', mag=8.5)  # 2000 km are used above the maximum
     2000
-
-    It has also a method `.get_closest(sites, rupture)` returning the closest
-    sites to the rupture and their distances. The integration distance can be
-    missing if the sites have been already filtered (empty dictionary): in
-    that case the method returns all the sites and all the distances.
     """
     def __init__(self, dic):
         self.dic = dic or {}  # TRT -> float or list of pairs
         self.magdist = {}  # TRT -> (magnitudes, distances)
         for trt, value in self.dic.items():
-            if isinstance(value, list):  # assume a list of pairs (mag, dist)
+            if isinstance(value, (list, numpy.ndarray)):
+                # assume a list of pairs (mag, dist)
                 self.magdist[trt] = value
             else:
                 self.dic[trt] = float(value)
 
     def __call__(self, trt, mag=None):
+        if not self.dic:
+            return MAX_DISTANCE
         value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
-        elif mag is None:  # get the maximum distance
-            return MAX_DISTANCE
+        elif mag is None:  # get the maximum distance for the maximum mag
+            return value[-1][1]
         elif not hasattr(self, 'piecewise'):
             self.piecewise = {}  # function cache
         try:
@@ -186,56 +178,125 @@ class IntegrationDistance(collections.Mapping):
     def __len__(self):
         return len(self.dic)
 
+    def __toh5__(self):
+        dic = {trt: numpy.array(dist) for trt, dist in self.dic.items()}
+        return dic, {}
+
+    def __fromh5__(self, dic, attrs):
+        self.__init__({trt: dic[trt][()] for trt in dic})
+
     def __repr__(self):
         return repr(self.dic)
 
 
-def prefilter(srcs, srcfilter, monitor):
+def split_sources(srcs):
     """
-    :returns: a dict src_group_id -> sources
+    :param srcs: sources
+    :returns: a pair (split sources, split time) or just the split_sources
     """
-    return groupby(srcfilter.filter(srcs), src_group_id)
+    from openquake.hazardlib.source import splittable
+    sources = []
+    split_time = {}  # src.id -> time
+    for src in srcs:
+        t0 = time.time()
+        mag_a, mag_b = src.get_min_max_mag()
+        min_mag = src.min_mag
+        if mag_b < min_mag:  # discard the source completely
+            continue
+        has_serial = hasattr(src, 'serial')
+        if has_serial:
+            src.serial = numpy.arange(
+                src.serial, src.serial + src.num_ruptures)
+        if not splittable(src):
+            sources.append(src)
+            split_time[src.id] = time.time() - t0
+            continue
+        if min_mag:
+            splits = []
+            for s in src:
+                s.min_mag = min_mag
+                mag_a, mag_b = s.get_min_max_mag()
+                if mag_b < min_mag:
+                    continue
+                s.num_ruptures = s.count_ruptures()
+                if s.num_ruptures:
+                    splits.append(s)
+        else:
+            splits = list(src)
+        split_time[src.id] = time.time() - t0
+        sources.extend(splits)
+        has_samples = hasattr(src, 'samples')
+        if len(splits) > 1:
+            start = 0
+            for i, split in enumerate(splits):
+                split.source_id = '%s:%s' % (src.source_id, i)
+                split.src_group_id = src.src_group_id
+                split.id = src.id
+                if has_serial:
+                    nr = split.num_ruptures
+                    split.serial = src.serial[start:start + nr]
+                    start += nr
+                if has_samples:
+                    split.samples = src.samples
+        elif splits:  # single source
+            [s] = splits
+            s.source_id = src.source_id
+            s.src_group_id = src.src_group_id
+            s.id = src.id
+            if has_serial:
+                s.serial = src.serial
+            if has_samples:
+                s.samples = src.samples
+    return sources, split_time
 
 
 class SourceFilter(object):
     """
     Filter objects have a .filter method yielding filtered sources,
     i.e. sources with an attribute .indices, containg the IDs of the sites
-    within the given maximum distance. There is also a .pfilter method
+    within the given maximum distance. There is also a .new method
     that filters the sources in parallel and returns a dictionary
     src_group_id -> filtered sources.
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
-    def __init__(self, sitecol, integration_distance, hdf5path=None):
+    def __init__(self, sitecol, integration_distance, filename=None):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
-        self.hdf5path = hdf5path
-        if hdf5path and (
-                config.distribution.oq_distribute in ('no', 'processpool') or
-                config.directory.shared_dir):  # store the sitecol
-            with hdf5.File(hdf5path, 'w') as h5:
-                h5['sitecol'] = sitecol
-        else:  # keep the sitecol in memory
-            self.__dict__['sitecol'] = sitecol
+        elif sitecol is None:
+            integration_distance = {}
+        self.filename = filename
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if os.environ.get('OQ_DISTRIBUTE') == 'no':
-            self.distribute = 'no'
+        if not filename:  # keep the sitecol in memory
+            self.__dict__['sitecol'] = sitecol
+
+    def __getstate__(self):
+        if self.filename:
+            # in the engine self.filename is the .hdf5 cache file
+            return dict(filename=self.filename,
+                        integration_distance=self.integration_distance)
         else:
-            self.distribute = 'processpool'
+            # when using calc_hazard_curves without an .hdf5 cache file
+            return dict(filename=None, sitecol=self.sitecol,
+                        integration_distance=self.integration_distance)
 
     @property
     def sitecol(self):
         """
-        Read the site collection from .hdf5path and cache it
+        Read the site collection from .filename and cache it
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
-        with hdf5.File(self.hdf5path, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5['sitecol']
+        if self.filename is None:
+            return
+        elif not os.path.exists(self.filename):
+            raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
+        h5 = hdf5.File(self.filename, 'r')
+        # NB: must not be closed on the workers for the case OQ_DISTRIBUTE=no
+        self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
     def get_rectangle(self, src):
@@ -281,6 +342,30 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
+    def close_sids(self, rec, trt):
+        """
+        :param rec:
+           a record with fields mag, minlon, minlat, maxlon, maxlat
+        :param trt:
+           tectonic region type string
+        :returns:
+           the site indices within the bounding box enlarged by the integration
+           distance for the given TRT and magnitude
+        """
+        if self.sitecol is None:
+            return []
+        elif not self.integration_distance:  # do not filter
+            return self.sitecol.sids
+        if hasattr(rec, 'dtype'):
+            bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
+        else:
+            bbox = rec  # assume it is a 4-tuple
+        maxdist = self.integration_distance(trt, rec['mag'])
+        a1 = min(maxdist * KM_TO_DEGREES, 90)
+        a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
+        bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+        return self.sitecol.within_bbox(bb)
+
     def filter(self, sources):
         """
         :param sources: a sequence of sources
@@ -296,79 +381,5 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
-    def pfilter(self, sources, concurrent_tasks, monitor):
-        """
-        Filter the sources in parallel by using Starmap.apply
 
-        :param sources: a sequence of sources
-        :param concurrent_tasks: how many tasks to generate
-        :param monitor: a Monitor instance
-        :returns: a dictionary src_group_id -> sources
-        """
-        sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor),
-            concurrent_tasks=concurrent_tasks, distribute=self.distribute,
-            progress=logging.debug).reduce()
-        Starmap.shutdown()  # close the processpool
-        Starmap.init()  # reopen it when necessary
-        # avoid task ordering issues
-        for sources in sources_by_grp.values():
-            sources.sort(key=operator.attrgetter('source_id'))
-        return sources_by_grp
-
-
-class RtreeFilter(SourceFilter):
-    """
-    The RtreeFilter uses the rtree library. The index is generated at
-    instantiation time and stored in a temporary file. The filter should be
-    instantiated only once per calculation, after the site collection is
-    known. It should be used as follows::
-
-      rfilter = RtreeFilter(sitecol, integration_distance)
-      for src, sites in rfilter(sources):
-         do_something(...)
-
-    As a side effect, sets the `.indices` attribute of the source, i.e. the
-    number of sites within the integration distance. Notice that
-    libspatialindex indices cannot be properly pickled
-    (https://github.com/Toblerity/rtree/issues/65) this is why they must
-    be saved on the file system where they can be read from the workers.
-
-    NB: an RtreeFilter has an .indexpath attribute, but not a .sitecol
-    attribute nor an .index attribute, so it can be pickled and transferred
-    easily.
-
-    :param sitecol:
-        :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param integration_distance:
-        Integration distance dictionary (TRT -> distance in km)
-    """
-    def __init__(self, sitecol, integration_distance, hdf5path=None):
-        if rtree is None:
-            raise ImportError('rtree')
-        super().__init__(sitecol, integration_distance, hdf5path)
-        self.indexpath = gettemp()
-        lonlats = zip(sitecol.lons, sitecol.lats)
-        index = rtree.index.Index(self.indexpath)
-        for i, (lon, lat) in enumerate(lonlats):
-            index.insert(i, (lon, lat, lon, lat))
-        index.close()
-
-    def filter(self, sources):
-        """
-        :param sources: a sequence of sources
-        :yields: rtree-filtered sources
-        """
-        index = rtree.index.Index(self.indexpath)
-        try:
-            for src in sources:
-                box = self.integration_distance.get_affected_box(src)
-                indices = within(box, index)
-                if len(indices):
-                    src.indices = indices
-                    yield src
-        finally:
-            index.close()
-
-
-source_site_noop_filter = SourceFilter(None, {})
+nofilter = SourceFilter(None, {})

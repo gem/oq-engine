@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Example Source Model Containing Area Source"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaSource
+            id="956"
+            name="MyArea"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <Polygon>
+                        <exterior>
+                            <LinearRing>
+                                <posList>
+                                    14.295409 41.746969 14.189112 41.67946 14.084597 41.613082 13.897352 41.46893 13.604964 41.527168 13.530234 41.848179 12.938025 42.439087 12.766461 42.665394 12.347427 43.112685 11.967603 43.507904 11.79718 43.549492 11.614281 43.712834 11.254693 43.954441 10.735526 43.975015 10.699876 44.208866 11.32331 44.136684 12.11651 43.793972 13.151796 43.028217 13.588533 42.522327 14.279234 41.857189 14.295409 41.746969
+                                </posList>
+                            </LinearRing>
+                        </exterior>
+                    </Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        50.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5000000E+00" bValue="1.0000000E+00" maxMag="7.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="13.2" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

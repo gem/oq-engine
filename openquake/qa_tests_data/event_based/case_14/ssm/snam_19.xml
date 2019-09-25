@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <sourceModel name="SA PSHA Sensitivity Source Model Containing Area Sources and Simple Fault Sources">
+
+        <sourceGroup rup_interdep="indep" src_interdep="indep" srcs_weights="1.0" 
+                tectonicRegion="Stable Continental Crust">
+
+        <areaSource id="19" name="SNAM_AZ" tectonicRegion="Stable Continental Crust">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                             18.30000  -24.10000
+                             18.50000  -26.00000
+                             20.00000  -27.80000
+							 15.21416  -28.51770
+						     15.00000  -27.00000	 
+                             14.60000  -24.80000    
+                             18.30000  -24.10000    
+						   </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>0.5</upperSeismoDepth>
+                <lowerSeismoDepth>17.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="3.69" bValue="0.97" minMag="5.0" maxMag="5.96" />
+            <nodalPlaneDist>
+                <nodalPlane probability="1.0" strike="330" dip="80.0" rake="-20.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.2" depth="5.0" />
+				<hypoDepth probability="0.6" depth="10.0" />
+				<hypoDepth probability="0.2" depth="15.0" />
+            </hypoDepthDist>
+        </areaSource>
+
+        </sourceGroup>
+    </sourceModel>
+</nrml>
+

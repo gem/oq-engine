@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,8 @@ from openquake.baselib.general import split_in_blocks, not_equal
 from openquake.hazardlib.geo.utils import fix_lon, cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
 
+U32LIMIT = 2 ** 32
+
 
 class Site(object):
     """
@@ -36,9 +38,6 @@ class Site(object):
         where the site is located.
     :param vs30:
         Average shear wave velocity in the top 30 m, in m/s.
-    :param vs30measured:
-        Boolean value, ``True`` if ``vs30`` was measured on that location
-        and ``False`` if it was inferred.
     :param z1pt0:
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 1.0 km/sec, in meters.
@@ -53,7 +52,7 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    def __init__(self, location, vs30=numpy.nan, vs30measured=False,
+    def __init__(self, location, vs30=numpy.nan,
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
@@ -63,7 +62,6 @@ class Site(object):
             raise ValueError('z2pt5 must be positive')
         self.location = location
         self.vs30 = vs30
-        self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         for param, val in extras.items():
@@ -74,15 +72,14 @@ class Site(object):
         """
         >>> import openquake.hazardlib
         >>> loc = openquake.hazardlib.geo.point.Point(1, 2, 3)
-        >>> str(Site(loc, 760.0, True, 100.0, 5.0))
+        >>> str(Site(loc, 760.0, 100.0, 5.0))
         '<Location=<Latitude=2.000000, Longitude=1.000000, Depth=3.0000>, \
-Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
+Vs30=760.0000, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         """
         return (
-            "<Location=%s, Vs30=%.4f, Vs30Measured=%r, Depth1.0km=%.4f, "
+            "<Location=%s, Vs30=%.4f, Depth1.0km=%.4f, "
             "Depth2.5km=%.4f>") % (
-            self.location, self.vs30, self.vs30measured, self.z1pt0,
-            self.z2pt5)
+            self.location, self.vs30, self.z1pt0, self.z2pt5)
 
     def __hash__(self):
         return hash((self.location.x, self.location.y))
@@ -95,7 +92,7 @@ Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         """
         >>> import openquake.hazardlib
         >>> loc = openquake.hazardlib.geo.point.Point(1, 2, 3)
-        >>> site = Site(loc, 760.0, True, 100.0, 5.0)
+        >>> site = Site(loc, 760.0, 100.0, 5.0)
         >>> str(site) == repr(site)
         True
         """
@@ -112,9 +109,6 @@ def _extract(array_or_float, indices):
 # dtype of each valid site parameter
 site_param_dt = {
     'sids': numpy.uint32,
-    'lons': numpy.float64,
-    'lats': numpy.float64,
-    'depths': numpy.float64,
     'lon': numpy.float64,
     'lat': numpy.float64,
     'depth': numpy.float64,
@@ -122,7 +116,14 @@ site_param_dt = {
     'vs30measured': numpy.bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
+    'siteclass': (numpy.string_, 1),
     'backarc': numpy.bool,
+
+    # Parameters for site amplification
+    'ec8': (numpy.string_, 1),
+    'ec8_p18': (numpy.string_, 2),
+    'h800': numpy.float64,
+    'geology': (numpy.string_, 20),
 
     # parameters for geotechnic hazard
     'liquefaction_susceptibility': numpy.int16,
@@ -140,7 +141,7 @@ site_param_dt = {
 
 
 class SiteCollection(object):
-    __doc__ = """\
+    """\
     A collection of :class:`sites <Site>`.
 
     Instances of this class are intended to represent a large collection
@@ -174,12 +175,12 @@ class SiteCollection(object):
         self.complete = self
         n = len(shakemap_array)
         dtype = numpy.dtype([(p, site_param_dt[p])
-                             for p in 'sids lons lats depths vs30'.split()])
+                             for p in 'sids lon lat depth vs30'.split()])
         self.array = arr = numpy.zeros(n, dtype)
         arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
-        arr['lons'] = shakemap_array['lon']
-        arr['lats'] = shakemap_array['lat']
-        arr['depths'] = numpy.zeros(n)
+        arr['lon'] = shakemap_array['lon']
+        arr['lat'] = shakemap_array['lat']
+        arr['depth'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
         arr.flags.writeable = False
         return self
@@ -201,22 +202,23 @@ class SiteCollection(object):
         :param req_site_params:
             a sequence of required site parameters, possibly empty
         """
+        assert len(lons) < U32LIMIT, len(lons)
         if depths is None:
             depths = numpy.zeros(len(lons))
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
-        req = ['sids', 'lons', 'lats', 'depths'] + sorted(
-            par for par in req_site_params if par not in ('lons', 'lats'))
+        req = ['sids', 'lon', 'lat', 'depth'] + sorted(
+            par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
             req.append('vs30measured')
         self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
         self.array = arr = numpy.zeros(len(lons), self.dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
-        arr['lons'] = fix_lon(numpy.array(lons))
-        arr['lats'] = numpy.array(lats)
-        arr['depths'] = numpy.array(depths)
+        arr['lon'] = fix_lon(numpy.array(lons))
+        arr['lat'] = numpy.array(lats)
+        arr['depth'] = numpy.array(depths)
         if sitemodel is None:
             pass
         elif hasattr(sitemodel, 'reference_vs30_value'):
@@ -226,6 +228,8 @@ class SiteCollection(object):
                       sitemodel.reference_vs30_type == 'measured')
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
+            self._set('siteclass', sitemodel.reference_siteclass)
+            self._set('backarc', sitemodel.reference_backarc)
         else:
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
@@ -248,7 +252,7 @@ class SiteCollection(object):
            a filtered SiteCollection instance if `indices` is a proper subset
            of the available indices, otherwise returns the full SiteCollection
         """
-        if len(indices) == len(self):
+        if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
         indices = numpy.uint32(sorted(indices))
@@ -268,21 +272,19 @@ class SiteCollection(object):
         """
         Build a complete SiteCollection from a list of Site objects
         """
-        dtlist = ([(p, site_param_dt[p])
-                   for p in ('sids', 'lons', 'lats', 'depths')] +
-                  [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
-                   if p in site_param_dt])
+        extra = [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
+                 if p in site_param_dt]
+        dtlist = [(p, site_param_dt[p])
+                  for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
         self.complete = self
         for i in range(len(arr)):
             arr['sids'][i] = i
-            arr['lons'][i] = sites[i].location.longitude
-            arr['lats'][i] = sites[i].location.latitude
-            arr['depths'][i] = sites[i].location.depth
-            arr['vs30'][i] = sites[i].vs30
-            arr['vs30measured'][i] = sites[i].vs30measured
-            arr['z1pt0'][i] = sites[i].z1pt0
-            arr['z2pt5'][i] = sites[i].z2pt5
+            arr['lon'][i] = sites[i].location.longitude
+            arr['lat'][i] = sites[i].location.latitude
+            arr['depth'][i] = sites[i].location.depth
+            for p, dt in extra:
+                arr[p][i] = getattr(sites[i], p)
 
         # protect arrays from being accidentally changed. it is useful
         # because we pass these arrays directly to a GMPE through
@@ -328,6 +330,15 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
+    def split(self, location, distance):
+        """
+        :returns: (close_sites, far_sites)
+        """
+        if distance is None:  # all close
+            return self, None
+        close = location.distance_to_mesh(self) < distance
+        return self.filter(close), self.filter(~close)
+
     def __iter__(self):
         """
         Iterate through all :class:`sites <Site>` in the collection, yielding
@@ -371,7 +382,7 @@ class SiteCollection(object):
         :returns: a filtered SiteCollection of sites within the region
         """
         mask = numpy.array([
-            geometry.Point(rec['lons'], rec['lats']).within(region)
+            geometry.Point(rec['lon'], rec['lat']).within(region)
             for rec in self.array])
         return self.filter(mask)
 
@@ -383,7 +394,7 @@ class SiteCollection(object):
             site IDs within the bounding box
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self.array['lons'], self.array['lats']
+        lons, lats = self.array['lon'], self.array['lat']
         if cross_idl(lons.min(), lons.max()) or cross_idl(min_lon, max_lon):
             lons = lons % 360
             min_lon, max_lon = min_lon % 360, max_lon % 360
@@ -401,6 +412,8 @@ class SiteCollection(object):
         return self.array[sid]
 
     def __getattr__(self, name):
+        if name in ('lons', 'lats', 'depths'):  # legacy names
+            return self.array[name[:-1]]
         if name not in site_param_dt:
             raise AttributeError(name)
         return self.array[name]

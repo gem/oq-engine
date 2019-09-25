@@ -1,0 +1,3 @@
+#,,,,"generated_by='OpenQuake engine 3.7.0-gitab830d1d1c', start_date='2019-09-14T06:47:16', checksum=572206371, kind='rlz-001', investigation_time=1.0"
+lon,lat,0.002105~PGA,0.002105~SA(0.2),0.002105~SA(1.0)
+-123.23738,49.27479,5.795240E-02,1.292215E-01,4.333935E-02

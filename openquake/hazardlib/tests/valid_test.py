@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,6 +18,7 @@
 
 import unittest
 from openquake.hazardlib import imt, valid
+from openquake.hazardlib.gsim import registry
 
 
 class ValidationTestCase(unittest.TestCase):
@@ -55,7 +56,7 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(valid.namelist('x y'), ['x', 'y'])
         self.assertEqual(valid.namelist(' '), [])
         with self.assertRaises(ValueError):
-            valid.namelist('x 1')
+            valid.namelist('x É')
 
     def test_longitude(self):
         self.assertEqual(valid.longitude('1'), 1.0)
@@ -139,12 +140,15 @@ class ValidationTestCase(unittest.TestCase):
             def __init__(self, arg):
                 self.arg = arg
 
+            def init(self):
+                pass
+
             def __repr__(self):
                 return '<FakeGsim(%s)>' % self.arg
-        valid.GSIM['FakeGsim'] = FakeGsim
+        registry['FakeGsim'] = FakeGsim
         try:
-            gsim = valid.gsim('FakeGsim', arg='0.1')
+            gsim = valid.gsim('[FakeGsim]\narg=0.1')
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
             self.assertEqual(gsim.minimum_distance, 0)
         finally:
-            del valid.GSIM['FakeGsim']
+            del registry['FakeGsim']

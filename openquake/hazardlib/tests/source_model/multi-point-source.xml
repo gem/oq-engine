@@ -10,7 +10,6 @@ xmlns:gml="http://www.opengis.net/gml"
         name="group 1"
         rup_interdep="indep"
         src_interdep="indep"
-        srcs_weights="0.6 0.4"
         tectonicRegion="Stable Continental Crust"
         >
             <multiPointSource
@@ -67,7 +66,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <multiPointGeometry>
                     <gml:posList>
-                        0.1 1.1
+                        0.10000000149011612 1.100000023841858
                     </gml:posList>
                     <upperSeismoDepth>
                         5.0

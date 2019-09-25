@@ -1,5 +1,19 @@
 # FAQ
 
+### Help! There is an error in my calculation!
+
+You are in the wrong place. These are the FAQ for IT issues, concerning
+how to install the engine. If you have already installed it and have
+issues running calculations you should go [here for hazard calculations](
+faq-hazard.md) and [here for risk calculations](faq-risk.md).
+
+### Help! I have a multi-node cluster and I'm in trouble
+
+If you are running the OpenQuake Engine on a multi-node cluster you should also
+have a look at [FAQ related to cluster deployments](faq-cluster.md).
+
+******
+
 ### Python 2.7 compatibility 
 
 Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
@@ -15,20 +29,23 @@ The OpenQuake Engine has at least three installation methods. To choose the one 
 ### Supported operating systems
 
 Binary packages are provided for the following 64bit operating systems:
-- [Windows](installing/windows.md)
-- [macOS](installing/macos.md)
-- Linux [Ubuntu](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux/Fedora](installing/rhel.md) via _deb_ and _rpm_
+- [Windows 10](installing/windows.md)
+- [macOS 10.9+](installing/macos.md)
+- Linux [Ubuntu 16.04+](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux 7+ and Fedora 28+](installing/rhel.md) via _deb_ and _rpm_
 - Any other generic Linux distribution via a [self-installable binary distribution](installing/linux-generic.md)
 - [Docker](installing/docker.md) hosts
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
+
+#### Windows 7 compatibility
+
+**Windows 7** is **deprecated** as a platform for running the Engine since it is reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support). Compatibility with Windows 7 will be removed in next Engine releases. Please upgrade your Windows installation to Windows 10.
 
 ******
 
 ### Unsupported operating systems
 
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
-- Ubuntu 14.04 (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
 - Ubuntu 16.04 (Xenial) packages work on **Mint Linux 18** and on **Debian 9.0** (Stretch)
 - Ubuntu 18.04 (Bionic) packages work on **Mint Linux 19** and on **Debian 10.0** (Buster)
 
@@ -40,7 +57,7 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ### 32bit support
 
-The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
+The OpenQuake Engine **requires a 64bit operating system**. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
 
 ******
 
@@ -61,7 +78,7 @@ MPI support may be added in the future if sponsored by someone. If you would lik
 
 ### Python scripts that import openquake
 
-On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must use a virtual environment and install al local copy of the Engine:
+On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must use a virtual environment and install a local copy of the Engine:
 
 ```
 $ python3 -m venv </path/to/myvenv>
@@ -132,85 +149,6 @@ The default port for the DbServer (configured via the `openquake.cfg` configurat
 
 ******
 
-### error: [Errno 111] Connection refused
-
-A more detailed stack trace:
-
-```python
-Traceback (most recent call last):
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/utils/functional.py", line 333, in retry_over_time
-    return fun(*args, **kwargs)
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 261, in connect
-    return self.connection
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 802, in connection
-    self._connection = self._establish_connection()
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 757, in _establish_connection
-    conn = self.transport.establish_connection()
-  File "/opt/openquake/lib/python3.6/site-packages/kombu/transport/pyamqp.py", line 130, in establish_connection
-    conn.connect()
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 282, in connect
-    self.transport.connect()
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/transport.py", line 109, in connect
-    self._connect(self.host, self.port, self.connect_timeout)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/transport.py", line 150, in _connect
-    self.sock.connect(sa)
-ConnectionRefusedError: [Errno 111] Connection refused
-```
-
-This happens when the **Celery support is enabled but RabbitMQ server is not running**. You can start it running
-```bash
-$ sudo service rabbitmq-server start
-``` 
-
-It may also mean that an incompatible version of Celery is used. Please check it with `/opt/openquake/bin/pip3 freeze`.
-
-******
-
-### error: [Errno 104] Connection reset by peer _or_ (403) ACCESS_REFUSED
-
-More detailed stack traces:
-
-
-```python
-Traceback (most recent call last):
-  [...]
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 180, in __init__
-    (10, 30),  # tune
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/abstract_channel.py", line 67, in wait
-    self.channel_id, allowed_methods, timeout)
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 241, in _wait_method
-    channel, method_sig, args, content = read_timeout(timeout)
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 330, in read_timeout
-    return self.method_reader.read_method()
-  File "/opt/openquake/lib/python3.6/dist-packages/amqp/method_framing.py", line 189, in read_method
-    raise m
-error: [Errno 104] Connection reset by peer
-```
-
-```python
-Traceback (most recent call last):
-  [...]
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 288, in connect
-    self.drain_events(timeout=self.connect_timeout)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 471, in drain_events
-    while not self.blocking_read(timeout):
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 477, in blocking_read
-    return self.on_inbound_frame(frame)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/method_framing.py", line 55, in on_frame
-    callback(channel, method_sig, buf, None)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 481, in on_inbound_method
-    method_sig, payload, content,
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/abstract_channel.py", line 128, in dispatch_method
-    listener(*args)
-  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 603, in _on_close
-    (class_id, method_id), ConnectionError)
-amqp.exceptions.AccessRefused: (0, 0): (403) ACCESS_REFUSED - Login was refused using authentication mechanism AMQPLAIN. For details see the broker logfile.
-```
-
-These errors mean that RabbiMQ _user_ and _vhost_ have not been created or set correctly. Please refer to [cluster documentation](installing/cluster.md#rabbitmq) to fix it.
-
-******
-
 ### Swap partitions
 
 Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
@@ -226,6 +164,64 @@ The OpenQuake Engine may require lot of disk space for the raw results data (`hd
 - `custom_tmp` must be set to `/mnt/ext_volume/tmp` (the directory must exist)
 
 ******
+
+### Certificate verification on macOS
+
+```python
+Traceback (most recent call last):
+  File "/Users/openquake/py36/bin/oq", line 11, in <module>
+    load_entry_point('openquake.engine', 'console_scripts', 'oq')()
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/__main__.py", line 53, in oq
+    parser.callfunc()
+  File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 181, in callfunc
+    return self.func(**vars(namespace))
+  File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 251, in main
+    return func(**kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 210, in engine
+    exports, hazard_calculation_id=hc_id)
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 70, in run_job
+    eng.run_calc(job_id, oqparam, exports, **kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/engine/engine.py", line 341, in run_calc
+    close=False, **kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 192, in run
+    self.pre_execute()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/scenario_damage.py", line 85, in pre_execute
+    super().pre_execute()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 465, in pre_execute
+    self.read_inputs()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 398, in read_inputs
+    self._read_risk_data()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 655, in _read_risk_data
+    haz_sitecol, assetcol)
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 821, in read_shakemap
+    oq.discard_assets)
+  File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 100, in get_sitecol_shakemap
+    array = download_array(array_or_id)
+  File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 74, in download_array
+    contents = json.loads(urlopen(url).read())[
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 223, in urlopen
+    return opener.open(url, data, timeout)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 526, in open
+    response = self._open(req, data)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 544, in _open
+    '_open', req)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 504, in _call_chain
+    result = func(*args)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1361, in https_open
+    context=self._context, check_hostname=self._check_hostname)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1320, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:852)>
+```
+
+Please have a look at `/Applications/Python 3.6/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
+
+```bash
+sudo /Applications/Python\ 3.6/install_certificates.command
+```
+
+******
+
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
