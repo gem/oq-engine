@@ -318,6 +318,7 @@ class ContextMaker(object):
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 pdist = self.pointsource_distance(mag)
                 close_sites, far_sites = sites.split(src.location, pdist)
+                # print(mag, close_sites)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
                         yield rup, far_sites
