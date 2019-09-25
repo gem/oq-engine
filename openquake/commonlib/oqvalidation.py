@@ -151,7 +151,7 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
-    # pointsource_distance = valid.Param(valid.maximum_distance, {})
+    pointsource_distance = valid.Param(float, None)
     task_duration = valid.Param(valid.positiveint, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -183,11 +183,13 @@ class OqParam(valid.ParamSet):
         return {key: valid.RjbEquivalent(value)
                 for key, value in self.inputs['reqv'].items()}
 
-    def pointsource_distance(self, mag):
+    def get_pointsource_distance(self, mag):
         """
         :param mag: a rupture magnitude
         :returns: a heuristic distance associated to the magnitude
         """
+        if self.pointsource_distance is not None:
+            return self.pointsource_distance
         return 2.1 ** mag
 
     def __init__(self, **names_vals):
