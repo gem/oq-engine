@@ -253,7 +253,7 @@ class SourceModelFactory(object):
         :yields: :class:`openquake.commonlib.logictree.LtSourceModel` tuples
         """
         oq = self.oqparam
-        spinning_off = self.oqparam.pointsource_distance == {'default': 0.0}
+        spinning_off = self.oqparam.pointsource_distance == 0
         if spinning_off:
             logging.info('Removing nodal plane and hypocenter distributions')
         dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
