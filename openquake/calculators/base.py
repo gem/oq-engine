@@ -729,7 +729,7 @@ class HazardCalculator(BaseCalculator):
             self.csm.info.update_eff_ruptures(eff_ruptures)
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
                 self.oqparam.sm_lt_path)
-            if not self.rlzs_assoc:
+            if not self.rlzs_assoc.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
             self.datastore['csm_info'] = self.csm.info
             self.datastore['source_model_lt'] = self.csm.source_model_lt
