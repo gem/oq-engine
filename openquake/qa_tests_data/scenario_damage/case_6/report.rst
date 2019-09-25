@@ -3,8 +3,8 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     1,635,481,027      
-date           2019-07-30T15:03:47
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:00
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 40, num_rlzs = 1
@@ -80,10 +80,20 @@ MUR/LWAL/HEX:5 1.00000 NaN    1   1   1         1
 *ALL*          5.00000 NaN    5   5   1         5         
 ============== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ================ ========= ========= ======
-calc_15453       time_sec  memory_mb counts
+calc_1743        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.368E-04 0.0       1     
+reading exposure 4.253E-04 0.0       1     
 ================ ========= ========= ======

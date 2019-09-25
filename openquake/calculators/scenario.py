@@ -67,7 +67,7 @@ class ScenarioCalculator(base.HazardCalculator):
             events[rlz * E: rlz * E + E]['rlz_id'] = rlz
         self.datastore['events'] = self.events = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rup_array = get_rup_array([ebr], self.src_filter)
+        rup_array = get_rup_array([ebr], self.src_filter())
         if len(rup_array) == 0:
             maxdist = oq.maximum_distance(
                 self.rup.tectonic_region_type, self.rup.mag)
@@ -108,7 +108,7 @@ class ScenarioCalculator(base.HazardCalculator):
     def post_execute(self, gmfa):
         if len(gmfa) == 0:  # no rupture_model
             return
-        with self.monitor('saving gmfs', autoflush=True):
+        with self.monitor('saving gmfs'):
             base.save_gmf_data(
                 self.datastore, self.sitecol, gmfa,
                 self.oqparam.imtls, self.events)

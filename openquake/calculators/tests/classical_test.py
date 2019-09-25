@@ -31,7 +31,8 @@ from openquake.qa_tests_data.classical import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41)
+    case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
+    case_42)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -73,7 +74,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_1.__file__, 'job.ini', minimum_magnitude='4.5')
-        self.assertEqual(str(ctx.exception), 'All sources were filtered away!')
+        self.assertEqual(
+            str(ctx.exception), 'Empty logic tree: too much filtering?')
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -522,3 +524,8 @@ hazard_uhs-std.csv
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_curve-mean-SA(1.0).csv"],
                               case_41.__file__)
+
+    def test_case_42(self):
+        # split/filter a long complex fault source with maxdist=1000 km
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "hazard_map-mean-PGA.csv"], case_42.__file__)

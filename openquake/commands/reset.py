@@ -44,8 +44,8 @@ def reset(yes):
         user = getpass.getuser()
         for calc_id in logs.dbcmd('get_calc_ids', user):
             purge_one(calc_id, user, force=True)
-        purge_all(user)  # calculations in oqdata not in the db
         if os.access(dbpath, os.W_OK):   # single user mode
+            purge_all(user)  # calculations in oqdata not in the db
             # stop the dbserver first
             pid = logs.dbcmd('getpid')
             os.kill(pid, signal.SIGTERM)

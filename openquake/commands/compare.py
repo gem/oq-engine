@@ -87,8 +87,8 @@ def compare(what, imt, calc_ids, files, samplesites=100, rtol=.1, atol=1E-4):
     rows = collections.defaultdict(list)
     diff_idxs = get_diff_idxs(array_imt, rtol, atol)
     if len(diff_idxs) == 0:
-        print('There are no differences within the tolerance of %d%%' %
-              (rtol * 100))
+        print('There are no differences within the tolerances '
+              'atol=%s, rtol=%d%%' % (atol, rtol * 100))
         return
     arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
     for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
