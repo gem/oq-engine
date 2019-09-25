@@ -236,8 +236,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         task_no, (0, 0, U32([])))
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
-        if not self.calc_times:
-            raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory
         return acc
 
