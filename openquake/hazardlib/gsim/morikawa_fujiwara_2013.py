@@ -27,7 +27,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, JMA
 
 
-class MorikawaFujiwara2013(GMPE):
+class MorikawaFujiwara2013Crustal(GMPE):
     """
     Implements the GMM from Morikawa and Fujiwara published as "A New Ground
     Motion Prediction Equation for Japan Applicable up to M9 Mega-Earthquake"
@@ -35,7 +35,7 @@ class MorikawaFujiwara2013(GMPE):
     """
 
     #: Supported tectonic region type is active shallow crust
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration
@@ -54,8 +54,6 @@ class MorikawaFujiwara2013(GMPE):
     #: and total, see equation 2, pag 106.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
     ])
 
     #: Required site parameters is Vs30
@@ -86,31 +84,42 @@ class MorikawaFujiwara2013(GMPE):
         mean = (mag_term + self._get_basin_term(C, sites.z1pt4) +
                 self._get_shallow_amplification_term(C, sites.vs30) +
                 self._get_intensity_correction_term(C, self.region, sites.xvf,
+                rup.hypo_depth))
+        """
+        if rup.hypo_depth > 49:
+            print(mag_term,
+                  self._get_shallow_amplification_term(C, sites.vs30),
+                  self._get_basin_term(C, sites.z1pt4),
+                  self._get_intensity_correction_term(C, self.region, sites.xvf,
                                                     rup.hypo_depth))
-        print(10**mag_term,
-              10**self._get_basin_term(C, sites.z1pt4),
-              10**self._get_shallow_amplification_term(C, sites.vs30),
-              10**self._get_intensity_correction_term(C, self.region, sites.xvf,
-                                                    rup.hypo_depth))
+        """
+
+        stddevs = self._get_stddevs(C, stddev_types,  dists.rrup.shape[0])
         mean = np.log(10**mean/980.665)
-        std = 0
-        return mean, std
+        return mean, stddevs
+
+    def _get_stddevs(self, C, stddev_types, num_sites):
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                   for stddev_type in stddev_types)
+        std = np.log(10**C['PH'])
+        stddevs = [np.zeros(num_sites) + std for _ in stddev_types]
+        return stddevs
 
     def _get_magnitude_term(self, C, mag, rrup):
         mw01 = self.CONSTS["Mw01"]
         mw1 = self.CONSTS["Mw1"]
-        mw1prime = np.min([mag, mw01])
+        mw1prime = np.minimum(mag, mw01)
         return (C['a']*(mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
                 np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
     def _get_basin_term(self, C, z1pt4):
-        d0 = self.CONSTS["Mw1"]
+        d0 = self.CONSTS["D0"]
         tmp = np.ones_like(z1pt4) * C['Dlmin']
         return C['pd'] * np.log10(np.maximum(tmp, z1pt4)/d0)
 
     def _get_shallow_amplification_term(self, C, vs30):
         tmp = np.ones_like(vs30) * C['Vsmax']
-        return C['ps'] * np.log10(np.maximum(tmp, vs30)/C['V0'])
+        return C['ps'] * np.log10(np.minimum(tmp, vs30)/C['V0'])
 
     def _get_intensity_correction_term(self, C, region, xvf, focal_depth):
         if region == 'NE':
@@ -121,7 +130,10 @@ class MorikawaFujiwara2013(GMPE):
             gamma = 0.
         else:
             raise ValueError('Unsupported region')
-        return gamma * xvf * focal_depth
+
+        return (gamma * np.minimum(xvf, 75.0) *
+                np.maximum(focal_depth-30., 0.))
+
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
   IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gEW      PH
@@ -182,3 +194,29 @@ class MorikawaFujiwara2013(GMPE):
         "e": 0.5,
         "Mw01": 4.5,
         "Mw1": 16.0}
+
+
+class MorikawaFujiwara2013SubInterface(MorikawaFujiwara2013Crustal):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    def _get_magnitude_term(self, C, mag, rrup):
+        mw01 = self.CONSTS["Mw01"]
+        mw1 = self.CONSTS["Mw1"]
+        mw1prime = np.min([mag, mw01])
+        return (C['a']*(mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
+                np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
+
+
+class MorikawaFujiwara2013SubSlab(MorikawaFujiwara2013Crustal):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    def _get_magnitude_term(self, C, mag, rrup):
+        mw01 = self.CONSTS["Mw01"]
+        mw1 = self.CONSTS["Mw1"]
+        mw1prime = np.min([mag, mw01])
+        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
+                np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
