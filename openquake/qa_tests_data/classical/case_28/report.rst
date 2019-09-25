@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     3,672,594,697      
-date           2019-07-30T15:04:33
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:25
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 133, num_rlzs = 8
@@ -82,18 +82,18 @@ GridSources.xml 1      Tectonic_type_b 260          260
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =======
-source_id grp_id code num_ruptures calc_time num_sites weight speed  
-========= ====== ==== ============ ========= ========= ====== =======
-21        0      M    260          0.00175   1.00000   260    148,734
-========= ====== ==== ============ ========= ========= ====== =======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+21        0      M    260          6.366E-04 1.00000   260          408,434
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-M    0.00175   2     
+M    6.366E-04 2     
 ==== ========= ======
 
 Duplicated sources
@@ -102,28 +102,28 @@ Found 0 unique sources and 1 duplicate sources with multiplicity 2.0: ['21']
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =======
-operation-duration mean      stddev    min       max       outputs
-preclassical       0.00210   NaN       0.00210   0.00210   1      
-read_source_models 8.621E-04 2.630E-05 8.435E-04 8.807E-04 2      
-================== ========= ========= ========= ========= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+preclassical       0.00111 NaN       0.00111 0.00111 1      
+read_source_models 0.00212 4.872E-05 0.00209 0.00216 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================= ========
-task               sent                                                    received
-preclassical       params=1.95 KB srcs=1.54 KB gsims=632 B srcfilter=220 B 347 B   
-read_source_models converter=628 B fnames=198 B                            3.86 KB 
-================== ======================================================= ========
+================== =========================================== ========
+task               sent                                        received
+preclassical       params=1.95 KB srcs=1.55 KB srcfilter=716 B 347 B   
+read_source_models converter=628 B fnames=212 B                3.87 KB 
+================== =========================================== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15548               time_sec  memory_mb counts
+calc_1843                time_sec  memory_mb counts
 ======================== ========= ========= ======
-store source_info        0.00217   0.0       1     
-total preclassical       0.00210   0.0       1     
-total read_source_models 0.00172   0.0       2     
-managing sources         0.00108   0.0       1     
-aggregate curves         1.507E-04 0.0       1     
+total read_source_models 0.00425   0.0       2     
+store source_info        0.00203   0.0       1     
+total preclassical       0.00111   0.0       1     
+managing sources         3.836E-04 0.0       1     
+aggregate curves         2.332E-04 0.0       1     
 ======================== ========= ========= ======

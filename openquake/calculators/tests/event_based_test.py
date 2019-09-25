@@ -21,7 +21,7 @@ import math
 
 import numpy.testing
 
-from openquake.baselib.general import group_array, gettemp
+from openquake.baselib.general import group_array, countby, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
@@ -154,7 +154,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['rupture_class'],
                          'ParametricProbabilisticRupture')
         self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['rup_id'], 1066)
+        self.assertEqual(einfo['serial'], 1066)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
@@ -205,7 +205,10 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check the rupture multiplicity
         [f] = export(('ruptures', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.xml', f)
+        self.assertEqualFiles('expected/ses.xml', f)
+
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', f)
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
@@ -252,6 +255,16 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
+        aw = extract(self.calc.datastore, 'realizations')
+        dic = countby(aw.array, 'branch_path')
+        self.assertEqual({b'b11~BA': 32, # w = .6 * .5 = .30
+                          b'b11~CB': 16, # w = .6 * .3 = .18
+                          b'b11~CY': 17, # w = .6 * .2 = .12
+                          b'b12~BA': 16, # w = .4 * .5 = .20
+                          b'b12~CB': 11, # w = .4 * .3 = .12
+                          b'b12~CY': 8}, # w = .4 * .2 = .08
+                         dic)
+
         fnames = out['hcurves', 'csv']
         mean_eb = get_mean_curves(self.calc.datastore)
         for exp, got in zip(expected, fnames):

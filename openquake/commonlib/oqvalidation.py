@@ -113,6 +113,7 @@ class OqParam(valid.ParamSet):
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
+    num_cores = valid.Param(valid.positiveint, None)
     num_epsilon_bins = valid.Param(valid.positiveint)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
@@ -559,8 +560,7 @@ class OqParam(valid.ParamSet):
 
     def hazard_stats(self):
         """
-        Return a list of item with the statistical functions defined for the
-        hazard calculation
+        Return a dictionary stat_name -> stat_func
         """
         names = []  # name of statistical functions
         funcs = []  # statistical functions of kind func(values, weights)
@@ -599,12 +599,30 @@ class OqParam(valid.ParamSet):
         """
         return self.hazard_calculation_id if self.shakemap_id else True
 
+    def is_valid_truncation_level(self):
+        """
+        In presence of a correlation model the truncation level must be nonzero
+        """
+        if self.ground_motion_correlation_model:
+            return self.truncation_level != 0
+        else:
+            return True
+
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
         """
         if self.calculation_mode == 'disaggregation':
             return self.truncation_level is not None
+        else:
+            return True
+
+    def is_valid_aggregate_by(self):
+        """
+        aggregate_by is implemented only for the ebrisk calculator
+        """
+        if self.aggregate_by:
+            return self.calculation_mode == 'ebrisk'
         else:
             return True
 

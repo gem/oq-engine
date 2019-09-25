@@ -58,27 +58,28 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
         [gsims] = sorted(self.csm.info.gsim_lt.values.values())
         sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
+        srcfilter = self.src_filter()
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             [src] = grp
             srcs = list(src)
             if sample:
-                srcs = random_filtered_sources(srcs, self.src_filter, 1)
+                srcs = random_filtered_sources(srcs, srcfilter, 1)
             acc = parallel.Starmap.apply(
                 classical_split_filter,
-                (srcs, self.src_filter, gsims, param, monitor),
+                (srcs, srcfilter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
-                hdf5path=self.datastore.filename
+                h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
-            srcs = ucerf.get_background_sources(self.src_filter, sample)
+            srcs = ucerf.get_background_sources(srcfilter, sample)
             acc = parallel.Starmap.apply(
-                classical, (srcs, self.src_filter, gsims, param, monitor),
+                classical, (srcs, srcfilter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
-                hdf5path=self.datastore.filename
+                h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
         self.store_rlz_info(acc.eff_ruptures)
         self.store_source_info(self.calc_times)

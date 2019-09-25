@@ -296,10 +296,8 @@ class RuptureSerializer(object):
         offset = len(self.datastore['rupgeoms'])
         rup_array.array['gidx1'] += offset
         rup_array.array['gidx2'] += offset
-        previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
-        self.datastore.extend(
-            'ruptures', rup_array, nbytes=previous + rup_array.nbytes)
-        self.datastore.extend('rupgeoms', rup_array.geom)
+        hdf5.extend(self.datastore['ruptures'], rup_array)
+        hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         # TODO: PMFs for nonparametric ruptures are not stored
         self.datastore.flush()
 

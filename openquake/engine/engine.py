@@ -74,6 +74,7 @@ if OQ_DISTRIBUTE == 'zmq':
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
+        parallel.Starmap.num_cores = num_workers
         OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
@@ -91,6 +92,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.dbcmd('finish', job_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        parallel.Starmap.num_cores = ncores
         OqParam.concurrent_tasks.default = ncores * 2
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
@@ -242,7 +244,7 @@ def job_from_file(job_ini, job_id, username, **kw):
     try:
         oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
     except Exception:
-        logs.dbcmd('finish', job_id, 'failed')
+        logs.dbcmd('finish', job_id, 'deleted')
         raise
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
@@ -330,8 +332,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
 
         poll_queue(job_id, _PID, poll_time=15)
         if OQ_DISTRIBUTE.endswith('pool'):
-            logs.LOG.warn('Using %d cores on %s',
-                          parallel.cpu_count, platform.node())
+            logs.LOG.warning('Using %d cores on %s',
+                             parallel.Starmap.num_cores, platform.node())
         if OQ_DISTRIBUTE == 'zmq':
             logs.dbcmd('zmq_start')  # start zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
@@ -339,8 +341,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             set_concurrent_tasks_default(job_id)
         t0 = time.time()
         calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id,
-                 close=False, **kw)
+                 hazard_calculation_id=hazard_calculation_id, **kw)
         logs.LOG.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         duration = time.time() - t0

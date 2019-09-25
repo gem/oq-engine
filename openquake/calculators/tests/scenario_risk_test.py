@@ -53,6 +53,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['losses_by_event', 'csv']
         self.assertEqualFiles('expected/losses_by_event.csv', fname)
 
+        with self.assertRaises(ValueError):
+            # aggregate_by is implemented only for the ebrisk calculator
+            self.run_calc(case_1.__file__, 'job_risk.ini',
+                          aggregate_by='taxonomy')
+
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
         [fname] = out['agglosses', 'csv']
@@ -208,3 +213,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
         [fname] = export(('agglosses', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
+
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
