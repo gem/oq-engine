@@ -3,7 +3,6 @@
       xmlns="http://openquake.org/xmlns/nrml/0.5">
     <logicTree logicTreeID="lt1">
 
-        <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="b11">
@@ -13,9 +12,7 @@
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
 
-        <logicTreeBranchingLevel branchingLevelID="bl2">
             <logicTreeBranchSet uncertaintyType="bGRRelative"
                                 branchSetID="bs21">
                 <logicTreeBranch branchID="b21">
@@ -31,9 +28,7 @@
                     <uncertaintyWeight>0.334</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
 
-        <logicTreeBranchingLevel branchingLevelID="bl3">
             <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
                                 branchSetID="bs31">
                 <logicTreeBranch branchID="b31">
@@ -49,7 +44,6 @@
                     <uncertaintyWeight>0.334</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
 
     </logicTree>
 </nrml>

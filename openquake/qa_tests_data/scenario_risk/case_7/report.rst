@@ -3,8 +3,8 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2019-07-30T15:03:55
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:20:58
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 27, num_levels = 8, num_rlzs = 1
@@ -80,11 +80,21 @@ taxonomy mean    stddev min max num_sites num_assets
 *ALL*    1.00000 0.0    1   1   27        27        
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 =================== ========= ========= ======
-calc_15497          time_sec  memory_mb counts
+calc_1733           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.03479   0.0       1     
-reading exposure    5.906E-04 0.0       1     
+building riskinputs 0.03553   0.0       1     
+reading exposure    5.705E-04 0.0       1     
 =================== ========= ========= ======

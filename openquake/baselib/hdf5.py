@@ -107,26 +107,6 @@ def extend(dset, array, **attrs):
     return newlength
 
 
-def extend3(filename, key, array, **attrs):
-    """
-    Extend an HDF5 file dataset with the given array
-    """
-    with h5py.File(filename) as h5:
-        try:
-            dset = h5[key]
-        except KeyError:
-            if array.dtype.name == 'object':  # vlen array
-                shape = (None,) + preshape(array[0])
-            else:
-                shape = (None,) + array.shape[1:]
-            dset = create(h5, key, array.dtype, shape)
-        length = extend(dset, array)
-        for key, val in attrs.items():
-            dset.attrs[key] = val
-        h5.flush()
-    return length
-
-
 class LiteralAttrs(object):
     """
     A class to serialize a set of parameters in HDF5 format. The goal is to
@@ -277,6 +257,14 @@ class File(h5py.File):
     3
     >>> f.close()
     """
+    def __init__(self, name, mode=None, driver=None, libver='latest',
+                 userblock_size=None, swmr=True, rdcc_nslots=None,
+                 rdcc_nbytes=None, rdcc_w0=None, track_order=None,
+                 **kwds):
+        super().__init__(name, mode, driver, libver,
+                         userblock_size, swmr, rdcc_nslots,
+                         rdcc_nbytes, rdcc_w0, track_order, **kwds)
+
     @classmethod
     def temporary(cls):
         """
@@ -303,16 +291,9 @@ class File(h5py.File):
         except KeyError:
             vdt = h5py.special_dtype(vlen=data[0].dtype)
             dset = create(self, key, vdt, shape, fillvalue=None)
-        nbytes = dset.attrs.get('nbytes', 0)
-        totlen = dset.attrs.get('totlen', 0)
-        for i, val in enumerate(data):
-            nbytes += val.nbytes
-            totlen += len(val)
         length = len(dset)
         dset.resize((length + len(data),) + shape[1:])
         dset[length:length + len(data)] = data
-        dset.attrs['nbytes'] = nbytes
-        dset.attrs['totlen'] = totlen
 
     def save_attrs(self, path, attrs, **kw):
         items = list(attrs.items()) + list(kw.items())
@@ -381,17 +362,6 @@ class File(h5py.File):
         # make the file pickleable
         return {'_id': 0}
 
-    def set_nbytes(self, key, nbytes=None):
-        """
-        Set the `nbytes` attribute on the HDF5 object identified by `key`.
-        """
-        obj = super().__getitem__(key)
-        if nbytes is not None:  # size set from outside
-            obj.attrs['nbytes'] = nbytes
-        else:  # recursively determine the size of the datagroup
-            obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
-        return nbytes
-
     def getitem(self, name):
         """
         Return a dataset by using h5py.File.__getitem__
@@ -418,7 +388,7 @@ class ArrayWrapper(object):
     A pickleable and serializable wrapper over an array, HDF5 dataset or group
     """
     @classmethod
-    def from_(cls, obj):
+    def from_(cls, obj, extra='value'):
         if isinstance(obj, cls):  # it is already an ArrayWrapper
             return obj
         elif inspect.isgenerator(obj):
@@ -429,10 +399,10 @@ class ArrayWrapper(object):
             array, attrs = obj[()], dict(obj.attrs)
             shape_descr = attrs.get('shape_descr', [])
             for descr in map(decode, shape_descr):
-                attrs[descr] = ['?'] + list(attrs[descr])
+                attrs[descr] = list(attrs[descr])
         else:  # assume obj is an array
             array, attrs = obj, {}
-        return cls(array, attrs)
+        return cls(array, attrs, (extra,))
 
     def __init__(self, array, attrs, extra=('value',)):
         vars(self).update(attrs)
@@ -465,6 +435,12 @@ class ArrayWrapper(object):
         self.__init__(array, attrs)
 
     def __repr__(self):
+        if hasattr(self, 'shape_descr'):
+            assert len(self.shape) == len(self.shape_descr), (
+                self.shape_descr, self.shape)
+            lst = ['%s=%d' % (descr, size)
+                   for descr, size in zip(self.shape_descr, self.shape)]
+            return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
         return '<%s%s>' % (self.__class__.__name__, self.shape)
 
     @property
@@ -513,8 +489,8 @@ class ArrayWrapper(object):
 
         >>> from pprint import pprint
         >>> dic = dict(shape_descr=['taxonomy', 'occupancy'],
-        ...            taxonomy=['?', 'RC', 'WOOD'],
-        ...            occupancy=['?', 'RES', 'IND', 'COM'])
+        ...            taxonomy=['RC', 'WOOD'],
+        ...            occupancy=['RES', 'IND', 'COM'])
         >>> arr = numpy.zeros((2, 3))
         >>> arr[0, 0] = 2000
         >>> arr[0, 1] = 5000
@@ -537,16 +513,17 @@ class ArrayWrapper(object):
                 raise ValueError(
                     'There are %d extra-fields but %d dimensions in %s' %
                     (len(self._extra), shape[-1], self))
-        fields = tuple(self.shape_descr) + self._extra
+        shape_descr = tuple(decode(d) for d in self.shape_descr)
+        fields = shape_descr + self._extra
         out = []
         tags = []
         idxs = []
-        for i, tagname in enumerate(map(decode, self.shape_descr)):
-            values = getattr(self, tagname)[1:]
+        for i, tagname in enumerate(shape_descr):
+            values = getattr(self, tagname)
             if len(values) != shape[i]:
                 raise ValueError(
-                    'The tag %s[%d] with %d values is inconsistent with %s'
-                    % (tagname, i, len(values), self))
+                    'The tag %s with %d values is inconsistent with %s'
+                    % (tagname, len(values), self))
             tags.append(decode_array(values))
             idxs.append(range(len(values)))
         for idx, values in zip(itertools.product(*idxs),

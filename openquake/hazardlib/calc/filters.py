@@ -270,10 +270,7 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if filename and not os.path.exists(filename):  # store the sitecol
-            with hdf5.File(filename, 'w') as h5:
-                h5['sitecol'] = sitecol if sitecol else ()
-        else:  # keep the sitecol in memory
+        if not filename:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
     def __getstate__(self):
@@ -297,8 +294,9 @@ class SourceFilter(object):
             return
         elif not os.path.exists(self.filename):
             raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
-        with hdf5.File(self.filename, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5.get('sitecol')
+        h5 = hdf5.File(self.filename, 'r')
+        # NB: must not be closed on the workers for the case OQ_DISTRIBUTE=no
+        self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
     def get_rectangle(self, src):

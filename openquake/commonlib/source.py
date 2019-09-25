@@ -288,13 +288,6 @@ class CompositionInfo(object):
                 dic[src_group.id] = getattr(src_group, name)
         return dic
 
-    def _get_rlzs(self, smodel, all_rlzs, seed):
-        if self.num_samples:
-            rlzs = logictree.sample(all_rlzs, smodel.samples, seed)
-        else:  # full enumeration
-            rlzs = logictree.get_effective_rlzs(all_rlzs)
-        return rlzs
-
     def __repr__(self):
         info_by_model = {}
         for sm in self.source_models:
