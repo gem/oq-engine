@@ -18,6 +18,7 @@
 import abc
 import sys
 import time
+import operator
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -151,7 +152,7 @@ class ContextMaker(object):
         self.maximum_distance = (
             param.get('maximum_distance') or IntegrationDistance({}))
         self.trunclevel = param.get('truncation_level')
-        self.pointsource_distance = param.get('pointsource_distance', {})
+        self.pointsource_distance = param.get('pointsource_distance', None)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -313,20 +314,21 @@ class ContextMaker(object):
 
     def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
-        pdist = self.pointsource_distance.get(src.tectonic_region_type)
-        if hasattr(src, 'location') and pdist:
-            close_sites, far_sites = sites.split(src.location, pdist)
-            if close_sites is None:  # all is far
-                for rup in src.iter_ruptures(False, False):
-                    yield rup, far_sites
-            elif far_sites is None:  # all is close
-                for rup in src.iter_ruptures(True, True):
-                    yield rup, close_sites
-            else:
-                for rup in src.iter_ruptures(True, True):
-                    yield rup, close_sites
-                for rup in src.iter_ruptures(False, False):
-                    yield rup, far_sites
+        if hasattr(src, 'location'):
+            for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+                pdist = self.pointsource_distance(mag)
+                close_sites, far_sites = sites.split(src.location, pdist)
+                if close_sites is None:  # all is far
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                        yield rup, far_sites
+                elif far_sites is None:  # all is close
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                        yield rup, close_sites
+                else:
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                        yield rup, close_sites
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                        yield rup, far_sites
         else:
             for rup in src.iter_ruptures():
                 yield rup, sites
