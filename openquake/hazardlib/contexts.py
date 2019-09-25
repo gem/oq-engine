@@ -152,7 +152,7 @@ class ContextMaker(object):
         self.maximum_distance = (
             param.get('maximum_distance') or IntegrationDistance({}))
         self.trunclevel = param.get('truncation_level')
-        self.pointsource_distance = param.get('pointsource_distance', None)
+        self.pointsource_distance = param.get('pointsource_distance', 1000)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -316,7 +316,8 @@ class ContextMaker(object):
         # implements the pointsource_distance feature
         if hasattr(src, 'location'):
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-                pdist = self.pointsource_distance(mag)
+                pdist = self.pointsource_distance(mag) if callable(
+                    self.pointsource_distance) else self.pointsource_distance
                 close_sites, far_sites = sites.split(src.location, pdist)
                 # print(mag, close_sites)
                 if close_sites is None:  # all is far
