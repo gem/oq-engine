@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Implements Abrahamson et al (2018) update of the BC Hydro GMPE
+
   [Michele Simionato]
   * Hiding calculations that fail before the pre-execute phase (for instance,
     because of missing files); they already give a clear error
