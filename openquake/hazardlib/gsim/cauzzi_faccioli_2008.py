@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -114,9 +114,8 @@ class CauzziFaccioli2008(GMPE):
         Distances are clipped at 15 km (as per Ezio Faccioli's personal
         communication.)
         """
-        d = rhypo
+        d = np.array(rhypo)  # make a copy
         d[d <= 15.0] = 15.0
-
         return C['a3'] * np.log10(d)
 
     def _compute_site_term(self, C, vs30):
@@ -127,7 +126,7 @@ class CauzziFaccioli2008(GMPE):
         # for rock values the site term is zero
         site_term = np.zeros_like(vs30)
 
-         # hard soil
+        # hard soil
         site_term[(vs30 >= 360) & (vs30 < 800)] = C['aB']
 
         # medium soil

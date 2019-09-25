@@ -2,12 +2,12 @@ Scenario Damage
 ===============
 
 ============== ===================
-checksum32     2,048,857,716      
-date           2018-06-26T14:56:58
-engine_version 3.2.0-gitb0cd949   
+checksum32     711,595,636        
+date           2019-09-24T15:21:00
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 7, num_levels = 26
+num_sites = 1, num_levels = 26, num_rlzs = 1
 
 Parameters
 ----------
@@ -46,25 +46,30 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -73,26 +78,22 @@ Wood     1.00000 NaN    1   1   1         1
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-scenario_damage    0.01062 NaN    0.01062 0.01062 1        
-================== ======= ====== ======= ======= =========
+Not available
 
 Data transfer
 -------------
-=============== ================================================= ========
-task            sent                                              received
-scenario_damage riskmodel=0 B riskinput=0 B param=0 B monitor=0 B 5.27 KB 
-=============== ================================================= ========
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
-========================== ========= ========= ======
-operation                  time_sec  memory_mb counts
-========================== ========= ========= ======
-total scenario_damage      0.01062   0.0       1     
-getting hazard             0.00721   0.0       2     
-building riskinputs        0.00258   0.0       1     
-computing risk             0.00213   0.0       1     
-unpickling scenario_damage 3.414E-04 0.0       1     
-========================== ========= ========= ======
+====================== ========= ========= ======
+calc_1750              time_sec  memory_mb counts
+====================== ========= ========= ======
+ScenarioCalculator.run 0.04732   1.03125   1     
+saving gmfs            0.00285   0.0       1     
+building riskinputs    0.00198   0.0       1     
+computing gmfs         0.00145   0.0       1     
+reading exposure       6.144E-04 0.0       1     
+====================== ========= ========= ======

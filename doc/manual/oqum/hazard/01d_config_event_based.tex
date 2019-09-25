@@ -50,9 +50,9 @@ ground_motion_fields = true
 # post-process ground motion fields into hazard curves,
 # given the specified `intensity_measure_types_and_levels`
 hazard_curves_from_gmfs = true
-mean_hazard_curves = true
-quantile_hazard_curves = 0.15 0.5 0.85
-poes = 0.1 0.2
+mean = true
+quantiles = 0.15, 0.50, 0.85
+poes = 0.1, 0.2
 \end{minted}
 
 Starting from \glsdesc{acr:oqe22}, it is now possible to export information

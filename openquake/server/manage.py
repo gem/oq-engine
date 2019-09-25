@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -54,7 +54,6 @@ if __name__ == "__main__":
         if err:
             sys.exit(err)
         logs.dbcmd('upgrade_db')  # make sure the DB exists
-        logs.dbcmd('reset_is_running')  # reset the flag is_running
 
     setproctitle('oq-webui')
     execute_from_command_line(sys.argv)

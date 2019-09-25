@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel name="Model 1" >
+        <sourceGroup name="group 1" tectonicRegion="Active Shallow Crust" >
+
+            <areaSource id="a1" name="Area Source" tectonicRegion="Active Shallow Crust" >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -0.5 -0.5 -0.3 -0.1 0.1 0.2 0.3 -0.8
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth> 0.0 </upperSeismoDepth>
+                    <lowerSeismoDepth> 10.0 </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel> WC1994 </magScaleRel>
+                <ruptAspectRatio> 1.0 </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5" bValue="1.0" maxMag="6.5" minMag="5.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+
+            <areaSource id="a2" name="Area Source" tectonicRegion="Active Shallow Crust" >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -0.6 -0.6 -0.3 -0.1 0.1 0.2 0.3 -0.8
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth> 0.0 </upperSeismoDepth>
+                    <lowerSeismoDepth> 10.0 </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel> WC1994 </magScaleRel>
+                <ruptAspectRatio> 1.0 </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" maxMag="6.5" minMag="5.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0" probability="1.0"/>
+                </hypoDepthDist>
+            </areaSource>
+
+        </sourceGroup>
+    </sourceModel>
+</nrml>

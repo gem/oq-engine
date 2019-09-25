@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,15 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
-import operator
 import numpy
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import surface_to_array
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
 
 TWO16 = 2 ** 16
@@ -39,6 +36,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
+
+code2cls = BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
 
@@ -57,7 +56,7 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
     for imt, imls in imtls.items():
         for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), numpy.float64))
+            lst.append(('%s-%s' % (imt, iml), F32))
     curves = numpy.zeros(nsites, numpy.dtype(lst))
     for sid, pcurve in pmap.items():
         curve = curves[sid]
@@ -143,7 +142,7 @@ def compute_hazard_maps(curves, imls, poes):
 # #########################  GMF->curves #################################### #
 
 # NB (MS): the approach used here will not work for non-poissonian models
-def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
+def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     """
     Given a set of ground motion values (``gmvs``) and intensity measure levels
     (``imls``), compute hazard curve probabilities of exceedance.
@@ -152,20 +151,8 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
         A list of ground motion values, as floats.
     :param imls:
         A list of intensity measure levels, as floats.
-    :param float invest_time:
-        Investigation time, in years. It is with this time span that we compute
-        probabilities of exceedance.
-
-        Another way to put it is the following. When computing a hazard curve,
-        we want to answer the question: What is the probability of ground
-        motion meeting or exceeding the specified levels (``imls``) in a given
-        time span (``invest_time``).
-    :param float duration:
-        Time window during which GMFs occur. Another was to say it is, the
-        period of time over which we simulate ground motion occurrences.
-
-        NOTE: Duration is computed as the calculation investigation time
-        multiplied by the number of stochastic event sets.
+    :param ses_per_logic_tree_path:
+        Number of stochastic event sets: the larger, the best convergency
 
     :returns:
         Numpy array of PoEs (probabilities of exceedance).
@@ -176,51 +163,38 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     # => num_exceeding = [1, 1, 0] coming from 0.04750576 > [0.03, 0.04, 0.05]
     imls = numpy.array(imls).reshape((len(imls), 1))
     num_exceeding = numpy.sum(numpy.array(gmvs) >= imls, axis=1)
-    poes = 1 - numpy.exp(- (invest_time / duration) * num_exceeding)
+    poes = 1 - numpy.exp(- num_exceeding / ses_per_logic_tree_path)
     return poes
 
 
 # ################## utilities for classical calculators ################ #
 
-def get_imts_periods(imtls):
-    """
-    Returns a list of IMT strings and a list of periods. There is an element
-    for each IMT of type Spectral Acceleration, including PGA which is
-    considered an alias for SA(0.0). The lists are sorted by period.
-
-    :param imtls: a set of intensity measure type strings
-    :returns: a list of IMT strings and a list of periods
-    """
-    imts = []
-    for im in imtls:
-        imt = from_string(im)
-        if hasattr(imt, 'period'):
-            imts.append(imt)
-    imts.sort(key=operator.attrgetter('period'))
-    return imts, [imt.period for imt in imts]
-
-
-def make_hmap(pmap, imtls, poes):
+def make_hmap(pmap, imtls, poes, sid=None):
     """
     Compute the hazard maps associated to the passed probability map.
 
     :param pmap: hazard curves in the form of a ProbabilityMap
     :param imtls: DictArray with M intensity measure types
     :param poes: P PoEs where to compute the maps
-    :returns: a ProbabilityMap with size (N, M * P, 1)
+    :param sid: not None when pmap is actually a ProbabilityCurve
+    :returns: a ProbabilityMap with size (N, M, P)
     """
+    if sid is None:
+        sids = pmap.sids
+    else:  # passed a probability curve
+        pmap = {sid: pmap}
+        sids = [sid]
     M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M * P, 1, pmap)
+    hmap = probability_map.ProbabilityMap.build(M, P, sids, dtype=F32)
     if len(pmap) == 0:
         return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
-        curves = numpy.array([pmap[sid].array[imtls(imt), 0]
-                              for sid in pmap.sids])
+        curves = numpy.array([pmap[sid].array[imtls(imt), 0] for sid in sids])
         data = compute_hazard_maps(curves, imtls[imt], poes)  # array (N, P)
-        for sid, value in zip(pmap.sids, data):
+        for sid, value in zip(sids, data):
             array = hmap[sid].array
             for j, val in enumerate(value):
-                array[i * P + j] = val
+                array[i, j] = val
     return hmap
 
 
@@ -228,18 +202,8 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     """
     :returns: a compound array of hazard maps of shape nsites
     """
-    if isinstance(pmap, probability_map.ProbabilityMap):
-        # this is here for compatibility with the
-        # past, it could be removed in the future
-        hmap = make_hmap(pmap, imtls, poes)
-        pdic = general.DictArray({imt: poes for imt in imtls})
-        return convert_to_array(hmap, nsites, pdic)
-    try:
-        hcurves = pmap.value
-    except AttributeError:
-        hcurves = pmap
-    dtlist = [('%s-%s' % (imt, poe), F64)
-              for imt in imtls for poe in poes]
+    hcurves = pmap[()]
+    dtlist = [('%s-%s' % (imt, poe), F32) for imt in imtls for poe in poes]
     array = numpy.zeros(len(pmap), dtlist)
     for imt, imls in imtls.items():
         curves = hcurves[:, imtls(imt)]
@@ -249,61 +213,23 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     return array  # array of shape N
 
 
-def make_uhs(hcurves, imtls, poes, nsites):
+def make_uhs(hmap, info):
     """
     Make Uniform Hazard Spectra curves for each location.
 
-    It is assumed that the `lons` and `lats` for each of the `maps` are
-    uniform.
-
-    :param pmap:
-        a composite array of hazard curves
-    :param imtls:
-        a dictionary of intensity measure types and levels
-    :param poes:
-        a sequence of PoEs for the underlying hazard maps
+    :param hmap:
+        array of shape (N, M, P)
+    :param info:
+        a dictionary with keys poes, imtls, uhs_dt
     :returns:
-        an composite array containing nsites uniform hazard maps
+        a composite array containing uniform hazard spectra
     """
-    imts, _ = get_imts_periods(imtls)
-    array = make_hmap_array(hcurves, imtls, poes, len(hcurves))
-    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
-    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
-    uhs = numpy.zeros(nsites, uhs_dt)
-    for field in array.dtype.names:
-        imt, poe = field.split('-')
-        if any(imt == str(i) for i in imts):
-            uhs[poe][imt] = array[field]
+    uhs = numpy.zeros(len(hmap), info['uhs_dt'])
+    for p, poe in enumerate(info['poes']):
+        for m, imt in enumerate(info['imtls']):
+            if imt.startswith(('PGA', 'SA')):
+                uhs[str(poe)][imt] = hmap[:, m, p]
     return uhs
-
-
-def fix_minimum_intensity(min_iml, imts):
-    """
-    :param min_iml: a dictionary, possibly with a 'default' key
-    :param imts: an ordered list of IMTs
-    :returns: a numpy array of intensities, one per IMT
-
-    Make sure the dictionary minimum_intensity (provided by the user in the
-    job.ini file) is filled for all intensity measure types and has no key
-    named 'default'. Here is how it works:
-
-    >>> min_iml = {'PGA': 0.1, 'default': 0.05}
-    >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
-    array([0.1 , 0.05], dtype=float32)
-    >>> sorted(min_iml.items())
-    [('PGA', 0.1), ('PGV', 0.05)]
-    """
-    if min_iml:
-        for imt in imts:
-            try:
-                min_iml[imt] = calc.filters.getdefault(min_iml, imt)
-            except KeyError:
-                raise ValueError(
-                    'The parameter `minimum_intensity` in the job.ini '
-                    'file is missing the IMT %r' % imt)
-    if 'default' in min_iml:
-        del min_iml['default']
-    return F32([min_iml.get(imt, 0) for imt in imts])
 
 
 class RuptureData(object):
@@ -313,11 +239,11 @@ class RuptureData(object):
     """
     def __init__(self, trt, gsims):
         self.trt = trt
-        self.cmaker = ContextMaker(gsims)
+        self.cmaker = ContextMaker(trt, gsims)
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', U32), ('multiplicity', U16), ('eidx', U32),
+            ('rup_id', U32), ('srcidx', U32), ('multiplicity', U16),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -333,16 +259,16 @@ class RuptureData(object):
             self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
-            multi_lons, multi_lats = rup.surface.get_surface_boundaries()
+            mlons, mlats, mdeps = rup.surface.get_surface_boundaries_3d()
             bounds = ','.join('((%s))' % ','.join(
-                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
-                              for lons, lats in zip(multi_lons, multi_lats))
+                '%.5f %.5f %.3f' % coords for coords in zip(lons, lats, deps))
+                              for lons, lats, deps in zip(mlons, mlats, mdeps))
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.serial, ebr.multiplicity, ebr.eidx1, rate,
+                (ebr.rup_id, ebr.srcidx, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake,
                  'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
@@ -354,84 +280,25 @@ class RuptureSerializer(object):
     Serialize event based ruptures on an HDF5 files. Populate the datasets
     `ruptures` and `sids`.
     """
-    rupture_dt = numpy.dtype([
-        ('serial', U32), ('grp_id', U16), ('code', U8),
-        ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
-        ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
-
-    pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
-
-    @classmethod
-    def get_array_nbytes(cls, ebruptures):
-        """
-        Convert a list of EBRuptures into a numpy composite array
-        """
-        lst = []
-        geom = []
-        nbytes = 0
-        for ebrupture in ebruptures:
-            rup = ebrupture.rupture
-            mesh = surface_to_array(rup.surface)
-            sy, sz = mesh.shape[1:]
-            # sanity checks
-            assert sy < TWO16, 'Too many multisurfaces: %d' % sy
-            assert sz < TWO16, 'The rupture mesh spacing is too small'
-            hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-            rate = getattr(rup, 'occurrence_rate', numpy.nan)
-            tup = (ebrupture.serial, ebrupture.grp_id, rup.code,
-                   ebrupture.eidx1, ebrupture.eidx2,
-                   getattr(ebrupture, 'pmfx', -1),
-                   rup.seed, rup.mag, rup.rake, rate, hypo, sy, sz)
-            lst.append(tup)
-            geom.append(mesh.reshape(3, -1))
-            nbytes += cls.rupture_dt.itemsize + mesh.nbytes
-        return numpy.array(lst, cls.rupture_dt), geom, nbytes
-
     def __init__(self, datastore):
         self.datastore = datastore
         self.nbytes = 0
         self.nruptures = 0
-        if datastore['oqparam'].save_ruptures:
-            datastore.create_dset('ruptures', self.rupture_dt, fillvalue=None,
-                                  attrs={'nbytes': 0})
-            datastore.create_dset('rupgeoms', hdf5.vfloat32,
-                                  shape=(None, 3), fillvalue=None)
+        datastore.create_dset('ruptures', calc.stochastic.rupture_dt,
+                              attrs={'nbytes': 0})
+        datastore.create_dset('rupgeoms', calc.stochastic.point3d)
 
-    def save(self, ebruptures, eidx=0):
+    def save(self, rup_array):
         """
-        Populate a dictionary of site IDs tuples and save the ruptures.
-
-        :param ebruptures: a list of EBRupture objects to save
-        :param eidx: the last event index saved
+         Store the ruptures in array format.
         """
-        pmfbytes = 0
-        self.nruptures += len(ebruptures)
-        for ebr in ebruptures:
-            mul = ebr.multiplicity
-            ebr.eidx1 = eidx
-            ebr.eidx2 = eidx + mul
-            eidx += mul
-            rup = ebr.rupture
-            if hasattr(rup, 'pmf'):
-                pmfs = numpy.array([(ebr.serial, rup.pmf)], self.pmfs_dt)
-                dset = self.datastore.extend('pmfs', pmfs)
-                ebr.pmfx = len(dset) - 1
-                pmfbytes += self.pmfs_dt.itemsize + rup.pmf.nbytes
-
-        # store the ruptures in a compact format
-        array, geom, nbytes = self.get_array_nbytes(ebruptures)
-        previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
-        dset = self.datastore.extend(
-            'ruptures', array, nbytes=previous + nbytes)
-        self.datastore.hdf5.save_vlen('rupgeoms', geom)
-
-        # save nbytes occupied by the PMFs
-        if pmfbytes:
-            if 'nbytes' in dset.attrs:
-                dset.attrs['nbytes'] += pmfbytes
-            else:
-                dset.attrs['nbytes'] = pmfbytes
+        self.nruptures += len(rup_array)
+        offset = len(self.datastore['rupgeoms'])
+        rup_array.array['gidx1'] += offset
+        rup_array.array['gidx2'] += offset
+        hdf5.extend(self.datastore['ruptures'], rup_array)
+        hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+        # TODO: PMFs for nonparametric ruptures are not stored
         self.datastore.flush()
 
     def close(self):
@@ -443,6 +310,5 @@ class RuptureSerializer(object):
             return
         codes = numpy.unique(self.datastore['ruptures']['code'])
         attr = {'code_%d' % code: ' '.join(
-            cls.__name__ for cls in BaseRupture.types[code])
-                for code in codes}
+            cls.__name__ for cls in code2cls[code]) for code in codes}
         self.datastore.set_attrs('ruptures', **attr)

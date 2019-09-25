@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID='lt1'>
+
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="DeepSeismicity">
+                <logicTreeBranch branchID="YoungsEtAl1997SSlab">
+                    <uncertaintyModel>YoungsEtAl1997SSlab</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+            </logicTreeBranchSet>
+
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                    applyToTectonicRegionType="Volcanic">
+                <logicTreeBranch branchID="BooreEtAl1997GeometricMean">
+                    <uncertaintyModel>BooreEtAl1997GeometricMean</uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.5</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.5</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.5</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="SadighEtAl1997">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.5</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.5</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.5</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="MunsonThurber1997Hawaii">
+                    <uncertaintyModel>MunsonThurber1997Hawaii</uncertaintyModel>
+                    <uncertaintyWeight>0.34</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.0</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="Campbell1997">
+                    <uncertaintyModel>Campbell1997</uncertaintyModel>
+                    <uncertaintyWeight>0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
+                    applyToTectonicRegionType="Volcanic_Large">
+                <logicTreeBranch branchID="SadighEtAl1997">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.5</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">1.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">1.0</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="MunsonThurber1997Hawaii">
+                    <uncertaintyModel>MunsonThurber1997Hawaii</uncertaintyModel>
+                    <uncertaintyWeight>0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.5</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+    </logicTree>
+</nrml>
+

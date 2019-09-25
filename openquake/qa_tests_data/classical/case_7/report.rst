@@ -2,17 +2,17 @@ Classical Hazard QA Test, Case 7
 ================================
 
 ============== ===================
-checksum32     359,954,679        
-date           2018-06-26T14:57:49
-engine_version 3.2.0-gitb0cd949   
+checksum32     750,810,642        
+date           2019-09-24T15:21:22
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 1, num_levels = 3
+num_sites = 1, num_levels = 3, num_rlzs = 2
 
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -36,8 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model_1.xml <source_model_1.xml>`_                  
-source                  `source_model_2.xml <source_model_2.xml>`_                  
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -46,25 +44,25 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        0.70000 trivial(1)      1/1             
-b2        0.30000 trivial(1)      0/1             
+b1        0.70000 trivial(1)      1               
+b2        0.30000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
+====== ================== ========= ========== ==========
+grp_id gsims              distances siteparams ruptparams
+====== ================== ========= ========== ==========
+0      '[SadighEtAl1997]' rrup      vs30       mag rake  
+1      '[SadighEtAl1997]' rrup      vs30       mag rake  
+====== ================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997(): [0]>
+  <RlzsAssoc(size=2, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -72,81 +70,61 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 140          140         
+source_model_2.xml 1      Active Shallow Crust 91           91          
 ================== ====== ==================== ============ ============
+
+============= ===
+#TRT models   2  
+#eff_ruptures 231
+#tot_ruptures 231
+============= ===
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= ========= ======
-source_id source_class       num_ruptures calc_time split_time num_sites num_split events
-========= ================== ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource  91           0.00431   5.007E-06  1.00000   1         0     
-2         ComplexFaultSource 49           0.00425   3.099E-06  1.00000   1         0     
-========= ================== ============ ========= ========== ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ ======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
+========= ====== ==== ============ ========= ========= ============ ======
+1         0      S    91           0.00332   1.00000   91           27,398
+2         0      C    49           0.00197   1.00000   49           24,878
+========= ====== ==== ============ ========= ========= ============ ======
 
 Computation times by source typology
 ------------------------------------
-================== ========= ======
-source_class       calc_time counts
-================== ========= ======
-ComplexFaultSource 0.00425   1     
-SimpleFaultSource  0.00431   1     
-================== ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+C    0.00197   1     
+S    0.00332   2     
+==== ========= ======
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 1 unique sources and 1 duplicate sources with multiplicity 2.0: ['1']
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00538 0.00168   0.00416 0.00729 3        
-count_eff_ruptures 0.00565 8.227E-05 0.00559 0.00571 2        
-================== ======= ========= ======= ======= =========
-
-Fastest task
-------------
-taskno=2, weight=196, duration=0 s, sources="2"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   196     NaN    196 196 1
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=1, weight=91, duration=0 s, sources="1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   91      NaN    91  91  1
-======== ======= ====== === === =
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+preclassical       0.00311 0.00102 0.00239 0.00383 2      
+read_source_models 0.07277 0.05769 0.03198 0.11357 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ===================================================================== ========
-task               sent                                                                  received
-RtreeFilter        srcs=3.23 KB monitor=966 B srcfilter=837 B                            3.56 KB 
-count_eff_ruptures sources=2.49 KB param=862 B monitor=658 B srcfilter=492 B gsims=240 B 716 B   
-================== ===================================================================== ========
+================== ============================================= ========
+task               sent                                          received
+preclassical       srcs=2.26 KB srcfilter=1.26 KB params=1.01 KB 689 B   
+read_source_models converter=628 B fnames=216 B                  3.54 KB 
+================== ============================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.19229   0.0       1     
-managing sources               0.10483   0.0       1     
-total prefilter                0.01613   4.17969   3     
-total count_eff_ruptures       0.01131   6.42969   2     
-store source_info              0.00607   0.0       1     
-unpickling prefilter           7.885E-04 0.0       3     
-unpickling count_eff_ruptures  4.709E-04 0.0       2     
-aggregate curves               4.585E-04 0.0       2     
-reading site collection        3.459E-04 0.0       1     
-splitting sources              3.216E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+calc_1839                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.14555   0.0       2     
+total preclassical       0.00623   0.0       2     
+store source_info        0.00247   0.0       1     
+aggregate curves         5.794E-04 0.0       2     
+managing sources         3.815E-04 0.0       1     
+======================== ========= ========= ======

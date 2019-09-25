@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -145,6 +145,7 @@ import sys
 import copy
 import types
 import warnings
+import itertools
 import pprint as pp
 import configparser
 from contextlib import contextmanager
@@ -196,7 +197,9 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
     '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
     """
-    if isinstance(value, bytes):
+    if isinstance(value, numpy.bool_):
+        return '1' if value else '0'
+    elif isinstance(value, bytes):
         return value.decode('utf8')
     elif isinstance(value, str):
         return value
@@ -378,8 +381,12 @@ def _displayattrs(attrib, expandattrs):
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
-    val = (' %s' % repr(node.text) if expandvals and node.text is not None
-           else '')
+    if node.text is None or not expandvals:
+        val = ''
+    elif isinstance(node.text, str):
+        val = ' %s' % repr(node.text.strip())
+    else:
+        val = ' %s' % repr(node.text)  # node.text can be a tuple
     output.write(encode(indent + striptag(node.tag) + attrs + val + '\n'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
@@ -531,16 +538,13 @@ class Node(object):
         """Return the number of subnodes"""
         return len(self.nodes)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         Return True if there are subnodes; it does not iter on the
         subnodes, so for lazy nodes it returns True even if the
         generator is empty.
         """
         return bool(self.nodes)
-
-    if sys.version > '3':
-        __bool__ = __nonzero__
 
     def __deepcopy__(self, memo):
         new = object.__new__(self.__class__)
@@ -588,16 +592,40 @@ def pprint(self, stream=None, indent=1, width=80, depth=None):
 
 def node_from_dict(dic, nodefactory=Node):
     """
-    Convert a (nested) dictionary with attributes tag, attrib, text, nodes
-    into a Node object.
+    Convert a (nested) dictionary into a Node object.
     """
-    tag = dic['tag']
-    text = dic.get('text')
-    attrib = dic.get('attrib', {})
-    nodes = dic.get('nodes', [])
-    if not nodes:
+    [(tag, dic)] = dic.items()
+    if isinstance(dic, dict):
+        dic = dic.copy()
+        text = dic.pop('text', None)
+        attrib = {n[1:]: dic.pop(n) for n in sorted(dic) if n.startswith('_')}
+    else:
+        return nodefactory(tag, {}, dic)
+    if not dic:
         return nodefactory(tag, attrib, text)
-    return nodefactory(tag, attrib, nodes=list(map(node_from_dict, nodes)))
+    [(k, vs)] = dic.items()
+    if isinstance(vs, list):
+        nodes = [node_from_dict({k: v}) for v in vs]
+    else:
+        nodes = [node_from_dict(dic)]
+    return nodefactory(tag, attrib, nodes=nodes)
+
+
+def _group(one_key_dicts):
+    items = []
+    for one_key_dict in one_key_dicts:
+        [(k, v)] = one_key_dict.items()
+        items.append((k, v))
+    dic = {}
+    for k, group in itertools.groupby(items, lambda item: item[0]):
+        vs = []
+        for k, v in group:
+            vs.append(v)
+        if len(vs) == 1:
+            dic[k] = vs[0]
+        else:
+            dic[k] = vs
+    return dic
 
 
 def node_to_dict(node):
@@ -607,14 +635,22 @@ def node_to_dict(node):
 
     :param node: a Node-compatible object
     """
-    dic = dict(tag=striptag(node.tag))
+    tag = striptag(node.tag)
+    dic = {}
     if node.attrib:
-        dic['attrib'] = node.attrib
-    if node.text is not None:
-        dic['text'] = node.text
+        for nam, val in node.attrib.items():
+            dic['_' + nam] = (float(val)
+                              if isinstance(val, numpy.float64) else val)
+    if isinstance(node.text, str) and node.text.strip() == '':
+        pass
+    elif node.text is not None:
+        if 'attrib' in dic:
+            dic['text'] = node.text
+        else:
+            dic = node.text
     if node.nodes:
-        dic['nodes'] = [node_to_dict(n) for n in node]
-    return dic
+        dic.update(_group([node_to_dict(n) for n in node]))
+    return {tag: dic}
 
 
 def node_from_elem(elem, nodefactory=Node, lazy=()):
@@ -675,7 +711,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
             if filter_elem(el):
                 yield node_from_elem(el, nodefactory)
                 el.clear()  # save memory
-    except:
+    except Exception:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
         if not str(fname) in msg:
@@ -721,7 +757,7 @@ def node_from_ini(ini_file, nodefactory=Node, root_name='ini'):
     """
     fileobj = open(ini_file) if isinstance(ini_file, str) else ini_file
     cfp = configparser.RawConfigParser()
-    cfp.readfp(fileobj)
+    cfp.read_file(fileobj)
     root = nodefactory(root_name)
     sections = cfp.sections()
     for section in sections:
@@ -761,7 +797,7 @@ def context(fname, node):
     """
     try:
         yield node
-    except:
+    except Exception:
         etype, exc, tb = sys.exc_info()
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, getattr(node, 'lineno', '?'), fname)

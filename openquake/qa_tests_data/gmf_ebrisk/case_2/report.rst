@@ -2,12 +2,12 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     4,081,447,500      
-date           2018-06-05T06:39:34
-engine_version 3.2.0-git65c4735   
+checksum32     1,821,360,684      
+date           2019-09-24T15:20:55
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 3, num_levels = 10
+num_sites = 3, num_levels = 10, num_rlzs = 1
 
 Parameters
 ----------
@@ -47,29 +47,34 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,FromFile: [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-3 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 1.41 KB
+3 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 20 tasks = 480 B
 
 Exposure model
 --------------
-=============== ========
-#assets         3       
-#taxonomies     2       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     3
+#taxonomies 2
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -78,12 +83,20 @@ RC       1.00000 NaN    1   1   1         1
 *ALL*    1.00000 0.0    1   1   3         3         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-building riskinputs     0.00999  0.12109   1     
-reading site collection 0.00241  0.0       1     
-reading exposure        0.00113  0.0       1     
-======================= ======== ========= ======
+================ ========= ========= ======
+calc_1709        time_sec  memory_mb counts
+================ ========= ========= ======
+reading exposure 6.979E-04 0.0       1     
+================ ========= ========= ======

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,18 +24,17 @@ from openquake.server import views
 urlpatterns = [
     url(r'^list$', views.calc_list),
     url(r'^(\d+)/status$', views.calc_list),
-    url(r'^(\d+)$', views.calc_info),
+    url(r'^(\d+)$', views.calc),
     url(r'^(\d+)/abort$', views.calc_abort),
-    url(r'^(\d+)/datastore$', views.get_datastore),
+    url(r'^(\d+)/datastore$', views.calc_datastore),
     url(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
-    url(r'^(\d+)/oqparam$', views.get_oqparam),
+    url(r'^(\d+)/oqparam$', views.calc_oqparam),
     url(r'^(\d+)/results$', views.calc_results),
-    url(r'^(\d+)/traceback$', views.get_traceback),
-    url(r'^(\d+)/log/size$', views.get_log_size),
-    url(r'^(\d+)/log/(\d*):(\d*)$', views.get_log_slice),
+    url(r'^(\d+)/traceback$', views.calc_traceback),
+    url(r'^(\d+)/log/size$', views.calc_log_size),
+    url(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log),
     url(r'^(\d+)/remove$', views.calc_remove),
-    url(r'^result/(\d+)$', views.get_result),
-    url(r'^run$', views.run_calc),
+    url(r'^result/(\d+)$', views.calc_result),
+    url(r'^run$', views.calc_run),
     url(r'^(\d+)/result/list$', views.calc_results),
-    url(r'^\d+/result/(\d+)$', views.get_result),
 ]

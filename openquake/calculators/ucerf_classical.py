@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,17 +15,16 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import operator
-
-from openquake.baselib import parallel
+import numpy as np
+from openquake.baselib import parallel, general
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.commonlib import source
-
+from openquake.commonlib.source_model_factory import random_filtered_sources
 from openquake.calculators import base
-from openquake.calculators.classical import ClassicalCalculator
-from openquake.calculators.ucerf_base import UcerfFilter
-# FIXME: the counting of effective ruptures has to be revised
+from openquake.calculators.classical import (
+    ClassicalCalculator, classical_split_filter)
 
 
 @base.calculators.add('ucerf_classical')
@@ -33,15 +32,14 @@ class UcerfClassicalCalculator(ClassicalCalculator):
     """
     UCERF classical calculator.
     """
+    accept_precalc = ['ucerf_classical']
+
     def pre_execute(self):
         super().pre_execute()
         self.csm_info = self.csm.info
-        self.src_filter = UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance)
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             for src in grp:
-                self.csm.infos[src.source_id] = source.SourceInfo(src)
                 grp.tot_ruptures += src.num_ruptures
 
     def execute(self):
@@ -52,29 +50,37 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         """
         monitor = self.monitor(self.core_task.__name__)
         oq = self.oqparam
-        acc = self.zerodict()
+        acc = self.acc0()
         self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
-                     filter_distance=oq.filter_distance)
+                     filter_distance=oq.filter_distance, maxweight=1E10,
+                     task_duration=1000)
+        self.calc_times = general.AccumDict(accum=np.zeros(3, np.float32))
+        [gsims] = sorted(self.csm.info.gsim_lt.values.values())
+        sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
+        srcfilter = self.src_filter()
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
-            gsims = self.csm.info.get_gsims(sm.ordinal)
+            [src] = grp
+            srcs = list(src)
+            if sample:
+                srcs = random_filtered_sources(srcs, srcfilter, 1)
             acc = parallel.Starmap.apply(
-                classical, (grp, self.src_filter, gsims, param, monitor),
+                classical_split_filter,
+                (srcs, srcfilter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
+                h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
-            srcs = ucerf.get_background_sources(self.src_filter)
-            for src in srcs:
-                self.csm.infos[src.source_id] = source.SourceInfo(src)
+            srcs = ucerf.get_background_sources(srcfilter, sample)
             acc = parallel.Starmap.apply(
-                classical, (srcs, self.src_filter, gsims, param, monitor),
+                classical, (srcs, srcfilter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
+                h5=self.datastore.hdf5
             ).reduce(self.agg_dicts, acc)
-
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos, acc)
+        self.store_rlz_info(acc.eff_ruptures)
+        self.store_source_info(self.calc_times)
         return acc  # {grp_id: pmap}

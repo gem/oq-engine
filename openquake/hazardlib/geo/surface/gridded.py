@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -83,8 +83,15 @@ class GriddedSurface(BaseSurface):
         """
         :returns: (min_max lons, min_max lats)
         """
-        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
+        min_lon, max_lon, max_lat, min_lat = self.get_bounding_box()
         return [[min_lon, max_lon]], [[min_lat, max_lat]]
+
+    def get_surface_boundaries_3d(self):
+        """
+        :returns: (min_max lons, min_max lats)
+        """
+        min_lon, max_lon, max_lat, min_lat = self.get_bounding_box()
+        return [[min_lon, max_lon]], [[min_lat, max_lat]], [[0, 0]]
 
     def get_rx_distance(self, mesh):
         """
@@ -106,7 +113,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             Numpy array of distances in km.
         """
-        raise NotImplementedError
+        raise NotImplementedError('GriddedSurface')
 
     def get_top_edge_depth(self):
         """
@@ -116,7 +123,7 @@ class GriddedSurface(BaseSurface):
             Float value, the vertical distance between the earth surface
             and the shallowest point in surface's top edge in km.
         """
-        raise NotImplementedError
+        raise NotImplementedError('GriddedSurface')
 
     def get_strike(self):
         """
@@ -150,7 +157,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             Float value, the surface width
         """
-        raise NotImplementedError
+        raise NotImplementedError('GriddedSurface')
 
     def get_area(self):
         """
@@ -159,7 +166,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             Float value, the surface area
         """
-        raise NotImplementedError
+        raise NotImplementedError('GriddedSurface')
 
     def get_middle_point(self):
         """
@@ -185,4 +192,4 @@ class GriddedSurface(BaseSurface):
         :param mesh:
             :class:`~openquake.hazardlib.geo.mesh.Mesh` of points
         """
-        raise NotImplementedError
+        raise NotImplementedError('GriddedSurface')

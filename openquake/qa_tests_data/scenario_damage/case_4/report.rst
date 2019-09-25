@@ -2,12 +2,12 @@ Scenario Damage QA Test 4
 =========================
 
 ============== ===================
-checksum32     1,284,787,561      
-date           2018-06-26T14:56:59
-engine_version 3.2.0-gitb0cd949   
+checksum32     1,140,149,609      
+date           2019-09-24T15:21:00
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 3, num_levels = 60
+num_sites = 3, num_levels = 60, num_rlzs = 1
 
 Parameters
 ----------
@@ -45,25 +45,30 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
-=============== ========
-#assets         3       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     3
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -73,12 +78,20 @@ W        1.00000 NaN    1   1   1         1
 *ALL*    1.00000 0.0    1   1   3         3         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-computing gmfs          0.00400   0.0       1     
-reading site collection 0.00139   0.0       1     
-reading exposure        8.466E-04 0.0       1     
-======================= ========= ========= ======
+================ ========= ========= ======
+calc_1745        time_sec  memory_mb counts
+================ ========= ========= ======
+reading exposure 3.908E-04 0.0       1     
+================ ========= ========= ======

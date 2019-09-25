@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -54,8 +54,6 @@ from openquake.hmtk.registry import CatalogueFunctionRegistry
 
 class SeismicityOccurrence(object):
     '''Implements recurrence calculations for instrumental seismicity'''
-    __metaclass__ = abc.ABCMeta
-
     @abc.abstractmethod
     def calculate(self, catalogue, config, completeness=None):
         """Implements recurrence calculation

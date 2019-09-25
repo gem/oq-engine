@@ -1,29 +1,49 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2018, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2018-2019 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import abc
+import sys
+import time
 import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
+
+F32 = numpy.float32
+KNOWN_DISTANCES = frozenset(
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+
+
+def _update(pmap, pm, src, src_mutex, rup_mutex):
+    if not rup_mutex:
+        pm = ~pm
+    if not pm:
+        return
+    if src_mutex:
+        pm *= src.mutex_weight
+    for grp_id in src.src_group_ids:
+        if src_mutex:
+            pmap[grp_id] += pm
+        else:
+            pmap[grp_id] |= pm
 
 
 def get_distances(rupture, mesh, param):
@@ -49,11 +69,14 @@ def get_distances(rupture, mesh, param):
         dist = rupture.get_cdppvalue(mesh)
     elif param == 'azimuth':
         dist = rupture.surface.get_azimuth(mesh)
+    elif param == 'azimuth_cp':
+        dist = rupture.surface.get_azimuth_of_closest_point(mesh)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(mesh.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
+    dist.flags.writeable = False
     return dist
 
 
@@ -71,17 +94,64 @@ def get_num_distances(gsims):
     return len(dists)
 
 
+class RupData(object):
+    """
+    A class to collect rupture information into an array
+    """
+    def __init__(self, cmaker):
+        self.cmaker = cmaker
+        self.data = AccumDict(accum=[])
+
+    def from_srcs(self, srcs, sites):  # used in disagg.disaggregation
+        """
+        :returns: param -> array
+        """
+        for src in srcs:
+            for rup in src.iter_ruptures():
+                self.cmaker.add_rup_params(rup)
+                self.add(rup, src.id, sites)
+        return {k: numpy.array(v) for k, v in self.data.items()}
+
+    def add(self, rup, src_id, sctx, dctx=None):
+        rate = rup.occurrence_rate
+        if numpy.isnan(rate):  # for nonparametric ruptures
+            probs_occur = rup.probs_occur
+        else:
+            probs_occur = numpy.zeros(0, numpy.float64)
+        self.data['srcidx'].append(src_id or 0)
+        self.data['occurrence_rate'].append(rate)
+        self.data['weight'].append(rup.weight or numpy.nan)
+        self.data['probs_occur'].append(probs_occur)
+        for rup_param in self.cmaker.REQUIRES_RUPTURE_PARAMETERS:
+            self.data[rup_param].append(getattr(rup, rup_param))
+
+        self.data['sid_'].append(numpy.int16(sctx.sids))
+        for dst_param in self.cmaker.REQUIRES_DISTANCES:
+            if dctx is None:  # compute the distances
+                dists = get_distances(rup, sctx, dst_param)
+            else:  # reuse already computed distances
+                dists = getattr(dctx, dst_param)
+            self.data[dst_param + '_'].append(F32(dists))
+        closest = rup.surface.get_closest_points(sctx)
+        self.data['lon_'].append(F32(closest.lons))
+        self.data['lat_'].append(F32(closest.lats))
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None, param=None,
-                 monitor=Monitor()):
-        self.gsims = gsims
-        self.maximum_distance = maximum_distance or {}
+    def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
+        self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.trt = trt
+        self.gsims = gsims
+        self.maximum_distance = (
+            param.get('maximum_distance') or IntegrationDistance({}))
+        self.trunclevel = param.get('truncation_level')
+        self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -96,20 +166,23 @@ class ContextMaker(object):
             else:
                 filter_distance = 'rrup'
         self.filter_distance = filter_distance
+        self.imtls = param.get('imtls', {})
+        self.imts = [imt_module.from_string(imt) for imt in self.imtls]
         self.reqv = param.get('reqv')
         self.REQUIRES_DISTANCES.add(self.filter_distance)
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
-            # since the ContextMaker must be used on ruptures with all the
+        if hasattr(gsims, 'items'):
+            # gsims is actually a dict rlzs_by_gsim
+            # since the ContextMaker must be used on ruptures with the
             # same TRT, given a realization there is a single gsim
             self.gsim_by_rlzi = {}
             for gsim, rlzis in gsims.items():
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
-        self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+        self.gmf_mon = monitor('computing mean_std', measuremem=False)
 
     def filter(self, sites, rupture):
         """
@@ -130,7 +203,8 @@ class ContextMaker(object):
             if mask.any():
                 sites, distances = sites.filter(mask), distances[mask]
             else:
-                raise FarAwayRupture(rupture.serial)
+                raise FarAwayRupture(
+                    '%d: %d km' % (rupture.rup_id, distances.min()))
         return sites, DistancesContext([(self.filter_distance, distances)])
 
     def add_rup_params(self, rupture):
@@ -177,146 +251,174 @@ class ContextMaker(object):
             Tuple of two items: sites and distances context.
 
         :raises ValueError:
-            If any of declared required parameters (that includes site, rupture
-            and distance parameters) is unknown.
+            If any of declared required parameters (site, rupture and
+            distance parameters) is unknown.
         """
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
-        if self.reqv and isinstance(rupture.surface, PlanarSurface):
-            reqv = self.reqv.get(dctx.repi, rupture.mag)
+        reqv_obj = (self.reqv.get(rupture.tectonic_region_type)
+                    if self.reqv else None)
+        if reqv_obj and isinstance(rupture.surface, PlanarSurface):
+            reqv = reqv_obj.get(dctx.repi, rupture.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
                 dctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:
                 reqv_rup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
                 dctx.rrup = reqv_rup
         self.add_rup_params(rupture)
-        # NB: returning a SitesContext make sures that the GSIM cannot
-        # access site parameters different from the ones declared
-        sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
-        return sctx, dctx
+        return sites, dctx
 
-    def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
+    def get_pmap(self, src, s_sites, rup_indep=True):
         """
-        :param src: a source object
-        :param sites: a filtered SiteCollection
-        :param imtls: intensity measure and levels
-        :param trunclevel: truncation level
-        :param rup_indep: True if the ruptures are independent
-        :returns: a ProbabilityMap instance
+        :param src: a hazardlib source
+        :param s_sites: the sites affected by it
+        :returns: the probability map generated by the source
         """
-        pmap = ProbabilityMap.build(
-            len(imtls.array), len(self.gsims), sites.sids,
-            initvalue=rup_indep)
-        eff_ruptures = 0
-        with self.ir_mon:
-            rups = list(src.iter_ruptures())
-        # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
-        # discards far away ruptures: len(rups) < src.num_ruptures can happen
-        if len(rups) > src.num_ruptures:
-            raise ValueError('Expected at max %d ruptures, got %d' % (
-                src.num_ruptures, len(rups)))
-        weight = 1. / len(rups)
-        for rup in rups:
-            rup.weight = weight
+        imts = self.imts
+        sitecol = s_sites.complete
+        N, M = len(sitecol), len(imts)
+        fewsites = N <= self.max_sites_disagg
+        rupdata = RupData(self)
+        nrups, nsites = 0, 0
+        L, G = len(self.imtls.array), len(self.gsims)
+        poemap = ProbabilityMap(L, G)
+        for rup, sites in self._gen_rup_sites(src, s_sites):
             try:
                 with self.ctx_mon:
                     sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
-            eff_ruptures += 1
+            with self.gmf_mon:
+                mean_std = numpy.zeros((G, 2, len(sctx), M))
+                for i, gsim in enumerate(self.gsims):
+                    dctx_ = dctx.roundup(gsim.minimum_distance)
+                    mean_std[i] = gsim.get_mean_std(sctx, rup, dctx_, imts)
             with self.poe_mon:
-                pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
-                for sid, pne in zip(sctx.sids, pnes):
+                for sid, pne in self._make_pnes(rup, sctx.sids, mean_std):
+                    pcurve = poemap.setdefault(sid, rup_indep)
                     if rup_indep:
-                        pmap[sid].array *= pne
+                        pcurve.array *= pne
                     else:
-                        pmap[sid].array += pne * rup.weight
-        pmap = ~pmap
-        pmap.eff_ruptures = eff_ruptures
-        return pmap
+                        pcurve.array += (1.-pne) * rup.weight
+            nrups += 1
+            nsites += len(sctx)
+            if fewsites:  # store rupdata
+                rupdata.add(rup, src.id, sctx, dctx)
+        poemap.nrups = nrups
+        poemap.nsites = nsites
+        poemap.data = rupdata.data
+        return poemap
+
+    def _gen_rup_sites(self, src, sites):
+        # implements the pointsource_distance feature
+        pdist = self.pointsource_distance.get(src.tectonic_region_type)
+        if hasattr(src, 'location') and pdist:
+            close_sites, far_sites = sites.split(src.location, pdist)
+            if close_sites is None:  # all is far
+                for rup in src.iter_ruptures(False, False):
+                    yield rup, far_sites
+            elif far_sites is None:  # all is close
+                for rup in src.iter_ruptures(True, True):
+                    yield rup, close_sites
+            else:
+                for rup in src.iter_ruptures(True, True):
+                    yield rup, close_sites
+                for rup in src.iter_ruptures(False, False):
+                    yield rup, far_sites
+        else:
+            for rup in src.iter_ruptures():
+                yield rup, sites
+
+    def get_pmap_by_grp(self, src_sites, src_mutex=False, rup_mutex=False):
+        """
+        :param src_sites: an iterator of pairs (source, sites)
+        :param src_mutex: True if the sources are mutually exclusive
+        :param rup_mutex: True if the ruptures are mutually exclusive
+        :return: dictionaries pmap, rdata, calc_times
+        """
+        imtls = self.imtls
+        L, G = len(imtls.array), len(self.gsims)
+        pmap = AccumDict(accum=ProbabilityMap(L, G))
+        gids = []
+        rup_data = AccumDict(accum=[])
+        # AccumDict of arrays with 3 elements nrups, nsites, calc_time
+        calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+        it = iter(src_sites)
+        while True:
+            t0 = time.time()
+            try:
+                src, s_sites = next(it)
+                poemap = self.get_pmap(src, s_sites, not rup_mutex)
+                _update(pmap, poemap, src, src_mutex, rup_mutex)
+            except StopIteration:
+                break
+            except Exception as err:
+                etype, err, tb = sys.exc_info()
+                msg = '%s (source id=%s)' % (str(err), src.source_id)
+                raise etype(msg).with_traceback(tb)
+            if len(poemap.data):
+                nr = len(poemap.data['sid_'])
+                for gid in src.src_group_ids:
+                    gids.extend([gid] * nr)
+                    for k, v in poemap.data.items():
+                        rup_data[k].extend(v)
+            calc_times[src.id] += numpy.array(
+                [poemap.nrups, poemap.nsites, time.time() - t0])
+
+        rdata = {k: numpy.array(v) for k, v in rup_data.items()}
+        rdata['grp_id'] = numpy.uint16(gids)
+        return pmap, rdata, calc_times
 
     # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, sctx, dctx, imtls, trunclevel):
-        pne_array = numpy.zeros(
-            (len(sctx.sids), len(imtls.array), len(self.gsims)))
+    def _make_pnes(self, rupture, sids, mean_std):
+        imtls = self.imtls
+        nsites = len(sids)
+        pne_array = numpy.zeros((nsites, len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
-            dctx_ = dctx.roundup(gsim.minimum_distance)
-            pnos = []  # list of arrays nsites x nlevels
-            for imt in imtls:
-                poes = gsim.get_poes(
-                    sctx, rupture, dctx_,
-                    imt_module.from_string(imt), imtls[imt], trunclevel)
-                pnos.append(rupture.get_probability_no_exceedance(poes))
-            pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
-        return pne_array
-
-    def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
-                     monitor=Monitor()):
-        """
-        Disaggregate (separate) PoE of `imldict` in different contributions
-        each coming from `n_epsilons` distribution bins.
-
-        :param sitecol: a SiteCollection
-        :param ruptures: an iterator over ruptures with the same TRT
-        :param iml4: a 4d array of IMLs of shape (N, R, M, P)
-        :param truncnorm: an instance of scipy.stats.truncnorm
-        :param epsilons: the epsilon bins
-        :param monitor: a Monitor instance
-        :returns:
-            an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
-        """
-        acc = AccumDict(accum=[])
-        ctx_mon = monitor('disagg_contexts', measuremem=False)
-        pne_mon = monitor('disaggregate_pne', measuremem=False)
-        clo_mon = monitor('get_closest', measuremem=False)
-        for rupture in ruptures:
-            with ctx_mon:
-                orig_dctx = DistancesContext(
-                    (param, get_distances(rupture, sitecol, param))
-                    for param in self.REQUIRES_DISTANCES)
-                self.add_rup_params(rupture)
-            with clo_mon:  # this is faster than computing orig_dctx
-                closest_points = rupture.surface.get_closest_points(sitecol)
-            cache = {}
-            for r, gsim in self.gsim_by_rlzi.items():
-                dctx = orig_dctx.roundup(gsim.minimum_distance)
-                for m, imt in enumerate(iml4.imts):
-                    for p, poe in enumerate(iml4.poes_disagg):
-                        iml = tuple(iml4.array[:, r, m, p])
-                        try:
-                            pne = cache[gsim, imt, iml]
-                        except KeyError:
-                            with pne_mon:
-                                pne = gsim.disaggregate_pne(
-                                    rupture, sitecol, dctx, imt, iml,
-                                    truncnorm, epsilons)
-                                cache[gsim, imt, iml] = pne
-                        acc[poe, str(imt), r].append(pne)
-            acc['mags'].append(rupture.mag)
-            acc['dists'].append(getattr(dctx, self.filter_distance))
-            acc['lons'].append(closest_points.lons)
-            acc['lats'].append(closest_points.lats)
-        return acc
+            for m, imt in enumerate(imtls):
+                slc = imtls(imt)
+                if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
+                    # set by the engine when parsing the gsim logictree;
+                    # when 0 ignore the gsim: see _build_trts_branches
+                    pno = numpy.ones((nsites, slc.stop - slc.start))
+                else:
+                    poes = gsim.get_poes(
+                        mean_std[i, :, :, m], imtls[imt], self.trunclevel)
+                    pno = rupture.get_probability_no_exceedance(poes)
+                pne_array[:, slc, i] = pno
+        return zip(sids, pne_array)
 
 
 class BaseContext(metaclass=abc.ABCMeta):
     """
     Base class for context object.
     """
-
     def __eq__(self, other):
         """
         Return True if ``other`` has same attributes with same values.
         """
         if isinstance(other, self.__class__):
             if self._slots_ == other._slots_:
-                self_other = [
-                    numpy.all(
-                        getattr(self, s, None) == getattr(other, s, None))
-                    for s in self._slots_]
-                return numpy.all(self_other)
+                oks = []
+                for s in self._slots_:
+                    a, b = getattr(self, s, None), getattr(other, s, None)
+                    if a is None and b is None:
+                        ok = True
+                    elif a is None and b is not None:
+                        ok = False
+                    elif a is not None and b is None:
+                        ok = False
+                    elif hasattr(a, 'shape') and hasattr(b, 'shape'):
+                        if a.shape == b.shape:
+                            ok = numpy.allclose(a, b)
+                        else:
+                            ok = False
+                    else:
+                        ok = a == b
+                    oks.append(ok)
+                return numpy.all(oks)
         return False
 
 
@@ -375,8 +477,9 @@ class DistancesContext(BaseContext):
         for dist, array in vars(self).items():
             small_distances = array < minimum_distance
             if small_distances.any():
-                array = array[:]  # make a copy first
+                array = numpy.array(array)  # make a copy first
                 array[small_distances] = minimum_distance
+                array.flags.writeable = False
             setattr(ctx, dist, array)
         return ctx
 
@@ -397,3 +500,57 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
+    temporal_occurrence_model = None  # to be set
+
+    def __init__(self, param_pairs=()):
+        for param, value in param_pairs:
+            setattr(self, param, value)
+
+    def get_probability_no_exceedance(self, poes):
+        """
+        Compute and return the probability that in the time span for which the
+        rupture is defined, the rupture itself never generates a ground motion
+        value higher than a given level at a given site.
+
+        Such calculation is performed starting from the conditional probability
+        that an occurrence of the current rupture is producing a ground motion
+        value higher than the level of interest at the site of interest.
+        The actual formula used for such calculation depends on the temporal
+        occurrence model the rupture is associated with.
+        The calculation can be performed for multiple intensity measure levels
+        and multiple sites in a vectorized fashion.
+
+        :param poes:
+            2D numpy array containing conditional probabilities the the a
+            rupture occurrence causes a ground shaking value exceeding a
+            ground motion level at a site. First dimension represent sites,
+            second dimension intensity measure levels. ``poes`` can be obtained
+            calling the :meth:`method
+            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>
+        """
+        if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
+            # Uses the formula
+            #
+            #    ∑ p(k|T) * p(X<x|rup)^k
+            #
+            # where `p(k|T)` is the probability that the rupture occurs k times
+            # in the time span `T`, `p(X<x|rup)` is the probability that a
+            # rupture occurrence does not cause a ground motion exceedance, and
+            # thesummation `∑` is done over the number of occurrences `k`.
+            #
+            # `p(k|T)` is given by the attribute probs_occur and
+            # `p(X<x|rup)` is computed as ``1 - poes``.
+            # Converting from 1d to 2d
+            if len(poes.shape) == 1:
+                poes = numpy.reshape(poes, (-1, len(poes)))
+            p_kT = self.probs_occur
+            prob_no_exceed = numpy.array(
+                [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
+            prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
+            if isinstance(prob_no_exceed, numpy.ndarray):
+                prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
+                prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
+            return prob_no_exceed
+        # parametric rupture
+        tom = self.temporal_occurrence_model
+        return tom.get_probability_no_exceedance(self.occurrence_rate, poes)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -122,6 +122,6 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
         retry += 1
 
     if not success:
-        logging.warn('Unable to connect to %s within %s retries'
+        logging.warning('Unable to connect to %s within %s retries'
                      % (url, max_retries))
     return success

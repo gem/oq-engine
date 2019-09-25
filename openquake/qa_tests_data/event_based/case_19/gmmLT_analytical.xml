@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                                applyToTectonicRegionType="Active Shallow Fault">
+
+                <logicTreeBranch branchID="b11">
+                    <uncertaintyModel gmpe_name="WesternCan15Low">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b12">
+                    <uncertaintyModel gmpe_name="WesternCan15Mid">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b13">
+                    <uncertaintyModel gmpe_name="WesternCan15Upp">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                                applyToTectonicRegionType="Subduction Interface">
+
+                <logicTreeBranch branchID="b21">
+                    <uncertaintyModel gmpe_name="SInterCan15Low">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b22">
+                    <uncertaintyModel gmpe_name="SInterCan15Mid">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b23">
+                    <uncertaintyModel gmpe_name="SInterCan15Upp">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
+                                applyToTectonicRegionType="Active Shallow Crust">
+
+                <logicTreeBranch branchID="b31">
+                    <uncertaintyModel gmpe_name="WesternCan15Low">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b32">
+                    <uncertaintyModel gmpe_name="WesternCan15Mid">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b33">
+                    <uncertaintyModel gmpe_name="WesternCan15Upp">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4"
+                                applyToTectonicRegionType="Subduction IntraSlab30">
+                
+                <logicTreeBranch branchID="b41">
+                    <uncertaintyModel gmpe_name="SSlabCan15Low">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b42">
+                    <uncertaintyModel gmpe_name="SSlabCan15Mid">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b43">
+                    <uncertaintyModel gmpe_name="SSlabCan15Upp">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel branchingLevelID="bl5">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs5"
+                                applyToTectonicRegionType="Subduction IntraSlab50">
+                
+                <logicTreeBranch branchID="b51">
+                    <uncertaintyModel gmpe_name="SInterCan15Low">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b52">
+                    <uncertaintyModel gmpe_name="SInterCan15Mid">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b53">
+                    <uncertaintyModel gmpe_name="SInterCan15Upp">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel branchingLevelID="bl6">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs6"
+                                applyToTectonicRegionType="Active Shallow Offshore">
+
+                <logicTreeBranch branchID="b61">
+                    <uncertaintyModel gmpe_name="OceanicCan15Low">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b62">
+                    <uncertaintyModel gmpe_name="OceanicCan15Mid">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b63">
+                    <uncertaintyModel gmpe_name="OceanicCan15Upp">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel branchingLevelID="bl7">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs7"
+                                applyToTectonicRegionType="Stable Shallow Crust">
+
+                <logicTreeBranch branchID="b71">
+                    <uncertaintyModel gmpe_name="EasternCan15Low">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b72">
+                    <uncertaintyModel gmpe_name="EasternCan15Mid">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b73">
+                    <uncertaintyModel gmpe_name="EasternCan15Upp">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>

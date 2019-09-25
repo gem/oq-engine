@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -415,10 +415,13 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         Tests the case when the GMPE table file is missing
         """
-        with self.assertRaises(IOError) as ioe:
+        with self.assertRaises(ValueError) as err:
             GMPETable(gmpe_table=None)
-        self.assertEqual(str(ioe.exception), "GMPE Table Not Defined!")
-        GMPETable(gmpe_table='/do/not/exists/table.hdf5')  # no error here
+        self.assertEqual(str(err.exception),
+                         "You forgot to set GMPETable.GMPE_TABLE!")
+        with self.assertRaises(OSError) as err:
+            GMPETable(gmpe_table='/do/not/exists/table.hdf5')
+        self.assertIn("No such file or directory", str(err.exception))
 
     def test_retreival_tables_good_no_interp(self):
         """
@@ -671,7 +674,7 @@ class GSIMTableTestCaseBadFile(unittest.TestCase):
         Tests missing period information
         """
         with self.assertRaises(ValueError) as ve:
-            GMPETable(gmpe_table=self.TABLE_FILE)
+            GMPETable(gmpe_table=self.TABLE_FILE).init()
         self.assertEqual(str(ve.exception),
                          "Spectral Acceleration must be accompanied by periods"
                          )

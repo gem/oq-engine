@@ -13,10 +13,10 @@ risk calculator are illustrated through the example below.
 This example illustrates a stochastic event based risk calculation which uses
 a single configuration file to first compute the \glspl{acr:ses} and
 \glspl{acr:gmf} for the given source model and ground motion model, and then
-calculate event loss tables, loss exceedance curves and probabilistic loss
-maps for structural losses, nonstructural losses, insured structural losses,
-and occupants, based on the \glspl{acr:gmf}. The job configuration file
-required for running this stochastic event based risk calculation is shown in
+calculate event loss tables, loss exceedance curves and probabilistic
+loss maps for structural losses, nonstructural losses and occupants,
+based on the \glspl{acr:gmf}. The job configuration file required for
+running this stochastic event based risk calculation is shown in
 Listing~\ref{lst:config_event_based_risk_combined}.
 
 \begin{listing}[htbp]
@@ -31,10 +31,7 @@ Monte Carlo sampling process is also employed in this calculator to take into
 account the uncertainty in the conditional loss ratio at a particular
 intensity level. Hence, the parameters \Verb+asset_correlation+ and
 \Verb+master_seed+ may be defined as previously described for the Scenario
-Risk calculator in Section~\ref{sec:config_scenario_risk}. This calculator is
-also capable of estimating insured losses and therefore, setting the
-\Verb+insured_losses+ attribute to \Verb+true+ will generate all results (loss
-tables, loss curves, loss maps) for insured losses as well. The parameter
+Risk calculator in Section~\ref{sec:config_scenario_risk}. The parameter
 ``risk\_investigation\_time'' specifies the time period for which the event
 loss tables and loss exceedance curves will be calculated, similar to the
 Classical Probabilistic Risk calculator. If this parameter is not provided in
@@ -116,7 +113,7 @@ with their latitude and longitude coordinates.
 
 Starting from the input \glspl{acr:gmf}, the \gls{acr:oqe} can calculate event
 loss tables, loss exceedance curves and probabilistic loss maps for structural
-losses, nonstructural losses, insured structural losses, and occupants. The
+losses, nonstructural losses and occupants. The
 job configuration file required for running this stochastic event based risk
 calculation starting from a precomputed set of \glspl{acr:gmf} is shown in
 Listing~\ref{lst:config_gmf_event_based_risk}.

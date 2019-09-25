@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,12 +23,13 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
+import toml
 import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
+from openquake.hazardlib.gsim import registry
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -62,35 +63,35 @@ class FromFile(object):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
+    kwargs = {}
+
+    def init(self):
+        pass
 
     def __repr__(self):
-        return 'FromFile'
+        return '[FromFile]'
 
 
 # more tests are in tests/valid_test.py
-def gsim(value, **kwargs):
+def gsim(value):
     """
-    Make sure the given value is the name of an available GSIM class.
+    Convert a string in TOML format into a GSIM instance
 
-    >>> gsim('BooreAtkinson2011')
-    'BooreAtkinson2011()'
+    >>> gsim('[BooreAtkinson2011]')
+    [BooreAtkinson2011]
     """
+    if not value.startswith('['):  # assume the GSIM name
+        value = '[%s]' % value
+    [(gsim_name, kwargs)] = toml.loads(value).items()
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
-    if value.endswith('()'):
-        value = value[:-2]  # strip parenthesis
-    if value == 'FromFile':
+    if gsim_name == 'FromFile':
         return FromFile()
-    elif value.startswith('GMPETable'):
-        gsim_class = GMPETable
-    else:
-        try:
-            gsim_class = GSIM[value]
-        except KeyError:
-            raise ValueError('Unknown GSIM: %s' % value)
     try:
-        gs = gsim_class(**kwargs)
-    except TypeError:
-        raise ValueError('Could not instantiate %s%s' % (value, kwargs))
+        gsim_class = registry[gsim_name]
+    except KeyError:
+        raise ValueError('Unknown GSIM: %s' % gsim_name)
+    gs = gsim_class(**kwargs)
+    gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     gs.minimum_distance = minimum_distance
     return gs
 
@@ -261,7 +262,7 @@ class SimpleId(object):
             "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
 
-MAX_ID_LENGTH = 60
+MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
 ASSET_ID_LENGTH = 100
 
 simple_id = SimpleId(MAX_ID_LENGTH)
@@ -272,14 +273,21 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange, name=''):
+    def __init__(self, minrange, maxrange, name='', accept=None):
         self.minrange = minrange
         self.maxrange = maxrange
         self.name = name
+        self.accept = accept
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
-        f = float_(value)
+        try:
+            f = float_(value)
+        except ValueError:  # passed a string
+            if value == self.accept:
+                return value
+            else:
+                raise
         if f > self.maxrange:
             raise ValueError("%s %s is bigger than the maximum (%s)" %
                              (self.name, f, self.maxrange))
@@ -333,14 +341,12 @@ def namelist(value):
     ['a1', 'b_2', '_c']
 
     >>> namelist('a1 b_2 1c')
-    Traceback (most recent call last):
-        ...
-    ValueError: List of names containing an invalid name: 1c
+    ['a1', 'b_2', '1c']
     """
     names = value.replace(',', ' ').split()
     for n in names:
         try:
-            name(n)
+            source_id(n)
         except ValueError:
             raise ValueError('List of names containing an invalid name:'
                              ' %s' % n)
@@ -525,18 +531,19 @@ def positivefloats(value):
     :returns:
         a list of positive floats
     """
-    floats = list(map(positivefloat, value.split()))
+    values = value.strip('[]').split()
+    floats = list(map(positivefloat, values))
     return floats
 
 
-def floats32(value):
+def floats(value):
     """
     :param value:
         string of whitespace separated floats
     :returns:
-        an array of 32 bit floats
+        a list of floats
     """
-    return numpy.float32(value.split())
+    return list(map(float, value.split()))
 
 
 _BOOL_DICT = {
@@ -644,8 +651,10 @@ def intensity_measure_type(value):
 def intensity_measure_types(value):
     """
     :param value: input string
-    :returns: non-empty list of Intensity Measure Type objects
+    :returns: non-empty list of ordered Intensity Measure Type objects
 
+    >>> intensity_measure_types('')
+    []
     >>> intensity_measure_types('PGA')
     ['PGA']
     >>> intensity_measure_types('PGA, SA(1.00)')
@@ -654,21 +663,27 @@ def intensity_measure_types(value):
     Traceback (most recent call last):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
+    >>> intensity_measure_types('PGV, SA(1), PGA')
+    ['PGA', 'PGV', 'SA(1.0)']
     """
+    if not value:
+        return []
     imts = []
     for chunk in value.split(','):
-        imts.append(str(imt.from_string(chunk.strip())))
+        imts.append(imt.from_string(chunk.strip()))
+    sorted_imts = sorted(imts, key=lambda im: getattr(im, 'period', 1))
     if len(distinct(imts)) < len(imts):
         raise ValueError('Duplicated IMTs in %s' % value)
-    return imts
+    return [str(imt) for imt in sorted_imts]
 
 
-def check_levels(imls, imt):
+def check_levels(imls, imt, min_iml=1E-10):
     """
     Raise a ValueError if the given levels are invalid.
 
     :param imls: a list of intensity measure and levels
     :param imt: the intensity measure type
+    :param min_iml: minimum intensity measure level (default 1E-10)
 
     >>> check_levels([0.1, 0.2], 'PGA')  # ok
     >>> check_levels([], 'PGA')
@@ -690,6 +705,11 @@ def check_levels(imls, imt):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
         raise ValueError("Found duplicated levels for %s: %s" % (imt, imls))
+    elif imls[0] == 0 and imls[1] <= min_iml:  # apply the cutoff
+        raise ValueError("The min_iml %s=%s is larger than the second level "
+                         "for %s" % (imt, min_iml, imls))
+    elif imls[0] == 0 and imls[1] > min_iml:  # apply the cutoff
+        imls[0] = min_iml
 
 
 def intensity_measure_types_and_levels(value):
@@ -744,6 +764,24 @@ def logscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.log(x_max / x_min)
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
+
+
+def sqrscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max in a quadratic scale
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min < 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.sqrt(x_max - x_min) / (n - 1)
+    return x_min + (delta * numpy.arange(n))**2
 
 
 def dictionary(value):
@@ -801,7 +839,9 @@ def floatdict(value):
     value = ast.literal_eval(value)
     if isinstance(value, (int, float, list)):
         return {'default': value}
-    return value
+    dic = {'default': value[next(iter(value))]}
+    dic.update(value)
+    return dic
 
 
 def maximum_distance(value):
@@ -939,10 +979,10 @@ def point3d(value, lon, lat, depth):
     return longitude(lon), latitude(lat), positivefloat(depth)
 
 
-strike_range = FloatRange(0, 360)
-slip_range = strike_range
-dip_range = FloatRange(0, 90)
-rake_range = FloatRange(-180, 180)
+strike_range = FloatRange(0, 360, 'strike')
+slip_range = FloatRange(0, 360, 'slip')
+dip_range = FloatRange(0, 90, 'dip')
+rake_range = FloatRange(-180, 180, 'rake', 'undefined')
 
 
 def ab_values(value):
@@ -968,7 +1008,7 @@ def integers(value):
     """
     if '.' in value:
         raise ValueError('There are decimal points in %s' % value)
-    values = value.replace(',', ' ').split()
+    values = value.strip('[]').replace(',', ' ').split()
     if not values:
         raise ValueError('Not a list of integers: %r' % value)
     try:
@@ -1008,7 +1048,6 @@ def simple_slice(value):
     except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
-
 
 
 # used for the exposure validation
@@ -1135,7 +1174,7 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             try:
                 p = getattr(cls, name)
             except AttributeError:
-                logging.warn('Ignored unknown parameter %s', name)
+                logging.warning('Ignored unknown parameter %s', name)
             else:
                 res[name] = p.validator(text)
         return res
@@ -1169,7 +1208,7 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             try:
                 convert = getattr(self.__class__, name).validator
             except AttributeError:
-                logging.warn("The parameter '%s' is unknown, ignoring" % name)
+                logging.warning("The parameter '%s' is unknown, ignoring" % name)
                 continue
             try:
                 value = convert(val)
@@ -1205,11 +1244,11 @@ class RjbEquivalent(object):
     >> reqv = RjbEquivalent('lookup.hdf5')
     >> reqv.get(repi_distances, mag)
     """
-    def __init__(self, hdf5path):
-        with hdf5.File(hdf5path, 'r') as f:
-            self.repi = f['default/repi'].value  # shape D
-            self.mags = f['default/mags'].value  # shape M
-            self.reqv = f['default/reqv'].value  # shape D x M
+    def __init__(self, filename):
+        with hdf5.File(filename, 'r') as f:
+            self.repi = f['default/repi'][()]  # shape D
+            self.mags = f['default/mags'][()]  # shape M
+            self.reqv = f['default/reqv'][()]  # shape D x M
 
     def get(self, repi, mag):
         """

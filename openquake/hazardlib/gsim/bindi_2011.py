@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -255,4 +255,66 @@ class BindiEtAl2011(GMPE):
     1.50    2.675    -0.9600    0.1920     4.117    0.000802     0.5750    -0.03530    0.0    0.2510    0.375    0.667    0.203    -0.0140    0.0505    -0.0365    0.0    0.218    0.303     0.373
     1.75    2.584    -1.0060    0.2050     4.505    0.000427     0.5740    -0.03710    0.0    0.2520    0.357    0.593    0.220    0.00154    0.0370    -0.0385    0.0    0.219    0.305     0.376
     2.00    2.537    -1.0090    0.1930     4.373    0.000164     0.5970    -0.03670    0.0    0.2450    0.352    0.540    0.226    0.00512    0.0350    -0.0401    0.0    0.211    0.308     0.373
+    2.50    2.425    -1.0290    0.1790     4.484   -0.000348     0.6550    -0.02620    0.0    0.2440    0.336    0.460    0.229    0.00561    0.0275    -0.0331    0.0    0.212    0.309     0.375
+    2.75    2.331    -1.0430    0.1830     4.581   -0.000617     0.6780    -0.01820    0.0    0.2320    0.335    0.416    0.232    0.01350    0.0263    -0.0398    0.0    0.203    0.310     0.370
+    4.00    2.058    -1.0840    0.2000     4.876   -0.000843     0.6740    -0.00621    0.0    0.1950    0.300    0.350    0.230    0.02950    0.0255    -0.0550    0.0    0.197    0.300     0.359
     """)
+
+
+class BindiEtAl2011Ita19Low(BindiEtAl2011):
+    """
+    Implements the lower term of the ITA19 backbone model.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
+                                                     stddev_types)
+        delta = self._get_delta(imt, rup.mag)
+        return mean-delta, stddevs
+
+    def _get_delta(self, imt, mag):
+        # Get the coefficients needed to compute the delta used for scaling
+        coeffs = self.DELTACOEFF[imt]
+        tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
+        return tmp
+
+    DELTACOEFF = CoeffsTable(sa_damping=5, table="""
+    imt   a      b     c
+    pga   0.101 -1.136 3.555
+    pgv   0.066 -0.741 2.400
+    0.05  0.105 -1.190 3.691
+    0.1   0.112 -1.284 4.001
+    0.15  0.094 -1.033 3.177
+    0.2   0.085 -0.907 2.831
+    0.3   0.086 -0.927 2.869
+    0.4   0.088 -0.974 3.076
+    0.5   0.083 -0.916 2.933
+    0.75  0.073 -0.808 2.628
+    1.00  0.066 -0.736 2.420
+    2.00  0.041 -0.512 1.888
+    3.00  0.050 -0.616 2.193
+    4.00  0.076 -0.906 3.046
+        """)
+
+
+class BindiEtAl2011Ita19Upp(BindiEtAl2011):
+    """
+    Implements the upper term of the ITA19 backbone model.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        gmm = BindiEtAl2011Ita19Low()
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
+                                                     stddev_types)
+        delta = gmm._get_delta(imt, rup.mag)
+        return mean+delta, stddevs

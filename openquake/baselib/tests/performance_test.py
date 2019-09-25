@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2018 GEM Foundation
+# Copyright (c) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,7 +33,6 @@ class MonitorTestCase(unittest.TestCase):
             with mon:
                 time.sleep(0.1)
         self.assertGreater(mon.duration, 0.3)
-        mon.flush()
 
     def test_mem(self):
         mon = self.mon('test_mem', measuremem=True)
@@ -43,7 +42,6 @@ class MonitorTestCase(unittest.TestCase):
                 ls.append(list(range(100000)))  # allocate some RAM
                 time.sleep(0.1)
         self.assertGreaterEqual(mon.mem, 0)
-        mon.flush()
 
     def test_children(self):
         mon1 = self.mon('child1')
@@ -59,7 +57,6 @@ class MonitorTestCase(unittest.TestCase):
         self.assertEqual(list(data['counts']), [1, 2])
         total_time = data['time_sec'].sum()
         self.assertGreaterEqual(total_time, 0.3)
-        self.mon.flush()
 
     def test_pickleable(self):
         pickle.loads(pickle.dumps(self.mon))

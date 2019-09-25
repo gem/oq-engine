@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,15 +13,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import unittest
 
 from openquake.hazardlib import const
+from openquake.hazardlib import nrml
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import Polygon, Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.sourceconverter import SourceConverter
 
 
 class FakeSource(ParametricSeismicSource):
@@ -34,18 +37,18 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
     POLYGON = Polygon([Point(0, 0), Point(0, 0.001),
                        Point(0.001, 0.001), Point(0.001, 0)])
     SITES = [
-        Site(Point(0.0005, 0.0005, -0.5), 0.1, True, 3, 4),  # inside, middle
-        Site(Point(0.0015, 0.0005), 1, True, 3, 4),  # outside, middle-east
-        Site(Point(-0.0005, 0.0005), 2, True, 3, 4),  # outside, middle-west
-        Site(Point(0.0005, 0.0015), 3, True, 3, 4),  # outside, north-middle
-        Site(Point(0.0005, -0.0005), 4, True, 3, 4),  # outside, south-middle
-        Site(Point(0., 0.), 5, True, 3, 4),  # south-west corner
-        Site(Point(0., 0.001), 6, True, 3, 4),  # north-west corner
-        Site(Point(0.001, 0.001), 7, True, 3, 4),  # north-east corner
-        Site(Point(0.001, 0.), 8, True, 3, 4),  # south-east corner
-        Site(Point(0., -0.01), 9, True, 3, 4),  # 1.1 km away
-        Site(Point(0.3, 0.3), 10, True, 3, 4),  # 47 km away
-        Site(Point(0., -1), 11, True, 3, 4),  # 111.2 km away
+        Site(Point(0.0005, 0.0005, -0.5), 0.1, 3, 4),  # inside, middle
+        Site(Point(0.0015, 0.0005), 1, 3, 4),  # outside, middle-east
+        Site(Point(-0.0005, 0.0005), 2, 3, 4),  # outside, middle-west
+        Site(Point(0.0005, 0.0015), 3, 3, 4),  # outside, north-middle
+        Site(Point(0.0005, -0.0005), 4, 3, 4),  # outside, south-middle
+        Site(Point(0., 0.), 5, 3, 4),  # south-west corner
+        Site(Point(0., 0.001), 6, 3, 4),  # north-west corner
+        Site(Point(0.001, 0.001), 7, 3, 4),  # north-east corner
+        Site(Point(0.001, 0.), 8, 3, 4),  # south-east corner
+        Site(Point(0., -0.01), 9, 3, 4),  # 1.1 km away
+        Site(Point(0.3, 0.3), 10, 3, 4),  # 47 km away
+        Site(Point(0., -1), 11, 3, 4),  # 111.2 km away
     ]
 
     def setUp(self):
@@ -77,3 +80,17 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
     def test_positive_filtering(self):
         rates = self.source.get_annual_occurrence_rates(min_rate=5)
         self.assertEqual(rates, [(5, 7)])
+
+
+class GenerateOneRuptureTestCase(unittest.TestCase):
+
+    def test_simple_fault_source(self):
+        d = os.path.dirname(os.path.dirname(__file__))
+        tmps = 'simple-fault-source.xml'
+        source_model = os.path.join(d, 'source_model', tmps)
+        groups = nrml.to_python(source_model, SourceConverter(
+            investigation_time=50., rupture_mesh_spacing=2.))
+        src = groups[0].sources[0]
+        src.seed = 0
+        rup = src.get_one_rupture()
+        self.assertEqual(rup.mag, 5.2)

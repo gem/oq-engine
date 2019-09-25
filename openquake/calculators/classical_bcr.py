@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,29 +28,29 @@ bcr_dt = numpy.dtype([('annual_loss_orig', F32), ('annual_loss_retro', F32),
                       ('bcr', F32)])
 
 
-def classical_bcr(riskinput, riskmodel, param, monitor):
+def classical_bcr(riskinputs, crmodel, param, monitor):
     """
     Compute and return the average losses for each asset.
 
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
-    :param riskmodel:
+    :param riskinputs:
+        :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param crmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    R = riskinput.hazard_getter.num_rlzs
+    R = riskinputs[0].hazard_getter.num_rlzs
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
-    for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        assets = outputs.assets
-        for out in outputs:
-            for asset, (eal_orig, eal_retro, bcr) in zip(assets, out):
-                aval = asset.value('structural')
-                result[asset.ordinal][outputs.rlzi] = numpy.array([
+    for ri in riskinputs:
+        for out in ri.gen_outputs(crmodel, monitor):
+            for asset, (eal_orig, eal_retro, bcr) in zip(
+                    ri.assets, out['structural']):
+                aval = asset['value-structural']
+                result[asset['ordinal']][out.rlzi] = numpy.array([
                     eal_orig * aval, eal_retro * aval, bcr])
-    return result
+    return {'bcr_data': result}
 
 
 @base.calculators.add('classical_bcr')
@@ -59,11 +59,20 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     Classical BCR Risk calculator
     """
     core_task = classical_bcr
+    accept_precalc = ['classical']
+
+    def pre_execute(self):
+        super().pre_execute()
+        for asset_ref, retrofitted in zip(self.assetcol.asset_refs,
+                                          self.assetcol.array['retrofitted']):
+            if numpy.isnan(retrofitted):
+                raise ValueError('The asset %s has no retrofitted value!'
+                                 % asset_ref.decode('utf8'))
 
     def post_execute(self, result):
         # NB: defined only for loss_type = 'structural'
         bcr_data = numpy.zeros((self.A, self.R), bcr_dt)
-        for aid, data in result.items():
+        for aid, data in result['bcr_data'].items():
             bcr_data[aid]['annual_loss_orig'] = data[:, 0]
             bcr_data[aid]['annual_loss_retro'] = data[:, 1]
             bcr_data[aid]['bcr'] = data[:, 2]

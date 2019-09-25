@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2018 GEM Foundation
+# Copyright (C) 2016-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -302,6 +302,8 @@ class Db(object):
             return self.local.conn
         except AttributeError:
             self.local.conn = self.connect(*self.args, **self.kw)
+            #  honor ON DELETE CASCADE
+            self.local.conn.execute('PRAGMA foreign_keys = ON')
             return self.local.conn
 
     @property
@@ -387,7 +389,7 @@ class Table(list):
 # we cannot use a namedtuple here because one would get a PicklingError:
 # Can't pickle <class 'openquake.server.dbapi.Row'>: attribute lookup
 # openquake.server.dbapi.Row failed
-class Row(collections.Sequence):
+class Row(collections.abc.Sequence):
     """
     A pickleable row, working both as a tuple and an object:
 

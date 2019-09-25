@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,22 +17,18 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import shutil
 import tempfile
-import mock
+import unittest.mock as mock
 import unittest
-import collections
-from io import BytesIO, StringIO
+from io import BytesIO
 
-import numpy
-from numpy.testing import assert_allclose
-
-from openquake.baselib import general
-from openquake.hazardlib import valid, InvalidFile
+from openquake.baselib import general, datastore
+from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
-from openquake.risklib.riskinput import ValidationError
-from openquake.commonlib import readinput, writers, oqvalidation
-from openquake.qa_tests_data.classical import case_1, case_2
+from openquake.risklib.riskmodels import ValidationError
+from openquake.commonlib import readinput
+from openquake.qa_tests_data.classical import case_1, case_2, case_21
+from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
 
@@ -67,60 +63,6 @@ export_dir = %s
         with self.assertRaises(ValueError) as ctx:
             readinput.get_params([job_config])
         self.assertIn('is an absolute path', str(ctx.exception))
-
-    def test_get_oqparam_with_files(self):
-        temp_dir = tempfile.mkdtemp()
-        source_model_input = general.gettemp(dir=temp_dir)
-        site_model_input = general.gettemp(dir=temp_dir, content="foo")
-        job_config = general.gettemp(dir=temp_dir, content="""
-[general]
-calculation_mode = event_based
-[site]
-sites = 0 0
-source_model_file = %s
-site_model_file = %s
-maximum_distance=1
-truncation_level=0
-random_seed=0
-intensity_measure_types = PGA
-investigation_time = 50
-export_dir = %s
-        """ % (os.path.basename(source_model_input),
-               os.path.basename(site_model_input), TMP))
-
-        try:
-            exp_base_path = os.path.dirname(job_config)
-
-            expected_params = {
-                'export_dir': TMP,
-                'base_path': exp_base_path,
-                'calculation_mode': 'event_based',
-                'truncation_level': 0.0,
-                'random_seed': 0,
-                'maximum_distance': {'default': 1},
-                'inputs': {'job_ini': job_config,
-                           'site_model': site_model_input,
-                           'source': [source_model_input],
-                           'source_model': source_model_input},
-                'sites': [(0.0, 0.0, 0.0)],
-                'hazard_imtls': {'PGA': None},
-                'investigation_time': 50.0,
-                'risk_investigation_time': 50.0,
-            }
-
-            params = getparams(readinput.get_oqparam(job_config))
-            for key in expected_params:
-                self.assertEqual(expected_params[key], params[key])
-            items = sorted(params['inputs'].items())
-            keys, values = zip(*items)
-            self.assertEqual(('job_ini', 'site_model', 'source',
-                              'source_model'), keys)
-            self.assertEqual((job_config, site_model_input,
-                              [source_model_input], source_model_input),
-                             values)
-
-        finally:
-            shutil.rmtree(temp_dir)
 
     def test_get_oqparam_with_sites_csv(self):
         sites_csv = general.gettemp('1.0,2.1\n3.0,4.1\n5.0,6.1')
@@ -196,28 +138,6 @@ export_dir = %s
         self.assertIn('expected site_id=0, got 1', str(ctx.exception))
         os.unlink(sites_csv)
 
-    def test_wrong_discretization(self):
-        source = general.gettemp("""
-[general]
-calculation_mode = event_based
-region = 27.685048 85.280857, 27.736719 85.280857, 27.733376 85.355358, 27.675015 85.355358
-region_grid_spacing = 5.0
-maximum_distance=1
-truncation_level=3
-random_seed=5
-reference_vs30_type = measured
-reference_vs30_value = 600.0
-reference_depth_to_2pt5km_per_sec = 5.0
-reference_depth_to_1pt0km_per_sec = 100.0
-intensity_measure_types = PGA
-investigation_time = 50.
-source_model_file = fake.xml
-""")
-        oqparam = readinput.get_oqparam(source)
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_site_collection(oqparam)
-        self.assertIn('Could not discretize region', str(ctx.exception))
-
     def test_invalid_magnitude_distance_filter(self):
         source = general.gettemp("""
 [general]
@@ -231,7 +151,7 @@ maximum_distance=[(200, 8)]
 
 
 def sitemodel():
-    return BytesIO(b'''\
+    return [BytesIO(b'''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -240,32 +160,7 @@ def sitemodel():
         <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="True" />
         <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
     </siteModel>
-</nrml>''')
-
-
-class ClosestSiteModelTestCase(unittest.TestCase):
-
-    def test_get_site_model(self):
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.inputs = dict(site_model=sitemodel())
-        self.assertEqual(len(readinput.get_site_model(oqparam, set())), 3)
-
-    def test_get_far_away_parameter(self):
-        oqparam = mock.Mock()
-        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
-        oqparam.hazard_calculation_id = None
-        oqparam.base_path = '/'
-        oqparam.maximum_distance = 100
-        oqparam.max_site_model_distance = 5
-        oqparam.sites = [(1.0, 0, 0), (2.0, 0, 0)]
-        oqparam.inputs = dict(site_model=sitemodel())
-        with mock.patch('logging.warn') as warn:
-            readinput.get_site_collection(oqparam)
-        # check that the warning was raised
-        self.assertEqual(
-            warn.call_args[0],
-            ('Association to %d km from site (%s %s)', 222, 2.0, 0.0))
+</nrml>''')]
 
 
 class ExposureTestCase(unittest.TestCase):
@@ -410,25 +305,25 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''', suffix='.xml')
 
     def test_get_metadata(self):
-        exp, _assets = asset._get_exposure(self.exposure, stop='assets')
+        [exp] = asset.Exposure.read_headers([self.exposure])
         self.assertEqual(exp.description, 'Exposure model for buildings')
-        self.assertIsNone(exp.insurance_limit_is_absolute)
-        self.assertIsNone(exp.deductible_is_absolute)
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
                          [('structural', 'per_asset', 'USD')])
 
     def test_missing_number(self):
+        raise unittest.SkipTest
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['occupants']
-        oqparam.inputs = {'exposure': self.exposure}
+        oqparam.inputs = {'exposure': [self.exposure]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
+        oqparam.aggregate_by = []
 
-        with self.assertRaises(KeyError) as ctx:
+        with self.assertRaises(Exception) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("node asset: 'number', line 17 of", str(ctx.exception))
 
@@ -438,11 +333,12 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = False
-        oqparam.inputs = {'exposure': self.exposure0}
+        oqparam.inputs = {'exposure': [self.exposure0]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
+        oqparam.aggregate_by = []
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
@@ -455,11 +351,12 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
-        oqparam.inputs = {'exposure': self.exposure1}
+        oqparam.inputs = {'exposure': [self.exposure1]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
+        oqparam.aggregate_by = []
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
@@ -471,12 +368,13 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = True
-        oqparam.inputs = {'exposure': self.exposure,
+        oqparam.inputs = {'exposure': [self.exposure],
                           'structural_vulnerability': None}
         oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
+        oqparam.aggregate_by = []
         with self.assertRaises(RuntimeError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn('Could not find any asset within the region!',
@@ -490,8 +388,9 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.ignore_missing_costs = []
         oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
-        oqparam.inputs = {'exposure': self.exposure2,
+        oqparam.inputs = {'exposure': [self.exposure2],
                           'structural_vulnerability': None}
+        oqparam.aggregate_by = []
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Got 'aggregate', expected "
@@ -503,12 +402,13 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
-        oqparam.inputs = {'exposure': self.exposure3}
+        oqparam.inputs = {'exposure': [self.exposure3]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.insured_losses = False
         oqparam.ignore_missing_costs = []
+        oqparam.aggregate_by = []
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("'RM ' contains whitespace chars, line 11",
@@ -523,293 +423,89 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
-        self.assertIn("Expected cost types ['structural']", str(ctx.exception))
-
-
-class ReadCsvTestCase(unittest.TestCase):
-    def test_get_mesh_csvdata_ok(self):
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.0 0.24 0.25 0.26
-PGV 12.0 42.1 0.34 0.35 0.36
-PGV 12.0 42.2 0.54 0.55 0.56
-""")
-        mesh, data = readinput.get_mesh_csvdata(
-            fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
-        assert_allclose(mesh.lons, [12., 12., 12.])
-        assert_allclose(mesh.lats, [42., 42.1, 42.2])
-        assert_allclose(data['PGA'], [[0.14, 0.15, 0.16],
-                                      [0.44, 0.45, 0.46],
-                                      [0.64, 0.65, 0.66]])
-        assert_allclose(data['PGV'], [[0.24, 0.25, 0.26],
-                                      [0.34, 0.35, 0.36],
-                                      [0.54, 0.55, 0.56]])
-
-    def test_get_mesh_csvdata_different_levels(self):
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.0 0.24 0.25
-PGV 12.0 42.1 0.34 0.35
-PGV 12.0 42.2 0.54 0.55
-""")
-        mesh, data = readinput.get_mesh_csvdata(
-            fakecsv, ['PGA', 'PGV'], [3, 2], valid.probabilities)
-        assert_allclose(mesh.lons, [12., 12., 12.])
-        assert_allclose(mesh.lats, [42., 42.1, 42.2])
-        assert_allclose(data['PGA'], [[0.14, 0.15, 0.16],
-                                      [0.44, 0.45, 0.46],
-                                      [0.64, 0.65, 0.66]])
-        assert_allclose(data['PGV'], [[0.24, 0.25],
-                                      [0.34, 0.35],
-                                      [0.54, 0.55]])
-
-    def test_get_mesh_csvdata_err1(self):
-        # a negative probability
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.0 0.24 0.25 -0.26
-PGV 12.0 42.1 0.34 0.35 0.36
-PGV 12.0 42.2 0.54 0.55 0.56
-""")
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
-        self.assertIn('line 4', str(ctx.exception))
-
-    def test_get_mesh_csvdata_err2(self):
-        # a duplicated point
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.1 0.24 0.25 0.26
-PGV 12.0 42.1 0.34 0.35 0.36
-""")
-        with self.assertRaises(readinput.DuplicatedPoint) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
-        self.assertIn('line 5', str(ctx.exception))
-
-    def test_get_mesh_csvdata_err3(self):
-        # a missing location for PGV
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.0 0.24 0.25 0.26
-PGV 12.0 42.1 0.34 0.35 0.36
-""")
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
-        self.assertEqual(str(ctx.exception),
-                         'Inconsistent locations between PGA and PGV')
-
-    def test_get_mesh_csvdata_err4(self):
-        # inconsistent number of levels
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64
-""")
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGA'], [2], valid.probabilities)
-        self.assertIn('Found 3 values, expected 2', str(ctx.exception))
-
-    def test_get_mesh_csvdata_err5(self):
-        # unexpected IMT
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15
-PGA 12.0 42.1 0.44 0.45
-PGA 12.0 42.2 0.64 0.65
-""")
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGV'], [3], valid.probabilities)
-        self.assertIn("Got 'PGA', expected PGV", str(ctx.exception))
-
-    def test_get_mesh_hcurves_ok(self):
-        fakecsv = StringIO(u"""\
-0 0, 0.42 0.24 0.14, 0.25 0.16 0.08
-0 1, 0.42 0.24 0.14, 0.45 0.40 0.18
-0 2, 0.42 0.24 0.14, 0.65 0.64 0.60
-0 3, 0.42 0.24 0.14, 0.25 0.21 0.20
-0 4, 0.42 0.24 0.04, 0.35 0.31 0.30
-0 5, 0.42 0.24 0.04, 0.55 0.51 0.50
-""")
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.inputs = dict(hazard_curves=fakecsv)
-        oqparam.imtls = collections.OrderedDict([
-            ('PGA', [0.1, 0.2, 0.3]),
-            ('PGV', [0.11, 0.22, 0.33])])
-        mesh, data = readinput.get_mesh_hcurves(oqparam)
-        assert_allclose(mesh.lons, [0., 0., 0., 0., 0., 0.])
-        assert_allclose(mesh.lats, [0., 1., 2., 3., 4., 5.])
-        assert_allclose(data['PGA'], [[0.42, 0.24, 0.14],
-                                      [0.42, 0.24, 0.14],
-                                      [0.42, 0.24, 0.14],
-                                      [0.42, 0.24, 0.14],
-                                      [0.42, 0.24, 0.04],
-                                      [0.42, 0.24, 0.04]])
-        assert_allclose(data['PGV'], [[0.25, 0.16, 0.08],
-                                      [0.45, 0.4, 0.18],
-                                      [0.65, 0.64, 0.6],
-                                      [0.25, 0.21, 0.2],
-                                      [0.35, 0.31, 0.3],
-                                      [0.55, 0.51, 0.5]])
-
-
-class TestReadGmfXmlTestCase(unittest.TestCase):
-    """
-    Read the GMF from a NRML file
-    """
-    def setUp(self):
-        self.oqparam = mock.Mock()
-        self.oqparam.base_path = '/'
-        self.oqparam.inputs = {}
-        self.oqparam.imtls = {'PGA': None, 'PGV': None}
-        self.oqparam.number_of_ground_motion_fields = 5
-
-    def test_ok(self):
-        fname = os.path.join(DATADIR,  'gmfdata.xml')
-        eids, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
-        assert_allclose(eids, range(5))
-        self.assertEqual(
-            writers.write_csv(BytesIO(), gmfa), b'''\
-PGA,PGV
-6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01,6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01
-1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01,1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01
-1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01,1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01''')
-
-    def test_err(self):
-        # missing ruptureId
-        fname = os.path.join(DATADIR,  'gmfdata_err.xml')
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Found a missing ruptureId 1", str(ctx.exception))
-
-    def test_err2(self):
-        # wrong mesh
-        fname = os.path.join(DATADIR,  'gmfdata_err2.xml')
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Expected 4 sites, got 3 nodes in", str(ctx.exception))
-
-    def test_two_nodes_on_the_same_point(self):
-        # after rounding of the coordinates two points can collide
-        fname = general.gettemp('''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-      xmlns:gml="http://www.opengis.net/gml">
-<gmfCollection gsimTreePath="" sourceModelTreePath="">
-  <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="0">
-      <node gmv="0.0126515007046" lon="12.12477995" lat="43.5812"/>
-      <node gmv="0.0124056290492" lon="12.12478193" lat="43.5812"/>
-    </gmf>
-  </gmfSet>
-</gmfCollection>
-</nrml>''')
-        self.oqparam.imtls = {'PGA': None}
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Expected 1 sites, got 2 nodes in", str(ctx.exception))
-
-
-class TestLoadCurvesTestCase(unittest.TestCase):
-    """
-    Read the hazard curves from a NRML file
-    """
-    def test(self):
-        fname = general.gettemp('''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <!-- Spectral Acceleration (SA) example -->
-    <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2" investigationTime="50.0" IMT="SA" saPeriod="0.025" saDamping="5.0">
-        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02</IMLs>
-
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-122.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
-        </hazardCurve>
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-123.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8727e-02 9.8265e-02 9.4956e-02</poEs>
-        </hazardCurve>
-    </hazardCurves>
-
-    <!-- Basic example, using PGA as IMT -->
-    <hazardCurves sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7" investigationTime="50.0" IMT="PGA">
-        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02 3.3700e-02</IMLs>
-
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-122.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-01 9.8226e-01 9.4947e-01 9.2947e-01</poEs>
-        </hazardCurve>
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-123.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-02 9.8216e-02 9.4945e-02 9.2947e-02</poEs>
-        </hazardCurve>
-    </hazardCurves>
-</nrml>
-''', suffix='.xml')
-        oqparam = object.__new__(oqvalidation.OqParam)
-        oqparam.inputs = dict(hazard_curves=fname)
-        sitecol = readinput.get_site_collection(oqparam)
-        self.assertEqual(len(sitecol), 2)
-        self.assertEqual(sorted(oqparam.hazard_imtls.items()),
-                         [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
-                          ('SA(0.025)', [0.005, 0.007, 0.0137])])
-        hcurves = readinput.pmap.convert(oqparam.imtls, 2)
-        assert_allclose(hcurves['PGA'], numpy.array(
-            [[0.098728, 0.098216, 0.094945, 0.092947],
-             [0.98728, 0.98226, 0.94947, 0.92947]]))
-        assert_allclose(hcurves['SA(0.025)'], numpy.array(
-            [[0.098727, 0.098265, 0.094956],
-             [0.98728, 0.98266, 0.94957]]))
+        self.assertIn("is missing", str(ctx.exception))
 
 
 class GetCompositeSourceModelTestCase(unittest.TestCase):
     # test the case in_memory=False, used when running `oq info job.ini`
 
-    def test_nrml05(self):
+    def test_nrml04(self):
         oq = readinput.get_oqparam('job.ini', case_1)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
         srcs = csm.get_sources()  # a single PointSource
         self.assertEqual(len(srcs), 1)
 
-    def test_nrml04(self):
+    def test_nrml05(self):
         oq = readinput.get_oqparam('job.ini', case_2)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
-        srcs = csm.get_sources()  # a single PointSource
-        self.assertEqual(len(srcs), 1)
+        srcs = csm.get_sources()  # two PointSources
+        self.assertEqual(len(srcs), 2)
 
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        readinput.reduce_source_model(smlt, [])
+        readinput.reduce_source_model(smlt, [], False)
+
+    def test_wrong_trts(self):
+        # invalid TRT in job.ini [reqv]
+        oq = readinput.get_oqparam('job.ini', case_2)
+        fname = oq.inputs['reqv'].pop('active shallow crust')
+        oq.inputs['reqv']['act shallow crust'] = fname
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_composite_source_model(oq, in_memory=False)
+        self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
+
+    def test_applyToSources(self):
+        oq = readinput.get_oqparam('job.ini', case_21)
+        with mock.patch('logging.info') as info:
+            readinput.get_composite_source_model(oq)
+        self.assertEqual(
+            info.call_args[0],
+            ('Applied %d changes to the composite source model', 81))
+
+    def test_extra_large_source(self):
+        oq = readinput.get_oqparam('job.ini', case_21)
+        with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
+            with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
+                readinput.get_composite_source_model(oq, h5)
+                os.remove(h5.filename)
+        self.assertEqual(
+            error.call_args[0][0], 'source SFLT2: too large: 84 km')
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
+    def tearDown(self):
+        # cleanup evil global
+        readinput.exposure = None
+
     def test_missing_vulnerability_function(self):
         oq = readinput.get_oqparam('job.ini', case_caracas)
         with self.assertRaises(ValidationError):
-            readinput.get_risk_model(oq)
+            readinput.get_crmodel(oq)
+
+
+class SitecolAssetcolTestCase(unittest.TestCase):
+
+    def tearDown(self):
+        # cleanup evil global
+        readinput.exposure = None
+
+    def test_grid_site_model_exposure(self):
+        oq = readinput.get_oqparam(
+            'job.ini', case_16, region_grid_spacing='15')
+        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
+        self.assertEqual(len(assetcol), 151)
+        self.assertEqual(len(discarded), 0)  # no assets were discarded
+
+    def test_site_model_exposure(self):
+        oq = readinput.get_oqparam('job.ini', case_16)
+        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        self.assertEqual(len(sitecol), 148)
+        self.assertEqual(len(assetcol), 151)
+        self.assertEqual(len(discarded), 0)
+
+    def test_site_model_sites(self):
+        # you cannot set them at the same time
+        with self.assertRaises(ValueError):
+            readinput.get_oqparam('job.ini', case_16, sites='0 0')

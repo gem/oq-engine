@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,4 +28,4 @@ class AkkarEtAl2013(AkkarEtAlRjb2014):
     the call AkkarEtAl2013 is retained as legacy. The AkkarEtAl2013 GMPE
     is now implemented as AkkarEtAlRjb2014
     """
-    deprecated = True
+    superseded_by = AkkarEtAlRjb2014

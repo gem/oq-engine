@@ -3,16 +3,16 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2018-06-26T14:57:28
-engine_version 3.2.0-gitb0cd949   
+date           2019-09-24T15:21:22
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 1, num_levels = 197
+num_sites = 1, num_levels = 197, num_rlzs = 1
 
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -36,7 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -45,24 +44,23 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
+b1        1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
+====== ===================== ========= ========== ==========
+grp_id gsims                 distances siteparams ruptparams
+====== ===================== ========= ========== ==========
+0      '[BooreAtkinson2008]' rjb       vs30       mag rake  
+====== ===================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -74,75 +72,44 @@ source_model.xml 0      Active Shallow Crust 260          260
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         AreaSource   260          0.00556   0.01267    1.00000   52        0     
-========= ============ ============ ========= ========== ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =========
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
+========= ====== ==== ============ ========= ========= ============ =========
+1         0      A    260          2.267E-04 1.00000   260          1,146,708
+========= ====== ==== ============ ========= ========= ============ =========
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-AreaSource   0.00556   1     
-============ ========= ======
-
-Duplicated sources
-------------------
-There are no duplicated sources
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    2.267E-04 1     
+==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ========= ======= =========
-operation-duration mean    stddev    min       max     num_tasks
-RtreeFilter        0.00198 7.723E-04 8.571E-04 0.00401 52       
-count_eff_ruptures 0.01088 NaN       0.01088   0.01088 1        
-================== ======= ========= ========= ======= =========
-
-Fastest task
-------------
-taskno=1, weight=26, duration=0 s, sources="1"
-
-======== ======= ====== ======= ======= ==
-variable mean    stddev min     max     n 
-======== ======= ====== ======= ======= ==
-nsites   1.00000 0.0    1       1       52
-weight   0.50000 0.0    0.50000 0.50000 52
-======== ======= ====== ======= ======= ==
-
-Slowest task
-------------
-taskno=1, weight=26, duration=0 s, sources="1"
-
-======== ======= ====== ======= ======= ==
-variable mean    stddev min     max     n 
-======== ======= ====== ======= ======= ==
-nsites   1.00000 0.0    1       1       52
-weight   0.50000 0.0    0.50000 0.50000 52
-======== ======= ====== ======= ======= ==
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+preclassical       7.191E-04 NaN    7.191E-04 7.191E-04 1      
+read_source_models 0.02067   NaN    0.02067   0.02067   1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-RtreeFilter        srcs=64.69 KB monitor=16.35 KB srcfilter=14.17 KB                       68.7 KB 
-count_eff_ruptures sources=24.87 KB param=2.5 KB monitor=329 B srcfilter=246 B gsims=131 B 359 B   
-================== ======================================================================= ========
+================== =========================================== ========
+task               sent                                        received
+preclassical       params=2.58 KB srcs=1.93 KB srcfilter=647 B 342 B   
+read_source_models converter=314 B fnames=107 B                2.29 KB 
+================== =========================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.29618   0.0       1     
-total prefilter                0.10285   1.75391   52    
-unpickling prefilter           0.01925   0.0       52    
-reading composite source model 0.01507   0.0       1     
-splitting sources              0.01294   0.0       1     
-total count_eff_ruptures       0.01088   6.33594   1     
-store source_info              0.00733   0.0       1     
-unpickling count_eff_ruptures  3.214E-04 0.0       1     
-aggregate curves               2.978E-04 0.0       1     
-reading site collection        2.623E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+calc_1837                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.02067   0.0       1     
+store source_info        0.00208   0.0       1     
+total preclassical       7.191E-04 0.0       1     
+managing sources         4.702E-04 0.0       1     
+aggregate curves         2.019E-04 0.0       1     
+======================== ========= ========= ======

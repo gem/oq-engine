@@ -2,17 +2,17 @@ North Africa PSHA
 =================
 
 ============== ===================
-checksum32     576,018,697        
-date           2018-06-26T14:57:49
-engine_version 3.2.0-gitb0cd949   
+checksum32     3,672,594,697      
+date           2019-09-24T15:21:25
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 2, num_levels = 133
+num_sites = 2, num_levels = 133, num_rlzs = 8
 
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              50.0              
@@ -37,7 +37,6 @@ Name                    File
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
 sites                   `sites.csv <sites.csv>`_                                    
-source                  `GridSources.xml <GridSources.xml>`_                        
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -46,33 +45,25 @@ Composite source model
 ============================= ======= =============== ================
 smlt_path                     weight  gsim_logic_tree num_realizations
 ============================= ======= =============== ================
-smoothed_model_m_m0.2_b_e0.0  0.50000 simple(0,4,0)   4/4             
-smoothed_model_m_m0.2_b_m0.05 0.50000 simple(0,4,0)   4/4             
+smoothed_model_m_m0.2_b_e0.0  0.50000 simple(0,4,0)   4               
+smoothed_model_m_m0.2_b_m0.05 0.50000 simple(0,4,0)   4               
 ============================= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ====================================================================================== =========== ======================= =================
-grp_id gsims                                                                                  distances   siteparams              ruptparams       
-====== ====================================================================================== =========== ======================= =================
-0      AkkarEtAlRjb2014() AtkinsonBoore2006Modified2011() ChiouYoungs2014() PezeshkEtAl2011() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-1      AkkarEtAlRjb2014() AtkinsonBoore2006Modified2011() ChiouYoungs2014() PezeshkEtAl2011() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-====== ====================================================================================== =========== ======================= =================
+====== ============================================================================================== =========== ======================= =================
+grp_id gsims                                                                                          distances   siteparams              ruptparams       
+====== ============================================================================================== =========== ======================= =================
+0      '[AkkarEtAlRjb2014]' '[AtkinsonBoore2006Modified2011]' '[ChiouYoungs2014]' '[PezeshkEtAl2011]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+1      '[AkkarEtAlRjb2014]' '[AtkinsonBoore2006Modified2011]' '[ChiouYoungs2014]' '[PezeshkEtAl2011]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ============================================================================================== =========== ======================= =================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=8, rlzs=8)
-  0,AkkarEtAlRjb2014(): [1]
-  0,AtkinsonBoore2006Modified2011(): [2]
-  0,ChiouYoungs2014(): [0]
-  0,PezeshkEtAl2011(): [3]
-  1,AkkarEtAlRjb2014(): [5]
-  1,AtkinsonBoore2006Modified2011(): [6]
-  1,ChiouYoungs2014(): [4]
-  1,PezeshkEtAl2011(): [7]>
+  <RlzsAssoc(size=32, rlzs=8)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -87,80 +78,52 @@ GridSources.xml 1      Tectonic_type_b 260          260
 #TRT models   2  
 #eff_ruptures 520
 #tot_ruptures 520
-#tot_weight   208
 ============= ===
 
 Slowest sources
 ---------------
-========= ================ ============ ========= ========== ========= ========= ======
-source_id source_class     num_ruptures calc_time split_time num_sites num_split events
-========= ================ ============ ========= ========== ========= ========= ======
-21        MultiPointSource 260          0.00902   2.196E-04  1.00000   4         0     
-========= ================ ============ ========= ========== ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+21        0      M    260          6.366E-04 1.00000   260          408,434
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
-================ ========= ======
-source_class     calc_time counts
-================ ========= ======
-MultiPointSource 0.00902   1     
-================ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+M    6.366E-04 2     
+==== ========= ======
 
 Duplicated sources
 ------------------
-There are no duplicated sources
+Found 0 unique sources and 1 duplicate sources with multiplicity 2.0: ['21']
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00409 1.545E-04 0.00390 0.00427 4        
-count_eff_ruptures 0.00616 7.576E-04 0.00563 0.00670 2        
-================== ======= ========= ======= ======= =========
-
-Fastest task
-------------
-taskno=1, weight=104, duration=0 s, sources="21"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 0.0    1   1   2
-weight   52      0.0    52  52  2
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=2, weight=104, duration=0 s, sources="21"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 0.0    1   1   2
-weight   52      0.0    52  52  2
-======== ======= ====== === === =
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+preclassical       0.00111 NaN       0.00111 0.00111 1      
+read_source_models 0.00212 4.872E-05 0.00209 0.00216 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-RtreeFilter        srcs=5.45 KB monitor=1.26 KB srcfilter=1.09 KB                          5.76 KB 
-count_eff_ruptures sources=4.13 KB param=3.72 KB gsims=794 B monitor=658 B srcfilter=492 B 720 B   
-================== ======================================================================= ========
+================== =========================================== ========
+task               sent                                        received
+preclassical       params=1.95 KB srcs=1.55 KB srcfilter=716 B 347 B   
+read_source_models converter=628 B fnames=212 B                3.87 KB 
+================== =========================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.21336   0.0       1     
-total prefilter                0.01636   3.47266   4     
-total count_eff_ruptures       0.01233   6.33594   2     
-store source_info              0.00902   0.0       1     
-reading composite source model 0.00373   0.0       1     
-unpickling prefilter           8.719E-04 0.0       4     
-splitting sources              7.510E-04 0.0       1     
-aggregate curves               6.931E-04 0.0       2     
-unpickling count_eff_ruptures  5.734E-04 0.0       2     
-reading site collection        3.853E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+calc_1843                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.00425   0.0       2     
+store source_info        0.00203   0.0       1     
+total preclassical       0.00111   0.0       1     
+managing sources         3.836E-04 0.0       1     
+aggregate curves         2.332E-04 0.0       1     
+======================== ========= ========= ======

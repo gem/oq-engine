@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ except ImportError:
 from openquake.baselib import sap
 
 
-@sap.Script
+@sap.script
 def viewlog(calc_id, host='localhost', port=8000):
     """
     Extract the log of the given calculation ID from the WebUI

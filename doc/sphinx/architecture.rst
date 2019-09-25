@@ -86,12 +86,13 @@ is a Python package containing several modules or event
 subpackages. The stack is a dependency tower where the higher levels
 depend on the lower levels but not viceversa:
 
-- level 8: commands (commands for oq script)
-- level 7: server (database and Web UI)
-- level 6: engine (command-line tool, export, logs)
-- level 5: calculators (hazard and risk calculators)
-- level 4: commonlib (configuration, logic trees, datastore, I/O)
-- level 3: risklib (risk validation, risk models, risk inputs)
+- level 9: commands (commands for oq script)
+- level 8: server (database and Web UI)
+- level 7: engine (command-line tool, export, logs)
+- level 6: calculators (hazard and risk calculators)
+- level 5: commonlib (configuration, logic trees, datastore, I/O)
+- level 4: risklib (risk validation, risk models, risk inputs)
+- level 3: hmtk (catalogues, plotting, ...)
 - level 2: hazardlib (validation, read/write XML, source and site objects, geospatial utilities, GSIM library)
 - level 1: baselib (programming utilities, parallelization, monitoring, Python 3 compatibility)
 

@@ -1,6 +1,21 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2016-2019 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 if [ $GEM_SET_DEBUG ]; then
     set -x
@@ -25,12 +40,20 @@ startstop() {
     local ACTION=$1
     local SERVICE=${2:-openquake-dbserver}
 
-    if [ -f /etc/supervisor/conf.d/${SERVICE}.conf ]; then
-        supervisorctl $ACTION $SERVICE
-    elif [ -f /lib/systemd/system/${SERVICE}.service ]; then
+    if [ -f /lib/systemd/system/${SERVICE}.service ]; then
         systemctl $ACTION ${SERVICE}.service
     else
         echo -e "!! Service $SERVICE not found. Aborting." >&2
+        exit 1
+    fi
+}
+
+getdbpath() {
+    local OQ_CFG='/etc/openquake/openquake.cfg'
+    if [ -f $OQ_CFG ]; then
+        grep 'file = ' $OQ_CFG | tr -d ' ' | cut -d '=' -f 2
+    else
+        echo -e "!! Configuration file not found. Aborting." >&2
         exit 1
     fi
 }
@@ -90,7 +113,7 @@ echo ''
 if [[ "$answer" == "y" ]]; then
     echo " * OpenQuake Engine DbServer stopped"
     startstop stop
-    rm -f $OQ_DB
+    rm $(getdbpath)
     echo " * Database dropped"
     find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \; || true
     if [ -z $skipnew ]; then

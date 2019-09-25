@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,11 +21,14 @@ Source model XML Writer
 """
 
 import os
+import toml
 import operator
 import numpy
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
+from openquake.hazardlib.source import NonParametricSeismicSource
+from openquake.hazardlib.tom import PoissonTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -41,8 +44,9 @@ def build_area_source_geometry(area_source):
         Instance of :class:`openquake.baselib.node.Node`
     """
     geom = []
-    for lon_lat in zip(area_source.polygon.lons, area_source.polygon.lats):
-        geom.extend(lon_lat)
+    for lon, lat in zip(area_source.polygon.lons, area_source.polygon.lats):
+        # NB: converting numpy.float64 -> float is good for TOML
+        geom.extend((float(lon), float(lat)))
     poslist_node = Node("gml:posList", text=geom)
     linear_ring_node = Node("gml:LinearRing", nodes=[poslist_node])
     exterior_node = Node("gml:exterior", nodes=[linear_ring_node])
@@ -236,10 +240,7 @@ def build_multi_mfd(mfd):
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
-            if len(values[0]) > 1:  # tested in multipoint_test.py
-                values = list(numpy.concatenate(values))
-            else:
-                values = sum(values, [])
+            values = sum(values, [])
         node.append(Node(name, text=values))
     if 'occurRates' in mfd.kwargs:
         lengths = [len(rates) for rates in mfd.kwargs['occurRates']]
@@ -258,11 +259,14 @@ def build_nodal_plane_dist(npd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     npds = []
+    dist = []
     for prob, npd in npd.data:
+        dist.append((prob, (npd.dip, npd.strike, npd.rake)))
         nodal_plane = Node(
             "nodalPlane", {"dip": npd.dip, "probability": prob,
                            "strike": npd.strike, "rake": npd.rake})
         npds.append(nodal_plane)
+    sourceconverter.check_dupl(dist)
     return Node("nodalPlaneDist", nodes=npds)
 
 
@@ -277,9 +281,11 @@ def build_hypo_depth_dist(hdd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     hdds = []
+    dist = []
     for (prob, depth) in hdd.data:
-        hdds.append(
-            Node("hypoDepth", {"depth": depth, "probability": prob}))
+        dist.append((prob, depth))
+        hdds.append(Node("hypoDepth", {"depth": depth, "probability": prob}))
+    sourceconverter.check_dupl(dist)
     return Node("hypoDepthDist", nodes=hdds)
 
 
@@ -384,9 +390,16 @@ def get_source_attributes(source):
     :returns:
         Dictionary of source attributes
     """
-    return {"id": source.source_id,
-            "name": source.name,
-            "tectonicRegion": source.tectonic_region_type}
+    attrs = {"id": source.source_id,
+             "name": source.name,
+             "tectonicRegion": source.tectonic_region_type}
+    if isinstance(source, NonParametricSeismicSource):
+        if source.data[0][0].weight is not None:
+            weights = []
+            for data in source.data:
+                weights.append(data[0].weight)
+            attrs['rup_weights'] = numpy.array(weights)
+    return attrs
 
 
 @obj_to_node.add('AreaSource')
@@ -471,8 +484,9 @@ def build_multi_point_source_node(multi_point_source):
     # parse geometry
     pos = []
     for p in multi_point_source.mesh:
-        pos.append(p.x)
-        pos.append(p.y)
+        # converting numpy.float64 -> float is good for TOML
+        pos.append(float(p.x))
+        pos.append(float(p.y))
     mesh_node = Node('gml:posList', text=pos)
     upper_depth_node = Node(
         "upperSeismoDepth", text=multi_point_source.upper_seismogenic_depth)
@@ -482,8 +496,8 @@ def build_multi_point_source_node(multi_point_source):
         "multiPointGeometry",
         nodes=[mesh_node, upper_depth_node, lower_depth_node])]
     # parse common distributed attributes
-    source_nodes.extend(get_distributed_seismicity_source_nodes(
-        multi_point_source))
+    source_nodes.extend(
+        get_distributed_seismicity_source_nodes(multi_point_source))
     return Node("multiPointSource",
                 get_source_attributes(multi_point_source),
                 nodes=source_nodes)
@@ -560,10 +574,18 @@ def build_source_group(source_group):
         attrs['src_interdep'] = source_group.src_interdep
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
-    if source_group.srcs_weights:
-        attrs['srcs_weights'] = ' '.join(map(str, source_group.srcs_weights))
     if source_group.grp_probability is not None:
         attrs['grp_probability'] = source_group.grp_probability
+    if source_group.cluster:
+        attrs['cluster'] = 'true'
+    if source_group.temporal_occurrence_model is not None:
+        tom = source_group.temporal_occurrence_model
+        if isinstance(tom, PoissonTOM) and tom.occurrence_rate:
+            attrs['tom'] = 'PoissonTOM'
+            attrs['occurrence_rate'] = tom.occurrence_rate
+    srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
+    if set(srcs_weights) != {1}:
+        attrs['srcs_weights'] = ' '.join(map(str, srcs_weights))
     return Node('sourceGroup', attrs, nodes=source_nodes)
 
 
@@ -589,7 +611,8 @@ def build_source_model(csm):
 
 # ##################### generic source model writer ####################### #
 
-def write_source_model(dest, sources_or_groups, name=None):
+def write_source_model(dest, sources_or_groups, name=None,
+                       investigation_time=None):
     """
     Writes a source model to XML.
 
@@ -613,16 +636,20 @@ def write_source_model(dest, sources_or_groups, name=None):
                   for trt in srcs_by_trt]
     name = name or os.path.splitext(os.path.basename(dest))[0]
     nodes = list(map(obj_to_node, sorted(groups)))
-    source_model = Node("sourceModel", {"name": name}, nodes=nodes)
+    attrs = {"name": name}
+    if investigation_time is not None:
+        attrs['investigation_time'] = investigation_time
+    source_model = Node("sourceModel", attrs, nodes=nodes)
     with open(dest, 'wb') as f:
         nrml.write([source_model], f, '%s')
     return dest
 
 
-def hdf5write(h5file, obj, root=''):
+def tomldump(obj, fileobj=None):
     """
-    Write a generic object serializable to a Node-like object into a :class:
-    `openquake.baselib.hdf5.File`
+    Write a generic serializable object in TOML format
     """
     dic = node_to_dict(obj_to_node(obj))
-    h5file.save(dic, root)
+    if fileobj is None:
+        return toml.dumps(dic)
+    toml.dump(dic, fileobj)
