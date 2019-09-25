@@ -2,7 +2,7 @@
 
 ![OpenQuake Logo](https://github.com/gem/oq-infrastructure/raw/master/logos/oq-logo.png)
 
-The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
+The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters. DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
 <!-- GEM BEGIN: apply the following patch with the proper values for the next release
 -[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
@@ -26,11 +26,14 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
 [![PyPI Version](https://img.shields.io/pypi/v/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
+![PyPI - Wheel](https://img.shields.io/pypi/wheel/openquake.engine.svg)
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/gem/oq-engine.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/gem/oq-engine/context:python)
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.1#openquake-engine.
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.1/doc/whats-new.md)
+Current stable version is the **OpenQuake Engine 3.6** 'Pak Topo'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.6#openquake-engine.
+
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.6/doc/whats-new.md)
 
 ## Documentation (master tree)
 
@@ -48,14 +51,11 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 * [Continuous integration and testing](https://github.com/gem/oq-engine/blob/master/doc/testing.md)
 * [Glossary of Terms](https://github.com/gem/oq-engine/blob/master/doc/glossary.md)
 
-#### For developers
+#### For contributors
 
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
-* [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
-
-#### For scientists
-
+* [HTTP REST API](https://github.com/gem/oq-engine/blob/master/doc/web-api.md)
 * [Implementing a new GSIM](https://github.com/gem/oq-engine/blob/master/doc/implementing-new-gsim.md)
 
 ### Installation
@@ -67,7 +67,7 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 
 * [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/master/doc/installing/ubuntu.md)
 * [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
-* [Installing on other flavors](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
+* [Installing on other flavors (without sudo)](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
 * [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
 * [Installing on a cluster](https://github.com/gem/oq-engine/blob/master/doc/installing/cluster.md)
 
@@ -85,9 +85,15 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 
 * [Download OVA appliance](https://downloads.openquake.org/ova/stable/)
 
-#### Docker
+#### Cloud
 
 * [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
+
+#### Mirrors
+
+A mirror of this repository, hosted in Pavia (Italy), is available at [https://mirror.openquake.org/git/GEM/oq-engine.git](https://mirror.openquake.org/git/GEM/oq-engine.git).
+
+The main download server ([downloads.openquake.org](https://downloads.openquake.org/)) is hosted in Nürnberg (Germany).
 
 ### Running the OpenQuake Engine
 
@@ -101,6 +107,7 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 * [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
 * [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
 * [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
+* [Repository](https://plugins.qgis.org/plugins/svir/)
 * [Source code](https://github.com/gem/oq-irmt-qgis)
 
 ## License

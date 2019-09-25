@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,21 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from nose.plugins.attrib import attr
-
 from openquake.qa_tests_data.classical_bcr import case_1, case_2
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 
 
 class ClassicalBCRTestCase(CalculatorTestCase):
 
-    @attr('qa', 'risk', 'classical_bcr')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
         [fname] = out['bcr-rlzs', 'csv']
         self.assertEqualFiles('expected/bcr-structural.csv', fname)
 
-    @attr('qa', 'risk', 'classical_bcr')
     def test_case_2(self):
         # test with the exposure in CSV format
         self.run_calc(case_2.__file__, 'job.ini',

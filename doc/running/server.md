@@ -14,6 +14,26 @@ The OpenQuake Engine WebUI does not require any special software on the client s
 - Microsoft Edge
 - Apple Safari >= 6
 
+## Starting the OpenQuake Engine server
+
+### Windows
+
+Double click on the "OpenQuake Engine (webui)" icon located on the desktop, or use the link in the 'Start' menu.
+
+### Linux and macOS from installers or from sources
+
+In a terminal type:
+
+```bash
+$ oq webui start
+```
+
+### Linux from packages
+
+A `systemd` service will take care of the OpenQuake Engine server, starting it at boot.
+Please refer to [Configure the systemd services](../installing/rhel.md#configure-the-system-services) page.
+
+
 ## Using the OpenQuake Engine WebUI
 
 Open the browser and load the [http://localhost:8800/engine](http://localhost:8800/engine) page
@@ -66,6 +86,10 @@ A calculation can be in one of the following statuses: `created`, `executing`, `
 ![WebUI calculations status](../img/webui-status.gif)
 
 The reason behind a `failed` calculation can be inspected by using the `Traceback` button.
+
+## Using the OpenQuake IRMT QGIS plugin
+
+Please refer to the [**OpenQuake IRMT QGIS plugin** documentation](https://docs.openquake.org/oq-irmt-qgis/).
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:

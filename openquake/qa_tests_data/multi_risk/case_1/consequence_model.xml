@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<consequenceModel id="consequence-from-IPT" assetCategory="buildings" lossCategory="structural">
+		<description>CRAVE</description>
+		<limitStates>collapse</limitStates>
+		<consequenceFunction id="Weak_roof" dist="LN">
+			<params ls="collapse" mean="0.15" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="Moderate_roof" dist="LN">
+			<params ls="collapse" mean="0.20" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="Heavy_roof" dist="LN">
+			<params ls="collapse" mean="0.4" stddev="0"/>
+		</consequenceFunction>
+		<consequenceFunction id="Slab_roof" dist="LN">
+			<params ls="collapse" mean="0.4" stddev="0"/>
+		</consequenceFunction>
+	</consequenceModel>
+</nrml>

@@ -2,17 +2,17 @@ Classical Hazard QA Test, Case 1
 ================================
 
 ============== ===================
-checksum32     1,984,592,463      
-date           2018-06-26T14:58:06
-engine_version 3.2.0-gitb0cd949   
+checksum32     141,718,627        
+date           2019-09-24T15:21:22
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 1, num_levels = 6
+num_sites = 1, num_levels = 6, num_rlzs = 1
 
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical'       
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -31,38 +31,36 @@ ses_seed                        42
 
 Input files
 -----------
-=============== ============================================
-Name            File                                        
-=============== ============================================
-gsim_logic_tree `gsim_logic_tree.xml <gsim_logic_tree.xml>`_
-job_ini         `job.ini <job.ini>`_                        
-source          `source_model.xml <source_model.xml>`_      
-source_model    `source_model.xml <source_model.xml>`_      
-=============== ============================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
+b11       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
+====== ================== ========= ========== ==========
+grp_id gsims              distances siteparams ruptparams
+====== ================== ========= ========== ==========
+0      '[SadighEtAl1997]' rrup      vs30       mag rake  
+====== ================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -74,75 +72,44 @@ source_model.xml 0      Active Shallow Crust 1            1
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  1            0.00493   4.053E-06  1.00000   1         0     
-========= ============ ============ ========= ========== ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+1         0      P    1            2.820E-04 1.00000   1.00000      3,545
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-PointSource  0.00493   1     
-============ ========= ======
-
-Duplicated sources
-------------------
-There are no duplicated sources
+==== ========= ======
+code calc_time counts
+==== ========= ======
+P    2.820E-04 1     
+==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ====== ========= ========= =========
-operation-duration mean      stddev min       max       num_tasks
-RtreeFilter        8.125E-04 NaN    8.125E-04 8.125E-04 1        
-count_eff_ruptures 0.00656   NaN    0.00656   0.00656   1        
-================== ========= ====== ========= ========= =========
-
-Fastest task
-------------
-taskno=1, weight=0, duration=0 s, sources="1"
-
-======== ======= ====== ======= ======= =
-variable mean    stddev min     max     n
-======== ======= ====== ======= ======= =
-nsites   1.00000 NaN    1       1       1
-weight   0.10000 NaN    0.10000 0.10000 1
-======== ======= ====== ======= ======= =
-
-Slowest task
-------------
-taskno=1, weight=0, duration=0 s, sources="1"
-
-======== ======= ====== ======= ======= =
-variable mean    stddev min     max     n
-======== ======= ====== ======= ======= =
-nsites   1.00000 NaN    1       1       1
-weight   0.10000 NaN    0.10000 0.10000 1
-======== ======= ====== ======= ======= =
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+preclassical       7.856E-04 NaN    7.856E-04 7.856E-04 1      
+read_source_models 0.00155   NaN    0.00155   0.00155   1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-================== ===================================================================== ========
-task               sent                                                                  received
-RtreeFilter        srcs=0 B srcfilter=0 B monitor=0 B                                    1.24 KB 
-count_eff_ruptures sources=1.29 KB param=526 B monitor=329 B srcfilter=246 B gsims=120 B 358 B   
-================== ===================================================================== ========
+================== ========================================= ========
+task               sent                                      received
+preclassical       srcs=1.17 KB srcfilter=647 B params=612 B 342 B   
+read_source_models converter=306 B fnames=106 B              1.56 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.16959   0.0       1     
-store source_info              0.00673   0.0       1     
-total count_eff_ruptures       0.00656   6.39844   1     
-reading composite source model 0.00186   0.0       1     
-total prefilter                8.125E-04 0.0       1     
-reading site collection        3.693E-04 0.0       1     
-unpickling count_eff_ruptures  2.971E-04 0.0       1     
-aggregate curves               2.835E-04 0.0       1     
-splitting sources              2.778E-04 0.0       1     
-unpickling prefilter           2.720E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+calc_1838                time_sec  memory_mb counts
+======================== ========= ========= ======
+store source_info        0.00208   0.0       1     
+total read_source_models 0.00155   0.0       1     
+total preclassical       7.856E-04 0.0       1     
+managing sources         3.057E-04 0.0       1     
+aggregate curves         2.067E-04 0.0       1     
+======================== ========= ========= ======

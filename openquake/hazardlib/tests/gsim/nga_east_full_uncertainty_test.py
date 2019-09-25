@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,10 +29,7 @@ and 5.13
 For delta_s2s: Table 5.15
 """
 import os
-import inspect
 import unittest
-import numpy as np
-from nose.plugins.attrib import attr
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
 from openquake.hazardlib.gsim.nga_east import DarraghEtAl2015NGAEast1CCSP
 
@@ -539,7 +536,7 @@ NGA_EAST_SIGMA_FILES = [
     ]
 
 
-@attr('slow')
+@unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
 class NGAEastUncertaintyTestCase(unittest.TestCase):
     """
     Variant of the :class:
@@ -554,15 +551,9 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
     """
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 
-    def get_context_attributes(self, ctx):
-        att = inspect.getmembers(ctx, lambda a: not inspect.isroutine(a))
-        att = [k for k, v in att if '_abc' not in k
-               and not (k.startswith('_') and k.endswith('_'))]
-        return set(att)
-
     def check(self, gsim, filename, max_discrep_percentage):
         filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
+        errors, stats, sctx, rctx, dctx = check_gsim(
             gsim, open(filename), max_discrep_percentage)
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
@@ -570,10 +561,6 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
         self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
         self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
-        self.assertTrue(
-            np.all(ctxs),
-            msg='Contexts objects have been changed by method '
-                'get_mean_and_stddevs')
         if errors:
             raise AssertionError(stats)
         print()

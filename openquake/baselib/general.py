@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,33 +16,40 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 Utility functions of general interest.
 """
 import os
 import sys
-import imp
 import copy
 import math
 import socket
 import random
 import atexit
 import zipfile
+import builtins
 import operator
 import warnings
 import tempfile
 import importlib
 import itertools
 import subprocess
-import collections
-
+from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
+
+
+def duplicated(items):
+    """
+    :returns: True if the items are duplicated, False otherwise
+    """
+    return len(items) > len(set(items))
 
 
 def cached_property(method):
@@ -64,7 +71,14 @@ def cached_property(method):
     return property(newmethod)
 
 
-class WeightedSequence(collections.MutableSequence):
+def nokey(item):
+    """
+    Dummy function to apply to items without a key
+    """
+    return 'Unspecified'
+
+
+class WeightedSequence(MutableSequence):
     """
     A wrapper over a sequence of weighted items with a total weight attribute.
     Adding items automatically increases the weight.
@@ -181,19 +195,12 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def nokey(item):
-    """
-    Dummy function to apply to items without a key
-    """
-    return 'Unspecified'
-
-
-def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
+def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
-    :param kind: a function returning the kind of a given item
+    :param key: a function returning the kind of a given item
 
     Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -205,28 +212,31 @@ def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
      >>> list(block_splitter(items, 3))
      [<WeightedSequence ['A', 'B', 'C'], weight=3>, <WeightedSequence ['D', 'E'], weight=2>]
 
-    The default weight is 1 for all items.
+    The default weight is 1 for all items. Here is an example leveraning on the
+    key to group together results:
+
+    >>> items = ['A1', 'C2', 'D2', 'E2']
+    >>> list(block_splitter(items, 2, key=operator.itemgetter(1)))
+    [<WeightedSequence ['A1'], weight=1>, <WeightedSequence ['C2', 'D2'], weight=2>, <WeightedSequence ['E2'], weight=1>]
     """
     if max_weight <= 0:
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
-    prev_kind = 'Unspecified'
+    prev_key = 'Unspecified'
     for item in items:
         w = weight(item)
-        k = kind(item)
+        k = key(item)
         if w < 0:  # error
             raise ValueError('The item %r got a negative weight %s!' %
                              (item, w))
-        elif w == 0:  # ignore items with 0 weight
-            pass
-        elif ws.weight + w > max_weight or k != prev_kind:
+        elif ws.weight + w > max_weight or k != prev_key:
             new_ws = WeightedSequence([(item, w)])
             if ws:
                 yield ws
             ws = new_ws
-        else:
+        elif w > 0:  # ignore items with 0 weight
             ws.append((item, w))
-        prev_kind = k
+        prev_key = k
     if ws:
         yield ws
 
@@ -260,6 +270,22 @@ def split_in_slices(number, num_slices):
     return slices
 
 
+def gen_slices(start, stop, blocksize):
+    """
+    Yields slices of lenght at most block_size.
+
+    >>> list(gen_slices(1, 6, 2))
+    [slice(1, 3, None), slice(3, 5, None), slice(5, 6, None)]
+    """
+    assert start <= stop, (start, stop)
+    assert blocksize > 0, blocksize
+    while True:
+        yield slice(start, min(start + blocksize, stop))
+        start += blocksize
+        if start >= stop:
+            break
+
+
 def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
@@ -279,10 +305,14 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     if isinstance(sequence, int):
         return split_in_slices(sequence, hint)
-
-    if hint == 0:  # do not split
+    elif hint in (0, 1) and key is nokey:  # do not split
         return [sequence]
-    items = list(sequence) if key is nokey else sorted(sequence, key=key)
+    elif hint in (0, 1):  # split by key
+        blocks = []
+        for k, group in groupby(sequence, key).items():
+            blocks.append(group)
+        return blocks
+    items = sorted(sequence, key=lambda item: (key(item), weight(item)))
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
@@ -341,7 +371,7 @@ _tmp_paths = []
 def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
 
-    Please note: the temporary file must be deleted by the caller.
+    Please note: the temporary file can be deleted by the caller or not.
 
     :param string content: the content to write to the temporary file.
     :param string dir: directory where the file should be created
@@ -474,26 +504,7 @@ def assert_independent(package, *packages):
                 raise CodeDependencyError('%s depends on %s' % (package, pkg))
 
 
-def search_module(module, syspath=sys.path):
-    """
-    Given a module name (possibly with dots) returns the corresponding
-    filepath, or None, if the module cannot be found.
-
-    :param module: (dotted) name of the Python module to look for
-    :param syspath: a list of directories to search (default sys.path)
-    """
-    lst = module.split(".")
-    pkg, submodule = lst[0], ".".join(lst[1:])
-    try:
-        fileobj, filepath, descr = imp.find_module(pkg, syspath)
-    except ImportError:
-        return
-    if submodule:  # recursive search
-        return search_module(submodule, [filepath])
-    return filepath
-
-
-class CallableDict(collections.OrderedDict):
+class CallableDict(dict):
     r"""
     A callable object built on top of a dictionary of functions, used
     as a smart registry or as a poor man generic function dispatching
@@ -569,30 +580,35 @@ class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables::
 
-     >> acc = AccumDict()
-     >> acc += {'a': 1}
-     >> acc += {'a': 1, 'b': 1}
-     >> acc
+     >>> acc = AccumDict()
+     >>> acc += {'a': 1}
+     >>> acc += {'a': 1, 'b': 1}
+     >>> acc
      {'a': 2, 'b': 1}
-     >> {'a': 1} + acc
+     >>> {'a': 1} + acc
      {'a': 3, 'b': 1}
-     >> acc + 1
+     >>> acc + 1
      {'a': 3, 'b': 2}
-     >> 1 - acc
+     >>> 1 - acc
      {'a': -1, 'b': 0}
-     >> acc - 1
+     >>> acc - 1
      {'a': 1, 'b': 0}
 
-    Also the multiplication has been defined::
+    The multiplication has been defined::
 
-     >> prob1 = AccumDict(a=0.4, b=0.5)
-     >> prob2 = AccumDict(b=0.5)
-     >> prob1 * prob2
+     >>> prob1 = AccumDict(a=0.4, b=0.5)
+     >>> prob2 = AccumDict(b=0.5)
+     >>> prob1 * prob2
      {'a': 0.4, 'b': 0.25}
-     >> prob1 * 1.2
+     >>> prob1 * 1.2
      {'a': 0.48, 'b': 0.6}
-     >> 1.2 * prob1
+     >>> 1.2 * prob1
      {'a': 0.48, 'b': 0.6}
+
+    And even the power::
+
+    >>> prob2 ** 2
+    {'b': 0.25}
 
     It is very common to use an AccumDict of accumulators; here is an
     example using the empty list as accumulator:
@@ -616,10 +632,13 @@ class AccumDict(dict):
     def __iadd__(self, other):
         if hasattr(other, 'items'):
             for k, v in other.items():
-                try:
-                    self[k] = self[k] + v
-                except KeyError:
+                if k not in self:
                     self[k] = v
+                elif isinstance(v, list):
+                    # specialized for speed
+                    self[k].extend(v)
+                else:
+                    self[k] = self[k] + v
         else:  # add other to all elements
             for k in self:
                 self[k] = self[k] + other
@@ -655,6 +674,9 @@ class AccumDict(dict):
     def __neg__(self):
         return self.__class__({k: -v for k, v in self.items()})
 
+    def __invert__(self):
+        return self.__class__({k: ~v for k, v in self.items()})
+
     def __imul__(self, other):
         if hasattr(other, 'items'):
             for k, v in other.items():
@@ -673,6 +695,12 @@ class AccumDict(dict):
         return new
 
     __rmul__ = __mul__
+
+    def __pow__(self, n):
+        new = self.__class__(self)
+        for key in new:
+            new[key] **= n
+        return new
 
     def __truediv__(self, other):
         return self * (1. / other)
@@ -706,7 +734,7 @@ def _slicedict_n(imt_dt):
     return slicedic, n
 
 
-class DictArray(collections.Mapping):
+class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays serializable to HDF5:
 
@@ -798,15 +826,14 @@ def groupby(objects, key, reducegroup=list):
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
     :param reducegroup: the function to apply to each group
-    :returns: an OrderedDict {key value: map(reducegroup, group)}
+    :returns: a dict {key value: map(reducegroup, group)}
 
     >>> groupby(['A1', 'A2', 'B1', 'B2', 'B3'], lambda x: x[0],
     ...         lambda group: ''.join(x[1] for x in group))
-    OrderedDict([('A', '12'), ('B', '123')])
+    {'A': '12', 'B': '123'}
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)
-    return collections.OrderedDict((k, reducegroup(group))
-                                   for k, group in kgroups)
+    return {k: reducegroup(group) for k, group in kgroups}
 
 
 def groupby2(records, kfield, vfield):
@@ -843,9 +870,87 @@ def _reducerecords(group):
 
 def group_array(array, *kfields):
     """
-    Convert an array into an OrderedDict kfields -> array
+    Convert an array into a dict kfields -> array
     """
     return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+
+
+def multi_index(shape, axis=None):
+    """
+    :param shape: a shape of lenght L with P = S1 * S2 * ... * SL
+    :param axis: None or an integer in the range 0 .. L -1
+    :yields:
+        P tuples of indices with a slice(None) at the axis position (if any)
+    """
+    if any(s >= TWO16 for s in shape):
+        raise ValueError('Shape too big: ' + str(shape))
+    ranges = (range(s) for s in shape)
+    if axis is None:
+        yield from itertools.product(*ranges)
+    for tup in itertools.product(*ranges):
+        lst = list(tup)
+        lst.insert(axis, slice(None))
+        yield tuple(lst)
+
+
+def fast_agg(indices, values=None, axis=0):
+    """
+    :param indices: N indices in the range 0 ... M - 1 with M < N
+    :param values: N values (can be arrays)
+    :returns: M aggregated values (can be arrays)
+
+    >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
+    >>> fast_agg([0, 1, 1, 0], values)
+    array([[0.5 , 0.55],
+           [0.5 , 0.55]])
+    """
+    if values is None:
+        values = numpy.ones_like(indices)
+    N = len(values)
+    if len(indices) != N:
+        raise ValueError('There are %d values but %d indices' %
+                         (N, len(indices)))
+    shp = values.shape[1:]
+    if not shp:
+        return numpy.bincount(indices, values)
+    M = max(indices) + 1
+    lst = list(shp)
+    lst.insert(axis, M)
+    res = numpy.zeros(lst, values.dtype)
+    for mi in multi_index(shp, axis):
+        res[mi] = numpy.bincount(indices, values[mi])
+    return res
+
+
+def fast_agg2(tags, values=None, axis=0):
+    """
+    :param tags: N non-unique tags out of M
+    :param values: N values (can be arrays)
+    :returns: (M unique tags, M aggregated values)
+
+    >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
+    >>> fast_agg2(['A', 'B', 'B', 'A'], values)
+    (array(['A', 'B'], dtype='<U1'), array([[0.5 , 0.55],
+           [0.5 , 0.55]]))
+
+    It can also be used to count the number of tags:
+
+    >>> fast_agg2(['A', 'B', 'B', 'A', 'A'])
+    (array(['A', 'B'], dtype='<U1'), array([3., 2.]))
+    """
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    return uniq, fast_agg(indices, values, axis)
+
+
+def count(groupiter):
+    return sum(1 for row in groupiter)
+
+
+def countby(array, *kfields):
+    """
+    :returns: a dict kfields -> number of records with that key
+    """
+    return groupby(array, operator.itemgetter(*kfields), count)
 
 
 def get_array(array, **kw):
@@ -905,17 +1010,17 @@ class DeprecationWarning(UserWarning):
 
 
 @decorator
-def deprecated(func, message='', *args, **kw):
+def deprecated(func, msg='', *args, **kw):
     """
     A family of decorators to mark deprecated functions.
 
-    :param message:
+    :param msg:
         the message to print the first time the
         deprecated function is used.
 
     Here is an example of usage:
 
-    >>> @deprecated('Use new_function instead')
+    >>> @deprecated(msg='Use new_function instead')
     ... def old_function():
     ...     'Do something'
 
@@ -923,7 +1028,7 @@ def deprecated(func, message='', *args, **kw):
     warning will be displayed only the first time.
     """
     msg = '%s.%s has been deprecated. %s' % (
-        func.__module__, func.__name__, message)
+        func.__module__, func.__name__, msg)
     if not hasattr(func, 'called'):
         warnings.warn(msg, DeprecationWarning, stacklevel=2)
         func.called = 0
@@ -944,6 +1049,38 @@ def random_filter(objects, reduction_factor, seed=42):
         if rnd.random() <= reduction_factor:
             out.append(obj)
     return out
+
+
+def random_histogram(counts, nbins, seed):
+    """
+    Distribute a total number of counts on a set of bins homogenously.
+
+    >>> random_histogram(1, 2, 42)
+    array([1, 0])
+    >>> random_histogram(100, 5, 42)
+    array([28, 18, 17, 19, 18])
+    >>> random_histogram(10000, 5, 42)
+    array([2043, 2015, 2050, 1930, 1962])
+    """
+    numpy.random.seed(seed)
+    return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
+
+
+def get_indices(integers):
+    """
+    :param integers: a sequence of integers (with repetitions)
+    :returns: a dict integer -> [(start, stop), ...]
+
+    >>> get_indices([0, 0, 3, 3, 3, 2, 2, 0])
+    {0: [(0, 2), (7, 8)], 3: [(2, 5)], 2: [(5, 7)]}
+    """
+    indices = AccumDict(accum=[])  # idx -> [(start, stop), ...]
+    start = 0
+    for i, vals in itertools.groupby(integers):
+        n = sum(1 for val in vals)
+        indices[i].append((start, start + n))
+        start += n
+    return indices
 
 
 def safeprint(*args, **kwargs):
@@ -999,12 +1136,12 @@ def _get_free_port():
     raise RuntimeError('No free ports in the range 1920:2000')
 
 
-def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None, cleanup=False):
     """
     Build a zip archive from the given file names.
 
     :param fnames: list of path names
-    :param archive: path of the archive
+    :param archive: path of the archive or BytesIO object
     """
     prefix = len(os.path.commonprefix([os.path.dirname(f) for f in fnames]))
     with zipfile.ZipFile(
@@ -1012,6 +1149,9 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
         for f in fnames:
             log('Archiving %s' % f)
             z.write(f, f[prefix:])
+            if cleanup:  # remove the zipped file
+                os.remove(f)
+    return archive
 
 
 def detach_process():
@@ -1050,6 +1190,9 @@ def debug(templ, *args):
         f.write(msg + '\n')
 
 
+builtins.debug = debug
+
+
 def warn(msg, *args):
     """
     Print a warning on stderr
@@ -1058,3 +1201,45 @@ def warn(msg, *args):
         sys.stderr.write('WARNING: ' + msg)
     else:
         sys.stderr.write('WARNING: ' + msg % args)
+
+
+def getsizeof(o, ids=None):
+    '''
+    Find the memory footprint of a Python object recursively, see
+    https://code.tutsplus.com/tutorials/understand-how-much-memory-your-python-objects-use--cms-25609
+    :param o: the object
+    :returns: the size in bytes
+    '''
+    ids = ids or set()
+    if id(o) in ids:
+        return 0
+
+    nbytes = sys.getsizeof(o)
+    ids.add(id(o))
+
+    if isinstance(o, Mapping):
+        return nbytes + sum(getsizeof(k, ids) + getsizeof(v, ids)
+                            for k, v in o.items())
+    elif isinstance(o, Container):
+        return nbytes + sum(getsizeof(x, ids) for x in o)
+
+    return nbytes
+
+
+def add_defaults(array, **kw):
+    """
+    :param array: a structured array
+    :param kw: a dictionary field name -> default value
+    :returns: a new array with additional fields with default values
+    """
+    dtlist = [(name, array.dtype[name]) for name in array.dtype.names]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            dtlist.append((k, type(v)))
+    new = numpy.zeros(array.shape, dtlist)
+    for name in array.dtype.names:
+        new[name] = array[name]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            new[k] = v
+    return new

@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli., L. E. Rodriguez-Abreu
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -504,7 +504,7 @@ class HMTKBaseMap(object):
                                         sscale=1.5,
                                         overlay=overlay)
             return
-        if not isinstance(cluster_id, collections.Iterable):
+        if not isinstance(cluster_id, collections.abc.Iterable):
             cluster_id = [cluster_id]
         for iloc, clid in enumerate(cluster_id):
             if iloc == (len(cluster_id) - 1):

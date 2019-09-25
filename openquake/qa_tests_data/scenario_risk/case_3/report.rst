@@ -2,12 +2,12 @@ Scenario QA Test 3
 ==================
 
 ============== ===================
-checksum32     775,322,845        
-date           2018-05-15T04:14:23
-engine_version 3.1.0-git0acbc11   
+checksum32     372,210,909        
+date           2019-09-24T15:20:58
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 4, num_levels = 15
+num_sites = 4, num_levels = 15, num_rlzs = 1
 
 Parameters
 ----------
@@ -46,25 +46,30 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 trivial(1)      1/1             
+b_1       1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
 
 Exposure model
 --------------
-=============== ========
-#assets         4       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     4
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -74,15 +79,24 @@ W        1.00000 0.0    1   1   2         2
 *ALL*    1.00000 0.0    1   1   4         4         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-building riskinputs     0.04396  0.0       1     
-saving gmfs             0.04374  0.0       1     
-computing gmfs          0.00949  0.0       1     
-reading site collection 0.00337  0.0       1     
-building epsilons       0.00139  0.0       1     
-reading exposure        0.00101  0.0       1     
-======================= ======== ========= ======
+====================== ========= ========= ======
+calc_1735              time_sec  memory_mb counts
+====================== ========= ========= ======
+ScenarioCalculator.run 0.07657   3.02344   1     
+saving gmfs            0.02757   1.68359   1     
+building riskinputs    0.01470   0.0       1     
+computing gmfs         0.00641   0.51562   1     
+reading exposure       8.671E-04 0.0       1     
+====================== ========= ========= ======

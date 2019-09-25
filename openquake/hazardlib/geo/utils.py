@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,15 +29,18 @@ import numpy
 from scipy.spatial import cKDTree
 import shapely.geometry
 
-from openquake.hazardlib.geo import geodetic
+from openquake.baselib.hdf5 import vstr
 from openquake.baselib.slots import with_slots
+from openquake.hazardlib.geo import geodetic
 
 U32 = numpy.uint32
+F32 = numpy.float32
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geodetic.EARTH_RADIUS
 spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
+MAX_EXTENT = 5000  # km, decided by M. Simionato
 
 
 def angular_distance(km, lat, lat2=None):
@@ -99,10 +102,11 @@ class _GeographicObjects(object):
         :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :returns: (filtered site collection, filtered objects)
+        :returns: filtered site collection, filtered objects, discarded
         """
         assert mode in 'strict warn filter', mode
         dic = {}
+        discarded = []
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
             if assoc_dist is None:
@@ -111,10 +115,12 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate within
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
-                logging.warn('Association to %d km from site (%s %s)',
-                             int(distance), lon, lat)
+                logging.warning(
+                    'The closest vs30 site (%.1f %.1f) is distant more than %d'
+                    ' km from site #%d (%.1f %.1f)', obj['lon'], obj['lat'],
+                    int(distance), sid, lon, lat)
             elif mode == 'filter':
-                pass  # do not associate
+                discarded.append(obj)
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
@@ -123,9 +129,10 @@ class _GeographicObjects(object):
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
         return (sitecol.filtered(dic),
-                numpy.array([dic[sid] for sid in sorted(dic)]))
+                numpy.array([dic[sid] for sid in sorted(dic)]),
+                discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode):
+    def assoc2(self, assets_by_site, assoc_dist, mode, asset_refs):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -133,11 +140,15 @@ class _GeographicObjects(object):
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :returns: (filtered site collection, filtered assets by site)
+        :param asset_ref: ID of the assets are a list of strings
+        :returns: filtered site collection, filtered assets by site, discarded
         """
-        assert mode in 'strict warn filter', mode
+        assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
+        asset_dt = numpy.dtype(
+            [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
+        discarded = []
         for assets in assets_by_site:
             lon, lat = assets[0].location
             obj, distance = self.get_closest(lon, lat)
@@ -148,9 +159,8 @@ class _GeographicObjects(object):
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
-            elif mode == 'warn':
-                logging.warn('Discarding %s, lon=%.5f, lat=%.5f',
-                             assets, lon, lat)
+            else:
+                discarded.extend(assets)
         sids = sorted(assets_by_sid)
         if not sids:
             raise SiteAssociationError(
@@ -159,10 +169,13 @@ class _GeographicObjects(object):
         assets_by_site = [
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in sids]
-        return self.objects.filtered(sids), assets_by_site
+        data = [(asset_refs[asset.ordinal],) + asset.location
+                for asset in discarded]
+        discarded = numpy.array(data, asset_dt)
+        return self.objects.filtered(sids), assets_by_site, discarded
 
 
-def assoc(objects, sitecol, assoc_dist, mode):
+def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
     """
     Associate geographic objects to a site collection.
 
@@ -180,7 +193,8 @@ def assoc(objects, sitecol, assoc_dist, mode):
         # objects is a geo array with lon, lat fields or a mesh-like instance
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
-        return _GeographicObjects(sitecol).assoc2(objects, assoc_dist, mode)
+        return _GeographicObjects(sitecol).assoc2(
+            objects, assoc_dist, mode, asset_refs)
 
 
 def clean_points(points):
@@ -251,15 +265,58 @@ def get_longitudinal_extent(lon1, lon2):
     return (lon2 - lon1 + 180) % 360 - 180
 
 
+def check_extent(lons, lats, msg=''):
+    """
+    :param lons: an array of longitudes (more than one)
+    :param lats: an array of latitudes (more than one)
+    :params msg: message to display in case of too large extent
+    :returns: (dx, dy, dz) in km (rounded)
+    """
+    l1 = len(lons)
+    l2 = len(lats)
+    if l1 < 2:
+        raise ValueError('%s: not enough lons: %s' % (msg, lons))
+    elif l2 < 2:
+        raise ValueError('%s: not enough lats: %s' % (msg, lats))
+    elif l1 != l2:
+        raise ValueError('%s: wrong number of lons, lats: (%d, %d)' %
+                         (msg, l1, l2))
+
+    xs, ys, zs = spherical_to_cartesian(lons, lats).T  # (N, 3) -> (3, N)
+    dx = xs.max() - xs.min()
+    dy = ys.max() - ys.min()
+    dz = zs.max() - zs.min()
+    # the goal is to forbid sources absurdely large due to wrong coordinates
+    if dx > MAX_EXTENT or dy > MAX_EXTENT or dz > MAX_EXTENT:
+        raise ValueError('%s: too large: %d km' % (msg, max(dx, dy, dz)))
+    return int(dx), int(dy), int(dz)
+
+
 def get_bounding_box(obj, maxdist):
     """
-    Return the dilated bounding box of a geometric object
+    Return the dilated bounding box of a geometric object.
+
+    :param obj:
+        an object with method .get_bounding_box, or with an attribute .polygon
+        or a list of locations
+    :param maxdist: maximum distance in km
     """
     if hasattr(obj, 'get_bounding_box'):
         return obj.get_bounding_box(maxdist)
-    bbox = obj.polygon.get_bbox()
-    a1 = maxdist * KM_TO_DEGREES
-    a2 = angular_distance(maxdist, bbox[1], bbox[3])
+    elif hasattr(obj, 'polygon'):
+        bbox = obj.polygon.get_bbox()
+    else:
+        if isinstance(obj, list):  # a list of locations
+            lons = numpy.array([loc.longitude for loc in obj])
+            lats = numpy.array([loc.latitude for loc in obj])
+        else:  # assume an array with fields lon, lat
+            lons, lats = obj['lon'], obj['lat']
+        min_lon, max_lon = lons.min(), lons.max()
+        if cross_idl(min_lon, max_lon):
+            lons %= 360
+        bbox = lons.min(), lats.min(), lons.max(), lats.max()
+    a1 = min(maxdist * KM_TO_DEGREES, 90)
+    a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
@@ -543,49 +600,6 @@ def cross_idl(lon1, lon2, *lons):
     # a line crosses the international date line if the end positions
     # have different sign and they are more than 180 degrees longitude apart
     return l1 * l2 < 0 and abs(l1 - l2) > 180
-
-
-def normalize_lons(l1, l2):
-    """
-    An international date line safe way of returning a range of longitudes.
-
-    >>> normalize_lons(20, 30)  # no IDL within the range
-    [(20, 30)]
-    >>> normalize_lons(-17, +17)  # no IDL within the range
-    [(-17, 17)]
-    >>> normalize_lons(-178, +179)
-    [(-180, -178), (179, 180)]
-    >>> normalize_lons(178, -179)
-    [(-180, -179), (178, 180)]
-    >>> normalize_lons(179, -179)
-    [(-180, -179), (179, 180)]
-    >>> normalize_lons(177, -176)
-    [(-180, -176), (177, 180)]
-    """
-    if l1 > l2:  # exchange lons
-        l1, l2 = l2, l1
-    delta = l2 - l1
-    if l1 < 0 and l2 > 0 and delta > 180:
-        return [(-180, l1), (l2, 180)]
-    elif l1 > 0 and l2 > 180 and delta < 180:
-        return [(l1, 180), (-180, l2 - 360)]
-    elif l1 < -180 and l2 < 0 and delta < 180:
-        return [(l1 + 360, 180), (l2, -180)]
-    return [(l1, l2)]
-
-
-def within(bbox, lonlat_index):
-    """
-    :param bbox: a bounding box in lon, lat
-    :param lonlat_index: an rtree index in lon, lat
-    :returns: array of indices within the bounding box
-    """
-    lon1, lat1, lon2, lat2 = bbox
-    set_ = set()
-    for l1, l2 in normalize_lons(lon1, lon2):
-        box = (l1, lat1, l2, lat2)
-        set_ |= set(lonlat_index.intersection(box))
-    return numpy.array(sorted(set_), numpy.uint32)
 
 
 def plane_fit(points):

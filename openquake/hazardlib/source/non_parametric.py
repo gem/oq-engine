@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2018 GEM Foundation
+# Copyright (C) 2013-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -50,6 +50,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         rupture to occur N times (the PMF must be defined from a minimum number
         of occurrences equal to 0)
     """
+    code = b'N'
     _slots_ = BaseSeismicSource._slots_ + ['data']
 
     MODIFICATIONS = set()
@@ -68,9 +69,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
             rupture.NonParametricProbabilisticRupture`.
         """
         for rup, pmf in self.data:
-            yield NonParametricProbabilisticRupture(
-                rup.mag, rup.rake, self.tectonic_region_type, rup.hypocenter,
-                rup.surface, pmf)
+            if rup.mag >= self.min_mag:
+                yield NonParametricProbabilisticRupture(
+                    rup.mag, rup.rake, self.tectonic_region_type,
+                    rup.hypocenter, rup.surface, pmf, weight=rup.weight)
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split
@@ -121,7 +123,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         :returns: True if containing only GriddedRuptures, False otherwise
         """
-        for rup, pmf in self.data:
+        for rup, _ in self.data:
             if not isinstance(rup.surface, GriddedSurface):
                 return False
         return True
@@ -158,3 +160,30 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        # the rupture can have a faultSurface which is a 3D array
+        # or can be a griddedSurface which is a 2D array or others
+        arr = numpy.concatenate([rup.surface.mesh.array.reshape(3, -1)
+                                 for rup, pmf in self.data],
+                                axis=1)  # shape (3, N)
+        return arr.T
+
+    def get_one_rupture(self, rupture_mutex=False):
+        """
+        Yields one random rupture from a source
+        """
+        num_ruptures = self.count_ruptures()
+        if rupture_mutex:
+            weights = numpy.array([rup.weight for rup in self.iter_ruptures()])
+        else:
+            weights = numpy.ones((num_ruptures))*1./num_ruptures
+        idx = numpy.random.choice(range(num_ruptures), p=weights)
+        for i, rup in enumerate(self.iter_ruptures()):
+            if i == idx:
+                rup.rup_id = self.serial + i
+                rup.idx = idx
+                return rup

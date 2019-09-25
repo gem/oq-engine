@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,9 +24,10 @@ import abc
 import numpy
 import math
 import itertools
+import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
@@ -35,8 +36,20 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
-pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
-classes = {}  # initialized in .init()
+U16 = numpy.uint16
+U32 = numpy.uint32
+TWO16 = 2 ** 16
+TWO32 = 2 ** 32
+pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
+events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
+
+
+def to_checksum(cls1, cls2):
+    """
+    Convert a pair of classes into a numeric code (uint8)
+    """
+    names = '%s,%s' % (cls1.__name__, cls2.__name__)
+    return sum(map(ord, names)) % 256
 
 
 @with_slots
@@ -68,34 +81,33 @@ class BaseRupture(metaclass=abc.ABCMeta):
     attribute surface_nodes to an appropriate value.
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
-    rupture_slip_direction'''.split()
-    serial = 0  # set to a value > 0 by the engine
+    rupture_slip_direction weight'''.split()
+    rup_id = 0  # set to a value > 0 by the engine
     _code = {}
-    types = {}
 
     @classmethod
     def init(cls):
         """
-        Initialize the class dictionaries `._code` and .`types` encoding the
+        Initialize the class dictionary `._code` by encoding the
         bidirectional correspondence between an integer in the range 0..255
-        (the code) and a triplet of classes (rupture_class, surface_class,
-        source_class). This is useful when serializing the rupture to and
-        from HDF5.
+        (the code) and a pair of classes (rupture_class, surface_class).
+        This is useful when serializing the rupture to and from HDF5.
+        :returns: {code: pair of classes}
         """
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
-        for cl in rupture_classes + surface_classes:
-            classes[cl.__name__] = cl
-        n = 0
+        code2cls = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
-            cls._code[rup, sur] = n
-            cls.types[n] = rup, sur
-            n += 1
-        if n >= 256:
-            raise ValueError('Too many rupture codes: %d' % n)
+            chk = to_checksum(rup, sur)
+            if chk in code2cls and code2cls[chk] != (rup, sur):
+                raise ValueError('Non-unique checksum %d for %s, %s' %
+                                 (chk, rup, sur))
+            cls._code[rup, sur] = chk
+            code2cls[chk] = rup, sur
+        return code2cls
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, rupture_slip_direction=None):
+                 surface, rupture_slip_direction=None, weight=None):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         NodalPlane.check_rake(rake)
@@ -105,37 +117,17 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.hypocenter = hypocenter
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
+        self.weight = weight
 
     @property
     def code(self):
         """Returns the code (integer in the range 0 .. 255) of the rupture"""
         return self._code[self.__class__, self.surface.__class__]
 
-    def get_probability_no_exceedance(self, poes):
-        """
-        Compute and return the probability that in the time span for which the
-        rupture is defined, the rupture itself never generates a ground motion
-        value higher than a given level at a given site.
+    get_probability_no_exceedance = (
+        contexts.RuptureContext.get_probability_no_exceedance)
 
-        Such calculation is performed starting from the conditional probability
-        that an occurrence of the current rupture is producing a ground motion
-        value higher than the level of interest at the site of interest.
-        The actual formula used for such calculation depends on the temporal
-        occurrence model the rupture is associated with.
-        The calculation can be performed for multiple intensity measure levels
-        and multiple sites in a vectorized fashion.
-
-        :param poes:
-            2D numpy array containing conditional probabilities the the a
-            rupture occurrence causes a ground shaking value exceeding a
-            ground motion level at a site. First dimension represent sites,
-            second dimension intensity measure levels. ``poes`` can be obtained
-            calling the :meth:`method
-            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>`.
-        """
-        raise NotImplementedError
-
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         Randomly sample number of occurrences from temporal occurrence model
         probability distribution.
@@ -146,7 +138,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
             http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
 
         :returns:
-            int, Number of rupture occurrences
+            numpy array of size n with number of rupture occurrences
         """
         raise NotImplementedError
 
@@ -171,7 +163,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         in increasing order, and if they are not defined with unit step
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 pmf, rupture_slip_direction=None):
+                 pmf, rupture_slip_direction=None, weight=None):
         occ = numpy.array([occ for (prob, occ) in pmf.data])
         if not occ[0] == 0:
             raise ValueError('minimum number of ruptures must be zero')
@@ -183,41 +175,13 @@ class NonParametricProbabilisticRupture(BaseRupture):
                 'numbers of ruptures must be defined with unit step')
         super().__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            rupture_slip_direction)
+            rupture_slip_direction, weight)
         # an array of probabilities with sum 1
         self.probs_occur = numpy.array(
             [prob for (prob, occ) in pmf.data], numpy.float32)
+        self.occurrence_rate = numpy.nan
 
-    def get_probability_no_exceedance(self, poes):
-        """
-        See :meth:`superclass method
-        <.rupture.BaseRupture.get_probability_no_exceedance>`
-        for spec of input and result values.
-
-        Uses the formula ::
-
-            ∑ p(k|T) * p(X<x|rup)^k
-
-        where ``p(k|T)`` is the probability that the rupture occurs k times in
-        the time span ``T``, ``p(X<x|rup)`` is the probability that a rupture
-        occurrence does not cause a ground motion exceedance, and the summation
-        ``∑`` is done over the number of occurrences ``k``.
-
-        ``p(k|T)`` is given by the constructor's parameter ``pmf``, and
-        ``p(X<x|rup)`` is computed as ``1 - poes``.
-        """
-        # Converting from 1d to 2d
-        if len(poes.shape) == 1:
-            poes = numpy.reshape(poes, (-1, len(poes)))
-        p_kT = self.probs_occur
-        prob_no_exceed = numpy.array(
-            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
-        prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-        prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
-        prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
-        return prob_no_exceed
-
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         See :meth:`superclass method
         <.rupture.BaseRupture.sample_number_of_occurrences>`
@@ -227,10 +191,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         """
         # compute cdf from pmf
         cdf = numpy.cumsum(self.probs_occur)
-
-        rn = numpy.random.random()
-        [n_occ] = numpy.digitize([rn], cdf)
-
+        n_occ = numpy.digitize(numpy.random.random(n), cdf)
         return n_occ
 
 
@@ -280,25 +241,24 @@ class ParametricProbabilisticRupture(BaseRupture):
         Return the probability of this rupture to occur exactly one time.
 
         Uses :meth:
-        `openquake.hazardlib.tom.PoissonTOM.get_probability_one_occurrence`
+        `openquake.hazardlib.tom.PoissonTOM.get_probability_n_occurrences`
         of an assigned temporal occurrence model.
         """
         tom = self.temporal_occurrence_model
         rate = self.occurrence_rate
-        return tom.get_probability_one_occurrence(rate)
+        return tom.get_probability_n_occurrences(rate, 1)
 
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         Draw a random sample from the distribution and return a number
-        of events to occur.
+        of events to occur as an array of integers of size n.
 
         Uses :meth:
         `openquake.hazardlib.tom.PoissonTOM.sample_number_of_occurrences`
         of an assigned temporal occurrence model.
         """
-        return self.temporal_occurrence_model.sample_number_of_occurrences(
-            self.occurrence_rate
-        )
+        r = self.occurrence_rate * self.temporal_occurrence_model.time_span
+        return numpy.random.poisson(r, n)
 
     def get_probability_no_exceedance(self, poes):
         """
@@ -446,7 +406,10 @@ class ParametricProbabilisticRupture(BaseRupture):
 
 
 def get_subclasses(cls):
-    for subclass in cls.__subclasses__():
+    """
+    :returns: the subclasses of `cls`, ordered by name
+    """
+    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
         yield subclass
         for ssc in get_subclasses(subclass):
             yield ssc
@@ -529,14 +492,32 @@ class ExportedRupture(object):
     Simplified Rupture class with attributes rupid, events_by_ses, indices
     and others, used in export.
 
-    :param rupid: rupture serial ID
+    :param rupid: rupture rup_id ID
     :param events_by_ses: dictionary ses_idx -> event records
     :param indices: site indices
     """
-    def __init__(self, rupid, events_by_ses, indices=None):
+    def __init__(self, rupid, n_occ, events_by_ses, indices=None):
         self.rupid = rupid
+        self.n_occ = n_occ
         self.events_by_ses = events_by_ses
         self.indices = indices
+
+
+def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
+    """
+    :param rup_array: a composite array with fields rup_id, n_occ and grp_id
+    :param samples_by_grp: a dictionary grp_id -> samples
+    :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
+    """
+    all_eids = []
+    for rup in rup_array:
+        grp_id = rup['grp_id']
+        samples = samples_by_grp[grp_id]
+        num_rlzs = num_rlzs_by_grp[grp_id]
+        num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
+        eids = numpy.arange(num_events, dtype=U32)
+        all_eids.append(eids)
+    return numpy.concatenate(all_eids)
 
 
 class EBRupture(object):
@@ -545,58 +526,93 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, sids, events):
+    def __init__(self, rupture, srcidx, grp_id, n_occ, samples=1):
+        assert rupture.rup_id  # sanity check
         self.rupture = rupture
-        self.sids = sids
-        self.events = events
-        self.eidx1 = 0
-        self.eidx2 = len(events)
+        self.srcidx = srcidx
+        self.grp_id = grp_id
+        self.n_occ = n_occ
+        self.samples = samples
 
     @property
-    def serial(self):
+    def rup_id(self):
         """
         Serial number of the rupture
         """
-        return self.rupture.serial
+        return self.rupture.rup_id
 
-    @property
-    def grp_id(self):
+    def get_eids_by_rlz(self, rlzs_by_gsim):
         """
-        Group ID of the rupture
+        :param n_occ: number of occurrences
+        :params rlzs_by_gsim: a dictionary gsims -> rlzs array
+        :param samples: number of samples in current source group
+        :returns: a dictionary rlz index -> eids array
         """
-        return int(self.events[0]['grp_id'])  # need Python int, not uint16
+        j = 0
+        dic = {}
+        if self.samples == 1:  # full enumeration or akin to it
+            for rlzs in rlzs_by_gsim.values():
+                for rlz in rlzs:
+                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U32)
+                    j += self.n_occ
+        else:  # associated eids to the realizations
+            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+            assert len(rlzs) == self.samples, (len(rlzs), self.samples)
+            histo = general.random_histogram(
+                self.n_occ, self.samples, self.rup_id)
+            for rlz, n in zip(rlzs, histo):
+                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
+                j += n
+        return dic
 
-    @property
-    def weight(self):
+    def get_events(self, rlzs_by_gsim, e0=None):
         """
-        Weight of the EBRupture
+        :returns: an array of events with fields eid, rlz
         """
-        return len(self.sids) * len(self.events)
+        all_eids, rlzs = [], []
+        for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
+            all_eids.extend(eids)
+            rlzs.extend([rlz] * len(eids))
+        evs = U32(all_eids) + (e0 if e0 is not None else self.e0)
+        rupids = [self.rup_id] * len(evs)
+        return numpy.fromiter(zip(evs, rupids, rlzs), events_dt)
 
-    @property
-    def eids(self):
+    def get_eids(self, num_rlzs):
         """
-        An array with the underlying event IDs
+        :param num_rlzs: the number of realizations for the given group
+        :returns: an array of event IDs
         """
-        return self.events['eid']
+        num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
+        return numpy.arange(num_events, dtype=U32)
 
-    @property
-    def multiplicity(self):
+    def get_events_by_ses(self, events, num_ses):
         """
-        How many times the underlying rupture occurs.
+        :returns: a dictionary ses index -> events array
         """
-        return len(self.events)
+        numpy.random.seed(self.rup_id)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        events_by_ses = collections.defaultdict(list)
+        for ses, event in zip(sess, events):
+            events_by_ses[ses].append(event)
+        for ses in events_by_ses:
+            events_by_ses[ses] = numpy.array(events_by_ses[ses])
+        return events_by_ses
 
-    def export(self, mesh):
+    def get_ses_by_eid(self, rlzs_by_gsim, num_ses):
+        events = self.get_events(rlzs_by_gsim)
+        numpy.random.seed(self.rup_id)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        return dict(zip(events['id'], sess))
+
+    def export(self, rlzs_by_gsim, num_ses):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        events_by_ses = general.group_array(self.events, 'ses')
-        new = ExportedRupture(self.serial, events_by_ses, self.sids)
-        new.mesh = mesh[self.sids]
-        new.multiplicity = self.multiplicity
+        events = self.get_events(rlzs_by_gsim, e0=TWO32 * self.rup_id)
+        events_by_ses = self.get_events_by_ses(events, num_ses)
+        new = ExportedRupture(self.rup_id, self.n_occ, events_by_ses)
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):
@@ -634,5 +650,5 @@ class EBRupture(object):
         return new
 
     def __repr__(self):
-        return '<%s %d%s>' % (
-            self.__class__.__name__, self.serial, self.events['eid'])
+        return '<%s %d[%d]>' % (
+            self.__class__.__name__, self.rup_id, self.n_occ)

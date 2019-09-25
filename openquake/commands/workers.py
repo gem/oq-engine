@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,12 +20,16 @@ import getpass
 from openquake.baselib import sap, config, workerpool
 
 
-@sap.Script
+ro_commands = ('status', 'inspect')
+
+
+@sap.script
 def workers(cmd):
     """
     start/stop/restart the workers, or return their status
     """
-    if config.dbserver.multi_user and getpass.getuser() != 'openquake':
+    if (cmd not in ro_commands and config.dbserver.multi_user and
+            getpass.getuser() != 'openquake'):
         sys.exit('oq workers only works in single user mode')
 
     master = workerpool.WorkerMaster(config.dbserver.host,
@@ -33,4 +37,5 @@ def workers(cmd):
     print(getattr(master, cmd)())
 
 
-workers.arg('cmd', 'command', choices='start stop status restart'.split())
+workers.arg('cmd', 'command',
+            choices='start stop status restart inspect'.split())

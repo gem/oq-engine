@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
+import unittest.mock as mock
 import unittest
 import tempfile
 from openquake.baselib.general import gettemp
@@ -40,21 +40,22 @@ GST = {'gsim_logic_tree': gettemp('''\
         </logicTreeBranchingLevel>
     </logicTree>
 </nrml>'''),
-       'source': 'fake', "job_ini": "job.ini"}
+       "job_ini": "job.ini",
+       "source_model_logic_tree": "fake"}
 
 # hard-coded to avoid a dependency from openquake.calculators
 OqParam.calculation_mode.validator.choices = (
     'classical', 'disaggregation', 'scenario', 'scenario_damage',
     'event_based', 'event_based_risk', 'classical_risk')
 
-fakeinputs = {"source": "fake", "job_ini": "job.ini"}
+fakeinputs = {"job_ini": "job.ini", "source_model_logic_tree": "fake"}
 
 
 class OqParamTestCase(unittest.TestCase):
 
     def test_unknown_parameter(self):
         # if the job.ini file contains an unknown parameter, print a warning
-        with mock.patch('logging.warn') as w:
+        with mock.patch('logging.warning') as w:
             OqParam(
                 calculation_mode='classical', inputs=GST,
                 hazard_calculation_id=None, hazard_output_id=None,
@@ -96,6 +97,7 @@ class OqParamTestCase(unittest.TestCase):
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance='10',
                 inputs=fakeinputs,
+                region_grid_spacing='5',
                 region='-78.182 15.615, -78.152 15.615, -78.152 15.565, '
                 '-78.182 15.565', sites='0.1 0.2',
             ).validate()
@@ -129,15 +131,8 @@ class OqParamTestCase(unittest.TestCase):
     def test_missing_maximum_distance(self):
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical_risk', inputs=fakeinputs,
-                hazard_calculation_id=None, hazard_output_id=None,
+                calculation_mode='classical', inputs=fakeinputs,
                 sites='0.1 0.2').validate()
-
-        with self.assertRaises(ValueError):
-            OqParam(
-                calculation_mode='classical_risk', inputs=fakeinputs,
-                hazard_calculation_id=None, hazard_output_id=None,
-                sites='0.1 0.2', maximum_distance='0').validate()
 
         oq = OqParam(
             calculation_mode='event_based', inputs=GST,
@@ -205,7 +200,7 @@ class OqParamTestCase(unittest.TestCase):
             reference_vs30_value='200',
             maximum_distance='400')
         oq.validate()
-        self.assertEqual(oq.export_dir, '.')
+        self.assertEqual(oq.export_dir, os.getcwd())
 
     def test_invalid_imt(self):
         with self.assertRaises(ValueError) as ctx:
@@ -282,22 +277,24 @@ class OqParamTestCase(unittest.TestCase):
                 intensity_measure_types='PGV',
                 inputs=fakeinputs,
             ).validate()
-        self.assertIn('The IMT PGV is not accepted by the GSIM ToroEtAl2002',
+        self.assertIn('The IMT PGV is not accepted by the GSIM [ToroEtAl2002]',
                       str(ctx.exception))
 
     def test_required_site_param(self):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='scenario',
-                gsim='AbrahamsonSilva1997',
+                gsim='AbrahamsonSilva2008',
                 sites='0.1 0.2',
                 maximum_distance='400',
+                reference_vs30_value='760',
                 intensity_measure_types='PGA',
                 inputs=fakeinputs,
             ).validate()
-        self.assertIn("Please set a value for 'reference_vs30_value', this is"
-                      " required by the GSIM AbrahamsonSilva1997",
-                      str(ctx.exception))
+        self.assertIn(
+            "Please set a value for 'reference_depth_to_1pt0km_per_sec', this "
+            "is required by the GSIM [AbrahamsonSilva2008]",
+            str(ctx.exception))
 
     def test_uniform_hazard_spectra(self):
         with self.assertRaises(ValueError) as ctx:
@@ -316,7 +313,7 @@ class OqParamTestCase(unittest.TestCase):
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
 
-        with mock.patch('logging.warn') as w:
+        with mock.patch('logging.warning') as w:
             OqParam(
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',
@@ -336,7 +333,7 @@ class OqParamTestCase(unittest.TestCase):
         vf = mock.Mock()
         vf.imt = 'SA (0.1)'
         vf.imls = [0.1, 0.2]
-        rm = dict(taxo=dict(structural=vf))
+        rm = dict(taxo={('structural', 'vulnerability'): vf})
         with self.assertRaises(KeyError) as ctx:
             oq.set_risk_imtls(rm)
         self.assertIn("'SA '", str(ctx.exception))

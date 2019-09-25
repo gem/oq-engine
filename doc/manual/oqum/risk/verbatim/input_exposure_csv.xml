@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<exposureModel id="exposure_example_with_csv_files" 
+               category="buildings"
+               taxonomySource="GEM_Building_Taxonomy_3.0">
+  <description>Exposure Model Example with CSV Files</description>
+
+  <conversions>
+    <costTypes>
+      <costType name="structural" type="aggregated" unit="USD" />
+      <costType name="nonstructural" type="aggregated" unit="USD" />
+      <costType name="contents" type="aggregated" unit="USD" />
+    </costTypes>
+    <area type="per_asset" unit="SQFT" />
+  </conversions>
+
+  <occupancyPeriods>night</occupancyPeriods>
+
+  <tagNames>occupancy state_id state county_id county tract</tagNames>
+
+  <assets>
+    Washington.csv
+    Oregon.csv
+    California.csv
+  </assets>
+
+</exposureModel>
+
+</nrml>

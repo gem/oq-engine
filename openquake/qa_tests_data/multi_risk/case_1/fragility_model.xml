@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="CRAVE" assetCategory="" lossCategory="structural">
+		<description>Ash fall - volcano model</description>
+		<limitStates>collapse</limitStates>
+		<fragilityFunction id="Weak_roof" format="discrete">
+			<imls imt="ASH" noDamageLimit="0.1">0.0 41.1 69.5 82.1 85.3 94.7 97.9 104.2 107.4 116.8 123.2 157.9</imls>
+			<poes ls="collapse">0 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1</poes>
+		</fragilityFunction>
+		<fragilityFunction id="Moderate_roof" format="discrete">
+			<imls imt="ASH" noDamageLimit=".1">0.0 55.1 97.2 110.1 119.8 123.1 132.8 139.3 145.7 155.5 168.4 210.5</imls>
+			<poes ls="collapse">0 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1</poes>
+		</fragilityFunction>
+		<fragilityFunction id="Heavy_roof" format="discrete">
+			<imls imt="ASH" noDamageLimit=".1">0.0 79.7 166.1 182.7 192.7 202.6 209.3 222.6 242.5 265.7 299.0 405.3</imls>
+			<poes ls="collapse">0 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1</poes>
+		</fragilityFunction>
+		<fragilityFunction id="Slab_roof" format="discrete">
+			<imls imt="ASH" noDamageLimit=".1">0.0 212.6 405.8 454.1 489.6 521.8 550.7 579.7 611.9 647.4 698.9 863.2</imls>
+			<poes ls="collapse">0 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1</poes>
+		</fragilityFunction>
+	</fragilityModel>
+</nrml>

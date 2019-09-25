@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,7 +35,7 @@ than 20 lines of code:
        oq = readinput.get_oqparam(job_ini)
        sitecol = readinput.get_site_collection(oq)
        src_filter = SourceFilter(sitecol, oq.maximum_distance)
-       csm = readinput.get_composite_source_model(oq).filter(src_filter)
+       csm = readinput.get_composite_source_model(oq, srcfilter=src_filter)
        rlzs_assoc = csm.info.get_rlzs_assoc()
        for i, sm in enumerate(csm.source_models):
            for rlz in rlzs_assoc.rlzs_by_smodel[i]:
@@ -53,11 +53,8 @@ NB: the implementation in the engine is smarter and more
 efficient. Here we start a parallel computation per each realization,
 the engine manages all the realizations at once.
 """
-import sys
-import time
+
 import operator
-import numpy
-from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
@@ -65,6 +62,30 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.tom import FatedTOM
+
+
+def _cluster(imtls, tom, gsims, pmap):
+    """
+    Computes the probability map in case of a cluster group
+    """
+    L, G = len(imtls.array), len(gsims)
+    pmapclu = AccumDict(accum=ProbabilityMap(L, G))
+    # Get temporal occurrence model
+    # Number of occurrences for the cluster
+    first = True
+    for nocc in range(0, 50):
+        # TODO fix this once the occurrence rate will be used just as
+        # an object attribute
+        ocr = tom.occurrence_rate
+        prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
+        if first:
+            pmapclu = prob_n_occ * (~pmap)**nocc
+            first = False
+        else:
+            pmapclu += prob_n_occ * (~pmap)**nocc
+    pmap = ~pmapclu
+    return pmap
 
 
 def classical(group, src_filter, gsims, param, monitor=Monitor()):
@@ -76,59 +97,45 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
     :returns:
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
-        .eff_ruptures
     """
-    if getattr(group, 'src_interdep', None) == 'mutex':
-        mutex_weight = {src.source_id: weight for src, weight in
-                        zip(group.sources, group.srcs_weights)}
-    else:
-        mutex_weight = None
-    grp_ids = set()
+    if not hasattr(src_filter, 'sitecol'):  # do not filter
+        src_filter = SourceFilter(src_filter, {})
+
+    # Get the parameters assigned to the group
+    src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
+    rup_mutex = getattr(group, 'rup_interdep', None) == 'mutex'
+    cluster = getattr(group, 'cluster', None)
+    trts = set()
     for src in group:
         if not src.num_ruptures:
             # src.num_ruptures is set when parsing the XML, but not when
             # the source is instantiated manually, so it is set here
             src.num_ruptures = src.count_ruptures()
-        grp_ids.update(src.src_group_ids)
-    maxdist = src_filter.integration_distance
-    imtls = param['imtls']
-    trunclevel = param.get('truncation_level')
-    cmaker = ContextMaker(gsims, maxdist, param, monitor)
-    pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
-                      for grp_id in grp_ids})
-    # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
-    pmap.calc_times = AccumDict(accum=numpy.zeros(4))
-    pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
-    for src, s_sites in src_filter(group):  # filter now
-        t0 = time.time()
-        indep = group.rup_interdep == 'indep' if mutex_weight else True
-        try:
-            poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel, indep)
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = '%s (source id=%s)' % (str(err), src.source_id)
-            raise etype(msg).with_traceback(tb)
-        if mutex_weight:  # mutex sources
-            weight = mutex_weight[src.source_id]
-            for sid in poemap:
-                pcurve = pmap[group.id].setdefault(sid, 0)
-                pcurve += poemap[sid] * weight
-        elif poemap:
-            for grp_id in src.src_group_ids:
-                pmap[grp_id] |= poemap
-        src_id = src.source_id.split(':', 1)[0]
-        pmap.calc_times[src_id] += numpy.array(
-            [src.weight, len(s_sites), time.time() - t0, 1])
-        # storing the number of contributing ruptures too
-        pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
-                              for grp_id in src.src_group_ids}
-    if mutex_weight and group.grp_probability is not None:
-        pmap[group.id] *= group.grp_probability
-    return pmap
+        # set the proper TOM in case of a cluster
+        if cluster:
+            src.temporal_occurrence_model = FatedTOM(time_span=1)
+        trts.add(src.tectonic_region_type)
+
+    param['maximum_distance'] = src_filter.integration_distance
+    [trt] = trts  # there must be a single tectonic region type
+    cmaker = ContextMaker(trt, gsims, param, monitor)
+    pmap, rup_data, calc_times = cmaker.get_pmap_by_grp(
+        src_filter(group), src_mutex, rup_mutex)
+
+    group_probability = getattr(group, 'grp_probability', None)
+    if src_mutex and group_probability:
+        pmap[src.src_group_id] *= group_probability
+
+    if cluster:
+        tom = getattr(group, 'temporal_occurrence_model')
+        pmap = _cluster(param['imtls'], tom, gsims, pmap)
+
+    return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
+                task_no=getattr(monitor, 'task_no', 0))
 
 
 def calc_hazard_curves(
-        groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
+        groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
         apply=sequential_apply, filter_distance='rjb', reqv=None):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
@@ -141,7 +148,7 @@ def calc_hazard_curves(
     :param groups:
         A sequence of groups of seismic sources objects (instances of
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param ss_filter:
+    :param srcfilter:
         A source filter over the site collection or the site collection itself
     :param imtls:
         Dictionary mapping intensity measure type strings
@@ -171,31 +178,28 @@ def calc_hazard_curves(
         odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
+    # ensure the sources have the right src_group_id
     for i, grp in enumerate(groups):
         for src in grp:
             if src.src_group_id is None:
                 src.src_group_id = i
-    if hasattr(ss_filter, 'sitecol'):  # a filter, as it should be
-        sitecol = ss_filter.sitecol
-    else:  # backward compatibility, a site collection was passed
-        sitecol = ss_filter
-        ss_filter = SourceFilter(sitecol, {})
-
     imtls = DictArray(imtls)
     param = dict(imtls=imtls, truncation_level=truncation_level,
-                 filter_distance=filter_distance, reqv=reqv)
+                 filter_distance=filter_distance, reqv=reqv,
+                 cluster=grp.cluster)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     mon = Monitor()
     for group in groups:
-        if group.src_interdep == 'mutex':  # do not split the group
-            it = [classical(group, ss_filter, [gsim], param, mon)]
+        if group.atomic:  # do not split
+            it = [classical(group, srcfilter, [gsim], param, mon)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
-                classical, (group, ss_filter, [gsim], param, mon),
+                classical, (group.sources, srcfilter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
-        for res in it:
-            for grp_id in res:
-                pmap |= res[grp_id]
+        for dic in it:
+            for grp_id, pval in dic['pmap'].items():
+                pmap |= pval
+    sitecol = getattr(srcfilter, 'sitecol', srcfilter)
     return pmap.convert(imtls, len(sitecol.complete))

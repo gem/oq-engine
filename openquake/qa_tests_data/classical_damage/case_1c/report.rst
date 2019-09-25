@@ -2,17 +2,17 @@ Classical PSHA-Based Hazard
 ===========================
 
 ============== ===================
-checksum32     1,299,541,683      
-date           2018-06-26T14:57:01
-engine_version 3.2.0-gitb0cd949   
+checksum32     3,911,216,819      
+date           2019-09-24T15:21:02
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 1, num_levels = 8
+num_sites = 1, num_levels = 8, num_rlzs = 1
 
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical_damage'
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -37,7 +37,6 @@ Name                    File
 exposure                `exposure_model.xml <exposure_model.xml>`_                  
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job_haz.ini <job_haz.ini>`_                                
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 structural_fragility    `fragility_model.xml <fragility_model.xml>`_                
 ======================= ============================================================
@@ -47,24 +46,23 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
+b1        1.00000 trivial(1)      1               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
+====== ================== ========= ========== ==========
+grp_id gsims              distances siteparams ruptparams
+====== ================== ========= ========== ==========
+0      '[SadighEtAl1997]' rrup      vs30       mag rake  
+====== ================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997(): [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -76,12 +74,10 @@ source_model.xml 0      Active Shallow Crust 482          482
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -90,76 +86,45 @@ Wood     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========== ========= ========= ======
-source_id source_class      num_ruptures calc_time split_time num_sites num_split events
-========= ================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource 482          0.03525   1.712E-04  1.00000   15        0     
-========= ================= ============ ========= ========== ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+1         0      S    482          0.00367   1.00000   482          131,310
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
-================= ========= ======
-source_class      calc_time counts
-================= ========= ======
-SimpleFaultSource 0.03525   1     
-================= ========= ======
-
-Duplicated sources
-------------------
-There are no duplicated sources
+==== ========= ======
+code calc_time counts
+==== ========= ======
+S    0.00367   1     
+==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00955 0.00188   0.00391 0.01084 15       
-count_eff_ruptures 0.00789 3.765E-04 0.00745 0.00836 6        
-================== ======= ========= ======= ======= =========
-
-Fastest task
-------------
-taskno=5, weight=85, duration=0 s, sources="1"
-
-======== ======= ======= === === =
-variable mean    stddev  min max n
-======== ======= ======= === === =
-nsites   1.00000 0.0     1   1   2
-weight   42      3.53553 40  45  2
-======== ======= ======= === === =
-
-Slowest task
-------------
-taskno=2, weight=93, duration=0 s, sources="1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 0.0    1   1   3
-weight   31      25     15  60  3
-======== ======= ====== === === =
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+preclassical       0.00421 NaN    0.00421 0.00421 1      
+read_source_models 0.00862 NaN    0.00862 0.00862 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================================================ ========
-task               sent                                                                         received
-RtreeFilter        srcs=15.36 KB monitor=4.72 KB srcfilter=4.09 KB                              17 KB   
-count_eff_ruptures sources=10.68 KB param=2.76 KB monitor=1.93 KB srcfilter=1.44 KB gsims=720 B 2.1 KB  
-================== ============================================================================ ========
+================== ========================================= ========
+task               sent                                      received
+preclassical       srcs=1.14 KB srcfilter=647 B params=557 B 342 B   
+read_source_models converter=314 B fnames=106 B              1.49 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.16309   0.0       1     
-total prefilter                0.14320   4.37109   15    
-total count_eff_ruptures       0.04735   6.33594   6     
-store source_info              0.00649   0.0       1     
-reading composite source model 0.00463   0.10156   1     
-unpickling prefilter           0.00443   0.0       15    
-aggregate curves               0.00182   0.0       6     
-unpickling count_eff_ruptures  0.00155   0.0       6     
-reading site collection        7.493E-04 0.0       1     
-reading exposure               4.828E-04 0.0       1     
-splitting sources              4.051E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+calc_1766                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.00862   0.0       1     
+total preclassical       0.00421   0.0       1     
+store source_info        0.00321   0.77344   1     
+reading exposure         4.697E-04 0.0       1     
+managing sources         4.320E-04 0.0       1     
+aggregate curves         2.573E-04 0.0       1     
+======================== ========= ========= ======

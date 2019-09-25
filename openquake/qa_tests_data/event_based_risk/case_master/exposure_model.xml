@@ -13,7 +13,7 @@
       <costType name="business_interruption" type="per_asset" unit="USD/month" />
     </costTypes>
   </conversions>
-  <tagNames>state cresta</tagNames>
+  <tagNames>state cresta occupancy</tagNames>
   <assets>
     <asset id="a1" number="1" area="100" taxonomy="tax1">
       <location lon="-122.000" lat="38.113" />
@@ -28,7 +28,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
-      <tags state="01" cresta="0.11" />
+      <tags state="01" cresta="0.11" occupancy="Res" />
     </asset>
     
     <asset id="a2" number="1" area="100" taxonomy="tax2">
@@ -44,7 +44,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
-      <tags state="01" cresta="0.12" />
+      <tags state="01" cresta="0.12"  occupancy="Res" />
     </asset>
     
     <asset id="a3" number="1" area="100" taxonomy="tax1">
@@ -60,7 +60,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
-      <tags state="02" cresta="0.21" />
+      <tags state="02" cresta="0.21"  occupancy="Com" />
     </asset>
     
     <asset id="a4" number="1" area="100" taxonomy="tax3">
@@ -76,7 +76,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
-      <tags state="02" cresta="0.22" />
+      <tags state="02" cresta="0.22"  occupancy="Res" />
     </asset>
     
     <asset id="a5" number="1" area="100" taxonomy="tax1">
@@ -92,7 +92,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
-      <tags state="02" cresta="0.23" />
+      <tags state="02" cresta="0.23" occupancy="Res" />
     </asset>
     
     <asset id="a6" number="1" area="100" taxonomy="tax2">
@@ -108,7 +108,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
-      <tags state="03" cresta="0.31" />
+      <tags state="03" cresta="0.31" occupancy="Res" />
     </asset>
     
     <asset id="a7" number="1" area="100" taxonomy="tax1">
@@ -124,7 +124,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
-      <tags state="03" cresta="0.32" />
+      <tags state="03" cresta="0.32" occupancy="Res" />
     </asset>
     
   </assets>

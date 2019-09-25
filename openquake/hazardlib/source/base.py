@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,7 +19,10 @@ seismic sources.
 """
 import abc
 import math
+import numpy
 from openquake.baselib.slots import with_slots
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 
 @with_slots
@@ -37,10 +40,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
-               'src_group_id', 'num_ruptures', 'seed', 'id', 'min_mag']
+               'src_group_id', 'num_ruptures', 'id', 'min_mag']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
+    splittable = True
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -49,16 +53,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     @property
     def weight(self):
         """
-        Determine the source weight from the number of ruptures, by
-        multiplying with the scale factor RUPTURE_WEIGHT
+        Determine the source weight from the number of ruptures
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        # (MS) the weight is proportional to the number of ruptures and GSIMs
-        # the relation to the number of sites is unclear, but for sure less
-        # than linear and I am using a sqrt here (totally made up but good)
-        return (self.num_ruptures * self.RUPTURE_WEIGHT *
-                math.sqrt(self.nsites) * self.ngsims)
+        return self.num_ruptures * math.sqrt(self.nsites)
 
     @property
     def nsites(self):
@@ -78,14 +77,14 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         :returns: a list of source group IDs (usually of 1 element)
         """
-        grp_id = getattr(self, 'src_group_id', [0])
+        grp_id = self.src_group_id
         return [grp_id] if isinstance(grp_id, int) else grp_id
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-        self.src_group_id = 0  # set by the engine
+        self.src_group_id = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
         self.id = None  # set by the engine
@@ -99,6 +98,79 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :returns:
             Generator of instances of sublclass of :class:
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
+        """
+
+    def sample_ruptures(self, eff_num_ses):
+        """
+        :param eff_num_ses: number of stochastic event sets * number of samples
+        :yields: pairs (rupture, num_occurrences[num_samples])
+        """
+        tom = getattr(self, 'temporal_occurrence_model', None)
+        rupids = numpy.arange(self.serial, self.serial + self.num_ruptures)
+        if tom:  # time-independent source
+            yield from self.sample_ruptures_poissonian(rupids, eff_num_ses)
+        else:  # time-dependent source
+            mutex_weight = getattr(self, 'mutex_weight', 1)
+            for rup, rup_id in zip(self.iter_ruptures(), rupids):
+                numpy.random.seed(rup_id)
+                occurs = rup.sample_number_of_occurrences(eff_num_ses)
+                if mutex_weight < 1:
+                    # consider only the occurrencies below the mutex_weight
+                    occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
+                num_occ = occurs.sum()
+                if num_occ:
+                    rup.rup_id = rup_id  # used as seed
+                    yield rup, num_occ
+
+    def sample_ruptures_poissonian(self, rupids, eff_num_ses):
+        """
+        :param eff_num_ses: number of stochastic event sets * number of samples
+        :yields: pairs (rupture, num_occurrences[num_samples])
+        """
+        tom = self.temporal_occurrence_model
+        if not hasattr(self, 'nodal_plane_distribution'):  # fault
+            ruptures = list(self.iter_ruptures())
+            rates = numpy.array([rup.occurrence_rate for rup in ruptures])
+            numpy.random.seed(self.serial)
+            occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
+            for rup, rup_id, num_occ in zip(ruptures, rupids, occurs):
+                if num_occ:
+                    rup.rup_id = rup_id  # used as seed
+                    yield rup, num_occ
+            return
+        # else (multi)point sources and area sources
+        rup_args = []
+        rates = []
+        for src in self:
+            for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+                if mag < self.min_mag:
+                    continue
+                for np_prob, np in src.nodal_plane_distribution.data:
+                    for hc_prob, hc_depth in src.hypocenter_distribution.data:
+                        args = (mag_occ_rate, np_prob, hc_prob,
+                                mag, np, hc_depth, src)
+                        rup_args.append(args)
+                        rates.append(mag_occ_rate * np_prob * hc_prob)
+        eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
+        numpy.random.seed(self.serial)
+        occurs = numpy.random.poisson(eff_rates)
+        for num_occ, args, rate, ser in zip(occurs, rup_args, rates, rupids):
+            if num_occ:
+                mag_occ_rate, np_prob, hc_prob, mag, np, hc_depth, src = args
+                hc = Point(latitude=src.location.latitude,
+                           longitude=src.location.longitude,
+                           depth=hc_depth)
+                surface = src._get_rupture_surface(mag, np, hc)
+                rup = ParametricProbabilisticRupture(
+                    mag, np.rake, src.tectonic_region_type, hc,
+                    surface, rate, tom)
+                rup.rup_id = ser  # used as seed
+                yield rup, num_occ
+
+    @abc.abstractmethod
+    def get_one_rupture(self, rupture_mutex=False):
+        """
+        Yields one random rupture from a source
         """
 
     def __iter__(self):
@@ -225,7 +297,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         Get the minimum and maximum magnitudes of the ruptures generated
         by the source from the underlying MFD.
         """
-        return self.mfd.get_min_max_mag()
+        min_mag, max_mag = self.mfd.get_min_max_mag()
+        return max(self.min_mag, min_mag), max_mag
 
     def __repr__(self):
         """
@@ -233,3 +306,24 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         and the source id.
         """
         return '<%s %s>' % (self.__class__.__name__, self.source_id)
+
+    def get_one_rupture(self, rupture_mutex=False):
+        """
+        Yields one random rupture from a source
+        """
+        # The Mutex case is admitted only for non-parametric ruptures
+        msg = 'Mutually exclusive ruptures are admitted only in case of'
+        msg += ' non-parametric sources'
+        assert (not rupture_mutex), msg
+        # Set random seed and get the number of ruptures
+        num_ruptures = self.count_ruptures()
+        numpy.random.seed(self.seed)
+        idx = numpy.random.choice(num_ruptures)
+        # NOTE Would be nice to have a method generating a rupture given two
+        # indexes, one for magnitude and one setting the position
+        for i, rup in enumerate(self.iter_ruptures()):
+            if i == idx:
+                if hasattr(self, 'rup_id'):
+                    rup.rup_id = self.rup_id
+                rup.idx = idx
+                return rup

@@ -2,18 +2,19 @@
 
 The OpenQuake Engine can be installed in several different ways. This page will provide a guide for the users to choose the best installation method for a specific use case.
 
-## Developers
+## Power users
 
-See the **[Installing the OpenQuake Engine for development](development.md)** guide.
+Scientists wanting to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development](development.md)** guide.
 
 A pre-configured VirtualBox appliance may be also [downloaded](https://downloads.openquake.org/ova/stable/). It contains all the OpenQuake software pre-installed and pre-configured.
+Please note that it is not possible to perform an upate of the appliance: a new downloads must be performed to get updated sofware.
 
 ## Single user
 
 ### Linux
 
 If you are the only user using OpenQuake on the target system the best choice is using **binary packages for [Ubuntu](ubuntu.md)** or **[RedHat (and clones)](rhel.md)**.
-If you don't have root permissions to install new software or you have to use an unsupported distribution (see [FAQ](faq.md#unsupported-operating-systems)) you can try with the **[self-installable binary distribution for Linux](linux-generic.md)**.
+If you don't have root permissions (i.e. no `sudo`) to install new software or you have to use an unsupported distribution (see [FAQ](faq.md#unsupported-operating-systems)) you can try with the **[self-installable binary distribution for Linux without 'sudo'](linux-generic.md)**.
 
 ### macOS
 
@@ -21,7 +22,7 @@ Use the **[self-installable binary distribution for macOS](macos.md)**. No root 
 
 ### Windows
 
-Use the **[self-installable binary distribution for Windows](windows.md)**. Administrator level access may be required.
+Use the **[self-installable binary distribution for Windows 10](windows.md)**. Administrator level access may be required.
 
 ### PyPI
 
