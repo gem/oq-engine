@@ -46,7 +46,7 @@ def estimate_duration(rups_per_task, maxdist, N):
     """
     Estimate the task duration with an heuristic formula
     """
-    return (rups_per_task * N) ** .33 * (maxdist / 200) ** 2
+    return (rups_per_task * N) ** .333 * (maxdist / 300) ** 2
 
 
 def get_src_ids(sources):
