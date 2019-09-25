@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="nwHswRneHseH_0"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Subduction IntraSlab50"
+        >
+            <areaSource
+            id="GTP"
+            name="GTP  -  GEORGIA STRAIT/PUGET SOUND (DEEP)"
+            tectonicRegion="Subduction IntraSlab50"
+            >
+                <areaGeometry
+                discretization="20.0"
+                >
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -123.85 49.55 -122.9 49.0 -122.0 48.0 -122.0 47.0 -123.3 47.0 -123.22 47.53 -123.35 47.87 -123.83 48.25 -124.75 48.85
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        40.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        60.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="4.85"
+                >
+                    <occurRates>
+                        0.026478 0.0236778 0.0211758 0.0189399 0.0169418 0.0151557 0.0135592 0.0121319 0.0108557 0.00971461 0.00869414 0.00778146 0.00696512 0.00623488 0.0055816 0.00499712 0.00447415 0.00400617 0.00358738 0.00321256 0.00287709 0.0025768 0.00161554 0.00144708 0.000185164 0.000165875 0.000148603
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="50.0" probability="1"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Subduction IntraSlab30"
+        >
+            <areaSource
+            id="AID"
+            name="AID - ALASKA INLAND - DEEP"
+            tectonicRegion="Subduction IntraSlab30"
+            >
+                <areaGeometry
+                discretization="20.0"
+                >
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -151.191 64.493 -147.005 63.963 -150.421 58.995 -157.484 55.783 -159.774 57.168 -154.031 60.013
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        50.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        130.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="4.85"
+                >
+                    <occurRates>
+                        1.25416 0.996923 0.792527 0.630097 0.501006 0.398401 0.316839 0.251999 0.200447 0.159457 0.126861 0.100938 0.0803199 0.0639195 0.0508727 0.0404928 0.0322339 0.0256619 0.0204318 0.0162692 0.0129559 0.0103184 0.00821857 0.00654671 0.00521544 0.00415529 0.00331095 0.0018469 0.000210272 1.99684e-17
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="90.0" probability="0.5"/>
+                    <hypoDepth depth="130.0" probability="0.25"/>
+                    <hypoDepth depth="50.0" probability="0.25"/>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="JDFN"
+            name="JDFN  -  JUAN DE FUCA PLATE BENDING, ONSHORE (DEEP)"
+            tectonicRegion="Subduction IntraSlab30"
+            >
+                <areaGeometry
+                discretization="20.0"
+                >
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -126.4 49.74 -124.75 48.85 -123.83 48.25 -123.35 47.87 -123.22 47.53 -123.3 47.0 -124.0 47.0 -123.9 47.56 -124.23 48.03 -124.8 48.4 -126.71 49.54
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        30.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        40.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="4.85"
+                >
+                    <occurRates>
+                        0.00415964 0.00358147 0.0030849 0.00265826 0.00229154 0.0019762 0.00170494 0.00147151 0.00127054 0.00109746 0.000948333 0.000819796 0.000708961 0.000613353 0.000530847 0.000459619 0.000398103 0.000344955 0.000299017 0.000259296 0.000224937 0.000136643 1.69461e-05 1.47172e-05 1.27862e-05 2.27158e-11
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="35.0" probability="0.5"/>
+                    <hypoDepth depth="30.0" probability="0.25"/>
+                    <hypoDepth depth="40.0" probability="0.25"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Subduction Interface"
+        >
+            <areaSource
+            id="AKC"
+            name="AKC - ALASKA COASTAL"
+            tectonicRegion="Subduction Interface"
+            >
+                <areaGeometry
+                discretization="20.0"
+                >
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -145.861 59.044 -147.71 57.589 -155.77 54.547 -157.491 55.783 -150.42 58.995 -147.674 63.115 -145.331 61.131 -143.454 59.3
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        30.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="7.05"
+                >
+                    <occurRates>
+                        0.0206703 0.0170429 0.014053 0.0115886 0.00955698 0.00788212 0.00650126 0.00536269 0.00442385 0.00364963 0.00301113 0.00248452 0.00205015 0.00169185 0.00139626 0.00115241 0.00095121 0.000785197 0.000648205 0.000535152 0.000441849 0.00036484 0.000301275 2.48802e-05 2.05484e-05
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="20.0" probability="0.5"/>
+                    <hypoDepth depth="30.0" probability="0.25"/>
+                    <hypoDepth depth="10.0" probability="0.25"/>
+                </hypoDepthDist>
+            </areaSource>
+            <complexFaultSource
+            id="CIS-15"
+            name="CASCADIA INTERFACE SOURCE"
+            tectonicRegion="Subduction Interface"
+            >
+                <complexFaultGeometry>
+                    <faultTopEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -125.5676 40.424 5.0 -125.7781 41.0541 5.0 -125.9569 42.0246 5.0 -125.9891 42.9993 5.0 -125.9428 43.985 5.0 -125.8578 44.7771 5.0 -125.795 45.308 5.0 -125.6721 45.9565 5.0 -125.5708 46.3485 5.0 -125.4138 46.9581 5.0 -125.3876 47.2505 5.0 -125.4845 47.5094 5.0 -125.7429 47.6854 5.0 -126.7479 48.1388 5.0 -126.9958 48.2481 5.0 -127.7339 48.5833 5.0 -127.8211 48.6402 5.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.8004 40.5688 15.0 -124.9926 41.1587 15.0 -125.1497 42.0695 15.0 -125.1673 42.9932 15.0 -125.109 43.9504 15.0 -125.0143 44.7268 15.0 -124.9464 45.2392 15.0 -124.8183 45.8646 15.0 -124.715 46.2408 15.0 -124.5428 46.8725 15.0 -124.5045 47.2991 15.0 -124.7008 47.7968 15.0 -125.2011 48.1644 15.0 -126.2362 48.6346 15.0 -126.4803 48.7426 15.0 -127.1967 49.0693 15.0 -127.1773 49.0666 15.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <faultBottomEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.151 40.6882 27.0 -124.328 41.2434 27.0 -124.4678 42.1028 27.0 -124.4741 42.9832 27.0 -124.4064 43.9164 27.0 -124.3039 44.6796 27.0 -124.2321 45.1764 27.0 -124.1003 45.7821 27.0 -123.9955 46.1452 27.0 -123.8086 46.8021 27.0 -123.7608 47.3548 27.0 -124.0327 48.0349 27.0 -124.7106 48.5531 27.0 -125.796 49.0508 27.0 -126.0376 49.1582 27.0 -126.7439 49.4816 27.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </complexFaultGeometry>
+                <magScaleRel>
+                    GSCCascadia
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="8.55"
+                >
+                    <occurRates>
+                        9.49066e-05 0.000139773 0.000206747 0.000307236 0.000458821 0.000462474 0.000107025 1.5285e-05
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    90.0
+                </rake>
+            </complexFaultSource>
+          </sourceGroup>
+    </sourceModel>
+</nrml>

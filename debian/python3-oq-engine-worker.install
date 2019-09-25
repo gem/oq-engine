@@ -1,1 +1,1 @@
-debian/supervisord/openquake-celery.conf   /etc/supervisor/conf.d
+debian/systemd/openquake-celery.service   /lib/systemd/system/

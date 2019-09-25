@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,36 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from nose.plugins.attrib import attr
-
 from openquake.qa_tests_data.classical_risk import (
-    case_1, case_2, case_3, case_4, case_5, case_master)
+    case_2, case_3, case_4, case_5, case_master)
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, NOT_DARWIN)
-from openquake.commonlib.writers import scientificformat
 from openquake.calculators.export import export
 
 
 class ClassicalRiskTestCase(CalculatorTestCase):
 
-    @attr('qa', 'risk', 'classical_risk')
-    def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
-
-        # check loss ratios
-        lrs = self.calc.datastore['composite_risk_model/VF/structural']
-        got = scientificformat(lrs.mean_loss_ratios, '%.2f')
-        self.assertEqual(got, '0.05 0.10 0.20 0.40 0.80')
-
-        # check loss curves
-        [fname] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/loss_curves.csv', fname)
-
-        # check loss maps
-        [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/loss_maps.csv', fname)
-
-    @attr('qa', 'risk', 'classical_risk')
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
         [fname] = export(('loss_curves/rlz-0', 'csv'), self.calc.datastore)
@@ -54,7 +33,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps.csv', fname)
 
-    @attr('qa', 'risk', 'classical_risk')
     def test_case_3(self):
         self.run_calc(case_3.__file__, 'job.ini', exports='csv')
         [fname] = export(('loss_curves/rlz-0/sid-0', 'csv'),
@@ -64,7 +42,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-ref-a8-000.csv', fname)
 
-    @attr('qa', 'risk', 'classical_risk')
     def test_case_4(self):
         self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
@@ -78,7 +55,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 3)  # mean, quantile-0.15, quantile-0.85
+        self.assertEqual(len(fnames), 1)  # mean
         self.assertEqualFiles('expected/loss_maps-mean.csv', fnames[0])
 
         [fname] = export(('loss_curves/mean/sid-1', 'csv'),
@@ -87,7 +64,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
                               fname)
 
     # test with 1 hazard site and 2 risk sites using assoc_assets_sites
-    @attr('qa', 'risk', 'classical_risk')
     def test_case_5(self):
         # test with different curve resolution for different taxonomies
         self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
@@ -105,7 +81,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves_avg.txt', fname)
 
-    @attr('qa', 'risk', 'classical_risk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)

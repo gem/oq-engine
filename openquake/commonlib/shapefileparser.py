@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,6 @@ import os
 import numpy
 import operator
 import shapefile
-from collections import OrderedDict
 from openquake.baselib.general import groupby
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
@@ -42,8 +41,7 @@ MAX_HYPO_DEPTHS = 20
 # maximum number of planes (for sources described by multi-surface)
 MAX_PLANES = 10
 
-# each triplet contains nrmllib parameter name, shapefile field name and
-# data type
+# each triplet contains parameter name, shapefile field name and data type
 BASE_PARAMS = [
     ('id', 'id', 'c'), ('name', 'name', 'c'),
     ('tectonicRegion', 'trt', 'c'),
@@ -60,7 +58,7 @@ MFD_PARAMS = [
     ('minMag', 'min_mag', 'f'), ('maxMag', 'max_mag', 'f'),
     ('aValue', 'a_val', 'f'), ('bValue', 'b_val', 'f'),
     ('binWidth', 'bin_width', 'f'),
-    ('characteristicMag', 'characteristic_mag','f')
+    ('characteristicMag', 'characteristic_mag', 'f'),
 ]
 
 
@@ -110,12 +108,11 @@ def expand_src_param(values, shp_params):
     into dictionary of shapefile parameters.
     """
     if values is None:
-        return dict([(key, None) for key, _ in shp_params])
+        return {key: None for key, _ in shp_params}
     else:
         num_values = len(values)
-        return OrderedDict(
-            [(key, float(values[i]) if i < num_values else None)
-                for i, (key, _) in enumerate(shp_params)])
+        return {key: float(values[i]) if i < num_values else None
+                for i, (key, _) in enumerate(shp_params)}
 
 
 def extract_source_params(src):
@@ -141,7 +138,7 @@ def extract_source_params(src):
                 data.append((param, None))
         else:
             data.append((param, None))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def parse_area_geometry(node):
@@ -155,8 +152,6 @@ def parse_area_geometry(node):
             crds = subnode.nodes[0].nodes[0].nodes[0].text
             geometry["polygon"] = numpy.array([[crds[i], crds[i + 1]]
                                               for i in range(0, len(crds), 2)])
-        else:
-            pass
     return geometry
 
 
@@ -170,8 +165,6 @@ def parse_point_geometry(node):
         elif "Point" in subnode.tag:
             lon, lat = subnode.nodes[0].text
             geometry["point"] = numpy.array([lon, lat])
-        else:
-            pass
     return geometry
 
 
@@ -194,8 +187,6 @@ def parse_simple_fault_geometry(node):
             crds = subnode.nodes[0].text
             geometry["trace"] = numpy.array([[crds[i], crds[i + 1]]
                                             for i in range(0, len(crds), 2)])
-        else:
-            pass
     return geometry
 
 
@@ -226,8 +217,6 @@ def parse_complex_fault_geometry(node):
             geometry["intermediateEdges"].append(
                 numpy.array([[crds[i], crds[i + 1], crds[i + 2]]
                              for i in range(0, len(crds), 3)]))
-        else:
-            pass
     geometry["dip"] = None
     return geometry
 
@@ -264,7 +253,7 @@ def get_attrs_dict(attrs, params):
             data.append((param, attrs[key]))
         else:
             data.append((param, None))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def extract_geometry_params(src):
@@ -315,11 +304,9 @@ def extract_geometry_params(src):
         if dip and counter:
             dip /= counter
 
-        return OrderedDict([("usd", upper_depth),
-                            ("lsd", lower_depth),
-                            ("dip", dip)])
+        return {"usd": upper_depth, "lsd": lower_depth, "dip": dip}
     else:
-        return OrderedDict()
+        return {}
 
 
 def extract_mfd_params(src):
@@ -351,30 +338,28 @@ def extract_mfd_params(src):
         if n_r > MAX_RATES:
             raise ValueError("Number of rates in source %s too large "
                              "to be placed into shapefile" % src.tag)
-        rate_dict = OrderedDict([(key, rates[i] if i < n_r else None)
-                                 for i, (key, _) in enumerate(RATE_PARAMS)])
+        rate_dict = {key: rates[i] if i < n_r else None
+                     for i, (key, _) in enumerate(RATE_PARAMS)}
     elif "YoungsCoppersmithMFD" in mfd_node.tag:
-        rate_dict = OrderedDict([(key, mfd_node.attrib['characteristicRate'])
-                                 for i, (key, _) in enumerate(RATE_PARAMS)])
+        rate_dict = {key: mfd_node.attrib['characteristicRate']
+                     for i, (key, _) in enumerate(RATE_PARAMS)}
     else:
-        rate_dict = OrderedDict([(key, None)
-                                 for i, (key, _) in enumerate(RATE_PARAMS)])
-    return OrderedDict(data), rate_dict
+        rate_dict = {key: None for i, (key, _) in enumerate(RATE_PARAMS)}
+    return dict(data), rate_dict
 
 
 def extract_source_nodal_planes(src):
     if "pointSource" not in src.tag and "areaSource" not in src.tag:
-        strikes = dict([(key, None) for key, _ in STRIKE_PARAMS])
-        dips = dict([(key, None) for key, _ in DIP_PARAMS])
-        rakes = dict([(key, None) for key, _ in RAKE_PARAMS])
-        np_weights = dict([(key, None) for key, _ in NPW_PARAMS])
+        strikes = {key: None for key, _ in STRIKE_PARAMS}
+        dips = {key: None for key, _ in DIP_PARAMS}
+        rakes = {key: None for key, _ in RAKE_PARAMS}
+        np_weights = {key: None for key, _ in NPW_PARAMS}
         return strikes, dips, rakes, np_weights
     tags = get_taglist(src)
     npd_nodeset = src.nodes[tags.index("nodalPlaneDist")]
     if len(npd_nodeset) > MAX_NODAL_PLANES:
-        raise ValueError("Number of nodal planes %s exceeds stated maximum "
-                         "of %s" % (str(len(npd_nodeset)),
-                                    str(MAX_NODAL_PLANES)))
+        raise ValueError("Number of nodal planes %d exceeds stated maximum "
+                         "of %d" % (len(npd_nodeset), MAX_NODAL_PLANES))
     if len(npd_nodeset):
         strikes = []
         dips = []
@@ -390,10 +375,10 @@ def extract_source_nodal_planes(src):
         rakes = expand_src_param(rakes, RAKE_PARAMS)
         np_weights = expand_src_param(np_weights, NPW_PARAMS)
     else:
-        strikes = dict([(key, None) for key, _ in STRIKE_PARAMS])
-        dips = dict([(key, None) for key, _ in DIP_PARAMS])
-        rakes = dict([(key, None) for key, _ in RAKE_PARAMS])
-        np_weights = dict([(key, None) for key, _ in NPW_PARAMS])
+        strikes = {key: None for key, _ in STRIKE_PARAMS}
+        dips = {key: None for key, _ in DIP_PARAMS}
+        rakes = {key: None for key, _ in RAKE_PARAMS}
+        np_weights = {key: None for key, _ in NPW_PARAMS}
     return strikes, dips, rakes, np_weights
 
 
@@ -402,8 +387,8 @@ def extract_source_hypocentral_depths(src):
     Extract source hypocentral depths.
     """
     if "pointSource" not in src.tag and "areaSource" not in src.tag:
-        hds = dict([(key, None) for key, _ in HDEPTH_PARAMS])
-        hdsw = dict([(key, None) for key, _ in HDW_PARAMS])
+        hds = {key: None for key, _ in HDEPTH_PARAMS}
+        hdsw = {key: None for key, _ in HDW_PARAMS}
         return hds, hdsw
 
     tags = get_taglist(src)
@@ -422,8 +407,8 @@ def extract_source_hypocentral_depths(src):
         hds = expand_src_param(hds, HDEPTH_PARAMS)
         hdsw = expand_src_param(hdws, HDW_PARAMS)
     else:
-        hds = dict([(key, None) for key, _ in HDEPTH_PARAMS])
-        hdsw = dict([(key, None) for key, _ in HDW_PARAMS])
+        hds = {key: None for key, _ in HDEPTH_PARAMS}
+        hdsw = {key: None for key, _ in HDW_PARAMS}
 
     return hds, hdsw
 
@@ -433,8 +418,8 @@ def extract_source_planes_strikes_dips(src):
     Extract strike and dip angles for source defined by multiple planes.
     """
     if "characteristicFaultSource" not in src.tag:
-        strikes = dict([(key, None) for key, _ in PLANES_STRIKES_PARAM])
-        dips = dict([(key, None) for key, _ in PLANES_DIPS_PARAM])
+        strikes = {key: None for key, _ in PLANES_STRIKES_PARAM}
+        dips = {key: None for key, _ in PLANES_DIPS_PARAM}
         return strikes, dips
     tags = get_taglist(src)
     surface_set = src.nodes[tags.index("surface")]
@@ -453,8 +438,8 @@ def extract_source_planes_strikes_dips(src):
         strikes = expand_src_param(strikes, PLANES_STRIKES_PARAM)
         dips = expand_src_param(dips, PLANES_DIPS_PARAM)
     else:
-        strikes = dict([(key, None) for key, _ in PLANES_STRIKES_PARAM])
-        dips = dict([(key, None) for key, _ in PLANES_DIPS_PARAM])
+        strikes = {key: None for key, _ in PLANES_STRIKES_PARAM}
+        dips = {key: None for key, _ in PLANES_DIPS_PARAM}
 
     return strikes, dips
 
@@ -617,7 +602,7 @@ def record_to_dict(record, fields):
         value = attr.strip()
         if value:
             data.append((name, value))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def area_geometry_from_shp(shape, record):
@@ -871,8 +856,6 @@ class SourceModel(object):
                         self.has_planar_geometry = True
                         p_size += 1
                 self.num_p = p_size if p_size > self.num_p else self.num_p
-            else:
-                pass
 
             # MFD params
             if "truncGutenbergRichterMFD" in src_taglist:
@@ -883,8 +866,6 @@ class SourceModel(object):
                 mfd_node = src.nodes[src_taglist.index("incrementalMFD")]
                 r_size = len(mfd_node.nodes[0].text)
                 self.num_r = r_size if r_size > self.num_r else self.num_r
-            else:
-                pass
 
     def __len__(self):
         """
@@ -914,7 +895,7 @@ class SourceModelParser(object):
              simple_fault_spacing=1.0, complex_mesh_spacing=5.0,
              mfd_spacing=0.1):
         """
-        Build the source model from nrml format
+        Build the source model from NRML format
         """
         self.source_file = nrml_file
         if validate:
@@ -962,7 +943,7 @@ class SourceModelParser(object):
 class ShapefileParser(SourceModelParser):
     def filter_params(self, src_mod):
         """
-        Remove params uneeded by source_model
+        Remove params unneeded by source_model
         """
         # point and area related params
         STRIKE_PARAMS[src_mod.num_np:] = []
@@ -998,7 +979,7 @@ class ShapefileParser(SourceModelParser):
              simple_fault_spacing=1.0, complex_mesh_spacing=5.0,
              mfd_spacing=0.1):
         """
-        Build the source model from nrml format
+        Build the source model from a shapefile
         """
         reader = shapefile.Reader(input_shapefile)
         fields = [field[0] for field in reader.fields[1:]]
@@ -1008,9 +989,8 @@ class ShapefileParser(SourceModelParser):
         if validate:
             converter = SourceConverter(1.0, simple_fault_spacing,
                                         complex_mesh_spacing,
-                                        mfd_spacing,
-                                        10.0)
-        for iloc in range(0, reader.numRecords):
+                                        mfd_spacing, 10.0)
+        for iloc in range(reader.numRecords):
             # Build record dictionary
             record = record_to_dict(records[iloc], fields)
             shape = shapes[iloc]
@@ -1023,6 +1003,9 @@ class ShapefileParser(SourceModelParser):
             elif "complexFaultSource" in record["sourcetype"]:
                 src = build_complex_fault_source_from_shp(shape, record)
             elif "characteristicFaultSource" in record["sourcetype"]:
+                print("Characteristic Fault Source Not Yet Supported - Sorry!")
+                src = None
+            elif "multiPointSource" in record["sourcetype"]:
                 print("Characteristic Fault Source Not Yet Supported - Sorry!")
                 src = None
             if src and validate:
@@ -1097,14 +1080,14 @@ class ShapefileParser(SourceModelParser):
                                  % src.tag)
 
         root = self.destination
-        if len(w_area.shapes()) > 0:
+        if len(w_area.shapes()):
             w_area.save('%s_area' % root)
-        if len(w_point.shapes()) > 0:
+        if len(w_point.shapes()):
             w_point.save('%s_point' % root)
-        if len(w_complex.shapes()) > 0:
+        if len(w_complex.shapes()):
             w_complex.save('%s_complex' % root)
-        if len(w_simple.shapes()) > 0:
+        if len(w_simple.shapes()):
             w_simple.save('%s_simple' % root)
             w_simple3d.save('%s_simple3d' % root)
-        if len(w_planar.shapes()) > 0:
+        if len(w_planar.shapes()):
             w_planar.save('%s_planar' % root)

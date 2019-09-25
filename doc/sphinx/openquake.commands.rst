@@ -73,14 +73,6 @@ plot_sites command
     :undoc-members:
     :show-inheritance:
 
-plot_uhs command
-----------------------------------
-
-.. automodule:: openquake.commands.plot_uhs
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 purge command
 -------------------------------
 
@@ -109,14 +101,6 @@ run command
 -----------------------------
 
 .. automodule:: openquake.commands.run
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-run_tiles command
-------------------------------------
-
-.. automodule:: openquake.commands.run_tiles
     :members:
     :undoc-members:
     :show-inheritance:

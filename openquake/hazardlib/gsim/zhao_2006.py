@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -341,7 +341,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
 
         # to avoid singularity at 0.0 (in the calculation of the
         # slab correction term), replace 0 values with 0.1
-        d = dists.rrup
+        d = np.array(dists.rrup)  # make a copy
         d[d == 0.0] = 0.1
 
         # mean value as given by equation 1, p. 901, without considering the
@@ -479,7 +479,7 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
 
         # to avoid singularity at 0.0 (in the calculation of the
         # slab correction term), replace 0 values with 0.1
-        d = dists.rrup
+        d = np.array(dists.rrup)  # make a copy
         d[d == 0.0] = 0.1
 
         if rup.mag > 7.8:
@@ -616,7 +616,7 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
 
         # to avoid singularity at 0.0 (in the calculation of the
         # slab correction term), replace 0 values with 0.1
-        d = dists.rrup
+        d = np.array(dists.rrup)  # make a copy
         d[d == 0.0] = 0.1
 
         # mean value as given by equation 1, p. 901, without considering the

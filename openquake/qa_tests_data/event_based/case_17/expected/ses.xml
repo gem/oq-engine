@@ -11,24 +11,19 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="active shallow crust"
         >
             <singlePlaneRupture
-            id="44"
-            multiplicity="4"
+            id="149"
+            multiplicity="2"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
-                    >
-                        188978561024 188978561025
-                    </SES>
-                    <SES
                     id="2"
                     >
-                        188978561026
+                        0
                     </SES>
                     <SES
-                    id="3"
+                    id="1"
                     >
-                        188978561027
+                        1
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -52,24 +47,19 @@ xmlns:gml="http://www.opengis.net/gml"
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
-            id="45"
-            multiplicity="5"
+            id="150"
+            multiplicity="2"
             >
                 <stochasticEventSets>
                     <SES
                     id="1"
                     >
-                        193273528320
-                    </SES>
-                    <SES
-                    id="2"
-                    >
-                        193273528321 193273528322 193273528323
+                        0
                     </SES>
                     <SES
                     id="3"
                     >
-                        193273528324
+                        1
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -93,19 +83,24 @@ xmlns:gml="http://www.opengis.net/gml"
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
-            id="46"
-            multiplicity="4"
+            id="151"
+            multiplicity="3"
             >
                 <stochasticEventSets>
                     <SES
                     id="1"
                     >
-                        197568495616 197568495618 197568495619
+                        0
                     </SES>
                     <SES
                     id="3"
                     >
-                        197568495617
+                        1
+                    </SES>
+                    <SES
+                    id="2"
+                    >
+                        2
                     </SES>
                 </stochasticEventSets>
                 <magnitude>

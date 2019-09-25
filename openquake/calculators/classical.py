@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,18 +15,21 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import math
+import os
 import time
 import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5, datastore
-from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, block_splitter, groupby
-from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
-from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.hazardlib import source
+from openquake.baselib import parallel, hdf5
+from openquake.baselib.general import AccumDict, block_splitter
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib.calc.hazard_curve import classical
+from openquake.hazardlib.probability_map import (
+    ProbabilityMap, ProbabilityCurve)
+from openquake.commonlib import calc, util
+from openquake.commonlib.source_model_factory import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -35,11 +38,15 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
+grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
+                             ('extreme_poe', F32)])
 
-grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
-                             ('source_name', hdf5.vstr)])
-source_data_dt = numpy.dtype(
-    [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
+
+def estimate_duration(rups_per_task, maxdist, N):
+    """
+    Estimate the task duration with an heuristic formula
+    """
+    return (rups_per_task * N) ** .333 * (maxdist / 300) ** 2
 
 
 def get_src_ids(sources):
@@ -59,19 +66,58 @@ def get_src_ids(sources):
     return ' '.join(set(src_ids))
 
 
-def saving_sources_by_task(iterargs, dstore):
+def get_extreme_poe(array, imtls):
     """
-    Yield the iterargs again by populating 'source_data'
+    :param array: array of shape (L, G) with L=num_levels, G=num_gsims
+    :param imtls: DictArray imt -> levels
+    :returns:
+        the maximum PoE corresponding to the maximum level for IMTs and GSIMs
     """
-    source_ids = []
-    data = []
-    for i, args in enumerate(iterargs, 1):
-        source_ids.append(get_src_ids(args[0]))
-        for src in args[0]:  # collect source data
-            data.append((i, src.nsites, src.num_ruptures, src.weight))
-        yield args
-    dstore['task_sources'] = encode(source_ids)
-    dstore.extend('source_data', numpy.array(data, source_data_dt))
+    return max(array[imtls(imt).stop - 1].max() for imt in imtls)
+
+
+def classical_split_filter(srcs, srcfilter, gsims, params, monitor):
+    """
+    Split the given sources, filter the subsources and the compute the
+    PoEs. Yield back subtasks if the split sources contain more than
+    maxweight ruptures.
+    """
+    # first check if we are sampling the sources
+    ss = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    if ss:
+        splits, stime = split_sources(srcs)
+        srcs = random_filtered_sources(splits, srcfilter, ss)
+        yield classical(srcs, srcfilter, gsims, params, monitor)
+        return
+    # NB: splitting all the sources improves the distribution significantly,
+    # compared to splitting only the big source
+    sources = []
+    with monitor("filtering/splitting sources"):
+        for src, _sites in srcfilter(srcs):
+            splits, _stime = split_sources([src])
+            sources.extend(srcfilter.filter(splits))
+    if sources:
+        yield from parallel.split_task(
+                classical, sources, srcfilter, gsims, params, monitor,
+                duration=params['task_duration'])
+
+
+def preclassical(srcs, srcfilter, gsims, params, monitor):
+    """
+    Prefilter the sources
+    """
+    calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
+    pmap = AccumDict(accum=0)
+    for src in srcs:
+        t0 = time.time()
+        if srcfilter.get_close_sites(src) is None:
+            continue
+        dt = time.time() - t0
+        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
+        for grp_id in src.src_group_ids:
+            pmap[grp_id] += 0
+    return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
+                task_no=monitor.task_no)
 
 
 @base.calculators.add('classical')
@@ -79,40 +125,78 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = classical
+    core_task = classical_split_filter
+    accept_precalc = ['classical']
 
-    def agg_dicts(self, acc, pmap_by_grp):
+    def agg_dicts(self, acc, dic):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param pmap_by_grp: dictionary grp_id -> ProbabilityMap
+        :param dic: dict with keys pmap, calc_times, rup_data
         """
-        with self.monitor('aggregate curves', autoflush=True):
-            acc.eff_ruptures += pmap_by_grp.eff_ruptures
-            for grp_id in pmap_by_grp:
-                if pmap_by_grp[grp_id]:
-                    acc[grp_id] |= pmap_by_grp[grp_id]
-                self.nsites.append(len(pmap_by_grp[grp_id]))
-            for srcid, (srcweight, nsites, calc_time, split) in \
-                    pmap_by_grp.calc_times.items():
-                info = self.csm.infos[srcid]
-                info.num_sites += nsites
-                info.calc_time += calc_time
-                info.num_split += split
+        with self.monitor('aggregate curves'):
+            d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
+            self.calc_times += d
+            srcids = []
+            eff_rups = 0
+            eff_sites = 0
+            for srcid, rec in d.items():
+                srcids.append(srcid)
+                eff_rups += rec[0]
+                if rec[0]:
+                    eff_sites += rec[1] / rec[0]
+            self.sources_by_task[dic['task_no']] = (
+                eff_rups, eff_sites, U32(srcids))
+            for grp_id, pmap in dic['pmap'].items():
+                if pmap:
+                    acc[grp_id] |= pmap
+                acc.eff_ruptures[grp_id] += eff_rups
+
+            rup_data = dic['rup_data']
+            if len(rup_data['grp_id']):
+                nr = len(rup_data['srcidx'])
+                default = (numpy.ones(nr, F32) * numpy.nan,
+                           [numpy.zeros(0, F32)] * nr)
+                for k in self.rparams:
+                    # variable lenght arrays
+                    vlen = k.endswith('_') or k == 'probs_occur'
+                    try:
+                        v = rup_data[k]
+                    except KeyError:
+                        v = default[vlen]
+                    if vlen:
+                        self.datastore.hdf5.save_vlen('rup/' + k, v)
+                    else:
+                        # NB: creating dataset on the fly is ugly
+                        try:
+                            dset = self.datastore['rup/' + k]
+                        except KeyError:
+                            dset = self.datastore.create_dset(
+                                'rup/' + k, v.dtype,
+                                shape=(None,) + v.shape[1:])
+                        hdf5.extend(dset, v)
         return acc
 
-    def zerodict(self):
+    def acc0(self):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
         csm_info = self.csm.info
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
+        rparams = {'grp_id', 'srcidx', 'occurrence_rate',
+                   'weight', 'probs_occur', 'sid_', 'lon_', 'lat_'}
         for grp in self.csm.src_groups:
-            num_gsims = len(csm_info.gsim_lt.get_gsims(grp.trt))
-            zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
-        zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
+            gsims = csm_info.gsim_lt.get_gsims(grp.trt)
+            cm = ContextMaker(grp.trt, gsims)
+            rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
+            for dparam in cm.REQUIRES_DISTANCES:
+                rparams.add(dparam + '_')
+            zd[grp.id] = ProbabilityMap(num_levels, len(gsims))
+        zd.eff_ruptures = AccumDict(accum=0)  # grp_id -> eff_ruptures
+        self.rparams = sorted(rparams)
+        self.sources_by_task = {}  # task_no => src_ids
         return zd
 
     def execute(self):
@@ -121,109 +205,103 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        if self.oqparam.hazard_calculation_id:
-            parent = datastore.read(self.oqparam.hazard_calculation_id)
-            self.csm_info = parent['csm_info']
-            parent.close()
-            self.calc_stats(parent)  # post-processing
+        oq = self.oqparam
+        if oq.hazard_calculation_id and not oq.compare_with_classical:
+            with util.read(self.oqparam.hazard_calculation_id) as parent:
+                self.csm_info = parent['csm_info']
+            self.calc_stats()  # post-processing
             return {}
-        self.csm_info = self.datastore['csm_info']
-        with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.monitor('classical'))
-            iterargs = saving_sources_by_task(allargs, self.datastore)
-            if isinstance(allargs, list):
-                # there is a trick here: if the arguments are known
-                # (a list, not an iterator), keep them as a list
-                # then the Starmap will understand the case of a single
-                # argument tuple and it will run in core the task
-                iterargs = list(iterargs)
-            ires = parallel.Starmap(
-                self.core_task.__func__, iterargs, self.monitor()
-            ).submit_all()
-        self.nsites = []
-        acc = ires.reduce(self.agg_dicts, self.zerodict())
-        if not self.nsites:
-            raise RuntimeError('All sources were filtered out!')
-        logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos, acc)
+
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(
+            self.core_task.__func__, h5=self.datastore.hdf5)
+        with self.monitor('managing sources'):
+            smap.task_queue = list(self.gen_task_queue())
+        self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        try:
+            acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
+            self.store_rlz_info(acc.eff_ruptures)
+        finally:
+            with self.monitor('store source_info'):
+                self.store_source_info(self.calc_times)
+            if self.sources_by_task:
+                num_tasks = max(self.sources_by_task) + 1
+                sbt = numpy.zeros(
+                    num_tasks, [('eff_ruptures', U32),
+                                ('eff_sites', U32),
+                                ('srcids', hdf5.vuint32)])
+                for task_no in range(num_tasks):
+                    sbt[task_no] = self.sources_by_task.get(
+                        task_no, (0, 0, U32([])))
+                self.datastore['sources_by_task'] = sbt
+                self.sources_by_task.clear()
+        if not self.calc_times:
+            raise RuntimeError('All sources were filtered away!')
+        self.calc_times.clear()  # save a bit of memory
         return acc
 
-    def gen_args(self, monitor):
+    def gen_task_queue(self):
         """
-        Used in the case of large source model logic trees.
-
-        :param monitor: a :class:`openquake.baselib.performance.Monitor`
-        :yields: (sources, sites, gsims, monitor) tuples
+        Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
-        opt = self.oqparam.optimize_same_id_sources
-        param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls,
-                     filter_distance=oq.filter_distance, reqv=oq.get_reqv())
-        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
-        num_tasks = 0
-        num_sources = 0
-        src_filter, csm = self.filter_csm()
-        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
-        if maxweight == minweight:
-            logging.info('Using minweight=%d', minweight)
-        else:
-            logging.info('Using maxweight=%d', maxweight)
+        N = len(self.sitecol)
+        trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
+        maxweight = min(self.csm.get_maxweight(
+            trt_sources, weight, oq.concurrent_tasks), 1E6)
+        maxdist = int(max(oq.maximum_distance.values()))
+        if oq.task_duration is None:  # inferred
+            # from 1 minute up to 1 day
+            td = int(max(estimate_duration(maxweight, maxdist, N), 60))
+        else:  # user given
+            td = int(oq.task_duration)
+        param = dict(
+            truncation_level=oq.truncation_level, imtls=oq.imtls,
+            filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
+            pointsource_distance=oq.pointsource_distance,
+            max_sites_disagg=oq.max_sites_disagg,
+            task_duration=td, maxweight=maxweight)
+        logging.info(f'ruptures_per_task={maxweight}, '
+                     f'maxdist={maxdist} km, task_duration={td} s')
 
-        if csm.has_dupl_sources and not opt:
-            logging.warn('Found %d duplicated sources',
-                         csm.has_dupl_sources)
-
-        for sg in csm.src_groups:
-            if sg.src_interdep == 'mutex' and len(sg) > 0:
-                gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                yield sg, src_filter, gsims, param, monitor
-                num_tasks += 1
-                num_sources += len(sg.sources)
-        # NB: csm.get_sources_by_trt discards the mutex sources
-        for trt, sources in csm.sources_by_trt.items():
+        srcfilter = self.src_filter()
+        for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            for block in block_splitter(sources, maxweight, weight):
-                yield block, src_filter, gsims, param, monitor
-                num_tasks += 1
-                num_sources += len(block)
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
-        self.csm.info.tot_weight = csm.info.tot_weight
+            if hasattr(sources, 'atomic') and sources.atomic:
+                # do not split atomic groups
+                yield classical, sources, srcfilter, gsims, param
+            else:  # regroup the sources in blocks
+                for block in block_splitter(sources, maxweight, weight):
+                    yield (self.core_task.__func__, block, srcfilter, gsims,
+                           param)
 
-    def gen_getters(self, parent):
+    def save_hazard(self, acc, pmap_by_kind):
         """
-        :yields: pgetter, hstats, monitor
-        """
-        monitor = self.monitor('build_hcurves_and_stats')
-        hstats = self.oqparam.hazard_stats()
-        for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pgetter = getters.PmapGetter(parent, self.rlzs_assoc, t.sids)
-            if parent is self.datastore:  # read now, not in the workers
-                logging.info('Reading PoEs on %d sites', len(t))
-                pgetter.init()
-            yield pgetter, hstats, monitor
+        Works by side effect by saving hcurves and hmaps on the datastore
 
-    def save_hcurves(self, acc, pmap_by_kind):
-        """
-        Works by side effect by saving statistical hcurves on the
-        datastore; the accumulator stores the number of bytes saved.
-
-        :param acc: dictionary kind -> nbytes
+        :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
+
+        kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
-        with self.monitor('saving statistical hcurves', autoflush=True):
-            for kind in pmap_by_kind:
-                pmap = pmap_by_kind[kind]
-                if pmap:
-                    key = 'hcurves/%s' % kind
-                    dset = self.datastore.getitem(key)
-                    for sid in pmap:
-                        dset[sid] = pmap[sid].array[:, 0]
-                    # in the datastore we save 4 byte floats, thus we
-                    # divide the memory consumption by 2: pmap.nbytes / 2
-                    acc += {kind: pmap.nbytes // 2}
+        with self.monitor('saving statistics'):
+            for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
+                pmaps = pmap_by_kind[kind]
+                if kind == 'rlz_by_sid':  # pmaps is actually a rlz_by_sid
+                    for sid, rlz in pmaps.items():
+                        self.datastore['best_rlz'][sid] = rlz
+                elif kind in ('hmaps-rlzs', 'hmaps-stats'):
+                    # pmaps is a list of R pmaps
+                    dset = self.datastore.getitem(kind)
+                    for r, pmap in enumerate(pmaps):
+                        for s in pmap:
+                            dset[s, r] = pmap[s].array  # shape (M, P)
+                elif kind in ('hcurves-rlzs', 'hcurves-stats'):
+                    dset = self.datastore.getitem(kind)
+                    for r, pmap in enumerate(pmaps):
+                        for s in pmap:
+                            dset[s, r] = pmap[s].array[:, 0]  # shape L
             self.datastore.flush()
-            return acc
 
     def post_execute(self, pmap_by_grp_id):
         """
@@ -233,94 +311,64 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        grp_trt = self.csm_info.grp_by("trt")
-        grp_source = self.csm_info.grp_by("name")
-        if oq.disagg_by_src:
-            src_name = {src.src_group_id: src.name
-                        for src in self.csm.get_sources()}
+        try:
+            csm_info = self.csm.info
+        except AttributeError:
+            csm_info = self.datastore['csm_info']
+        trt_by_grp = csm_info.grp_by("trt")
+        grp_name = {grp.id: grp.name for sm in csm_info.source_models
+                    for grp in sm.src_groups}
         data = []
-        with self.monitor('saving probability maps', autoflush=True):
+        with self.monitor('saving probability maps'):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
-                    fix_ones(pmap)  # avoid saving PoEs == 1
+                    base.fix_ones(pmap)  # avoid saving PoEs == 1
+                    trt = trt_by_grp[grp_id]
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
-                    if oq.disagg_by_src:
-                        data.append(
-                            (grp_id, grp_source[grp_id], src_name[grp_id]))
+                    self.datastore.set_attrs(key, trt=trt)
+                    extreme = max(
+                        get_extreme_poe(pmap[sid].array, oq.imtls)
+                        for sid in pmap)
+                    data.append((grp_id, grp_name[grp_id], extreme))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
-            self.datastore.set_nbytes('poes')
-            if oq.disagg_by_src and self.csm_info.get_num_rlzs() == 1:
-                # this is useful for disaggregation, which is implemented
-                # only for the case of a single realization
-                self.datastore['disagg_by_src/source_id'] = numpy.array(
-                    sorted(data), grp_source_dt)
+            self.datastore['disagg_by_grp'] = numpy.array(
+                sorted(data), grp_extreme_dt)
+            self.datastore.close()  # for SWMR safety
+            self.datastore.open('r+')
+            self.calc_stats()
 
-            # save a copy of the poes in hdf5cache
-            if hasattr(self, 'hdf5cache'):
-                with hdf5.File(self.hdf5cache) as cache:
-                    cache['oqparam'] = oq
-                    self.datastore.hdf5.copy('poes', cache)
-                self.calc_stats(self.hdf5cache)
-            else:
-                self.calc_stats(self.datastore)
-        self.datastore.open('r+')
-        self.save_hmaps()
-
-    def calc_stats(self, parent):
+    def calc_stats(self):
         oq = self.oqparam
-        if not oq.hazard_stats():
-            if oq.hazard_maps or oq.uniform_hazard_spectra:
-                logging.warn('mean_hazard_curves was false in the job.ini, '
-                             'so no outputs were generated.\nYou can compute '
-                             'the statistics without repeating the calculation'
-                             ' with the --hc option')
-            return {}
+        hstats = oq.hazard_stats()
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
-        nbytes = N * L * 4  # bytes per realization (32 bit floats)
-        totbytes = 0
-        for name, stat in oq.hazard_stats():
-            self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
-            self.datastore.set_attrs('hcurves/%s' % name)
-            totbytes += nbytes
-        if 'hcurves' in self.datastore:
-            self.datastore.set_attrs('hcurves', nbytes=totbytes)
-        self.datastore.flush()
-        with self.monitor('sending pmaps', autoflush=True, measuremem=True):
-            ires = parallel.Starmap(
-                build_hcurves_and_stats, self.gen_getters(parent),
-                self.monitor()
-            ).submit_all()
-        for kind, nbytes in ires.reduce(self.save_hcurves).items():
-            self.datastore.getitem('hcurves/' + kind).attrs['nbytes'] = nbytes
-
-
-# used in PreClassicalCalculator
-def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
-    """
-    Count the number of ruptures contained in the given sources by applying a
-    raw source filtering on the integration distance. Return a dictionary
-    src_group_id -> {}.
-    All sources must belong to the same tectonic region type.
-    """
-    dic = groupby(sources, lambda src: src.src_group_ids[0])
-    acc = AccumDict({grp_id: {} for grp_id in dic})
-    acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = AccumDict(accum=numpy.zeros(4))
-    for grp_id in dic:
-        for src in sources:
-            t0 = time.time()
-            src_id = src.source_id.split(':')[0]
-            sites = srcfilter.get_close_sites(src)
-            if sites is not None:
-                acc.eff_ruptures[grp_id] += src.num_ruptures
-                dt = time.time() - t0
-                acc.calc_times[src_id] += numpy.array(
-                    [src.weight, len(sites), dt, 1])
-    return acc
+        P = len(oq.poes)
+        M = len(oq.imtls)
+        R = len(self.rlzs_assoc.realizations)
+        S = len(hstats)
+        if R > 1 and oq.individual_curves or not hstats:
+            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, L))
+            if oq.poes:
+                self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
+        if hstats:
+            self.datastore.create_dset('hcurves-stats', F32, (N, S, L))
+            if oq.poes:
+                self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
+        if 'mean' in dict(hstats) and R > 1 and N <= oq.max_sites_disagg:
+            self.datastore.create_dset('best_rlz', U32, (N,))
+        ct = oq.concurrent_tasks
+        logging.info('Building hazard statistics with %d concurrent_tasks', ct)
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        allargs = [  # this list is very fast to generate
+            (getters.PmapGetter(self.datastore, weights, t.sids, oq.poes),
+             N, hstats, oq.individual_curves, oq.max_sites_disagg)
+            for t in self.sitecol.split_in_tiles(ct)]
+        self.datastore.swmr_on()
+        parallel.Starmap(
+            build_hazard, allargs, h5=self.datastore.hdf5
+        ).reduce(self.save_hazard)
 
 
 @base.calculators.add('preclassical')
@@ -329,46 +377,76 @@ class PreCalculator(ClassicalCalculator):
     Calculator to filter the sources and compute the number of effective
     ruptures
     """
-    core_task = count_eff_ruptures
+    core_task = preclassical
 
 
-def fix_ones(pmap):
-    """
-    Physically, an extremely small intensity measure level can have an
-    extremely large probability of exceedence, however that probability
-    cannot be exactly 1 unless the level is exactly 0. Numerically, the
-    PoE can be 1 and this give issues when calculating the damage (there
-    is a log(0) in
-    :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
-    Here we solve the issue by replacing the unphysical probabilities 1
-    with .9999999999999999 (the float64 closest to 1).
-    """
-    for sid in pmap:
-        array = pmap[sid].array
-        array[array == 1.] = .9999999999999999
+def _build_stat_curve(poes, imtls, stat, weights):
+    L = len(imtls.array)
+    array = numpy.zeros((L, 1))
+    if isinstance(weights, list):  # IMT-dependent weights
+        # this is slower since the arrays are shorter
+        for imt in imtls:
+            slc = imtls(imt)
+            ws = [w[imt] for w in weights]
+            if sum(ws) == 0:  # expect no data for this IMT
+                continue
+            array[slc] = stat(poes[:, slc], ws)
+    else:
+        array = stat(poes, weights)
+    return ProbabilityCurve(array)
 
 
-def build_hcurves_and_stats(pgetter, hstats, monitor):
+def build_hazard(pgetter, N, hstats, individual_curves,
+                 max_sites_disagg, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
+    :param N: the total number of sites
     :param hstats: a list of pairs (statname, statfunc)
+    :param individual_curves: if True, also build the individual curves
+    :param max_sites_disagg: if there are less sites than this, store rup info
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('combine pmaps'):
-        pgetter.init()  # if not already initialized
-        try:
-            pmaps = pgetter.get_pmaps(pgetter.sids)
-        except IndexError:  # no data
-            return {}
-        if sum(len(pmap) for pmap in pmaps) == 0:  # no data
-            return {}
-    pmap_by_kind = {}
-    for kind, stat in hstats:
-        with monitor('compute ' + kind):
-            pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
-        pmap_by_kind[kind] = pmap
+    with monitor('read PoEs'):
+        pgetter.init()
+    imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
+    L = len(imtls.array)
+    R = len(weights)
+    S = len(hstats)
+    pmap_by_kind = {'rlz_by_sid': {}}
+    if R > 1 and individual_curves or not hstats:
+        pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
+    if hstats:
+        pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
+        if poes:
+            pmap_by_kind['hmaps-stats'] = [ProbabilityMap(L) for r in range(S)]
+    combine_mon = monitor('combine pmaps', measuremem=False)
+    compute_mon = monitor('compute stats', measuremem=False)
+    for sid in pgetter.sids:
+        with combine_mon:
+            pcurves = pgetter.get_pcurves(sid)
+        if sum(pc.array.sum() for pc in pcurves) == 0:  # no data
+            continue
+        with compute_mon:
+            if hstats:
+                arr = numpy.array([pc.array for pc in pcurves])
+                for s, (statname, stat) in enumerate(hstats.items()):
+                    pc = _build_stat_curve(arr, imtls, stat, weights)
+                    pmap_by_kind['hcurves-stats'][s][sid] = pc
+                    if poes:
+                        hmap = calc.make_hmap(pc, pgetter.imtls, poes, sid)
+                        pmap_by_kind['hmaps-stats'][s].update(hmap)
+                    if statname == 'mean' and R > 1 and N <= max_sites_disagg:
+                        rlz = pmap_by_kind['rlz_by_sid']
+                        rlz[sid] = util.closest_to_ref(
+                            [p.array for p in pcurves], pc.array)['rlz']
+            if R > 1 and individual_curves or not hstats:
+                for pmap, pc in zip(pmap_by_kind['hcurves-rlzs'], pcurves):
+                    pmap[sid] = pc
+                if poes:
+                    pmap_by_kind['hmaps-rlzs'] = [
+                        calc.make_hmap(pc, imtls, poes, sid) for pc in pcurves]
     return pmap_by_kind

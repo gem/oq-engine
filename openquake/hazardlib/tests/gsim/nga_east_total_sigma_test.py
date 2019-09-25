@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 
 """
 import os
-import numpy as np
 from openquake.hazardlib.gsim.nga_east import \
     DarraghEtAl2015NGAEast1CCSPTotalSigma
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
@@ -33,7 +32,7 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
     """
     def check(self, filename, max_discrep_percentage):
         filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
+        errors, stats, sctx, rctx, dctx = check_gsim(
             self.GSIM_CLASS, open(filename), max_discrep_percentage)
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
@@ -41,10 +40,6 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
         self.assertEqual(self.GSIM_CLASS.REQUIRES_SITES_PARAMETERS, s_att)
         self.assertEqual(self.GSIM_CLASS.REQUIRES_RUPTURE_PARAMETERS, r_att)
         self.assertEqual(self.GSIM_CLASS.REQUIRES_DISTANCES, d_att)
-        self.assertTrue(
-            np.all(ctxs),
-            msg='Contexts objects have been changed by method '
-                'get_mean_and_stddevs')
         if errors:
             raise AssertionError(stats)
         print()
@@ -52,7 +47,10 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
 
 
 # Required the definition of a specific GMPE, doesn't matter which
-DUMMY_GSIM = DarraghEtAl2015NGAEast1CCSPTotalSigma
+def DUMMY_GSIM(**kw):
+    gsim = DarraghEtAl2015NGAEast1CCSPTotalSigma(**kw)
+    return gsim
+
 
 # Maximum discrepancy is increased to 2 % to account for misprints and
 # rounding errors in the tables used for the target values

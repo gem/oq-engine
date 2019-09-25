@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ avoid an external dependency.
 """
 import math
 import builtins
+import numpy
 
 
 def encode(val):
@@ -48,7 +49,9 @@ def decode(val):
     :param: a unicode or bytes object
     :returns: a unicode object
     """
-    if isinstance(val, str):
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        return [decode(v) for v in val]
+    elif isinstance(val, str):
         # it was an already decoded unicode object
         return val
     else:

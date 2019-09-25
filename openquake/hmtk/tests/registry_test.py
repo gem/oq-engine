@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # LICENSE
 #
-# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -43,7 +43,7 @@
 # liability for use of the software.
 
 import unittest
-import mock
+import unittest.mock as mock
 from openquake.hmtk import registry
 
 

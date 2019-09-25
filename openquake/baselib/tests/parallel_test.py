@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,10 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
+import unittest.mock as mock
+import time
+import shutil
 import unittest
+import itertools
+import tempfile
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import parallel, general, hdf5, workerpool, performance
 
 try:
     import celery
@@ -32,12 +36,43 @@ def get_length(data, monitor):
     return {'n': len(data)}
 
 
+def gfunc(text, monitor):
+    for char in text:
+        yield char * 3
+
+
+def supertask(text, monitor):
+    # a supertask spawning subtasks of kind get_length
+    with monitor('waiting'):
+        time.sleep(.1)
+    yield {}
+    for block in general.block_splitter(text, max_weight=10):
+        items = [(k, len(list(grp))) for k, grp in itertools.groupby(block)]
+        if len(items) == 1:
+            # for instance items = [('i', 1)]
+            k, v = items[0]
+            yield get_length(k * v, monitor)
+            return
+        # for instance items = [('a', 4), ('e', 4), ('i', 2)]
+        for k, v in items:
+            yield get_length, k * v
+
+
+def countletters(text1, text2, monitor):
+    for block in general.block_splitter(text1 + text2, 5):
+        yield get_length, ''.join(block)
+
+
 class StarmapTestCase(unittest.TestCase):
     monitor = parallel.Monitor()
 
     @classmethod
     def setUpClass(cls):
         parallel.Starmap.init()  # initialize the pool
+        if parallel.oq_distribute() == 'zmq':
+            err = workerpool.check_status()
+            if err:
+                raise unittest.SkipTest(err)
 
     def test_apply(self):
         res = parallel.Starmap.apply(
@@ -70,10 +105,47 @@ class StarmapTestCase(unittest.TestCase):
         res = {}
         for key, data in all_data:
             res[key] = parallel.Starmap(
-                get_length, [(data, self.monitor)]).submit_all()
+                get_length, [(data,)]).submit_all()
         for key, val in res.items():
             res[key] = val.reduce()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})
+
+    def test_gfunc(self):
+        res = list(parallel.Starmap(gfunc, [('xy',), ('z',)],
+                                    distribute='no'))
+        self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
+
+        res = list(parallel.Starmap(gfunc, [('xy',), ('z',)]))
+        self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
+
+    def test_supertask(self):
+        # this test has 4 supertasks generating 4 + 5 + 3 + 5 = 17 subtasks
+        # and 5 real outputs (one from the yield {})
+        allargs = [('aaaaeeeeiii',),
+                   ('uuuuaaaaeeeeiii',),
+                   ('aaaaaaaaeeeeiii',),
+                   ('aaaaeeeeiiiiiooooooo',)]
+        numchars = sum(len(arg) for arg, in allargs)  # 61
+        tmpdir = tempfile.mkdtemp()
+        tmp = os.path.join(tmpdir, 'calc_1.hdf5')
+        performance.init_performance(tmp, swmr=True)
+        smap = parallel.Starmap(supertask, allargs, h5=hdf5.File(tmp, 'a'))
+        res = smap.reduce()
+        smap.h5.close()
+        self.assertEqual(res, {'n': numchars})
+        # check that the correct information is stored in the hdf5 file
+        with hdf5.File(tmp, 'r') as h5:
+            num = general.countby(h5['performance_data'][()], 'operation')
+            self.assertEqual(num[b'waiting'], 4)
+            self.assertEqual(num[b'total supertask'], 5)  # outputs
+            self.assertEqual(num[b'total get_length'], 17)  # subtasks
+            self.assertGreater(len(h5['task_info']), 0)
+        shutil.rmtree(tmpdir)
+
+    def test_countletters(self):
+        data = [('hello', 'world'), ('ciao', 'mondo')]
+        smap = parallel.Starmap(countletters, data)
+        self.assertEqual(smap.reduce(), {'n': 19})
 
     @classmethod
     def tearDownClass(cls):
@@ -92,3 +164,41 @@ class ThreadPoolTestCase(unittest.TestCase):
                 self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
             finally:
                 parallel.Starmap.shutdown()
+
+
+def sum_chunk(slc, hdf5path):
+    with hdf5.File(hdf5path, 'r') as f:
+        return f['array'][slc].sum()
+
+
+def pool_starmap(func, allargs, h5):
+    import multiprocessing
+    with multiprocessing.get_context('spawn').Pool() as pool:
+        for i, res in enumerate(pool.starmap(func, allargs)):
+            perf = numpy.array([(func.__name__, 0, 0, i)], performance.perf_dt)
+            hdf5.extend(h5['performance_data'], perf)
+            yield res
+
+
+class SWMRTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        tmpdir = tempfile.mkdtemp()
+        cls.tmp = os.path.join(tmpdir, 'calc_1.hdf5')
+        with hdf5.File(cls.tmp, 'w') as h:
+            h['array'] = numpy.arange(100)
+        performance.init_performance(cls.tmp, swmr=True)
+
+    def test(self):
+        allargs = []
+        for s in range(0, 100, 10):
+            allargs.append((slice(s, s + 10), self.tmp))
+        with hdf5.File(self.tmp, 'a') as h5:
+            h5.swmr_mode = True
+            tot = sum(pool_starmap(sum_chunk, allargs, h5))
+        self.assertEqual(tot, 4950)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(os.path.dirname(cls.tmp))

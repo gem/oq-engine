@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2018 GEM Foundation
+# Copyright (C) 2010-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,52 +21,38 @@ Tests for python logic tree processor.
 """
 
 import os
+import unittest.mock as mock
 import codecs
 import unittest
 import collections
 
 import numpy
 from xml.parsers.expat import ExpatError
-from xml.etree import ElementTree as ET
 from copy import deepcopy
-
-from io import BytesIO
-from decimal import Decimal
-from mock import Mock
 
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import gettemp
-from openquake.hazardlib import valid
-from openquake.commonlib import logictree, readinput, tests, source
+from openquake.hazardlib.gsim import registry
+from openquake.commonlib import logictree, readinput, tests
+from openquake.commonlib.source_model_factory import SourceModelFactory
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.commonlib.logictree import SourceModelLogicTree, GsimLogicTree
+
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
-class StringIO(BytesIO):
-    def __repr__(self):
-        return '<StringIO>'
-
-
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
-    def __init__(self, filename, files, basepath, validate=True):
+    def __init__(self, filename, files, basepath):
         self.files = files
-        if not validate:
-            self.validate_branchset = self.__fail
-            self.validate_tree = self.__fail
-            self.validate_filters = self.__fail
-            self.validate_uncertainty_value = self.__fail
         f = gettemp(files[filename], suffix='.' + filename)
-        super().__init__(f, validate)
+        super().__init__(f, validate=True)
 
     def _get_source_model(self, filename):
-        return StringIO(self.files[filename].encode('utf-8'))
-
-    def __fail(self, *args, **kwargs):
-        raise AssertionError("this method shouldn't be called")
+        return open(gettemp(self.files[filename]))
 
 
 def _make_nrml(content):
@@ -189,7 +175,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         exc = self._assert_logic_tree_error(
             'screwed_schema', {'screwed_schema': source}, 'base',
-            logictree.ValidationError)
+            logictree.LogicTreeError)
         self.assertIn('missing logicTree node', exc.message)
 
     def test_wrong_uncert_type_on_first_branching_level(self):
@@ -208,7 +194,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         exc = self._assert_logic_tree_error(
             'logictree', {'logictree': source}, 'base',
-            logictree.ValidationError
+            logictree.LogicTreeError
         )
         self.assertEqual(exc.lineno, 4)
         error = 'first branchset must define an uncertainty ' \
@@ -242,42 +228,11 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error(
             'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
-            logictree.ValidationError
+            logictree.LogicTreeError
         )
         self.assertEqual(exc.lineno, 13)
         error = 'uncertainty of type "sourceModel" can be defined ' \
                 'on first branchset only'
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
-
-    def test_two_branchsets_on_first_level(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm1</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>sm2</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error(
-            'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
-            logictree.ValidationError
-        )
-        self.assertEqual(exc.lineno, 11)
-        error = 'there must be only one branch set on first branching level'
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
@@ -302,7 +257,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error(
             'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, '/bz',
-            logictree.ValidationError
+            logictree.LogicTreeError
         )
         self.assertEqual(exc.lineno, 10)
         self.assertEqual(exc.message, "branchID 'b1' is not unique",
@@ -329,7 +284,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error(
             'lo', {'lo': lt, 'sm1': sm, 'sm2': sm}, 'base',
-            logictree.ValidationError
+            logictree.LogicTreeError
         )
         self.assertEqual(exc.lineno, 4)
         self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
@@ -361,7 +316,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 13)
         self.assertEqual(exc.message, "branch 'mssng' is not yet defined",
                          "wrong exception message: %s" % exc.message)
@@ -369,7 +324,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
     def test_apply_to_occupied_branch(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
                                     branchSetID="bs1">
                   <logicTreeBranch branchID="b1">
@@ -377,8 +331,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
                                     branchSetID="bs1"
                                     applyToBranches="b1">
@@ -395,13 +347,12 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(exc.lineno, 21)
+                                            logictree.LogicTreeError)
+        self.assertEqual(exc.lineno, 18)
         error = "branch 'b1' already has child branchset"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
@@ -435,7 +386,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
 
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm},
                                             'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 17)
         error = "expected a pair of floats separated by space"
         self.assertEqual(exc.message, error,
@@ -466,7 +417,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 16)
         self.assertEqual(exc.message, 'expected single float value',
                          "wrong exception message: %s" % exc.message)
@@ -518,9 +469,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="simpleFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                   uncertaintyType="simpleFaultGeometryAbsolute"
+                   branchSetID="bs1"
+                   applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <simpleFaultGeometry spacing="1.0">
@@ -566,9 +518,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="complexFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                   uncertaintyType="complexFaultGeometryAbsolute"
+                   branchSetID="bs1"
+                   applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <complexFaultGeometry spacing="5.0">
@@ -613,9 +566,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                  uncertaintyType="characteristicFaultGeometryAbsolute"
+                  branchSetID="bs1"
+                  applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <surface>
@@ -655,9 +609,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                   uncertaintyType="characteristicFaultGeometryAbsolute"
+                   branchSetID="bs1"
+                   applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <surface>
@@ -704,9 +659,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
-                                    branchSetID="bs1"
-                                    applyToSources="src01">
+                <logicTreeBranchSet
+                   uncertaintyType="characteristicFaultGeometryAbsolute"
+                   branchSetID="bs1"
+                   applyToSources="src01">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <surface>
@@ -770,7 +726,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(
             exc.message,
             "Surface geometry type not recognised",
@@ -796,56 +752,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'sm', {'lt': lt, 'sm': sm}, 'base',
             ExpatError, exc_filename='sm')
 
-    def test_source_model_schema_violation(self):
-        lt = _make_nrml("""\
+    def test_apply_to_branches(self):
+        smlt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _make_nrml("""\
-        <sourceModel gml:id="sm1">
-            <config/>
-            <simpleFaultSource gml:id="src01">
-                <gml:name>Mount Diablo Thrust</gml:name>
-                <tectonicRegion>Swamps, lots of them</tectonicRegion>
-                <rake>90.0</rake>
-                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
-                    type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
-                              6.108288E-4 5.080653E-4
-                </evenlyDiscretizedIncrementalMFD>
-                <simpleFaultGeometry gml:id="sfg_1">
-                    <faultTrace>
-                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                            <gml:posList>
-                                -121.82290 37.73010  0.0
-                                -122.03880 37.87710  0.0
-                            </gml:posList>
-                        </gml:LineString>
-                    </faultTrace>
-                    <dip>38</dip>
-                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
-                </simpleFaultGeometry>
-            </simpleFaultSource>
-        </sourceModel>
-        """)
-        error = self._assert_logic_tree_error(
-            'lt', {'lt': lt, 'sm': sm}, '/x',
-            logictree.ValidationError, exc_filename='lt')
-        self.assertIn("node config", str(error.message))
-
-    def test_referencing_over_level_boundaries(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
                                     branchSetID="bs1">
                   <logicTreeBranch branchID="b1">
@@ -857,8 +766,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
                                     branchSetID="bs1" applyToSources="src01"
                                     applyToBranches="b1">
@@ -867,8 +774,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl3">
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
                                     branchSetID="bs1" applyToSources="src01"
                                     applyToBranches="b2">
@@ -877,19 +782,14 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error(
-            'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
-            logictree.ValidationError
-        )
-        self.assertEqual(exc.lineno, 27)
-        error = 'applyToBranches must reference only branches ' \
-                'from previous branching level'
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
+        lt = _TestableSourceModelLogicTree(
+            'lt', {'lt': smlt, 'sm1': sm, 'sm2': sm}, 'basepath')
+        self.assertEqual(
+            str(lt),
+            '<_TestableSourceModelLogicTree[b1[b3], b2[b4]]>')
 
     def test_gmpe_uncertainty(self):
         lt = _make_nrml("""\
@@ -916,7 +816,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 13)
         error = 'uncertainty of type "gmpeModel" is not allowed ' \
                 'in source model logic tree'
@@ -943,7 +843,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             """ % filter_)
             sm = _whatever_sourcemodel()
             exc = self._assert_logic_tree_error(
-                'lt', {'lt': lt, 'sm': sm}, 'base', logictree.ValidationError
+                'lt', {'lt': lt, 'sm': sm}, 'base', logictree.LogicTreeError
             )
             self.assertEqual(exc.lineno, 4)
             error = 'filters are not allowed on source model uncertainty'
@@ -976,7 +876,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 13)
         error = "source with id 'bzzz' is not defined in source models"
         self.assertEqual(exc.message, error,
@@ -1008,7 +908,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 13)
         error = "source models don't define sources of " \
                 "tectonic region type 'Volcanic'"
@@ -1041,7 +941,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 13)
         error = "source models don't define sources of type 'complexFault'"
         self.assertEqual(exc.message, error,
@@ -1075,7 +975,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
+                                            logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 13)
         error = 'only one filter is allowed per branchset'
         self.assertEqual(exc.message, error,
@@ -1114,7 +1014,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 sm = _whatever_sourcemodel()
                 exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm},
                                                     'base',
-                                                    logictree.ValidationError)
+                                                    logictree.LogicTreeError)
                 self.assertEqual(exc.lineno, 13)
                 error = (
                     "uncertainty of type '%s' must define 'applyToSources'"
@@ -1123,13 +1023,45 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     exc.message, error,
                     "wrong exception message: %s" % exc.message)
 
+    def test_duplicated_values(self):
+        sm = _whatever_sourcemodel()
+        lt = _make_nrml("""\
+        <logicTree>
+         <logicTreeBranchSet uncertaintyType="sourceModel"
+                             branchSetID="bs1">
+            <logicTreeBranch branchID="b1">
+              <uncertaintyModel>sm</uncertaintyModel>
+              <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+          </logicTreeBranchSet>
+          <logicTreeBranchSet branchSetID="bs1" uncertaintyType="bGRRelative">
+            <logicTreeBranch branchID="b71">
+                 <uncertaintyModel> 7.7 </uncertaintyModel>
+                 <uncertaintyWeight>0.333</uncertaintyWeight>
+             </logicTreeBranch>
+             <logicTreeBranch branchID="b72">
+                 <uncertaintyModel> 7.695 </uncertaintyModel>
+                 <uncertaintyWeight>0.333</uncertaintyWeight>
+             </logicTreeBranch>
+             <logicTreeBranch branchID="b73">
+                 <uncertaintyModel> 7.7 </uncertaintyModel>
+                 <uncertaintyWeight>0.334</uncertaintyWeight>
+            </logicTreeBranch>
+          </logicTreeBranchSet>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm': sm}, 'base', logictree.LogicTreeError)
+        self.assertIn('duplicate values in uncertaintyModel: 7.7 7.695 7.7',
+                      str(exc))
+
 
 class SourceModelLogicTreeTestCase(unittest.TestCase):
     def assert_branch_equal(self, branch, branch_id, weight_str, value,
                             child_branchset_args=None):
         self.assertEqual(type(branch), logictree.Branch)
         self.assertEqual(branch.branch_id, branch_id)
-        self.assertEqual(branch.weight, Decimal(weight_str))
+        self.assertEqual(branch.weight, float(weight_str))
         self.assertEqual(branch.value, value)
         if child_branchset_args is None:
             self.assertEqual(branch.child_branchset, None)
@@ -1167,7 +1099,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm},
-            'basepath', validate=False)
+            'basepath')
         self.assertEqual(lt.samples_by_lt_path(),
                          collections.Counter({('b1',): 1, ('b2',): 1}))
 
@@ -1204,8 +1136,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
-            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
-            validate=False)
+            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base')
         self.assertEqual(
             lt.samples_by_lt_path(),
             collections.Counter({('b1', 'b2'): 1, ('b1', 'b3'): 1}))
@@ -1247,8 +1178,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
-            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
-            validate=False)
+            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base')
         self.assert_branchset_equal(
             lt.root_branchset,
             'sourceModel', {},
@@ -1261,7 +1191,6 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
     def test_apply_to_branches(self):
         source_model_logic_tree = _make_nrml("""\
         <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
                                     branchSetID="bs1">
                     <logicTreeBranch branchID="sb1">
@@ -1277,8 +1206,6 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                         <uncertaintyWeight>0.1</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-            <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
                                     branchSetID="bs2"
                                     applyToBranches="sb1 sb3">
@@ -1296,14 +1223,13 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree,
                    'sm1': sm, 'sm2': sm, 'sm3': sm},
-            '/base', validate=False)
+            '/base')
         self.assert_branchset_equal(
             lt.root_branchset,
             'sourceModel', {},
@@ -1323,6 +1249,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             )
         sb1, sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.child_branchset is sb3.child_branchset)
+        self.assertEqual(
+            str(lt),
+            '<_TestableSourceModelLogicTree[sb1[b2], sb2[b3], sb3[b2]]>')
 
     def test_comments(self):
         source_model_logic_tree = _make_nrml("""\
@@ -1352,7 +1281,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm': sm},
-            '/base', validate=False)
+            '/base')
         self.assert_branchset_equal(
             lt.root_branchset, 'sourceModel', {}, [('b1', '1.0', 'sm')])
 
@@ -1360,9 +1289,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
 class SampleTestCase(unittest.TestCase):
 
     def test_sample(self):
-        branches = [logictree.Branch(1, Decimal('0.2'), 'A'),
-                    logictree.Branch(1, Decimal('0.3'), 'B'),
-                    logictree.Branch(1, Decimal('0.5'), 'C')]
+        branches = [logictree.Branch('BS', 1, 0.2, 'A'),
+                    logictree.Branch('BS', 1, 0.3, 'B'),
+                    logictree.Branch('BS', 1, 0.5, 'C')]
         samples = logictree.sample(branches, 1000, 42)
 
         def count(samples, value):
@@ -1377,14 +1306,14 @@ class SampleTestCase(unittest.TestCase):
         self.assertEqual(count(samples, value='C'), 497)
 
     def test_sample_broken_branch_weights(self):
-        branches = [logictree.Branch(0, Decimal('0.1'), 0),
-                    logictree.Branch(1, Decimal('0.2'), 1)]
+        branches = [logictree.Branch('BS', 0, 0.1, 0),
+                    logictree.Branch('BS', 1, 0.2, 1)]
         with self.assertRaises(ValueError):
             logictree.sample(branches, 1000, 42)
 
     def test_sample_one_branch(self):
         # always the same branch is returned
-        branches = [logictree.Branch(0, Decimal('1.0'), 0)]
+        branches = [logictree.Branch('BS', 0, 1.0, 0)]
         bs = logictree.sample(branches, 10, 42)
         for b in bs:
             self.assertEqual(b.branch_id, 0)
@@ -1392,14 +1321,14 @@ class SampleTestCase(unittest.TestCase):
 
 class BranchSetEnumerateTestCase(unittest.TestCase):
     def test_enumerate(self):
-        b0 = logictree.Branch('0', Decimal('0.64'), '0')
-        b1 = logictree.Branch('1', Decimal('0.36'), '1')
-        b00 = logictree.Branch('0.0', Decimal('0.33'), '0.0')
-        b01 = logictree.Branch('0.1', Decimal('0.27'), '0.1')
-        b02 = logictree.Branch('0.2', Decimal('0.4'), '0.2')
-        b10 = logictree.Branch('1.0', Decimal('1.0'), '1.0')
-        b100 = logictree.Branch('1.0.0', Decimal('0.1'), '1.0.0')
-        b101 = logictree.Branch('1.0.1', Decimal('0.9'), '1.0.1')
+        b0 = logictree.Branch('BS1', '0', 0.64, '0')
+        b1 = logictree.Branch('BS1', '1', 0.36, '1')
+        b00 = logictree.Branch('BS2', '0.0', 0.33, '0.0')
+        b01 = logictree.Branch('BS2', '0.1', 0.27, '0.1')
+        b02 = logictree.Branch('BS2', '0.2', 0.4, '0.2')
+        b10 = logictree.Branch('BS3', '1.0', 1.0, '1.0')
+        b100 = logictree.Branch('BS4', '1.0.0', 0.1, '1.0.0')
+        b101 = logictree.Branch('BS4', '1.0.1', 0.9, '1.0.1')
         bs_root = logictree.BranchSet(None, None)
         bs_root.branches = [b0, b1]
         bs0 = logictree.BranchSet(None, None)
@@ -1412,28 +1341,30 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
         bs10.branches = [b100, b101]
         b10.child_branchset = bs10
 
-        ae = self.assertEqual
+        def ae(got, expected):
+            self.assertAlmostEqual(got[0], expected[0])  # weight
+            self.assertEqual(got[1], expected[1])  # branches
 
         paths = bs_root.enumerate_paths()
-        ae(next(paths), (Decimal('0.2112'), [b0, b00]))
-        ae(next(paths), (Decimal('0.1728'), [b0, b01]))
-        ae(next(paths), (Decimal('0.256'), [b0, b02]))
-        ae(next(paths), (Decimal('0.036'), [b1, b10, b100]))
-        ae(next(paths), (Decimal('0.32400'), [b1, b10, b101]))
+        ae(next(paths), (0.2112, [b0, b00]))
+        ae(next(paths), (0.1728, [b0, b01]))
+        ae(next(paths), (0.256, [b0, b02]))
+        ae(next(paths), (0.036, [b1, b10, b100]))
+        ae(next(paths), (0.324, [b1, b10, b101]))
         self.assertRaises(StopIteration, lambda: next(paths))
 
         paths = bs1.enumerate_paths()
-        ae(next(paths), (Decimal('0.1'), [b10, b100]))
-        ae(next(paths), (Decimal('0.9'), [b10, b101]))
+        ae(next(paths), (0.1, [b10, b100]))
+        ae(next(paths), (0.9, [b10, b101]))
         self.assertRaises(StopIteration, lambda: next(paths))
 
 
 class BranchSetGetBranchByIdTestCase(unittest.TestCase):
     def test(self):
         bs = logictree.BranchSet(None, None)
-        b1 = logictree.Branch('1', Decimal('0.33'), None)
-        b2 = logictree.Branch('2', Decimal('0.33'), None)
-        bbzz = logictree.Branch('bzz', Decimal('0.34'), None)
+        b1 = logictree.Branch('BS', '1', 0.33, None)
+        b2 = logictree.Branch('BS', '2', 0.33, None)
+        bbzz = logictree.Branch('BS', 'bzz', 0.34, None)
         bs.branches = [b1, b2, bbzz]
         self.assertIs(bs.get_branch_by_id('1'), b1)
         self.assertIs(bs.get_branch_by_id('2'), b2)
@@ -1441,14 +1372,14 @@ class BranchSetGetBranchByIdTestCase(unittest.TestCase):
 
     def test_nonexistent_branch(self):
         bs = logictree.BranchSet(None, None)
-        br = logictree.Branch('br', Decimal('1.0'), None)
+        br = logictree.Branch('BS', 'br', 1.0, None)
         bs.branches.append(br)
         self.assertRaises(AssertionError, bs.get_branch_by_id, 'bz')
 
 
 class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
     def test_apply_uncertainty_ab_absolute(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('abGRAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, (0.1, 33.4))
         self.assertEqual(mfd.method_calls,
@@ -1456,14 +1387,14 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
                                       {'a_val': 0.1, 'b_val': 33.4}), {})])
 
     def test_apply_uncertainty_b_relative(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('bGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, -1.6)
         self.assertEqual(mfd.method_calls,
                          [('modify', ('increment_b', {'value': -1.6}), {})])
 
     def test_apply_uncertainty_mmax_relative(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('maxMagGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, 32.1)
         self.assertEqual(
@@ -1471,14 +1402,14 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
             [('modify', ('increment_max_mag', {'value': 32.1}), {})])
 
     def test_apply_uncertainty_mmax_absolute(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('maxMagGRAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, 55)
         self.assertEqual(mfd.method_calls,
                          [('modify', ('set_max_mag', {'value': 55}), {})])
 
     def test_apply_uncertainty_incremental_mfd_absolute(self):
-        mfd = Mock()
+        mfd = mock.Mock()
         bs = logictree.BranchSet('incrementalMFDAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, (8.0, 0.1, [0.01, 0.005]))
         self.assertEqual(
@@ -1489,7 +1420,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
         )
 
     def test_apply_uncertainty_simple_fault_dip_relative(self):
-        source = Mock()
+        source = mock.Mock()
         bs = logictree.BranchSet('simpleFaultDipRelative', {})
         bs._apply_uncertainty_to_geometry(source, 15.0)
         self.assertEqual(
@@ -1497,7 +1428,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
             [('modify', ('adjust_dip', {'increment': 15.0}), {})])
 
     def test_apply_uncertainty_simple_fault_dip_absolute(self):
-        source = Mock()
+        source = mock.Mock()
         bs = logictree.BranchSet('simpleFaultDipAbsolute', {})
         bs._apply_uncertainty_to_geometry(source, 45.0)
         self.assertEqual(
@@ -1505,7 +1436,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
             [('modify', ('set_dip', {'dip': 45.0}), {})])
 
     def test_apply_uncertainty_simple_fault_geometry_absolute(self):
-        source = Mock()
+        source = mock.Mock()
         trace = geo.Line([geo.Point(0., 0.), geo.Point(1., 1.)])
         bs = logictree.BranchSet('simpleFaultGeometryAbsolute', {})
         bs._apply_uncertainty_to_geometry(source,
@@ -1519,7 +1450,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
                                           'spacing': 1.0}), {})])
 
     def test_apply_uncertainty_complex_fault_geometry_absolute(self):
-        source = Mock()
+        source = mock.Mock()
         edges = [
             geo.Line([geo.Point(0.0, 0.0, 0.0), geo.Point(1.0, 0.0, 0.0)]),
             geo.Line([geo.Point(0.0, -0.1, 10.0), geo.Point(1.0, -0.1, 10.0)])
@@ -1532,7 +1463,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
                                           'spacing': 5.0}), {})])
 
     def test_apply_uncertainty_characteristic_fault_geometry_absolute(self):
-        source = Mock()
+        source = mock.Mock()
         trace = geo.Line([geo.Point(0., 0.), geo.Point(1., 1.)])
         surface = geo.SimpleFaultSurface.from_fault_data(
             trace, 0.0, 10.0, 90.0, 1.0)
@@ -2009,18 +1940,17 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         if hasattr(xml, 'encode'):
             xml = xml.encode('utf8')
         with self.assertRaises(errorclass) as exc:
-            logictree.GsimLogicTree(StringIO(xml), ['Shield'])
+            logictree.GsimLogicTree(gettemp(xml), ['Shield'])
         if errormessage is not None:
-            self.assertEqual(errormessage, str(exc.exception))
+            self.assertIn(errormessage, str(exc.exception))
 
     def parse_valid(self, xml, tectonic_region_types=('Shield',)):
-        xmlbytes = xml.encode('utf-8') if hasattr(xml, 'encode') else xml
-        return logictree.GsimLogicTree(
-            StringIO(xmlbytes), tectonic_region_types)
+        xml = xml.decode('utf-8') if hasattr(xml, 'decode') else xml
+        return logictree.GsimLogicTree(gettemp(xml), tectonic_region_types)
 
     def test_not_xml(self):
-        self.parse_invalid('xxx', ET.ParseError)
-        self.parse_invalid('<?xml foo bar baz', ET.ParseError)
+        self.parse_invalid('xxx', ExpatError)
+        self.parse_invalid('<?xml foo bar baz', ExpatError)
 
     def test_invalid_schema(self):
         xml = _make_nrml("""\
@@ -2046,7 +1976,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, 'Unknown GSIM: +100 in file <StringIO>')
+            xml, ValueError, "Invalid group name '+100'. Try quoting it.")
 
     def test_gmpe_uncertainty(self):
         xml = _make_nrml("""\
@@ -2064,7 +1994,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>""")
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            '<StringIO>: only uncertainties of type "gmpeModel" are allowed '
+            'only uncertainties of type "gmpeModel" are allowed '
             'in gmpe logic tree')
 
     def test_two_branchsets_in_one_level(self):
@@ -2096,7 +2026,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            '<StringIO>: Branching level bl1 has multiple branchsets')
+            'Branching level bl1 has multiple branchsets')
 
     def test_branchset_id_not_unique(self):
         xml = _make_nrml("""\
@@ -2133,7 +2063,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "<StringIO>: Duplicated branchSetID bs1")
+            "Duplicated branchSetID bs1")
 
     def test_branch_id_not_unique(self):
         xml = _make_nrml("""
@@ -2164,7 +2094,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "There where duplicated branchIDs in <StringIO>")
+            "There where duplicated branchIDs in")
 
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
@@ -2184,7 +2114,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, ValueError, "Unknown GSIM: SAdighEtAl1997 in file <StringIO>")
+            xml, ValueError, "Unknown GSIM: SAdighEtAl1997 in file")
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
@@ -2217,7 +2147,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "<StringIO>: Found duplicated applyToTectonicRegionType="
+            "Found duplicated applyToTectonicRegionType="
             "['Subduction Interface', 'Subduction Interface']")
 
     def test_SHARE(self):
@@ -2231,9 +2161,15 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         as_model_lt = self.parse_valid(xml, as_model_trts)
         fs_bg_model_lt = self.parse_valid(xml, fs_bg_model_trts)
         self.assertEqual(as_model_lt.get_num_branches(),
-                         {'bs1': 4, 'bs2': 5, 'bs3': 2, 'bs4': 1})
+                         {'Active Shallow Crust': 4,
+                          'Shield': 2,
+                          'Stable Shallow Crust': 5,
+                          'Volcanic': 1})
         self.assertEqual(fs_bg_model_lt.get_num_branches(),
-                         {'bs1': 4, 'bs2': 5, 'bs3': 0, 'bs4': 0})
+                         {'Active Shallow Crust': 4,
+                          'Shield': 0,
+                          'Stable Shallow Crust': 5,
+                          'Volcanic': 0})
         self.assertEqual(as_model_lt.get_num_paths(), 40)
         self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
         self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
@@ -2272,109 +2208,20 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
 
-    def test_get_gsim_by_trt(self):
-        xml = _make_nrml("""\
-    <logicTree logicTreeID='lt1'>
-<!-- 1.0 Logic Tree for Active Shallow Crust -->
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Active Shallow" applyToTectonicRegionType="Active Shallow Crust">
-
-                <logicTreeBranch branchID="AkkarBommer2010">
- <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-                
-               </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 2.0 Logic Tree for Stable Shallow Crust -->
-        <logicTreeBranchingLevel branchingLevelID="bl2">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Stable Shallow" applyToTectonicRegionType="Stable Shallow Crust">
-
-                <logicTreeBranch branchID="AkkarBommer2010">
- <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-                
-               </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 3.0 Logic Tree for Shield -->
-        <logicTreeBranchingLevel branchingLevelID="bl3"> 
-        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Shield" applyToTectonicRegionType="Shield">
-
-                <logicTreeBranch branchID="Toro2002SHARE">
- <uncertaintyModel>ToroEtAl2002SHARE</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-                
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 4.0 Logic Tree for Subduction Interface -->
-        <logicTreeBranchingLevel branchingLevelID="bl4">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Subduction_Interface" applyToTectonicRegionType="Subduction Interface">
-                
-                <logicTreeBranch branchID="ZhaoEtAl2006SInter">
- <uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                    
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 5.0 Logic Tree for Subduction Inslab -->
-        <logicTreeBranchingLevel branchingLevelID="bl5">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Subduction_InSlab"
-                    applyToTectonicRegionType="Subduction IntraSlab">
-
-               <logicTreeBranch branchID="ZhaoEtAl2006SSlab">
- <uncertaintyModel>ZhaoEtAl2006SSlab</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-         
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 6.0 Logic Tree for Volcanic -->
-        <logicTreeBranchingLevel branchingLevelID="bl6">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Volcanic" applyToTectonicRegionType="Volcanic">
-                <logicTreeBranch branchID="FaccioliEtAl2010">
-                <uncertaintyModel>FaccioliEtAl2010</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-<!-- 7.0 Logic Tree for Vrancea -->
-        <logicTreeBranchingLevel branchingLevelID="bl7">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="Deep" applyToTectonicRegionType="Subduction Deep">
-
-                <logicTreeBranch branchID="LinLee2008SSlab">
- <uncertaintyModel>LinLee2008SSlab</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-    </logicTree>""")
-        gsim_lt = self.parse_valid(xml, ["Stable Shallow Crust"])
-        [rlz] = gsim_lt
-        gsim = gsim_lt.get_gsim_by_trt(rlz, 'Stable Shallow Crust')
-        self.assertEqual(str(gsim), 'AkkarBommer2010()')
-        # this test was broken in release 1.4, a wrong ordering
-        # of the value gave back LinLee2008SSlab instead of AkkarBommer2010
-        self.assertEqual([str(v) for v in rlz.value], [
-            'AkkarBommer2010()', 'AkkarBommer2010()', 'ToroEtAl2002SHARE()',
-            'ZhaoEtAl2006SInter()', 'ZhaoEtAl2006SSlab()',
-            'FaccioliEtAl2010()', 'LinLee2008SSlab()'])
-
     def test_gsim_with_kwargs(self):
         class FakeGMPETable(object):
             REQUIRES_SITES_PARAMETERS = ()
 
             def __init__(self, gmpe_table):
-                self.gmpe_table = gmpe_table
+                self.kwargs = {'gmpe_table': gmpe_table}
+
+            def init(self):
+                pass
 
             def __str__(self):
-                return 'FakeGMPETable(gmpe_table="%s")' % self.gmpe_table
+                return 'FakeGMPETable(%s)' % self.kwargs
 
-        valid.GSIM['FakeGMPETable'] = FakeGMPETable
+        registry['FakeGMPETable'] = FakeGMPETable
         try:
             xml = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -2394,9 +2241,9 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             """)
             gsim_lt = self.parse_valid(xml, ['Shield'])
             self.assertEqual(repr(gsim_lt), '''<GsimLogicTree
-Shield,b1,FakeGMPETable(gmpe_table="Wcrust_rjb_med.hdf5"),w=1.0>''')
+Shield,b1,FakeGMPETable({'gmpe_table': 'Wcrust_rjb_med.hdf5'}),w=1.0>''')
         finally:
-            del valid.GSIM['FakeGMPETable']
+            del registry['FakeGMPETable']
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
@@ -2426,49 +2273,115 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_gmpe(self):
         [(value, weight, branch_ids, _, _)] = logictree.sample(
             list(self.gmpe_lt), 1, self.seed)
-        self.assertEqual(value, ('ChiouYoungs2008()', 'SadighEtAl1997()'))
-        self.assertEqual(weight, 0.5)
+        self.assertEqual(value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
+        self.assertEqual(weight['default'], 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
 
 
 class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
     def setUp(self):
         oqparam = tests.get_oqparam('classical_job.ini')
-
-        self.uncertainties_applied = []
-
-        def apply_uncertainty(branchset, value, source):
-            fingerprint = (branchset.uncertainty_type, value)
-            self.uncertainties_applied.append(fingerprint)
-        self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
-        logictree.BranchSet.apply_uncertainty = apply_uncertainty
-
         self.source_model_lt = readinput.get_source_model_lt(oqparam)
         self.gmpe_lt = readinput.get_gsim_lt(
             oqparam, ['Active Shallow Crust', 'Subduction Interface'])
 
-    def tearDown(self):
-        logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
-
     def test_parse_source_model_logictree_path(self):
-        make_apply_un = self.source_model_lt.make_apply_uncertainties
-        make_apply_un(['b1', 'b5', 'b8'])(None)
-        self.assertEqual(self.uncertainties_applied,
+        apply_un = self.source_model_lt.apply_uncertainties
+        sg = mock.Mock(sources=[mock.Mock()])
+        sg = apply_un(['b1', 'b5', 'b8'], sg)
+        self.assertEqual(sg.applied_uncertainties,
                          [('maxMagGRRelative', -0.2),
                           ('bGRRelative', -0.1)])
-        del self.uncertainties_applied[:]
-        make_apply_un(['b1', 'b3', 'b6'])(None)
-        self.assertEqual(self.uncertainties_applied,
+        sg = apply_un(['b1', 'b3', 'b6'], sg)
+        self.assertEqual(sg.applied_uncertainties,
                          [('maxMagGRRelative', 0.2),
                           ('bGRRelative', 0.1)])
 
     def test_parse_invalid_smlt(self):
         smlt = os.path.join(DATADIR, 'source_model_logic_tree.xml')
         with self.assertRaises(Exception) as ctx:
-            for smpath in logictree.collect_source_model_paths(smlt):
-                pass
+            logictree.collect_info(smlt)
         exc = ctx.exception
         self.assertIn('not well-formed (invalid token)', str(exc))
         self.assertEqual(exc.lineno, 5)
         self.assertEqual(exc.offset, 61)
         self.assertEqual(exc.filename, smlt)
+
+
+class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
+    """
+    Test the applications of a source-specific uncertainty
+    """
+    def test_full_path(self):
+        path = os.path.join(DATADIR, 'source_specific_uncertainty')
+        fname_ini = os.path.join(path, 'job.ini')
+        fname_ssc = os.path.join(path, 'sscLt.xml')
+        fname_gmc = os.path.join(path, 'gmcLt.xml')
+
+        oqparam = readinput.get_oqparam(fname_ini)
+        ssc_lt = SourceModelLogicTree(fname_ssc)
+        gs_lt = GsimLogicTree(fname_gmc)
+
+        mags = [5.7, 5.98, 6.26, 6.54, 6.82, 7.1]
+        for sm in SourceModelFactory(oqparam, gs_lt, ssc_lt).get_models():
+            for src in sm.src_groups[0]:
+                if src.source_id == 'a2':
+                    self.assertEqual(src.mfd.max_mag, 6.5)
+                elif src.source_id == 'a1':
+                    msg = "Wrong mmax value assigned to source 'a1'"
+                    self.assertIn(src.mfd.max_mag, mags, msg)
+
+    def test_smlt_bad(self):
+        # apply to a source that does not exist in the given branch
+        path = os.path.join(DATADIR, 'source_specific_uncertainty')
+        job_ini = os.path.join(path, 'job.ini')
+        oqparam = readinput.get_oqparam(job_ini)
+        oqparam.inputs['source_model_logic_tree'] = os.path.join(
+            oqparam.base_path, 'smlt_bad.xml')
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_composite_source_model(oqparam)
+        self.assertIn('The source c1 is not in the source model, please fix '
+                      'applyToSources', str(ctx.exception))
+
+
+class TaxonomyMappingTestCase(unittest.TestCase):
+    taxonomies = '? taxo1 taxo2 taxo3 taxo4'.split()
+
+    def test_missing_taxo(self):
+        xml = '''taxonomy,conversion,weight
+taxo1,taxo1,1
+taxo2,taxo2,1
+taxo3,taxo3,1
+'''
+        with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
+            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        self.assertIn("{'taxo4'} are in the exposure but not in",
+                      str(ctx.exception))
+
+    def test_wrong_weight(self):
+        xml = '''taxonomy,conversion,weight
+taxo1,taxo1,1
+taxo2,taxo2,1
+taxo3,taxo3,1
+taxo4,taxo1,.5
+taxo4,taxo2,.4
+'''
+        with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
+            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        self.assertIn("the weights do not sum up to 1 for taxo4",
+                      str(ctx.exception))
+
+    def test_mixed_lines(self):
+        xml = '''taxonomy,conversion,weight
+taxo1,taxo1,1
+taxo2,taxo2,1
+taxo4,taxo2,.5
+taxo3,taxo3,1
+taxo4,taxo1,.5
+'''
+        arr, lst = logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        self.assertEqual(lst, [[('?', 1)],
+                               [('taxo1', 1.0)],
+                               [('taxo2', 1.0)],
+                               [('taxo3', 1.0)],
+                               [('taxo2', 0.5), ('taxo1', 0.5)]])

@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2015-2018 GEM Foundation
+ Copyright (C) 2015-2019 GEM Foundation
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU Affero General Public License as
@@ -418,7 +418,7 @@
     var Calculations = Backbone.Collection.extend(
         {
             model: Calculation,
-            url: gem_oq_server_url + "/v1/calc/list?relevant=true"
+            url: gem_oq_server_url + "/v1/calc/list"
         });
     var calculations = new Calculations();
 

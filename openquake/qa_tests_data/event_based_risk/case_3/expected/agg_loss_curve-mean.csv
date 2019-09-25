@@ -1,0 +1,5 @@
+#,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:16:53', checksum=1182973928, kind='mean', risk_investigation_time=5.0"
+annual_frequency_of_exceedence,return_period,loss_type,loss_value,loss_ratio
+1.00000E+00,1,structural,0.00000E+00,0.00000E+00
+5.00000E-01,2,structural,0.00000E+00,0.00000E+00
+2.00000E-01,5,structural,7.65351E+02,1.35620E-05

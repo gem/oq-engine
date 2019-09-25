@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,10 +21,10 @@ import json
 import logging
 import os
 import sys
-import inspect
 import tempfile
 import subprocess
 import threading
+import traceback
 import signal
 import zlib
 import pickle
@@ -42,7 +42,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import datastore
-from openquake.baselib.general import groupby, gettemp
+from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -278,7 +278,7 @@ def validate_nrml(request):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_info(request, calc_id):
+def calc(request, calc_id):
     """
     Get a JSON blob containing all of parameters for the given calculation
     (specified by ``calc_id``). Also includes the current job status (
@@ -347,7 +347,7 @@ def calc_abort(request, calc_id):
         message = {'error': 'Unknown job %s' % calc_id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    if job.status not in ('executing', 'running'):
+    if job.status not in ('submitted', 'executing'):
         message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
@@ -359,11 +359,11 @@ def calc_abort(request, calc_id):
 
     if job.pid:  # is a spawned job
         try:
-            os.kill(job.pid, signal.SIGTERM)
+            os.kill(job.pid, signal.SIGINT)
         except Exception as exc:
             logging.error(exc)
         else:
-            logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
+            logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
             logs.dbcmd('set_status', job.id, 'aborted')
         message = {'success': 'Killing job %d' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
@@ -408,7 +408,7 @@ def log_to_json(log):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def get_log_slice(request, calc_id, start, stop):
+def calc_log(request, calc_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows
     """
@@ -423,7 +423,7 @@ def get_log_slice(request, calc_id, start, stop):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def get_log_size(request, calc_id):
+def calc_log_size(request, calc_id):
     """
     Get the current number of lines in the log
     """
@@ -437,7 +437,7 @@ def get_log_size(request, calc_id):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def run_calc(request):
+def calc_run(request):
     """
     Run a calculation.
 
@@ -451,12 +451,14 @@ def run_calc(request):
         together.
     """
     hazard_job_id = request.POST.get('hazard_job_id')
+    job_ini = request.POST.get('job_ini')
 
     if hazard_job_id:
         hazard_job_id = int(hazard_job_id)
-        candidates = ("job_risk.ini", "job.ini")
+        candidates = [job_ini] if job_ini else ("job_risk.ini", "job.ini")
     else:
-        candidates = ("job_hazard.ini", "job_haz.ini", "job.ini")
+        candidates = [job_ini] if job_ini else (
+            "job_hazard.ini", "job_haz.ini", "job.ini")
     result = safely_call(_prepare_job, (request, candidates))
     if result.tb_str:
         return HttpResponse(json.dumps(result.tb_str.splitlines()),
@@ -486,12 +488,15 @@ def run_calc(request):
 
 RUNCALC = '''\
 import os, sys, pickle
+from openquake.commonlib import logs
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
-    engine.run_calc(
-        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s,
-        username='%(username)s')
+    logs.init(%(job_id)s)
+    with logs.handle(%(job_id)s):
+        engine.run_calc(
+            %(job_id)s, oqparam, '', %(hazard_job_id)s,
+           username='%(username)s')
     os.remove(__file__)
 '''
 
@@ -501,7 +506,9 @@ def submit_job(job_ini, username, hazard_job_id=None):
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oq = engine.job_from_file(job_ini, username, hazard_job_id)
+    job_id = logs.init('job')
+    oq = engine.job_from_file(
+        job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
                           username=username)
@@ -539,7 +546,7 @@ def calc_results(request, calc_id):
 
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
-    # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
+    # {'agg_loss_curve': ['xml', 'csv'], ...}
     output_types = groupby(export, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
     results = logs.dbcmd('get_outputs', calc_id)
@@ -565,7 +572,7 @@ def calc_results(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def get_traceback(request, calc_id):
+def calc_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
     """
@@ -579,7 +586,7 @@ def get_traceback(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def get_result(request, result_id):
+def calc_result(request, result_id):
     """
     Download a specific result, by ``result_id``.
 
@@ -622,21 +629,23 @@ def get_result(request, result_id):
         # TODO: there should be a better error page
         return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
                             content_type='text/plain', status=500)
-    if exported is None:
+    if not exported:
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(
-            'export_type=%s is not supported for %s' % (export_type, ds_key))
+            'Nothing to export for export_type=%s, %s' % (export_type, ds_key))
+    elif len(exported) > 1:
+        # Building an archive so that there can be a single file download
+        archname = ds_key + '-' + export_type + '.zip'
+        zipfiles(exported, os.path.join(tmpdir, archname))
+        exported = os.path.join(tmpdir, archname)
+    else:  # single file
+        exported = exported[0]
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
 
-    bname = os.path.basename(exported)
-    if bname.startswith('.'):
-        # the "." is added by `export_from_db`, strip it
-        bname = bname[1:]
-    fname = 'output-%s-%s' % (result_id, bname)
-    # 'b' is needed when running the WebUI on Windows
-    stream = FileWrapper(open(exported, 'rb'))
+    fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
+    stream = FileWrapper(open(exported, 'rb'))  # 'b' is needed on Windows
     stream.close = lambda: (
         FileWrapper.close(stream), shutil.rmtree(tmpdir))
     response = FileResponse(stream, content_type=content_type)
@@ -646,17 +655,11 @@ def get_result(request, result_id):
     return response
 
 
-def _array(v):
-    if hasattr(v, '__toh5__'):
-        return v.__toh5__()[0]
-    return v
-
-
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
-    Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
+    Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true
     only calculations owned by the current user can be retrieved.
     """
     job = logs.dbcmd('get_job', int(calc_id))
@@ -665,30 +668,34 @@ def extract(request, calc_id, what):
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
 
-    # read the data and save them on a temporary .pik file
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        fd, fname = tempfile.mkstemp(
-            prefix=what.replace('/', '-'), suffix='.npz')
-        os.close(fd)
-        n = len(request.path_info)
-        query_string = unquote_plus(request.get_full_path()[n:])
-        obj = _extract(ds, what + query_string)
-        if inspect.isgenerator(obj):
-            array, attrs = 0, {k: _array(v) for k, v in obj}
-        elif hasattr(obj, '__toh5__'):
-            array, attrs = obj.__toh5__()
-        else:  # assume obj is an array
-            array, attrs = obj, {}
-        a = {}
-        for key, val in attrs.items():
-            if isinstance(key, bytes):
-                key = key.decode('utf-8')
-            if isinstance(val, str):
-                # without this oq extract would fail
-                a[key] = numpy.array(val.encode('utf-8'))
-            else:
-                a[key] = val
-        numpy.savez_compressed(fname, array=array, **a)
+    try:
+        # read the data and save them on a temporary .npz file
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            fd, fname = tempfile.mkstemp(
+                prefix=what.replace('/', '-'), suffix='.npz')
+            os.close(fd)
+            n = len(request.path_info)
+            query_string = unquote_plus(request.get_full_path()[n:])
+            aw = _extract(ds, what + query_string)
+            a = {}
+            for key, val in vars(aw).items():
+                key = str(key)  # can be a numpy.bytes_
+                if key.startswith('_'):
+                    continue
+                elif isinstance(val, str):
+                    # without this oq extract would fail
+                    a[key] = numpy.array(val.encode('utf-8'))
+                elif isinstance(val, dict):
+                    # this is hack: we are losing the values
+                    a[key] = list(val)
+                else:
+                    a[key] = val
+            numpy.savez_compressed(fname, **a)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
+            content_type='text/plain', status=500)
 
     # stream the data back
     stream = FileWrapper(open(fname, 'rb'))
@@ -702,7 +709,7 @@ def extract(request, calc_id, what):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_datastore(request, job_id):
+def calc_datastore(request, job_id):
     """
     Download a full datastore file.
 
@@ -731,7 +738,7 @@ def get_datastore(request, job_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_oqparam(request, job_id):
+def calc_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """

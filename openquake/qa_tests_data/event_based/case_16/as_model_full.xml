@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="SHARE Complete Area Source Model"
+    >
+        <areaSource
+        id="AS_HRAS083"
+        name="HRAS083"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                15.6505480004 46.1762790001 16.0881319998 46.4906589998 16.5498420002 46.6114830003 17.0307809997 46.5632639998 17.7291529997 46.0950770002 18.094483 45.8501790004 19.9176370002 45.6219599999 19.9038300003 44.9067979999 18.3700969999 45.3242089998 18.2828449998 45.347965 18.0994840004 45.3957779998 17.294917 45.6055650001 17.1170409999 45.6887650004 16.3987420001 46.0247439997 16.2731079999 46.0834649998
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    30.0
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.0
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="0.1"
+            minMag="4.7"
+            >
+                <occurRates>
+                    0.023291886741 0.014696187006 0.0092726671273 0.00585065742689 0.00369151527353 0.0023291886741 0.0014696187006 0.00092726671273 0.000585065742689 0.000369151527353 0.00023291886741 0.00014696187006 2.78097971715e-05 1.75467957738e-05 3.6904265552e-06
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane dip="67.172103" probability="0.2000" rake="0.0" strike="117.13175"/>
+                <nodalPlane dip="67.172103" probability="0.6000" rake="-90.0" strike="117.13175"/>
+                <nodalPlane dip="67.172103" probability="0.2000" rake="90.0" strike="117.13175"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="13.2" probability="1.0"/>
+            </hypoDepthDist>
+        </areaSource>
+    </sourceModel>
+</nrml>
+

@@ -3,11 +3,11 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     1,923,070,683      
-date           2018-06-26T14:58:38
-engine_version 3.2.0-gitb0cd949   
+date           2019-09-24T15:20:57
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 1, num_levels = 1
+num_sites = 1, num_levels = 1, num_rlzs = 2
 
 Parameters
 ----------
@@ -44,23 +44,37 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b_1       1.00000 simple(2)       2/2             
+b_1       1.00000 simple(2)       2               
 ========= ======= =============== ================
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,BooreAtkinson2008(): [0]
-  0,ChiouYoungs2008(): [1]>
+  <RlzsAssoc(size=4, rlzs=2)>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
+
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-computing gmfs          0.00491  0.0       1     
-reading site collection 0.00101  0.0       1     
-======================= ======== ========= ======
+========= ======== ========= ======
+calc_1721 time_sec memory_mb counts
+========= ======== ========= ======
+========= ======== ========= ======

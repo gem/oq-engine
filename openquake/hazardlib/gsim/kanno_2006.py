@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2018 GEM Foundation
+# Copyright (C) 2012-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -378,7 +378,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #    #: Since "R_tr is the shortest distance from the observation site to the
 #    #: Kuril, Japan, and Izu-Bonin trenches" this attenuation model is not
 #    #: trivially adaptable to other regions.
-#    REQUIRES_SITES_PARAMETERS = set(('vs30', 'lons', 'lats'))
+#    REQUIRES_SITES_PARAMETERS = set(('vs30', 'lon', 'lat'))
 #
 #    #: There aren't even plots of results for northeast Japan in the paper
 #    #: so results cannot be verified without a dataset from the authors.
@@ -431,7 +431,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #        ``A = log(obs/pre) = (alpha*R_tr + beta)*(D - 30)``
 #        """
 #
-#        r_trench = _get_min_distance_to_sub_trench(sites.lons, sites.lats)
+#        r_trench = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
 #
 #        log_amp = (coeffs['alpha']*r_trench + coeffs['beta']) * \
 #            (rup.hypo_depth - self.REF_DEPTH_KM)

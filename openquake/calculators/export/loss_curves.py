@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2017-2019 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
 from openquake.baselib.python3compat import decode
+from openquake.baselib.general import countby
 from openquake.commonlib import writers
 from openquake.risklib import scientific
 
@@ -24,17 +25,18 @@ from openquake.risklib import scientific
 def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     """
     :param dstore: datastore for an event based risk calculation
-    :returns: a LossesByPeriodBuilder instance
+    :returns: a LossCurvesMapsBuilder instance
     """
     oq = dstore['oqparam']
-    weights = dstore['csm_info'].rlzs['weight']
+    weights = dstore['weights'][()]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = dstore['gmdata']['events']
+    num_events = countby(dstore['events'][()], 'rlz_id')
     periods = return_periods or oq.return_periods or scientific.return_periods(
-        eff_time, num_events.max())
-    return scientific.LossesByPeriodBuilder(
-        numpy.array(periods), loss_dt or oq.loss_dt(), weights, num_events,
-        eff_time, oq.investigation_time)
+        eff_time, max(num_events.values()))
+    return scientific.LossCurvesMapsBuilder(
+        oq.conditional_loss_poes, numpy.array(periods),
+        loss_dt or oq.loss_dt(), weights, num_events,
+        eff_time, oq.risk_investigation_time)
 
 
 class LossCurveExporter(object):
@@ -58,15 +60,16 @@ class LossCurveExporter(object):
     """
     def __init__(self, dstore):
         self.dstore = dstore
+        self.oq = dstore['oqparam']
         try:
             self.builder = get_loss_builder(dstore)
-        except KeyError:  # no 'gmdata' for non event_based_risk
+        except KeyError:  # no 'events' for non event_based_risk
             pass
         self.assetcol = dstore['assetcol']
         arefs = [decode(aref) for aref in self.assetcol.asset_refs]
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
-        self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+        self.loss_types = dstore.get_attr('risk_model', 'loss_types')
         self.R = dstore['csm_info'].get_num_rlzs()
 
     def parse(self, what):
@@ -96,7 +99,7 @@ class LossCurveExporter(object):
                     arefs.append(self.asset_refs[aid])
         elif spec.startswith('ref-'):  # passed the asset name
             arefs = [spec[4:]]
-            aids = [self.str2asset[arefs[0]].ordinal]
+            aids = [self.str2asset[arefs[0]]['ordinal']]
         else:
             raise ValueError('Wrong specification in %s' % what)
         return aids, arefs, spec, key
@@ -111,9 +114,9 @@ class LossCurveExporter(object):
         for key in sorted(curves_dict):
             recs = curves_dict[key]
             data = [['asset', 'loss_type', 'loss', 'period' if ebr else 'poe']]
-            for loss_type in self.loss_types:
+            for li, loss_type in enumerate(self.loss_types):
                 if ebr:  # event_based_risk
-                    array = recs[loss_type]  # shape (A, P) loss_dt
+                    array = recs[:, :, li]  # shape (A, P, LI)
                     periods = self.builder.return_periods
                     for aref, losses in zip(asset_refs, array):
                         for period, loss in zip(periods, losses):
@@ -126,7 +129,10 @@ class LossCurveExporter(object):
                             data.append((aref, loss_type, loss, poe))
             dest = self.dstore.build_fname(
                 'loss_curves', '%s-%s' % (spec, key) if spec else key, 'csv')
-            writer.save(data, dest)
+            com = dict(
+                kind=key,
+                risk_investigation_time=self.oq.risk_investigation_time)
+            writer.save(data, dest, comment=com)
         return writer.getsaved()
 
     def export(self, export_type, what):
@@ -174,7 +180,7 @@ class LossCurveExporter(object):
         :returns: a dictionary rlzi -> record of dtype loss_curve_dt
         """
         oq = self.dstore['oqparam']
-        stats = oq.risk_stats()  # pair (name, func)
+        stats = oq.hazard_stats().items()  # pair (name, func)
         stat2idx = {stat[0]: s for s, stat in enumerate(stats)}
         if 'loss_curves-stats' in self.dstore:  # classical_risk
             dset = self.dstore['loss_curves-stats']
