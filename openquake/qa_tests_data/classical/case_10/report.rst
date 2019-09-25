@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 10
 
 ============== ===================
 checksum32     4,001,490,780      
-date           2019-07-30T15:04:34
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:15
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = 2
@@ -81,44 +81,44 @@ source_model.xml 1      Active Shallow Crust 3,000        3,000
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =======
-source_id grp_id code num_ruptures calc_time num_sites weight speed  
-========= ====== ==== ============ ========= ========= ====== =======
-1         0      P    3,000        0.01392   2.00000   6,000  431,150
-========= ====== ==== ============ ========= ========= ====== =======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+1         0      P    3,000        0.03415   2.00000   6,000        175,678
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.01392   2     
+P    0.03415   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-preclassical       0.00730 2.520E-04 0.00712 0.00748 2      
-read_source_models 0.00619 3.759E-05 0.00616 0.00621 2      
+preclassical       0.01747 0.01369   0.00779 0.02715 2      
+read_source_models 0.03543 3.577E-04 0.03518 0.03569 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ======================================================= ========
-task               sent                                                    received
-preclassical       srcs=2.34 KB params=1.03 KB srcfilter=440 B gsims=294 B 684 B   
-read_source_models converter=628 B fnames=200 B                            3.12 KB 
-================== ======================================================= ========
+================== ============================================= ========
+task               sent                                          received
+preclassical       srcs=2.35 KB srcfilter=1.26 KB params=1.03 KB 684 B   
+read_source_models converter=628 B fnames=214 B                  3.13 KB 
+================== ============================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15555               time_sec  memory_mb counts
+calc_1819                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.01461   0.0       2     
-total read_source_models 0.01237   0.0       2     
-store source_info        0.00217   0.0       1     
-managing sources         0.00165   0.0       1     
-aggregate curves         2.913E-04 0.0       2     
+total read_source_models 0.07087   0.25781   2     
+total preclassical       0.03494   0.14844   2     
+store source_info        0.00267   0.0       1     
+aggregate curves         0.00105   0.0       2     
+managing sources         4.148E-04 0.0       1     
 ======================== ========= ========= ======

@@ -108,7 +108,7 @@ class ReportWriter(object):
             self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
-            tasks = set(ds['task_info'])
+            tasks = set(ds['task_info']['taskname'])
             if 'classical_split_filter' in tasks:
                 self.add('task:classical_split_filter:0')
                 self.add('task:classical_split_filter:-1')
@@ -148,8 +148,6 @@ def build_report(job_ini, output_dir=None):
     calc.pre_execute()
     if oq.calculation_mode == 'preclassical':
         calc.execute()
-    for key in calc.datastore:
-        calc.datastore.set_nbytes(key)
     logging.info('Making the .rst report')
     rw = ReportWriter(calc.datastore)
     rw.make_report()

@@ -149,6 +149,8 @@ def lon_lat_bins(bb, coord_bin_width):
     lat_bins = coord_bin_width * numpy.arange(
         int(numpy.floor(south / coord_bin_width)),
         int(numpy.ceil(north / coord_bin_width) + 1))
+    if cross_idl(*lon_bins):
+        lon_bins %= 360
     return lon_bins, lat_bins
 
 

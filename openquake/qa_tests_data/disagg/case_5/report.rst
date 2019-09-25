@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     1,136,041,000      
-date           2019-07-30T15:03:56
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:20:59
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
@@ -80,45 +80,45 @@ slab_buc0/6.05.nrml slab_buc1/6.75.nrml 1      Deep Seismicity 15           8
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ======= ======
-source_id grp_id code num_ruptures calc_time num_sites weight  speed 
-========= ====== ==== ============ ========= ========= ======= ======
-buc06pt05 0      N    7            0.00137   1.00000   7.00000 5,116 
-buc16pt75 1      N    8            2.491E-04 1.00000   8.00000 32,110
-========= ====== ==== ============ ========= ========= ======= ======
+========= ====== ==== ============ ========= ========= ============ ======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
+========= ====== ==== ============ ========= ========= ============ ======
+buc06pt05 0      N    7            7.207E-04 1.00000   7.00000      9,712 
+buc16pt75 1      N    8            6.220E-04 1.00000   8.00000      12,861
+========= ====== ==== ============ ========= ========= ============ ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    0.00162   2     
+N    0.00134   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-preclassical       0.00195 NaN       0.00195 0.00195 1      
-read_source_models 0.00315 8.419E-04 0.00256 0.00375 2      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+preclassical       0.00192 NaN     0.00192 0.00192 1      
+read_source_models 0.00399 0.00132 0.00305 0.00492 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================================== ========
-task               sent                                                   received
-preclassical       srcs=11.16 KB params=647 B srcfilter=220 B gsims=163 B 392 B   
-read_source_models converter=628 B fnames=198 B                           12.77 KB
-================== ====================================================== ========
+================== ========================================== ========
+task               sent                                       received
+preclassical       srcs=11.17 KB srcfilter=666 B params=647 B 392 B   
+read_source_models converter=628 B fnames=212 B               12.79 KB
+================== ========================================== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15503               time_sec  memory_mb counts
+calc_1737                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00631   0.0       2     
-store source_info        0.00292   0.0       1     
-total preclassical       0.00195   0.0       1     
-managing sources         0.00138   0.0       1     
-aggregate curves         1.578E-04 0.0       1     
+total read_source_models 0.00798   0.28906   2     
+store source_info        0.00240   0.0       1     
+total preclassical       0.00192   0.0       1     
+managing sources         3.664E-04 0.0       1     
+aggregate curves         2.496E-04 0.0       1     
 ======================== ========= ========= ======

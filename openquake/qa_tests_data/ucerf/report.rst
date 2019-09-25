@@ -3,8 +3,8 @@ Ucerf test
 
 ============== ===================
 checksum32     87,673,300         
-date           2019-07-30T15:03:57
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:00
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 155, num_levels = 6, num_rlzs = ?
@@ -43,10 +43,10 @@ source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =====
-source_id grp_id code num_ruptures calc_time num_sites weight speed
-========= ====== ==== ============ ========= ========= ====== =====
-========= ====== ==== ============ ========= ========= ====== =====
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -55,3 +55,20 @@ code calc_time counts
 ==== ========= ======
 U    0.0       24    
 ==== ========= ======
+
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
+Slowest operations
+------------------
+========= ======== ========= ======
+calc_1751 time_sec memory_mb counts
+========= ======== ========= ======
+========= ======== ========= ======

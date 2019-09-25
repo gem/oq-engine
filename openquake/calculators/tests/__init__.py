@@ -88,7 +88,7 @@ orig_write_csv = writers.write_csv
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     fname = orig_write_csv(dest, data, sep, fmt, header, comment)
     lines = open(fname).readlines()[:3]
-    name = re.sub(r'\d', 'X', strip_calc_id(fname))
+    name = re.sub(r'[\d\.]+', '.', strip_calc_id(fname))
     collect_csv[name] = lines
     return fname
 
@@ -130,6 +130,7 @@ class CalculatorTestCase(unittest.TestCase):
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
             result = self.calc.run(export_dir=self.edir)
+        self.calc.datastore.close()
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id

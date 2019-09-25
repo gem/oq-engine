@@ -31,7 +31,7 @@ oq engine --lhc
 MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' -1
 MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' -1
 MPLBACKEND=Agg oq plot 'uhs?kind=stats' -1
-MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' -1
+MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' 16
 MPLBACKEND=Agg oq plot_sites -1
 MPLBACKEND=Agg oq plot memory?
 
@@ -44,6 +44,11 @@ oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
 
 # run ebrisk
 oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
+echo "Displaying the exposed values in the ebrisk demo"
+oq show exposed_values/agg_NAME_1_taxonomy
+oq show exposed_values/agg_NAME_1
+oq show exposed_values/agg_taxonomy
+oq show exposed_values/agg
 
 # display the calculations
 oq db find %

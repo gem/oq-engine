@@ -25,7 +25,7 @@ import pickle
 import zlib
 import numpy
 
-from openquake.baselib import hdf5, general, parallel
+from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, sourcewriter, geo
 from openquake.hazardlib.geo.mesh import point3d
 from openquake.commonlib import logictree
@@ -105,7 +105,7 @@ class SourceModelFactory(object):
         self.mfds = set()  # set of toml strings
         self.grp_id = 0
         self.source_ids = set()
-        self.mags = general.AccumDict(accum=set())  # TRT -> mags
+        self.mags = set()
 
     def __call__(self, fname, sm, apply_uncertainties, investigation_time):
         """
@@ -161,7 +161,7 @@ class SourceModelFactory(object):
                         else:
                             srcmags = [item[0] for item in
                                        src.get_annual_occurrence_rates()]
-                        self.mags[src.tectonic_region_type].update(srcmags)
+                        self.mags.update(srcmags)
                         self.source_ids.add(src.source_id)
                         src.src_group_id = self.grp_id
                         src.id = idx
@@ -275,8 +275,8 @@ class SourceModelFactory(object):
             logging.info('Reading the source model(s) in parallel')
             smap = parallel.Starmap(
                 nrml.read_source_models, distribute=dist,
-                hdf5path=self.hdf5.filename if self.hdf5 else None)
-            # NB: hdf5path is None in logictree_test.py
+                h5=self.hdf5 if self.hdf5 else None)
+            # NB: h5 is None in logictree_test.py
             for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
                 for name in sm.names.split():
                     fname = os.path.abspath(os.path.join(smlt_dir, name))
@@ -314,6 +314,8 @@ class SourceModelFactory(object):
                 hdf5.extend(self.hdf5['source_mfds'],
                             numpy.array(list(self.mfds), hdf5.vstr))
 
+        if self.hdf5:
+            self.hdf5['source_mags'] = sorted(self.mags)
         # log if some source file is being used more than once
         dupl = 0
         for fname, hits in self.fname_hits.items():
