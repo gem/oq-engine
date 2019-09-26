@@ -668,6 +668,14 @@ munson_thurber_1997
     :undoc-members:
     :show-inheritance:
 
+morikawa_fujiwara_2013
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.morikawa_fujiwara_2013
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nath_2012
 -----------------------------------------
 
