@@ -13,12 +13,13 @@ Contents:
 
    introduction
    common-mistakes
-   effective-realizations       
    hazard
    risk
+   effective-realizations       
    event-based-with-large-logic-tree
    extract-api
    parametric-gmpes
    parallelization
-   equivalent_distance_approximation
+   special-features
+   risk-features
    multipoint

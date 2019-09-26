@@ -119,6 +119,12 @@ site_param_dt = {
     'siteclass': (numpy.string_, 1),
     'backarc': numpy.bool,
 
+    # Parameters for site amplification
+    'ec8': (numpy.string_, 1),
+    'ec8_p18': (numpy.string_, 2),
+    'h800': numpy.float64,
+    'geology': (numpy.string_, 20),
+
     # parameters for geotechnic hazard
     'liquefaction_susceptibility': numpy.int16,
     'landsliding_susceptibility': numpy.int16,
@@ -223,6 +229,7 @@ class SiteCollection(object):
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
             self._set('siteclass', sitemodel.reference_siteclass)
+            self._set('backarc', sitemodel.reference_backarc)
         else:
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):

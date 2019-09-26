@@ -100,6 +100,13 @@ allen_2012_ipe
     :undoc-members:
     :show-inheritance:
 
+ameri_2017
+---------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.ameri_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 armenia_2016
 ---------------------------------------------------
 .. automodule:: openquake.hazardlib.gsim.armenia_2016
@@ -579,6 +586,14 @@ kotha_2019
     :undoc-members:
     :show-inheritance:
 
+lanzano_luzi_2019
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_luzi_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lin_2009
 ----------------------------------------
 
@@ -740,6 +755,22 @@ sadigh_1997
     :undoc-members:
     :show-inheritance:
 
+sera_amplification_models
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sera_amplification_models
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+sera_2019_craton
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sera_2019_craton
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 shahjouei_pezeshk_2016
 --------------------------------------------
 
@@ -828,6 +859,14 @@ travasarou_2003
     :undoc-members:
     :show-inheritance:
 
+tromans_2019
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.tromans_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tusa_langer_2016
 ------------------------------------------------
 
@@ -848,6 +887,14 @@ utils_swiss_gmpe
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.utils_swiss_gmpe
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+vanhoutte_2018
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.vanhoutte_2018
     :members:
     :undoc-members:
     :show-inheritance:

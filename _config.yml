@@ -1,6 +1,0 @@
-theme: jekyll-theme-minimal
-
-include:
-  - README.md
-  - doc/*.md
-  - doc/*/*.md

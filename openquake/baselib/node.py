@@ -145,6 +145,7 @@ import sys
 import copy
 import types
 import warnings
+import itertools
 import pprint as pp
 import configparser
 from contextlib import contextmanager
@@ -591,16 +592,40 @@ def pprint(self, stream=None, indent=1, width=80, depth=None):
 
 def node_from_dict(dic, nodefactory=Node):
     """
-    Convert a (nested) dictionary with attributes tag, attrib, text, nodes
-    into a Node object.
+    Convert a (nested) dictionary into a Node object.
     """
-    tag = dic['tag']
-    text = dic.get('text')
-    attrib = dic.get('attrib', {})
-    nodes = dic.get('nodes', [])
-    if not nodes:
+    [(tag, dic)] = dic.items()
+    if isinstance(dic, dict):
+        dic = dic.copy()
+        text = dic.pop('text', None)
+        attrib = {n[1:]: dic.pop(n) for n in sorted(dic) if n.startswith('_')}
+    else:
+        return nodefactory(tag, {}, dic)
+    if not dic:
         return nodefactory(tag, attrib, text)
-    return nodefactory(tag, attrib, nodes=list(map(node_from_dict, nodes)))
+    [(k, vs)] = dic.items()
+    if isinstance(vs, list):
+        nodes = [node_from_dict({k: v}) for v in vs]
+    else:
+        nodes = [node_from_dict(dic)]
+    return nodefactory(tag, attrib, nodes=nodes)
+
+
+def _group(one_key_dicts):
+    items = []
+    for one_key_dict in one_key_dicts:
+        [(k, v)] = one_key_dict.items()
+        items.append((k, v))
+    dic = {}
+    for k, group in itertools.groupby(items, lambda item: item[0]):
+        vs = []
+        for k, v in group:
+            vs.append(v)
+        if len(vs) == 1:
+            dic[k] = vs[0]
+        else:
+            dic[k] = vs
+    return dic
 
 
 def node_to_dict(node):
@@ -610,14 +635,22 @@ def node_to_dict(node):
 
     :param node: a Node-compatible object
     """
-    dic = dict(tag=striptag(node.tag))
+    tag = striptag(node.tag)
+    dic = {}
     if node.attrib:
-        dic['attrib'] = node.attrib
-    if node.text is not None:
-        dic['text'] = node.text
+        for nam, val in node.attrib.items():
+            dic['_' + nam] = (float(val)
+                              if isinstance(val, numpy.float64) else val)
+    if isinstance(node.text, str) and node.text.strip() == '':
+        pass
+    elif node.text is not None:
+        if 'attrib' in dic:
+            dic['text'] = node.text
+        else:
+            dic = node.text
     if node.nodes:
-        dic['nodes'] = [node_to_dict(n) for n in node]
-    return dic
+        dic.update(_group([node_to_dict(n) for n in node]))
+    return {tag: dic}
 
 
 def node_from_elem(elem, nodefactory=Node, lazy=()):

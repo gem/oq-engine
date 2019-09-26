@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
-import mock
+import unittest.mock as mock
 import os.path
 from openquake.baselib import sap
 from openquake.commonlib import readinput

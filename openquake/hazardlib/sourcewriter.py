@@ -21,6 +21,7 @@ Source model XML Writer
 """
 
 import os
+import toml
 import operator
 import numpy
 from openquake.baselib.general import CallableDict, groupby
@@ -43,8 +44,9 @@ def build_area_source_geometry(area_source):
         Instance of :class:`openquake.baselib.node.Node`
     """
     geom = []
-    for lon_lat in zip(area_source.polygon.lons, area_source.polygon.lats):
-        geom.extend(lon_lat)
+    for lon, lat in zip(area_source.polygon.lons, area_source.polygon.lats):
+        # NB: converting numpy.float64 -> float is good for TOML
+        geom.extend((float(lon), float(lat)))
     poslist_node = Node("gml:posList", text=geom)
     linear_ring_node = Node("gml:LinearRing", nodes=[poslist_node])
     exterior_node = Node("gml:exterior", nodes=[linear_ring_node])
@@ -238,10 +240,7 @@ def build_multi_mfd(mfd):
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
-            if len(values[0]) > 1:  # tested in multipoint_test.py
-                values = list(numpy.concatenate(values))
-            else:
-                values = sum(values, [])
+            values = sum(values, [])
         node.append(Node(name, text=values))
     if 'occurRates' in mfd.kwargs:
         lengths = [len(rates) for rates in mfd.kwargs['occurRates']]
@@ -260,11 +259,14 @@ def build_nodal_plane_dist(npd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     npds = []
+    dist = []
     for prob, npd in npd.data:
+        dist.append((prob, (npd.dip, npd.strike, npd.rake)))
         nodal_plane = Node(
             "nodalPlane", {"dip": npd.dip, "probability": prob,
                            "strike": npd.strike, "rake": npd.rake})
         npds.append(nodal_plane)
+    sourceconverter.check_dupl(dist)
     return Node("nodalPlaneDist", nodes=npds)
 
 
@@ -279,9 +281,11 @@ def build_hypo_depth_dist(hdd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     hdds = []
+    dist = []
     for (prob, depth) in hdd.data:
-        hdds.append(
-            Node("hypoDepth", {"depth": depth, "probability": prob}))
+        dist.append((prob, depth))
+        hdds.append(Node("hypoDepth", {"depth": depth, "probability": prob}))
+    sourceconverter.check_dupl(dist)
     return Node("hypoDepthDist", nodes=hdds)
 
 
@@ -395,7 +399,6 @@ def get_source_attributes(source):
             for data in source.data:
                 weights.append(data[0].weight)
             attrs['rup_weights'] = numpy.array(weights)
-    print(attrs)
     return attrs
 
 
@@ -481,8 +484,9 @@ def build_multi_point_source_node(multi_point_source):
     # parse geometry
     pos = []
     for p in multi_point_source.mesh:
-        pos.append(p.x)
-        pos.append(p.y)
+        # converting numpy.float64 -> float is good for TOML
+        pos.append(float(p.x))
+        pos.append(float(p.y))
     mesh_node = Node('gml:posList', text=pos)
     upper_depth_node = Node(
         "upperSeismoDepth", text=multi_point_source.upper_seismogenic_depth)
@@ -492,8 +496,8 @@ def build_multi_point_source_node(multi_point_source):
         "multiPointGeometry",
         nodes=[mesh_node, upper_depth_node, lower_depth_node])]
     # parse common distributed attributes
-    source_nodes.extend(get_distributed_seismicity_source_nodes(
-        multi_point_source))
+    source_nodes.extend(
+        get_distributed_seismicity_source_nodes(multi_point_source))
     return Node("multiPointSource",
                 get_source_attributes(multi_point_source),
                 nodes=source_nodes)
@@ -641,10 +645,11 @@ def write_source_model(dest, sources_or_groups, name=None,
     return dest
 
 
-def hdf5write(h5file, obj, root=''):
+def tomldump(obj, fileobj=None):
     """
-    Write a generic object serializable to a Node-like object into a :class:
-    `openquake.baselib.hdf5.File`
+    Write a generic serializable object in TOML format
     """
     dic = node_to_dict(obj_to_node(obj))
-    h5file.save(dic, root)
+    if fileobj is None:
+        return toml.dumps(dic)
+    toml.dump(dic, fileobj)

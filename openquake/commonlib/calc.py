@@ -18,7 +18,7 @@
 import warnings
 import numpy
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -37,7 +37,7 @@ F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
 
-BaseRupture.init()
+code2cls = BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
 
@@ -142,7 +142,7 @@ def compute_hazard_maps(curves, imls, poes):
 # #########################  GMF->curves #################################### #
 
 # NB (MS): the approach used here will not work for non-poissonian models
-def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
+def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     """
     Given a set of ground motion values (``gmvs``) and intensity measure levels
     (``imls``), compute hazard curve probabilities of exceedance.
@@ -151,20 +151,8 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
         A list of ground motion values, as floats.
     :param imls:
         A list of intensity measure levels, as floats.
-    :param float invest_time:
-        Investigation time, in years. It is with this time span that we compute
-        probabilities of exceedance.
-
-        Another way to put it is the following. When computing a hazard curve,
-        we want to answer the question: What is the probability of ground
-        motion meeting or exceeding the specified levels (``imls``) in a given
-        time span (``invest_time``).
-    :param float duration:
-        Time window during which GMFs occur. Another was to say it is, the
-        period of time over which we simulate ground motion occurrences.
-
-        NOTE: Duration is computed as the calculation investigation time
-        multiplied by the number of stochastic event sets.
+    :param ses_per_logic_tree_path:
+        Number of stochastic event sets: the larger, the best convergency
 
     :returns:
         Numpy array of PoEs (probabilities of exceedance).
@@ -175,30 +163,35 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     # => num_exceeding = [1, 1, 0] coming from 0.04750576 > [0.03, 0.04, 0.05]
     imls = numpy.array(imls).reshape((len(imls), 1))
     num_exceeding = numpy.sum(numpy.array(gmvs) >= imls, axis=1)
-    poes = 1 - numpy.exp(- (invest_time / duration) * num_exceeding)
+    poes = 1 - numpy.exp(- num_exceeding / ses_per_logic_tree_path)
     return poes
 
 
 # ################## utilities for classical calculators ################ #
 
-def make_hmap(pmap, imtls, poes):
+def make_hmap(pmap, imtls, poes, sid=None):
     """
     Compute the hazard maps associated to the passed probability map.
 
     :param pmap: hazard curves in the form of a ProbabilityMap
     :param imtls: DictArray with M intensity measure types
     :param poes: P PoEs where to compute the maps
+    :param sid: not None when pmap is actually a ProbabilityCurve
     :returns: a ProbabilityMap with size (N, M, P)
     """
+    if sid is None:
+        sids = pmap.sids
+    else:  # passed a probability curve
+        pmap = {sid: pmap}
+        sids = [sid]
     M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M, P, pmap, dtype=F32)
+    hmap = probability_map.ProbabilityMap.build(M, P, sids, dtype=F32)
     if len(pmap) == 0:
         return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
-        curves = numpy.array([pmap[sid].array[imtls(imt), 0]
-                              for sid in pmap.sids])
+        curves = numpy.array([pmap[sid].array[imtls(imt), 0] for sid in sids])
         data = compute_hazard_maps(curves, imtls[imt], poes)  # array (N, P)
-        for sid, value in zip(pmap.sids, data):
+        for sid, value in zip(sids, data):
             array = hmap[sid].array
             for j, val in enumerate(value):
                 array[i, j] = val
@@ -209,16 +202,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     """
     :returns: a compound array of hazard maps of shape nsites
     """
-    if isinstance(pmap, probability_map.ProbabilityMap):
-        # this is here for compatibility with the
-        # past, it could be removed in the future
-        hmap = make_hmap(pmap, imtls, poes)
-        pdic = general.DictArray({imt: poes for imt in imtls})
-        return convert_to_array(hmap, nsites, pdic)
-    try:
-        hcurves = pmap.value
-    except AttributeError:
-        hcurves = pmap
+    hcurves = pmap[()]
     dtlist = [('%s-%s' % (imt, poe), F32) for imt in imtls for poe in poes]
     array = numpy.zeros(len(pmap), dtlist)
     for imt, imls in imtls.items():
@@ -275,16 +259,16 @@ class RuptureData(object):
             self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
-            multi_lons, multi_lats = rup.surface.get_surface_boundaries()
+            mlons, mlats, mdeps = rup.surface.get_surface_boundaries_3d()
             bounds = ','.join('((%s))' % ','.join(
-                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
-                              for lons, lats in zip(multi_lons, multi_lats))
+                '%.5f %.5f %.3f' % coords for coords in zip(lons, lats, deps))
+                              for lons, lats, deps in zip(mlons, mlats, mdeps))
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.serial, ebr.srcidx, ebr.n_occ, rate,
+                (ebr.rup_id, ebr.srcidx, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake,
                  'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
@@ -312,10 +296,8 @@ class RuptureSerializer(object):
         offset = len(self.datastore['rupgeoms'])
         rup_array.array['gidx1'] += offset
         rup_array.array['gidx2'] += offset
-        previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
-        self.datastore.extend(
-            'ruptures', rup_array, nbytes=previous + rup_array.nbytes)
-        self.datastore.extend('rupgeoms', rup_array.geom)
+        hdf5.extend(self.datastore['ruptures'], rup_array)
+        hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         # TODO: PMFs for nonparametric ruptures are not stored
         self.datastore.flush()
 
@@ -328,6 +310,5 @@ class RuptureSerializer(object):
             return
         codes = numpy.unique(self.datastore['ruptures']['code'])
         attr = {'code_%d' % code: ' '.join(
-            cls.__name__ for cls in BaseRupture.types[code])
-                for code in codes}
+            cls.__name__ for cls in code2cls[code]) for code in codes}
         self.datastore.set_attrs('ruptures', **attr)

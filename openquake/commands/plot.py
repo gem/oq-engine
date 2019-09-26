@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 from openquake.baselib import sap
+from openquake.hazardlib import mfd
 from openquake.hazardlib.geo.utils import get_bounding_box
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -117,6 +118,26 @@ def make_figure_uhs(extractors, what):
     return plt
 
 
+def make_figure_disagg(extractors, what):
+    """
+    $ oq plot 'disagg?by=Dist&imt=PGA'
+    """
+    assert len(extractors) == 1
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    disagg = extractors[0].get(what)
+    [sid] = disagg.site_id
+    [poe_id] = disagg.poe_id
+    oq = extractors[0].oqparam
+    poe = oq.poes_disagg[poe_id]
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Disagg%s on site %s, poe=%s, inv_time=%dy' %
+                  (disagg.by, sid, poe, oq.investigation_time))
+    ax.plot(disagg.array)
+    ax.legend()
+    return plt
+
+
 def make_figure_source_geom(extractors, what):
     """
     Extract the geometry of a given sources
@@ -140,6 +161,84 @@ def make_figure_source_geom(extractors, what):
     return plt
 
 
+def make_figure_task_info(extractors, what):
+    """
+    Plot an histogram with the task distribution. Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/task_info?kind=classical
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    [(task_name, task_info)] = ex.get(what).to_dict().items()
+    x = task_info['duration']
+    ax = fig.add_subplot(1, 1, 1)
+    mean, std = x.mean(), x.std(ddof=1)
+    ax.hist(x, bins=50, rwidth=0.9)
+    ax.set_xlabel("mean=%d+-%d seconds" % (mean, std))
+    ax.set_ylabel("tasks=%d" % len(x))
+    #from scipy.stats import linregress
+    #ax = fig.add_subplot(2, 1, 2)
+    #arr = numpy.sort(task_info, order='duration')
+    #x, y = arr['duration'], arr['weight']
+    #reg = linregress(x, y)
+    #ax.plot(x, reg.intercept + reg.slope * x)
+    #ax.plot(x, y)
+    #ax.set_ylabel("weight")
+    #ax.set_xlabel("duration")
+    return plt
+
+
+def make_figure_memory(extractors, what):
+    """
+    :param plots: list of pairs (task_name, memory array)
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+
+    [ex] = extractors
+    task_info = ex.get('task_info').to_dict()
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    ax.set_xlabel('tasks')
+    ax.set_ylabel('GB')
+    start = 0
+    for task_name in task_info:
+        mem = task_info[task_name]['mem_gb']
+        ax.plot(range(start, start + len(mem)), mem, label=task_name)
+        start += len(mem)
+    ax.legend()
+    return plt
+
+
+def make_figure_event_based_mfd(extractors, what):
+    """
+    :param plots: list of pairs (task_name, memory array)
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+
+    num_plots = len(extractors)
+    fig = plt.figure()
+    for i, ex in enumerate(extractors):
+        mfd_dict = ex.get(what).to_dict()
+        mags = mfd_dict.pop('magnitudes')
+        duration = mfd_dict.pop('duration')
+        ax = fig.add_subplot(1, num_plots, i + 1)
+        ax.grid(True)
+        ax.set_xlabel('magnitude')
+        ax.set_ylabel('annual frequency [on %dy]' % duration)
+        for label, freqs in mfd_dict.items():
+            ax.plot(mags, freqs, label=label)
+        mfds = ex.get('source_mfds').array
+        if len(mfds) == 1:
+            expected = mfd.from_toml(mfds[0], ex.oqparam.width_of_mfd_bin)
+            magnitudes, frequencies = zip(
+                *expected.get_annual_occurrence_rates())
+            ax.plot(magnitudes, frequencies, label='expected')
+        ax.legend()
+    return plt
+
+
 @sap.script
 def plot(what, calc_id=-1, other_id=None, webapi=False):
     """
@@ -148,13 +247,14 @@ def plot(what, calc_id=-1, other_id=None, webapi=False):
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
     prefix, rest = what.split('?', 1)
-    assert prefix in 'source_geom hcurves hmaps uhs', prefix
     if prefix in 'hcurves hmaps' and 'imt=' not in rest:
         raise SystemExit('Missing imt= in %r' % what)
     elif prefix == 'uhs' and 'imt=' in rest:
         raise SystemExit('Invalid IMT in %r' % what)
-    elif prefix in 'hcurves uhs' and 'site_id=' not in rest:
+    elif prefix in 'hcurves uhs disagg' and 'site_id=' not in rest:
         what += '&site_id=0'
+    if prefix == 'disagg' and 'poe=' not in rest:
+        what += '&poe_id=0'
     if webapi:
         xs = [WebExtractor(calc_id)]
         if other_id:

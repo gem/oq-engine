@@ -18,14 +18,14 @@
 
 import unittest
 import collections
-import mock
+import unittest.mock as mock
 
 import numpy
 from copy import deepcopy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
-    GMPE, IPE, CoeffsTable, SitesContext, RuptureContext, DistancesContext,
+    GMPE, IPE, CoeffsTable, SitesContext, RuptureContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -45,7 +45,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
             DEFINED_FOR_TECTONIC_REGION_TYPE = None
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-            DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
+            DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
             REQUIRES_SITES_PARAMETERS = set()
             REQUIRES_RUPTURE_PARAMETERS = set()
             REQUIRES_DISTANCES = set()
@@ -63,115 +63,17 @@ class _FakeGSIMTestCase(unittest.TestCase):
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES = frozenset(
             self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES | {self.DEFAULT_IMT})
 
-    def _get_poes(self, **kwargs):
-        default_kwargs = dict(
-            sctx=SitesContext(),
-            rctx=RuptureContext(),
-            dctx=DistancesContext(),
-            imt=self.DEFAULT_IMT(),
-            imls=[1.0, 2.0, 3.0],
-            truncation_level=1.0)
-        default_kwargs.update(kwargs)
-        kwargs = default_kwargs
-        return self.gsim.get_poes(**kwargs)
-
     def _assert_value_error(self, func, error, **kwargs):
         with self.assertRaises(ValueError) as ar:
             func(**kwargs)
         self.assertEqual(str(ar.exception), error)
 
 
-class GetPoEsTestCase(_FakeGSIMTestCase):
-    def test_no_truncation(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
-            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
-            {const.StdDev.TOTAL})
-
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
-            self.assertEqual(imt, self.DEFAULT_IMT())
-            self.assertEqual(stddev_types, [const.StdDev.TOTAL])
-            mean = numpy.array([-0.7872268528578843])
-            stddev = numpy.array([0.5962393527251486])
-            get_mean_and_stddevs.call_count += 1
-            return mean, [stddev]
-
-        get_mean_and_stddevs.call_count = 0
-        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
-        iml = 0.6931471805599453
-        iml_poes = self._get_poes(imt=self.DEFAULT_IMT(), imls=[iml],
-                                  truncation_level=None)
-        self.assertIsInstance(iml_poes, numpy.ndarray)
-        [poe] = iml_poes
-        expected_poe = 0.006516701082128207
-        self.assertAlmostEqual(float(poe), expected_poe, places=6)
-        self.assertEqual(get_mean_and_stddevs.call_count, 1)
-
-    def test_zero_truncation(self):
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
-            return numpy.array([1.1]), [numpy.array([123.45])]
-        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
-        imt = self.DEFAULT_IMT()
-        imls = [0, 1, 2, 1.1, 1.05]
-        [poes] = self._get_poes(imt=imt, imls=imls, truncation_level=0)
-        self.assertIsInstance(poes, numpy.ndarray)
-        expected_poes = [1, 1, 0, 1, 1]
-        self.assertEqual(list(poes), expected_poes)
-
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
-            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
-            {const.StdDev.TOTAL})
-        [poes] = self._get_poes(imt=imt, imls=imls, truncation_level=0)
-        self.assertEqual(list(poes), expected_poes)
-
-    def test_truncated(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
-            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
-            {const.StdDev.TOTAL})
-
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
-            return numpy.array([-0.7872268528578843]), \
-                [numpy.array([0.5962393527251486])]
-
-        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
-        imls = [-2.995732273553991, -0.6931471805599453, 0.6931471805599453]
-        poes = self._get_poes(imt=self.DEFAULT_IMT(), imls=imls,
-                              truncation_level=2.0)
-        self.assertIsInstance(poes, numpy.ndarray)
-        [[poe1, poe2, poe3]] = poes
-        self.assertEqual(poe1, 1)
-        self.assertEqual(poe3, 0)
-        self.assertAlmostEqual(poe2, 0.43432352175355504, places=6)
-
-    def test_several_contexts(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES = frozenset(
-            self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES |
-            {const.StdDev.TOTAL})
-        mean_stddev = numpy.array([[3, 4], [5, 6]])
-
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
-            mean, stddev = mean_stddev
-            mean_stddev[0] += 1
-            mean_stddev[1] += 2
-            return mean, [stddev]
-        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
-        imls = [2, 3, 4]
-        poes = self._get_poes(imt=self.DEFAULT_IMT(), imls=imls,
-                              truncation_level=2.0)
-        self.assertIsInstance(poes, numpy.ndarray)
-        [[poe11, poe12, poe13], [poe21, poe22, poe23]] = poes
-        self.assertAlmostEqual(poe11, 0.617812)
-        self.assertAlmostEqual(poe12, 0.559506)
-        self.assertAlmostEqual(poe13, 0.5)
-        self.assertAlmostEqual(poe21, 0.6531376)
-        self.assertAlmostEqual(poe22, 0.6034116)
-        self.assertAlmostEqual(poe23, 0.5521092)
-
-
 class TGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = None
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     REQUIRES_SITES_PARAMETERS = None
     REQUIRES_RUPTURE_PARAMETERS = None
     REQUIRES_DISTANCES = None
@@ -182,7 +84,7 @@ class TIPE(IPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = None
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     REQUIRES_SITES_PARAMETERS = None
     REQUIRES_RUPTURE_PARAMETERS = None
     REQUIRES_DISTANCES = None

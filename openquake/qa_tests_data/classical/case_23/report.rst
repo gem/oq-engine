@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     3,211,843,635      
-date           2019-05-03T06:44:23
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:27
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 29, num_rlzs = 1
@@ -61,9 +61,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=1)
-  0,'[McVerry2006Asc]': [0]
-  1,'[McVerry2006SInter]': [0]>
+  <RlzsAssoc(size=2, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -74,57 +72,56 @@ NSHM_source_model-editedbkgd.xml 0      Active Shallow Crust 40           40
 NSHM_source_model-editedbkgd.xml 1      Subduction Interface 2            2           
 ================================ ====== ==================== ============ ============
 
-============= =======
-#TRT models   2      
-#eff_ruptures 42     
-#tot_ruptures 42     
-#tot_weight   6.00000
-============= =======
+============= ==
+#TRT models   2 
+#eff_ruptures 42
+#tot_ruptures 42
+============= ==
 
 Slowest sources
 ---------------
-====== ========= ==== ====== ====== ============ ========= ========= =======
-grp_id source_id code gidx1  gidx2  num_ruptures calc_time num_sites weight 
-====== ========= ==== ====== ====== ============ ========= ========= =======
-0      1         P    0      1      20           2.313E-05 1.00000   2.00000
-1      21444     X    2      20,504 1            2.289E-05 1.00000   1.00000
-1      21445     X    20,504 34,373 1            7.868E-06 1.00000   1.00000
-0      2         P    1      2      20           7.391E-06 1.00000   2.00000
-====== ========= ==== ====== ====== ============ ========= ========= =======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+21444     1      X    1            3.734E-04 1.00000   1.00000      2,678  
+21445     1      X    1            2.573E-04 1.00000   1.00000      3,887  
+1         0      P    20           1.900E-04 1.00000   20           105,252
+2         0      P    20           1.206E-04 1.00000   20           165,783
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    3.052E-05 2     
-X    3.076E-05 2     
+P    3.107E-04 2     
+X    6.306E-04 2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-read_source_models 0.20554 NaN       0.20554 0.20554 1      
-preclassical       0.00368 3.372E-05 0.00365 0.00370 2      
-================== ======= ========= ======= ======= =======
+================== ========= ========= ========= ======= =======
+operation-duration mean      stddev    min       max     outputs
+preclassical       9.179E-04 4.063E-04 6.306E-04 0.00121 2      
+read_source_models 0.16891   NaN       0.16891   0.16891 1      
+================== ========= ========= ========= ======= =======
 
 Data transfer
 -------------
-================== ========================================================= =========
-task               sent                                                      received 
-read_source_models converter=313 B fnames=123 B                              809.05 KB
-preclassical       srcs=808.94 KB params=1.34 KB srcfilter=436 B gsims=302 B 760 B    
-================== ========================================================= =========
+================== ============================================ =========
+task               sent                                         received 
+preclassical       srcs=809 KB params=1.42 KB srcfilter=1.26 KB 774 B    
+read_source_models converter=314 B fnames=123 B                 809.06 KB
+================== ============================================ =========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_1849                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.20554   0.54297   1     
-total preclassical       0.00735   0.0       2     
-managing sources         0.00355   0.0       1     
-store source_info        0.00245   0.0       1     
-aggregate curves         2.956E-04 0.0       2     
+total read_source_models 0.16891   0.69922   1     
+store source_info        0.00267   0.0       1     
+total preclassical       0.00184   0.0       2     
+aggregate curves         0.00107   0.0       2     
+managing sources         4.535E-04 0.0       1     
 ======================== ========= ========= ======

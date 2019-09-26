@@ -341,14 +341,12 @@ def namelist(value):
     ['a1', 'b_2', '_c']
 
     >>> namelist('a1 b_2 1c')
-    Traceback (most recent call last):
-        ...
-    ValueError: List of names containing an invalid name: 1c
+    ['a1', 'b_2', '1c']
     """
     names = value.replace(',', ' ').split()
     for n in names:
         try:
-            name(n)
+            source_id(n)
         except ValueError:
             raise ValueError('List of names containing an invalid name:'
                              ' %s' % n)
@@ -533,18 +531,19 @@ def positivefloats(value):
     :returns:
         a list of positive floats
     """
-    floats = list(map(positivefloat, value.split()))
+    values = value.strip('[]').split()
+    floats = list(map(positivefloat, values))
     return floats
 
 
-def floats32(value):
+def floats(value):
     """
     :param value:
         string of whitespace separated floats
     :returns:
-        an array of 32 bit floats
+        a list of floats
     """
-    return numpy.float32(value.split())
+    return list(map(float, value.split()))
 
 
 _BOOL_DICT = {
@@ -652,8 +651,10 @@ def intensity_measure_type(value):
 def intensity_measure_types(value):
     """
     :param value: input string
-    :returns: non-empty list of Intensity Measure Type objects
+    :returns: non-empty list of ordered Intensity Measure Type objects
 
+    >>> intensity_measure_types('')
+    []
     >>> intensity_measure_types('PGA')
     ['PGA']
     >>> intensity_measure_types('PGA, SA(1.00)')
@@ -662,20 +663,18 @@ def intensity_measure_types(value):
     Traceback (most recent call last):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
-    >>> intensity_measure_types('SA(1), PGA')
-    Traceback (most recent call last):
-    ...
-    ValueError: The IMTs are not sorted by period: SA(1), PGA
+    >>> intensity_measure_types('PGV, SA(1), PGA')
+    ['PGA', 'PGV', 'SA(1.0)']
     """
+    if not value:
+        return []
     imts = []
     for chunk in value.split(','):
         imts.append(imt.from_string(chunk.strip()))
     sorted_imts = sorted(imts, key=lambda im: getattr(im, 'period', 1))
     if len(distinct(imts)) < len(imts):
         raise ValueError('Duplicated IMTs in %s' % value)
-    if sorted_imts != imts:
-        raise ValueError('The IMTs are not sorted by period: %s' % value)
-    return [str(imt) for imt in imts]
+    return [str(imt) for imt in sorted_imts]
 
 
 def check_levels(imls, imt, min_iml=1E-10):
@@ -765,6 +764,24 @@ def logscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.log(x_max / x_min)
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
+
+
+def sqrscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max in a quadratic scale
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min < 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.sqrt(x_max - x_min) / (n - 1)
+    return x_min + (delta * numpy.arange(n))**2
 
 
 def dictionary(value):
@@ -991,7 +1008,7 @@ def integers(value):
     """
     if '.' in value:
         raise ValueError('There are decimal points in %s' % value)
-    values = value.replace(',', ' ').split()
+    values = value.strip('[]').replace(',', ' ').split()
     if not values:
         raise ValueError('Not a list of integers: %r' % value)
     try:
@@ -1229,9 +1246,9 @@ class RjbEquivalent(object):
     """
     def __init__(self, filename):
         with hdf5.File(filename, 'r') as f:
-            self.repi = f['default/repi'].value  # shape D
-            self.mags = f['default/mags'].value  # shape M
-            self.reqv = f['default/reqv'].value  # shape D x M
+            self.repi = f['default/repi'][()]  # shape D
+            self.mags = f['default/mags'][()]  # shape M
+            self.reqv = f['default/reqv'][()]  # shape D x M
 
     def get(self, repi, mag):
         """

@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     2,348,158,649      
-date           2019-05-03T06:43:41
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:02
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 4, num_rlzs = ?
@@ -41,19 +41,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      9         A    32    36    222          0.0       0.0       0.0   
-0      8         A    28    32    447          0.0       0.0       0.0   
-0      7         A    24    28    1,028        0.0       0.0       0.0   
-0      6         A    20    24    316          0.0       0.0       0.0   
-0      5         A    16    20    518          0.0       0.0       0.0   
-0      4         A    12    16    267          0.0       0.0       0.0   
-0      3         A    8     12    440          0.0       0.0       0.0   
-0      2         A    4     8     582          0.0       0.0       0.0   
-0      1         A    0     4     1,752        0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -67,20 +58,20 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.45084 NaN    0.45084 0.45084 1      
+read_source_models 0.48851 NaN    0.48851 0.48851 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=313 B fnames=111 B 9.42 KB 
+read_source_models converter=314 B fnames=111 B 9.45 KB 
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_1770                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.45084  0.25000   1     
+total read_source_models 0.48851  0.19531   1     
 ======================== ======== ========= ======

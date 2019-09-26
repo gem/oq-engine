@@ -19,7 +19,7 @@ import os
 import sys
 import time
 import operator
-import collections
+import collections.abc
 from contextlib import contextmanager
 import numpy
 from scipy.interpolate import interp1d
@@ -83,7 +83,7 @@ class Piecewise(object):
         return self.y[idx]
 
 
-class IntegrationDistance(collections.Mapping):
+class IntegrationDistance(collections.abc.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type. The integration distances can be scalars or
@@ -108,7 +108,8 @@ class IntegrationDistance(collections.Mapping):
         self.dic = dic or {}  # TRT -> float or list of pairs
         self.magdist = {}  # TRT -> (magnitudes, distances)
         for trt, value in self.dic.items():
-            if isinstance(value, list):  # assume a list of pairs (mag, dist)
+            if isinstance(value, (list, numpy.ndarray)):
+                # assume a list of pairs (mag, dist)
                 self.magdist[trt] = value
             else:
                 self.dic[trt] = float(value)
@@ -119,8 +120,8 @@ class IntegrationDistance(collections.Mapping):
         value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
-        elif mag is None:  # get the maximum distance
-            return MAX_DISTANCE
+        elif mag is None:  # get the maximum distance for the maximum mag
+            return value[-1][1]
         elif not hasattr(self, 'piecewise'):
             self.piecewise = {}  # function cache
         try:
@@ -177,6 +178,13 @@ class IntegrationDistance(collections.Mapping):
     def __len__(self):
         return len(self.dic)
 
+    def __toh5__(self):
+        dic = {trt: numpy.array(dist) for trt, dist in self.dic.items()}
+        return dic, {}
+
+    def __fromh5__(self, dic, attrs):
+        self.__init__({trt: dic[trt][()] for trt in dic})
+
     def __repr__(self):
         return repr(self.dic)
 
@@ -231,11 +239,14 @@ def split_sources(srcs):
                 if has_samples:
                     split.samples = src.samples
         elif splits:  # single source
-            splits[0].id = src.id
+            [s] = splits
+            s.source_id = src.source_id
+            s.src_group_id = src.src_group_id
+            s.id = src.id
             if has_serial:
-                splits[0].serial = src.serial
+                s.serial = src.serial
             if has_samples:
-                splits[0].samples = src.samples
+                s.samples = src.samples
     return sources, split_time
 
 
@@ -259,16 +270,18 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if sitecol is not None and filename and not os.path.exists(filename):
-            # store the sitecol
-            with hdf5.File(filename, 'w') as h5:
-                h5['sitecol'] = sitecol
-        else:  # keep the sitecol in memory
+        if not filename:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
 
     def __getstate__(self):
-        return dict(filename=self.filename,
-                    integration_distance=self.integration_distance)
+        if self.filename:
+            # in the engine self.filename is the .hdf5 cache file
+            return dict(filename=self.filename,
+                        integration_distance=self.integration_distance)
+        else:
+            # when using calc_hazard_curves without an .hdf5 cache file
+            return dict(filename=None, sitecol=self.sitecol,
+                        integration_distance=self.integration_distance)
 
     @property
     def sitecol(self):
@@ -277,11 +290,13 @@ class SourceFilter(object):
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
-        if self.filename is None or not os.path.exists(self.filename):
-            # case of nofilter/None sitecol
+        if self.filename is None:
             return
-        with hdf5.File(self.filename, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5.get('sitecol')
+        elif not os.path.exists(self.filename):
+            raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
+        h5 = hdf5.File(self.filename, 'r')
+        # NB: must not be closed on the workers for the case OQ_DISTRIBUTE=no
+        self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
     def get_rectangle(self, src):
@@ -327,14 +342,12 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
-    def close_sids(self, rec, trt, mag):
+    def close_sids(self, rec, trt):
         """
         :param rec:
-           a record with fields minlon, minlat, maxlon, maxlat
+           a record with fields mag, minlon, minlat, maxlon, maxlat
         :param trt:
            tectonic region type string
-        :param mag:
-           magnitude
         :returns:
            the site indices within the bounding box enlarged by the integration
            distance for the given TRT and magnitude
@@ -343,11 +356,8 @@ class SourceFilter(object):
             return []
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
-        if hasattr(rec, 'dtype'):
-            bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
-        else:
-            bbox = rec  # assume it is a 4-tuple
-        maxdist = self.integration_distance(trt, mag)
+        bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
+        maxdist = self.integration_distance(trt, rec['mag'])
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
         bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1

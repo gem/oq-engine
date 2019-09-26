@@ -1,8 +1,7 @@
 # Installing the OpenQuake Engine on macOS
-
 The OpenQuake Engine is available for macOS in the form of **self-installable binary distribution**.
 
-- this distribution uses Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-366/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
+- this distribution uses Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-368/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
     - pip, numpy, scipy, h5py, django, shapely, and few more
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
@@ -19,18 +18,19 @@ Requirements are:
 - [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
 - Python 3.6 from [python.org](https://python.org)
 
-Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg).
+Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.8/python-3.6.8-macosx10.9.pkg).
+Make sure to run the script located under `/Applications/Python 3.6/Install Certificates.command`, after Python has been installed, to update the SSL certificates bundle [see FAQ](../faq.md#certificate-verification-on-macOS).
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.4.0-1.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.7.0-1.run using any browser
 
 From the Terminal app (or using iTerm) run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-macos-3.4.0-1.run
-./openquake-setup-macos-3.4.0-1.run
+chmod +x openquake-setup-macos-3.7.0-1.run
+./openquake-setup-macos-3.7.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 

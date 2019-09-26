@@ -3,8 +3,8 @@ Event Based Risk SJ
 
 ============== ===================
 checksum32     2,863,568,899      
-date           2019-05-03T06:43:43
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:04
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 61, num_levels = 1, num_rlzs = ?
@@ -42,11 +42,10 @@ source_model_logic_tree `sm_lt.xml <sm_lt.xml>`_
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         A    0     9     120          0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -60,20 +59,20 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.01168 NaN    0.01168 0.01168 1      
+read_source_models 0.01212 NaN    0.01212 0.01212 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=313 B fnames=106 B 2.38 KB 
+read_source_models converter=314 B fnames=106 B 2.38 KB 
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_1781                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.01168  0.0       1     
+total read_source_models 0.01212  0.0       1     
 ======================== ======== ========= ======

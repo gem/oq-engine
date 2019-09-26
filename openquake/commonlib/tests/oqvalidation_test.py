@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
+import unittest.mock as mock
 import unittest
 import tempfile
 from openquake.baselib.general import gettemp
@@ -333,7 +333,7 @@ class OqParamTestCase(unittest.TestCase):
         vf = mock.Mock()
         vf.imt = 'SA (0.1)'
         vf.imls = [0.1, 0.2]
-        rm = dict(taxo=dict(structural=vf))
+        rm = dict(taxo={('structural', 'vulnerability'): vf})
         with self.assertRaises(KeyError) as ctx:
             oq.set_risk_imtls(rm)
         self.assertIn("'SA '", str(ctx.exception))
@@ -377,15 +377,3 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1')
         self.assertIn("iml_disagg and poes_disagg cannot be set at the "
                       "same time", str(ctx.exception))
-
-    def test_optimize_same_id_sources(self):
-        with self.assertRaises(ValueError) as ctx:
-            OqParam(
-                calculation_mode='event_based', inputs=fakeinputs,
-                sites='0.1 0.2',
-                maximum_distance='400',
-                intensity_measure_types='PGA',
-                optimize_same_id_sources='true',
-            ).validate()
-        self.assertIn('can be true only in the classical\ncalculators',
-                      str(ctx.exception))

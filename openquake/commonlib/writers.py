@@ -17,109 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
-import ast
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
-from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.hazardlib import InvalidFile
 from openquake.baselib.node import scientificformat
 from openquake.baselib.python3compat import encode
 
 FIVEDIGITS = '%.5E'
-
-
-class HeaderTranslator(object):
-    r"""
-    An utility to convert the headers in CSV files. When reading,
-    the column names are converted into column descriptions with the
-    method .read, when writing column descriptions are converted
-    into column names with the method .write. The usage is
-
-    >>> htranslator = HeaderTranslator(
-    ...     r'(asset_ref):\|S100',
-    ...     r'(eid):uint32',
-    ...     r'(taxonomy):object')
-    >>> htranslator.write(r'asset_ref:|S100 value:5'.split())
-    ['asset_ref', 'value:5']
-    >>> htranslator.read('asset_ref value:5'.split())
-    ['asset_ref:|S100', 'value:5']
-    """
-    def __init__(self, *regexps):
-        self.suffix = []
-        short_regexps = []
-        for regex in regexps:
-            prefix, suffix = regex.split(')')
-            short_regexps.append(prefix + ')$')
-            self.suffix.append(suffix)
-        self.short_regex = '|'.join(short_regexps)
-        self.long_regex = '|'.join(regexps)
-
-    def read(self, names):
-        """
-        Convert names into descriptions
-        """
-        descrs = []
-        for name in names:
-            mo = re.match(self.short_regex, name)
-            if mo:
-                idx = mo.lastindex  # matching group index, starting from 1
-                suffix = self.suffix[idx - 1].replace(r':\|', ':|')
-                descrs.append(mo.group(mo.lastindex) + suffix +
-                              name[mo.end():])
-            else:
-                descrs.append(name)
-        return descrs
-
-    def write(self, descrs):
-        """
-        Convert descriptions into names
-        """
-        # example: '(poe-[\d\.]+):float32' -> 'poe-[\d\.]+'
-        names = []
-        for descr in descrs:
-            mo = re.match(self.long_regex, descr)
-            if mo:
-                names.append(mo.group(mo.lastindex) + descr[mo.end():])
-            else:
-                names.append(descr)
-        return names
-
-
-htranslator = HeaderTranslator(
-    '(rlzi):uint16',
-    '(sid):uint32',
-    '(eid):uint64',
-    '(imti):uint8',
-    '(aid):uint32',
-    '(boundary):object',
-    '(tectonic_region_type):object',
-    r'(asset_ref):\|S100',
-    '(rup_id):uint32',
-    '(event_id):uint64',
-    '(event_set):uint32',
-    '(eid):uint32',
-    '(year):uint32',
-    '(occupancy):object',
-    '(return_period):uint32',
-    '(site_id):uint32',
-    '(taxonomy):object',
-    r'(tag):\|S100',
-    '(multiplicity):uint16',
-    '(name):object',
-    '(numsites):uint32',
-    '(lon):float64',
-    '(lat):float64',
-    '(depth):float64',
-    '(ordinal):uint32',
-    '(gsims):object',
-    '(branch_path):object',
-    '(modal-ds-structural):object',
-    '(vs30):float64',
-    '(vs30measured):bool',
-    '(z1pt0):float64',
-    '(z2pt5):float64',
-)
 
 
 # recursive function used internally by build_header
@@ -139,7 +42,6 @@ def _build_header(dtype, root):
     return header
 
 
-# NB: builds an header that can be read by parse_header
 def build_header(dtype):
     """
     Convert a numpy nested dtype into a list of strings suitable as header
@@ -152,17 +54,14 @@ def build_header(dtype):
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
     >>> build_header(gmf_dt)
-    ['A~PGA:3', 'A~PGV:4', 'B~PGA:3', 'B~PGV:4', 'idx:uint32']
+    ['A~PGA:3', 'A~PGV:4', 'B~PGA:3', 'B~PGV:4', 'idx']
     """
     header = _build_header(dtype, ())
     h = []
     for col in header:
         name = '~'.join(col[:-2])
-        numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float32' and not numpytype.startswith('|S'):
-            coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))
         h.append(coldescr)
@@ -201,8 +100,10 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     :param header:
        optional list with the names of the columns to display
     :param comment:
-       optional first line starting with a # character
+       optional comment dictionary
     """
+    if comment is not None:
+        comment = ', '.join('%s=%r' % item for item in comment.items())
     close = True
     if dest is None:  # write on a temporary file
         fd, dest = tempfile.mkstemp(suffix='.csv')
@@ -223,12 +124,22 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     else:
         autoheader = build_header(data.dtype)
 
+    nfields = len(autoheader) or len(data[0])
     if comment:
-        dest.write(encode('# %s\n' % comment))
+        if '"' in comment:
+            raise ValueError('There cannot be quotes in %s' % comment)
+        com = '#%s"%s"\n' % (sep * (nfields - 1), comment)
+        dest.write(encode(com))
 
     someheader = header or autoheader
     if header != 'no-header' and someheader:
-        dest.write(encode(sep.join(htranslator.write(someheader)) + u'\n'))
+        dest.write(encode(sep.join(someheader) + u'\n'))
+
+    def format(val):
+        col = scientificformat(val, fmt)
+        if sep in col:
+            return '"%s"' % col
+        return col
 
     if autoheader:
         all_fields = [col.split(':', 1)[0].split('~')
@@ -240,12 +151,11 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
                 if fields[0] in ('lon', 'lat', 'depth'):
                     row.append('%.5f' % val)
                 else:
-                    row.append(scientificformat(val, fmt))
-            dest.write(encode(sep.join(row) + u'\n'))
+                    row.append(format(val))
+            dest.write(encode(sep.join(row) + '\n'))
     else:
         for row in data:
-            dest.write(encode(sep.join(scientificformat(col, fmt)
-                                       for col in row) + u'\n'))
+            dest.write(encode(sep.join(format(col) for col in row) + '\n'))
     if hasattr(dest, 'getvalue'):
         return dest.getvalue()[:-1]  # a newline is strangely added
     elif close:
@@ -262,15 +172,16 @@ class CsvWriter(object):
         self.fmt = fmt
         self.fnames = set()
 
-    def save(self, data, fname, header=None):
+    def save(self, data, fname, header=None, comment=None):
         """
         Save data on fname.
 
         :param data: numpy array or list of lists
         :param fname: path name
         :param header: header to use
+        :param comment: optional dictionary to be converted in a comment
         """
-        write_csv(fname, data, self.sep, self.fmt, header)
+        write_csv(fname, data, self.sep, self.fmt, header, comment)
         self.fnames.add(getattr(fname, 'name', fname))
 
     def save_block(self, data, dest):
@@ -331,105 +242,6 @@ def parse_header(header):
         triples.append((field, numpytype, shape))
         fields.append(field)
     return fields, numpy.dtype(triples)
-
-
-def _cast(col, ntype, shape, lineno, fname):
-    # convert strings into tuples or numbers, used inside read_composite_array
-    if shape:
-        return tuple(map(ntype, col.split()))
-    else:
-        return ntype(col)
-
-
-def parse_comment(comment):
-    """
-    Parse a comment of the form
-    # investigation_time=50.0, imt="PGA", ...
-    and returns it as pairs of strings:
-
-    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
-    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
-    """
-    names, vals = [], []
-    pieces = comment.split('=')
-    for i, piece in enumerate(pieces):
-        if i == 0:  # first line
-            names.append(piece.strip())
-        elif i == len(pieces) - 1:  # last line
-            vals.append(ast.literal_eval(piece))
-        else:
-            val, name = piece.rsplit(',', 1)
-            vals.append(ast.literal_eval(val))
-            names.append(name.strip())
-    return list(zip(names, vals))
-
-
-# NB: this only works with flat composite arrays
-def read_composite_array(fname, sep=','):
-    r"""
-    Convert a CSV file with header into an ArrayWrapper object.
-
-    >>> from openquake.baselib.general import gettemp
-    >>> fname = gettemp('PGA:3,PGV:2,avg:1\n'
-    ...                  '.1 .2 .3,.4 .5,.6\n')
-    >>> print(read_composite_array(fname).array)  # array of shape (1,)
-    [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6])]
-    """
-    with open(fname) as f:
-        header = next(f)
-        if header.startswith('#'):  # the first line is a comment, skip it
-            attrs = dict(parse_comment(header[1:]))
-            header = next(f)
-        else:
-            attrs = {}
-        transheader = htranslator.read(header.split(sep))
-        fields, dtype = parse_header(transheader)
-        ts_pairs = []  # [(type, shape), ...]
-        for name in fields:
-            dt = dtype.fields[name][0]
-            ts_pairs.append((dt.subdtype[0].type if dt.subdtype else dt.type,
-                             dt.shape))
-        col_ids = list(range(1, len(ts_pairs) + 1))
-        num_columns = len(col_ids)
-        records = []
-        col, col_id = '', 0
-        for i, line in enumerate(f, 2):
-            row = line.split(sep)
-            if len(row) != num_columns:
-                raise InvalidFile(
-                    'expected %d columns, found %d in file %s, line %d' %
-                    (num_columns, len(row), fname, i))
-            try:
-                record = []
-                for (ntype, shape), col, col_id in zip(ts_pairs, row, col_ids):
-                    record.append(_cast(col, ntype, shape, i, fname))
-                records.append(tuple(record))
-            except Exception as e:
-                raise InvalidFile(
-                    'Could not cast %r in file %s, line %d, column %d '
-                    'using %s: %s' % (col, fname, i, col_id,
-                                      (ntype.__name__,) + shape, e))
-        return ArrayWrapper(numpy.array(records, dtype), attrs)
-
-
-# this is simple and without error checking for the moment
-def read_array(fname, sep=','):
-    r"""
-    Convert a CSV file without header into a numpy array of floats.
-
-    >>> from openquake.baselib.general import gettemp
-    >>> print(read_array(gettemp('.1 .2, .3 .4, .5 .6\n')))
-    [[[0.1 0.2]
-      [0.3 0.4]
-      [0.5 0.6]]]
-    """
-    with open(fname) as f:
-        records = []
-        for line in f:
-            row = line.split(sep)
-            record = [list(map(float, col.split())) for col in row]
-            records.append(record)
-        return numpy.array(records)
 
 
 if __name__ == '__main__':  # pretty print of NRML files

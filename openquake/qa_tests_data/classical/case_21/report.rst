@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     2,852,175,627      
-date           2019-05-03T06:43:56
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:16
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = 27
@@ -112,34 +112,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=27, rlzs=27)
-  0,'[SadighEtAl1997]': [0]
-  1,'[SadighEtAl1997]': [1]
-  2,'[SadighEtAl1997]': [2]
-  3,'[SadighEtAl1997]': [3]
-  4,'[SadighEtAl1997]': [4]
-  5,'[SadighEtAl1997]': [5]
-  6,'[SadighEtAl1997]': [6]
-  7,'[SadighEtAl1997]': [7]
-  8,'[SadighEtAl1997]': [8]
-  9,'[SadighEtAl1997]': [9]
-  10,'[SadighEtAl1997]': [10]
-  11,'[SadighEtAl1997]': [11]
-  12,'[SadighEtAl1997]': [12]
-  13,'[SadighEtAl1997]': [13]
-  14,'[SadighEtAl1997]': [14]
-  15,'[SadighEtAl1997]': [15]
-  16,'[SadighEtAl1997]': [16]
-  17,'[SadighEtAl1997]': [17]
-  18,'[SadighEtAl1997]': [18]
-  19,'[SadighEtAl1997]': [19]
-  20,'[SadighEtAl1997]': [20]
-  21,'[SadighEtAl1997]': [21]
-  22,'[SadighEtAl1997]': [22]
-  23,'[SadighEtAl1997]': [23]
-  24,'[SadighEtAl1997]': [24]
-  25,'[SadighEtAl1997]': [25]
-  26,'[SadighEtAl1997]': [26]>
+  <RlzsAssoc(size=27, rlzs=27)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -155,15 +128,15 @@ source_model.xml 5      Active Shallow Crust 239          296
 source_model.xml 6      Active Shallow Crust 474          296         
 source_model.xml 7      Active Shallow Crust 238          296         
 source_model.xml 8      Active Shallow Crust 179          296         
-source_model.xml 9      Active Shallow Crust 409          296         
-source_model.xml 10     Active Shallow Crust 173          296         
-source_model.xml 11     Active Shallow Crust 114          296         
+source_model.xml 9      Active Shallow Crust 436          296         
+source_model.xml 10     Active Shallow Crust 200          296         
+source_model.xml 11     Active Shallow Crust 141          296         
 source_model.xml 12     Active Shallow Crust 465          296         
 source_model.xml 13     Active Shallow Crust 229          296         
 source_model.xml 14     Active Shallow Crust 170          296         
-source_model.xml 15     Active Shallow Crust 411          296         
-source_model.xml 16     Active Shallow Crust 175          296         
-source_model.xml 17     Active Shallow Crust 116          296         
+source_model.xml 15     Active Shallow Crust 436          296         
+source_model.xml 16     Active Shallow Crust 200          296         
+source_model.xml 17     Active Shallow Crust 141          296         
 source_model.xml 18     Active Shallow Crust 483          296         
 source_model.xml 19     Active Shallow Crust 247          296         
 source_model.xml 20     Active Shallow Crust 188          296         
@@ -177,70 +150,56 @@ source_model.xml 26     Active Shallow Crust 221          296
 
 ============= =====
 #TRT models   27   
-#eff_ruptures 8,175
+#eff_ruptures 8,331
 #tot_ruptures 7,992
-#tot_weight   8,175
 ============= =====
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      SFLT2     S    2     4     384          1.643E-04 1.00000   384   
-6      SFLT2     S    26    28    384          1.552E-04 1.00000   384   
-15     SFLT2     S    62    64    384          9.012E-05 1.00000   384   
-21     SFLT2     S    86    88    384          8.702E-05 1.00000   384   
-12     SFLT2     S    50    52    384          8.559E-05 1.00000   384   
-3      SFLT2     S    14    16    384          8.273E-05 1.00000   384   
-24     SFLT2     S    98    100   384          7.749E-05 1.00000   384   
-18     SFLT2     S    74    76    384          7.296E-05 1.00000   384   
-9      SFLT2     S    38    40    384          7.010E-05 1.00000   384   
-4      SFLT2     S    18    20    148          2.313E-05 1.00000   148   
-4      SFLT1     S    16    18    150          2.289E-05 1.00000   150   
-2      SFLT2     S    10    12    89           2.217E-05 1.00000   89    
-5      SFLT1     S    20    22    150          2.170E-05 1.00000   150   
-0      SFLT1     S    0     2     60           2.027E-05 1.00000   60    
-11     SFLT2     S    46    48    89           1.955E-05 1.00000   89    
-8      SFLT1     S    32    34    90           1.860E-05 1.00000   90    
-12     SFLT1     S    48    50    81           1.812E-05 1.00000   81    
-1      SFLT1     S    4     6     60           1.693E-05 1.00000   60    
-3      SFLT1     S    12    14    150          1.621E-05 1.00000   150   
-13     SFLT1     S    52    54    81           1.407E-05 1.00000   81    
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ ======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
+========= ====== ==== ============ ========= ========= ============ ======
+SFLT1     0      S    60           0.02536   9.00000   862          33,988
+SFLT2     0      S    384          0.00716   3.00000   621          86,761
+========= ====== ==== ============ ========= ========= ============ ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.00138   54    
+S    0.03252   54    
 ==== ========= ======
+
+Duplicated sources
+------------------
+Found 0 unique sources and 12 duplicate sources with multiplicity 4.5: ['SFLT1' 'SFLT1' 'SFLT1' 'SFLT1' 'SFLT1' 'SFLT1' 'SFLT1' 'SFLT1' 'SFLT1'
+ 'SFLT2' 'SFLT2' 'SFLT2']
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.02138 0.00670 0.01671 0.04722 27     
-preclassical       0.00460 0.00210 0.00245 0.00986 34     
+preclassical       0.00345 0.00107 0.00176 0.00568 11     
+read_source_models 0.02318 0.00528 0.01935 0.04365 27     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================================= ========
-task               sent                                                          received
-read_source_models converter=8.25 KB fnames=2.82 KB                              49.89 KB
-preclassical       srcs=43.44 KB params=16.17 KB srcfilter=7.24 KB gsims=4.88 KB 12.05 KB
-================== ============================================================= ========
+================== ============================================== ========
+task               sent                                           received
+preclassical       srcs=12.51 KB srcfilter=6.95 KB params=5.64 KB 3.85 KB 
+read_source_models converter=8.28 KB fnames=2.82 KB               50.04 KB
+================== ============================================== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.57736  0.0       27    
-total preclassical       0.15639  0.25391   34    
-managing sources         0.00756  0.0       1     
-aggregate curves         0.00461  0.0       34    
-store source_info        0.00234  0.0       1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+calc_1823                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.62585   0.11328   27    
+total preclassical       0.03795   0.0       11    
+aggregate curves         0.00316   0.0       11    
+store source_info        0.00269   0.0       1     
+managing sources         5.555E-04 0.0       1     
+======================== ========= ========= ======

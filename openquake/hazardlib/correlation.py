@@ -61,14 +61,17 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
             corma = self.get_lower_triangle_correlation_matrix(
                 sites.complete, imt)
             self.cache[imt] = corma
-        if len(sites.complete) == len(sites):
-            return numpy.dot(corma, residuals)
-        # it is important to allocate little memory, this is why I am
-        # accumulating below; if S is the length of the complete sites
-        # the correlation matrix has shape (S, S) and the residuals (N, s),
+        # if N is the length of the complete site collection, then the
+        # correlation matrix has shape (N, N) and the residuals (N, s),
         # where s is the number of samples
-        return numpy.sum(corma[sites.sids, sid] * res
-                         for sid, res in zip(sites.sids, residuals))
+        N = len(sites.complete)
+        n = len(sites)
+        if n < N:  # filtered site collection
+            res = numpy.zeros((N, residuals.shape[1]))
+            res[sites.sids] = residuals
+            return (corma @ res)[sites.sids, :]  # shape (n, s)
+        else:  # complete site collection
+            return corma @ residuals  # shape (N, s)
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
@@ -197,8 +200,8 @@ class HM2018CorrelationModel(BaseCorrelationModel):
                 # corresponding to sites.complete, here we compute only the
                 # correlation matrix corresponding to sites.
                 cormaLow = numpy.linalg.cholesky(
-                       numpy.diag(stddev_intra[sites.sids]) *
-                       self._get_correlation_matrix(sites, imt) *
+                       numpy.diag(stddev_intra[sites.sids]) @
+                       self._get_correlation_matrix(sites, imt) @
                        numpy.diag(stddev_intra[sites.sids]))
                 self.cache[imt] = cormaLow
 
@@ -213,7 +216,7 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             residuals_correlated = residuals * 0
             for isim in range(0, nsim):
                 corma = self._get_correlation_matrix(sites, imt)
-                cov = (numpy.diag(stddev_intra[sites.sids]) * corma *
+                cov = (numpy.diag(stddev_intra[sites.sids]) @ corma @
                        numpy.diag(stddev_intra[sites.sids]))
                 residuals_correlated[0:, isim] = (
                     numpy.random.multivariate_normal(
@@ -259,4 +262,5 @@ def hmcorrelation(sites_or_distances, imt, uncertainty_multiplier=0):
             numpy.log(Med_b), Std_b * uncertainty_multiplier)
 
     # Eq. (8)
-    return numpy.exp(-numpy.power((distances / beta), 0.55))
+    res = numpy.exp(-numpy.power((distances / beta), 0.55))
+    return res

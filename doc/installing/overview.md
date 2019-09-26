@@ -7,6 +7,7 @@ The OpenQuake Engine can be installed in several different ways. This page will 
 Scientists wanting to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development](development.md)** guide.
 
 A pre-configured VirtualBox appliance may be also [downloaded](https://downloads.openquake.org/ova/stable/). It contains all the OpenQuake software pre-installed and pre-configured.
+Please note that it is not possible to perform an upate of the appliance: a new downloads must be performed to get updated sofware.
 
 ## Single user
 
@@ -21,7 +22,7 @@ Use the **[self-installable binary distribution for macOS](macos.md)**. No root 
 
 ### Windows
 
-Use the **[self-installable binary distribution for Windows](windows.md)**. Administrator level access may be required.
+Use the **[self-installable binary distribution for Windows 10](windows.md)**. Administrator level access may be required.
 
 ### PyPI
 

@@ -2,9 +2,9 @@ scenario risk
 =============
 
 ============== ===================
-checksum32     765,505,459        
-date           2019-05-03T06:43:30
-engine_version 3.5.0-git7a6d15e809
+checksum32     314,695,229        
+date           2019-09-24T15:20:58
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 7, num_levels = 46, num_rlzs = 2
@@ -44,6 +44,7 @@ nonstructural_vulnerability         `nonstructural_vulnerability_model.xml <nons
 occupants_vulnerability             `occupants_vulnerability_model.xml <occupants_vulnerability_model.xml>`_        
 rupture_model                       `rupture_model.xml <rupture_model.xml>`_                                        
 structural_vulnerability            `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_      
+taxonomy_mapping                    `taxonomy_mapping.csv <taxonomy_mapping.csv>`_                                  
 =================================== ================================================================================
 
 Composite source model
@@ -59,9 +60,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[BooreAtkinson2008]': [0]
-  0,'[ChiouYoungs2008]': [1]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -73,28 +72,38 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         7       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     7
+#taxonomies 4
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
-tax1     1.00000 0.0    1   1   4         4         
+tax1     1.00000 0.0    1   1   3         3         
 tax2     1.00000 0.0    1   1   2         2         
 tax3     1.00000 NaN    1   1   1         1         
+tax4     1.00000 NaN    1   1   1         1         
 *ALL*    1.00000 0.0    1   1   7         7         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
-=================== ========= ========= ======
-operation           time_sec  memory_mb counts
-=================== ========= ========= ======
-computing gmfs      0.01192   0.0       1     
-building riskinputs 0.00978   0.0       1     
-saving gmfs         0.00572   0.0       1     
-reading exposure    7.079E-04 0.0       1     
-=================== ========= ========= ======
+====================== ========= ========= ======
+calc_1728              time_sec  memory_mb counts
+====================== ========= ========= ======
+ScenarioCalculator.run 0.07993   1.25391   1     
+building riskinputs    0.01138   0.0       1     
+computing gmfs         0.00946   0.0       1     
+saving gmfs            0.00683   0.22266   1     
+reading exposure       6.025E-04 0.0       1     
+====================== ========= ========= ======

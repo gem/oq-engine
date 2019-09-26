@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     3,529,984,501      
-date           2019-05-03T06:43:45
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:05
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 46, num_rlzs = ?
@@ -41,20 +41,10 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Slowest sources
 ---------------
-====== ========= ==== ====== ====== ============ ========= ========= ======
-grp_id source_id code gidx1  gidx2  num_ruptures calc_time num_sites weight
-====== ========= ==== ====== ====== ============ ========= ========= ======
-0      case_10   N    29,255 32,080 1            0.0       0.0       0.0   
-0      case_09   N    28,021 29,255 1            0.0       0.0       0.0   
-0      case_08   N    21,872 28,021 1            0.0       0.0       0.0   
-0      case_07   N    17,050 21,872 1            0.0       0.0       0.0   
-0      case_06   N    12,124 17,050 1            0.0       0.0       0.0   
-0      case_05   N    8,525  12,124 1            0.0       0.0       0.0   
-0      case_04   N    5,132  8,525  1            0.0       0.0       0.0   
-0      case_03   N    3,599  5,132  1            0.0       0.0       0.0   
-0      case_02   N    1,207  3,599  1            0.0       0.0       0.0   
-0      case_01   N    0      1,207  1            0.0       0.0       0.0   
-====== ========= ==== ====== ====== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -68,20 +58,20 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.19407 NaN    0.19407 0.19407 1      
+read_source_models 0.17650 NaN    0.17650 0.17650 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ =========
 task               sent                         received 
-read_source_models converter=313 B fnames=107 B 756.09 KB
+read_source_models converter=314 B fnames=107 B 756.12 KB
 ================== ============================ =========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_1790                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.19407  3.34766   1     
+total read_source_models 0.17650  3.54688   1     
 ======================== ======== ========= ======

@@ -18,7 +18,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        184683593728
+                        0
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -54,18 +54,12 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        292057776128
+                        0
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
                     7.9000001e+00
                 </magnitude>
-                <strike>
-                    nan
-                </strike>
-                <dip>
-                    nan
-                </dip>
                 <rake>
                     9.0000000e+01
                 </rake>

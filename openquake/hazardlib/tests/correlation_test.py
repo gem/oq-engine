@@ -135,6 +135,18 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(inferred_corrcoef, actual_corrcoef,
                                           decimal=2)
 
+    def test_filtered_sitecol(self):
+        filtered = self.SITECOL.filtered([0, 2])
+        numpy.random.seed(13)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        intra_residuals_sampled = numpy.random.normal(size=(2, 5))
+        intra_residuals_correlated = cormo.apply_correlation(
+            filtered, PGA(), intra_residuals_sampled)
+        aaae(intra_residuals_correlated,
+             [[-0.71239066, 0.75376638, -0.04450308, 0.45181234, 1.34510171],
+              [0.51816327, 1.36481251, 0.86016437, 1.48732124, -1.01860545]],
+             decimal=6)
+
 
 class HM2018CorrelationMatrixTestCase(unittest.TestCase):
     SITECOL = SiteCollection([Site(Point(2, -40), 1, 1, 1),
@@ -146,46 +158,46 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
 
         imt = SA(period=0.1, damping=5)
-        corma = cormo._get_correlation_matrix(self.SITECOL,imt)
-        aaae(corma, [[1.0000000,    0.3981537,    1.0000000,    0.3981537,],
-                     [0.3981537,    1.0000000,    0.3981537,    0.2596809,],
-                     [1.0000000,    0.3981537,    1.0000000,    0.3981537,],
-                     [0.3981537,    0.2596809,    0.3981537,    1.0000000,]])
+        corma = cormo._get_correlation_matrix(self.SITECOL, imt)
+        aaae(corma, [[1.0000000,    0.3981537,    1.0000000,    0.3981537],
+                     [0.3981537,    1.0000000,    0.3981537,    0.2596809],
+                     [1.0000000,    0.3981537,    1.0000000,    0.3981537],
+                     [0.3981537,    0.2596809,    0.3981537,    1.0000000]])
 
         imt = SA(period=0.5, damping=5)
         corma = cormo._get_correlation_matrix(self.SITECOL, imt)
-        aaae(corma, [[1.0000000,    0.3809173,    1.0000000,    0.3809173,],
-                     [0.3809173,    1.0000000,    0.3809173,    0.2433886,],
-                     [1.0000000,    0.3809173,    1.0000000,    0.3809173,],
-                     [0.3809173,    0.2433886,    0.3809173,    1.0000000,]])
+        aaae(corma, [[1.0000000,    0.3809173,    1.0000000,    0.3809173],
+                     [0.3809173,    1.0000000,    0.3809173,    0.2433886],
+                     [1.0000000,    0.3809173,    1.0000000,    0.3809173],
+                     [0.3809173,    0.2433886,    0.3809173,    1.0000000]])
 
         imt = SA(period=1, damping=5)
         corma = cormo._get_correlation_matrix(self.SITECOL, imt)
-        aaae(corma, [[1.0000000,    0.3906193,    1.0000000,    0.3906193,],
-                     [0.3906193,    1.0000000,    0.3906193,    0.2525181,],
-                     [1.0000000,    0.3906193,    1.0000000,    0.3906193,],
-                     [0.3906193,    0.2525181,    0.3906193,    1.0000000,]])
+        aaae(corma, [[1.0000000,    0.3906193,    1.0000000,    0.3906193],
+                     [0.3906193,    1.0000000,    0.3906193,    0.2525181],
+                     [1.0000000,    0.3906193,    1.0000000,    0.3906193],
+                     [0.3906193,    0.2525181,    0.3906193,    1.0000000]])
 
         imt = SA(period=2, damping=5)
         corma = cormo._get_correlation_matrix(self.SITECOL, imt)
-        aaae(corma, [[1.0000000,    0.4011851,    1.0000000,    0.4011851,],
-                     [0.4011851,    1.0000000,    0.4011851,    0.2625807,],
-                     [1.0000000,    0.4011851,    1.0000000,    0.4011851,],
-                     [0.4011851,    0.2625807,    0.4011851,    1.0000000,]])
+        aaae(corma, [[1.0000000,    0.4011851,    1.0000000,    0.4011851],
+                     [0.4011851,    1.0000000,    0.4011851,    0.2625807],
+                     [1.0000000,    0.4011851,    1.0000000,    0.4011851],
+                     [0.4011851,    0.2625807,    0.4011851,    1.0000000]])
 
         imt = SA(period=4, damping=5)
         corma = cormo._get_correlation_matrix(self.SITECOL, imt)
-        aaae(corma, [[1.0000000,    0.3522765,    1.0000000,    0.3522765,],
-                     [0.3522765,    1.0000000,    0.3522765,    0.2170695,],
-                     [1.0000000,    0.3522765,    1.0000000,    0.3522765,],
-                     [0.3522765,    0.2170695,    0.3522765,    1.0000000,]])
+        aaae(corma, [[1.0000000,    0.3522765,    1.0000000,    0.3522765],
+                     [0.3522765,    1.0000000,    0.3522765,    0.2170695],
+                     [1.0000000,    0.3522765,    1.0000000,    0.3522765],
+                     [0.3522765,    0.2170695,    0.3522765,    1.0000000]])
 
         imt = SA(period=6, damping=5)
         corma = cormo._get_correlation_matrix(self.SITECOL, imt)
-        aaae(corma, [[1.0000000,    0.3159779,    1.0000000,    0.3159779,],
-                     [0.3159779,    1.0000000,    0.3159779,    0.1851206,],
-                     [1.0000000,    0.3159779,    1.0000000,    0.3159779,],
-                     [0.3159779,    0.1851206,    0.3159779,    1.0000000,]])
+        aaae(corma, [[1.0000000,    0.3159779,    1.0000000,    0.3159779],
+                     [0.3159779,    1.0000000,    0.3159779,    0.1851206],
+                     [1.0000000,    0.3159779,    1.0000000,    0.3159779],
+                     [0.3159779,    0.1851206,    0.3159779,    1.0000000]])
 
     def test_correlation_small_uncertainty(self):
         imt = SA(period=1.5, damping=5)
@@ -202,7 +214,6 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
         pga = PGA()
 
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
-        
         corma = cormo._get_correlation_matrix(self.SITECOL, sa)
         corma2 = cormo._get_correlation_matrix(self.SITECOL, pga)
         self.assertTrue((corma == corma2).all())
@@ -211,7 +222,7 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
         Nsim = 100000
         cormo = HM2018CorrelationModel(uncertainty_multiplier=1)
         imt = SA(period=3, damping=5)
-        
+
         corma_3d = numpy.zeros((len(self.SITECOL), len(self.SITECOL), Nsim))
 
         # For each simulation, construct a new correlation matrix

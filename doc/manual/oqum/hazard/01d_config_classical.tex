@@ -146,18 +146,31 @@ the values of the closest point used to specify site conditions.
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=23,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 [site_params]
-site_model_file = site_model.xml
+site_model_file = site_model.csv
 \end{minted}
 
 The file containing the site model has the following structure:
 
 \begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_site_model.xml}
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_site_model.csv}
   \caption{Example site model input file}
   \label{lst:input_site_model}
 \end{listing}
 
+Notice that the $0$ for the field \texttt{vs30measured} means that the
+\texttt{vs30} field is inferred, not measured. Most of the GMPEs are not
+sensitive to it, so you can usually skip it.  For the \texttt{backarc}
+parameter $0$ means false and this is the default, so you can skip
+such column. All columns that have defaults or are not needed by the
+GMPEs you are using can be skipped, while you will get an error
+if a relevant column is missing.
+
 If the closest available site with soil conditions is at a distance greater than 5~km from the investigation location, a warning is generated.
+
+\textbf{Note:} For backward-compatibility reasons, the site model file can
+also be given in XML format. That old format is deprecated but there are
+no plans to remove it any soon.
+
 
 \textbf{Calculation configuration}
 \phantomsection
@@ -251,8 +264,8 @@ precision.
 [output]
 export_dir = outputs/
 # given the specified `intensity_measure_types_and_levels`
-mean_hazard_curves = true
-quantile_hazard_curves = 0.1 0.5 0.9
+mean = true
+quantiles = 0.1 0.5 0.9
 uniform_hazard_spectra = false
 poes = 0.1
 \end{minted}
@@ -261,8 +274,8 @@ The final section of the configuration file is the one that contains the
 parameters controlling the types of output to be produced. Providing an export
 directory will tell OpenQuake where to place the output files when the
 \texttt{-{}-exports} flag is used when running the program. Setting
-\verb=mean_hazard_curves= to true will result in a specific output containing
-the mean curves of the logic tree, likewise \verb=quantile_hazard_curves= will
+\verb=mean= to true will result in a specific output containing
+the mean curves of the logic tree, likewise \verb=quantiles= will
 produce separate files containing the quantile hazard curves at the quantiles
 listed (0.1, 0.5 and 0.9 in the example above, leave blank or omit if no
 quantiles are required). Setting \verb=uniform_hazard_spectra= to true will

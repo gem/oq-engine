@@ -1,4 +1,4 @@
-## Technology Stack
+## Technology stack
 
 A 64bit operating system and 64bit capable hardware are required.
 

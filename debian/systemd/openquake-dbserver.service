@@ -1,6 +1,6 @@
 [Unit]
 Description=The OpenQuake Engine DbServer
-Documentation=https://github.com/gem/oq-engine/wiki
+Documentation=https://github.com/gem/oq-engine/
 After=network.target
 
 [Service]
@@ -8,7 +8,7 @@ User=openquake
 Group=openquake
 Environment=
 WorkingDirectory=/usr/share/openquake/engine
-ExecStart=/opt/openquake/bin/python3 -m openquake.server.dbserver
+ExecStart=/opt/openquake/bin/oq dbserver start -f
 Restart=always
 RestartSec=30
 KillMode=control-group

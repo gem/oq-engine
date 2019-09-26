@@ -43,8 +43,22 @@ class CauzziEtAl2014RhypTestCase(BaseGSIMTestCase):
     MEAN_FILE = "germany_2018/C14_RHYPO_ADJUSTMENT_MEAN.csv"
 
     def test_mean(self):
-        self.check(self.MEAN_FILE,
-                   max_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
+
+
+class CauzziEtAl2014RhypFiniteRuptureTestCase(BaseGSIMTestCase):
+    """
+    Implements the Cauzzi et al. (2014) Rhypo adjusted GMPE test for the case
+    of a finite rupture (i.e. should use rrup rather than rhypo)
+
+    Test tables for corrected GMPE verified against original FRISK version
+    """
+    GSIM_CLASS = CauzziEtAl2014RhypoGermany
+
+    MEAN_FILE = "germany_2018/C14_RHYPO_FINITE_RUPTURE_MEAN.csv"
+
+    def test_mean(self):
+        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
 
 
 class DerrasEtAl2014RhypTestCase(CauzziEtAl2014RhypTestCase):
@@ -55,6 +69,17 @@ class DerrasEtAl2014RhypTestCase(CauzziEtAl2014RhypTestCase):
     """
     GSIM_CLASS = DerrasEtAl2014RhypoGermany
     MEAN_FILE = "germany_2018/D14_RHYPO_ADJUSTMENT_MEAN.csv"
+
+
+class DerrasEtAl2014RhypFiniteRuptureTestCase(CauzziEtAl2014RhypTestCase):
+    """
+    Implements the Derras et al. (2014) Rhypo adjusted GMPE test for the case
+    of a finite rupture (i.e. should use rjb rather than rhypo)
+
+    Test tables for corrected GMPE verified against original FRISK version
+    """
+    GSIM_CLASS = DerrasEtAl2014RhypoGermany
+    MEAN_FILE = "germany_2018/D14_RHYPO_FINITE_RUPTURE_MEAN.csv"
 
 
 class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
@@ -90,6 +115,7 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
                     rctx.mag = mag
                     rctx.rake = rake
                     rctx.hypo_depth = 10.
+                    rctx.width = 0.0001
                     # Get "original" values
                     mean = original_gmpe.get_mean_and_stddevs(self.sctx, rctx,
                                                               self.dctx, imt,

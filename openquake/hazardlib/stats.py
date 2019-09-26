@@ -19,7 +19,6 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
-from openquake.baselib.python3compat import encode
 
 
 def mean_curve(values, weights=None):
@@ -117,7 +116,10 @@ def compute_pmap_stats(pmaps, stats, weights, imtls):
     out = p0.__class__.build(L, nstats, sids)
     for imt in imtls:
         slc = imtls(imt)
-        w = [weight[imt] for weight in weights]
+        w = [weight[imt] if hasattr(weight, 'dic') else weight
+             for weight in weights]
+        if sum(w) == 0:  # expect no data for this IMT
+            continue
         for i, array in enumerate(compute_stats(curves[:, :, slc], stats, w)):
             for j, sid in numpy.ndenumerate(sids):
                 out[sid].array[slc, i] = array[j]
@@ -201,14 +203,20 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
     """
     if arrayNR is None:
         # assume the -rlzs array is already stored
-        arrayNR = dstore[prefix + '-rlzs'].value
+        arrayNR = dstore[prefix + '-rlzs'][()]
     else:
         # store passed the -rlzs array
         dstore[prefix + '-rlzs'] = arrayNR
     R = arrayNR.shape[1]
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
+        if not stats:
+            return
         statnames, statfuncs = zip(*stats.items())
-        weights = dstore['weights'].value
-        dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
-        dstore.set_attrs(prefix + '-stats', stats=encode(statnames))
+        weights = dstore['weights'][()]
+        name = prefix + '-stats'
+        if name in set(dstore):
+            dstore[name][...] = compute_stats2(arrayNR, statfuncs, weights)
+        else:
+            dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
+            dstore.set_attrs(name, stats=statnames)

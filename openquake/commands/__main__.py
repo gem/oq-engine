@@ -39,7 +39,11 @@ if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
 
 
 def oq():
-    logging.basicConfig(level=logging.INFO)
+    args = set(sys.argv[1:])
+    if 'engine' not in args and 'dbserver' not in args:
+        # oq engine and oq dbserver define their own log levels
+        level = logging.DEBUG if 'debug' in args else logging.INFO
+        logging.basicConfig(level=level)
     modnames = ['openquake.commands.%s' % mod[:-3]
                 for mod in os.listdir(commands.__path__[0])
                 if mod.endswith('.py') and not mod.startswith('_')]

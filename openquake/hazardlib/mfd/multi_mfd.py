@@ -36,12 +36,19 @@ ASSOC = {
     'truncGutenbergRichterMFD': (
         TruncatedGRMFD, 'min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val'),
     'YoungsCoppersmithMFD': (
-        YoungsCoppersmith1985MFD, 'min_mag', 'max_mag', 'a_val', 'b_val',
-        'char_mag', 'char_rate', 'bin_width')}
+        YoungsCoppersmith1985MFD, 'min_mag', 'max_mag', 'b_val',
+        'char_mag', 'char_rate', 'bin_width', 'total_moment_rate')}
 
 ALIAS = dict(min_mag='minMag', max_mag='maxMag',
              a_val='aValue', b_val='bValue', bin_width='binWidth',
              char_mag='characteristicMag', char_rate='characteristicRate')
+
+TOML2PY = dict(_minMag='min_mag', _maxMag='max_mag',
+               _aValue='a_val', _bValue='b_val',
+               _binWidth='bin_width',
+               _characteristicMag='char_mag',
+               _characteristicRate='char_rate',
+               occurRates='occurrence_rates',)
 
 
 def _reshape(kwargs, lengths):
@@ -67,7 +74,10 @@ class MultiMFD(BaseMFD):
         MODIFICATIONS.update(vals[0].MODIFICATIONS)
 
     @classmethod
-    def from_node(cls, node, width_of_mfd_bin=None):
+    def from_node(cls, node, width_of_mfd_bin):
+        """
+        :returns: a MultiMFD instance from a node XML-like object
+        """
         kind = node['kind']
         size = node['size']
         kwargs = {}  # a dictionary name -> array of n elements
@@ -80,6 +90,28 @@ class MultiMFD(BaseMFD):
                 # missing bindWidth in GR MDFs is ok
         if 'occurRates' in ASSOC[kind][1:]:
             lengths = ~getattr(node, 'lengths')
+            if len(lengths) == 1:  # all occurRates are the same
+                lengths = [lengths[0]] * size
+            _reshape(kwargs, lengths)
+        return cls(kind, size, width_of_mfd_bin, **kwargs)
+
+    @classmethod
+    def from_params(cls, params, width_of_mfd_bin):
+        """
+        :returns: a MultiMFD instance from a TOML-like dictionary
+        """
+        kind = params['_kind']
+        size = params['_size']
+        kwargs = {}  # a dictionary name -> array of n elements
+        for field in ASSOC[kind][1:]:
+            try:
+                kwargs[field] = params[field]
+            except AttributeError:
+                if field != 'bin_width':
+                    raise
+                # missing bindWidth in GR MDFs is ok
+        if 'occurRates' in ASSOC[kind][1:]:
+            lengths = params['lengths']
             if len(lengths) == 1:  # all occurRates are the same
                 lengths = [lengths[0]] * size
             _reshape(kwargs, lengths)

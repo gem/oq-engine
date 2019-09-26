@@ -19,8 +19,10 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 import math
 import numpy
 from openquake.baselib.slots import with_slots
+from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
+from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import get_bounding_box
@@ -190,14 +192,19 @@ class PointSource(ParametricSeismicSource):
                 if not npdist:
                     break
 
+    def count_nphc(self):
+        """
+        :returns: the number of nodal planes times the number of hypocenters
+        """
+        return len(self.nodal_plane_distribution.data) * len(
+            self.hypocenter_distribution.data)
+
     def count_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
-        return (len(self.get_annual_occurrence_rates()) *
-                len(self.nodal_plane_distribution.data) *
-                len(self.hypocenter_distribution.data))
+        return len(self.get_annual_occurrence_rates()) * self.count_nphc()
 
     def _get_rupture_surface(self, mag, nodal_plane, hypocenter):
         """
@@ -322,3 +329,19 @@ class PointSource(ParametricSeismicSource):
         """
         loc = self.location
         return numpy.array([[loc.x, loc.y, loc.z]], numpy.float32)
+
+
+def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
+                 nodal_plane_tup=(0, 90, 0), hc_tup=(0, 0, 20),
+                 occurrence_rate=1, tom=None):
+    hc = Point(*hc_tup)
+    np = NodalPlane(*nodal_plane_tup)
+    ps = object.__new__(PointSource)
+    ps.magnitude_scaling_relationship = msr
+    ps.upper_seismogenic_depth = seismo[0]
+    ps.lower_seismogenic_depth = seismo[1]
+    ps.rupture_aspect_ratio = aspect_ratio
+    surface = ps._get_rupture_surface(mag, np, hc)
+    rup = ParametricProbabilisticRupture(
+        mag, np.rake, trt, hc, surface, occurrence_rate, tom)
+    return rup
