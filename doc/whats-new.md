@@ -255,3 +255,9 @@ Python 3.6 in our packages with the goal of migrating to 3.7
 in the future. The migration to numpy 1.16 required disabling
 OpenBLAS threads to avoid oversubscription: therefore importing the
 engine sets the environment variable OPENBLAS_NUM_THREADS to '1'.
+
+Supported operating systems
+---------------------------
+
+Support for the operating system Fedora 28 has ceased because it reached the
+End-Of-Life. Support for Fedora 31 (currently in beta) has been introduced.
