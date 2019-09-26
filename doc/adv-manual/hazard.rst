@@ -75,7 +75,7 @@ was the limit configuration for our cluster which has 5 machines with
 128 GB of RAM each. 
 
 The full calculation was completed in only 4 hours because our calculators
-are highly optimized. The total size of the generated .hdf5 files was
+are highly optimized. The total size of the generated HDF5 files was
 of 400 GB. This is a lot less than 25 TB, but still too large for sharing
 purposes.
 
@@ -90,7 +90,7 @@ Also, raising the minimum magnitude reduces the number of events significantly.
 
 But the best approach is to be smart. For instance, we know from experience
 that if the final goal is to estimate the total loss for a given exposure, the
-right way to do that is to aggregate the exposure on a smaller number of
+correct way to do that is to aggregate the exposure on a smaller number of
 hazard sites. For instance, instead of the original 707,920 hazard sites
 we could aggregate on only ~7,000 hazard sites and we would a calculation
 which is 100 times faster, produces 100 times less GMFs and still produces

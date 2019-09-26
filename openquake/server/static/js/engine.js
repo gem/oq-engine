@@ -418,7 +418,7 @@
     var Calculations = Backbone.Collection.extend(
         {
             model: Calculation,
-            url: gem_oq_server_url + "/v1/calc/list?relevant=true"
+            url: gem_oq_server_url + "/v1/calc/list"
         });
     var calculations = new Calculations();
 

@@ -2,9 +2,9 @@ Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
 ============== ===================
-checksum32     572,372,510        
-date           2019-05-03T06:43:29
-engine_version 3.5.0-git7a6d15e809
+checksum32     2,644,086,889      
+date           2019-09-24T15:20:57
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 3, num_levels = 1, num_rlzs = 2
@@ -52,9 +52,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[LinLee2008SSlab]\nminimum_distance = 10': [0]
-  0,'[YoungsEtAl1997SSlab]\nminimum_distance = 5': [1]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -64,9 +62,19 @@ source_model grp_id trt eff_ruptures tot_ruptures
 scenario     0      *   1            0           
 ============ ====== === ============ ============
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ========= ======== ========= ======
-operation time_sec memory_mb counts
+calc_1715 time_sec memory_mb counts
 ========= ======== ========= ======
 ========= ======== ========= ======

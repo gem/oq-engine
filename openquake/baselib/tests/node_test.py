@@ -145,33 +145,47 @@ param=yyy
 
     def test_dict(self):
         # convertion to and from JSON strings
-        input_dict = {
-            "attrib": {},
-            "nodes": [
-                {
-                    "attrib": {},
-                    "tag": "a",
-                    "text": "A"
-                    }
-                ],
-            "tag": "root",
-            "text": None
-            }
-        expected_dict = {
-            "nodes": [
-                {
-                    "tag": "a",
-                    "text": "A"
-                    }
-                ],
-            "tag": "root",
-            }
-        node = n.node_from_dict(input_dict)
-        output_dict = n.node_to_dict(node)
-        self.assertEqual(expected_dict, output_dict)
+        d1 = {'root': {'a': 'A'}}
+        d2 = {'root': {'a': 'A', '_x': 1, '_y': 2}}
+        d3 = {'root': [{'a': 'A', '_x': 1, '_y': 2},
+                       {'a': 'A', '_x': 3, '_y': 4}]}
+        for input_dict in [d1, d2, d3]:
+            node = n.node_from_dict(input_dict)
+            output_dict = n.node_to_dict(node)
+            self.assertEqual(input_dict, output_dict)
+            # test deepcopy
+            self.assertEqual(node, copy.deepcopy(node))
 
-        # test deepcopy
-        self.assertEqual(node, copy.deepcopy(node))
+    def test_duplicates_bad(self):
+        # this is the current behavior: the first rupture is lost
+        # we may want to raise an error instead
+        xmlfile = io.StringIO(u"""\
+<nonParametric>
+<singlePlaneRupture>1</singlePlaneRupture>
+<multiPlanesRupture>2</multiPlanesRupture>
+<singlePlaneRupture>3</singlePlaneRupture>
+</nonParametric>
+""")
+        node = n.node_from_xml(xmlfile)
+        dic = n.node_to_dict(node)
+        self.assertEqual(dic, {
+            'nonParametric':
+            {'singlePlaneRupture': '3', 'multiPlanesRupture': '2'}})
+
+    def test_duplicates_ok(self):
+        # sequential duplicate tags
+        xmlfile = io.StringIO(u"""\
+<nonParametric>
+<singlePlaneRupture>1</singlePlaneRupture>
+<singlePlaneRupture>3</singlePlaneRupture>
+<multiPlanesRupture>2</multiPlanesRupture>
+</nonParametric>
+""")
+        node = n.node_from_xml(xmlfile)
+        dic = n.node_to_dict(node)
+        self.assertEqual(dic, {
+            'nonParametric':
+            {'singlePlaneRupture': ['1', '3'], 'multiPlanesRupture': '2'}})
 
     def test_can_pickle(self):
         node = n.Node('tag')

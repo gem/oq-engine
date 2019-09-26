@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     1,429,593,239      
-date           2019-05-03T06:43:31
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:20:58
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 8, num_rlzs = 1
@@ -54,8 +54,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[BooreAtkinson2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -67,25 +66,34 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         2       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     2
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
 tax1     1.00000 0.0    1   1   2         2         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
-=================== ========= ========= ======
-operation           time_sec  memory_mb counts
-=================== ========= ========= ======
-building riskinputs 0.00324   0.0       1     
-saving gmfs         0.00225   0.0       1     
-reading exposure    5.691E-04 0.0       1     
-computing gmfs      4.086E-04 0.0       1     
-=================== ========= ========= ======
+====================== ========= ========= ======
+calc_1734              time_sec  memory_mb counts
+====================== ========= ========= ======
+ScenarioCalculator.run 0.04257   1.01953   1     
+building riskinputs    0.00333   0.0       1     
+saving gmfs            0.00314   0.0       1     
+reading exposure       5.169E-04 0.0       1     
+computing gmfs         4.036E-04 0.0       1     
+====================== ========= ========= ======

@@ -19,11 +19,12 @@ import os
 import sys
 import time
 import signal
+import getpass
 from openquake.baselib import sap, config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
-from openquake.commands.purge import purge_all
+from openquake.commands.purge import purge_one, purge_all
 
 
 @sap.script
@@ -35,28 +36,27 @@ def reset(yes):
     if not ok:
         return
 
+    status = dbserver.get_status()
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
-
-    # user must be able to access and write the databse file to remove it
-    if os.path.isfile(dbpath) and os.access(dbpath, os.W_OK):
-        if dbserver.get_status() == 'running':
-            if config.dbserver.multi_user:
-                sys.exit('The oq dbserver must be stopped '
-                         'before proceeding')
-            else:
-                pid = logs.dbcmd('getpid')
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(.5)  # give time to stop
-                assert dbserver.get_status() == 'not-running'
-                print('dbserver stopped')
-        try:
+    if not os.path.isfile(dbpath):
+        sys.exit('%s does not exist' % dbpath)
+    elif status == 'running':
+        user = getpass.getuser()
+        for calc_id in logs.dbcmd('get_calc_ids', user):
+            purge_one(calc_id, user, force=True)
+        if os.access(dbpath, os.W_OK):   # single user mode
+            purge_all(user)  # calculations in oqdata not in the db
+            # stop the dbserver first
+            pid = logs.dbcmd('getpid')
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(.5)  # give time to stop
+            assert dbserver.get_status() == 'not-running'
+            print('dbserver stopped')
+            # remove the database
             os.remove(dbpath)
             print('Removed %s' % dbpath)
-        except OSError as exc:
-            print(exc, file=sys.stderr)
-
-    # fast way of removing everything
-    purge_all(fast=True)  # datastore of the current user
+    else:
+        sys.exit('The dbserver is not running')
 
 
 reset.flg('yes', 'confirmation')

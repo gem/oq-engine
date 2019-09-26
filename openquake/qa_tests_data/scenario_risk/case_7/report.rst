@@ -3,8 +3,8 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2019-05-03T06:43:31
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:20:58
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 27, num_levels = 8, num_rlzs = 1
@@ -54,8 +54,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[FromFile]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -67,12 +66,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         27      
-#taxonomies     4       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== ==
+#assets     27
+#taxonomies 4 
+=========== ==
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -83,11 +80,21 @@ taxonomy mean    stddev min max num_sites num_assets
 *ALL*    1.00000 0.0    1   1   27        27        
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 =================== ========= ========= ======
-operation           time_sec  memory_mb counts
+calc_1733           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.03037   0.0       1     
-reading exposure    6.297E-04 0.0       1     
+building riskinputs 0.03553   0.0       1     
+reading exposure    5.705E-04 0.0       1     
 =================== ========= ========= ======

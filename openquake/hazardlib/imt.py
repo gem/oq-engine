@@ -255,21 +255,3 @@ class ASH(IMT):
     """
     Level of the ash fall in millimeters
     """
-
-
-class LAVA(IMT):
-    """
-    Boolean value for the lava flow (1 if affected 0 otherwise)
-    """
-
-
-class LAHAR(IMT):
-    """
-    Boolean value for the lahars (1 if affected 0 otherwise)
-    """
-
-
-class PYRO(IMT):
-    """
-    Boolean value for the pyroclastic flow (1 if affected 0 otherwise)
-    """

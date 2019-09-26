@@ -20,8 +20,9 @@ import os
 import copy
 import unittest
 import tempfile
-from openquake.baselib import hdf5, general
-from openquake.hazardlib.sourcewriter import write_source_model, hdf5write
+import toml
+from openquake.baselib import general
+from openquake.hazardlib.sourcewriter import write_source_model, tomldump
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib import nrml
 
@@ -45,6 +46,8 @@ MULTIPOINT = os.path.join(os.path.dirname(__file__),
 GRIDDED = os.path.join(os.path.dirname(__file__),
                        'source_model/gridded.xml')
 
+TOML = os.path.join(os.path.dirname(__file__), 'expected_sources.toml')
+
 conv = SourceConverter(50., 1., 10, 0.1, 10.)
 
 
@@ -55,12 +58,12 @@ class SourceWriterTestCase(unittest.TestCase):
         fd, name = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
             write_source_model(name, smodel)
-        with hdf5.File.temporary() as f:
-            for group in smodel.src_groups:
-                hdf5write(f, group)
+        with open(name + '.toml', 'w') as f:
+            tomldump(smodel, f)
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
+        os.remove(name + '.toml')
         return smodel
 
     def test_mixed(self):
@@ -78,27 +81,32 @@ class SourceWriterTestCase(unittest.TestCase):
     def test_collection(self):
         self.check_round_trip(COLLECTION)
 
-    def test_collection(self):
+    def test_mutex(self):
         self.check_round_trip(MUTEX)
 
     def test_multipoint(self):
         smodel = self.check_round_trip(MULTIPOINT)
 
-        # test hdf5 round trip
-        temp = general.gettemp(suffix='.hdf5')
-        with hdf5.File(temp, 'w') as f:
-            f['/'] = smodel
-        with hdf5.File(temp, 'r') as f:
-            sm = f['/']
-        self.assertEqual(smodel.name, sm.name)
-        self.assertEqual(len(smodel.src_groups), len(sm.src_groups))
+        # test toml round trip
+        temp = general.gettemp(suffix='.toml')
+        with open(temp, 'w') as f:
+            tomldump(smodel, f)
+        with open(temp, 'r') as f:
+            sm = toml.load(f)['sourceModel']
+        self.assertEqual(smodel.name, sm['_name'])
 
-    def test_gridded(self):
-        # test xml -> hdf5
-        smodel = nrml.to_python(GRIDDED, conv)
-        temp = general.gettemp(suffix='.hdf5')
-        with hdf5.File(temp, 'w') as f:
-            f['/'] = smodel
+
+class TOMLTestCase(unittest.TestCase):
+    def test_toml(self):
+        out = ''
+        for fname in (MIXED, ALT_MFDS, MULTIPOINT):
+            smodel = nrml.to_python(fname, conv)
+            for sgroup in smodel:
+                for src in sgroup:
+                    out += tomldump(src)
+        # NB: uncomment the line below to regenerate the TOML file
+        # with open(TOML, 'w') as f: f.write(out)
+        self.assertEqual(out, open(TOML).read())
 
 
 class DeepcopyTestCase(unittest.TestCase):

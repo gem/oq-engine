@@ -504,7 +504,7 @@ class HMTKBaseMap(object):
                                         sscale=1.5,
                                         overlay=overlay)
             return
-        if not isinstance(cluster_id, collections.Iterable):
+        if not isinstance(cluster_id, collections.abc.Iterable):
             cluster_id = [cluster_id]
         for iloc, clid in enumerate(cluster_id):
             if iloc == (len(cluster_id) - 1):

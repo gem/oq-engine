@@ -76,7 +76,7 @@ import re
 import sys
 import logging
 import operator
-import collections
+import collections.abc
 
 import numpy
 
@@ -98,7 +98,7 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-class SourceModel(collections.Sequence):
+class SourceModel(collections.abc.Sequence):
     """
     A container of source groups with attributes name, investigation_time
     and start_time. It is serialize on hdf5 as follows:
@@ -186,6 +186,8 @@ def get_source_model_04(node, fname, converter=default):
     converter.fname = fname
     for src_node in node:
         src = converter.convert_node(src_node)
+        if src is None:
+            continue
         if src.source_id in source_ids:
             raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
@@ -236,7 +238,7 @@ validators = {
     'posList': valid.posList,
     'pos': valid.lon_lat,
     'aValue': float,
-    'a_val': valid.floats32,
+    'a_val': valid.floats,
     'bValue': valid.positivefloat,
     'b_val': valid.positivefloats,
     'magScaleRel': valid.mag_scale_rel,
@@ -318,8 +320,6 @@ def read_source_models(fnames, converter, monitor):
     for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
             sm = to_python(fname, converter)
-        elif fname.endswith('.hdf5'):
-            sm = sourceconverter.to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname

@@ -247,21 +247,22 @@ class GCMTMomentTensor(object):
         # Tensor
         _, evect = utils.eigendecompose(self.tensor)
         # Rotation matrix
-        _, rot_vec = utils.eigendecompose(np.matrix([[0., 0., -1],
-                                                     [0., 0., 0.],
-                                                     [-1., 0., 0.]]))
-        rotation_matrix = (np.matrix(evect * rot_vec.T)).T
+        _, rot_vec = utils.eigendecompose(np.array([[0., 0., -1],
+                                                    [0., 0., 0.],
+                                                    [-1., 0., 0.]]))
+        rotation_matrix = (evect @ rot_vec.T).T
         if np.linalg.det(rotation_matrix) < 0.:
-            rotation_matrix *= -1.
-        flip_dc = np.matrix([[0., 0., -1.],
-                             [0., -1., 0.],
-                             [-1., 0., 0.]])
+            rotation_matrix @= -1.
+        flip_dc = np.array([[0., 0., -1.],
+                            [0., -1., 0.],
+                            [-1., 0., 0.]])
         rotation_matrices = sorted(
-            [rotation_matrix, flip_dc * rotation_matrix],
+            [rotation_matrix, flip_dc @ rotation_matrix],
             cmp=cmp_mat)
         nodal_planes = GCMTNodalPlanes()
         dip, strike, rake = [(180. / pi) * angle
-                             for angle in utils.matrix_to_euler(rotation_matrices[0])]
+                             for angle in utils.matrix_to_euler(
+                                     rotation_matrices[0])]
         # 1st Nodal Plane
         nodal_planes.nodal_plane_1 = {'strike': strike % 360,
                                       'dip': dip,
@@ -269,7 +270,8 @@ class GCMTMomentTensor(object):
 
         # 2nd Nodal Plane
         dip, strike, rake = [(180. / pi) * angle
-                             for angle in utils.matrix_to_euler(rotation_matrices[1])]
+                             for angle in utils.matrix_to_euler(
+                                     rotation_matrices[1])]
         nodal_planes.nodal_plane_2 = {'strike': strike % 360.,
                                       'dip': dip,
                                       'rake': -rake}
@@ -277,7 +279,7 @@ class GCMTMomentTensor(object):
 
     def get_principal_axes(self):
         """
-        Uses the eigendecomposition to extract the principal axes from the 
+        Uses the eigendecomposition to extract the principal axes from the
         moment tensor - returning an instance of the GCMTPrincipalAxes class
         """
         # Perform eigendecomposition - returns in order P, B, T

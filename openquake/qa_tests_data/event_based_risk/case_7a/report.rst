@@ -2,9 +2,9 @@ event based hazard
 ==================
 
 ============== ===================
-checksum32     485,638,434        
-date           2019-05-03T06:43:47
-engine_version 3.5.0-git7a6d15e809
+checksum32     2,697,546,358      
+date           2019-09-24T15:21:08
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = ?
@@ -42,12 +42,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     relative
-insurance_limit relative
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -56,11 +54,10 @@ tax1     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         S    0     2     482          0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -74,21 +71,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00304 NaN    0.00304 0.00304 1      
+read_source_models 0.00665 NaN    0.00665 0.00665 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=313 B fnames=114 B 1.49 KB 
+read_source_models converter=314 B fnames=114 B 1.5 KB  
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_1799                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.00304   0.0       1     
-reading exposure         5.603E-04 0.0       1     
+total read_source_models 0.00665   0.0       1     
+reading exposure         6.135E-04 0.0       1     
 ======================== ========= ========= ======

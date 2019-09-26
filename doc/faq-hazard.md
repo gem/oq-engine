@@ -38,16 +38,11 @@ quite efficiently.
 A single rupture can produce multiple seismic events during the
 investigation time. In the engine a rupture is uniquely identified by
 a rupture ID, a.k.a. `serial`, which is a 32 bit positive integer.
-Starting from engine 3.3, seismic events are uniquely identified by an
-event ID, a.k.a. `eid`, which is a 64 bit positive integer. The relation
-between event ID and rupture ID is given by the following formula:
-
-   `rupture_ID = event_ID // 2 ** 32`
-
-where `//` is the integer division. For instance the event ID 
-7374458847232 is associated to the rupture ID 1717. Given an event ID
-it is possible to ascertain the realization it belongs to, by looking
-inside the `events` table in the datastore. The properties of the
+Starting from engine 3.7, seismic events are uniquely identified by an
+event ID, which is a 32 bit positive integer. The relation
+between event ID and rupture ID is given encoded in the `events` table
+in the datastore, which also contains the realization associated to the
+event. The properties of the
 rupture generating the events can be ascertained by looking inside the
 `ruptures` table. In particular ther `srcidx` contains the index of the
 source that generated the rupture. The `srcidx` can be used to extract
@@ -55,6 +50,27 @@ the properties of the sources by looking inside the `source_info` table,
 which contains the `source_id` string used in the XML source model.
 
 ## general
+
+### Can I run a calculation from a Jupyter notebook?
+
+You can run any kind of calculation from a Jupyter notebook, but usually
+calculations are long and it is not convenient to run them interactively.
+Scenarios are an exception, since they are usually fast, unless you use
+spatial correlation with a lot of sites. Assuming the parameters of the
+calculation are in a `job.ini` file you can run the following lines in
+the notebook:
+```python
+In[1]: from openquake.commands.run import run
+In[2]: calc = run(['job.ini'])
+```
+Then you can inspect the contents of the datastore and perform your
+postprocessing:
+```python
+In[3]: calc.datastore.open('r')  # open the datastore for reading
+```
+The inner format of the databook is not guaranteed to be the same
+across releases and it is not documented, so this approach is
+recommended only to the most adventurous people.
 
 ### how do I plot/analyze/postprocess the results of a calculation?
 

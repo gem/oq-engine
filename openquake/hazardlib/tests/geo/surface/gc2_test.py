@@ -56,7 +56,7 @@ class CartesianTestingMultiSurface(MultiSurface):
 
 
 def _setup_peer_test_bending_fault_config():
-    """
+    r"""
     The GC2 tests will be based on variations of the PEER bending fault
     test case:
 

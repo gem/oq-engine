@@ -1,0 +1,3 @@
+#,,,,,"generated_by='OpenQuake engine 3.7.0-gitab830d1d1c', start_date='2019-09-14T06:50:27', checksum=687330760, kind='b1~b1', risk_investigation_time=1.0"
+id,taxonomy,lon,lat,occupants~poe-0.01,occupants~poe-0.02
+"a3","tax1",-122.57000,38.11300,6.28599E-04,0.00000E+00

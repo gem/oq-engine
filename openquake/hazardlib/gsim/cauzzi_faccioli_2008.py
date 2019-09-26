@@ -114,9 +114,8 @@ class CauzziFaccioli2008(GMPE):
         Distances are clipped at 15 km (as per Ezio Faccioli's personal
         communication.)
         """
-        d = rhypo
+        d = np.array(rhypo)  # make a copy
         d[d <= 15.0] = 15.0
-
         return C['a3'] * np.log10(d)
 
     def _compute_site_term(self, C, vs30):

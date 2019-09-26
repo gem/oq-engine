@@ -24,3 +24,11 @@ set -e
 . /usr/share/debconf/confmodule
 
 GEM_DEB_PACKAGE="python3-oq-engine-worker"
+
+#DEBHELPER#
+
+if [ -d /run/systemd/system ]; then
+    deb-systemd-invoke disable --now openquake-dbserver.service openquake-webui.service >/dev/null
+fi
+
+exit 0

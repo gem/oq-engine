@@ -19,7 +19,7 @@
 import os
 import pickle
 import unittest
-import mock
+import unittest.mock as mock
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
@@ -323,7 +323,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 </nrml>""")
         vfs = {('structural', 'vulnerability'):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
-        rm = riskmodels.ProbabilisticEventBased("RC/A", {}, vfs, [], False)
+        vfs['structural', 'vulnerability'].seed = 42
+        vfs['structural', 'vulnerability'].init()
+        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
+                                  ignore_covs=False)
         assets = [0, 1]
         eids = numpy.array([1, 2, 3, 4, 5])
         gmvs = numpy.array([.1, .2, .3, .4, .5])

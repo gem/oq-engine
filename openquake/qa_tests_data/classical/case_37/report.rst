@@ -2,12 +2,12 @@ Classical PSHA that utilises Christchurch-specific gsims and GMtoLHC horizontal 
 ====================================================================================================
 
 ============== ===================
-checksum32     4,001,176,234      
-date           2019-05-03T06:43:56
-engine_version 3.5.0-git7a6d15e809
+checksum32     3,681,125,057      
+date           2019-09-24T15:21:15
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 1, num_levels = 4, num_rlzs = 2
+num_sites = 2, num_levels = 4, num_rlzs = 2
 
 Parameters
 ----------
@@ -36,6 +36,7 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
+site_model              `site_model.xml <site_model.xml>`_                          
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -49,20 +50,18 @@ smb1      1.00000 simple(2)       2
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ===================================================== =========== ================================= ============================
-grp_id gsims                                                 distances   siteparams                        ruptparams                  
-====== ===================================================== =========== ================================= ============================
-0      '[Bradley2013bChchCBD]' '[McVerry2006ChchStressDrop]' rjb rrup rx siteclass vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
-====== ===================================================== =========== ================================= ============================
+====== ====================================================== =========== ========================================= ============================
+grp_id gsims                                                  distances   siteparams                                ruptparams                  
+====== ====================================================== =========== ========================================= ============================
+0      '[Bradley2013bChchMaps]' '[McVerry2006ChchStressDrop]' rjb rrup rx lat lon siteclass vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+====== ====================================================== =========== ========================================= ============================
 
 Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[Bradley2013bChchCBD]': [0]
-  0,'[McVerry2006ChchStressDrop]': [1]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -74,44 +73,44 @@ source_model.xml 0      Active Shallow Crust 1            1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
-====== ========= ==== ===== ===== ============ ========= ========= =======
-0      1         X    0     57    1            2.384E-05 1.00000   1.00000
-====== ========= ==== ===== ===== ============ ========= ========= =======
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+1         0      X    1            1.590E-04 2.00000   1.00000      6,288
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    2.384E-05 1     
+X    1.590E-04 1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.02121 NaN    0.02121 0.02121 1      
-preclassical       0.00345 NaN    0.00345 0.00345 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+preclassical       4.485E-04 NaN    4.485E-04 4.485E-04 1      
+read_source_models 0.02490   NaN    0.02490   0.02490   1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-================== ===================================================== ========
-task               sent                                                  received
-read_source_models converter=305 B fnames=107 B                          3.36 KB 
-preclassical       srcs=2.93 KB params=486 B gsims=290 B srcfilter=218 B 335 B   
-================== ===================================================== ========
+================== ========================================= ========
+task               sent                                      received
+preclassical       srcs=2.95 KB srcfilter=768 B params=525 B 342 B   
+read_source_models converter=306 B fnames=107 B              3.37 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_1815                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.02121   0.0       1     
-managing sources         0.00370   0.0       1     
-total preclassical       0.00345   0.0       1     
-store source_info        0.00232   0.0       1     
-aggregate curves         1.504E-04 0.0       1     
+total read_source_models 0.02490   0.0       1     
+store source_info        0.00262   0.0       1     
+managing sources         4.487E-04 0.0       1     
+total preclassical       4.485E-04 0.0       1     
+aggregate curves         2.632E-04 0.0       1     
 ======================== ========= ========= ======

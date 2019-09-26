@@ -1,2 +1,2 @@
-asset_ref,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
-a1,"W",83.31382,29.46117,9.24994E-01,2.06786E-02,2.32758E-02,1.39201E-02,1.71313E-02
+id,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
+"a1","W",83.31382,29.46117,8.67434E-01,2.18697E-02,3.31904E-02,2.68928E-02,5.06130E-02

@@ -32,7 +32,6 @@ from openquake.calculators.ucerf_base import (
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
@@ -42,7 +41,7 @@ def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
     """
     Generates the event set corresponding to a particular branch
     """
-    serial = seed + ses_idx * TWO16
+    rup_id = seed + ses_idx * TWO16
     # get rates from file
     with h5py.File(ucerf.source_file, 'r') as hdf5:
         occurrences = ucerf.tom.sample_number_of_occurrences(ucerf.rate, seed)
@@ -56,8 +55,8 @@ def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
         for iloc, n_occ in zip(indices, occurrences[indices]):
             ucerf_rup = ucerf.get_ucerf_rupture(iloc, src_filter)
             if ucerf_rup:
-                ucerf_rup.serial = serial
-                serial += 1
+                ucerf_rup.rup_id = rup_id
+                rup_id += 1
                 ruptures.append(ucerf_rup)
                 rupture_occ.append(n_occ)
 
@@ -67,8 +66,8 @@ def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
             background_sids, ucerf.min_mag, ucerf.npd, ucerf.hdd, ucerf.usd,
             ucerf.lsd, ucerf.msr, ucerf.aspect, ucerf.tectonic_region_type)
         for i, brup in enumerate(background_ruptures):
-            brup.serial = serial
-            serial += 1
+            brup.rup_id = rup_id
+            rup_id += 1
             ruptures.append(brup)
         rupture_occ.extend(background_n_occ)
 
@@ -111,7 +110,7 @@ def sample_background_model(
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
-    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])].value
+    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])][()]
     # Select magnitudes above the minimum magnitudes
     mag_idx = bg_magnitudes >= min_mag
     mags = bg_magnitudes[mag_idx]
@@ -168,7 +167,8 @@ def build_ruptures(sources, src_filter, param, monitor):
                    for rup, n in n_occ.items()]
     dic['rup_array'] = stochastic.get_rup_array(eb_ruptures, src_filter)
     dt = time.time() - t0
-    dic['calc_times'] = {src.id: numpy.array([tot_occ, dt], F32)}
+    n = len(src_filter.sitecol)
+    dic['calc_times'] = {src.id: numpy.array([tot_occ, n, dt], F32)}
     return dic
 
 

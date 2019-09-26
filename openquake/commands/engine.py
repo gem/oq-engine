@@ -33,6 +33,8 @@ from openquake.commands.abort import abort
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
+ZMQ = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
 
 def get_job_id(job_id, username=None):
@@ -111,25 +113,12 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     job = logs.dbcmd('get_job_from_checksum', haz_checksum)
     reuse = reuse_hazard and job and os.path.exists(job.ds_calc_dir + '.hdf5')
     # recompute the hazard and store the checksum
-    ebr = (oqparam.calculation_mode == 'event_based_risk' and
-           'gmfs' not in oqparam.inputs)
-    if ebr:
-        kw = dict(calculation_mode='event_based')
-        if (oqparam.sites or 'sites' in oqparam.inputs or
-                'site_model' in oqparam.inputs):
-            # remove exposure from the hazard
-            kw['exposure_file'] = ''
-    else:
-        kw = {}
     if not reuse:
-        hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
+        hc_id = run_job(job_ini, log_level, log_file, exports)
         if job is None:
             logs.dbcmd('add_checksum', hc_id, haz_checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             logs.dbcmd('update_job_checksum', hc_id, haz_checksum)
-        if ebr:
-            run_job(job_ini, log_level, log_file,
-                    exports, hazard_calculation_id=hc_id)
     else:
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
@@ -155,7 +144,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
                     soft_mem_limit=int, hard_mem_limit=int, port=int,
-                    multi_user=valid.boolean, multi_node=valid.boolean)
+                    multi_user=valid.boolean, multi_node=valid.boolean,
+                    serialize_jobs=valid.boolean, strict=valid.boolean,
+                    code=exec)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'

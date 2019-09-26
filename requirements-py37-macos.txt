@@ -1,0 +1,45 @@
+# Suggested versions for development
+# !! must update pip first! so wheels will be used !!
+
+# GEM Mirror
+# We also provide pre-compiled macosx_10_9_x86_64 wheels for
+# h5py, Shapely, psutil, PyYAML, Basemap
+
+http://wheelhouse.openquake.org/v3/macos/py/pytz-2019.1-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/setuptools-41.0.1-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py37/h5py-2.9.0-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py37/numpy-1.16.5-cp37-cp37m-macosx_10_9_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py37/scipy-1.3.1-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py37/pyzmq-18.0.2-cp37-cp37m-macosx_10_9_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py37/psutil-5.6.3-cp37-cp37m-macosx_10_9_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py37/Shapely-1.6.4.post2-cp37-cp37m-macosx_10_9_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py/docutils-0.14-py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/decorator-4.4.0-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/pbr-5.2.0-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/six-1.12.0-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/Django-2.2.4-py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/sqlparse-0.3.0-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/certifi-2019.3.9-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/chardet-3.0.4-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/idna-2.8-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/urllib3-1.25.3-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/requests-2.22.0-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/pyshp-1.2.3-py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py37/PyYAML-5.1.2-cp37-cp37m-macosx_10_9_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py/toml-0.10.0-py2.py3-none-any.whl
+
+
+### setproctitle ###
+# comment the following lines to skip installation
+# of setproctitle (optional feature)
+http://wheelhouse.openquake.org/v3/macos/py37/setproctitle-1.1.10-cp37-cp37m-macosx_10_9_x86_64.whl
+
+### Plotting ###
+# comment the following lines to skip installation
+# of the plotting libraries (optional feature)
+http://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.0-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/pyparsing-2.4.0-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
+http://wheelhouse.openquake.org/v3/macos/py37/kiwisolver-1.1.0-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py37/matplotlib-3.1.1-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
+http://wheelhouse.openquake.org/v3/macos/py37/pyproj-2.1.3-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl

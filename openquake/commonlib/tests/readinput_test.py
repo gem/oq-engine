@@ -18,18 +18,15 @@
 
 import os
 import tempfile
-import mock
+import unittest.mock as mock
 import unittest
 from io import BytesIO
 
-import numpy
-from numpy.testing import assert_allclose
-
-from openquake.baselib import general
+from openquake.baselib import general, datastore
 from openquake.hazardlib import InvalidFile
 from openquake.risklib import asset
-from openquake.risklib.riskinput import ValidationError
-from openquake.commonlib import readinput, writers, oqvalidation
+from openquake.risklib.riskmodels import ValidationError
+from openquake.commonlib import readinput
 from openquake.qa_tests_data.classical import case_1, case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_caracas
@@ -310,12 +307,11 @@ class ExposureTestCase(unittest.TestCase):
     def test_get_metadata(self):
         [exp] = asset.Exposure.read_headers([self.exposure])
         self.assertEqual(exp.description, 'Exposure model for buildings')
-        self.assertIsNone(exp.insurance_limit_is_absolute)
-        self.assertIsNone(exp.deductible_is_absolute)
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
                          [('structural', 'per_asset', 'USD')])
 
     def test_missing_number(self):
+        raise unittest.SkipTest
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
@@ -430,126 +426,6 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         self.assertIn("is missing", str(ctx.exception))
 
 
-class TestReadGmfXmlTestCase(unittest.TestCase):
-    """
-    Read the GMF from a NRML file
-    """
-    def setUp(self):
-        self.oqparam = mock.Mock()
-        self.oqparam.base_path = '/'
-        self.oqparam.inputs = {}
-        self.oqparam.imtls = {'PGA': None, 'PGV': None}
-        self.oqparam.number_of_ground_motion_fields = 5
-
-    def test_ok(self):
-        fname = os.path.join(DATADIR,  'gmfdata.xml')
-        eids, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
-        assert_allclose(eids, range(5))
-        self.assertEqual(
-            writers.write_csv(BytesIO(), gmfa), b'''\
-PGA,PGV
-6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01,6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01
-1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01,1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01
-1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01,1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01''')
-
-    def test_err(self):
-        # missing ruptureId
-        fname = os.path.join(DATADIR,  'gmfdata_err.xml')
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Found a missing ruptureId 1", str(ctx.exception))
-
-    def test_err2(self):
-        # wrong mesh
-        fname = os.path.join(DATADIR,  'gmfdata_err2.xml')
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Expected 4 sites, got 3 nodes in", str(ctx.exception))
-
-    def test_two_nodes_on_the_same_point(self):
-        # after rounding of the coordinates two points can collide
-        fname = general.gettemp('''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-      xmlns:gml="http://www.opengis.net/gml">
-<gmfCollection gsimTreePath="" sourceModelTreePath="">
-  <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="0">
-      <node gmv="0.0126515007046" lon="12.12477995" lat="43.5812"/>
-      <node gmv="0.0124056290492" lon="12.12478193" lat="43.5812"/>
-    </gmf>
-  </gmfSet>
-</gmfCollection>
-</nrml>''')
-        self.oqparam.imtls = {'PGA': None}
-        with self.assertRaises(readinput.InvalidFile) as ctx:
-            readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Expected 1 sites, got 2 nodes in", str(ctx.exception))
-
-
-class TestLoadCurvesTestCase(unittest.TestCase):
-    """
-    Read the hazard curves from a NRML file
-    """
-    def test(self):
-        fname = general.gettemp('''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <!-- Spectral Acceleration (SA) example -->
-    <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2" investigationTime="50.0" IMT="SA" saPeriod="0.025" saDamping="5.0">
-        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02</IMLs>
-
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-122.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
-        </hazardCurve>
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-123.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8727e-02 9.8265e-02 9.4956e-02</poEs>
-        </hazardCurve>
-    </hazardCurves>
-
-    <!-- Basic example, using PGA as IMT -->
-    <hazardCurves sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7" investigationTime="50.0" IMT="PGA">
-        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02 3.3700e-02</IMLs>
-
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-122.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-01 9.8226e-01 9.4947e-01 9.2947e-01</poEs>
-        </hazardCurve>
-        <hazardCurve>
-            <gml:Point>
-                <gml:pos>-123.5000 37.5000</gml:pos>
-            </gml:Point>
-            <poEs>9.8728e-02 9.8216e-02 9.4945e-02 9.2947e-02</poEs>
-        </hazardCurve>
-    </hazardCurves>
-</nrml>
-''', suffix='.xml')
-        oqparam = object.__new__(oqvalidation.OqParam)
-        oqparam.inputs = dict(hazard_curves=fname)
-        sitecol = readinput.get_site_collection(oqparam)
-        self.assertEqual(len(sitecol), 2)
-        self.assertEqual(sorted(oqparam.hazard_imtls.items()),
-                         [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
-                          ('SA(0.025)', [0.005, 0.007, 0.0137])])
-        hcurves = readinput.pmap.convert(oqparam.imtls, 2)
-        assert_allclose(hcurves['PGA'], numpy.array(
-            [[0.098728, 0.098216, 0.094945, 0.092947],
-             [0.98728, 0.98226, 0.94947, 0.92947]]))
-        assert_allclose(hcurves['SA(0.025)'], numpy.array(
-            [[0.098727, 0.098265, 0.094956],
-             [0.98728, 0.98266, 0.94957]]))
-
-
 class GetCompositeSourceModelTestCase(unittest.TestCase):
     # test the case in_memory=False, used when running `oq info job.ini`
 
@@ -587,6 +463,15 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             info.call_args[0],
             ('Applied %d changes to the composite source model', 81))
 
+    def test_extra_large_source(self):
+        oq = readinput.get_oqparam('job.ini', case_21)
+        with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
+            with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
+                readinput.get_composite_source_model(oq, h5)
+                os.remove(h5.filename)
+        self.assertEqual(
+            error.call_args[0][0], 'source SFLT2: too large: 84 km')
+
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
     def tearDown(self):
@@ -596,7 +481,7 @@ class GetCompositeRiskModelTestCase(unittest.TestCase):
     def test_missing_vulnerability_function(self):
         oq = readinput.get_oqparam('job.ini', case_caracas)
         with self.assertRaises(ValidationError):
-            readinput.get_risk_model(oq)
+            readinput.get_crmodel(oq)
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):
@@ -609,7 +494,7 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(
             'job.ini', case_16, region_grid_spacing='15')
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
-        self.assertEqual(len(sitecol), 148)  # 3 sites were discarded silently
+        self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 
@@ -619,41 +504,6 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
-
-    def test_exposure_only(self):
-        oq = readinput.get_oqparam('job.ini', case_16)
-        del oq.inputs['site_model']
-        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
-        self.assertEqual(len(sitecol), 148)
-        self.assertEqual(len(assetcol), 151)
-        self.assertEqual(len(discarded), 0)
-
-        # test agg_value
-        arr = assetcol.agg_value()
-        assert_allclose(arr, [3.6306637e+09])
-        arr = assetcol.agg_value('taxonomy')
-        assert_allclose(arr,
-                        [[4.9882240e+06],
-                         [1.1328099e+08],
-                         [4.2222912e+08],
-                         [1.6412870e+07],
-                         [5.0686808e+07],
-                         [2.5343402e+07],
-                         [1.5254313e+09],
-                         [6.6375590e+06],
-                         [8.3206810e+08],
-                         [1.6412871e+07],
-                         [3.9439158e+08],
-                         [1.6734690e+07],
-                         [6.7582400e+06],
-                         [1.3613027e+08],
-                         [4.3124016e+07],
-                         [9.4132640e+06],
-                         [1.0620092e+07]])
-        arr = assetcol.agg_value('occupancy')
-        assert_allclose(assetcol.agg_value('occupancy'), [[3.6306644e+09]])
-        arr = assetcol.agg_value('taxonomy', 'occupancy')
-        self.assertEqual(arr.shape, (17, 1, 1))
 
     def test_site_model_sites(self):
         # you cannot set them at the same time

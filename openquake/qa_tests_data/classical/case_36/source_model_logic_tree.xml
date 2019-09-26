@@ -5,7 +5,6 @@
 <logicTree logicTreeID="lt1">
 
 <!-- Fault source geometry -->
-	<logicTreeBranchingLevel branchingLevelID="bl1">
 		<logicTreeBranchSet uncertaintyType="sourceModel"
 				    branchSetID="bs1">
 
@@ -16,13 +15,10 @@
 			</logicTreeBranch>
 
 		</logicTreeBranchSet>
-	</logicTreeBranchingLevel>
-    
     
     <!-- Max magnitude uncertainties -->
     
      <!-- MFT, NW, Grabens, Karakoram -->
-    <logicTreeBranchingLevel branchingLevelID="bl2">
         
         <logicTreeBranchSet branchSetID="bs21"
             uncertaintyType="maxMagGRRelative"
@@ -89,16 +85,11 @@
                 <uncertaintyWeight>0.275</uncertaintyWeight>
             </logicTreeBranch>
             
-        </logicTreeBranchSet>
-    </logicTreeBranchingLevel>
-    
-    
+        </logicTreeBranchSet>    
     
     <!-- a and b uncertainties -->
 
 <!-- Main Frontal Thrust -->
-	<logicTreeBranchingLevel branchingLevelID="bl3">
-
 		<logicTreeBranchSet branchSetID="bs31"
 				    uncertaintyType="abGRAbsolute"
 				    applyToSources="1" >
@@ -249,9 +240,6 @@
 
 		</logicTreeBranchSet>
 
-
-	</logicTreeBranchingLevel>
-	
 </logicTree>
 </nrml> 
 

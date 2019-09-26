@@ -22,16 +22,19 @@ import shutil
 import logging
 import tempfile
 import unittest
+import builtins
 import sys
 
 import numpy
 
 from openquake.calculators import base
 from openquake.baselib import datastore, general
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, writers
 
 
 NOT_DARWIN = sys.platform != 'darwin'
+OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
+OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')
 
 
 class DifferentFiles(Exception):
@@ -62,13 +65,44 @@ def columns(line):
     return data
 
 
+orig_open = open
+
+
+def check_open(fname, mode='r', buffering=-1, encoding=None, errors=None,
+               newline=None, closefd=True, opener=None):
+    if (isinstance(fname, str) and fname.endswith('.xml') and 'b' not in mode
+            and encoding != 'utf-8'):
+        raise ValueError('Please set the encoding to utf-8!')
+    return orig_open(fname, mode, buffering, encoding, errors, newline,
+                     closefd, opener)
+
+
+def open8(fname, mode='r'):
+    return orig_open(fname, mode, encoding='utf-8')
+
+
+collect_csv = {}  # outputname -> lines
+orig_write_csv = writers.write_csv
+
+
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
+    fname = orig_write_csv(dest, data, sep, fmt, header, comment)
+    lines = open(fname).readlines()[:3]
+    name = re.sub(r'[\d\.]+', '.', strip_calc_id(fname))
+    collect_csv[name] = lines
+    return fname
+
+
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
 
     @classmethod
     def setUpClass(cls):
+        builtins.open = check_open
         cls.duration = general.AccumDict()
+        if OQ_CALC_OUTPUTS:
+            writers.write_csv = write_csv
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -96,6 +130,7 @@ class CalculatorTestCase(unittest.TestCase):
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
             result = self.calc.run(export_dir=self.edir)
+        self.calc.datastore.close()
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
@@ -132,7 +167,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,
-            delta=None, lastline=None):
+            delta=1E-6, lastline=None):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -145,14 +180,23 @@ class CalculatorTestCase(unittest.TestCase):
             expected_dir = os.path.dirname(expected)
             if not os.path.exists(expected_dir):
                 os.makedirs(expected_dir)
-            open(expected, 'w').write('')
+            open8(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
-        expected_lines = make_comparable(open(expected).readlines())
-        actual_lines = make_comparable(open(actual).readlines()[:lastline])
+        expected_lines = [line for line in open8(expected)
+                          if not line.startswith('#,')]
+        comments = []
+        actual_lines = []
+        for line in open8(actual).readlines()[:lastline]:
+            if line.startswith('#'):
+                comments.append(line)
+            else:
+                actual_lines.append(line)
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
-            for exp, got in zip(expected_lines, actual_lines):
+            self.assertEqual(expected_lines[0], actual_lines[0])  # header
+            for exp, got in zip(make_comparable(expected_lines),
+                                make_comparable(actual_lines)):
                 if delta:
                     self.practicallyEqual(exp, got, delta)
                 else:
@@ -162,7 +206,7 @@ class CalculatorTestCase(unittest.TestCase):
                 # use this path when the expected outputs have changed
                 # for a good reason
                 logging.info('overriding %s', expected)
-                open(expected, 'w').write(''.join(actual_lines))
+                open8(expected, 'w').write(''.join(comments + actual_lines))
             else:
                 # normally raise an exception
                 raise DifferentFiles('%s %s' % (expected, actual))
@@ -171,15 +215,15 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Make sure the content of the exported file is the expected one
         """
-        with open(os.path.join(self.calc.oqparam.export_dir, fname)) as actual:
-            self.assertEqual(expected_content, actual.read())
+        with open8(os.path.join(self.calc.oqparam.export_dir, fname)) as got:
+            self.assertEqual(expected_content, got.read())
 
     def assertEventsByRlz(self, events_by_rlz):
         """
         Check the distribution of the events by realization index
         """
         n_events = numpy.zeros(self.calc.R, int)
-        dic = general.group_array(self.calc.datastore['events'].value, 'rlz')
+        dic = general.group_array(self.calc.datastore['events'][()], 'rlz_id')
         for rlzi, events in dic.items():
             n_events[rlzi] = len(events)
         numpy.testing.assert_equal(n_events, events_by_rlz)
@@ -200,3 +244,11 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         print('durations =', cls.duration)
+        builtins.open = orig_open
+        if OQ_CALC_OUTPUTS:
+            if not os.path.exists(OUTPUTS):
+                os.mkdir(OUTPUTS)
+            for name, lines in collect_csv.items():
+                fname = os.path.join(OUTPUTS, name)
+                with open(fname, 'w') as f:
+                    f.write(''.join(lines))

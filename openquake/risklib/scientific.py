@@ -31,9 +31,10 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, cached_property
 from openquake.hazardlib.stats import compute_stats2
 
+F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
 
@@ -76,13 +77,17 @@ def fine_graining(points, steps):
 
 
 class VulnerabilityFunction(object):
-    dtype = numpy.dtype([('iml', F32), ('loss_ratio', F32), ('cov', F32)])
+    dtype = numpy.dtype([('iml', F64), ('loss_ratio', F64), ('cov', F64)])
+    seed = None  # to be overridden
 
     def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
                  distribution="LN"):
         """
         A wrapper around a probabilistic distribution function
-        (currently only the log normal distribution is supported).
+        (currently, the Log-normal ("LN") and Beta ("BT")
+        distributions are supported amongst the continuous probability
+        distributions. For specifying a discrete probability
+        distribution refer to the class VulnerabilityFunctionWithPMF.
         It is meant to be pickeable to allow distributed computation.
         The only important method is `.__call__`, which applies
         the vulnerability function to a given set of ground motion
@@ -122,15 +127,19 @@ class VulnerabilityFunction(object):
                 msg = ("It is not valid to define a loss ratio = 0.0 with a "
                        "corresponding coeff. of variation > 0.0")
                 raise ValueError(msg)
+            if distribution == 'BT':
+                if lr > 1:
+                    raise ValueError('The meanLRs must be <= 1, got %s' % lr)
+                elif cov ** 2 > 1 / lr - 1:
+                    # see https://github.com/gem/oq-engine/issues/4841
+                    raise ValueError(
+                        'The coefficient of variation %s > %s is too large '
+                        'in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
 
         self.distribution_name = distribution
 
-        # to be set in .init(), called also by __setstate__
-        (self.stddevs, self._mlr_i1d, self._covs_i1d,
-         self.distribution) = None, None, None, None
-        self.init()
-
     def init(self):
+        # called by CompositeRiskModel and by __setstate__
         self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
@@ -143,6 +152,8 @@ class VulnerabilityFunction(object):
             self.distribution = DegenerateDistribution()
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
+        assert self.seed is not None, self
+        numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
 
     def interpolate(self, gmvs):
         """
@@ -174,7 +185,7 @@ class VulnerabilityFunction(object):
         :returns:
            array of E' loss ratios
         """
-        if epsilons is None:
+        if self.distribution_name == 'LN' and epsilons is None:
             return means
         self.set_distribution(epsilons)
         res = self.distribution.sample(means, covs, means * covs, idxs)
@@ -256,7 +267,7 @@ class VulnerabilityFunction(object):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name)
+                self.covs, self.distribution_name, self.seed)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -265,6 +276,7 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = state[3]
         self.covs = state[4]
         self.distribution_name = state[5]
+        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -339,14 +351,15 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     :param ratios: an array of mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed=42):
+    seed = None
+
+    def __init__(self, vf_id, imt, imls, loss_ratios, probs):
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
         self.loss_ratios = loss_ratios
         self.probs = probs
-        self.seed = seed
         self.distribution_name = "PM"
 
         # to be set in .init(), called also by __setstate__
@@ -364,7 +377,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     def set_distribution(self, epsilons=None):
         self.distribution = DISTRIBUTIONS[self.distribution_name]()
         self.distribution.epsilons = epsilons
-        self.distribution.seed = self.seed
+        self.distribution.seed = self.seed  # needed only for PM
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
@@ -844,7 +857,8 @@ class BetaDistribution(Distribution):
     def sample(self, means, _covs, stddevs, _idxs=None):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
-        return numpy.random.beta(alpha, beta, size=None)
+        res = numpy.random.beta(alpha, beta, size=None)
+        return res
 
     def survival(self, loss_ratio, mean, stddev):
         return stats.beta.sf(loss_ratio,
@@ -959,8 +973,7 @@ def classical_damage(
         numpy.putmask(imls, imls > max_val, max_val)
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
-        imls = (hazard_imls if fragility_functions.format == 'continuous'
-                else fragility_functions.imls)
+        imls = hazard_imls
         poes = numpy.array(hazard_poes)
     afe = annual_frequency_of_exceedence(poes, investigation_time)
     annual_frequency_of_occurrence = pairwise_diff(
@@ -1477,3 +1490,42 @@ class LossCurvesMapsBuilder(object):
                 maps[(p,) + idx] = conditional_loss_ratio(
                     lbp, self.poes, poe)
         return curves, maps
+
+
+class LossesByAsset(object):
+    """
+    A class to compute losses by asset.
+
+    :param assetcol: an AssetCollection instance
+    :param policy_name: the name of the policy field (can be empty)
+    :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
+    """
+    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
+        self.A = len(assetcol)
+        self.policy_name = policy_name
+        self.policy_dict = policy_dict
+        self.loss_names = loss_names
+
+    def compute(self, asset, losses_by_lt):
+        """
+        :param asset: an asset record
+        :param losses_by_lt: a dictionary loss_type -> losses (of size E)
+        :yields: pairs (loss_idx, losses)
+        """
+        idx = 0
+        for lt, losses in losses_by_lt.items():
+            yield idx, losses
+            idx += 1
+            if lt in self.policy_dict:
+                val = asset['value-' + lt]
+                ded, lim = self.policy_dict[lt][asset[self.policy_name]]
+                ins_losses = insured_losses(losses, ded * val, lim * val)
+                yield idx, ins_losses
+                idx += 1
+
+    @cached_property
+    def losses_by_A(self):
+        """
+        :returns: an array of shape (A, L)
+        """
+        return numpy.zeros((self.A, len(self.loss_names)), F32)

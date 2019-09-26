@@ -193,7 +193,13 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     @classmethod
     def __init_subclass__(cls):
-        registry[cls.__name__] = cls
+        stddevtypes = cls.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+        if not isinstance(stddevtypes, abc.abstractproperty):  # concrete class
+            if const.StdDev.TOTAL not in stddevtypes:
+                raise ValueError('%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
+                                 'not defined for const.StdDev.TOTAL' %
+                                 cls.__name__)
+            registry[cls.__name__] = cls
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -210,6 +216,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             msg = ('%s is experimental and may change in future versions - '
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, ExperimentalWarning)
+        self.init()
 
     def init(self):
         """
@@ -271,30 +278,31 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         compute interim steps).
         """
 
-    def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
+    def get_mean_std(self, sctx, rctx, dctx, imts):
+        """
+        :returns: an array of shape (2, N, M) with means and stddevs
+        """
+        N = len(sctx.sids)
+        M = len(imts)
+        arr = numpy.zeros((2, N, M))
+        for m, imt in enumerate(imts):
+            mean, [std] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                    [const.StdDev.TOTAL])
+            arr[0, :, m] = mean
+            arr[1, :, m] = std
+        return arr
+
+    def get_poes(self, mean_std, imls, truncation_level):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
         for one or more pairs "site -- rupture".
 
-        :param sctx:
-            An instance of :class:`SitesContext` with sites information
-            to calculate PoEs on.
-        :param rctx:
-            An instance of :class:`RuptureContext` with a single rupture
-            information.
-        :param dctx:
-            An instance of :class:`DistancesContext` with information about
-            the distances between sites and a rupture.
-
-            All three contexts (``sctx``, ``rctx`` and ``dctx``) must conform
-            to each other. The easiest way to get them is to call
-            ContextMaker.make_contexts.
-        :param imt:
-            An intensity measure type object (that is, an instance of one
-            of classes from :mod:`openquake.hazardlib.imt`).
+        :param mean_std:
+            An array of shape (2, N) with mean and standard deviation for
+            the current intensity measure type
         :param imls:
-            List of interested intensity measure levels (of type ``imt``).
+            List of interested intensity measure levels
         :param truncation_level:
             Can be ``None``, which means that the distribution of intensity
             is treated as Gaussian distribution with possible values ranging
@@ -329,80 +337,19 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        self._check_imt(imt)
+        mean, stddev = mean_std
+        mean = mean.reshape(mean.shape + (1, ))
+        stddev = stddev.reshape(stddev.shape + (1, ))
+        imls = self.to_distribution_values(imls)
+        if truncation_level == 0:  # just compare imls to mean
+            return imls <= mean
 
-        if truncation_level == 0:
-            # zero truncation mode, just compare imls to mean
-            imls = self.to_distribution_values(imls)
-            mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
-            mean = mean.reshape(mean.shape + (1, ))
-            return (imls <= mean).astype(float)
+        # else use real normal distribution
+        values = (imls - mean) / stddev
+        if truncation_level is None:
+            return _norm_sf(values)
         else:
-            # use real normal distribution
-            assert (const.StdDev.TOTAL
-                    in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            imls = self.to_distribution_values(imls)
-            mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                       [const.StdDev.TOTAL])
-            mean = mean.reshape(mean.shape + (1, ))
-            stddev = stddev.reshape(stddev.shape + (1, ))
-            values = (imls - mean) / stddev
-            if truncation_level is None:
-                return _norm_sf(values)
-            else:
-                return _truncnorm_sf(truncation_level, values)
-
-    def disaggregate_pne(self, rupture, sctx, dctx, imt, iml,
-                         truncnorm, epsilons):
-        """
-        Disaggregate (separate) PoE of ``iml`` in different contributions
-        each coming from ``epsilons`` distribution bins.
-
-        Other parameters are the same as for :meth:`get_poes`, with
-        differences that ``truncation_level`` is required to be positive.
-
-        :returns:
-            Contribution to probability of exceedance of ``iml`` coming
-            from different sigma bands in the form of a 2d numpy array of
-            probabilities with shape (n_sites, n_epsilons)
-        """
-        # compute mean and standard deviations
-        mean, [stddev] = self.get_mean_and_stddevs(sctx, rupture, dctx, imt,
-                                                   [const.StdDev.TOTAL])
-
-        # compute iml value with respect to standard (mean=0, std=1)
-        # normal distributions
-        standard_imls = (self.to_distribution_values(iml) - mean) / stddev
-
-        # compute epsilon bins contributions
-        contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
-                                 truncnorm.cdf(epsilons[:-1]))
-
-        # take the minimum epsilon larger than standard_iml
-        bins = numpy.searchsorted(epsilons, standard_imls)
-        poe_by_site = []
-        n_epsilons = len(epsilons) - 1
-        for lvl, bin in zip(standard_imls, bins):  # one per site
-            if bin == 0:
-                poe_by_site.append(contribution_by_bands)
-            elif bin > n_epsilons:
-                poe_by_site.append(numpy.zeros(n_epsilons))
-            else:
-                # for other cases (when ``lvl`` falls somewhere in the
-                # histogram):
-                poe = numpy.concatenate([
-                    # take zeros for bins that are on the left hand side
-                    # from the bin ``lvl`` falls into,
-                    numpy.zeros(bin - 1),
-                    # ... area of the portion of the bin containing ``lvl``
-                    # (the portion is limited on the left hand side by
-                    # ``lvl`` and on the right hand side by the bin edge),
-                    [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
-                    # ... and all bins on the right go unchanged.
-                    contribution_by_bands[bin:]])
-                poe_by_site.append(poe)
-        poes = numpy.array(poe_by_site)  # shape (n_sites, n_epsilons)
-        return rupture.get_probability_no_exceedance(poes)
+            return _truncnorm_sf(truncation_level, values)
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
