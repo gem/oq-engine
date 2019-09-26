@@ -60,6 +60,7 @@
   [Marco Pagani]
   * Added a new rupture-site metric: the azimuth to the closest point on the
     rupture
+  * Implemented Morikawa and Fujiwara (2013) GMM
 
   [Michele Simionato]
   * Fixed a regression in disaggregation with nonparametric sources, which
