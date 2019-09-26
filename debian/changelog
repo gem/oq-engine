@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds configurable nonergodic sigma option to BC Hydro and SERA GMPEs
+  
   [Michele Simionato]
   * Hiding calculations that fail before the pre-execute phase (for instance,
     because of missing files); they already give a clear error

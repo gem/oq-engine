@@ -86,6 +86,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: interface events
     REQUIRES_DISTANCES = set(('rrup',))
 
+    def __init__(self, ergodic=True):
+        self.ergodic = ergodic
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -205,12 +208,17 @@ class AbrahamsonEtAl2015SInter(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
+                sigma = C["sigma"] if self.ergodic else C["sigma_ss"]
+                stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(C['tau'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi'] + np.zeros(num_sites))
-
+                if self.ergodic:
+                    phi = C["phi"]
+                else:
+                    # Get single station phi
+                    phi = np.sqrt(C["sigma_ss"] ** 2. - C["tau"] ** 2.)
+                stddevs.append(phi + np.zeros(num_sites))
         return stddevs
 
     # Period-dependent coefficients (Table 3)

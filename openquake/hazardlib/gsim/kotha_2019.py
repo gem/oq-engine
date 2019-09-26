@@ -101,7 +101,7 @@ class KothaEtAl2019(GMPE):
     #: Required distance measure is Rjb (eq. 1).
     REQUIRES_DISTANCES = set(('rjb', ))
 
-    def __init__(self, sigma_mu_epsilon=0.0, c3=None):
+    def __init__(self, sigma_mu_epsilon=0.0, c3=None, ergodic=True):
         """
         Instantiate setting the sigma_mu_epsilon and c3 terms
         """
@@ -117,6 +117,7 @@ class KothaEtAl2019(GMPE):
             self.c3 = c3
 
         self.sigma_mu_epsilon = sigma_mu_epsilon
+        self.ergodic = ergodic
         if self.sigma_mu_epsilon:
             # Connect to hdf5 and load tables into memory
             self.retreive_sigma_mu_data()
@@ -266,7 +267,9 @@ class KothaEtAl2019(GMPE):
         """
         stddevs = []
         tau = C["tau_event"]
-        phi = np.sqrt(C["phi0"] ** 2.0 + C["phis2s"] ** 2.)
+        phi = C["phi0"]
+        if self.ergodic:
+            phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
@@ -380,7 +383,9 @@ class KothaEtAl2019Slope(KothaEtAl2019):
         """
         stddevs = []
         tau = C["tau_event"]
-        phi = np.sqrt(C["phi0"] ** 2.0 + C["phis2s_slope"] ** 2.)
+        phi = C["phi0"]
+        if self.ergodic:
+            phi = np.sqrt(phi ** 2. + C["phis2s_slope"] ** 2.)
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
@@ -426,10 +431,12 @@ class KothaEtAl2019SERA(KothaEtAl2019):
         """
         stddevs = []
         tau = C["tau_event"]
-        phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
-        phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
-        phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
-        phi = np.sqrt(C["phi0"] ** 2.0 + phi_s2s ** 2.)
+        phi = C["phi0"]
+        if self.ergodic:
+            phi_s2s = np.zeros(sites.vs30measured.shape, dtype=float)
+            phi_s2s[sites.vs30measured] += C["phi_s2s_obs"]
+            phi_s2s[np.logical_not(sites.vs30measured)] += C["phi_s2s_inf"]
+            phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
@@ -528,7 +535,9 @@ class KothaEtAl2019SERASlopeGeology(KothaEtAl2019SERA):
         """
         stddevs = []
         tau = C["tau_event"]
-        phi = np.sqrt(C["phi0"] ** 2.0 + C["phi_s2s_inf"] ** 2.)
+        phi = C["phi0"]
+        if self.ergodic:
+            phi = np.sqrt(phi ** 2. + C["phi_s2s_inf"] ** 2.)
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
