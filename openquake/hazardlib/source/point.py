@@ -162,6 +162,11 @@ class PointSource(ParametricSeismicSource):
             radius.append(math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0)
         return max(radius)
 
+    def _get_delta_depth(self):
+        depths = numpy.array(
+            [dep for prob, dep in self.hypocenter_distribution.data])
+        return depths.max() - depths.min()
+
     def iter_ruptures(self):
         """
         Generate one rupture for each combination of magnitude, nodal plane
