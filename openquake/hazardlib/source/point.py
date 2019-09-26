@@ -174,6 +174,10 @@ class PointSource(ParametricSeismicSource):
         """
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
+
+        :param mag: magnitude
+        :param mag_occ_rate: occurrence rate for the given magnitude
+        :param collapse: if True, collapse the ruptures to one
         """
         for np_prob, np in self.nodal_plane_distribution.data:
             for hc_prob, hc_depth in self.hypocenter_distribution.data:
