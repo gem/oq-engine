@@ -22,64 +22,59 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 -## Documentation (master tree)
 -->
 
-[![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
-[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
-[![Supported Python versions](https://img.shields.io/pypi/pyversions/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
-[![PyPI Version](https://img.shields.io/pypi/v/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
-![PyPI - Wheel](https://img.shields.io/pypi/wheel/openquake.engine.svg)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/gem/oq-engine.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/gem/oq-engine/context:python)
+## OpenQuake Engine version 3.7 (Richter)
 
-### Current stable
+Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists.
 
-Current stable version is the **OpenQuake Engine 3.6** 'Pak Topo'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.6#openquake-engine.
+The code name for version 3.7 is **Richter**, in memory of [Charles Francis Richter](https://en.wikipedia.org/wiki/Charles_Francis_Richter).
 
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.6/doc/whats-new.md)
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.7/doc/whats-new.md)
 
-## Documentation (master tree)
+## Documentation
 
 <!-- GEM END -->
 
 ### General overview
 
-* [About](https://github.com/gem/oq-engine/blob/master/doc/about.md)
-* [FAQ](https://github.com/gem/oq-engine/blob/master/doc/faq.md)
+* [About](https://github.com/gem/oq-engine/blob/engine-3.7/doc/about.md)
+* [FAQ](https://github.com/gem/oq-engine/blob/engine-3.7/doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
-* [OQ Commands](https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md)
-* [Architecture](https://github.com/gem/oq-engine/blob/master/doc/sphinx/architecture.rst)
-* [Calculation Workflow](https://github.com/gem/oq-engine/blob/master/doc/calculation-workflow.md)
-* [Hardware Suggestions](https://github.com/gem/oq-engine/blob/master/doc/hardware-suggestions.md)
-* [Continuous integration and testing](https://github.com/gem/oq-engine/blob/master/doc/testing.md)
-* [Glossary of Terms](https://github.com/gem/oq-engine/blob/master/doc/glossary.md)
+* [OQ Commands](https://github.com/gem/oq-engine/blob/engine-3.7/doc/oq-commands.md)
+* [Architecture](https://github.com/gem/oq-engine/blob/engine-3.7/doc/sphinx/architecture.rst)
+* [Calculation Workflow](https://github.com/gem/oq-engine/blob/engine-3.7/doc/calculation-workflow.md)
+* [Hardware Suggestions](https://github.com/gem/oq-engine/blob/engine-3.7/doc/hardware-suggestions.md)
+* [Continuous integration and testing](https://github.com/gem/oq-engine/blob/engine-3.7/doc/testing.md)
+* [Glossary of Terms](https://github.com/gem/oq-engine/blob/engine-3.7/doc/glossary.md)
 
 #### For contributors
 
-* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
+* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/engine-3.7/doc/development-guidelines.md)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
-* [HTTP REST API](https://github.com/gem/oq-engine/blob/master/doc/web-api.md)
-* [Implementing a new GSIM](https://github.com/gem/oq-engine/blob/master/doc/implementing-new-gsim.md)
+* [HTTP REST API](https://github.com/gem/oq-engine/blob/engine-3.7/doc/web-api.md)
+* [Implementing a new GSIM](https://github.com/gem/oq-engine/blob/engine-3.7/doc/implementing-new-gsim.md)
 
 ### Installation
 
-* [Technology stack and requirements](https://github.com/gem/oq-engine/blob/master/doc/requirements.md)
-* [Which installation method should I use?](https://github.com/gem/oq-engine/blob/master/doc/installing/overview.md)
+* [Technology stack and requirements](https://github.com/gem/oq-engine/blob/engine-3.7/doc/requirements.md)
+* [Which installation method should I use?](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/overview.md)
 
 #### Linux
 
-* [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/master/doc/installing/ubuntu.md)
-* [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
-* [Installing on other flavors (without sudo)](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
-* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
-* [Installing on a cluster](https://github.com/gem/oq-engine/blob/master/doc/installing/cluster.md)
+* [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/ubuntu.md)
+* [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/rhel.md)
+* [Installing on other flavors (without sudo)](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/linux-generic.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/development.md)
+* [Installing on a cluster](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/cluster.md)
 
 #### macOS
 
-* [Installing on macOS](https://github.com/gem/oq-engine/blob/master/doc/installing/macos.md)
-* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md#macos)
+* [Installing on macOS](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/macos.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/development.md#macos)
 
 #### Windows
 
-* [Installing on Windows](https://github.com/gem/oq-engine/blob/master/doc/installing/windows.md)
-* [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
+* [Installing on Windows](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/windows.md)
+* [Starting the software](https://github.com/gem/oq-engine/blob/engine-3.7/doc/running/windows.md)
 
 #### VirtualBox
 
@@ -87,7 +82,7 @@ Current stable version is the **OpenQuake Engine 3.6** 'Pak Topo'. The documenta
 
 #### Cloud
 
-* [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
+* [Deploy a Docker container](https://github.com/gem/oq-engine/blob/engine-3.7/doc/installing/docker.md)
 
 #### Mirrors
 
@@ -97,8 +92,8 @@ The main download server ([downloads.openquake.org](https://downloads.openquake.
 
 ### Running the OpenQuake Engine
 
-* [Using the command line](https://github.com/gem/oq-engine/blob/master/doc/running/unix.md)
-* [Using the WebUI](https://github.com/gem/oq-engine/blob/master/doc/running/server.md)
+* [Using the command line](https://github.com/gem/oq-engine/blob/engine-3.7/doc/running/unix.md)
+* [Using the WebUI](https://github.com/gem/oq-engine/blob/engine-3.7/doc/running/server.md)
 
 ### Visualizing outputs via QGIS
 
@@ -112,7 +107,7 @@ The main download server ([downloads.openquake.org](https://downloads.openquake.
 
 ## License
 
-The OpenQuake Engine is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/master/LICENSE)**.
+The OpenQuake Engine is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/engine-3.7/LICENSE)**.
 
 ## Contacts
 
