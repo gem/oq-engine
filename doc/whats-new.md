@@ -9,27 +9,28 @@ https://github.com/gem/oq-engine/blob/engine-3.7/debian/changelog
 Disaggregation
 --------------
 
-We fixed a bug in disaggregation calculations with nonparametric sources:
+We fixed a bug in disaggregations with nonparametric sources:
 they were being incorrectly discarded.
 
-We fixed a bug in disaggregation calculations crossing the international
+We fixed a bug in disaggregations crossing the international
 date line: the lon-lat bins were incorrectly computed.
 
 We fixed the filtering procedure by discarding ruptures
-over the integration distance that were not discarded before.
+over the integration distance that were incorrectly not discarded before.
 
 We implemented various optimizations to make it possible to run
-calculation with many sites (where many means less than a thousand).
+calculation with many sites (where many means less than a thousand,
+disaggregating is still expensive).
 
 We changed the exporter for `disagg_by_src` to export filenames
 containing the site ID and not longitude and latitude, consistently
 with the other disaggregation exporters.
 
-Now we generate the output `disagg_by_src` even in the
-case of multiple realizations, even only the chosen realization is considered.
+We generate the output `disagg_by_src` even in the
+case of multiple realizations, but only the chosen realization is considered.
 
 There is a new configuration parameter `max_sites_disagg` which can be used
-to constraint the maximum number of disaggregation sites (the default is 10).
+to constraint the maximum number of disaggregation sites; the default is 10.
 
 We added an experimental API `extract/disagg_layer` to extract the
 disaggregation outputs for multiple sites at once.
@@ -39,8 +40,10 @@ Event based
 
 There was a crucial change in the event based calculators: we moved
 from 64 bit event IDs to 32 bit event IDs. The change was necessary to
-accomodate Excel users, because Excel silently converts 64
-bit integers to floats, thus causing the IDs to be not unique.
+accomodate Excel users, because Excel silently converts 64 bit
+integers to floats and truncates the numbers, thus causing the IDs to
+be non-unique. This is not a problem of the engine per se, but it
+caused endless trouble in the past, so it has been fixed at the source.
 
 Users taking advantage of the relation `rupture_ID = event_ID //
 2 ** 32` will have to change their scripts and extract the rupture_ID
@@ -48,10 +51,11 @@ from the events table instead, since the relation does not hold true
 anymore. The others will not see any change, except that the event
 IDs in their event loss table will be smaller numbers.
 
-When exporting the event loss table a new field rupture_id will be
-visible.
+When exporting the event loss table a new field `rupture_id` will be
+visible. The event loss table has been unified (as much as possible)
+between scenario, event based and event based calculations.
 
-We also added a new output `Events` which is a CSV with
+We added a new output `Events` which is a CSV with
 fields id, rup_id, rlz_id where `id` is the 32 bit event ID, `rup_id`
 is the rupture ID and `rlz_id` is the realization ID.
  
@@ -92,41 +96,45 @@ GMPE with new coefficients using a robust linear mixed regression
 analysis. There are three new subclasses for modelling site amplifications:
 see https://github.com/gem/oq-engine/pull/4957 for the details.
 
-Greame also contributed four site amplification models for SERA (see
+Graeme also contributed four site amplification models for SERA (see
 https://github.com/gem/oq-engine/pull/4968 for the details) and a
 preliminary scalable backbone GMPE for application to the stable
 cratonic parts of Europe, based on an analysis of epistemic
 uncertainty in the NGA East suite
 (see https://github.com/gem/oq-engine/pull/4988).
 
-Guillaume Daniel contributed an implementation of the Ameri 2017 GMPE.
+Kris Vanneste updated the coefficients table of the Atkinson (2015) GMPE
+to the latest version of the published paper.
+
+Guillaume Daniel contributed an implementation of the (Ameri) 2017 GMPE.
 
 We added a new rupture-site metric: the azimuth to the closest point on the
 rupture.
+
+There was a bug fix in the Youngs and Coppersmith (1985)
+GMPE: due to numerical issues, instantiating the GMPE with the classmethod
+`YoungsCoppersmith1985MFD.from_total_moment_rate` was producing wrong
+numbers.
 
 There were some internal changes to the GMPE instantiation mechanism,
 so that now users of hazardlib do not need to call the `.init()` method
 manually.
 
-Richard Styron fixed a bug in the Youngs and Coppersmith (1985)
-GMPE: due to numerical issues, instantiating the GMPE with the classmethod
-`YoungsCoppersmith1985MFD.from_total_moment_rate` was producing wrong
-numbers.
-
 Other Hazard
 ------------
 
 There was a subtle bug introduced in engine 3.3 that went unnoticed for
-nearly a year: due to a change to the prefiltering mechanism,
-for complex fault sources producing large ruptures,
-some ruptures could be incorrectly discarded, thus producing a lower hazard.
+nearly a year: due to a change in the prefiltering mechanism,
+for complex fault sources producing large ruptures
+some ruptures at the limit of the integration distance
+could be incorrectly discarded, thus producing a lower hazard.
 This was discovered in the South America model, where there are complex
 fault sources with magnitudes up to 9.65.
 
 There was a memory issue in the GMPE logic tree sampling procedure, visibile
 for logic trees with billions of branches, like in the SERA model. This
 has been fixed, by not keeping the full tree in memory, similarly to
-the implementation for the source model logic tree.
+what we do for the source model logic tree.
 
 The source weighting algorithm has been improved, thus reducing even more the
 issue of slow tasks in classical calculations. There was also some
@@ -164,7 +172,7 @@ We added some metadata to the risk CSV exporters, in particular the
 We now raise a clear error for unquoted WKT geometries in multi-risk
 calculations.
 
-We now a clear error when the `aggregate_by` flag is used in calculators
+We now raise a clear error when the `aggregate_by` flag is used in calculators
 different from `ebrisk`.
 
 We optimized the aggregation facilities of the engine by leveraging
@@ -229,7 +237,7 @@ corresponding to calculations in the database are removed.
 Calculations that fail in the validation phase, before starting, are
 now hidden to the user, to avoid littering. The error message
 is still clearly displayed to the user in all cases (command-line, Web UI,
-QGIS plugin).
+QGIS plugin)
 
 We fixed/changed several APIs for interacting with the QGIS plugin.
 
