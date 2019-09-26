@@ -314,14 +314,15 @@ class ContextMaker(object):
     def _gen_rup_sites(self, src, sites):
         # implements the collapse distance feature: the finite site effects
         # are ignored for sites over 3 times the rupture length
-        if hasattr(src, 'location') and src.count_nphc() > 1:
+        loc = getattr(src, 'location', None)
+        if loc and src.count_nphc() > 1:
             d_depth = src._get_delta_depth()
+            loc.depth = src.lower_seismogenic_depth  # used in sites.split
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 p_radius = src._get_max_rupture_projection_radius(mag)
                 # the collapse distance has been decided heuristically by MS
                 collapse_distance = 3 * max(p_radius, d_depth)
-                close_sites, far_sites = sites.split(
-                    src.location, collapse_distance)
+                close_sites, far_sites = sites.split(loc, collapse_distance)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
                         yield rup, far_sites
