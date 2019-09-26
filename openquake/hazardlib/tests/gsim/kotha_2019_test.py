@@ -99,6 +99,20 @@ class KothaEtAl2019SERATestCase(BaseGSIMTestCase):
                    max_discrep_percentage=MAX_DISCREP)
 
 
+class KothaEtAl2019SERANonErgodicTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERA
+
+    def test_std_intra(self):
+        self.check("kotha19/KOTHA_2019_STDDEV_NONERGODIC_INTRA_EVENT.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
+
+    def test_std_total(self):
+        self.check("kotha19/KOTHA_2019_STDDEV_NONERGODIC_TOTAL.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
+
+
 class KothaEtAl2019SERASlowAttenTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2019SERA
 
@@ -155,6 +169,20 @@ class KothaEtAl2019SiteTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=MAX_DISCREP)
 
 
+class KothaEtAl2019SiteNonErgodicTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019Site
+
+    def test_std_intra(self):
+        self.check("kotha19/KOTHA_2019_VS30_NONERGODIC_STDDEV_INTRA_EVENT.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
+
+    def test_std_total(self):
+        self.check("kotha19/KOTHA_2019_VS30_NONERGODIC_STDDEV_TOTAL.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
+
+
 class KothaEtAl2019SlopeTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2019Slope
 
@@ -175,6 +203,20 @@ class KothaEtAl2019SlopeTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=MAX_DISCREP)
 
 
+class KothaEtAl2019SlopeNonErgodicTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019Slope
+
+    def test_std_intra(self):
+        self.check("kotha19/KOTHA_2019_SLOPE_NONERGODIC_STDDEV_INTRA_EVENT.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
+
+    def test_std_total(self):
+        self.check("kotha19/KOTHA_2019_SLOPE_NONERGODIC_STDDEV_TOTAL.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
+
+
 class KothaEtAl2019SlopeGeologyTestCase(BaseGSIMTestCase):
     GSIM_CLASS = KothaEtAl2019SERASlopeGeology
 
@@ -193,3 +235,17 @@ class KothaEtAl2019SlopeGeologyTestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check("kotha19/KOTHA_2019_SLOPE_GEOLOGY_TOTAL_STDDEV.csv",
                    max_discrep_percentage=MAX_DISCREP)
+
+
+class KothaEtAl2019SlopeGeologyNonergodicTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = KothaEtAl2019SERASlopeGeology
+
+    def test_std_intra(self):
+        self.check("kotha19/KOTHA_2019_SLOPE_GEOLOGY_NONERGODIC_INTRA_EVENT_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
+
+    def test_std_total(self):
+        self.check("kotha19/KOTHA_2019_SLOPE_GEOLOGY_NONERGODIC_TOTAL_STDDEV.csv",
+                   max_discrep_percentage=MAX_DISCREP,
+                   ergodic=False)
