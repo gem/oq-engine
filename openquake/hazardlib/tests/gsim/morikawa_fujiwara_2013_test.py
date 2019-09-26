@@ -16,12 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import numpy as np
-import unittest
-from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.contexts import DistancesContext
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
         MorikawaFujiwara2013Crustal,
         MorikawaFujiwara2013SubInterfaceNE,
@@ -36,6 +30,9 @@ class MorikawaFujiwara2013CrustalTest(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('MF13/mean_crustal.csv', max_discrep_percentage=0.1)
+
+    def test_sigma(self):
+        self.check('MF13/total_std_crustal.csv', max_discrep_percentage=0.1)
 
 
 class MorikawaFujiwara2013InterfaceTest(BaseGSIMTestCase):
