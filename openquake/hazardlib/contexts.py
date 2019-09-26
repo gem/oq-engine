@@ -151,7 +151,6 @@ class ContextMaker(object):
         self.maximum_distance = (
             param.get('maximum_distance') or IntegrationDistance({}))
         self.trunclevel = param.get('truncation_level')
-        self.pointsource_distance = param.get('pointsource_distance', 1000)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -316,8 +315,9 @@ class ContextMaker(object):
         # are ignored for sites over 3 times the rupture length
         loc = getattr(src, 'location', None)
         if loc and src.count_nphc() > 1:
-            d_depth = src._get_delta_depth()
-            loc.depth = src.lower_seismogenic_depth  # used in sites.split
+            min_dep, max_dep = src._get_min_max_depths()
+            d_depth = max_dep - min_dep
+            loc.depth = min_dep  # used in sites.split
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 max_dist = self.maximum_distance(src.tectonic_region_type, mag)
                 p_radius = src._get_max_rupture_projection_radius(mag)
