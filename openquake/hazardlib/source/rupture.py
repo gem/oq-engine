@@ -38,12 +38,18 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-U64 = numpy.uint64
-TWO16 = U64(2 ** 16)
-TWO32 = U64(2 ** 32)
+TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
-events_dt = numpy.dtype([('id', U64), ('rlz', U16)])
-classes = {}  # initialized in .init()
+events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
+
+
+def to_checksum(cls1, cls2):
+    """
+    Convert a pair of classes into a numeric code (uint8)
+    """
+    names = '%s,%s' % (cls1.__name__, cls2.__name__)
+    return sum(map(ord, names)) % 256
 
 
 @with_slots
@@ -76,29 +82,29 @@ class BaseRupture(metaclass=abc.ABCMeta):
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
     rupture_slip_direction weight'''.split()
-    serial = 0  # set to a value > 0 by the engine
+    rup_id = 0  # set to a value > 0 by the engine
     _code = {}
-    types = {}
 
     @classmethod
     def init(cls):
         """
-        Initialize the class dictionaries `._code` and .`types` encoding the
+        Initialize the class dictionary `._code` by encoding the
         bidirectional correspondence between an integer in the range 0..255
         (the code) and a pair of classes (rupture_class, surface_class).
         This is useful when serializing the rupture to and from HDF5.
+        :returns: {code: pair of classes}
         """
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
-        for cl in rupture_classes + surface_classes:
-            classes[cl.__name__] = cl
-        n = 0
+        code2cls = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
-            cls._code[rup, sur] = n
-            cls.types[n] = rup, sur
-            n += 1
-        if n >= 256:
-            raise ValueError('Too many rupture codes: %d' % n)
+            chk = to_checksum(rup, sur)
+            if chk in code2cls and code2cls[chk] != (rup, sur):
+                raise ValueError('Non-unique checksum %d for %s, %s' %
+                                 (chk, rup, sur))
+            cls._code[rup, sur] = chk
+            code2cls[chk] = rup, sur
+        return code2cls
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, rupture_slip_direction=None, weight=None):
@@ -400,7 +406,10 @@ class ParametricProbabilisticRupture(BaseRupture):
 
 
 def get_subclasses(cls):
-    for subclass in cls.__subclasses__():
+    """
+    :returns: the subclasses of `cls`, ordered by name
+    """
+    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
         yield subclass
         for ssc in get_subclasses(subclass):
             yield ssc
@@ -483,19 +492,20 @@ class ExportedRupture(object):
     Simplified Rupture class with attributes rupid, events_by_ses, indices
     and others, used in export.
 
-    :param rupid: rupture serial ID
+    :param rupid: rupture rup_id ID
     :param events_by_ses: dictionary ses_idx -> event records
     :param indices: site indices
     """
-    def __init__(self, rupid, events_by_ses, indices=None):
+    def __init__(self, rupid, n_occ, events_by_ses, indices=None):
         self.rupid = rupid
+        self.n_occ = n_occ
         self.events_by_ses = events_by_ses
         self.indices = indices
 
 
 def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
     """
-    :param rup_array: a composite array with fields serial, n_occ and grp_id
+    :param rup_array: a composite array with fields rup_id, n_occ and grp_id
     :param samples_by_grp: a dictionary grp_id -> samples
     :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
     """
@@ -505,7 +515,7 @@ def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
         samples = samples_by_grp[grp_id]
         num_rlzs = num_rlzs_by_grp[grp_id]
         num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
-        eids = TWO32 * U64(rup['serial']) + numpy.arange(num_events, dtype=U64)
+        eids = numpy.arange(num_events, dtype=U32)
         all_eids.append(eids)
     return numpy.concatenate(all_eids)
 
@@ -517,7 +527,7 @@ class EBRupture(object):
     as well as the IDs of the corresponding seismic events.
     """
     def __init__(self, rupture, srcidx, grp_id, n_occ, samples=1):
-        assert rupture.serial  # sanity check
+        assert rupture.rup_id  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
@@ -525,11 +535,11 @@ class EBRupture(object):
         self.samples = samples
 
     @property
-    def serial(self):
+    def rup_id(self):
         """
         Serial number of the rupture
         """
-        return self.rupture.serial
+        return self.rupture.rup_id
 
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """
@@ -543,21 +553,19 @@ class EBRupture(object):
         if self.samples == 1:  # full enumeration or akin to it
             for rlzs in rlzs_by_gsim.values():
                 for rlz in rlzs:
-                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U64) + (
-                        TWO32 * U64(self.serial))
+                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U32)
                     j += self.n_occ
         else:  # associated eids to the realizations
             rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
             assert len(rlzs) == self.samples, (len(rlzs), self.samples)
             histo = general.random_histogram(
-                self.n_occ, self.samples, self.serial)
+                self.n_occ, self.samples, self.rup_id)
             for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U64) + (
-                    TWO32 * U64(self.serial))
+                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
                 j += n
         return dic
 
-    def get_events(self, rlzs_by_gsim):
+    def get_events(self, rlzs_by_gsim, e0=None):
         """
         :returns: an array of events with fields eid, rlz
         """
@@ -565,7 +573,9 @@ class EBRupture(object):
         for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
             all_eids.extend(eids)
             rlzs.extend([rlz] * len(eids))
-        return numpy.fromiter(zip(all_eids, rlzs), events_dt)
+        evs = U32(all_eids) + (e0 if e0 is not None else self.e0)
+        rupids = [self.rup_id] * len(evs)
+        return numpy.fromiter(zip(evs, rupids, rlzs), events_dt)
 
     def get_eids(self, num_rlzs):
         """
@@ -573,13 +583,13 @@ class EBRupture(object):
         :returns: an array of event IDs
         """
         num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
-        return TWO32 * U64(self.serial) + numpy.arange(num_events, dtype=U64)
+        return numpy.arange(num_events, dtype=U32)
 
     def get_events_by_ses(self, events, num_ses):
         """
         :returns: a dictionary ses index -> events array
         """
-        numpy.random.seed(self.serial)
+        numpy.random.seed(self.rup_id)
         sess = numpy.random.choice(num_ses, len(events)) + 1
         events_by_ses = collections.defaultdict(list)
         for ses, event in zip(sess, events):
@@ -590,20 +600,19 @@ class EBRupture(object):
 
     def get_ses_by_eid(self, rlzs_by_gsim, num_ses):
         events = self.get_events(rlzs_by_gsim)
-        numpy.random.seed(self.serial)
+        numpy.random.seed(self.rup_id)
         sess = numpy.random.choice(num_ses, len(events)) + 1
         return dict(zip(events['id'], sess))
 
-    def export(self, mesh, rlzs_by_gsim, num_ses):
+    def export(self, rlzs_by_gsim, num_ses):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        events = self.get_events(rlzs_by_gsim)
+        events = self.get_events(rlzs_by_gsim, e0=TWO32 * self.rup_id)
         events_by_ses = self.get_events_by_ses(events, num_ses)
-        new = ExportedRupture(self.serial, events_by_ses)
-        new.mesh = mesh[()]
+        new = ExportedRupture(self.rup_id, self.n_occ, events_by_ses)
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):
@@ -642,4 +651,4 @@ class EBRupture(object):
 
     def __repr__(self):
         return '<%s %d[%d]>' % (
-            self.__class__.__name__, self.serial, self.n_occ)
+            self.__class__.__name__, self.rup_id, self.n_occ)

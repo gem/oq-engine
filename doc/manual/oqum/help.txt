@@ -1,24 +1,14 @@
-usage: oq engine [-h]
-                 [--log-file LOG_FILE]
-                 [--no-distribute]
-                 [-y]
-                 [-c CONFIG_FILE]
-                 [--make-html-report YYYY-MM-DD|today]
-                 [-u]
-                 [-d]
-                 [-w]
-                 [--run CONFIG_FILE]
-                 [--list-hazard-calculations]
-                 [--list-risk-calculations]
+usage: oq engine [-h] [--log-file LOG_FILE] [--no-distribute] [-y]
+                 [-c CONFIG_FILE] [--make-html-report YYYY-MM-DD|today] [-u]
+                 [-d] [-w] [--run JOB_INI [JOB_INI ...]]
+                 [--list-hazard-calculations] [--list-risk-calculations]
                  [--delete-calculation CALCULATION_ID]
                  [--delete-uncompleted-calculations]
                  [--hazard-calculation-id HAZARD_CALCULATION_ID]
-                 [--list-outputs CALCULATION_ID]
-                 [--show-log CALCULATION_ID]
+                 [--list-outputs CALCULATION_ID] [--show-log CALCULATION_ID]
                  [--export-output OUTPUT_ID TARGET_DIR]
-                 [--export-outputs CALCULATION_ID TARGET_DIR]
-                 [-e]
-                 [-l {debug, info, warn, error, critical}]
+                 [--export-outputs CALCULATION_ID TARGET_DIR] [-e]
+                 [-l {debug, info, warn, error, critical}] [-r]
 
 Run a calculation using the traditional command line API
 
@@ -37,7 +27,7 @@ optional arguments:
   -c CONFIG_FILE, --config-file CONFIG_FILE
                         Custom openquake.cfg file, to override default
                         configurations
-  --make-html-report YYYY-MM-DD|today, -r YYYY-MM-DD|today
+  --make-html-report YYYY-MM-DD|today, --r YYYY-MM-DD|today
                         Build an HTML report of the computation at the given
                         date
   -u, --upgrade-db      Upgrade the openquake database
@@ -45,7 +35,8 @@ optional arguments:
   -w, --what-if-I-upgrade
                         Show what will happen to the openquake database if you
                         upgrade
-  --run CONFIG_FILE     Run a job with the specified config file
+  --run JOB_INI [JOB_INI ...]
+                        Run a job with the specified config file
   --list-hazard-calculations, --lhc
                         List hazard calculation information
   --list-risk-calculations, --lrc
@@ -65,7 +56,8 @@ optional arguments:
   --export-outputs CALCULATION_ID TARGET_DIR, --eos CALCULATION_ID TARGET_DIR
                         Export all of the calculation outputs to the specified
                         directory
-  -e , --exports        Comma-separated string specifing the export formats,
+  -e, --exports         Comma-separated string specifing the export formats,
                         in order of priority
-  -l {debug, info, warn, error, critical}, --log-level {debug, info, warn, 
-                        error, critical} Defaults to "info"
+  -l, --log-level {debug, info, warn, error, critical}
+                        Defaults to "info"
+  -r, --reuse-hazard    Reuse the event based hazard if available

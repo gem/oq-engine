@@ -1,0 +1,10 @@
+#,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:17:15', checksum=687330760, kind='rlz-000', risk_investigation_time=1.0"
+annual_frequency_of_exceedence,return_period,loss_type,loss_value,loss_ratio
+2.00000E-02,50,occupants,9.10071E-03,3.28941E-04
+1.00000E-02,100,occupants,1.20664E-02,4.36136E-04
+5.00000E-03,200,occupants,1.64134E-02,5.93254E-04
+2.00000E-03,500,occupants,2.36237E-02,8.53870E-04
+1.00000E-03,1000,occupants,2.91504E-02,1.05363E-03
+5.00000E-04,2000,occupants,3.92252E-02,1.41778E-03
+2.00000E-04,5000,occupants,4.43688E-02,1.60369E-03
+1.00000E-04,10000,occupants,4.96850E-02,1.79584E-03

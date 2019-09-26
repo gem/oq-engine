@@ -21,7 +21,6 @@ Utility functions of general interest.
 """
 import os
 import sys
-import imp
 import copy
 import math
 import socket
@@ -35,15 +34,15 @@ import tempfile
 import importlib
 import itertools
 import subprocess
-import collections
-from collections.abc import Mapping, Container
-
+from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 
 
 def duplicated(items):
@@ -79,7 +78,7 @@ def nokey(item):
     return 'Unspecified'
 
 
-class WeightedSequence(collections.MutableSequence):
+class WeightedSequence(MutableSequence):
     """
     A wrapper over a sequence of weighted items with a total weight attribute.
     Adding items automatically increases the weight.
@@ -271,6 +270,22 @@ def split_in_slices(number, num_slices):
     return slices
 
 
+def gen_slices(start, stop, blocksize):
+    """
+    Yields slices of lenght at most block_size.
+
+    >>> list(gen_slices(1, 6, 2))
+    [slice(1, 3, None), slice(3, 5, None), slice(5, 6, None)]
+    """
+    assert start <= stop, (start, stop)
+    assert blocksize > 0, blocksize
+    while True:
+        yield slice(start, min(start + blocksize, stop))
+        start += blocksize
+        if start >= stop:
+            break
+
+
 def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
@@ -356,7 +371,7 @@ _tmp_paths = []
 def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
 
-    Please note: the temporary file must be deleted by the caller.
+    Please note: the temporary file can be deleted by the caller or not.
 
     :param string content: the content to write to the temporary file.
     :param string dir: directory where the file should be created
@@ -489,25 +504,6 @@ def assert_independent(package, *packages):
                 raise CodeDependencyError('%s depends on %s' % (package, pkg))
 
 
-def search_module(module, syspath=sys.path):
-    """
-    Given a module name (possibly with dots) returns the corresponding
-    filepath, or None, if the module cannot be found.
-
-    :param module: (dotted) name of the Python module to look for
-    :param syspath: a list of directories to search (default sys.path)
-    """
-    lst = module.split(".")
-    pkg, submodule = lst[0], ".".join(lst[1:])
-    try:
-        fileobj, filepath, descr = imp.find_module(pkg, syspath)
-    except ImportError:
-        return
-    if submodule:  # recursive search
-        return search_module(submodule, [filepath])
-    return filepath
-
-
 class CallableDict(dict):
     r"""
     A callable object built on top of a dictionary of functions, used
@@ -636,10 +632,13 @@ class AccumDict(dict):
     def __iadd__(self, other):
         if hasattr(other, 'items'):
             for k, v in other.items():
-                try:
-                    self[k] = self[k] + v
-                except KeyError:
+                if k not in self:
                     self[k] = v
+                elif isinstance(v, list):
+                    # specialized for speed
+                    self[k].extend(v)
+                else:
+                    self[k] = self[k] + v
         else:  # add other to all elements
             for k in self:
                 self[k] = self[k] + other
@@ -735,7 +734,7 @@ def _slicedict_n(imt_dt):
     return slicedic, n
 
 
-class DictArray(collections.Mapping):
+class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays serializable to HDF5:
 
@@ -874,6 +873,73 @@ def group_array(array, *kfields):
     Convert an array into a dict kfields -> array
     """
     return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+
+
+def multi_index(shape, axis=None):
+    """
+    :param shape: a shape of lenght L with P = S1 * S2 * ... * SL
+    :param axis: None or an integer in the range 0 .. L -1
+    :yields:
+        P tuples of indices with a slice(None) at the axis position (if any)
+    """
+    if any(s >= TWO16 for s in shape):
+        raise ValueError('Shape too big: ' + str(shape))
+    ranges = (range(s) for s in shape)
+    if axis is None:
+        yield from itertools.product(*ranges)
+    for tup in itertools.product(*ranges):
+        lst = list(tup)
+        lst.insert(axis, slice(None))
+        yield tuple(lst)
+
+
+def fast_agg(indices, values=None, axis=0):
+    """
+    :param indices: N indices in the range 0 ... M - 1 with M < N
+    :param values: N values (can be arrays)
+    :returns: M aggregated values (can be arrays)
+
+    >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
+    >>> fast_agg([0, 1, 1, 0], values)
+    array([[0.5 , 0.55],
+           [0.5 , 0.55]])
+    """
+    if values is None:
+        values = numpy.ones_like(indices)
+    N = len(values)
+    if len(indices) != N:
+        raise ValueError('There are %d values but %d indices' %
+                         (N, len(indices)))
+    shp = values.shape[1:]
+    if not shp:
+        return numpy.bincount(indices, values)
+    M = max(indices) + 1
+    lst = list(shp)
+    lst.insert(axis, M)
+    res = numpy.zeros(lst, values.dtype)
+    for mi in multi_index(shp, axis):
+        res[mi] = numpy.bincount(indices, values[mi])
+    return res
+
+
+def fast_agg2(tags, values=None, axis=0):
+    """
+    :param tags: N non-unique tags out of M
+    :param values: N values (can be arrays)
+    :returns: (M unique tags, M aggregated values)
+
+    >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
+    >>> fast_agg2(['A', 'B', 'B', 'A'], values)
+    (array(['A', 'B'], dtype='<U1'), array([[0.5 , 0.55],
+           [0.5 , 0.55]]))
+
+    It can also be used to count the number of tags:
+
+    >>> fast_agg2(['A', 'B', 'B', 'A', 'A'])
+    (array(['A', 'B'], dtype='<U1'), array([3., 2.]))
+    """
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    return uniq, fast_agg(indices, values, axis)
 
 
 def count(groupiter):
@@ -1075,7 +1141,7 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None, cleanup=False):
     Build a zip archive from the given file names.
 
     :param fnames: list of path names
-    :param archive: path of the archive
+    :param archive: path of the archive or BytesIO object
     """
     prefix = len(os.path.commonprefix([os.path.dirname(f) for f in fnames]))
     with zipfile.ZipFile(
@@ -1085,7 +1151,6 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None, cleanup=False):
             z.write(f, f[prefix:])
             if cleanup:  # remove the zipped file
                 os.remove(f)
-    log('Generated %s' % archive)
     return archive
 
 
@@ -1159,3 +1224,22 @@ def getsizeof(o, ids=None):
         return nbytes + sum(getsizeof(x, ids) for x in o)
 
     return nbytes
+
+
+def add_defaults(array, **kw):
+    """
+    :param array: a structured array
+    :param kw: a dictionary field name -> default value
+    :returns: a new array with additional fields with default values
+    """
+    dtlist = [(name, array.dtype[name]) for name in array.dtype.names]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            dtlist.append((k, type(v)))
+    new = numpy.zeros(array.shape, dtlist)
+    for name in array.dtype.names:
+        new[name] = array[name]
+    for k, v in kw.items():
+        if k not in array.dtype.names:
+            new[k] = v
+    return new

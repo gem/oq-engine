@@ -22,7 +22,7 @@ import numpy
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
-    case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
+    case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
@@ -45,7 +45,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % fname, actual)
 
     def test_case_1(self):
-        # test with a single event
+        # test with a single event and a missing tag
         self.assert_ok(case_1, 'job_risk.ini')
         got = view('num_units', self.calc.datastore)
         self.assertEqual('''\
@@ -78,10 +78,6 @@ RM       4,000
         # check extract gmf_data works with a filtered site collection
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
         self.assertEqual(gmf_data['rlz-000'].shape, (1,))
-
-    def test_case_1h(self):
-        # test for consequences with a single asset
-        self.assert_ok(case_1h, 'job_risk.ini', exports='csv', kind='losses')
 
     def test_case_2(self):
         self.assert_ok(case_2, 'job_risk.ini')

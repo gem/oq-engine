@@ -28,6 +28,7 @@ import numpy
 
 # Test data generated from OpenSHA implementation.
 
+
 class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = CauzziFaccioli2008
 
@@ -45,12 +46,13 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         # method should return values equal to the ones obtained by clipping
         # distances at 15 km.
         sctx = SitesContext()
+        sctx.vs30 = numpy.array([800.0, 800.0, 800.0])
         rctx = RuptureContext()
+        rctx.mag = 5.0
+        rctx.rake = 0
         dctx = DistancesContext()
-        setattr(sctx, 'vs30', numpy.array([800.0, 800.0, 800.0]))
-        setattr(rctx, 'mag', 5.0)
-        setattr(rctx, 'rake', 0.0)
-        setattr(dctx, 'rhypo', numpy.array([0.0, 10.0, 16.0]))
+        dctx.rhypo = numpy.array([0.0, 10.0, 16.0])
+        dctx.rhypo.flags.writeable = False
         mean_0, stds_0 = self.GSIM_CLASS().get_mean_and_stddevs(
             sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         setattr(dctx, 'rhypo', numpy.array([15.0, 15.0, 16.0]))

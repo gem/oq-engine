@@ -26,7 +26,8 @@ from openquake.server import dbserver as dbs
 
 @sap.script
 def dbserver(cmd, dbhostport=None,
-             dbpath=os.path.expanduser(config.dbserver.file)):
+             dbpath=os.path.expanduser(config.dbserver.file),
+             loglevel='INFO', foreground=False):
     """
     start/stop/restart the database server, or return its status
     """
@@ -44,17 +45,14 @@ def dbserver(cmd, dbhostport=None,
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            dbs.run_server(dbpath, dbhostport)
+            dbs.run_server(dbpath, dbhostport, loglevel, foreground)
         else:
             print('dbserver already running')
-    elif cmd == 'restart':
-        if status == 'running':
-            pid = logs.dbcmd('getpid')
-            os.kill(pid, signal.SIGINT)
-        dbs.run_server(dbpath, dbhostport)
 
 
 dbserver.arg('cmd', 'dbserver command',
-             choices='start stop status restart'.split())
+             choices='start stop status'.split())
 dbserver.arg('dbhostport', 'dbhost:port')
 dbserver.arg('dbpath', 'dbpath')
+dbserver.opt('loglevel', 'DEBUG|INFO|WARN')
+dbserver.flg('foreground', 'stay in foreground')

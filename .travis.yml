@@ -15,19 +15,20 @@ jobs:
     env: HAZARDLIB
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
-          pytest --doctest-module -xv openquake/baselib openquake/hazardlib openquake/hmtk;
+          pytest --doctest-modules -xv openquake/baselib --tb=short &&
+          OQ_DISTRIBUTE=no pytest --doctest-modules -xv -nauto openquake/hazardlib openquake/hmtk --tb=short;
           fi
   - stage: tests
     env: ENGINE
     before_script:
-        - oq dbserver start &
+        - oq dbserver start -l DEBUG
     script:
-        - pytest --doctest-module -xv openquake/engine
-        - pytest --doctest-module -xv openquake/server
-        - pytest --doctest-module -xv openquake/calculators
-        - pytest --doctest-module -xv openquake/risklib
-        - pytest --doctest-module -xv openquake/commonlib
-        - pytest --doctest-module -xv openquake/commands
+        - pytest --doctest-modules -xv openquake/engine --tb=short
+        - pytest --doctest-modules -xv openquake/server --tb=short
+        - pytest --doctest-modules -xv openquake/calculators --tb=short
+        - pytest --doctest-modules -xv openquake/risklib --tb=short
+        - pytest --doctest-modules -xv openquake/commonlib --tb=short
+        - pytest --doctest-modules -xv openquake/commands --tb=short
         - oq webui migrate
     after_success:  # old sphinx does not work well with Python 3.5.4+
         - pip install sphinx==1.6.5
@@ -40,25 +41,21 @@ jobs:
             rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
           fi
     after_script:
-        - oq dbserver stop
+        - oq reset -y
   - stage: tests
     env: DEMOS
     script:
         # Upload oqdata.zip to http://artifacts.openquake.org/travis/ only if
         # the commit message includes a [demos] tag at the end or branch is master
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[demos\]' || test "$BRANCH" == "master"; then
-            time bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
-            oq dbserver stop &&
+            OQ_DISTRIBUTE=zmq bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
             oq dump /tmp/oqdata.zip &&
             oq restore /tmp/oqdata.zip /tmp/oqdata &&
             helpers/zipdemos.sh $(pwd)/demos &&
             openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
             chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
             eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
-            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
-            oq workers stop &&
-            oq reset --yes &&
-            oq dbserver status | grep -q 'dbserver not-running';
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip;
           fi
 
 before_install:
@@ -71,9 +68,10 @@ install:
   # to download the wheels first, put the folder in cache and then install the wheels from there.
   # A second run of 'pip download' will download only the missing wheels.
   - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
-      pip download -r requirements-py36-linux64.txt -d wheels &&
+      pip download -r requirements-py36-linux64.txt -r requirements-extra-py36-linux64.txt -d wheels &&
       pip -q install wheels/* ;
     fi
+  - pip install pytest-xdist
   - pip -q install -e .
 
 before_script:

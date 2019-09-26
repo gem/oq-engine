@@ -237,75 +237,12 @@ def gen_gmfs(gmf_set):
         yield gmf_node
 
 
-class EventBasedGMFXMLWriter(object):
-    """
-    :param dest:
-        File path (including filename) or a file-like object for XML results to
-        be saved to.
-    :param str sm_lt_path:
-        Source model logic tree branch identifier of the logic tree realization
-        which produced this collection of ground motion fields.
-    :param gsim_lt_path:
-        GSIM logic tree branch identifier of the logic tree realization which
-        produced this collection of ground motion fields.
-    """
-
-    def __init__(self, dest, sm_lt_path, gsim_lt_path):
-        self.dest = dest
-        self.sm_lt_path = sm_lt_path
-        self.gsim_lt_path = gsim_lt_path
-
-    # we want at least 1+7 digits of precision
-    def serialize(self, data, fmt='%10.7E'):
-        """
-        Serialize a collection of ground motion fields to XML.
-
-        :param data:
-            An iterable of "GMF set" objects.
-            Each "GMF set" object should:
-
-            * have an `investigation_time` attribute
-            * have an `stochastic_event_set_id` attribute
-            * be iterable, yielding a sequence of "GMF" objects
-
-            Each "GMF" object should:
-
-            * have an `imt` attribute
-            * have an `sa_period` attribute (only if `imt` is 'SA')
-            * have an `sa_damping` attribute (only if `imt` is 'SA')
-            * have a `event_id` attribute (to indicate which rupture
-              contributed to this gmf)
-            * be iterable, yielding a sequence of "GMF node" objects
-
-            Each "GMF node" object should have:
-
-            * a `gmv` attribute (to indicate the ground motion value
-            * `lon` and `lat` attributes (to indicate the geographical location
-              of the ground motion field)
-        """
-        gmf_set_nodes = []
-        for gmf_set in data:
-            gmf_set_node = Node('gmfSet')
-            if gmf_set.investigation_time:
-                gmf_set_node['investigationTime'] = str(
-                    gmf_set.investigation_time)
-            gmf_set_node['stochasticEventSetId'] = str(
-                gmf_set.stochastic_event_set_id)
-            gmf_set_node.nodes = gen_gmfs(gmf_set)
-            gmf_set_nodes.append(gmf_set_node)
-
-        gmf_container = Node('gmfCollection')
-        gmf_container[SM_TREE_PATH] = self.sm_lt_path
-        gmf_container[GSIM_TREE_PATH] = self.gsim_lt_path
-        gmf_container.nodes = gmf_set_nodes
-
-        with open(self.dest, 'wb') as dest:
-            nrml.write([gmf_container], dest, fmt)
-
-
 def sub_elems(elem, rup, *names):
     for name in names:
-        et.SubElement(elem, name).text = '%.7e' % getattr(rup, name)
+        value = getattr(rup, name)
+        # NB: dip and strike can be NaN for griddedRuptures
+        if not numpy.isnan(value):
+            et.SubElement(elem, name).text = '%.7e' % value
 
 
 def rupture_to_element(rup, parent=None):
@@ -321,14 +258,12 @@ def rupture_to_element(rup, parent=None):
         parent = et.Element('root')
     rup_elem = et.SubElement(parent, rup.typology)
     elem = et.SubElement(rup_elem, 'stochasticEventSets')
-    n = 0
     for ses in rup.events_by_ses:
         eids = rup.events_by_ses[ses]['id']
-        n += len(eids)
         ses_elem = et.SubElement(elem, 'SES', id=ses)
         ses_elem.text = ' '.join(str(eid) for eid in eids)
     rup_elem.set('id', rup.rupid)
-    rup_elem.set('multiplicity', str(n))
+    rup_elem.set('multiplicity', rup.n_occ)
     sub_elems(rup_elem, rup, 'magnitude',  'strike', 'dip', 'rake')
     h = rup.hypocenter
     et.SubElement(rup_elem, 'hypocenter', dict(lon=h.x, lat=h.y, depth=h.z))

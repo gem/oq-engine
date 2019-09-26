@@ -19,11 +19,19 @@
 import os
 import sys
 import configparser
-from openquake.baselib.general import git_suffix
+
+# disable OpenBLAS threads before the first numpy import
+# see https://github.com/numpy/numpy/issues/11826
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.5.0'
+__version__ = '3.8.0'
 __version__ += git_suffix(__file__)
+
+
+class InvalidFile(Exception):
+    """Raised from custom file validators"""
 
 
 class DotDict(dict):
@@ -100,7 +108,8 @@ def boolean(flag):
 
 
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
-            multi_user=boolean, multi_node=boolean, serialize_jobs=boolean)
+            multi_user=boolean, multi_node=boolean,
+            serialize_jobs=boolean, strict=boolean, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp

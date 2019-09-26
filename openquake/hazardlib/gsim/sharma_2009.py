@@ -102,7 +102,6 @@ class SharmaEtAl2009(GMPE):
         # extract dictionary of coefficients specific to required
         # intensity measure type
         coeffs = self.COEFFS[imt]
-        coeffs.update(self.CONSTS)
 
         # equation (1) is in terms of common logarithm
         log_mean = (self._compute_magnitude(rup, coeffs) +
@@ -210,30 +209,26 @@ class SharmaEtAl2009(GMPE):
     #: Coefficients taken from Table 2, p. 1202. Note that "In
     #: this article, only the coefficients for a subset of these
     #: periods [between 0.04 and 2.5 s] are reported" and the damping
-    #: is 5% (Sharma et al., 2009, p. 1200).
+    #: is 5% (Sharma et al., 2009, p. 1200).  "After trials with
+    #: different values b4 was fixed to be 15km for all periods."
+    #: (Sharma et al., 2009, p. 1201)
     COEFFS = CoeffsTable(sa_damping=5., table="""\
-     IMT      b1      b2      b3      b5      b6   sigma
-     pga  1.0170  0.1046 -1.0070 -0.0735 -0.3068  0.3227
-    0.04  1.0170  0.1046 -1.0070 -0.0735 -0.3068  0.3227
-    0.05  1.0280  0.1245 -1.0550 -0.0775 -0.3246  0.3350
-    0.10  1.3820  0.1041 -1.0620 -0.1358 -0.3326  0.3427
-    0.20  1.3820  0.1041 -1.0620 -0.1358 -0.3326  0.3596
-    0.30  1.3680  0.0684 -0.9139 -0.0972 -0.3011  0.3651
-    0.40  0.9747  0.1009 -0.8886 -0.0552 -0.2639  0.3613
-    0.50  0.5295  0.1513 -0.8601 -0.0693 -0.2533  0.3654
-    0.75 -0.5790  0.3147 -0.9064 -0.0111 -0.2394  0.3770
-    1.00 -1.6120  0.4673 -0.9278 -0.0203 -0.2355  0.3949
-    1.25 -1.7160  0.4763 -0.9482 -0.0200 -0.2921  0.4190
-    1.50 -2.1380  0.5222 -0.9333  0.0284 -0.3197  0.4251
-    2.00 -2.6900  0.5707 -0.9082  0.0400 -0.2770  0.4077
-    2.50 -2.9420  0.5671 -0.8270  0.0054 -0.2710  0.3959
+     IMT      b1      b2      b3    b4       b5      b6   sigma
+     pga  1.0170  0.1046 -1.0070  15.0  -0.0735 -0.3068  0.3227
+    0.04  1.0170  0.1046 -1.0070  15.0  -0.0735 -0.3068  0.3227
+    0.05  1.0280  0.1245 -1.0550  15.0  -0.0775 -0.3246  0.3350
+    0.10  1.3820  0.1041 -1.0620  15.0  -0.1358 -0.3326  0.3427
+    0.20  1.3820  0.1041 -1.0620  15.0  -0.1358 -0.3326  0.3596
+    0.30  1.3680  0.0684 -0.9139  15.0  -0.0972 -0.3011  0.3651
+    0.40  0.9747  0.1009 -0.8886  15.0  -0.0552 -0.2639  0.3613
+    0.50  0.5295  0.1513 -0.8601  15.0  -0.0693 -0.2533  0.3654
+    0.75 -0.5790  0.3147 -0.9064  15.0  -0.0111 -0.2394  0.3770
+    1.00 -1.6120  0.4673 -0.9278  15.0  -0.0203 -0.2355  0.3949
+    1.25 -1.7160  0.4763 -0.9482  15.0  -0.0200 -0.2921  0.4190
+    1.50 -2.1380  0.5222 -0.9333  15.0   0.0284 -0.3197  0.4251
+    2.00 -2.6900  0.5707 -0.9082  15.0   0.0400 -0.2770  0.4077
+    2.50 -2.9420  0.5671 -0.8270  15.0   0.0054 -0.2710  0.3959
     """)
-
-    #: "After trials with different values b4 was fixed to be 15km for
-    #: all periods." (Sharma et al., 2009, p. 1201)
-    CONSTS = {
-        'b4': 15.0
-    }
 
     #: Sharma et al. (2009) does not use VS30 so no threshhold is given.
     #: A value of 760 m/s was selected. This is consistent with

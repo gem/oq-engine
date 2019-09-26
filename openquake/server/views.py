@@ -451,12 +451,14 @@ def calc_run(request):
         together.
     """
     hazard_job_id = request.POST.get('hazard_job_id')
+    job_ini = request.POST.get('job_ini')
 
     if hazard_job_id:
         hazard_job_id = int(hazard_job_id)
-        candidates = ("job_risk.ini", "job.ini")
+        candidates = [job_ini] if job_ini else ("job_risk.ini", "job.ini")
     else:
-        candidates = ("job_hazard.ini", "job_haz.ini", "job.ini")
+        candidates = [job_ini] if job_ini else (
+            "job_hazard.ini", "job_haz.ini", "job.ini")
     result = safely_call(_prepare_job, (request, candidates))
     if result.tb_str:
         return HttpResponse(json.dumps(result.tb_str.splitlines()),
@@ -678,7 +680,9 @@ def extract(request, calc_id, what):
             a = {}
             for key, val in vars(aw).items():
                 key = str(key)  # can be a numpy.bytes_
-                if isinstance(val, str):
+                if key.startswith('_'):
+                    continue
+                elif isinstance(val, str):
                     # without this oq extract would fail
                     a[key] = numpy.array(val.encode('utf-8'))
                 elif isinstance(val, dict):

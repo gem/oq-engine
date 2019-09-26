@@ -8,7 +8,7 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 
 - Ubuntu 18.04 LTS (Bionic)
 - RedHat Enterprise Linux 7 / CentOS 7 / Scientific Linux 7
-- Fedora 28/29/30
+- Fedora 29/30/31
 
 This guide may work also on other Linux releases/distributions.
 
@@ -18,6 +18,8 @@ This guide may work also on other Linux releases/distributions.
 - macOS 10.12 (Sierra)
 - macOS 10.13 (High Sierra)
 - macOS 10.14 (Mojave)
+
+See also the [FAQ about SSL certificate validation on macOS](../faq.md#ertificate-verification-on-macOS).
 
 ## Prerequisites
 
@@ -67,7 +69,7 @@ If Xcode is already installed on your machine, then there is no need to install 
 
 #### Python
 
-You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg
+You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.6.8/python-3.6.8-macosx10.9.pkg
 
 #### Encoding
 
@@ -114,12 +116,12 @@ It's strongly recommended to install Python dependencies using our Python wheels
 
 ```bash
 # For Linux
-pip install -r oq-engine/requirements-py36-linux64.txt
+pip install -r oq-engine/requirements-py36-linux64.txt -r oq-engine/requirements-extra-py36-linux64.txt
 ```
 
 ```bash
 # For macOS
-pip install -r oq-engine/requirements-py36-macos.txt
+pip install -r oq-engine/requirements-py36-macos.txt -r oq-engine/requirements-extra-py36-macos.txt
 ```
 
 The OpenQuake Engine source code must be installed via `pip` using the `--editable` flag. See `pip install --help` for further help.
@@ -220,6 +222,8 @@ pip install -e oq-engine/[dev,celery]
 pip install -e oq-engine/[dev,pam]
 # oq-engine with support for both
 pip install -e oq-engine/[dev,celery,pam]
+# oq-engine with GDAL
+pip install -e oq-engine/[platform]
 ```
 
 *<a name="note2">[2]</a>: unsupported systems:*

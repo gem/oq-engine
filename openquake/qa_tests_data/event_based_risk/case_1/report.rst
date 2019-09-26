@@ -2,9 +2,9 @@ Event Based Risk QA Test 1
 ==========================
 
 ============== ===================
-checksum32     4,277,581,030      
-date           2019-05-03T06:43:52
-engine_version 3.5.0-git7a6d15e809
+checksum32     1,503,171,782      
+date           2019-09-24T15:21:13
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 3, num_levels = 25, num_rlzs = 2
@@ -35,7 +35,7 @@ Input files
 =========================== ====================================================================
 Name                        File                                                                
 =========================== ====================================================================
-exposure                    `exposure.xml <exposure.xml>`_                                      
+exposure                    `exposure1.xml <exposure1.xml>`_                                    
 gsim_logic_tree             `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                        
 job_ini                     `job.ini <job.ini>`_                                                
 nonstructural_vulnerability `vulnerability_model_nonstco.xml <vulnerability_model_nonstco.xml>`_
@@ -64,30 +64,26 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,'[AkkarBommer2010]': [1]
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 18           18          
+source_model.xml 0      Active Shallow Crust 3            18          
 ================ ====== ==================== ============ ============
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-4 asset(s) x 2 realization(s) x 2 loss type(s) losses x 8 bytes x 30 tasks = 3.75 KB
+4 asset(s) x 2 realization(s) x 2 loss type(s) losses x 8 bytes x 20 tasks = 2.5 KB
 
 Exposure model
 --------------
-=============== ========
-#assets         4       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     4
+#taxonomies 3
+=========== =
 
 ======== ======= ======= === === ========= ==========
 taxonomy mean    stddev  min max num_sites num_assets
@@ -99,51 +95,48 @@ W        1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= =======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight 
-====== ========= ==== ===== ===== ============ ========= ========= =======
-0      1         P    0     1     6            0.00514   1.00000   4.00000
-0      2         P    1     2     6            0.00512   1.00000   2.00000
-0      3         P    2     3     6            0.00301   1.00000   8.00000
-====== ========= ==== ===== ===== ============ ========= ========= =======
+========= ====== ==== ============ ========= ========= ============ ======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
+========= ====== ==== ============ ========= ========= ============ ======
+1         0      P    6            0.00136   1.00000   4.00000      2,944 
+2         0      P    6            0.00127   1.00000   2.00000      1,576 
+3         0      P    6            7.942E-04 1.00000   8.00000      10,073
+========= ====== ==== ============ ========= ========= ============ ======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.01328   3     
+P    0.00342   3     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =======
-operation-duration mean      stddev    min       max       outputs
-read_source_models 0.00264   NaN       0.00264   0.00264   1      
-sample_ruptures    0.01791   NaN       0.01791   0.01791   1      
-get_eid_rlz        6.265E-04 7.086E-05 4.637E-04 6.914E-04 8      
-================== ========= ========= ========= ========= =======
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.00138 NaN    0.00138 0.00138 1      
+sample_ruptures    0.00494 NaN    0.00494 0.00494 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================= ========
-task               sent                                          received
-read_source_models converter=313 B fnames=113 B                  2.27 KB 
-sample_ruptures    param=4.01 KB sources=1.91 KB srcfilter=218 B 1.94 KB 
-get_eid_rlz        self=12.56 KB                                 2.34 KB 
-================== ============================================= ========
+================== ============================ ========
+task               sent                         received
+read_source_models converter=314 B fnames=113 B 2.28 KB 
+sample_ruptures                                 2 KB    
+================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_1805                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    0.01791  0.0       1     
-iter_ruptures            0.01290  0.0       3     
-total get_eid_rlz        0.00501  0.0       8     
-saving ruptures          0.00273  0.0       1     
-total read_source_models 0.00264  0.0       1     
-store source_info        0.00188  0.0       1     
-store source model       0.00126  0.0       1     
-reading exposure         0.00121  0.0       1     
+EventBasedCalculator.run 0.07199  0.25781   1     
+saving events            0.00591  0.0       1     
+total sample_ruptures    0.00494  0.0       1     
+store source_info        0.00206  0.0       1     
+saving ruptures          0.00167  0.0       1     
+total read_source_models 0.00138  0.0       1     
+reading exposure         0.00130  0.0       1     
 ======================== ======== ========= ======

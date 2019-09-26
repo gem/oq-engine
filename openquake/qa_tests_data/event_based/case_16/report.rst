@@ -3,8 +3,8 @@ Reduced Hazard Italy
 
 ============== ===================
 checksum32     1,879,307,037      
-date           2019-05-03T06:43:43
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:04
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 148, num_levels = 30, num_rlzs = ?
@@ -43,12 +43,10 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Exposure model
 --------------
-=============== ========
-#assets         151     
-#taxonomies     17      
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== ===
+#assets     151
+#taxonomies 17 
+=========== ===
 
 ================= ======= ======= === === ========= ==========
 taxonomy          mean    stddev  min max num_sites num_assets
@@ -74,11 +72,10 @@ CR/CDN/H:3        1.00000 0.0     1   1   3         3
 
 Slowest sources
 ---------------
-====== ========== ==== ===== ===== ============ ========= ========= ======
-grp_id source_id  code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========== ==== ===== ===== ============ ========= ========= ======
-0      AS_HRAS083 A    0     15    2,295        0.0       0.0       0.0   
-====== ========== ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -92,21 +89,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.02340 NaN    0.02340 0.02340 1      
+read_source_models 0.02970 NaN    0.02970 0.02970 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================ ========
 task               sent                         received
-read_source_models converter=313 B fnames=110 B 2.86 KB 
+read_source_models converter=314 B fnames=110 B 2.86 KB 
 ================== ============================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_1780                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.02340  0.0       1     
-reading exposure         0.00259  0.0       1     
+total read_source_models 0.02970  0.0       1     
+reading exposure         0.00256  0.0       1     
 ======================== ======== ========= ======

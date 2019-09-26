@@ -34,8 +34,8 @@ def restore(archive, oqdata):
     """
     Build a new oqdata directory from the data contained in the zip archive
     """
-    if os.path.exists(oqdata):
-        sys.exit('%s exists already' % oqdata)
+    if os.path.exists(oqdata) and os.listdir(oqdata):
+        sys.exit('%s is not empty' % oqdata)
     if '://' in archive:
         # get the zip archive from an URL
         resp = requests.get(archive)
@@ -47,7 +47,8 @@ def restore(archive, oqdata):
     t0 = time.time()
     oqdata = os.path.abspath(oqdata)
     assert archive.endswith('.zip'), archive
-    os.mkdir(oqdata)
+    if not os.path.exists(oqdata):
+        os.mkdir(oqdata)
     zipfile.ZipFile(archive).extractall(oqdata)
     dbpath = os.path.join(oqdata, 'db.sqlite3')
     db = Db(sqlite3.connect, dbpath, isolation_level=None,

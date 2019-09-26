@@ -3,16 +3,16 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     3,629,822,399      
-date           2019-01-20T07:37:45
-engine_version 3.4.0-git452d0c6835
+date           2019-09-24T15:21:01
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
-num_sites = 1, num_levels = 8
+num_sites = 1, num_levels = 8, num_rlzs = 2
 
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'classical_damage'
+calculation_mode                'preclassical'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              1.0               
@@ -46,25 +46,23 @@ Composite source model
 ========= ======= =============== ================
 smlt_path weight  gsim_logic_tree num_realizations
 ========= ======= =============== ================
-b1        1.00000 simple(2)       2/2             
+b1        1.00000 simple(2)       2               
 ========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================================== ========= ========== ==========
-grp_id gsims                              distances siteparams ruptparams
-====== ================================== ========= ========== ==========
-0      AkkarBommer2010() SadighEtAl1997() rjb rrup  vs30       mag rake  
-====== ================================== ========= ========== ==========
+====== ====================================== ========= ========== ==========
+grp_id gsims                                  distances siteparams ruptparams
+====== ====================================== ========= ========== ==========
+0      '[AkkarBommer2010]' '[SadighEtAl1997]' rjb rrup  vs30       mag rake  
+====== ====================================== ========= ========== ==========
 
-Realizations per (TRT, GSIM)
+Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=2, rlzs=2)
-  0,AkkarBommer2010(): [1]
-  0,SadighEtAl1997(): [0]>
+  <RlzsAssoc(size=4, rlzs=2)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -76,12 +74,10 @@ source_model.xml 0      Active Shallow Crust 482          482
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -90,46 +86,45 @@ Wood     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00255    0.0       15        0.0   
-====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+1         0      S    482          0.00365   1.00000   482          132,134
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.0       1     
+S    0.00365   1     
 ==== ========= ======
-
-Duplicated sources
-------------------
-Found 0 source(s) with the same ID and 0 true duplicate(s)
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00353 NaN    0.00353 0.00353 1      
-split_filter       0.02172 NaN    0.02172 0.02172 1      
+preclassical       0.00419 NaN    0.00419 0.00419 1      
+read_source_models 0.00822 NaN    0.00822 0.00822 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================== ========
-task               sent                                   received
-read_source_models converter=388 B fnames=106 B           1.45 KB 
-split_filter       srcs=1.09 KB srcfilter=253 B seed=14 B 3.92 KB 
-================== ====================================== ========
+================== ========================================= ========
+task               sent                                      received
+preclassical       srcs=1.14 KB srcfilter=647 B params=557 B 342 B   
+read_source_models converter=314 B fnames=106 B              1.49 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_1761                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total split_filter       0.02172   1.96875   1     
-total read_source_models 0.00353   0.28516   1     
-reading exposure         3.986E-04 0.0       1     
+total read_source_models 0.00822   0.0       1     
+total preclassical       0.00419   0.0       1     
+store source_info        0.00305   1.02734   1     
+reading exposure         4.725E-04 0.0       1     
+managing sources         3.858E-04 0.0       1     
+aggregate curves         2.773E-04 0.0       1     
 ======================== ========= ========= ======

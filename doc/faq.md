@@ -29,13 +29,17 @@ The OpenQuake Engine has at least three installation methods. To choose the one 
 ### Supported operating systems
 
 Binary packages are provided for the following 64bit operating systems:
-- [Windows](installing/windows.md)
-- [macOS](installing/macos.md)
-- Linux [Ubuntu](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux/Fedora](installing/rhel.md) via _deb_ and _rpm_
+- [Windows 10](installing/windows.md)
+- [macOS 10.9+](installing/macos.md)
+- Linux [Ubuntu 16.04+](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux 7+ and Fedora 28+](installing/rhel.md) via _deb_ and _rpm_
 - Any other generic Linux distribution via a [self-installable binary distribution](installing/linux-generic.md)
 - [Docker](installing/docker.md) hosts
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
+
+#### Windows 7 compatibility
+
+**Windows 7** is **deprecated** as a platform for running the Engine since it is reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support). Compatibility with Windows 7 will be removed in next Engine releases. Please upgrade your Windows installation to Windows 10.
 
 ******
 
@@ -53,7 +57,7 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ### 32bit support
 
-The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
+The OpenQuake Engine **requires a 64bit operating system**. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
 
 ******
 
@@ -74,7 +78,7 @@ MPI support may be added in the future if sponsored by someone. If you would lik
 
 ### Python scripts that import openquake
 
-On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must use a virtual environment and install al local copy of the Engine:
+On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must use a virtual environment and install a local copy of the Engine:
 
 ```
 $ python3 -m venv </path/to/myvenv>
@@ -160,6 +164,64 @@ The OpenQuake Engine may require lot of disk space for the raw results data (`hd
 - `custom_tmp` must be set to `/mnt/ext_volume/tmp` (the directory must exist)
 
 ******
+
+### Certificate verification on macOS
+
+```python
+Traceback (most recent call last):
+  File "/Users/openquake/py36/bin/oq", line 11, in <module>
+    load_entry_point('openquake.engine', 'console_scripts', 'oq')()
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/__main__.py", line 53, in oq
+    parser.callfunc()
+  File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 181, in callfunc
+    return self.func(**vars(namespace))
+  File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 251, in main
+    return func(**kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 210, in engine
+    exports, hazard_calculation_id=hc_id)
+  File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 70, in run_job
+    eng.run_calc(job_id, oqparam, exports, **kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/engine/engine.py", line 341, in run_calc
+    close=False, **kw)
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 192, in run
+    self.pre_execute()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/scenario_damage.py", line 85, in pre_execute
+    super().pre_execute()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 465, in pre_execute
+    self.read_inputs()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 398, in read_inputs
+    self._read_risk_data()
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 655, in _read_risk_data
+    haz_sitecol, assetcol)
+  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 821, in read_shakemap
+    oq.discard_assets)
+  File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 100, in get_sitecol_shakemap
+    array = download_array(array_or_id)
+  File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 74, in download_array
+    contents = json.loads(urlopen(url).read())[
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 223, in urlopen
+    return opener.open(url, data, timeout)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 526, in open
+    response = self._open(req, data)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 544, in _open
+    '_open', req)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 504, in _call_chain
+    result = func(*args)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1361, in https_open
+    context=self._context, check_hostname=self._check_hostname)
+  File "/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/urllib/request.py", line 1320, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:852)>
+```
+
+Please have a look at `/Applications/Python 3.6/ReadMe.rtf` for possible solutions. If unsure run from a terminal the following command:
+
+```bash
+sudo /Applications/Python\ 3.6/install_certificates.command
+```
+
+******
+
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:

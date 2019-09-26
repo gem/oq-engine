@@ -47,39 +47,6 @@ def tearDownModule():
         os.remove(path)
 
 
-class GmfCollection(object):
-
-    def __init__(self, gmf_sets):
-        self.gmf_sets = gmf_sets
-
-    def __iter__(self):
-        return iter(self.gmf_sets)
-
-
-class GmfSet(object):
-
-    def __init__(self, gmfs, investigation_time, stochastic_event_set_id=None):
-        self.gmfs = gmfs
-        self.investigation_time = investigation_time
-        self.stochastic_event_set_id = stochastic_event_set_id
-
-    def __iter__(self):
-        return iter(self.gmfs)
-
-
-class Gmf(object):
-
-    def __init__(self, imt, sa_period, sa_damping, gmf_nodes, event_id=None):
-        self.imt = imt
-        self.sa_period = sa_period
-        self.sa_damping = sa_damping
-        self.event_id = event_id
-        self.gmf_nodes = gmf_nodes
-
-    def __iter__(self):
-        return iter(self.gmf_nodes)
-
-
 class SES(object):
 
     def __init__(self, ordinal, investigation_time, sesruptures):
@@ -279,43 +246,6 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         writer = writers.HazardCurveXMLWriter(path, **metadata)
         writer.serialize(self.data)
         check_equal(__file__, 'expected_quantile_curves.xml', path)
-
-
-class EventBasedGMFXMLWriterTestCase(HazardWriterTestCase):
-
-    def test_serialize(self):
-        # Test data is:
-        # - 1 gmf collection
-        # - 3 gmf sets
-        # for each set:
-        # - 2 ground motion fields
-        # for each ground motion field:
-        # - 2 nodes
-        # Total nodes: 12
-        locations = [Location(i * 0.1, i * 0.1) for i in range(12)]
-        gmf_nodes = [GmfNode(i * 0.2, locations[i]) for i in range(12)]
-        gmfs = [
-            Gmf('SA', 0.1, 5.0, gmf_nodes[:2], 'i=1'),
-            Gmf('SA', 0.2, 5.0, gmf_nodes[2:4], 'i=2'),
-            Gmf('SA', 0.3, 5.0, gmf_nodes[4:6], 'i=3'),
-            Gmf('PGA', None, None, gmf_nodes[6:8], 'i=4'),
-            Gmf('PGA', None, None, gmf_nodes[8:10], 'i=5'),
-            Gmf('PGA', None, None, gmf_nodes[10:], 'i=6'),
-        ]
-        gmf_sets = [
-            GmfSet(gmfs[:2], 50.0, 1),
-            GmfSet(gmfs[2:4], 40.0, 2),
-            GmfSet(gmfs[4:], 30.0, 3),
-        ]
-        gmf_collection = GmfCollection(gmf_sets)
-
-        sm_lt_path = 'b1_b2_b3'
-        gsim_lt_path = 'b1_b7_b15'
-
-        writer = writers.EventBasedGMFXMLWriter(
-            path, sm_lt_path, gsim_lt_path)
-        writer.serialize(gmf_collection)
-        check_equal(__file__, 'expected_gmf.xml', path)
 
 
 class HazardMapWriterTestCase(HazardWriterTestCase):

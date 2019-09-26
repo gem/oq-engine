@@ -99,8 +99,6 @@ sig_hand () {
     if [ "$lxc_name" != "" ]; then
         set +e
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/"
-        scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
-        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         sudo $LXC_KILL -n "$lxc_name"
@@ -357,7 +355,6 @@ _pkgbuild_innervm_run () {
 #                     - installs oq-engine sources on lxc
 #                     - set up db
 #                     - runs tests
-#                     - runs coverage
 #                     - collects all tests output files from lxc
 #
 #      <lxc_ip>   the IP address of lxc instance
@@ -392,7 +389,7 @@ _devtest_innervm_run () {
         ssh "$lxc_ip" "set -e
                  export PYTHONPATH=\"\$PWD/oq-engine\"
                  echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
-                 cd oq-engine; nohup /opt/openquake/bin/python3 bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
+                 cd oq-engine; nohup /opt/openquake/bin/python3 bin/oq dbserver start &>/tmp/dbserver.log </dev/null"
 
         ssh "$lxc_ip" "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
@@ -400,25 +397,23 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 sudo /opt/openquake/bin/pip install coverage
+                 sudo /opt/openquake/bin/pip install pytest pytest-xdist
 
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
 
-                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.baselib --with-xunit --xunit-file=xunit-baselib.xml --with-doctest -vs openquake.baselib
-                 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.hmtk --with-doctest --with-xunit --xunit-file=xunit-hmtk.xml -vs openquake.hmtk
-                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.engine --with-doctest --with-xunit --xunit-file=xunit-engine.xml -vs openquake.engine
-                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.server --with-doctest --with-xunit --xunit-file=xunit-server.xml -vs openquake.server
-                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.calculators --with-doctest --with-xunit --xunit-file=xunit-calculators.xml -vs openquake.calculators
-                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.risklib --with-doctest --with-xunit --xunit-file=xunit-risklib.xml -vs openquake.risklib
-                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.commonlib --with-doctest --with-xunit --xunit-file=xunit-commonlib.xml -vs openquake.commonlib
-                 /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.commands --with-doctest --with-xunit --xunit-file=xunit-commands.xml -vs openquake.commands 
+                 /opt/openquake/bin/pytest --doctest-modules -v openquake/baselib
+                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-hmtk.xml -v openquake/hmtk
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-engine.xml -v openquake/engine
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-server.xml -v openquake/server
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-calculators.xml -v openquake/calculators
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-risklib.xml -v openquake/risklib
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-commonlib.xml -v openquake/commonlib
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-commands.xml -v openquake/commands
 
-                 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests --with-coverage --cover-package=openquake.hazardlib  --with-xunit --xunit-file=xunit-hazardlib.xml --with-doctest -vs openquake.hazardlib
-                 /opt/openquake/bin/coverage xml --include=\"openquake/*\"
+                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n 4 --doctest-modules -v openquake/hazardlib
                  /opt/openquake/bin/python3 bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
-        scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
     else
         if [ -d "$HOME/fake-data/$GEM_GIT_PACKAGE" ]; then
@@ -591,8 +586,14 @@ celery_wait() {
     return 1
 }
 
-sudo systemctl status openquake-\\*
+# Start the DbServer
+# openquake-webui and openquake-dbserver have been stopped by python3-oq-engine-worker
+sudo systemctl start openquake-dbserver
+sleep 10
+# Restart openquake-celery after the changes made to openquake.cfg
 sudo systemctl start openquake-celery
+sleep 10
+sudo systemctl status openquake-dbserver openquake-celery
 
 celery_wait $GEM_MAXLOOP
 
@@ -860,7 +861,6 @@ devtest_run () {
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n "$lxc_name"
@@ -1043,8 +1043,6 @@ EOF
     _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
-    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n "$lxc_name"

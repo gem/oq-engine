@@ -20,12 +20,7 @@
 hazardlib stands for Hazard Library.
 """
 
-from openquake.baselib import __version__
+from openquake.baselib import __version__, InvalidFile
 from openquake.hazardlib import (
     calc, geo, gsim, mfd, scalerel, source, const, correlation, imt, pmf, site,
     tom, near_fault)
-
-
-class InvalidFile(Exception):
-    pass
-

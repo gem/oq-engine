@@ -7,17 +7,19 @@ list of outputs are the following:
 user@ubuntu:~$ oq engine --lo <calc_id>
 id | name
 \textcolor{red}{3 | Disaggregation Outputs}
-\textcolor{black}{4 | Disaggregation Statistics}
 \textcolor{black}{5 | Full Report}
 \textcolor{black}{6 | Realizations}
-\textcolor{black}{6 | Seismic Source Groups}
 \end{Verbatim}
 %\input{oqum/hazard/verbatim/output_disaggregation}
 
-Note that if the logic tree only contains one realization, then
-\texttt{Disaggregation Statistics} will not be computed nor listed in the output.
+Running \texttt{-{}-export-output} to export the disaggregation results will produce individual files for each IMT, probability of exceedence and site.
+In presence of a nontrivial logic tree the user can specify the realization
+on which to perform the disaggregation by setting the \texttt{rlz\_index}
+parameter in the \texttt{job.ini} file. If not specified, for each site
+the engine will determine the realization closest to the mean hazard curve
+and will use that realization to perform the disaggregation.
 
-Running \texttt{-{}-export-output} to export the disaggregation results will produce individual files for each IMT, probability of exceedence and logic tree realisation. In the following inset we show an example of the nrml file used to represent the different disaggregation matrices (highlighted in red) produced by
+In the following inset we show an example of the nrml file used to represent the different disaggregation matrices (highlighted in red) produced by
 \gls{acr:oqe}:
 
 \input{oqum/hazard/verbatim/output_disaggregation_matrix}

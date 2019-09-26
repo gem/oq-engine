@@ -3,8 +3,8 @@ Calculation of the ground motion fields for a scenario
 
 ============== ===================
 checksum32     4,182,813,640      
-date           2019-05-03T06:43:40
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:00
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -52,8 +52,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -65,12 +64,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         7       
-#taxonomies     4       
-deductibile     relative
-insurance_limit relative
-=============== ========
+=========== =
+#assets     7
+#taxonomies 4
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -81,10 +78,20 @@ UFB      1.00000 NaN    1   1   1         1
 *ALL*    1.00000 0.0    1   1   7         7         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ================ ======== ========= ======
-operation        time_sec memory_mb counts
+calc_1744        time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00201  0.0       1     
+reading exposure 0.00192  0.0       1     
 ================ ======== ========= ======

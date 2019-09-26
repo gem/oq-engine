@@ -261,7 +261,6 @@ class MeshGetDistanceMatrixTestCase(unittest.TestCase):
     def test_zeroes(self):
         mesh = Mesh(numpy.zeros(1000), numpy.zeros(1000), None)
         matrix = mesh.get_distance_matrix()
-        self.assertIsInstance(matrix, numpy.matrix)
         self.assertEqual(matrix.shape, (1000, 1000))
         self.assertTrue((matrix == 0).all())
 
@@ -269,10 +268,10 @@ class MeshGetDistanceMatrixTestCase(unittest.TestCase):
         mesh = Mesh(numpy.array([0., 1., 2., 3.]), numpy.zeros(4), None)
         matrix = mesh.get_distance_matrix()
         aaae = numpy.testing.assert_array_almost_equal
-        aaae(matrix[0], [[0, 111.2, 222.4, 333.6]], decimal=1)
-        aaae(matrix[1], [[111.2, 0, 111.2, 222.4]], decimal=1)
-        aaae(matrix[2], [[222.4, 111.2, 0, 111.2]], decimal=1)
-        aaae(matrix[3], [[333.6, 222.4, 111.2, 0]], decimal=1)
+        aaae(matrix[0], [0, 111.2, 222.4, 333.6], decimal=1)
+        aaae(matrix[1], [111.2, 0, 111.2, 222.4], decimal=1)
+        aaae(matrix[2], [222.4, 111.2, 0, 111.2], decimal=1)
+        aaae(matrix[3], [333.6, 222.4, 111.2, 0], decimal=1)
         for i in range(4):
             for j in range(i, 4):
                 self.assertEqual(matrix[i, j], matrix[j, i])

@@ -29,14 +29,14 @@ Requirements are:
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/linux/oq-engine/openquake-setup-linux64-3.4.0-1.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/linux/oq-engine/openquake-setup-linux64-3.7.0-1.run using any browser
 
 From a terminal run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-linux64-3.4.0-1.run
-./openquake-setup-linux64-3.4.0-1.run
+chmod +x openquake-setup-linux64-3.5.1-3.run
+./openquake-setup-linux64-3.5.1-3.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 

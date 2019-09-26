@@ -2,9 +2,9 @@ British Columbia With Vs30
 ==========================
 
 ============== ===================
-checksum32     2,623,339,741      
-date           2019-05-03T06:43:44
-engine_version 3.5.0-git7a6d15e809
+checksum32     226,163,923        
+date           2019-09-24T15:21:05
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -43,31 +43,24 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Exposure model
 --------------
-=============== ========
-#assets         2       
-#taxonomies     2       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     2
+#taxonomies 2
+=========== =
 
-========== ======= ====== === === ========= ==========
-taxonomy   mean    stddev min max num_sites num_assets
-RES1-W1-HC 1.00000 NaN    1   1   1         1         
-RES1-W1-LC 1.00000 NaN    1   1   1         1         
-*ALL*      1.00000 0.0    1   1   2         2         
-========== ======= ====== === === ========= ==========
+========== ======= ======= === === ========= ==========
+taxonomy   mean    stddev  min max num_sites num_assets
+RES1-W1-HC 1.00000 NaN     1   1   1         1         
+RES1-W1-LC 1.00000 NaN     1   1   1         1         
+*ALL*      0.22222 0.44096 0   1   9         2         
+========== ======= ======= === === ========= ==========
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-4      OFS       A    29    37    15,618       0.0       0.0       0.0   
-3      OFS       A    22    29    8,778        0.0       0.0       0.0   
-2      OFS       A    15    22    8,778        0.0       0.0       0.0   
-1      OFS       A    7     15    15,618       0.0       0.0       0.0   
-0      OFS       A    0     7     8,778        0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
@@ -77,25 +70,29 @@ code calc_time counts
 A    0.0       5     
 ==== ========= ======
 
+Duplicated sources
+------------------
+Found 0 unique sources and 2 duplicate sources with multiplicity 2.5: ['OFS' 'OFS']
+
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05075 0.01344 0.03756 0.07061 5      
+read_source_models 0.05476 0.01166 0.04512 0.07208 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ================== ============================== ========
 task               sent                           received
-read_source_models converter=1.74 KB fnames=585 B 13.96 KB
+read_source_models converter=1.74 KB fnames=585 B 13.98 KB
 ================== ============================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-operation                time_sec memory_mb counts
+calc_1784                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.25375  0.0       5     
-reading exposure         0.00153  0.0       1     
+total read_source_models 0.27380  0.0       5     
+reading exposure         0.00154  0.0       1     
 ======================== ======== ========= ======

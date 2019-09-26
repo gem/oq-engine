@@ -21,37 +21,28 @@ import unittest
 from openquake.baselib import config
 from openquake.baselib.workerpool import WorkerMaster
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import _get_free_port
-from openquake.baselib.performance import Monitor
+from openquake.baselib.general import socket_ready
 
 
-def double(x, mon):
+def double(x):
     return 2 * x
 
 
-# this test is temporarily disabled, the workerpool is tested in the demos
-# in travis, since they are run with OQ_DISTRIBUTE=zmq
-@unittest.skip
 class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.z = config.zworkers.copy()
-        dic = dict(master_host='127.0.0.1',
-                   task_in_port=_get_free_port(),
-                   task_out_port=_get_free_port(),
-                   receiver_ports=_get_free_port())
-        config.zworkers.update(dic)
-        ctrl_port = _get_free_port()
         host_cores = '127.0.0.1 4'
+        hostport = '127.0.0.1', int(cls.z['ctrl_port']) + 1
+        if not socket_ready(hostport):
+            raise unittest.SkipTest('The task streamer is off')
         cls.master = WorkerMaster(
-            dic['master_host'], dic['task_in_port'], dic['task_out_port'],
-            ctrl_port, host_cores)
-        cls.master.start(streamer=True)
+            '127.0.0.1', cls.z['ctrl_port'], host_cores)
+        cls.master.start()
 
     def test(self):
-        mon = Monitor()
         iterargs = ((i,) for i in range(10))
-        smap = Starmap(double, iterargs, mon, distribute='zmq')
+        smap = Starmap(double, iterargs, distribute='zmq')
         self.assertEqual(sum(res for res in smap), 90)
         # sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
 

@@ -3,8 +3,8 @@ Scenario QA Test with AtkinsonBoore2003SInter
 
 ============== ===================
 checksum32     157,390,023        
-date           2019-05-03T06:43:29
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:20:57
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = 1
@@ -51,8 +51,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[AtkinsonBoore2003SInter]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -62,9 +61,19 @@ source_model grp_id trt eff_ruptures tot_ruptures
 scenario     0      *   1            0           
 ============ ====== === ============ ============
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ========= ======== ========= ======
-operation time_sec memory_mb counts
+calc_1714 time_sec memory_mb counts
 ========= ======== ========= ======
 ========= ======== ========= ======

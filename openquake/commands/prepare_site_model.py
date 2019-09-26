@@ -94,11 +94,11 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
     if vs30measured:
         req_site_params.add('vs30measured')
         fields.append('vs30measured')
-    with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
+    with performance.Monitor(measuremem=True) as mon:
         if exposure_xml:
             mesh, assets_by_site = Exposure.read(
                 exposure_xml, check_dupl=False).get_mesh_assets_by_site()
-            mon.hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
+            hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, req_site_params=req_site_params)
             if grid_spacing:
                 grid = mesh.get_convex_hull().dilate(
@@ -114,7 +114,7 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
                 if len(discarded):
                     logging.info('Discarded %d sites with assets '
                                  '[use oq plot_assets]', len(discarded))
-                    mon.hdf5['discarded'] = numpy.array(discarded)
+                    hdf5['discarded'] = numpy.array(discarded)
                 haz_sitecol.make_complete()
             else:
                 haz_sitecol = assetcol
@@ -150,7 +150,7 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
             sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
         if vs30measured:
             sitecol.array['vs30measured'] = False  # it is inferred
-        mon.hdf5['sitecol'] = sitecol
+        hdf5['sitecol'] = sitecol
         write_csv(output, sitecol.array[fields])
     logging.info('Saved %d rows in %s' % (len(sitecol), output))
     logging.info(mon)

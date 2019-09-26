@@ -34,10 +34,17 @@ import string
 import random
 from django.test import Client
 from openquake.baselib.general import gettemp
+from openquake.commonlib.logs import dbcmd
+from openquake.baselib.workerpool import TimeoutError
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
 from openquake.commands import engine
+
+
+def loadnpz(lines):
+    bio = io.BytesIO(b''.join(ln for ln in lines))
+    return numpy.load(bio, allow_pickle=True)
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -75,11 +82,12 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        while True:
+        for i in range(40):  # 20 seconds of timeout
+            time.sleep(0.5)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
-                break
-            time.sleep(0.5)
+                return
+        raise TimeoutError(running_calcs)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
@@ -111,6 +119,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
+        assert c > 0, 'There are no jobs??'
         cls.wait()
 
     # tests
@@ -146,46 +156,34 @@ class EngineServerTestCase(unittest.TestCase):
         url = extract_url + 'composite_risk_model.attrs'
         self.assertEqual(self.c.get(url).status_code, 200)
 
-        # check asset_values
-        resp = self.c.get(extract_url + 'asset_values/0')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertEqual(len(got['array']), 49)  # 49 assets on site 0
-        self.assertEqual(resp.status_code, 200)
-
         # check asset_tags
         resp = self.c.get(extract_url + 'asset_tags')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['taxonomy']), 7)
 
         # check exposure_metadata
         resp = self.c.get(extract_url + 'exposure_metadata')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertEqual(list(got['tagnames']), ['taxonomy'])
-        self.assertEqual(list(got['array']), ['number', 'value-structural'])
+        got = loadnpz(resp.streaming_content)
+        self.assertEqual(sorted(got['tagnames']), ['id', 'taxonomy'])
+        self.assertEqual(sorted(got['array']), ['number', 'value-structural'])
 
         # check assets
         resp = self.c.get(
             extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 25)
 
         # check avg_losses-rlzs
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
         self.assertEqual(resp.status_code, 200)
 
         # check *-aggregation
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=*')
-        data = b''.join(ln for ln in resp.streaming_content)
-        got = numpy.load(io.BytesIO(data))  # load npz file
+        got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['tags']), 6)  # expected 6 taxonomies
         self.assertEqual(len(got['array']), 6)  # expected 6 aggregates
         self.assertEqual(resp.status_code, 200)
@@ -199,18 +197,17 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertIn('Could not export XXX in csv', str(ctx.exception))
 
         # check MFD distribution
-        extract_url = '/v1/calc/%s/extract/event_based_mfd' % job_id
-        data = b''.join(ln for ln in self.c.get(extract_url))
-        got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertGreater(len(got['array']['mag']), 1)
-        self.assertGreater(len(got['array']['freq']), 1)
+        extract_url = '/v1/calc/%s/extract/event_based_mfd?kind=mean' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertGreater(len(got['magnitudes']), 1)
+        self.assertGreater(len(got['mean_frequency']), 1)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()
 
         # check that we get at least the following 6 outputs
-        # fullreport, input, hcurves, hmaps, realizations, sourcegroups
+        # fullreport, input, hcurves, hmaps, realizations, events
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
         self.assertGreaterEqual(len(results), 5)
@@ -253,8 +250,8 @@ class EngineServerTestCase(unittest.TestCase):
             sys.stderr.write('Empty traceback, please check!\n')
 
         self.post('%s/remove' % job_id)
-        # make sure job_id is no more in the list of relevant jobs
-        job_ids = [job['id'] for job in self.get('list', relevant=True)]
+        # make sure job_id is no more in the list of jobs
+        job_ids = [job['id'] for job in self.get('list')]
         self.assertFalse(job_id in job_ids)
 
     def test_err_2(self):
