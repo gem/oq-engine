@@ -62,9 +62,10 @@ Classical calculations are roughly linear in the number of intensity
 measure types and levels. A common mistake is to use too many levels.
 For instance a configuration like the following one::
 
-  intensity_measure_types_and_levels = {"PGA":  logscale(0.001,4.0, 100),
-                                        "SA(0.3)":  logscale(0.001,4.0, 100),
-                                        "SA(1.0)":  logscale(0.001,4.0, 100)}
+  intensity_measure_types_and_levels = {
+    "PGA":  logscale(0.001,4.0, 100),
+    "SA(0.3)":  logscale(0.001,4.0, 100),
+    "SA(1.0)":  logscale(0.001,4.0, 100)}
 
 requires computing the PoEs on 300 levels. Is that really what the user wants?
 It could very well be that using only 20 levels per each intensity
@@ -78,7 +79,7 @@ PointSources (and MultiPointSources and AreaSources,
 which are split into PointSources and therefore are effectively
 the same thing) have an hypocenter distribution and
 a nodal plane distribution, which are used to model the uncertainties on
-the hypocenter location and ont the orientation of the underlying ruptures.
+the hypocenter location and on the orientation of the underlying ruptures.
 Since PointSources produce rectangular surfaces, thery are really
 not pointwise for the engine.
 Is the effect of the hypocenter/nodal planes distributions relevant?
@@ -112,7 +113,7 @@ the hazard is totally independent from the nodal plane and by using
 ``pointsource_distance = 0``
 
 one can get *exactly* the same numbers and run the model in 1 hour instead
-of 20. Actually, starting from engine 3.3 the engine is smart enough to
+of 20 hours. Actually, starting from engine 3.3 the engine is smart enough to
 recognize the cases where the equivalent distance approximation is used and
 automatically set ``pointsource_distance = 0``.
 
@@ -148,7 +149,3 @@ tasks. Again, it is best not to touch this parameter unless you know what
 you are doing.
 
 .. _equivalent distance approximation: equivalent_distance_approximation.rst
-
-Now you may continue with the `tips for running large hazard calculations`_:
-
-.. _tips for running large hazard calculations: hazard.html

@@ -22,7 +22,7 @@ import getpass
 import collections
 import h5py
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, performance
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
@@ -77,10 +77,13 @@ def hdf5new(datadir=None):
     generated filename.
     """
     datadir = datadir or get_datadir()
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
     calc_id = get_last_calc_id(datadir) + 1
     fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
     new = hdf5.File(fname, 'w')
     new.path = fname
+    performance.init_performance(new)
     return new
 
 
@@ -128,7 +131,7 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-class DataStore(collections.MutableMapping):
+class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
     filesystem.
@@ -137,7 +140,7 @@ class DataStore(collections.MutableMapping):
 
     >>> ds = DataStore()
     >>> ds['example'] = 42
-    >>> print(ds['example'].value)
+    >>> print(ds['example'][()])
     42
     >>> ds.clear()
 
@@ -186,11 +189,8 @@ class DataStore(collections.MutableMapping):
         Open the underlying .hdf5 file and the parent, if any
         """
         if self.hdf5 == ():  # not already open
-            kw = dict(mode=mode, libver='latest')
-            if mode == 'r':
-                kw['swmr'] = True
             try:
-                self.hdf5 = hdf5.File(self.filename, **kw)
+                self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
 
@@ -209,23 +209,20 @@ class DataStore(collections.MutableMapping):
         """
         self._export_dir = value
 
-    def hdf5cache(self):
-        """
-        :returns: the path to the .hdf5 cache file associated to the calc_id
-        """
-        return os.path.join(self.datadir, 'cache_%d.hdf5' % self.calc_id)
-
     def getitem(self, name):
         """
         Return a dataset by using h5py.File.__getitem__
         """
         return h5py.File.__getitem__(self.hdf5, name)
 
-    def set_nbytes(self, key, nbytes=None):
+    def swmr_on(self):
         """
-        Set the `nbytes` attribute on the HDF5 object identified by `key`.
+        Enable the SWMR mode on the underlying HDF5 file
         """
-        return self.hdf5.set_nbytes(key, nbytes)
+        try:
+            self.hdf5.swmr_mode = True
+        except ValueError:  # already set
+            pass
 
     def set_attrs(self, key, **kw):
         """
@@ -281,24 +278,6 @@ class DataStore(collections.MutableMapping):
         """
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
-
-    def extend(self, key, array, **attrs):
-        """
-        Extend the dataset associated to the given key; create it if needed
-
-        :param key: name of the dataset
-        :param array: array to store
-        :param attrs: a dictionary of attributes
-        """
-        try:
-            dset = self.hdf5[key]
-        except KeyError:
-            dset = hdf5.create(self.hdf5, key, array.dtype,
-                               shape=(None,) + array.shape[1:])
-        hdf5.extend(dset, array)
-        for k, v in attrs.items():
-            dset.attrs[k] = v
-        return dset
 
     def save(self, key, kw):
         """
@@ -384,6 +363,15 @@ class DataStore(collections.MutableMapping):
             return self[key]
         except KeyError:
             return default
+
+    @property
+    def metadata(self):
+        """
+        :returns: datastore metadata version, date, checksum as a dictionary
+        """
+        a = self.hdf5.attrs
+        return dict(generated_by='OpenQuake engine %s' % a['engine_version'],
+                    start_date=a['date'], checksum=a['checksum32'])
 
     def __getitem__(self, key):
         if self.hdf5 == ():  # the datastore is closed

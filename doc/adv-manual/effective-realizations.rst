@@ -2,8 +2,8 @@ The concept of effective realizations
 ==============================================
 
 The management of the logic trees is the most complicated thing in the
-OpenQuake libraries. The issue is that it is necessary to manage them
-in an efficient way, by avoiding redundant computation and storage,
+OpenQuake engine. The issue is that it is necessary to manage the logic
+trees in an efficient way, by avoiding redundant computation and storage,
 otherwise the engine will not be able to cope with large computations.
 
 Historically the engine did not fare well in the case of complex logic
@@ -36,7 +36,6 @@ Here is an example of trivial GMPE logic tree, in its XML input representation:
    <nrml xmlns:gml="http://www.opengis.net/gml"
         xmlns="http://openquake.org/xmlns/nrml/0.4">
       <logicTree logicTreeID='lt1'>
-          <logicTreeBranchingLevel branchingLevelID="bl1">
               <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                       applyToTectonicRegionType="active shallow crust">
   
@@ -46,7 +45,6 @@ Here is an example of trivial GMPE logic tree, in its XML input representation:
                   </logicTreeBranch>
   
               </logicTreeBranchSet>
-          </logicTreeBranchingLevel>
       </logicTree>
    </nrml>
 
@@ -87,8 +85,8 @@ The number of paths in the logic tree is 4 * 5 * 2 * 4 * 4 * 1 * 2 =
 realizations* per source model. However, in most computations, the
 user will be interested only in a subset of them. For instance, if the
 sources contributing to your region of interest are only of kind
-**Active_Shallow** and **Stable_Shallow**, you would consider only 4 *
-5 = 20 effective realizations instead of 1280. Doing so will improve
+*Active_Shallow* and *Stable_Shallow*, you would consider only 4 *
+5 = 20 effective realizations instead of 1280. Doing so may improve
 the computation time and the needed storage by a factor of 1280 / 20 =
 64, which is very significant.
 
@@ -154,7 +152,7 @@ it will export only two files with names like::
 How to analyze the logic tree of a calculation without running the calculation
 ------------------------------------------------------------------------------
 
-The engine provide some facilities to explore the logic tree of a
+The engine provides some facilities to explore the logic tree of a
 computation without running it. The command you need is the *info* command::
 
    $ oq info -h
@@ -175,7 +173,7 @@ SHARE source model, the SHARE source model logic tree file and the SHARE
 GMPE logic tree file as provided by the SHARE collaboration, as well as
 a `job.ini` file. If you run
 
-  `oq info SHARE.zip`
+  ``$ oq info SHARE.zip``
 
 all the files will be parsed and the full logic tree of the computation
 will be generated. This is very fast, it runs in exactly 1 minute on my
@@ -228,9 +226,10 @@ and will be discussed later on.
 The realization-association object
 ----------------------------------
 
-The `info` commands produces more output, which I have denoted simply as
-`<RlzsAssoc...>`. This output is the string representation of
-a Python object containing the associations between the pairs
+The `info` commands produces an additional output, which I have
+denoted simply as `<RlzsAssoc...>`. This output is the string
+representation of a Python object containing the associations between
+the pairs
 
   `(src_group_id, gsim) -> realizations`
 
@@ -243,31 +242,17 @@ classical/case_7; you can run the command and get::
    <CompositionInfo
    b1, source_model_1.xml, trt=[0], weight=0.70: 1 realization(s)
    b2, source_model_2.xml, trt=[1], weight=0.30: 1 realization(s)>
-   <RlzsAssoc(2)
-   0,SadighEtAl1997: ['<0,b1,b1,w=0.7>']
-   1,SadighEtAl1997: ['<1,b2,b1,w=0.3>']>
+   <RlzsAssoc(size=1, rlzs=2)>
 
 In other words, this is an example containing two submodels, each one
 with a single tectonic region type and with a single GMPE
 (SadighEtAl1997). There are only two realizations with weights 0.7 and
-0.3 and they are associated to the tectonic region types as shown in
-the RlzsAssoc object. This is a case when there is a realization for
+0.3. This is a case when there is a realization for
 tectonic region type, but more complex cases are possibile.  For
 instance consider our test classical/case_19, which is a reduction of
 the SHARE model with just a simplified area source model::
 
-   $ oq info classical/case_19/job.ini -f
-   <CompositionInfo
-   b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4], weight=1.0:: 4 realization(s)>
-   <RlzsAssoc(8)
-   0,AtkinsonBoore2003SInter: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
-   1,FaccioliEtAl2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
-   2,ToroEtAl2002SHARE: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
-   3,AkkarBommer2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
-   4,AtkinsonBoore2003SSlab: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
-   4,LinLee2008SSlab: ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
-   4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
-   4,ZhaoEtAl2006SSlab: ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
+   $ oq info classical/case_19/job.ini -r
 
 This is a case where a lot of tectonic region types have been completely
 filtered out, so the original 160 realizations have been reduced to merely 4 for

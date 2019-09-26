@@ -3,8 +3,8 @@ Scenario Damage QA Test 4
 
 ============== ===================
 checksum32     1,140,149,609      
-date           2019-05-03T06:43:41
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:00
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 3, num_levels = 60, num_rlzs = 1
@@ -53,8 +53,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -66,12 +65,10 @@ scenario     0      *   1            0
 
 Exposure model
 --------------
-=============== ========
-#assets         3       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     3
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -81,10 +78,20 @@ W        1.00000 NaN    1   1   1         1
 *ALL*    1.00000 0.0    1   1   3         3         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ================ ========= ========= ======
-operation        time_sec  memory_mb counts
+calc_1745        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.137E-04 0.0       1     
+reading exposure 3.908E-04 0.0       1     
 ================ ========= ========= ======

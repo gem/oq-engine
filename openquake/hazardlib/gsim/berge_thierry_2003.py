@@ -89,7 +89,7 @@ class BergeThierryEtAl2003Ms(GMPE):
         return stddevs
 
     def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types,
-        mag_conversion_sigma=0.0):
+                              mag_conversion_sigma=0.0):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
@@ -102,7 +102,7 @@ class BergeThierryEtAl2003Ms(GMPE):
         # clip distance at 4 km, minimum distance for which the equation is
         # valid (see section 2.2.4, page 201). This also avoids singularity
         # in the equation
-        rhypo = dists.rhypo
+        rhypo = np.array(dists.rhypo)  # make a copy
         rhypo[rhypo < 4.] = 4.
 
         mean = C['a'] * rup.mag + C['b'] * rhypo - np.log10(rhypo)

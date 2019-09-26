@@ -74,11 +74,12 @@ if OQ_DISTRIBUTE == 'zmq':
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
-        OqParam.concurrent_tasks.default = num_workers * 3
+        parallel.Starmap.num_cores = num_workers
+        OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.warn('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
-    import celery.task.control
+    import celery.task.control  # noqa: E402
 
     def set_concurrent_tasks_default(job_id):
         """
@@ -91,7 +92,8 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.dbcmd('finish', job_id, 'failed')
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = ncores * 3
+        parallel.Starmap.num_cores = ncores
+        OqParam.concurrent_tasks.default = ncores * 2
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
     def celery_cleanup(terminate):
@@ -131,8 +133,6 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     rlzs = dstore['csm_info'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
-    if len(dstore['csm_info/sg_data']) > 1:  # export sourcegroups.csv
-        dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
         if oq.hazard_stats() or oq.individual_curves or len(rlzs) == 1:
@@ -244,7 +244,7 @@ def job_from_file(job_ini, job_id, username, **kw):
     try:
         oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
     except Exception:
-        logs.dbcmd('finish', job_id, 'failed')
+        logs.dbcmd('finish', job_id, 'deleted')
         raise
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
@@ -275,8 +275,9 @@ def poll_queue(job_id, pid, poll_time):
             jobs = logs.dbcmd(GET_JOBS)
             failed = [job.id for job in jobs if not psutil.pid_exists(job.pid)]
             if failed:
-                logs.dbcmd("UPDATE job SET status='failed', is_running=0 "
-                           "WHERE id in (?X)", failed)
+                for job in failed:
+                    logs.dbcmd('update_job', job,
+                               {'status': 'failed', 'is_running': 0})
             elif any(job.id < job_id for job in jobs):
                 if first_time:
                     logs.LOG.warn('Waiting for jobs %s', [j.id for j in jobs])
@@ -311,8 +312,6 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     msg = check_obsolete_version(oqparam.calculation_mode)
     if msg:
         logs.LOG.warn(msg)
-    if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-        set_concurrent_tasks_default(job_id)
     calc.from_engine = True
     tb = 'None\n'
     try:
@@ -321,7 +320,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
                 with open(oqparam.inputs['input_zip'], 'rb') as arch:
                     data = numpy.array(arch.read())
             else:
-                logs.LOG.info('zipping the input files')
+                logs.LOG.info('Zipping the input files')
                 bio = io.BytesIO()
                 oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
                               logging.debug)
@@ -332,15 +331,21 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             del data  # save memory
 
         poll_queue(job_id, _PID, poll_time=15)
+        if OQ_DISTRIBUTE.endswith('pool'):
+            logs.LOG.warning('Using %d cores on %s',
+                             parallel.Starmap.num_cores, platform.node())
+        if OQ_DISTRIBUTE == 'zmq':
+            logs.dbcmd('zmq_start')  # start zworkers
+            logs.dbcmd('zmq_wait')  # wait for them to go up
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
+            set_concurrent_tasks_default(job_id)
         t0 = time.time()
         calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id,
-                 close=False, **kw)
+                 hazard_calculation_id=hazard_calculation_id, **kw)
         logs.LOG.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         duration = time.time() - t0
-        calc._monitor.flush()
-        records = views.performance_view(calc.datastore)
+        records = views.performance_view(calc.datastore, add_calc_id=False)
         logs.dbcmd('save_performance', job_id, records)
         calc.datastore.close()
         logs.LOG.info('Calculation %d finished correctly in %d seconds',
@@ -362,6 +367,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
         # if there was an error in the calculation, this part may fail;
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate
+        if OQ_DISTRIBUTE == 'zmq':  # stop zworkers
+            logs.dbcmd('zmq_stop')
         try:
             if OQ_DISTRIBUTE.startswith('celery'):
                 celery_cleanup(TERMINATE)

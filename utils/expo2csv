@@ -41,10 +41,6 @@ def expo2csv(job_ini):
     for costname in exposure.cost_types['name']:
         if costname != 'occupants':
             header.append(costname)
-            if exposure.deductible_is_absolute is not None:
-                header.append(costname + '-deductible')
-            if exposure.insurance_limit_is_absolute is not None:
-                header.append(costname + '-insured_limit')
     if exposure.retrofitted:
         header.append('retrofitted')
     occupancy_periods = exposure.occupancy_periods.split()
@@ -58,10 +54,6 @@ def expo2csv(job_ini):
         for costname in exposure.cost_types['name']:
             if costname != 'occupants':
                 row.append(asset.values[costname])
-                if exposure.deductible_is_absolute is not None:
-                    row.append(asset.deductibles[costname])
-                if exposure.insurance_limit_is_absolute is not None:
-                    row.append(asset.insurance_limits[costname])
         if exposure.retrofitted:
             row.append(asset._retrofitted)
         for time_event in occupancy_periods:

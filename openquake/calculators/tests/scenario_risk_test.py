@@ -19,7 +19,7 @@
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_9, case_10, occupants, case_master,
+    case_6a, case_7, case_8, case_10, occupants, case_master,
     case_shakemap)
 
 from openquake.baselib.general import gettemp
@@ -46,21 +46,17 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg.csv', fname)
 
         # check the exported GMFs
-        [fname, _, sitefile] = export(('gmf_data', 'csv'), self.calc.datastore)
+        [fname, sitefile] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-FromFile.csv', fname)
         self.assertEqualFiles('expected/sites.csv', sitefile)
 
         [fname] = out['losses_by_event', 'csv']
         self.assertEqualFiles('expected/losses_by_event.csv', fname)
 
-        # check the asset values by sid
-        [val] = extract(self.calc.datastore, 'asset_values/0')
-        self.assertEqual(val['aref'], b'a2')
-        self.assertEqual(val['aid'], 0)
-        self.assertEqual(val['structural'], 2000.)
-
-        with self.assertRaises(IndexError):  # non-existing site_id
-            extract(self.calc.datastore, 'asset_values/1')
+        with self.assertRaises(ValueError):
+            # aggregate_by is implemented only for the ebrisk calculator
+            self.run_calc(case_1.__file__, 'job_risk.ini',
+                          aggregate_by='taxonomy')
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
@@ -85,6 +81,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(tbl.array.shape, (1, 1))  # 1 taxonomy, 1 rlz
 
     def test_case_3(self):
+        # a4 has a missing cost
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
 
         [fname] = out['losses_by_asset', 'csv']
@@ -131,6 +128,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('totlosses', dstore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
+        # testing portfolio_losses
+        fname = gettemp(view('portfolio_losses', dstore))
+        self.assertEqualFiles('expected/portfolio_losses.txt', fname)
+
         # two equal gsims
         with self.assertRaises(InvalidLogicTree):
             self.run_calc(case_6a.__file__, 'job_haz.ini',
@@ -173,7 +174,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2632.0447, 3204.5427]])
+        aac(obj.array, [[2499.0835, 2949.6074]])
 
     def test_case_7(self):
         # check independence from concurrent_tasks
@@ -194,12 +195,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
 
-    def test_case_9(self):
-        # using gmfs.xml
-        self.run_calc(case_9.__file__, 'job.ini')
-        agglosses = extract(self.calc.datastore, 'agg_losses/structural')
-        aac(agglosses.array, [7306.7124])
-
     def test_case_10(self):
         # missing occupants in the exposure
         with self.assertRaises(InvalidFile):
@@ -216,8 +211,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (9,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
-        agglosses = extract(self.calc.datastore, 'agglosses')
-        aac(agglosses['mean'], numpy.array([1848876.5], numpy.float32),
-            atol=.1)
-        aac(agglosses['stddev'], numpy.array([1902063.], numpy.float32),
-            atol=.1)
+        [fname] = export(('agglosses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agglosses.csv', fname)
+
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)

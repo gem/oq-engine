@@ -2,7 +2,7 @@
 
 ![OpenQuake Logo](https://github.com/gem/oq-infrastructure/raw/master/logos/oq-logo.png)
 
-The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
+The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters. DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
 <!-- GEM BEGIN: apply the following patch with the proper values for the next release
 -[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
@@ -31,8 +31,9 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 3.4** 'Omori'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.4#openquake-engine.
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.4/doc/whats-new.md)
+Current stable version is the **OpenQuake Engine 3.7** 'Richter'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.7#openquake-engine.
+
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.6/doc/whats-new.md)
 
 ## Documentation (master tree)
 
@@ -88,6 +89,12 @@ Current stable version is the **OpenQuake Engine 3.4** 'Omori'. The documentatio
 
 * [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
 
+#### Mirrors
+
+A mirror of this repository, hosted in Pavia (Italy), is available at [https://mirror.openquake.org/git/GEM/oq-engine.git](https://mirror.openquake.org/git/GEM/oq-engine.git).
+
+The main download server ([downloads.openquake.org](https://downloads.openquake.org/)) is hosted in Nürnberg (Germany).
+
 ### Running the OpenQuake Engine
 
 * [Using the command line](https://github.com/gem/oq-engine/blob/master/doc/running/unix.md)
@@ -100,6 +107,7 @@ Current stable version is the **OpenQuake Engine 3.4** 'Omori'. The documentatio
 * [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
 * [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
 * [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
+* [Repository](https://plugins.qgis.org/plugins/svir/)
 * [Source code](https://github.com/gem/oq-irmt-qgis)
 
 ## License

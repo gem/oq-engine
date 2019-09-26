@@ -51,6 +51,11 @@ class NodalPlane(object):
         self.dip = dip
         self.rake = rake
 
+    def __iter__(self):
+        yield self.strike
+        yield self.dip
+        yield self.rake
+
     @classmethod
     def check_dip(cls, dip):
         """

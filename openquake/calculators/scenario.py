@@ -49,8 +49,9 @@ class ScenarioCalculator(base.HazardCalculator):
         self.rup = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
         R = len(self.gsims)
-        self.cmaker = ContextMaker('*', self.gsims, oq.maximum_distance,
-                                   {'filter_distance': oq.filter_distance})
+        self.cmaker = ContextMaker('*', self.gsims,
+                                   {'maximum_distance': oq.maximum_distance,
+                                    'filter_distance': oq.filter_distance})
         super().pre_execute()
         self.datastore['oqparam'] = oq
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
@@ -59,13 +60,14 @@ class ScenarioCalculator(base.HazardCalculator):
         E = oq.number_of_ground_motion_fields
         n_occ = numpy.array([E])
         ebr = EBRupture(self.rup, 0, 0, n_occ)
+        ebr.e0 = 0
         events = numpy.zeros(E * R, events_dt)
         for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             events[rlz * E: rlz * E + E]['id'] = eids
-            events[rlz * E: rlz * E + E]['rlz'] = rlz
+            events[rlz * E: rlz * E + E]['rlz_id'] = rlz
         self.datastore['events'] = self.events = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rup_array = get_rup_array([ebr], self.src_filter)
+        rup_array = get_rup_array([ebr], self.src_filter())
         if len(rup_array) == 0:
             maxdist = oq.maximum_distance(
                 self.rup.tectonic_region_type, self.rup.mag)
@@ -106,7 +108,7 @@ class ScenarioCalculator(base.HazardCalculator):
     def post_execute(self, gmfa):
         if len(gmfa) == 0:  # no rupture_model
             return
-        with self.monitor('saving gmfs', autoflush=True):
+        with self.monitor('saving gmfs'):
             base.save_gmf_data(
                 self.datastore, self.sitecol, gmfa,
                 self.oqparam.imtls, self.events)

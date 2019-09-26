@@ -2,9 +2,9 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ============== ===================
-checksum32     3,805,160,323      
-date           2019-05-03T06:44:23
-engine_version 3.5.0-git7a6d15e809
+checksum32     572,206,371        
+date           2019-09-24T15:21:27
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 3, num_levels = 36, num_rlzs = 3
@@ -23,7 +23,7 @@ complex_fault_mesh_spacing      5.0
 width_of_mfd_bin                0.1               
 area_source_discretization      50.0              
 ground_motion_correlation_model None              
-minimum_intensity               {}                
+minimum_intensity               {'default': 0.002}
 random_seed                     23                
 master_seed                     0                 
 ses_seed                        42                
@@ -50,21 +50,18 @@ b1        1.00000 simple(3)       3
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============================================================================================================================================================ ========== ========== ==========
-grp_id gsims                                                                                                                                                        distances  siteparams ruptparams
-====== ============================================================================================================================================================ ========== ========== ==========
-0      '[GMPETable]\ngmpe_table = "Wcrust_high_rhypo.hdf5"' '[GMPETable]\ngmpe_table = "Wcrust_low_rhypo.hdf5"' '[GMPETable]\ngmpe_table = "Wcrust_med_rhypo.hdf5"' rhypo rrup            mag       
-====== ============================================================================================================================================================ ========== ========== ==========
+====== ================================================================================================================================================================== ========== ========== ==========
+grp_id gsims                                                                                                                                                              distances  siteparams ruptparams
+====== ================================================================================================================================================================== ========== ========== ==========
+0      '[GMPETable]\ngmpe_table = "./Wcrust_high_rhypo.hdf5"' '[GMPETable]\ngmpe_table = "./Wcrust_low_rhypo.hdf5"' '[GMPETable]\ngmpe_table = "./Wcrust_med_rhypo.hdf5"' rhypo rrup            mag       
+====== ================================================================================================================================================================== ========== ========== ==========
 
 Realizations per (GRP, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=3, rlzs=3)
-  0,'[GMPETable]\ngmpe_table = "Wcrust_high_rhypo.hdf5"': [2]
-  0,'[GMPETable]\ngmpe_table = "Wcrust_low_rhypo.hdf5"': [0]
-  0,'[GMPETable]\ngmpe_table = "Wcrust_med_rhypo.hdf5"': [1]>
+  <RlzsAssoc(size=9, rlzs=3)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -76,44 +73,44 @@ vancouver_area_source.xml 0      Active Shallow Crust 2,430        2,430
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      VICM      A    0     8     2,430        0.01540   3.00000   420   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ ==========
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed     
+========= ====== ==== ============ ========= ========= ============ ==========
+VICM      0      A    2,430        2.344E-04 3.00000   2,430        10,368,422
+========= ====== ==== ============ ========= ========= ============ ==========
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.01540   1     
+A    2.344E-04 1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.01454 NaN    0.01454 0.01454 1      
-preclassical       0.01817 NaN    0.01817 0.01817 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+preclassical       7.446E-04 NaN    7.446E-04 7.446E-04 1      
+read_source_models 0.01706   NaN    0.01706   0.01706   1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-================== ========================================================= ========
-task               sent                                                      received
-read_source_models converter=313 B fnames=116 B                              2.51 KB 
-preclassical       gsims=157.44 KB srcs=2.16 KB params=887 B srcfilter=218 B 336 B   
-================== ========================================================= ========
+================== ========================================= ========
+task               sent                                      received
+preclassical       gsims=157.45 KB srcs=2.18 KB params=926 B 342 B   
+read_source_models converter=314 B fnames=116 B              2.51 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_1848                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.01817   0.0       1     
-total read_source_models 0.01454   0.0       1     
-managing sources         0.00453   0.0       1     
-store source_info        0.00245   0.0       1     
-aggregate curves         1.929E-04 0.0       1     
+total read_source_models 0.01706   0.0       1     
+store source_info        0.00223   0.0       1     
+total preclassical       7.446E-04 0.0       1     
+managing sources         6.969E-04 0.0       1     
+aggregate curves         2.944E-04 0.0       1     
 ======================== ========= ========= ======

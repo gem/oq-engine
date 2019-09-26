@@ -104,7 +104,7 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
     missing = set(imts) - available_imts
     if missing:
         msg = ('The IMT %s is required but not in the available set %s, '
-               'please change the riskmodel otherwise you will have '
+               'please change the risk model otherwise you will have '
                'incorrect zero losses for the associated taxonomies' %
                (missing.pop(), ', '.join(available_imts)))
         if discard_assets:
@@ -313,5 +313,6 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     if site_effects:
         gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs)
     if gmfs.max() > MAX_GMV:
-        logging.warning('There suspiciously large GMVs of %.2fg', gmfs.max())
+        logging.warning('There are suspiciously large GMVs of %.2fg',
+                        gmfs.max())
     return imts, gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)

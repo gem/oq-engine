@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     3,490,620,350      
-date           2019-05-03T06:43:34
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:20:59
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
@@ -12,7 +12,7 @@ num_sites = 1, num_levels = 200, num_rlzs = 6
 Parameters
 ----------
 =============================== ==============================================================================================================================================================
-calculation_mode                'disaggregation'                                                                                                                                              
+calculation_mode                'preclassical'                                                                                                                                                
 number_of_logic_tree_samples    0                                                                                                                                                             
 maximum_distance                {'default': 200.0, 'Stable Shallow Crust': 200.0, 'Active Shallow Crust': 200.0, 'Volcanic': 100.0, 'Subduction Interface': 200.0, 'Subduction Inslab': 200.0}
 investigation_time              50.0                                                                                                                                                          
@@ -62,13 +62,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=6, rlzs=6)
-  0,'[BindiEtAl2011]': [0]
-  0,'[BindiEtAl2014Rhyp]': [1]
-  0,'[CauzziEtAl2014]': [2]
-  1,'[BindiEtAl2011]': [3]
-  1,'[BindiEtAl2014Rhyp]': [4]
-  1,'[CauzziEtAl2014]': [5]>
+  <RlzsAssoc(size=18, rlzs=6)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -83,90 +77,52 @@ source_model_test_point.xml   1      Active Shallow Crust 624          624
 #TRT models   2    
 #eff_ruptures 2,932
 #tot_ruptures 2,932
-#tot_weight   9,294
 ============= =====
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      f1        C    0     4     2,308        9.47433   37        9,232 
-1      p1        P    4     5     156          0.45874   1.00000   15    
-1      p3        P    6     7     156          0.45664   1.00000   15    
-1      p4        P    7     8     156          0.45562   1.00000   15    
-1      p2        P    5     6     156          0.45189   1.00000   15    
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+f1        0      C    2,308        0.00272   2.00000   2,464        905,605
+p1        1      P    156          3.347E-04 1.00000   156          466,034
+p2        1      P    156          2.804E-04 1.00000   156          556,387
+p3        1      P    156          1.998E-04 1.00000   156          780,801
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    9.47433   1     
-P    1.82288   4     
+C    0.00272   1     
+P    8.149E-04 4     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-====================== ======= ======= ========= ======= =======
-operation-duration     mean    stddev  min       max     outputs
-read_source_models     0.04957 0.06497 0.00363   0.09551 2      
-classical_split_filter 0.21035 0.79406 1.469E-04 4.52334 33     
-classical              0.48197 0.86666 0.00595   4.84498 28     
-build_hazard_stats     0.00470 NaN     0.00470   0.00470 1      
-====================== ======= ======= ========= ======= =======
-
-Fastest task
-------------
-taskno=0, weight=2308, duration=0 s, sources="p4"
-
-======== ======= ====== ===== ===== =
-variable mean    stddev min   max   n
-======== ======= ====== ===== ===== =
-nsites   1.00000 NaN    1     1     1
-weight   9,232   NaN    9,232 9,232 1
-======== ======= ====== ===== ===== =
-
-Slowest task
-------------
-taskno=0, weight=2308, duration=4 s, sources="p4"
-
-======== ======= ====== ===== ===== =
-variable mean    stddev min   max   n
-======== ======= ====== ===== ===== =
-nsites   1.00000 NaN    1     1     1
-weight   9,232   NaN    9,232 9,232 1
-======== ======= ====== ===== ===== =
+================== ======= ========= ========= ======= =======
+operation-duration mean    stddev    min       max     outputs
+preclassical       0.00118 9.895E-04 5.364E-04 0.00294 5      
+read_source_models 0.05846 0.07676   0.00418   0.11274 2      
+================== ======= ========= ========= ======= =======
 
 Data transfer
 -------------
-====================== ============================================================== ========
-task                   sent                                                           received
-read_source_models     converter=626 B fnames=230 B                                   6.27 KB 
-classical_split_filter srcs=1.39 MB params=73.51 KB gsims=15.47 KB srcfilter=11.73 KB 1.65 MB 
-classical              srcs=1.39 MB params=73.51 KB gsims=15.47 KB srcfilter=11.73 KB 728.3 KB
-build_hazard_stats     pgetter=0 B individual_curves=0 B hstats=0 B N=0 B             11.87 KB
-====================== ============================================================== ========
+================== ============================================== ========
+task               sent                                           received
+preclassical       params=11.33 KB srcs=7.99 KB srcfilter=3.96 KB 1.67 KB 
+read_source_models converter=628 B fnames=230 B                   6.29 KB 
+================== ============================================== ========
 
 Slowest operations
 ------------------
-============================ ========= ========= ======
-operation                    time_sec  memory_mb counts
-============================ ========= ========= ======
-total classical              13        3.24219   28    
-get_poes                     9.37708   0.0       2,932 
-make_contexts                7.65233   0.0       2,932 
-total classical_split_filter 6.94155   2.98828   33    
-filtering/splitting sources  4.53607   2.98828   5     
-total read_source_models     0.09914   0.0       2     
-aggregate curves             0.05540   1.03125   33    
-store source model           0.00554   0.0       2     
-total build_hazard_stats     0.00470   0.0       1     
-managing sources             0.00431   0.0       1     
-saving probability maps      0.00395   0.0       1     
-combine pmaps                0.00374   0.0       1     
-store source_info            0.00200   0.0       1     
-saving statistics            0.00174   0.0       1     
-compute stats                7.596E-04 0.0       1     
-============================ ========= ========= ======
+======================== ========= ========= ======
+calc_1741                time_sec  memory_mb counts
+======================== ========= ========= ======
+total read_source_models 0.11692   0.0       2     
+total preclassical       0.00590   0.0       5     
+store source_info        0.00211   0.0       1     
+aggregate curves         0.00173   0.0       5     
+managing sources         4.323E-04 0.0       1     
+======================== ========= ========= ======

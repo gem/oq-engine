@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import mock
+import unittest.mock as mock
 import logging
 import operator
 import collections
@@ -74,9 +74,6 @@ def print_csm_info(fname):
           'effective-realizations.html for an explanation')
     rlzs_assoc = csm.info.get_rlzs_assoc()
     print(rlzs_assoc)
-    dupl = [(srcs[0]['id'], len(srcs)) for srcs in csm.check_dupl_sources()]
-    if dupl:
-        print(rst_table(dupl, ['source_id', 'multiplicity']))
     tot, pairs = get_pickled_sizes(rlzs_assoc)
     print(rst_table(pairs, ['attribute', 'nbytes']))
 

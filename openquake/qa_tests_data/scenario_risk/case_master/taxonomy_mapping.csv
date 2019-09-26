@@ -1,0 +1,6 @@
+taxonomy,conversion,weight
+tax1,tax1,1
+tax2,tax2,1
+tax3,tax3,1
+tax4,tax2,0.4
+tax4,tax3,0.6

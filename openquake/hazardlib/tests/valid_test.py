@@ -56,7 +56,7 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(valid.namelist('x y'), ['x', 'y'])
         self.assertEqual(valid.namelist(' '), [])
         with self.assertRaises(ValueError):
-            valid.namelist('x 1')
+            valid.namelist('x É')
 
     def test_longitude(self):
         self.assertEqual(valid.longitude('1'), 1.0)

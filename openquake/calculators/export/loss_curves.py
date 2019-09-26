@@ -28,9 +28,9 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     :returns: a LossCurvesMapsBuilder instance
     """
     oq = dstore['oqparam']
-    weights = dstore['weights'].value
+    weights = dstore['weights'][()]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = countby(dstore['events'].value, 'rlz')
+    num_events = countby(dstore['events'][()], 'rlz_id')
     periods = return_periods or oq.return_periods or scientific.return_periods(
         eff_time, max(num_events.values()))
     return scientific.LossCurvesMapsBuilder(
@@ -60,6 +60,7 @@ class LossCurveExporter(object):
     """
     def __init__(self, dstore):
         self.dstore = dstore
+        self.oq = dstore['oqparam']
         try:
             self.builder = get_loss_builder(dstore)
         except KeyError:  # no 'events' for non event_based_risk
@@ -128,7 +129,10 @@ class LossCurveExporter(object):
                             data.append((aref, loss_type, loss, poe))
             dest = self.dstore.build_fname(
                 'loss_curves', '%s-%s' % (spec, key) if spec else key, 'csv')
-            writer.save(data, dest)
+            com = dict(
+                kind=key,
+                risk_investigation_time=self.oq.risk_investigation_time)
+            writer.save(data, dest, comment=com)
         return writer.getsaved()
 
     def export(self, export_type, what):

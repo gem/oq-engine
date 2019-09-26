@@ -212,7 +212,7 @@ class UCERFSource(BaseSeismicSource):
         if hasattr(self.orig, '_mags'):
             return self.orig._mags
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._mags = hdf5[self.idx_set["mag"]].value
+            self.orig._mags = hdf5[self.idx_set["mag"]][()]
             return self.orig._mags
 
     @property
@@ -221,7 +221,7 @@ class UCERFSource(BaseSeismicSource):
         if hasattr(self.orig, '_rate'):
             return self.orig._rate
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._rate = hdf5[self.idx_set["rate"]].value
+            self.orig._rate = hdf5[self.idx_set["rate"]][()]
             return self.orig._rate
 
     @property
@@ -230,7 +230,7 @@ class UCERFSource(BaseSeismicSource):
         if hasattr(self.orig, '_rake'):
             return self.orig._rake
         with h5py.File(self.source_file, "r") as hdf5:
-            self.orig._rake = hdf5[self.idx_set["rake"]].value
+            self.orig._rake = hdf5[self.idx_set["rake"]][()]
             return self.orig._rake
 
     def count_ruptures(self):
@@ -281,7 +281,7 @@ class UCERFSource(BaseSeismicSource):
         with h5py.File(self.source_file, "r") as hdf5:
             for idx in ridx:
                 trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
-                centroids.append(hdf5[trace + "/Centroids"].value)
+                centroids.append(hdf5[trace + "/Centroids"][()])
         return numpy.concatenate(centroids)
 
     def gen_trace_planes(self, ridx):
@@ -303,13 +303,13 @@ class UCERFSource(BaseSeismicSource):
         branch_key = self.idx_set["grid_key"]
         idist = src_filter.integration_distance(DEFAULT_TRT)
         with h5py.File(self.source_file, 'r') as hdf5:
-            bg_locations = hdf5["Grid/Locations"].value
+            bg_locations = hdf5["Grid/Locations"][()]
             distances = min_geodetic_distance(
                 src_filter.sitecol.xyz,
                 (bg_locations[:, 0], bg_locations[:, 1]))
             # Add buffer equal to half of length of median area from Mmax
             mmax_areas = self.msr.get_median_area(
-                hdf5["/".join(["Grid", branch_key, "MMax"])].value, 0.0)
+                hdf5["/".join(["Grid", branch_key, "MMax"])][()], 0.0)
             # for instance hdf5['Grid/FM0_0_MEANFS_MEANMSR/MMax']
             mmax_lengths = numpy.sqrt(mmax_areas / self.aspect)
             ok = distances <= (0.5 * mmax_lengths + idist)
@@ -400,7 +400,7 @@ class UCERFSource(BaseSeismicSource):
         with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
-            mags = hdf5[grid_loc + "/Magnitude"].value
+            mags = hdf5[grid_loc + "/Magnitude"][()]
             mmax = hdf5[grid_loc + "/MMax"][background_sids]
             rates = hdf5[grid_loc + "/RateArray"][background_sids, :]
             locations = hdf5["Grid/Locations"][background_sids, :]

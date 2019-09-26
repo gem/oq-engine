@@ -186,9 +186,9 @@ class PenalizedMLE(SeismicityOccurrence):
         v11 = (cum_count[0] / ((am0 * config["area"]) ** 2.)) + (wau / am0)
         v22 = -d2ldb2 * (np.log(10.) ** 2.)
         v12 = np.log(10.) * ((satmeb / (1.0 - e_b[-1])) +
-                             delta[-1] * e_b[-1] * sateb / ((1.0 - e_b[-1]) ** 2.)) /\
-            config["area"]
-        vmat = np.matrix([[v11, v12], [v12, v22]])
+                             delta[-1] * e_b[-1] * sateb /
+                             ((1.0 - e_b[-1]) ** 2.)) / config["area"]
+        vmat = np.array([[v11, v12], [v12, v22]])
         error_mat = np.linalg.inv(vmat)
         sigmab = np.sqrt(error_mat[1, 1])
         sigma_rate = np.sqrt(error_mat[0, 0])

@@ -17,30 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.qa_tests_data.classical_risk import (
-    case_1, case_2, case_3, case_4, case_5, case_master)
+    case_2, case_3, case_4, case_5, case_master)
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, NOT_DARWIN)
-from openquake.commonlib.writers import scientificformat
 from openquake.calculators.export import export
 
 
 class ClassicalRiskTestCase(CalculatorTestCase):
-
-    def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
-
-        # check loss ratios
-        lrs = self.calc.datastore['risk_model/VF/structural-vulnerability']
-        got = scientificformat(lrs.mean_loss_ratios, '%.2f')
-        self.assertEqual(got, '0.05 0.10 0.20 0.40 0.80')
-
-        # check loss curves
-        [fname] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/loss_curves.csv', fname)
-
-        # check loss maps
-        [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/loss_maps.csv', fname)
 
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')

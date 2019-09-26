@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2019-05-03T06:43:55
-engine_version 3.5.0-git7a6d15e809
+date           2019-09-24T15:21:14
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 6, num_levels = 3, num_rlzs = 1
@@ -61,8 +61,7 @@ Realizations per (GRP, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[TusaLanger2016Rhypo]': [0]>
+  <RlzsAssoc(size=1, rlzs=1)>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -74,44 +73,44 @@ source_model.xml 0      Volcanic 440          440
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      1         A    0     8     440          0.01515   6.00000   107   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ====== ==== ============ ========= ========= ============ =========
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
+========= ====== ==== ============ ========= ========= ============ =========
+1         0      A    440          1.931E-04 6.00000   440          2,278,387
+========= ====== ==== ============ ========= ========= ============ =========
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.01515   1     
+A    1.931E-04 1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.01255 NaN    0.01255 0.01255 1      
-preclassical       0.01747 NaN    0.01747 0.01747 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+preclassical       5.908E-04 NaN    5.908E-04 5.908E-04 1      
+read_source_models 0.01484   NaN    0.01484   0.01484   1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-================== ===================================================== ========
-task               sent                                                  received
-read_source_models converter=313 B fnames=107 B                          2.37 KB 
-preclassical       srcs=2.02 KB params=478 B srcfilter=218 B gsims=162 B 336 B   
-================== ===================================================== ========
+================== ========================================= ========
+task               sent                                      received
+preclassical       srcs=2.04 KB srcfilter=832 B params=517 B 342 B   
+read_source_models converter=314 B fnames=107 B              2.38 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-operation                time_sec  memory_mb counts
+calc_1813                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.01747   0.0       1     
-total read_source_models 0.01255   0.0       1     
-managing sources         0.00344   0.0       1     
-store source_info        0.00294   0.0       1     
-aggregate curves         1.948E-04 0.0       1     
+total read_source_models 0.01484   0.0       1     
+store source_info        0.00286   1.02344   1     
+total preclassical       5.908E-04 0.0       1     
+aggregate curves         4.711E-04 0.0       1     
+managing sources         3.948E-04 0.0       1     
 ======================== ========= ========= ======

@@ -20,7 +20,7 @@ import logging
 import operator
 import collections
 import numpy
-from openquake.hazardlib import probability_map
+from openquake.commonlib.logictree import get_effective_rlzs
 
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
@@ -122,14 +122,15 @@ class RlzsAssoc(object):
                 except ValueError:  # there is more than 1 TRT
                     gsim = gsim_by_trt[trt]
                 acc[gsim].append(rlz.ordinal)
-        return {gsim: numpy.array(acc[gsim], dtype=U16)
+        # EventBasedTestCase::test_case_10 is a case with num_rlzs=[25, 36, 39]
+        return {gsim: numpy.array(acc[gsim], dtype=U32)
                 for gsim in sorted(acc)}
 
     def by_grp(self):
         """
         :returns: a dictionary grp -> rlzis
         """
-        dic = {}  # grp -> [(gsim_idx, rlzis), ...]
+        dic = {}  # grp -> rlzis
         for sm in self.csm_info.source_models:
             for sg in sm.src_groups:
                 if not sg.eff_ruptures:
@@ -137,8 +138,7 @@ class RlzsAssoc(object):
                 rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
                 if not rlzs_by_gsim:
                     continue
-                dic['grp-%02d' % sg.id] = numpy.array(
-                    list(rlzs_by_gsim.values()))
+                dic['grp-%02d' % sg.id] = list(rlzs_by_gsim.values())
         return dic
 
     def _init(self):
@@ -170,23 +170,6 @@ class RlzsAssoc(object):
         """Array with the weight of the realizations"""
         return numpy.array([rlz.weight for rlz in self.realizations])
 
-    def combine_pmaps(self, pmap_by_grp):
-        """
-        :param pmap_by_grp: dictionary group string -> probability map
-        :returns: a list of probability maps, one per realization
-        """
-        grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
-        num_levels = pmap_by_grp[grp].shape_y
-        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
-                 for _ in self.realizations]
-        array = self.by_grp()
-        for grp in pmap_by_grp:
-            for gsim_idx, rlzis in enumerate(array[grp]):
-                pmap = pmap_by_grp[grp].extract(gsim_idx)
-                for rlzi in rlzis:
-                    pmaps[rlzi] |= pmap
-        return pmaps
-
     def get_rlz(self, rlzstr):
         r"""
         Get a Realization instance for a string of the form 'rlz-\d+'
@@ -200,27 +183,22 @@ class RlzsAssoc(object):
         idx = numpy.arange(offset, offset + len(gsim_rlzs))
         rlzs = []
         for i, gsim_rlz in enumerate(gsim_rlzs):
-            weight = float(lt_model.weight) * gsim_rlz.weight
+            weight = lt_model.weight * gsim_rlz.weight
             rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
             self.gsim_by_trt.append(dict(zip(all_trts, gsim_rlz.value)))
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
     def __repr__(self):
-        pairs = []
         dic = {grp.id: self.get_rlzs_by_gsim(grp.id)
                for sm in self.csm_info.source_models
                for grp in sm.src_groups if grp.eff_ruptures}
         size = 0
         for grp_id, rlzs_by_gsim in dic.items():
             for gsim, rlzs in rlzs_by_gsim.items():
-                size += 1
-                if len(rlzs) > 10:  # short representation
-                    rlzs = ['%d realizations' % len(rlzs)]
-                pairs.append(('%s,%r' % (grp_id, repr(gsim)), rlzs))
-        return '<%s(size=%d, rlzs=%d)\n%s>' % (
-            self.__class__.__name__, size, len(self.realizations),
-            '\n'.join('%s: %s' % pair for pair in pairs))
+                size += len(rlzs_by_gsim)
+        return '<%s(size=%d, rlzs=%d)>' % (
+            self.__class__.__name__, size, len(self.realizations))
 
 
 def accept_path(path, ref_path):
@@ -277,16 +255,25 @@ def get_rlzs_assoc(cinfo, sm_lt_path=None, trts=None):
                 # i.e. when called with sm_lt_path in store_rlz_info
                 logging.warning('Reducing the logic tree of %s from %d to %d '
                                 'realizations', smodel.name, before, after)
-            gsim_rlzs = list(gsim_lt)
+            rlzs = _get_rlzs(cinfo.num_samples, smodel, gsim_lt,
+                             cinfo.seed + offset)
             all_trts = list(gsim_lt.values)
         else:
-            gsim_rlzs = list(cinfo.gsim_lt)
+            rlzs = _get_rlzs(cinfo.num_samples, smodel, cinfo.gsim_lt,
+                             cinfo.seed + offset)
             all_trts = list(cinfo.gsim_lt.values)
 
-        rlzs = cinfo._get_rlzs(smodel, gsim_rlzs, cinfo.seed + offset)
         assoc._add_realizations(offset, smodel, all_trts, rlzs)
         offset += len(rlzs)
 
     if assoc.realizations:
         assoc._init()
     return assoc
+
+
+def _get_rlzs(num_samples, smodel, gsim_lt, seed):
+    if num_samples:
+        rlzs = gsim_lt.sample(smodel.samples, seed)
+    else:  # full enumeration
+        rlzs = get_effective_rlzs(gsim_lt)
+    return rlzs

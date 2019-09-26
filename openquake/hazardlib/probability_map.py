@@ -219,31 +219,6 @@ class ProbabilityMap(dict):
                 curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
         return curves
 
-    def convert2(self, imtls, sids):
-        """
-        Convert a probability map into a composite array of shape (N,)
-        and dtype `imtls.dt`.
-
-        :param imtls:
-            DictArray instance
-        :param sids:
-            the IDs of the sites we are interested in
-        :returns:
-            an array of curves of shape (N,)
-        """
-        assert self.shape_z == 1, self.shape_z
-        curves = numpy.zeros(len(sids), imtls.dt)
-        for imt in curves.dtype.names:
-            curves_by_imt = curves[imt]
-            for i, sid in numpy.ndenumerate(sids):
-                try:
-                    pcurve = self[sid]
-                except KeyError:
-                    pass  # the poes will be zeros
-                else:
-                    curves_by_imt[i] = pcurve.array[imtls(imt), 0]
-        return curves
-
     def filter(self, sids):
         """
         Extracs a submap of self for the given sids.
@@ -269,6 +244,11 @@ class ProbabilityMap(dict):
         return out
 
     def __ior__(self, other):
+        if not other:
+            return self
+        if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
+            raise ValueError('%s has inconsistent shape with %s' %
+                             (other, self))
         self_sids = set(self)
         other_sids = set(other)
         for sid in self_sids & other_sids:
@@ -299,6 +279,13 @@ class ProbabilityMap(dict):
             prob = other.get(sid, 1) if is_pmap else other
             new[sid] = self.get(sid, 1) + prob
         return new
+
+    def __iadd__(self, other):
+        # this is used when composing mutually exclusive probabilities
+        for sid in other:
+            pcurve = self.setdefault(sid, 0)
+            pcurve += other[sid]
+        return self
 
     def __mul__(self, other):
         try:
@@ -333,6 +320,9 @@ class ProbabilityMap(dict):
                 new[sid] = ~self[sid]  # store only nonzero probabilities
         return new
 
+    def __getstate__(self):
+        return dict(shape_y=self.shape_y, shape_z=self.shape_z)
+
     def __toh5__(self):
         # converts to an array of shape (num_sids, shape_y, shape_z)
         size = len(self)
@@ -340,7 +330,12 @@ class ProbabilityMap(dict):
         shape = (size, self.shape_y, self.shape_z)
         array = numpy.zeros(shape, F64)
         for i, sid in numpy.ndenumerate(sids):
-            array[i] = self[sid].array
+            try:
+                array[i] = self[sid].array
+            except ValueError as exc:
+                # this should never happen, but I got a could not broadcast
+                # input array once for Australia
+                raise ValueError('%s on site_id=%d' % (exc, sid))
         return dict(array=array, sids=sids), {}
 
     def __fromh5__(self, dic, attrs):
@@ -351,6 +346,10 @@ class ProbabilityMap(dict):
         self.shape_z = array.shape[2]
         for sid, prob in zip(sids, array):
             self[sid] = ProbabilityCurve(prob)
+
+    def __repr__(self):
+        return '<%s %d, %d, %d>' % (self.__class__.__name__, len(self),
+                                    self.shape_y, self.shape_z)
 
 
 def get_shape(pmaps):

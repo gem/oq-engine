@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -36,6 +37,14 @@ from openquake.hazardlib.imt import registry
 from openquake.hazardlib.imt import from_string
 
 
+def set_read_only(*ctxs):
+    for ctx in ctxs:
+        for slot in vars(ctx):
+            arr = getattr(ctx, slot)
+            if isinstance(arr, numpy.ndarray):
+                arr.flags.writeable = False
+
+
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
@@ -63,9 +72,6 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         gsim = copy.deepcopy(gsim_cls)
     else:
         gsim = gsim_cls()
-    gsim.init()
-
-    ctxs = []
     errors = 0
     linenum = 1
     discrepancies = []
@@ -75,25 +81,10 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         linenum += 1
         (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
             = testcase
-        # make a copy of the original context objects so that they can then
-        # be compared againts the context objects after the
-        # 'get_mean_and_stddevs' method has been called
-        orig_sctx = copy.deepcopy(sctx)
-        orig_rctx = copy.deepcopy(rctx)
-        orig_dctx = copy.deepcopy(dctx)
         for imt, expected_result in expected_results.items():
+            set_read_only(sctx, dctx, rctx)
             mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
                                                       imt, stddev_types)
-            ctxs.append(
-                (orig_sctx == sctx) and (orig_rctx == rctx) and
-                (orig_dctx == dctx))
-            if not numpy.all(ctxs) and debug:
-                msg = 'file %r line %r imt %r. Context object ' \
-                      'has changed after get_mean_and_stddevs has been ' \
-                      'called' % (datafile.name, linenum, imt)
-                print(msg, file=sys.stderr)
-                break
-
             if result_type == 'MEAN':
                 if isinstance(gsim, IPE):
                     # For IPEs it is the values, not the logarithms returned
@@ -122,15 +113,14 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                 print(msg, file=sys.stderr)
                 break
 
-        if debug and (errors or not numpy.all(ctxs)):
+        if debug and errors:
             break
-    return (
-        errors,
-        _format_stats(time.time() - started, discrepancies, errors, ctxs),
-        sctx, rctx, dctx, ctxs)
+    return (errors,
+            _format_stats(time.time() - started, discrepancies, errors),
+            sctx, rctx, dctx)
 
 
-def _format_stats(time_spent, discrepancies, errors, ctxs):
+def _format_stats(time_spent, discrepancies, errors):
     """
     Format a GMPE test statistics.
 
@@ -140,9 +130,6 @@ def _format_stats(time_spent, discrepancies, errors, ctxs):
         A list of discrepancy percentage values, one for each check.
     :param errors:
         Number of tests that failed.
-    :param ctxs:
-        list of boolean values indicating if context objectes have been
-        changed by call to the method ``get_mean_and_stddevs``
     :returns:
         A string with human-readable statistics.
     """
@@ -153,8 +140,6 @@ def _format_stats(time_spent, discrepancies, errors, ctxs):
     success_rate = successes / float(total_checks) * 100
     stddev = math.sqrt(1.0 / total_checks * sum((avg_discrep - discrep) ** 2
                                                 for discrep in discrepancies))
-
-    yes_no = {False: 'yes', True: 'no'}
     # NB: on a windows virtual machine the clock can be buggy and
     # the time spent can be zero: Daniele has seen that
     checks_per_sec = (total_checks / time_spent) if time_spent else '?'
@@ -164,16 +149,14 @@ total of %d checks done, %d were successful and %d failed.
 success rate = %.1f%%
 average discrepancy = %.4f%%
 maximum discrepancy = %.4f%%
-standard deviation = %.4f%%
-context objects changed = %s'''
+standard deviation = %.4f%%'''
     successes = total_checks - errors
     stats %= (total_checks, successes, errors,
               time_spent, checks_per_sec,
               success_rate,
               avg_discrep,
               max_discrep,
-              stddev,
-              yes_no[numpy.all(ctxs)])
+              stddev)
     return stats
 
 
@@ -280,7 +263,8 @@ def _parse_csv_line(headers, values, req_site_params):
             # value is sites context object attribute
             if param == 'site_vs30measured' or param == 'site_backarc':
                 value = float(value) != 0
-            elif param == 'site_siteclass':
+            elif param in ('site_siteclass', 'site_ec8', 'site_ec8_p18',
+                           'site_geology'):
                 value = numpy.string_(value)
             else:
                 value = float(value)
@@ -372,7 +356,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    errors, stats, _, _, _, _ = check_gsim(
+    errors, stats, _, _, _, = check_gsim(
         gsim_cls=args.gsim, datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
         debug=args.debug)

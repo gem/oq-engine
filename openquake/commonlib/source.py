@@ -25,8 +25,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import (
-    groupby, group_array, gettemp, AccumDict)
+from openquake.baselib.general import groupby, group_array, AccumDict
 from openquake.hazardlib import source, sourceconverter
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
@@ -69,22 +68,6 @@ def capitalize(words):
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
 
-def _assert_equal_sources(nodes):
-    if hasattr(nodes[0], 'source_id'):
-        n0 = nodes[0]
-        for n in nodes[1:]:
-            n.assert_equal(n0, ignore=('id', 'src_group_id'))
-    else:  # assume source nodes
-        n0 = nodes[0].to_str()
-        for n in nodes[1:]:
-            eq = n.to_str() == n0
-            if not eq:
-                f0 = gettemp(n0)
-                f1 = gettemp(n.to_str())
-            assert eq, 'different parameters for source %s, run meld %s %s' % (
-                n['id'], f0, f1)
-
-
 def get_field(data, field, default):
     """
     :param data: a record with a field `field`, possibily missing
@@ -117,16 +100,18 @@ class CompositionInfo(object):
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
-                   totweight=0)
+                   min_mag=0, max_mag=0)
 
     get_rlzs_assoc = get_rlzs_assoc
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight):
+    def __init__(self, gsim_lt, seed, num_samples, source_models,
+                 min_mag, max_mag):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
-        self.tot_weight = totweight
+        self.min_mag = min_mag
+        self.max_mag = max_mag
         self.init()
 
     def init(self):
@@ -146,8 +131,7 @@ class CompositionInfo(object):
         """
         sm = self.source_models[sm_id]
         num_samples = sm.samples if self.num_samples else 0
-        return self.__class__(
-            self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
+        return self.__class__(self.gsim_lt, self.seed, num_samples, [sm])
 
     def classify_gsim_lt(self, source_model):
         """
@@ -214,7 +198,7 @@ class CompositionInfo(object):
             sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(sorted(trti)),
-                     tot_weight=self.tot_weight))
+                     min_mag=self.min_mag, max_mag=self.max_mag))
 
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
@@ -296,20 +280,13 @@ class CompositionInfo(object):
 
     def grp_by(self, name):
         """
-        :returns: a dictionary grp_id -> TRT string
+        :returns: a dictionary grp_id -> group attribute
         """
         dic = {}
         for smodel in self.source_models:
             for src_group in smodel.src_groups:
                 dic[src_group.id] = getattr(src_group, name)
         return dic
-
-    def _get_rlzs(self, smodel, all_rlzs, seed):
-        if self.num_samples:
-            rlzs = logictree.sample(all_rlzs, smodel.samples, seed)
-        else:  # full enumeration
-            rlzs = logictree.get_effective_rlzs(all_rlzs)
-        return rlzs
 
     def __repr__(self):
         info_by_model = {}
@@ -326,7 +303,7 @@ class CompositionInfo(object):
             self.__class__.__name__, '\n'.join(summary))
 
 
-class CompositeSourceModel(collections.Sequence):
+class CompositeSourceModel(collections.abc.Sequence):
     """
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
@@ -334,28 +311,25 @@ class CompositeSourceModel(collections.Sequence):
         a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
-    def __init__(self, gsim_lt, source_model_lt, source_models,
-                 optimize_same_id):
+    def __init__(self, gsim_lt, source_model_lt, source_models):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
-        self.optimize_same_id = optimize_same_id
         self.source_info = ()
-        # NB: the weight is 1 for sources which are XML nodes
-        totweight = sum(getattr(src, 'weight', 1) for sm in source_models
-                        for sg in sm.src_groups for src in sg)
+        min_mags, max_mags = [], []
+        for sm in source_models:
+            for sg in sm.src_groups:
+                for src in sg:
+                    if hasattr(src, 'get_min_max_mag'):
+                        m1, m2 = src.get_min_max_mag()
+                        min_mags.append(m1)
+                        max_mags.append(m2)
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models],
-            totweight)
-        try:
-            dupl_sources = self.check_dupl_sources()
-        except AssertionError:
-            # different sources with the same ID
-            self.has_dupl_sources = 0
-        else:
-            self.has_dupl_sources = len(dupl_sources)
+            min(min_mags) if min_mags else 0,
+            max(max_mags) if max_mags else 0)
 
     def grp_by_src(self):
         """
@@ -375,8 +349,7 @@ class CompositeSourceModel(collections.Sequence):
                             sg.trt, [src], name=src.source_id, id=grp_id))
                     grp_id += 1
             smodels.append(smodel)
-        return self.__class__(self.gsim_lt, self.source_model_lt, smodels,
-                              self.optimize_same_id)
+        return self.__class__(self.gsim_lt, self.source_model_lt, smodels)
 
     def get_model(self, sm_id):
         """
@@ -386,11 +359,11 @@ class CompositeSourceModel(collections.Sequence):
         sm = self.source_models[sm_id]
         if self.source_model_lt.num_samples:
             self.source_model_lt.num_samples = sm.samples
-        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm],
-                             self.optimize_same_id)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm])
         new.sm_id = sm_id
         return new
 
+    # used only by UCERF
     def new(self, sources_by_grp):
         """
         Generate a new CompositeSourceModel from the given dictionary.
@@ -410,18 +383,18 @@ class CompositeSourceModel(collections.Sequence):
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
-                             self.optimize_same_id)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         new.info.update_eff_ruptures(new.get_num_ruptures())
-        new.info.tot_weight = new.get_weight()
         return new
 
-    def get_weight(self, weight=operator.attrgetter('weight')):
+    def get_weight(self, trt_sources, weight=operator.attrgetter('weight')):
         """
         :param weight: source weight function
         :returns: total weight of the source model
         """
-        return sum(weight(src) for src in self.get_sources())
+        # NB: I am looking at .trt_sources to count the weight coming
+        # from duplicated sources correctly
+        return sum(weight(s) for trt, sources in trt_sources for s in sources)
 
     @property
     def src_groups(self):
@@ -440,29 +413,6 @@ class CompositeSourceModel(collections.Sequence):
                 for src_group in sm.src_groups
                 for src in src_group if hasattr(src, 'data')]
 
-    def check_dupl_sources(self):  # used in print_csm_info
-        """
-        Extracts duplicated sources, i.e. sources with the same source_id in
-        different source groups. Raise an exception if there are sources with
-        the same ID which are not duplicated.
-
-        :returns: a list of list of sources, ordered by source_id
-        """
-        dd = collections.defaultdict(list)
-        for src_group in self.src_groups:
-            for src in src_group:
-                try:
-                    srcid = src.source_id
-                except AttributeError:  # src is a Node object
-                    srcid = src['id']
-                dd[srcid].append(src)
-        dupl = []
-        for srcid, srcs in sorted(dd.items()):
-            if len(srcs) > 1:
-                _assert_equal_sources(srcs)
-                dupl.append(srcs)
-        return dupl
-
     def get_sources(self, kind='all'):
         """
         Extract the sources contained in the source models by optionally
@@ -479,8 +429,9 @@ class CompositeSourceModel(collections.Sequence):
                         sources.append(src)
         return sources
 
-    def get_trt_sources(self, optimize_same_id=None):
+    def get_trt_sources(self, optimize_dupl=False):
         """
+        :param optimize_dupl: if True change src_group_id to a list
         :returns: a list of pairs [(trt, group of sources)]
         """
         atomic = []
@@ -491,28 +442,23 @@ class CompositeSourceModel(collections.Sequence):
                     atomic.append((grp.trt, grp))
                 elif grp:
                     acc[grp.trt].extend(grp)
-        if optimize_same_id is None:
-            optimize_same_id = self.optimize_same_id
-        if optimize_same_id is False:
+        if not acc:
+            return atomic
+        elif not hasattr(grp.sources[0], 'checksum') or not optimize_dupl:
+            # for UCERF or for event_based
             return atomic + list(acc.items())
         # extract a single source from multiple sources with the same ID
-        n = 0
-        tot = 0
         dic = {}
+        key = operator.attrgetter('source_id', 'checksum')
         for trt in acc:
             dic[trt] = []
-            for grp in groupby(acc[trt], lambda x: x.source_id).values():
-                src = grp[0]
-                n += 1
-                tot += len(grp)
+            for srcs in groupby(acc[trt], key).values():
+                src = srcs[0]
                 # src.src_group_id can be a list if get_sources_by_trt was
                 # called before
-                if len(grp) > 1 and not isinstance(src.src_group_id, list):
-                    src.src_group_id = [s.src_group_id for s in grp]
+                if len(srcs) > 1 and not isinstance(src.src_group_id, list):
+                    src.src_group_id = [s.src_group_id for s in srcs]
                 dic[trt].append(src)
-        if n < tot:
-            logging.info('Reduced %d sources to %d sources with unique IDs',
-                         tot, n)
         return atomic + list(dic.items())
 
     def get_num_ruptures(self):
@@ -534,11 +480,12 @@ class CompositeSourceModel(collections.Sequence):
             src.serial = serial
             serial += nr
 
-    def get_maxweight(self, weight, concurrent_tasks, minweight=MINWEIGHT):
+    def get_maxweight(self, trt_sources, weight, concurrent_tasks,
+                      minweight=MINWEIGHT):
         """
         Return an appropriate maxweight for use in the block_splitter
         """
-        totweight = self.get_weight(weight)
+        totweight = self.get_weight(trt_sources, weight)
         ct = concurrent_tasks or 1
         mw = math.ceil(totweight / ct)
         return max(mw, minweight)

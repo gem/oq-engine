@@ -91,7 +91,7 @@ class LineCreationTestCase(unittest.TestCase):
         p6 = geo.Point(0.0, 3.0, 0.0)
 
         expected = [p1, p2, p4, p5]
-        self.assertEquals(expected, geo.Line([p1, p2, p3, p4, p5, p6]).points)
+        self.assertEqual(expected, geo.Line([p1, p2, p3, p4, p5, p6]).points)
 
 
 class LineResampleToNumPointsTestCase(unittest.TestCase):
