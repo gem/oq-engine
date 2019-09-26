@@ -33,7 +33,7 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 Current stable version is the **OpenQuake Engine 3.7** 'Richter'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.7#openquake-engine.
 
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.6/doc/whats-new.md)
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.7/doc/whats-new.md)
 
 ## Documentation (master tree)
 
