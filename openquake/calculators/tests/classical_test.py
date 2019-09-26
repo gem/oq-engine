@@ -447,16 +447,16 @@ hazard_uhs-std.csv
                 nruptures.append((par, len(rupdata)))
             self.assertEqual(
                 nruptures,
-                [('dip', 2877), ('grp_id', 2877), ('hypo_depth', 2877),
-                 ('lat_', 2877), ('lon_', 2877), ('mag', 2877),
-                 ('occurrence_rate', 2877), ('probs_occur', 2877),
-                 ('rake', 2877), ('rjb_', 2877), ('rrup_', 2877),
-                 ('rx_', 2877), ('sid_', 2877), ('srcidx', 2877),
-                 ('weight', 2877), ('ztor', 2877)])
+                [('dip', 2781), ('grp_id', 2781), ('hypo_depth', 2781),
+                 ('lat_', 2781), ('lon_', 2781), ('mag', 2781),
+                 ('occurrence_rate', 2781), ('probs_occur', 2781),
+                 ('rake', 2781), ('rjb_', 2781), ('rrup_', 2781),
+                 ('rx_', 2781), ('sid_', 2781), ('srcidx', 2781),
+                 ('weight', 2781), ('ztor', 2781)])
 
             # check best_rlz on 5 sites
             best_rlz = self.calc.datastore['best_rlz'][()]
-            numpy.testing.assert_equal(best_rlz, [3, 9, 2, 3, 1])
+            numpy.testing.assert_equal(best_rlz, [3, 9, 3, 3, 1])
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling are not implemented
