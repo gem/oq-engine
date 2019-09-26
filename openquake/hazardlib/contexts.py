@@ -319,9 +319,10 @@ class ContextMaker(object):
             d_depth = src._get_delta_depth()
             loc.depth = src.lower_seismogenic_depth  # used in sites.split
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
+                max_dist = self.maximum_distance(src.tectonic_region_type, mag)
                 p_radius = src._get_max_rupture_projection_radius(mag)
                 # the collapse distance has been decided heuristically by MS
-                collapse_distance = 3 * max(p_radius, d_depth)
+                collapse_distance = min(3 * max(p_radius, d_depth), max_dist)
                 close_sites, far_sites = sites.split(loc, collapse_distance)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
