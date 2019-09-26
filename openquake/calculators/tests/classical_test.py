@@ -447,12 +447,12 @@ hazard_uhs-std.csv
                 nruptures.append((par, len(rupdata)))
             self.assertEqual(
                 nruptures,
-                [('dip', 3252), ('grp_id', 3252), ('hypo_depth', 3252),
-                 ('lat_', 3252), ('lon_', 3252), ('mag', 3252),
-                 ('occurrence_rate', 3252), ('probs_occur', 3252),
-                 ('rake', 3252), ('rjb_', 3252), ('rrup_', 3252),
-                 ('rx_', 3252), ('sid_', 3252), ('srcidx', 3252),
-                 ('weight', 3252), ('ztor', 3252)])
+                [('dip', 2922), ('grp_id', 2922), ('hypo_depth', 2922),
+                 ('lat_', 2922), ('lon_', 2922), ('mag', 2922),
+                 ('occurrence_rate', 2922), ('probs_occur', 2922),
+                 ('rake', 2922), ('rjb_', 2922), ('rrup_', 2922),
+                 ('rx_', 2922), ('sid_', 2922), ('srcidx', 2922),
+                 ('weight', 2922), ('ztor', 2922)])
 
             # check best_rlz on 5 sites
             best_rlz = self.calc.datastore['best_rlz'][()]
