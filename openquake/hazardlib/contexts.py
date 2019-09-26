@@ -312,24 +312,26 @@ class ContextMaker(object):
         return poemap
 
     def _gen_rup_sites(self, src, sites):
-        # implements the pointsource_distance feature
+        # implements the collapse distance feature: the finite site effects
+        # are ignored for sites over 3 times the rupture length
         if hasattr(src, 'location') and src.count_nphc() > 1:
             d_depth = src._get_delta_depth()
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 p_radius = src._get_max_rupture_projection_radius(mag)
+                # the collapse distance has been decided heuristically by MS
                 collapse_distance = 3 * max(p_radius, d_depth)
                 close_sites, far_sites = sites.split(
                     src.location, collapse_distance)
                 if close_sites is None:  # all is far
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
                         yield rup, far_sites
                 elif far_sites is None:  # all is close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
                         yield rup, close_sites
                 else:  # some sites are far, some are close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
                         yield rup, far_sites
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
                         yield rup, close_sites
         else:
             for rup in src.iter_ruptures():
