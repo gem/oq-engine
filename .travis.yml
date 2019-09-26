@@ -18,6 +18,10 @@ jobs:
           pytest --doctest-modules -xv openquake/baselib --tb=short &&
           OQ_DISTRIBUTE=no pytest --doctest-modules -xv -nauto openquake/hazardlib openquake/hmtk --tb=short;
           fi
+    after_success:
+        - pip install sphinx==1.6.5
+        - sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk
+        - cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
   - stage: tests
     env: ENGINE
     before_script:
@@ -30,10 +34,7 @@ jobs:
         - pytest --doctest-modules -xv openquake/commonlib --tb=short
         - pytest --doctest-modules -xv openquake/commands --tb=short
         - oq webui migrate
-    after_success:  # old sphinx does not work well with Python 3.5.4+
-        - pip install sphinx==1.6.5
-        - sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk #texlive-full
-        - cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
+    after_success:
         - if [[ "$BRANCH" == "master" ]]; then
             openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
             chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
