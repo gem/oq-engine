@@ -218,13 +218,18 @@ There were also a few minor fixes/changes.
 The `-l` switch in `oq engine --run` finally works and in particular it is
 possible to see the debug logs when `-l debug` is passed on the command line.
 
-Deleting a calculation (from the command-line or the WebUI)
-now actually only hides the calculation from the user, but it is kept
-in the database and can be restored.
+Deleting a calculation from the command-line or from the WebUI
+now only hides the calculation from the user. The calculation is actually
+kept in the database and can be restored.
 
 It is still possible to really delete the calculations of an user with
 the command `oq reset`. Still, it has been made safer and only datastores
 corresponding to calculations in the database are removed.
+
+Calculations that fail in the validation phase, before starting, are
+now hidden to the user, to avoid littering. The error message
+is still clearly displayed to the user in all cases (command-line, Web UI,
+QGIS plugin).
 
 We fixed/changed several APIs for interacting with the QGIS plugin.
 
