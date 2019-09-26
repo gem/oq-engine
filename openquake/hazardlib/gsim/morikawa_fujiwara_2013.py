@@ -65,12 +65,12 @@ class MorikawaFujiwara2013Crustal(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = set(('rrup', ))
 
-    def __init__(self, model='model1', region=None):
-        super().__init__()
-        self.region = region
-        self.model = model
+    def _set_params(self):
+        self.region = None
+        self.model = 'model1'
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        self._set_params()
         C = self.COEFFS[imt]
 
         mw01 = self.CONSTS["Mw01"]
@@ -115,7 +115,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
     def _get_intensity_correction_term(self, C, region, xvf, focal_depth):
         if region == 'NE':
             gamma = C['gNE']
-        elif region == 'EW':
+        elif region == 'SW':
             gamma = C['gEW']
         elif region is None:
             gamma = 0.
@@ -191,8 +191,7 @@ class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013Crustal):
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    def __init__(self):
-        super().__init__()
+    def _set_params(self):
         self.region = 'NE'
         self.model = 'model1'
 
@@ -204,13 +203,26 @@ class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013Crustal):
 class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013Crustal):
 
     #: Supported tectonic region type is active shallow crust
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    def __init__(self):
-        super().__init__()
+    def _set_params(self):
         self.region = 'NE'
         self.model = 'model1'
 
     def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
         return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
                 np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
+
+
+class MorikawaFujiwara2013SubSlabSW(MorikawaFujiwara2013SubSlabNE):
+
+    #: Supported tectonic region type is active shallow crust
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    def _set_params(self):
+        self.region = 'SW'
+        self.model = 'model1'
+
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
+        return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] + C['PH']
+                - np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
