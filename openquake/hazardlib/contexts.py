@@ -314,12 +314,11 @@ class ContextMaker(object):
 
     def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
-        if hasattr(src, 'location'):
+        if hasattr(src, 'location') and src.count_nphc() > 1:
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 pdist = self.pointsource_distance(mag) if callable(
                     self.pointsource_distance) else self.pointsource_distance
                 close_sites, far_sites = sites.split(src.location, pdist)
-                # print(mag, close_sites)
                 if close_sites is None:  # all is far
                     for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
                         yield rup, far_sites
