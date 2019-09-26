@@ -73,10 +73,12 @@ class MorikawaFujiwara2013Crustal(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         C = self.COEFFS[imt]
 
+        mw01 = self.CONSTS["Mw01"]
+        mw1 = self.CONSTS["Mw1"]
+        mw1prime = np.min([rup.mag, mw01])
+
         if self.model == 'model1':
-            mag_term = self._get_magnitude_term(C, rup.mag, dists.rrup)
-        elif self.model == 'model2':
-            pass
+            mag_term = self._get_magnitude_term(C, dists.rrup, mw1prime, mw1)
         else:
             msg = "Model not supported"
             raise ValueError(msg)
@@ -85,14 +87,6 @@ class MorikawaFujiwara2013Crustal(GMPE):
                 self._get_shallow_amplification_term(C, sites.vs30) +
                 self._get_intensity_correction_term(C, self.region, sites.xvf,
                 rup.hypo_depth))
-        """
-        if rup.hypo_depth > 49:
-            print(mag_term,
-                  self._get_shallow_amplification_term(C, sites.vs30),
-                  self._get_basin_term(C, sites.z1pt4),
-                  self._get_intensity_correction_term(C, self.region, sites.xvf,
-                                                    rup.hypo_depth))
-        """
 
         stddevs = self._get_stddevs(C, stddev_types,  dists.rrup.shape[0])
         mean = np.log(10**mean/980.665)
@@ -105,10 +99,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
         stddevs = [np.zeros(num_sites) + std for _ in stddev_types]
         return stddevs
 
-    def _get_magnitude_term(self, C, mag, rrup):
-        mw01 = self.CONSTS["Mw01"]
-        mw1 = self.CONSTS["Mw1"]
-        mw1prime = np.minimum(mag, mw01)
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
         return (C['a']*(mw1prime - mw1)**2 + C['b1'] * rrup + C['c1'] -
                 np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
@@ -130,7 +121,6 @@ class MorikawaFujiwara2013Crustal(GMPE):
             gamma = 0.
         else:
             raise ValueError('Unsupported region')
-
         return (gamma * np.minimum(xvf, 75.0) *
                 np.maximum(focal_depth-30., 0.))
 
@@ -192,31 +182,35 @@ class MorikawaFujiwara2013Crustal(GMPE):
     CONSTS = {
         "D0": 300.,
         "e": 0.5,
-        "Mw01": 4.5,
+        "Mw01": 8.2,
         "Mw1": 16.0}
 
 
-class MorikawaFujiwara2013SubInterface(MorikawaFujiwara2013Crustal):
+class MorikawaFujiwara2013SubInterfaceNE(MorikawaFujiwara2013Crustal):
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    def _get_magnitude_term(self, C, mag, rrup):
-        mw01 = self.CONSTS["Mw01"]
-        mw1 = self.CONSTS["Mw1"]
-        mw1prime = np.min([mag, mw01])
+    def __init__(self):
+        super().__init__()
+        self.region = 'NE'
+        self.model = 'model1'
+
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
         return (C['a']*(mw1prime - mw1)**2 + C['b2'] * rrup + C['c2'] -
                 np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
 
 
-class MorikawaFujiwara2013SubSlab(MorikawaFujiwara2013Crustal):
+class MorikawaFujiwara2013SubSlabNE(MorikawaFujiwara2013Crustal):
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    def _get_magnitude_term(self, C, mag, rrup):
-        mw01 = self.CONSTS["Mw01"]
-        mw1 = self.CONSTS["Mw1"]
-        mw1prime = np.min([mag, mw01])
+    def __init__(self):
+        super().__init__()
+        self.region = 'NE'
+        self.model = 'model1'
+
+    def _get_magnitude_term(self, C, rrup, mw1prime, mw1):
         return (C['a']*(mw1prime - mw1)**2 + C['b3'] * rrup + C['c3'] -
                 np.log10(rrup + C['d'] * 10.**(self.CONSTS['e']*mw1prime)))
