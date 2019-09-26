@@ -183,15 +183,6 @@ class OqParam(valid.ParamSet):
         return {key: valid.RjbEquivalent(value)
                 for key, value in self.inputs['reqv'].items()}
 
-    def get_pointsource_distance(self, mag):
-        """
-        :param mag: a rupture magnitude
-        :returns: a heuristic distance associated to the magnitude
-        """
-        if self.pointsource_distance is not None:
-            return self.pointsource_distance
-        return 2.1 ** mag
-
     def __init__(self, **names_vals):
         for name in list(names_vals):
             if name == 'quantile_hazard_curves':

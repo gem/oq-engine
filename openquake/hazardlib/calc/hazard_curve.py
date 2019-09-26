@@ -136,8 +136,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
 def calc_hazard_curves(
         groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
-        apply=sequential_apply, filter_distance='rjb', reqv=None,
-        pointsource_distance=1000):
+        apply=sequential_apply, filter_distance='rjb', reqv=None):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per
@@ -187,7 +186,6 @@ def calc_hazard_curves(
     imtls = DictArray(imtls)
     param = dict(imtls=imtls, truncation_level=truncation_level,
                  filter_distance=filter_distance, reqv=reqv,
-                 pointsource_distance=pointsource_distance,
                  cluster=grp.cluster)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
