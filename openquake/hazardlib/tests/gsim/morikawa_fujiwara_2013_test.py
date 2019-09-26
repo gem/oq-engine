@@ -22,8 +22,11 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
-from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import \
-        MorikawaFujiwara2013Crustal, MorikawaFujiwara2013SubInterface
+from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
+        MorikawaFujiwara2013Crustal,
+        MorikawaFujiwara2013SubInterfaceNE,
+        MorikawaFujiwara2013SubSlabNE
+        )
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -46,11 +49,18 @@ class MorikawaFujiwara2013CrustalTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013Crustal
 
     def test_mean(self):
-        self.check('MF13/mean.csv', max_discrep_percentage=0.1)
+        self.check('MF13/mean_crustal.csv', max_discrep_percentage=0.1)
 
 
 class MorikawaFujiwara2013InterfaceTest(BaseGSIMTestCase):
-    GSIM_CLASS = MorikawaFujiwara2013SubInterface(region='NE')
+    GSIM_CLASS = MorikawaFujiwara2013SubInterfaceNE
 
     def test_mean(self):
-        self.check('MF13/mean_interface.csv', max_discrep_percentage=0.1)
+        self.check('MF13/mean_interface_NE.csv', max_discrep_percentage=1.0)
+
+
+class MorikawaFujiwara2013InterfaceTest(BaseGSIMTestCase):
+    GSIM_CLASS = MorikawaFujiwara2013SubSlabNE
+
+    def test_mean(self):
+        self.check('MF13/mean_intraslab_NE.csv', max_discrep_percentage=0.1)
