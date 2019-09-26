@@ -25,24 +25,10 @@ from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
         MorikawaFujiwara2013Crustal,
         MorikawaFujiwara2013SubInterfaceNE,
+        MorikawaFujiwara2013SubSlabSW,
         MorikawaFujiwara2013SubSlabNE
         )
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-
-
-class MorikawaFujiwara2013BaseTest(unittest.TestCase):
-
-    def test_instantiation(self):
-        dists = DistancesContext()
-        dists.rrup = np.array([10., 50., 100.])
-        imt = PGA()
-        mag = 6.0
-        rup = Dummy.get_rupture(mag=mag, hypo_depth=10.)
-        slen = len(dists.rrup)
-        sites = Dummy.get_site_collection(slen, vs30=760., z1pt4=100., xvf=10.)
-        stdt = [const.StdDev.TOTAL]
-        gmm = MorikawaFujiwara2013Crustal(model='model1', region=None)
-        mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
 
 
 class MorikawaFujiwara2013CrustalTest(BaseGSIMTestCase):
@@ -56,11 +42,18 @@ class MorikawaFujiwara2013InterfaceTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013SubInterfaceNE
 
     def test_mean(self):
-        self.check('MF13/mean_interface_NE.csv', max_discrep_percentage=1.0)
+        self.check('MF13/mean_interface_NE.csv', max_discrep_percentage=0.25)
 
 
-class MorikawaFujiwara2013InterfaceTest(BaseGSIMTestCase):
+class MorikawaFujiwara2013IntraSlabTest(BaseGSIMTestCase):
     GSIM_CLASS = MorikawaFujiwara2013SubSlabNE
 
     def test_mean(self):
-        self.check('MF13/mean_intraslab_NE.csv', max_discrep_percentage=0.1)
+        self.check('MF13/mean_intraslab_NE.csv', max_discrep_percentage=0.2)
+
+
+class MorikawaFujiwara2013IntraSlabSWTest(BaseGSIMTestCase):
+    GSIM_CLASS = MorikawaFujiwara2013SubSlabSW
+
+    def test_mean(self):
+        self.check('MF13/mean_intraslab_SW.csv', max_discrep_percentage=0.3)
