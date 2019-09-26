@@ -320,15 +320,15 @@ class ContextMaker(object):
                     self.pointsource_distance) else self.pointsource_distance
                 close_sites, far_sites = sites.split(src.location, pdist)
                 if close_sites is None:  # all is far
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
                         yield rup, far_sites
                 elif far_sites is None:  # all is close
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
                         yield rup, close_sites
                 else:
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, 1):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=0):
                         yield rup, close_sites
-                    for rup in src.gen_ruptures(mag, mag_occ_rate, 0):
+                    for rup in src.gen_ruptures(mag, mag_occ_rate, collapse=1):
                         yield rup, far_sites
         else:
             for rup in src.iter_ruptures():
