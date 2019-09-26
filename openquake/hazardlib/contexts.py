@@ -314,7 +314,7 @@ class ContextMaker(object):
     def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
         pdist = self.pointsource_distance.get(src.tectonic_region_type)
-        if hasattr(src, 'location') and pdist:
+        if hasattr(src, 'location') and pdist and src.count_nphc() > 1:
             close_sites, far_sites = sites.split(src.location, pdist)
             if close_sites is None:  # all is far
                 for rup in src.iter_ruptures(False, False):
