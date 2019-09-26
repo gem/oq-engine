@@ -32,7 +32,7 @@ from openquake.qa_tests_data.classical import (
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
-    case_42)
+    case_42, case_43)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -529,3 +529,8 @@ hazard_uhs-std.csv
         # split/filter a long complex fault source with maxdist=1000 km
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_42.__file__)
+
+    def test_case_43(self):
+        # collapsing of point source ruptures
+        self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
+                               "hazard_map-mean-PGA.csv"], case_43.__file__)
