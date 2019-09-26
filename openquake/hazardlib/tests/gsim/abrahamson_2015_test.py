@@ -54,6 +54,26 @@ class AbrahamsonEtAl2015SInterTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
 
+class AbrahamsonEtAl2015SInterNonErgodicTestCase(BaseGSIMTestCase):
+    """
+    Tests the intra-event standard deviation and total standard deviation
+    for the non-ergodic case
+    """
+    GSIM_CLASS = AbrahamsonEtAl2015SInter
+    TOTAL_FILE = "BCHYDRO/BCHYDRO_SINTER_CENTRAL_STDDEV_NONERGODIC_TOTAL.csv"
+    INTRA_FILE = "BCHYDRO/BCHYDRO_SINTER_CENTRAL_STDDEV_NONERGODIC_INTRA.csv"
+
+    def test_std_total(self):
+        self.check(self.TOTAL_FILE,
+                   max_discrep_percentage=0.1,
+                   ergodic=False)
+
+    def test_std_intra(self):
+        self.check(self.INTRA_FILE,
+                   max_discrep_percentage=0.1,
+                   ergodic=False)
+
+
 class AbrahamsonEtAl2015SInterHighTestCase(AbrahamsonEtAl2015SInterTestCase):
     """
     Tests the Abrahamson et al. (2015) BC Hydro model for subduction
