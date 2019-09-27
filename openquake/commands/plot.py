@@ -138,6 +138,7 @@ def make_figure_disagg(extractors, what):
     return plt
 
 
+# FIXME: not working right now
 def make_figure_source_geom(extractors, what):
     """
     Extract the geometry of a given sources
@@ -210,6 +211,7 @@ def make_figure_memory(extractors, what):
     return plt
 
 
+# FIXME: not working right now
 def make_figure_event_based_mfd(extractors, what):
     """
     :param plots: list of pairs (task_name, memory array)

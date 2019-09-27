@@ -74,7 +74,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_1.__file__, 'job.ini', minimum_magnitude='4.5')
-        self.assertEqual(str(ctx.exception), 'All sources were filtered away!')
+        self.assertEqual(
+            str(ctx.exception), 'Empty logic tree: too much filtering?')
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -426,7 +427,7 @@ hazard_uhs-std.csv
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.05).csv',
             'hazard_curve-mean-SA(0.1).csv', 'hazard_curve-mean-SA(0.2).csv',
             'hazard_curve-mean-SA(0.5)', 'hazard_curve-mean-SA(1.0).csv',
-            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__)
+            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__, delta=1E-6)
 
     def test_case_29(self):  # non parametric source
         # check the high IMLs are zeros: this is a test for

@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2019-07-30T15:04:00
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:20:45
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 50, num_rlzs = 4
@@ -80,45 +80,45 @@ source_model.xml 1      Subduction Interface 23           23
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== ======
-source_id grp_id code num_ruptures calc_time num_sites weight speed 
-========= ====== ==== ============ ========= ========= ====== ======
-A         0      P    23           0.00164   1.00000   23     14,009
-B         1      P    23           0.00141   1.00000   23     16,268
-========= ====== ==== ============ ========= ========= ====== ======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+A         0      P    23           1.955E-04 1.00000   23           117,645
+B         1      P    23           1.779E-04 1.00000   23           129,315
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.00306   2     
+P    3.734E-04 2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-preclassical       0.00185 1.404E-04 0.00175 0.00194 2      
-read_source_models 0.00105 NaN       0.00105 0.00105 1      
-================== ======= ========= ======= ======= =======
+================== ========= ========= ========= ========= =======
+operation-duration mean      stddev    min       max       outputs
+preclassical       5.999E-04 2.192E-05 5.844E-04 6.154E-04 2      
+read_source_models 0.00150   NaN       0.00150   0.00150   1      
+================== ========= ========= ========= ========= =======
 
 Data transfer
 -------------
-================== ======================================================= ========
-task               sent                                                    received
-preclassical       srcs=2.32 KB params=1.77 KB gsims=658 B srcfilter=440 B 684 B   
-read_source_models converter=314 B fnames=104 B                            1.96 KB 
-================== ======================================================= ========
+================== ============================================= ========
+task               sent                                          received
+preclassical       srcs=2.34 KB params=1.77 KB srcfilter=1.26 KB 684 B   
+read_source_models converter=314 B fnames=111 B                  1.97 KB 
+================== ============================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15510               time_sec  memory_mb counts
+calc_1702                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.00369   0.0       2     
-store source_info        0.00198   0.0       1     
-managing sources         0.00121   0.0       1     
-total read_source_models 0.00105   0.0       1     
-aggregate curves         2.804E-04 0.0       2     
+store source_info        0.00191   0.0       1     
+total read_source_models 0.00150   0.03906   1     
+total preclassical       0.00120   0.16016   2     
+aggregate curves         7.725E-04 0.0       2     
+managing sources         3.774E-04 0.00391   1     
 ======================== ========= ========= ======

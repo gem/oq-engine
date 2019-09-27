@@ -1,5 +1,20 @@
   [Michele Simionato]
-  * Extended the task queue to most calculators
+  * Storing the sources in TOML format
+
+python3-oq-engine (3.7.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Hiding calculations that fail before the pre-execute phase (for instance,
+    because of missing files); they already give a clear error
+  * Added an early check on truncation_level in presence of correlation model
+
+  [Guillaume Daniel]
+  * Implemented Ameri (2017) GMPE
+
+  [Michele Simionato]
+  * Changed the ruptures CSV exporter to use commas instead of tabs
+  * Added a check forbidding `aggregate_by` for non-ebrisk calculators
+  * Introduced a task queue
   * Removed the `cache_XXX.hdf5` files by using the SWMR mode of h5py
 
   [Kris Vanneste]
@@ -114,6 +129,8 @@
   * Moved `max_sites_disagg` from openquake.cfg into the job.ini
   * Fixed a bug with the --config option: serialize_jobs could not be overridden
   * Implemented insured losses
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 26 Sep 2019 08:51:44 +0000
 
 python3-oq-engine (3.6.0-1~xenial01) xenial; urgency=low
 

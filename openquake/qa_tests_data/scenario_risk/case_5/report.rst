@@ -3,8 +3,8 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     3,193,187,389      
-date           2019-07-30T15:03:53
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:20:57
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 8, num_levels = 106, num_rlzs = 1
@@ -81,14 +81,24 @@ steel_spl    1.00000 0.0     1   1   3         3
 *ALL*        0.03704 0.20995 0   2   243       9         
 ============ ======= ======= === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_15488             time_sec memory_mb counts
+calc_1722              time_sec memory_mb counts
 ====================== ======== ========= ======
-ScenarioCalculator.run 0.15700  2.21875   1     
-building riskinputs    0.01166  0.0       1     
-saving gmfs            0.00508  0.0       1     
-reading exposure       0.00278  1.03125   1     
-computing gmfs         0.00257  0.42578   1     
+ScenarioCalculator.run 0.14824  1.08203   1     
+building riskinputs    0.01189  0.0       1     
+saving gmfs            0.00500  0.35938   1     
+computing gmfs         0.00285  0.02734   1     
+reading exposure       0.00246  0.51172   1     
 ====================== ======== ========= ======
