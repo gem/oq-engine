@@ -133,8 +133,12 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
-            h5=self.datastore.hdf5)
+            h5=self.datastore)
+        # NB: using h5=self.datastore.hdf5 would mean losing the performance
+        # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
+        if oqparam.num_cores:
+            Starmap.num_cores = oqparam.num_cores
 
     def monitor(self, operation='', **kw):
         """
@@ -396,12 +400,13 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            self.csm = readinput.get_composite_source_model(
-                oq, self.datastore.hdf5,
-                srcfilter=self.src_filter(self.datastore.filename))
-            res = views.view('dupl_sources', self.datastore)
-            logging.info(f'The composite source model has {res.val:,d} '
-                         'ruptures')
+            with self.monitor('composite source model', measuremem=True):
+                self.csm = readinput.get_composite_source_model(
+                    oq, self.datastore.hdf5, srcfilter=self.src_filter(
+                        self.datastore.filename))
+                res = views.view('dupl_sources', self.datastore)
+                logging.info(f'The composite source model has {res.val:,d} '
+                             'ruptures')
             if res:
                 logging.info(res)
         self.init()  # do this at the end of pre-execute
@@ -669,7 +674,8 @@ class HazardCalculator(BaseCalculator):
         else:  # no exposure
             self.sitecol = haz_sitecol
             if self.sitecol:
-                logging.info('Read %d hazard sites', len(self.sitecol))
+                logging.info('Read N=%d hazard sites and L=%d hazard levels',
+                             len(self.sitecol), len(oq.imtls.array))
 
         if oq_hazard:
             parent = self.datastore.parent
@@ -727,7 +733,7 @@ class HazardCalculator(BaseCalculator):
             self.csm.info.update_eff_ruptures(eff_ruptures)
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
                 self.oqparam.sm_lt_path)
-            if not self.rlzs_assoc:
+            if not self.rlzs_assoc.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
             self.datastore['csm_info'] = self.csm.info
             self.datastore['source_model_lt'] = self.csm.source_model_lt

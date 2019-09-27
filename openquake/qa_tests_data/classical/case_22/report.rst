@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,152,338,418      
-date           2019-07-30T15:04:29
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:14
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 21, num_levels = 114, num_rlzs = 4
@@ -81,45 +81,45 @@ Alaska_asc_grid_NSHMP2007.xml extra_source_model.xml 1      Active Shallow Crust
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ====== =======
-source_id grp_id code num_ruptures calc_time num_sites weight speed  
-========= ====== ==== ============ ========= ========= ====== =======
-2         1      M    1,104        0.00225   21        1,104  491,249
-1         0      M    160          0.00193   3.00000   160    82,820 
-========= ====== ==== ============ ========= ========= ====== =======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+2         1      M    1,104        0.00137   21        1,104        803,769
+1         0      M    160          6.502E-04 3.00000   160          246,090
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-M    0.00418   2     
+M    0.00202   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ========= ======= =======
-operation-duration mean    stddev    min       max     outputs
-preclassical       0.00243 1.932E-04 0.00229   0.00256 2      
-read_source_models 0.00109 2.940E-04 8.843E-04 0.00130 2      
-================== ======= ========= ========= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+preclassical       0.00154 5.090E-04 0.00118 0.00190 2      
+read_source_models 0.00197 0.00133   0.00103 0.00291 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
-================== ========================================================= ========
-task               sent                                                      received
-preclassical       srcs=5.98 KB params=3.45 KB gsims=1.07 KB srcfilter=440 B 684 B   
-read_source_models converter=628 B fnames=219 B                              6.84 KB 
-================== ========================================================= ========
+================== ============================================= ========
+task               sent                                          received
+preclassical       srcs=5.99 KB params=3.45 KB srcfilter=2.71 KB 684 B   
+read_source_models converter=628 B fnames=233 B                  6.85 KB 
+================== ============================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15536               time_sec  memory_mb counts
+calc_1812                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total preclassical       0.00485   0.0       2     
-total read_source_models 0.00218   0.0       2     
-store source_info        0.00203   0.0       1     
-managing sources         0.00136   0.0       1     
-aggregate curves         2.818E-04 0.0       2     
+total read_source_models 0.00393   0.0       2     
+total preclassical       0.00308   0.0       2     
+store source_info        0.00210   0.0       1     
+aggregate curves         7.238E-04 0.0       2     
+managing sources         3.924E-04 0.0       1     
 ======================== ========= ========= ======

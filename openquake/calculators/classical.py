@@ -42,6 +42,13 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_name', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
+def estimate_duration(rups_per_task, maxdist, N):
+    """
+    Estimate the task duration with an heuristic formula
+    """
+    return (rups_per_task * N) ** .333 * (maxdist / 300) ** 2
+
+
 def get_src_ids(sources):
     """
     :returns:
@@ -206,10 +213,9 @@ class ClassicalCalculator(base.HazardCalculator):
             return {}
 
         self.datastore.swmr_on()
-        smap = parallel.Starmap(self.core_task.__func__,
-                                h5=self.datastore.hdf5,
-                                num_cores=oq.num_cores)
-        smap.task_queue = list(self.gen_task_queue())
+        smap = parallel.Starmap(
+            self.core_task.__func__, h5=self.datastore.hdf5)
+        smap.task_queue = list(self.gen_task_queue())  # really fast
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
@@ -228,8 +234,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         task_no, (0, 0, U32([])))
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
-        if not self.calc_times:
-            raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory
         return acc
 
@@ -238,23 +242,24 @@ class ClassicalCalculator(base.HazardCalculator):
         Build a task queue to be attached to the Starmap instance
         """
         oq = self.oqparam
-        N, L = len(self.sitecol), len(oq.imtls.array)
+        N = len(self.sitecol)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
         maxweight = min(self.csm.get_maxweight(
             trt_sources, weight, oq.concurrent_tasks), 1E6)
+        maxdist = int(max(oq.maximum_distance.values()))
         if oq.task_duration is None:  # inferred
-            # from 1 minute up to 6 hours
-            td = max((maxweight * N * L) ** numpy.log10(4) / 3000, 60)
+            # from 1 minute up to 1 day
+            td = int(max(estimate_duration(maxweight, maxdist, N), 60))
         else:  # user given
-            td = oq.task_duration
+            td = int(oq.task_duration)
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
             max_sites_disagg=oq.max_sites_disagg,
             task_duration=td, maxweight=maxweight)
-        logging.info('ruptures_per_task = %(maxweight)d, '
-                     'task_duration = %(task_duration)ds', param)
+        logging.info(f'ruptures_per_task={maxweight}, '
+                     f'maxdist={maxdist} km, task_duration={td} s')
 
         srcfilter = self.src_filter(self.datastore.filename)
         for trt, sources in trt_sources:
@@ -264,8 +269,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield classical, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
-                    yield (classical_split_filter, block, srcfilter,
-                           gsims, param)
+                    yield (self.core_task.__func__, block, srcfilter, gsims,
+                           param)
 
     def save_hazard(self, acc, pmap_by_kind):
         """
@@ -356,8 +361,9 @@ class ClassicalCalculator(base.HazardCalculator):
              N, hstats, oq.individual_curves, oq.max_sites_disagg)
             for t in self.sitecol.split_in_tiles(ct)]
         self.datastore.swmr_on()
-        parallel.Starmap(build_hazard, allargs,
-                         h5=self.datastore.hdf5).reduce(self.save_hazard)
+        parallel.Starmap(
+            build_hazard, allargs, h5=self.datastore.hdf5
+        ).reduce(self.save_hazard)
 
 
 @base.calculators.add('preclassical')
