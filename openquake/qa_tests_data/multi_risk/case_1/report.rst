@@ -3,8 +3,8 @@ Volcano example
 
 ============== ===================
 checksum32     3,488,609,606      
-date           2019-07-30T15:04:09
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:20:57
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 173, num_levels = 45, num_rlzs = 1
@@ -81,10 +81,20 @@ Slab_roof     1.00000 0.0     1   1   59        59
 *ALL*         1.00578 0.07603 1   2   173       174       
 ============= ======= ======= === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_15513       time_sec memory_mb counts
+calc_1720        time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00299  0.0       1     
+reading exposure 0.00280  0.0       1     
 ================ ======== ========= ======
