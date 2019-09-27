@@ -26,7 +26,7 @@ import zlib
 import numpy
 
 from openquake.baselib import hdf5, parallel
-from openquake.hazardlib import nrml, sourceconverter, sourcewriter, geo
+from openquake.hazardlib import nrml, sourceconverter, sourcewriter
 from openquake.hazardlib.geo.mesh import point3d
 from openquake.commonlib import logictree
 
@@ -35,14 +35,12 @@ source_info_dt = numpy.dtype([
     ('grp_id', numpy.uint16),          # 0
     ('source_id', hdf5.vstr),          # 1
     ('code', (numpy.string_, 1)),      # 2
-    ('gidx1', numpy.uint32),           # 3
-    ('gidx2', numpy.uint32),           # 4
-    ('mfdi', numpy.int32),             # 5
-    ('num_ruptures', numpy.uint32),    # 6
-    ('calc_time', numpy.float32),      # 7
-    ('num_sites', numpy.float32),      # 8
-    ('eff_ruptures', numpy.float32),   # 9
-    ('checksum', numpy.uint32),        # 10
+    ('num_ruptures', numpy.uint32),    # 3
+    ('calc_time', numpy.float32),      # 5
+    ('num_sites', numpy.float32),      # 6
+    ('eff_ruptures', numpy.float32),   # 7
+    ('checksum', numpy.uint32),        # 8
+    ('toml', hdf5.vstr),               # 9
 ])
 
 
@@ -102,7 +100,6 @@ class SourceModelFactory(object):
         self.srcfilter = srcfilter
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changes = 0
-        self.mfds = set()  # set of toml strings
         self.grp_id = 0
         self.source_ids = set()
         self.mags = set()
@@ -213,38 +210,15 @@ class SourceModelFactory(object):
         """
         h5 = self.hdf5
         sources = h5['source_info']
-        source_geom = h5['source_geom']
-        gid = len(source_geom)
         for sg in smodel:
             srcs = []
-            geoms = []
             for src in sg:
-                if hasattr(src, 'mfd'):  # except nonparametric
-                    mfdi = len(self.mfds)
-                    self.mfds.add(sourcewriter.tomldump(src.mfd))
-                else:
-                    mfdi = -1
-                srcgeom = src.geom()
-                n = len(srcgeom)
-                geom = numpy.zeros(n, point3d)
-                geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
-                if len(geom) > 1:  # more than a point source
-                    msg = 'source %s' % src.source_id
-                    try:
-                        geo.utils.check_extent(
-                            geom['lon'], geom['lat'], msg)
-                    except ValueError as err:
-                        logging.error(str(err))
                 dic = {k: v for k, v in vars(src).items()
                        if k != 'id' and k != 'src_group_id'}
                 src.checksum = zlib.adler32(pickle.dumps(dic))
-                srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                             mfdi, src.num_ruptures, 0, 0, 0,
-                             src.checksum))
-                geoms.append(geom)
-                gid += n
-            if geoms:
-                hdf5.extend(source_geom, numpy.concatenate(geoms))
+                srcs.append((sg.id, src.source_id, src.code,
+                             src.num_ruptures, 0, 0, 0,
+                             src.checksum, sourcewriter.tomldump(src)))
             if sources:
                 hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
@@ -288,8 +262,6 @@ class SourceModelFactory(object):
         idx = 0
         if self.hdf5:
             sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
-            hdf5.create(self.hdf5, 'source_geom', point3d)
-            hdf5.create(self.hdf5, 'source_mfds', hdf5.vstr)
         grp_id = 0
         for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
             if 'ucerf' in dic:
@@ -310,9 +282,6 @@ class SourceModelFactory(object):
             else:
                 self.apply_uncertainties(sm, idx, dic)
             yield sm
-            if self.hdf5:
-                hdf5.extend(self.hdf5['source_mfds'],
-                            numpy.array(list(self.mfds), hdf5.vstr))
 
         if self.hdf5:
             self.hdf5['source_mags'] = sorted(self.mags)
