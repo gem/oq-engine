@@ -930,19 +930,6 @@ def get_ruptures_within(dstore, bbox):
     return dstore['ruptures'][mask]
 
 
-@extract.add('source_geom')
-def extract_source_geom(dstore, srcidxs):
-    """
-    Extract the geometry of a given sources
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
-    """
-    for i in srcidxs.split(','):
-        rec = dstore['source_info'][int(i)]
-        geom = dstore['source_geom'][rec['gidx1']:rec['gidx2']]
-        yield rec['source_id'], geom
-
-
 def disagg_output(dstore, imt, sid, poe_id):
     key = '%s-sid-%d-poe-%d' % (imt, sid, poe_id)
     for name, out in dstore['disagg'].items():
