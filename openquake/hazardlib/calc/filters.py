@@ -360,10 +360,7 @@ class SourceFilter(object):
             return []
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
-        if hasattr(rec, 'dtype'):
-            bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
-        else:
-            bbox = rec  # assume it is a 4-tuple
+        bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
         maxdist = self.integration_distance(trt, rec['mag'])
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)

@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     3,211,843,635      
-date           2019-07-30T15:04:29
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:27
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 29, num_rlzs = 1
@@ -80,48 +80,48 @@ NSHM_source_model-editedbkgd.xml 1      Subduction Interface 2            2
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ======= =======
-source_id grp_id code num_ruptures calc_time num_sites weight  speed  
-========= ====== ==== ============ ========= ========= ======= =======
-1         0      P    20           0.00210   1.00000   20      9,543  
-21444     1      X    1            0.00171   1.00000   1.00000 585    
-2         0      P    20           1.945E-04 1.00000   20      102,802
-21445     1      X    1            1.445E-04 1.00000   1.00000 6,921  
-========= ====== ==== ============ ========= ========= ======= =======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+21444     1      X    1            3.734E-04 1.00000   1.00000      2,678  
+21445     1      X    1            2.573E-04 1.00000   1.00000      3,887  
+1         0      P    20           1.900E-04 1.00000   20           105,252
+2         0      P    20           1.206E-04 1.00000   20           165,783
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.00229   2     
-X    0.00185   2     
+P    3.107E-04 2     
+X    6.306E-04 2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-preclassical       0.00245 3.785E-04 0.00218 0.00272 2      
-read_source_models 0.17041 NaN       0.17041 0.17041 1      
-================== ======= ========= ======= ======= =======
+================== ========= ========= ========= ======= =======
+operation-duration mean      stddev    min       max     outputs
+preclassical       9.179E-04 4.063E-04 6.306E-04 0.00121 2      
+read_source_models 0.16891   NaN       0.16891   0.16891 1      
+================== ========= ========= ========= ======= =======
 
 Data transfer
 -------------
-================== ========================================================= =========
-task               sent                                                      received 
-preclassical       srcs=808.98 KB params=1.42 KB srcfilter=440 B gsims=302 B 774 B    
-read_source_models converter=314 B fnames=116 B                              809.06 KB
-================== ========================================================= =========
+================== ============================================ =========
+task               sent                                         received 
+preclassical       srcs=809 KB params=1.42 KB srcfilter=1.26 KB 774 B    
+read_source_models converter=314 B fnames=123 B                 809.06 KB
+================== ============================================ =========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15533               time_sec  memory_mb counts
+calc_1849                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 0.17041   0.0       1     
-total preclassical       0.00490   0.0       2     
-store source_info        0.00210   0.0       1     
-managing sources         0.00190   0.24219   1     
-aggregate curves         3.614E-04 0.0       2     
+total read_source_models 0.16891   0.69922   1     
+store source_info        0.00267   0.0       1     
+total preclassical       0.00184   0.0       2     
+aggregate curves         0.00107   0.0       2     
+managing sources         4.535E-04 0.0       1     
 ======================== ========= ========= ======

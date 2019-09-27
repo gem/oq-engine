@@ -207,8 +207,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             n_occ = self.datastore['ruptures']['n_occ']
             dstore = self.datastore
         per_block = numpy.ceil(n_occ.sum() / (oq.concurrent_tasks or 1))
-        logging.info('Using %d occurrences per block (over %d occurrences, '
-                     '%d events)', per_block, n_occ.sum(), self.E)
         self.set_param(
             hdf5path=self.datastore.filename,
             task_duration=oq.task_duration or 600,  # 10min
@@ -245,8 +243,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.lossbytes = 0
         self.datastore.swmr_on()
         smap = parallel.Starmap(
-            self.core_task.__func__, allargs,
-            num_cores=oq.num_cores, h5=self.datastore.hdf5)
+            self.core_task.__func__, allargs, h5=self.datastore.hdf5)
         res = smap.reduce(self.agg_dicts, numpy.zeros(self.N))
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(

@@ -3,8 +3,8 @@ Event Based Risk for Turkey reduced
 
 ============== ===================
 checksum32     39,734,555         
-date           2019-07-30T15:04:39
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:07
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 13, num_levels = 91, num_rlzs = 8
@@ -112,23 +112,23 @@ SAM_4S   1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-========== ====== ==== ============ ========= ========= ======= =====
-source_id  grp_id code num_ruptures calc_time num_sites weight  speed
-========== ====== ==== ============ ========= ========= ======= =====
-AS_TRAS334 0      A    760          0.03496   7.00000   4.00000 114  
-AS_TRAS360 0      A    624          0.03156   3.00000   2.00000 63   
-AS_TRAS346 0      A    527          0.02211   5.00000   2.00000 90   
-AS_TRAS458 0      A    399          0.01706   2.00000   2.00000 117  
-AS_TRAS395 0      A    432          0.01278   3.00000   2.00000 156  
-AS_TRAS410 0      A    240          0.00536   2.00000   0.0     0.0  
-========== ====== ==== ============ ========= ========= ======= =====
+========== ====== ==== ============ ========= ========= ============ =====
+source_id  grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========== ====== ==== ============ ========= ========= ============ =====
+AS_TRAS334 0      A    760          0.04165   7.00000   4.00000      96   
+AS_TRAS346 0      A    527          0.01964   5.00000   2.00000      101  
+AS_TRAS458 0      A    399          0.01948   2.00000   2.00000      102  
+AS_TRAS360 0      A    624          0.01769   3.00000   2.00000      113  
+AS_TRAS395 0      A    432          0.01363   3.00000   2.00000      146  
+AS_TRAS410 0      A    240          0.00545   2.00000   0.0          0.0  
+========== ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.12383   7     
+A    0.11754   7     
 P    0.0       1     
 ==== ========= ======
 
@@ -136,38 +136,37 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ========= ======= =======
 operation-duration mean    stddev  min       max     outputs
-compute_gmfs       0.02381 0.00593 0.01952   0.04122 29     
-read_source_models 0.02178 0.02998 6.950E-04 0.05610 3      
-sample_ruptures    0.01943 0.01359 0.00201   0.04240 8      
+compute_gmfs       0.01966 0.00303 0.01388   0.02464 29     
+read_source_models 0.02924 0.03932 0.00109   0.07417 3      
+sample_ruptures    0.01591 0.00970 7.699E-04 0.03234 8      
 ================== ======= ======= ========= ======= =======
 
 Data transfer
 -------------
-================== ==================================================== =========
-task               sent                                                 received 
-compute_gmfs       param=199.43 KB rupgetter=55.31 KB srcfilter=6.23 KB 221.97 KB
-read_source_models converter=942 B fnames=341 B                         12.5 KB  
-sample_ruptures    param=56.6 KB sources=17.2 KB srcfilter=1.72 KB      9.73 KB  
-================== ==================================================== =========
+================== ===================================================== =========
+task               sent                                                  received 
+compute_gmfs       param=209.94 KB rupgetter=52.93 KB srcfilter=34.38 KB 219.57 KB
+read_source_models converter=942 B fnames=362 B                          12.52 KB 
+sample_ruptures    param=56.98 KB sources=17.25 KB srcfilter=9.48 KB     9.92 KB  
+================== ===================================================== =========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_15573               time_sec memory_mb counts
+calc_1795                time_sec memory_mb counts
 ======================== ======== ========= ======
-EventBasedCalculator.run 1.33270  2.57422   1     
-total compute_gmfs       0.69056  0.0       29    
-building hazard          0.40790  0.0       29    
-total sample_ruptures    0.15543  0.0       8     
-getting ruptures         0.14006  0.0       29    
-saving gmfs              0.10369  0.0       29    
-saving events            0.08099  0.0       1     
-total read_source_models 0.06534  0.0       3     
-building hazard curves   0.05204  0.0       236   
-aggregating hcurves      0.03123  0.0       29    
-saving ruptures          0.01480  0.0       6     
-saving gmf_data/indices  0.01296  0.0       1     
-GmfGetter.init           0.00528  0.0       29    
-store source_info        0.00390  0.0       1     
-reading exposure         0.00165  0.0       1     
+EventBasedCalculator.run 0.88974  2.03906   1     
+total compute_gmfs       0.57022  1.32031   29    
+building hazard          0.30733  0.41797   29    
+getting ruptures         0.20489  1.32031   29    
+total sample_ruptures    0.12732  0.32422   8     
+total read_source_models 0.08772  0.0       3     
+saving events            0.08531  0.0       1     
+saving gmfs              0.03857  0.0       29    
+building hazard curves   0.03139  0.0       236   
+saving ruptures          0.01299  0.0       6     
+aggregating hcurves      0.00856  0.0       29    
+saving gmf_data/indices  0.00756  0.0       1     
+store source_info        0.00291  0.0       1     
+reading exposure         0.00222  0.0       1     
 ======================== ======== ========= ======

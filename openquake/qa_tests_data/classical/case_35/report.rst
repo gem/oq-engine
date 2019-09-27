@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 35 - Cluster model
 
 ============== ===================
 checksum32     1,518,465,114      
-date           2019-07-30T15:04:30
-engine_version 3.7.0-git3b3dff46da
+date           2019-09-24T15:21:17
+engine_version 3.7.0-git749bb363b3
 ============== ===================
 
 num_sites = 1, num_levels = 5, num_rlzs = 1
@@ -72,47 +72,48 @@ source_model.xml 0      Active Shallow Crust 2            2
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ======= =====
-source_id grp_id code num_ruptures calc_time num_sites weight  speed
-========= ====== ==== ============ ========= ========= ======= =====
-0         0      X    1            6.592E-04 1.00000   1.00000 1,517
-1         0      X    1            4.106E-04 1.00000   1.00000 2,436
-========= ====== ==== ============ ========= ========= ======= =====
+========= ====== ==== ============ ========= ========= ============ =====
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
+========= ====== ==== ============ ========= ========= ============ =====
+0         0      X    1            0.00151   1.00000   1.00000      662  
+1         0      X    1            0.00116   1.00000   1.00000      861  
+========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00107   2     
+X    0.00267   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-classical          0.03168 NaN    0.03168 0.03168 1      
-read_source_models 0.00407 NaN    0.00407 0.00407 1      
+classical          0.04072 NaN    0.04072 0.04072 1      
+read_source_models 0.01090 NaN    0.01090 0.01090 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ==================================================== ========
-task               sent                                                 received
-classical          srcs=3.4 KB params=533 B srcfilter=220 B gsims=147 B 1.3 KB  
-read_source_models converter=314 B fnames=100 B                         3.57 KB 
-================== ==================================================== ========
+================== ========================================= ========
+task               sent                                      received
+classical          group=3.4 KB src_filter=647 B param=533 B 1.3 KB  
+read_source_models converter=314 B fnames=107 B              3.57 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_15540               time_sec  memory_mb counts
+calc_1825                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          0.03168   0.0       1     
-aggregate curves         0.00774   0.0       1     
-total read_source_models 0.00407   0.0       1     
-store source_info        0.00209   0.0       1     
-managing sources         0.00100   0.0       1     
-make_contexts            3.271E-04 0.0       2     
-get_poes                 2.975E-04 0.0       2     
+total classical          0.04072   0.0       1     
+aggregate curves         0.01299   0.0       1     
+total read_source_models 0.01090   0.0       1     
+store source_info        0.00263   0.0       1     
+make_contexts            6.044E-04 0.0       2     
+computing mean_std       3.784E-04 0.0       2     
+get_poes                 3.510E-04 0.0       2     
+managing sources         3.257E-04 0.0       1     
 ======================== ========= ========= ======
