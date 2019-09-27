@@ -400,11 +400,12 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            self.csm = readinput.get_composite_source_model(
-                oq, self.datastore.hdf5, srcfilter=self.src_filter())
-            res = views.view('dupl_sources', self.datastore)
-            logging.info(f'The composite source model has {res.val:,d} '
-                         'ruptures')
+            with self.monitor('composite source model', measuremem=True):
+                self.csm = readinput.get_composite_source_model(
+                    oq, self.datastore.hdf5, srcfilter=self.src_filter())
+                res = views.view('dupl_sources', self.datastore)
+                logging.info(f'The composite source model has {res.val:,d} '
+                             'ruptures')
             if res:
                 logging.info(res)
         self.init()  # do this at the end of pre-execute
