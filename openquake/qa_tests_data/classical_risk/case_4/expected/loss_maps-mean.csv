@@ -1,8 +1,8 @@
-#,,,,"generated_by='OpenQuake engine 3.7.0-git5e91b20b88', start_date='2019-09-05T06:13:20', checksum=2740825900, kind='mean', risk_investigation_time=None"
+#,,,,"generated_by='OpenQuake engine 3.8.0-gitb010beda11', start_date='2019-09-27T08:00:28', checksum=2740825900, kind='mean', risk_investigation_time=None"
 id,taxonomy,lon,lat,structural~poe-0.1
 "a4","A",80.56210,29.51040,0.00000E+00
 "a5","W",81.17910,29.71360,0.00000E+00
-"a1","W",81.29850,29.10980,1.21384E+04
-"a6","W",81.56850,29.56420,3.34779E+00
+"a1","W",81.29850,29.10980,6.64269E+00
+"a6","W",81.56850,29.56420,2.12019E+00
 "a2","W",83.08230,27.90060,5.35230E+06
 "a3","W",83.25100,28.34050,5.59167E+06

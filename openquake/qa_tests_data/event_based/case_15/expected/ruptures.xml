@@ -7,42 +7,6 @@ xmlns:gml="http://www.opengis.net/gml"
     investigationTime="50.0"
     >
         <ruptureGroup
-        id="0"
-        tectonicRegion="Subduction Interface - North East Correction"
-        >
-            <singlePlaneRupture
-            id="43"
-            multiplicity="1"
-            >
-                <stochasticEventSets>
-                    <SES
-                    id="1"
-                    >
-                        0
-                    </SES>
-                </stochasticEventSets>
-                <magnitude>
-                    5.0999999e+00
-                </magnitude>
-                <strike>
-                    2.4173760e+02
-                </strike>
-                <dip>
-                    3.4419558e+01
-                </dip>
-                <rake>
-                    9.0000000e+01
-                </rake>
-                <hypocenter depth="5.2000000E+01" lat="4.3396999E+01" lon="1.4590401E+02"/>
-                <planarSurface>
-                    <topLeft depth="51.9969902" lat="43.3969917" lon="145.9040833"/>
-                    <topRight depth="51.9969902" lat="43.3969460" lon="145.9039764"/>
-                    <bottomLeft depth="52.0030098" lat="43.3970528" lon="145.9040222"/>
-                    <bottomRight depth="52.0030098" lat="43.3970070" lon="145.9039154"/>
-                </planarSurface>
-            </singlePlaneRupture>
-        </ruptureGroup>
-        <ruptureGroup
         id="1"
         tectonicRegion="Subduction Interface - North East Correction"
         >
