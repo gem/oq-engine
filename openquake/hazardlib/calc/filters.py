@@ -298,7 +298,9 @@ class SourceFilter(object):
         h5 = h5py.File(self.filename, 'r', swmr=True)
         # NB: must not be closed on the workers for the case OQ_DISTRIBUTE=no
         sc = object.__new__(SiteCollection)
-        sc.array = h5['sitecol'][()]
+        dset = h5['sitecol']
+        dset.refresh()
+        sc.array = dset[()]
         sc.complete = sc
         self.__dict__['sitecol'] = sc
         return sc
