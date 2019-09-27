@@ -334,6 +334,7 @@ class DataStore(collections.abc.MutableMapping):
 
     def close(self):
         """Close the underlying hdf5 file"""
+        print('closing', self)
         if self.parent != ():
             self.parent.flush()
             self.parent.close()
