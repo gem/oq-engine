@@ -27,7 +27,6 @@ import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, sourcewriter
-from openquake.hazardlib.geo.mesh import point3d
 from openquake.commonlib import logictree
 
 TWO16 = 2 ** 16  # 65,536
@@ -277,7 +276,7 @@ class SourceModelFactory(object):
                 idx += 1
                 grp_id += 1
                 data = [((sg.id, src.source_id, src.code, 0, 0, -1,
-                          src.num_ruptures, 0, 0, 0, idx))]
+                          src.num_ruptures, idx, ''))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
             else:
                 self.apply_uncertainties(sm, idx, dic)
