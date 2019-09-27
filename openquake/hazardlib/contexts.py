@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import abc
 import sys
+import copy
 import time
 import numpy
 
@@ -315,9 +316,11 @@ class ContextMaker(object):
         # are ignored for sites over 3 times the rupture length
         loc = getattr(src, 'location', None)
         if loc and src.count_nphc() > 1:
-            min_dep, max_dep = src._get_min_max_depths()
+            weights, depths = zip(*src.hypocenter_distribution.data)
+            min_dep, max_dep = min(depths), max(depths)
             d_depth = max_dep - min_dep
-            loc.depth = min_dep  # used in sites.split
+            loc = copy.copy(loc)  # average hypocenter used in sites.split
+            loc.depth = numpy.average(depths, weights=weights)
             for mag, mag_occ_rate in src.get_annual_occurrence_rates():
                 max_dist = self.maximum_distance(src.tectonic_region_type, mag)
                 p_radius = src._get_max_rupture_projection_radius(mag)
