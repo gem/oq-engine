@@ -751,8 +751,9 @@ class Starmap(object):
 
     def _submit_many(self, queue, howmany):
         for _ in range(howmany):
-            if queue:
-                func, *args = queue.pop()
+            if queue:  # remove in FIFO order
+                func, *args = queue[0]
+                del queue[0]
                 self.submit(*args, func=func)
                 self.todo += 1
                 logging.debug('%d tasks todo, %d in queue',
