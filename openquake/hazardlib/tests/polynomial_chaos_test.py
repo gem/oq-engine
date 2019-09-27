@@ -20,9 +20,7 @@ import copy
 import unittest
 import numpy as np
 
-from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.polynomial_chaos import get_coeff, get_hermite
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
@@ -38,6 +36,7 @@ class GetHermiteTest(unittest.TestCase):
         expected = [1, 0.53, -0.7191, -1.441123, 1.39350481, 6.50304955,
                     -3.52090779]
         np.testing.assert_almost_equal(computed, expected)
+
 
 class GetCoeffTest(unittest.TestCase):
 
@@ -83,8 +82,8 @@ class ScenarioTest(unittest.TestCase):
         # Compute the probability of exceedance
         self.poes_orig = self.gsim.get_poes(self.mean_std_orig, self.imls,
                                             truncation_level=None)
-        # Compute the 'combined' std. `mean_std` has shape 2, number of sites,
-        # number of intensity measure types
+        # Compute the 'combined' std. Note that `mean_std` has shape: 2,
+        # number of sites, number of intensity measure types
         mean_std = np.empty_like(self.mean_std_orig)
         mean_std[0, :] = self.mean_std_orig[0, :]
         mean_std[1, :] = (self.mean_std_orig[1, :]**2 +

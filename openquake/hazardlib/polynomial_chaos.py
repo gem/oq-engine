@@ -22,10 +22,13 @@ from scipy.constants import pi
 
 def get_hermite(sg):
     """
-    :param vals:
-    :param coeff:
-    :param degree:
-    :param partial:
+    Given a value, this evaluates the Hermite polynomials up to order 6
+
+    :param sg:
+        The value for which the Hermite polynomials must be computed
+    :return:
+        A :class:`numpy.ndarray` instance with the values. The shape of the
+        array is N (in this specific case 6+1)
     """
     deg = []
     deg.append(numpy.ones((len(sg))))
@@ -62,16 +65,15 @@ def get_coeff(m_mu, sigma, sigma_mu, imls):
             - M is the
             - K is the number of IMLs
     """
-
     # sigma_mu is the epistemic std
     # sigma is the total aleatory std
     assert sigma.shape == sigma_mu.shape
-
+    # common terms
     az = -1*sigma_mu**2/(2*sigma**2)-0.5
     bz = (numpy.log(imls) - m_mu) * sigma_mu / (sigma**2)
     cz = -1*(numpy.log(imls) - m_mu)**2 / (2*sigma**2)
     alpha = sigma_mu/(2*sigma*pi)*numpy.sqrt(pi)*numpy.exp(cz-bz**2/(4*az))
-    #
+    # coefficients list
     coeff = []
     # c1
     coeff.append(alpha / ((-az)**(0.5)))
@@ -93,5 +95,4 @@ def get_coeff(m_mu, sigma, sigma_mu, imls):
     num = bz*(60*az**2*(1+2*az)**2-20*az*(1+2*az)*bz**2+bz**4)
     den = 32*(-az)**5.5
     coeff.append(alpha/720 * num / den)
-
     return numpy.array(coeff)
