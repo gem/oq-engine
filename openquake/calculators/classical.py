@@ -261,7 +261,10 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(f'ruptures_per_task={maxweight}, '
                      f'maxdist={maxdist} km, task_duration={td} s')
 
-        srcfilter = self.src_filter(self.datastore.filename)
+        hdf5path = self.datastore.filename[:-4] + 'eps.hdf5'
+        with hdf5.File(hdf5path, 'w') as f:
+            f['sitecol'] = self.sitecol
+        srcfilter = self.src_filter(filename=hdf5path)
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
