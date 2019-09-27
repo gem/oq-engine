@@ -229,8 +229,6 @@ class SourceModelFactory(object):
         spinning_off = self.oqparam.pointsource_distance == {'default': 0.0}
         if spinning_off:
             logging.info('Removing nodal plane and hypocenter distributions')
-        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-                else 'processpool')
         smlt_dir = os.path.dirname(self.source_model_lt.filename)
         converter = sourceconverter.SourceConverter(
             oq.investigation_time,
@@ -246,9 +244,7 @@ class SourceModelFactory(object):
             dic = {'ucerf': grp}
         elif self.in_memory:
             logging.info('Reading the source model(s) in parallel')
-            smap = parallel.Starmap(
-                nrml.read_source_models, distribute=dist,
-                h5=self.hdf5 if self.hdf5 else None)
+            smap = parallel.Starmap(nrml.read_source_models)
             # NB: h5 is None in logictree_test.py
             for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
                 for name in sm.names.split():
