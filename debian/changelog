@@ -1,3 +1,5 @@
+python3-oq-engine (3.7.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Hiding calculations that fail before the pre-execute phase (for instance,
     because of missing files); they already give a clear error
@@ -124,6 +126,8 @@
   * Moved `max_sites_disagg` from openquake.cfg into the job.ini
   * Fixed a bug with the --config option: serialize_jobs could not be overridden
   * Implemented insured losses
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 26 Sep 2019 08:51:44 +0000
 
 python3-oq-engine (3.6.0-1~xenial01) xenial; urgency=low
 
