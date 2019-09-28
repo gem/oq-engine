@@ -244,8 +244,8 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        maxweight = min(self.csm.get_maxweight(
-            trt_sources, weight, oq.concurrent_tasks), 1E6)
+        maxweight = self.csm.get_maxweight(
+            trt_sources, weight, oq.concurrent_tasks)
         maxdist = int(max(oq.maximum_distance.values()))
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 1 day
