@@ -215,7 +215,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         tl = oq.truncation_level
-        src_filter = self.src_filter(self.datastore.tempname)
+        src_filter = self.src_filter()
         if hasattr(self, 'csm'):
             for sg in self.csm.src_groups:
                 if sg.atomic:
