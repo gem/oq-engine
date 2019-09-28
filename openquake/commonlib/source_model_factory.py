@@ -89,13 +89,11 @@ class SourceModelFactory(object):
     A class able to build source models from the logic tree and to store
     them inside the `source_info` dataset.
     """
-    def __init__(self, oqparam, gsim_lt, source_model_lt, h5=None,
-                 in_memory=True):
+    def __init__(self, oqparam, gsim_lt, source_model_lt, h5=None):
         self.oqparam = oqparam
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.hdf5 = h5
-        self.in_memory = in_memory
         if 'OQ_SAMPLE_SOURCES' in os.environ:
             self.srcfilter = calc.filters.SourceFilter(
                 h5['sitecol'], h5['oqparam'].maximum_distance)
@@ -144,36 +142,30 @@ class SourceModelFactory(object):
         smlt_dir = os.path.dirname(self.source_model_lt.filename)
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            if self.in_memory:
-                newsm = self(fname, dic[fname], apply_unc,
-                             self.oqparam.investigation_time)
-                for sg in newsm:
-                    # sample a source for each group
-                    if os.environ.get('OQ_SAMPLE_SOURCES'):
-                        sg.sources = random_filtered_sources(
-                            sg.sources, self.srcfilter, sg.id +
-                            self.oqparam.random_seed)
-                    for src in sg:
-                        if hasattr(src, 'data'):  # nonparametric
-                            srcmags = [item[0].mag for item in src.data]
-                        else:
-                            srcmags = [item[0] for item in
-                                       src.get_annual_occurrence_rates()]
-                        self.mags.update(srcmags)
-                        self.source_ids.add(src.source_id)
-                        src.src_group_id = self.grp_id
-                        src.id = idx
-                        idx += 1
-                    sg.id = self.grp_id
-                    self.grp_id += 1
-                    src_groups.append(sg)
-                if self.hdf5:
-                    self.store_sm(newsm)
-            else:  # just collect the TRT models
-                groups = logictree.read_source_groups(fname)
-                for group in groups:
-                    self.source_ids.update(src['id'] for src in group)
-                src_groups.extend(groups)
+            newsm = self(fname, dic[fname], apply_unc,
+                         self.oqparam.investigation_time)
+            for sg in newsm:
+                # sample a source for each group
+                if os.environ.get('OQ_SAMPLE_SOURCES'):
+                    sg.sources = random_filtered_sources(
+                        sg.sources, self.srcfilter, sg.id +
+                        self.oqparam.random_seed)
+                for src in sg:
+                    if hasattr(src, 'data'):  # nonparametric
+                        srcmags = [item[0].mag for item in src.data]
+                    else:
+                        srcmags = [item[0] for item in
+                                   src.get_annual_occurrence_rates()]
+                    self.mags.update(srcmags)
+                    self.source_ids.add(src.source_id)
+                    src.src_group_id = self.grp_id
+                    src.id = idx
+                    idx += 1
+                sg.id = self.grp_id
+                self.grp_id += 1
+                src_groups.append(sg)
+            if self.hdf5:
+                self.store_sm(newsm)
 
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
@@ -244,7 +236,7 @@ class SourceModelFactory(object):
         if oq.calculation_mode.startswith('ucerf'):
             [grp] = nrml.to_python(oq.inputs["source_model"], converter)
             dic = {'ucerf': grp}
-        elif self.in_memory:
+        else:
             logging.info('Reading the source model(s) in parallel')
             smap = parallel.Starmap(nrml.read_source_models,
                                     h5=self.hdf5 if self.hdf5 else None)
@@ -254,8 +246,7 @@ class SourceModelFactory(object):
                     fname = os.path.abspath(os.path.join(smlt_dir, name))
                     smap.submit([fname], converter)
             dic = {sm.fname: sm for sm in smap}
-        else:
-            dic = {}
+
         # consider only the effective realizations
         idx = 0
         if self.hdf5:
