@@ -310,13 +310,12 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.set_param()
         self.offset = 0
-        srcfilter = self.src_filter(self.datastore.filename)
+        srcfilter = self.src_filter(self.datastore.tempname)
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
         else:  # from sources
-            srcfilter = self.src_filter()
             self.build_events_from_sources(srcfilter)
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):

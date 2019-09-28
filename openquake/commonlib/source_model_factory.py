@@ -244,7 +244,8 @@ class SourceModelFactory(object):
             dic = {'ucerf': grp}
         elif self.in_memory:
             logging.info('Reading the source model(s) in parallel')
-            smap = parallel.Starmap(nrml.read_source_models)
+            smap = parallel.Starmap(nrml.read_source_models,
+                                    h5=self.hdf5 if self.hdf5 else None)
             # NB: h5 is None in logictree_test.py
             for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
                 for name in sm.names.split():

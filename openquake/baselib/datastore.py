@@ -173,6 +173,7 @@ class DataStore(collections.abc.MutableMapping):
                 self.calc_id = calc_id
             self.filename = os.path.join(
                 datadir, 'calc_%s.hdf5' % self.calc_id)
+        self.tempname = self.filename[:-5] + '_tmp.hdf5'
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         self.params = params

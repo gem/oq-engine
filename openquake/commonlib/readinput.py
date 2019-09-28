@@ -574,7 +574,7 @@ def get_composite_source_model(oqparam, h5=None, in_memory=True,
     :param in_memory:
         if False, just parse the XML without instantiating the sources
     :param srcfilter:
-        if not None, use it to prefilter the sources
+        if not None, use it to prefilter the sources with OQ_SAMPLE_SOURCES
     """
     ucerf = oqparam.calculation_mode.startswith('ucerf')
     source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
