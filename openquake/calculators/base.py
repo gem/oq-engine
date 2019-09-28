@@ -358,7 +358,7 @@ class HazardCalculator(BaseCalculator):
         :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
-        if self.sitecol:
+        if getattr(self, 'sitecol', None):
             sitecol = self.sitecol.complete
         else:  # can happen to the ruptures-only calculator
             sitecol = None
