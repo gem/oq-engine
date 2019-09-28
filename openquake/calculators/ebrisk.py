@@ -75,7 +75,7 @@ def _calc_risk(hazard, param, monitor):
     arr = acc['elt']
     alt = acc['alt']
     lba = param['lba']
-    epspath = param['epspath']
+    tempname = param['tempname']
     tagnames = param['aggregate_by']
     eid2rlz = dict(events[['id', 'rlz_id']])
     eid2idx = {eid: idx for idx, eid in enumerate(eid2rlz)}
@@ -87,7 +87,7 @@ def _calc_risk(hazard, param, monitor):
         acc['events_per_sid'] += len(haz)
         if param['avg_losses']:
             ws = weights[[eid2rlz[eid] for eid in haz['eid']]]
-        assets_by_taxo = get_assets_by_taxo(assets_on_sid, epspath)
+        assets_by_taxo = get_assets_by_taxo(assets_on_sid, tempname)
         eidx = [eid2idx[eid] for eid in haz['eid']]
         with mon_risk:
             out = get_output(crmodel, assets_by_taxo, haz)
@@ -210,7 +210,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.set_param(
             hdf5path=self.datastore.filename,
             task_duration=oq.task_duration or 600,  # 10min
-            epspath=cache_epsilons(
+            tempname=cache_epsilons(
                 self.datastore, oq, self.assetcol, self.crmodel, self.E))
         self.init_logic_tree(self.csm_info)
         trt_by_grp = self.csm_info.grp_by("trt")
@@ -221,7 +221,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         eslices = self.datastore['eslices']
         allargs = []
         allpairs = list(enumerate(n_occ))
-        srcfilter = self.src_filter(dstore.filename)
+        srcfilter = self.src_filter()
         for grp_id, rlzs_by_gsim in rlzs_by_gsim_grp.items():
             start, stop = grp_indices[grp_id]
             if start == stop:  # no ruptures for the given grp_id
@@ -340,8 +340,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         builder = get_loss_builder(self.datastore)
         self.build_datasets(builder)
-        self.datastore.close()  # so that the readers see the data
-        self.datastore.open('r+')
         self.datastore.swmr_on()
         args = [(self.datastore.filename, builder, oq.ses_ratio, rlzi)
                 for rlzi in range(self.R)]

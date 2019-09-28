@@ -61,7 +61,7 @@ def scenario_risk(riskinputs, crmodel, param, monitor):
     result = dict(agg=numpy.zeros((E, L), F32), avg=[],
                   all_losses=AccumDict(accum={}))
     for ri in riskinputs:
-        for out in ri.gen_outputs(crmodel, monitor, param['epspath']):
+        for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
             slc = param['event_slice'](r)
             for l, loss_type in enumerate(crmodel.loss_types):
@@ -103,7 +103,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             _event_slice, oq.number_of_ground_motion_fields)
         E = oq.number_of_ground_motion_fields * self.R
         self.riskinputs = self.build_riskinputs('gmf')
-        self.param['epspath'] = riskinput.cache_epsilons(
+        self.param['tempname'] = riskinput.cache_epsilons(
             self.datastore, oq, self.assetcol, self.crmodel, E)
         self.param['E'] = E
         # assuming the weights are the same for all IMTs
