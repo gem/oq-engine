@@ -562,19 +562,16 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, h5=None, in_memory=True,
-                               srcfilter=SourceFilter(None, {})):
+def get_composite_source_model(oqparam, dstore=None, in_memory=True):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param h5:
-         an open hdf5.File where to store the source info
+    :param dstore:
+         an open datastore where to store the source info
     :param in_memory:
         if False, just parse the XML without instantiating the sources
-    :param srcfilter:
-        if not None, use it to prefilter the sources with OQ_SAMPLE_SOURCES
     """
     ucerf = oqparam.calculation_mode.startswith('ucerf')
     source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
@@ -603,8 +600,8 @@ def get_composite_source_model(oqparam, h5=None, in_memory=True,
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     smodels = []
-    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, h5,
-                                 in_memory, srcfilter)
+    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, dstore,
+                                 in_memory)
     for source_model in factory.get_models():
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
