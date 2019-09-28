@@ -27,20 +27,20 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_assets_by_taxo(assets, epspath=None):
+def get_assets_by_taxo(assets, tempname=None):
     """
     :param assets: an array of assets
-    :param epspath: hdf5 file where the epsilons are (or None)
+    :param tempname: hdf5 file where the epsilons are (or None)
     :returns: assets_by_taxo with attributes eps and idxs
     """
     assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
     assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
         a['ordinal'] for a in assets_by_taxo.values()]))
     assets_by_taxo.eps = {}
-    if epspath is None:  # no epsilons
+    if tempname is None:  # no epsilons
         return assets_by_taxo
     # otherwise read the epsilons and group them by taxonomy
-    with hdf5.File(epspath, 'r') as h5:
+    with hdf5.File(tempname, 'r') as h5:
         dset = h5['epsilon_matrix']
         for taxo, assets in assets_by_taxo.items():
             lst = [dset[aid] for aid in assets['ordinal']]
@@ -123,7 +123,7 @@ class RiskInput(object):
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
 
-    def gen_outputs(self, cr_model, monitor, epspath=None, haz=None):
+    def gen_outputs(self, cr_model, monitor, tempname=None, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
@@ -146,7 +146,7 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            assets_by_taxo = get_assets_by_taxo(self.assets, epspath)
+            assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
             for rlzi, haz_by_rlzi in items:
                 out = get_output(cr_model, assets_by_taxo, haz_by_rlzi, rlzi)
                 yield out
@@ -186,8 +186,7 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     if oq.ignore_covs or not crmodel.covs or 'LN' not in crmodel.distributions:
         return
     A = len(assetcol)
-    hdf5path = dstore.filename[:-4] + 'eps.hdf5'
-    logging.info('Storing the epsilon matrix in %s', hdf5path)
+    logging.info('Storing the epsilon matrix in %s', dstore.tempname)
     if oq.calculation_mode == 'scenario_risk':
         eps = make_eps(assetcol.array, E, oq.master_seed, oq.asset_correlation)
     else:  # event based
@@ -200,9 +199,9 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
             for i, seed in enumerate(seeds):
                 numpy.random.seed(seed)
                 eps[:, i] = numpy.random.normal(size=A)
-    with hdf5.File(hdf5path) as cache:
+    with hdf5.File(dstore.tempname, 'w') as cache:
         cache['epsilon_matrix'] = eps
-    return hdf5path
+    return dstore.tempname
 
 
 def str2rsi(key):

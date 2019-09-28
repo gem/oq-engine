@@ -26,7 +26,7 @@ import zlib
 import numpy
 
 from openquake.baselib import hdf5, parallel
-from openquake.hazardlib import nrml, sourceconverter, sourcewriter
+from openquake.hazardlib import nrml, sourceconverter, sourcewriter, calc
 from openquake.commonlib import logictree
 
 TWO16 = 2 ** 16  # 65,536
@@ -90,13 +90,15 @@ class SourceModelFactory(object):
     them inside the `source_info` dataset.
     """
     def __init__(self, oqparam, gsim_lt, source_model_lt, h5=None,
-                 in_memory=True, srcfilter=None):
+                 in_memory=True):
         self.oqparam = oqparam
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.hdf5 = h5
         self.in_memory = in_memory
-        self.srcfilter = srcfilter
+        if 'OQ_SAMPLE_SOURCES' in os.environ:
+            self.srcfilter = calc.filters.SourceFilter(
+                h5['sitecol'], h5['oqparam'].maximum_distance)
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changes = 0
         self.grp_id = 0
@@ -229,8 +231,6 @@ class SourceModelFactory(object):
         spinning_off = self.oqparam.pointsource_distance == {'default': 0.0}
         if spinning_off:
             logging.info('Removing nodal plane and hypocenter distributions')
-        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-                else 'processpool')
         smlt_dir = os.path.dirname(self.source_model_lt.filename)
         converter = sourceconverter.SourceConverter(
             oq.investigation_time,
@@ -246,9 +246,8 @@ class SourceModelFactory(object):
             dic = {'ucerf': grp}
         elif self.in_memory:
             logging.info('Reading the source model(s) in parallel')
-            smap = parallel.Starmap(
-                nrml.read_source_models, distribute=dist,
-                h5=self.hdf5 if self.hdf5 else None)
+            smap = parallel.Starmap(nrml.read_source_models,
+                                    h5=self.hdf5 if self.hdf5 else None)
             # NB: h5 is None in logictree_test.py
             for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
                 for name in sm.names.split():
