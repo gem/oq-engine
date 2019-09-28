@@ -561,7 +561,7 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, h5=None, in_memory=True):
+def get_composite_source_model(oqparam, h5=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -569,8 +569,6 @@ def get_composite_source_model(oqparam, h5=None, in_memory=True):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param h5:
          an open hdf5.File where to store the source info
-    :param in_memory:
-        if False, just parse the XML without instantiating the sources
     """
     ucerf = oqparam.calculation_mode.startswith('ucerf')
     source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
@@ -599,18 +597,10 @@ def get_composite_source_model(oqparam, h5=None, in_memory=True):
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     smodels = []
-    factory = SourceModelFactory(
-        oqparam, gsim_lt, source_model_lt, h5, in_memory)
+    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, h5)
     for source_model in factory.get_models():
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
-            for src in src_group:
-                # there are two cases depending on the flag in_memory:
-                # 1) src is a hazardlib source and has a src_group_id
-                #    attribute; in that case the source has to be numbered
-                # 2) src is a Node object, then nothing must be done
-                if isinstance(src, Node):
-                    continue
         smodels.append(source_model)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
     for sm in csm.source_models:
@@ -622,8 +612,6 @@ def get_composite_source_model(oqparam, h5=None, in_memory=True):
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
-    if not in_memory:
-        return csm
 
     if oqparam.is_event_based():
         # initialize the rupture rup_id numbers before splitting/filtering; in
