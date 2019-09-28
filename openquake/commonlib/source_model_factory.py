@@ -233,28 +233,15 @@ class SourceModelFactory(object):
             oq.minimum_magnitude,
             not spinning_off,
             oq.source_id)
-        if oq.calculation_mode.startswith('ucerf'):
-            [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-            dic = {'ucerf': grp}
-        else:
-            logging.info('Reading the source model(s) in parallel')
-            smap = parallel.Starmap(nrml.read_source_models,
-                                    h5=self.hdf5 if self.hdf5 else None)
-            # NB: h5 is None in logictree_test.py
-            for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
-                for name in sm.names.split():
-                    fname = os.path.abspath(os.path.join(smlt_dir, name))
-                    smap.submit([fname], converter)
-            dic = {sm.fname: sm for sm in smap}
-
-        # consider only the effective realizations
         idx = 0
         if self.hdf5:
             sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
         grp_id = 0
-        for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
-            if 'ucerf' in dic:
-                sg = copy.copy(dic['ucerf'])
+        lt_models = list(self.source_model_lt.gen_source_models(self.gsim_lt))
+        if oq.calculation_mode.startswith('ucerf'):
+            [grp] = nrml.to_python(oq.inputs["source_model"], converter)
+            for sm in lt_models:
+                sg = copy.copy(grp)
                 sm.src_groups = [sg]
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
@@ -268,9 +255,20 @@ class SourceModelFactory(object):
                 data = [((sg.id, src.source_id, src.code, 0, 0, -1,
                           src.num_ruptures, idx, ''))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
-            else:
+                yield sm
+        else:
+            logging.info('Reading the source model(s) in parallel')
+            smap = parallel.Starmap(nrml.read_source_models,
+                                    h5=self.hdf5 if self.hdf5 else None)
+            # NB: h5 is None in logictree_test.py
+            for ltm in lt_models:
+                for name in ltm.names.split():
+                    fname = os.path.abspath(os.path.join(smlt_dir, name))
+                    smap.submit([fname], converter)
+            dic = {sm.fname: sm for sm in smap}
+            for sm in lt_models:
                 self.apply_uncertainties(sm, idx, dic)
-            yield sm
+                yield sm
 
         if self.hdf5:
             self.hdf5['source_mags'] = sorted(self.mags)
