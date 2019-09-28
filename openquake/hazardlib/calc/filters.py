@@ -22,11 +22,10 @@ import operator
 import collections.abc
 from contextlib import contextmanager
 import numpy
-import h5py
 from scipy.interpolate import interp1d
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box)
 
@@ -295,14 +294,9 @@ class SourceFilter(object):
             return
         elif not os.path.exists(self.filename):
             raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
-        h5 = h5py.File(self.filename, 'r', swmr=True)
+        h5 = hdf5.File(self.filename, 'r')
         # NB: must not be closed on the workers for the case OQ_DISTRIBUTE=no
-        sc = object.__new__(SiteCollection)
-        dset = h5['sitecol']
-        dset.refresh()
-        sc.array = dset[()]
-        sc.complete = sc
-        self.__dict__['sitecol'] = sc
+        self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
     def get_rectangle(self, src):

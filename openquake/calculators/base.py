@@ -229,8 +229,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.eids = None
 
                 # cleanup epsilons, if any
-                if os.path.exists(self.datastore.filename[:-4] + 'eps.hdf5'):
-                    os.remove(self.datastore.filename[:-4] + 'eps.hdf5')
+                if os.path.exists(self.datastore.tempname):
+                    os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -402,13 +402,14 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = readinput.get_composite_source_model(
-                    oq, self.datastore.hdf5, srcfilter=self.src_filter(
-                        self.datastore.filename))
+                    oq, self.datastore.hdf5)
                 res = views.view('dupl_sources', self.datastore)
                 logging.info(f'The composite source model has {res.val:,d} '
                              'ruptures')
             if res:
                 logging.info(res)
+        with hdf5.File(self.datastore.tempname, 'w') as tmp:
+            tmp['sitecol'] = self.sitecol
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
