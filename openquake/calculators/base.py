@@ -398,18 +398,18 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+        with hdf5.File(self.datastore.tempname, 'w') as tmp:
+            tmp['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = readinput.get_composite_source_model(
-                    oq, self.datastore.hdf5)
+                    oq, self.datastore)
                 res = views.view('dupl_sources', self.datastore)
                 logging.info(f'The composite source model has {res.val:,d} '
                              'ruptures')
             if res:
                 logging.info(res)
-        with hdf5.File(self.datastore.tempname, 'w') as tmp:
-            tmp['sitecol'] = self.sitecol
         self.init()  # do this at the end of pre-execute
 
     def save_multi_peril(self):
