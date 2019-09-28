@@ -358,7 +358,11 @@ class HazardCalculator(BaseCalculator):
         :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
-        sitecol = self.sitecol.complete if self.sitecol else None
+        if self.sitecol:
+            sitecol = self.sitecol.complete
+        else:  # can happen to the ruptures-only calculator
+            sitecol = None
+            filename = None
         if 'ucerf' in oq.calculation_mode:
             return UcerfFilter(sitecol, oq.maximum_distance, filename)
         return SourceFilter(sitecol, oq.maximum_distance, filename)
@@ -398,8 +402,9 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
-        with hdf5.File(self.datastore.tempname, 'w') as tmp:
-            tmp['sitecol'] = self.sitecol
+        if self.sitecol:  # can be None for the ruptures-only calculator
+            with hdf5.File(self.datastore.tempname, 'w') as tmp:
+                tmp['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             with self.monitor('composite source model', measuremem=True):
