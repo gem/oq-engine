@@ -402,7 +402,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
-        if self.sitecol:  # can be None for the ruptures-only calculator
+        if getattr(self, 'sitecol', None):
+            # can be None for the ruptures-only calculator
             with hdf5.File(self.datastore.tempname, 'w') as tmp:
                 tmp['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
