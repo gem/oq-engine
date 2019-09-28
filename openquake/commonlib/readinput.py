@@ -35,7 +35,6 @@ from openquake.baselib.general import random_filter
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -562,14 +561,14 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, dstore=None, in_memory=True):
+def get_composite_source_model(oqparam, h5=None, in_memory=True):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param dstore:
-         an open datastore where to store the source info
+    :param h5:
+         an open hdf5.File where to store the source info
     :param in_memory:
         if False, just parse the XML without instantiating the sources
     """
@@ -600,8 +599,8 @@ def get_composite_source_model(oqparam, dstore=None, in_memory=True):
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     smodels = []
-    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, dstore,
-                                 in_memory)
+    factory = SourceModelFactory(
+        oqparam, gsim_lt, source_model_lt, h5, in_memory)
     for source_model in factory.get_models():
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)

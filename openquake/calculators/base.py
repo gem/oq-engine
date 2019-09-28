@@ -404,7 +404,7 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = readinput.get_composite_source_model(
-                    oq, self.datastore)
+                    oq, self.datastore.hdf5)
                 res = views.view('dupl_sources', self.datastore)
                 logging.info(f'The composite source model has {res.val:,d} '
                              'ruptures')
