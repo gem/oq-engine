@@ -2,7 +2,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
 # Copyright (C) 2019, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
@@ -21,13 +21,11 @@ import os.path
 import functools
 import collections
 import logging
-import pickle
 import zlib
 import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, sourcewriter, calc
-from openquake.commonlib import logictree
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
@@ -84,6 +82,77 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
     return np
 
 
+class SourceReader(object):
+    def __init__(self, converter, smlt_dir, h5):
+        self.converter = converter
+        self.smlt_dir = smlt_dir
+        self.__name__ = 'SourceReader'
+        if 'OQ_SAMPLE_SOURCES' in os.environ and h5:
+            self.srcfilter = calc.filters.SourceFilter(
+                h5['sitecol'], h5['oqparam'].maximum_distance)
+
+    def makesm(self, fname, sm, apply_uncertainties):
+        """
+        :param fname:
+            the full pathname of a source model file
+        :param sm:
+            the original source model
+        :param apply_uncertainties:
+            a function modifying the sources (or None)
+        :returns:
+            a copy of the original source model with changed sources, if any
+        """
+        check_nonparametric_sources(
+            fname, sm, self.converter.investigation_time)
+        newsm = nrml.SourceModel(
+            [], sm.name, sm.investigation_time, sm.start_time)
+        newsm.changes = 0
+        for group in sm:
+            newgroup = apply_uncertainties(group)
+            newsm.src_groups.append(newgroup)
+            # the attribute .changed is set by logictree.apply_uncertainties
+            if hasattr(newgroup, 'changed') and newgroup.changed.any():
+                newsm.changes += newgroup.changed.sum()
+                for src, changed in zip(newgroup, newgroup.changed):
+                    # redoing count_ruptures can be slow
+                    if changed:
+                        src.num_ruptures = src.count_ruptures()
+        return newsm
+
+    def __call__(self, ltmodel, apply_unc, fname, fileno, monitor):
+        changes = 0
+        fname_hits = collections.Counter()  # fname -> number of calls
+        mags = set()
+        source_ids = set()
+        src_groups = []
+        [sm] = nrml.read_source_models([fname], self.converter, monitor)
+        newsm = self.makesm(fname, sm, apply_unc)
+        fname_hits[fname] += 1
+        changes += newsm.changes
+        for sg in newsm:
+            # sample a source for each group
+            if os.environ.get('OQ_SAMPLE_SOURCES'):
+                sg.sources = random_filtered_sources(
+                    sg.sources, self.srcfilter, sg.id)
+            sg.info = numpy.zeros(len(sg), source_info_dt)
+            for i, src in enumerate(sg):
+                if hasattr(src, 'data'):  # nonparametric
+                    srcmags = [item[0].mag for item in src.data]
+                else:
+                    srcmags = [item[0] for item in
+                               src.get_annual_occurrence_rates()]
+                mags.update(srcmags)
+                source_ids.add(src.source_id)
+                toml = sourcewriter.tomldump(src)
+                checksum = zlib.adler32(toml.encode('utf8'))
+                sg.info[i] = (0, src.source_id, src.code, src.num_ruptures,
+                              0, 0, 0, checksum, toml)
+            src_groups.append(sg)
+        return dict(fname_hits=fname_hits, changes=changes,
+                    src_groups=src_groups, mags=mags, source_ids=source_ids,
+                    ordinal=ltmodel.ordinal, fileno=fileno)
+
+
 class SourceModelFactory(object):
     """
     A class able to build source models from the logic tree and to store
@@ -94,127 +163,17 @@ class SourceModelFactory(object):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.hdf5 = h5
-        if 'OQ_SAMPLE_SOURCES' in os.environ:
-            self.srcfilter = calc.filters.SourceFilter(
-                h5['sitecol'], h5['oqparam'].maximum_distance)
-        self.fname_hits = collections.Counter()  # fname -> number of calls
-        self.changes = 0
-        self.grp_id = 0
-        self.source_ids = set()
-        self.mags = set()
 
-    def __call__(self, fname, sm, apply_uncertainties, investigation_time):
+    def store_groups(self, src_groups):
         """
-        :param fname:
-            the full pathname of a source model file
-        :param sm:
-            the original source model
-        :param apply_uncertainties:
-            a function modifying the sources (or None)
-        :param investigation_time:
-            the investigation_time in the job.ini
-        :returns:
-            a copy of the original source model with changed sources, if any
+        :param src_groups: a list of source groups with attribute .info
         """
-        check_nonparametric_sources(fname, sm, investigation_time)
-        newsm = nrml.SourceModel(
-            [], sm.name, sm.investigation_time, sm.start_time)
-        for group in sm:
-            newgroup = apply_uncertainties(group)
-            newsm.src_groups.append(newgroup)
-            if hasattr(newgroup, 'changed') and newgroup.changed.any():
-                self.changes += newgroup.changed.sum()
-                for src, changed in zip(newgroup, newgroup.changed):
-                    # redoing count_ruptures can be slow
-                    if changed:
-                        src.num_ruptures = src.count_ruptures()
-        self.fname_hits[fname] += 1
-        return newsm
+        sources = self.hdf5['source_info']
+        for sg in src_groups:
+            sg.info['grp_id'] = sg.id
+            hdf5.extend(sources, sg.info)
 
-    def apply_uncertainties(self, sm, idx, dic):
-        """
-        Apply uncertainties to a source model object and populate
-        .source_ids and .mags
-        """
-        src_groups = []
-        apply_unc = functools.partial(
-            self.source_model_lt.apply_uncertainties, sm.path)
-        smlt_dir = os.path.dirname(self.source_model_lt.filename)
-        for name in sm.names.split():
-            fname = os.path.abspath(os.path.join(smlt_dir, name))
-            newsm = self(fname, dic[fname], apply_unc,
-                         self.oqparam.investigation_time)
-            for sg in newsm:
-                # sample a source for each group
-                if os.environ.get('OQ_SAMPLE_SOURCES'):
-                    sg.sources = random_filtered_sources(
-                        sg.sources, self.srcfilter, sg.id +
-                        self.oqparam.random_seed)
-                for src in sg:
-                    if hasattr(src, 'data'):  # nonparametric
-                        srcmags = [item[0].mag for item in src.data]
-                    else:
-                        srcmags = [item[0] for item in
-                                   src.get_annual_occurrence_rates()]
-                    self.mags.update(srcmags)
-                    self.source_ids.add(src.source_id)
-                    src.src_group_id = self.grp_id
-                    src.id = idx
-                    idx += 1
-                sg.id = self.grp_id
-                self.grp_id += 1
-                src_groups.append(sg)
-            if self.hdf5:
-                self.store_sm(newsm)
-
-        num_sources = sum(len(sg.sources) for sg in src_groups)
-        sm.src_groups = src_groups
-        trts = [mod.trt for mod in src_groups]
-        self.source_model_lt.tectonic_region_types.update(trts)
-        logging.info(
-            'Processed source model %d with %d gsim path(s) and %d '
-            'sources', sm.ordinal + 1, sm.num_gsim_paths, num_sources)
-
-        gsim_file = self.oqparam.inputs.get('gsim_logic_tree')
-        if gsim_file:  # check TRTs
-            for src_group in src_groups:
-                if src_group.trt not in self.gsim_lt.values:
-                    raise ValueError(
-                        "Found in %r a tectonic region type %r inconsistent "
-                        "with the ones in %r" % (sm, src_group.trt, gsim_file))
-
-        if self.grp_id >= TWO16:
-            # the limit is really needed only for event based calculations
-            raise ValueError('There is a limit of %d src groups!' % TWO16)
-
-        # check applyToSources
-        for brid, srcids in self.source_model_lt.info.applytosources.items():
-            if brid in sm.path:
-                for srcid in srcids:
-                    if srcid not in self.source_ids:
-                        raise ValueError(
-                            'The source %s is not in the source model, please '
-                            'fix applyToSources in %s or the source model' %
-                            (srcid, self.source_model_lt.filename))
-
-    def store_sm(self, smodel):
-        """
-        :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
-        """
-        h5 = self.hdf5
-        sources = h5['source_info']
-        for sg in smodel:
-            srcs = []
-            for src in sg:
-                toml = sourcewriter.tomldump(src)
-                src.checksum = zlib.adler32(toml.encode('utf8'))
-                srcs.append((sg.id, src.source_id, src.code,
-                             src.num_ruptures, 0, 0, 0,
-                             src.checksum, toml))
-            if sources:
-                hdf5.extend(sources, numpy.array(srcs, source_info_dt))
-
-    def get_models(self):
+    def get_ltmodels(self):
         """
         :yields: :class:`openquake.commonlib.logictree.LtSourceModel` tuples
         """
@@ -236,52 +195,104 @@ class SourceModelFactory(object):
             oq.minimum_magnitude,
             not spinning_off,
             oq.source_id)
-        idx = 0
+        mags = set()
+        changes = 0
+        fname_hits = collections.Counter()
         if self.hdf5:
             sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
-        grp_id = 0
         lt_models = list(self.source_model_lt.gen_source_models(self.gsim_lt))
         if oq.calculation_mode.startswith('ucerf'):
+            idx = 0
             [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-            for sm in lt_models:
+            for grp_id, sm in enumerate(lt_models):
                 sg = copy.copy(grp)
-                sm.src_groups = [sg]
                 sg.id = grp_id
+                sm.src_groups = [sg]
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
                 src.src_group_id = grp_id
                 src.id = idx
+                idx += 1
                 if oq.number_of_logic_tree_samples:
                     src.samples = sm.samples
                 sg.sources = [src]
-                idx += 1
-                grp_id += 1
                 data = [((sg.id, src.source_id, src.code, 0, 0, -1,
-                          src.num_ruptures, idx, ''))]
+                          src.num_ruptures, 0, ''))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
-                yield sm
-        else:
-            logging.info('Reading the source model(s) in parallel')
-            smap = parallel.Starmap(nrml.read_source_models, distribute=dist,
-                                    h5=self.hdf5 if self.hdf5 else None)
-            # NB: h5 is None in logictree_test.py
-            for ltm in lt_models:
-                for name in ltm.names.split():
-                    fname = os.path.abspath(os.path.join(smlt_dir, name))
-                    smap.submit([fname], converter)
-            dic = {sm.fname: sm for sm in smap}
-            for sm in lt_models:
-                self.apply_uncertainties(sm, idx, dic)
-                yield sm
+            return lt_models
+
+        logging.info('Reading the source model(s) in parallel')
+        allargs = []
+        fileno = 0
+        for ltm in lt_models:
+            apply_unc = functools.partial(
+                self.source_model_lt.apply_uncertainties, ltm.path)
+            for name in ltm.names.split():
+                fname = os.path.abspath(os.path.join(smlt_dir, name))
+                allargs.append((ltm, apply_unc, fname, fileno))
+                fileno += 1
+        smap = parallel.Starmap(
+            SourceReader(converter, smlt_dir, self.hdf5),
+            allargs, distribute=dist, h5=self.hdf5 if self.hdf5 else None)
+        # NB: h5 is None in logictree_test.py
+        groups = [[] for _ in lt_models]  # (fileno, src_groups)
+        for dic in smap:
+            ltm = lt_models[dic['ordinal']]
+            groups[ltm.ordinal].append((dic['fileno'], dic['src_groups']))
+            fname_hits += dic['fname_hits']
+            changes += dic['changes']
+            mags.update(dic['mags'])
+            gsim_file = self.oqparam.inputs.get('gsim_logic_tree')
+            if gsim_file:  # check TRTs
+                for src_group in dic['src_groups']:
+                    if src_group.trt not in self.gsim_lt.values:
+                        raise ValueError(
+                            "Found in %r a tectonic region type %r "
+                            "inconsistent with the ones in %r" %
+                            (ltm, src_group.trt, gsim_file))
+
+            # check applyToSources
+            for brid, srcids in self.source_model_lt.info.\
+                    applytosources.items():
+                if brid in ltm.path:
+                    for srcid in srcids:
+                        if srcid not in dic['source_ids']:
+                            raise ValueError(
+                                "The source %s is not in the source model,"
+                                " please fix applyToSources in %s or the "
+                                "source model" % (
+                                    srcid, self.source_model_lt.filename))
+        # global checks
+        idx = 0
+        grp_id = 0
+        for ltm in lt_models:
+            for fileno, grps in sorted(groups[ltm.ordinal]):
+                for grp in grps:
+                    grp.id = grp_id
+                    for src in grp:
+                        src.src_group_id = grp_id
+                        src.id = idx
+                        idx += 1
+                    grp.sources.sort(key=lambda s: s.source_id)
+                    grp.info.sort(order='source_id')
+                    ltm.src_groups.append(grp)
+                    grp_id += 1
+                    if grp_id >= TWO16:
+                        # the limit is only for event based calculations
+                        raise ValueError('There is a limit of %d src groups!' %
+                                         TWO16)
+            if self.hdf5:
+                self.store_groups(ltm.src_groups)
 
         if self.hdf5:
-            self.hdf5['source_mags'] = sorted(self.mags)
+            self.hdf5['source_mags'] = sorted(dic['mags'])
         # log if some source file is being used more than once
         dupl = 0
-        for fname, hits in self.fname_hits.items():
+        for fname, hits in fname_hits.items():
             if hits > 1:
                 logging.info('%s has been considered %d times', fname, hits)
-                if not self.changes:
+                if not changes:
                     dupl += hits
-        if self.changes:
+        if changes:
             logging.info('Applied %d changes to the composite source model',
-                         self.changes)
+                         changes)
+        return lt_models
