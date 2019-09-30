@@ -880,6 +880,10 @@ class RiskCalculator(HazardCalculator):
             getter = getters.PmapGetter(dstore, ws, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
+            if len(dstore['gmf_data/data']) == 0:
+                raise RuntimeError(
+                    'There are no GMFs available: perhaps you set '
+                    'ground_motion_fields=False or a large minimum_intensity')
         if dstore is self.datastore:
             getter.init()
         return getter
