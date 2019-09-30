@@ -134,7 +134,8 @@ class SourceReader(object):
             if os.environ.get('OQ_SAMPLE_SOURCES'):
                 sg.sources = random_filtered_sources(
                     sg.sources, self.srcfilter, sg.id)
-            for src in sg:
+            sg.info = numpy.zeros(len(sg), source_info_dt)
+            for i, src in enumerate(sg):
                 if hasattr(src, 'data'):  # nonparametric
                     srcmags = [item[0].mag for item in src.data]
                 else:
@@ -142,6 +143,11 @@ class SourceReader(object):
                                src.get_annual_occurrence_rates()]
                 mags.update(srcmags)
                 source_ids.add(src.source_id)
+                toml = sourcewriter.tomldump(src)
+                src.checksum = zlib.adler32(toml.encode('utf8'))
+                sg.info[i] = (0, src.source_id, src.code,
+                              src.num_ruptures, 0, 0, 0,
+                              src.checksum, toml)
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=changes,
                     src_groups=src_groups, mags=mags, source_ids=source_ids,
@@ -161,20 +167,12 @@ class SourceModelFactory(object):
 
     def store_groups(self, src_groups):
         """
-        :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
+        :param src_groups: a list of source groups with attribute .info
         """
-        h5 = self.hdf5
-        sources = h5['source_info']
+        sources = self.hdf5['source_info']
         for sg in src_groups:
-            srcs = []
-            for src in sg:
-                toml = sourcewriter.tomldump(src)
-                src.checksum = zlib.adler32(toml.encode('utf8'))
-                srcs.append((sg.id, src.source_id, src.code,
-                             src.num_ruptures, 0, 0, 0,
-                             src.checksum, toml))
-            if sources:
-                hdf5.extend(sources, numpy.array(srcs, source_info_dt))
+            sg.info['grp_id'] = sg.id
+            hdf5.extend(sources, sg.info)
 
     def get_ltmodels(self):
         """
@@ -205,60 +203,66 @@ class SourceModelFactory(object):
             sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
         lt_models = list(self.source_model_lt.gen_source_models(self.gsim_lt))
         if oq.calculation_mode.startswith('ucerf'):
+            idx = 0
             [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-            for sm in lt_models:
+            for grp_id, sm in enumerate(lt_models):
                 sg = copy.copy(grp)
+                sg.id = grp_id
                 sm.src_groups = [sg]
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
+                src.src_group_id = grp_id
+                src.id = idx
+                idx += 1
                 if oq.number_of_logic_tree_samples:
                     src.samples = sm.samples
                 sg.sources = [src]
                 data = [((sg.id, src.source_id, src.code, 0, 0, -1,
                           src.num_ruptures, 0, ''))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
-        else:
-            logging.info('Reading the source model(s) in parallel')
-            smap = parallel.Starmap(nrml.read_source_models, distribute=dist)
-            allargs = []
-            fileno = 0
-            for ltm in lt_models:
-                apply_unc = functools.partial(
-                    self.source_model_lt.apply_uncertainties, ltm.path)
-                for name in ltm.names.split():
-                    fname = os.path.abspath(os.path.join(smlt_dir, name))
-                    fileno += 1
-                    allargs.append((ltm, apply_unc, fname, fileno))
-            reader = SourceReader(converter, smlt_dir, self.hdf5)
-            smap = parallel.Starmap(
-                reader, allargs, h5=self.hdf5 if self.hdf5 else None)
-            # NB: h5 is None in logictree_test.py
-            groups = [[] for _ in lt_models]  # (fileno, src_groups)
-            for dic in smap:
-                ltm = lt_models[dic['ordinal']]
-                groups[ltm.ordinal].append((dic['fileno'], dic['src_groups']))
-                fname_hits += dic['fname_hits']
-                changes += dic['changes']
-                mags.update(dic['mags'])
-                gsim_file = self.oqparam.inputs.get('gsim_logic_tree')
-                if gsim_file:  # check TRTs
-                    for src_group in dic['src_groups']:
-                        if src_group.trt not in self.gsim_lt.values:
-                            raise ValueError(
-                                "Found in %r a tectonic region type %r "
-                                "inconsistent with the ones in %r" %
-                                (ltm, src_group.trt, gsim_file))
+            return lt_models
 
-                # check applyToSources
-                for brid, srcids in self.source_model_lt.info.\
-                        applytosources.items():
-                    if brid in ltm.path:
-                        for srcid in srcids:
-                            if srcid not in dic['source_ids']:
-                                raise ValueError(
-                                    "The source %s is not in the source model,"
-                                    " please fix applyToSources in %s or the "
-                                    "source model" % (
-                                        srcid, self.source_model_lt.filename))
+        logging.info('Reading the source model(s) in parallel')
+        smap = parallel.Starmap(nrml.read_source_models, distribute=dist)
+        allargs = []
+        fileno = 0
+        for ltm in lt_models:
+            apply_unc = functools.partial(
+                self.source_model_lt.apply_uncertainties, ltm.path)
+            for name in ltm.names.split():
+                fname = os.path.abspath(os.path.join(smlt_dir, name))
+                fileno += 1
+                allargs.append((ltm, apply_unc, fname, fileno))
+        reader = SourceReader(converter, smlt_dir, self.hdf5)
+        smap = parallel.Starmap(
+            reader, allargs, h5=self.hdf5 if self.hdf5 else None)
+        # NB: h5 is None in logictree_test.py
+        groups = [[] for _ in lt_models]  # (fileno, src_groups)
+        for dic in smap:
+            ltm = lt_models[dic['ordinal']]
+            groups[ltm.ordinal].append((dic['fileno'], dic['src_groups']))
+            fname_hits += dic['fname_hits']
+            changes += dic['changes']
+            mags.update(dic['mags'])
+            gsim_file = self.oqparam.inputs.get('gsim_logic_tree')
+            if gsim_file:  # check TRTs
+                for src_group in dic['src_groups']:
+                    if src_group.trt not in self.gsim_lt.values:
+                        raise ValueError(
+                            "Found in %r a tectonic region type %r "
+                            "inconsistent with the ones in %r" %
+                            (ltm, src_group.trt, gsim_file))
+
+            # check applyToSources
+            for brid, srcids in self.source_model_lt.info.\
+                    applytosources.items():
+                if brid in ltm.path:
+                    for srcid in srcids:
+                        if srcid not in dic['source_ids']:
+                            raise ValueError(
+                                "The source %s is not in the source model,"
+                                " please fix applyToSources in %s or the "
+                                "source model" % (
+                                    srcid, self.source_model_lt.filename))
         # global checks
         idx = 0
         grp_id = 0
@@ -271,6 +275,7 @@ class SourceModelFactory(object):
                         src.id = idx
                         idx += 1
                     grp.sources.sort(key=lambda s: s.source_id)
+                    grp.info.sort(order='source_id')
                     ltm.src_groups.append(grp)
                     grp_id += 1
                     if grp_id >= TWO16:
