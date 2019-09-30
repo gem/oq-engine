@@ -2323,7 +2323,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         gs_lt = GsimLogicTree(fname_gmc)
 
         mags = [5.7, 5.98, 6.26, 6.54, 6.82, 7.1]
-        for sm in SourceModelFactory(oqparam, gs_lt, ssc_lt).get_models():
+        for sm in SourceModelFactory(oqparam, gs_lt, ssc_lt).get_ltmodels():
             for src in sm.src_groups[0]:
                 if src.source_id == 'a2':
                     self.assertEqual(src.mfd.max_mag, 6.5)
