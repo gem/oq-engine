@@ -161,13 +161,13 @@ class SourceModelFactory(object):
         self.source_model_lt = source_model_lt
         self.hdf5 = h5
 
-    def store_sm(self, smodel):
+    def store_groups(self, src_groups):
         """
         :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
         """
         h5 = self.hdf5
         sources = h5['source_info']
-        for sg in smodel:
+        for sg in src_groups:
             srcs = []
             for src in sg:
                 toml = sourcewriter.tomldump(src)
@@ -250,7 +250,7 @@ class SourceModelFactory(object):
                 # check applyToSources
                 for brid, srcids in self.source_model_lt.info.\
                         applytosources.items():
-                    if brid in sm.path:
+                    if brid in ltm.path:
                         for srcid in srcids:
                             if srcid not in dic['source_ids']:
                                 raise ValueError(
@@ -266,7 +266,7 @@ class SourceModelFactory(object):
                 grp.id = grp_id
                 for src in grp:
                     src.src_group_id = grp_id
-                    src.idx = idx
+                    src.id = idx
                     idx += 1
                 grp.sources.sort(key=lambda s: s.source_id)
                 grp_id += 1
@@ -274,6 +274,8 @@ class SourceModelFactory(object):
                     # the limit is needed only for event based calculations
                     raise ValueError('There is a limit of %d src groups!' %
                                      TWO16)
+            if self.hdf5:
+                self.store_groups(ltm.src_groups)
 
         if self.hdf5:
             self.hdf5['source_mags'] = sorted(dic['mags'])
