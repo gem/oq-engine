@@ -206,12 +206,11 @@ class SourceModelFactory(object):
         for sg in smodel:
             srcs = []
             for src in sg:
-                dic = {k: v for k, v in vars(src).items()
-                       if k != 'id' and k != 'src_group_id'}
-                src.checksum = zlib.adler32(pickle.dumps(dic))
+                toml = sourcewriter.tomldump(src)
+                src.checksum = zlib.adler32(toml)
                 srcs.append((sg.id, src.source_id, src.code,
                              src.num_ruptures, 0, 0, 0,
-                             src.checksum, sourcewriter.tomldump(src)))
+                             src.checksum, toml))
             if sources:
                 hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
