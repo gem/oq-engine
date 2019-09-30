@@ -222,7 +222,6 @@ class SourceModelFactory(object):
             return lt_models
 
         logging.info('Reading the source model(s) in parallel')
-        smap = parallel.Starmap(nrml.read_source_models, distribute=dist)
         allargs = []
         fileno = 0
         for ltm in lt_models:
@@ -230,11 +229,11 @@ class SourceModelFactory(object):
                 self.source_model_lt.apply_uncertainties, ltm.path)
             for name in ltm.names.split():
                 fname = os.path.abspath(os.path.join(smlt_dir, name))
-                fileno += 1
                 allargs.append((ltm, apply_unc, fname, fileno))
-        reader = SourceReader(converter, smlt_dir, self.hdf5)
+                fileno += 1
         smap = parallel.Starmap(
-            reader, allargs, h5=self.hdf5 if self.hdf5 else None)
+            SourceReader(converter, smlt_dir, self.hdf5),
+            allargs, distribute=dist, h5=self.hdf5 if self.hdf5 else None)
         # NB: h5 is None in logictree_test.py
         groups = [[] for _ in lt_models]  # (fileno, src_groups)
         for dic in smap:
