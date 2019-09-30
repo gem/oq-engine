@@ -144,10 +144,9 @@ class SourceReader(object):
                 mags.update(srcmags)
                 source_ids.add(src.source_id)
                 toml = sourcewriter.tomldump(src)
-                src.checksum = zlib.adler32(toml.encode('utf8'))
-                sg.info[i] = (0, src.source_id, src.code,
-                              src.num_ruptures, 0, 0, 0,
-                              src.checksum, toml)
+                checksum = zlib.adler32(toml.encode('utf8'))
+                sg.info[i] = (0, src.source_id, src.code, src.num_ruptures,
+                              0, 0, 0, checksum, toml)
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=changes,
                     src_groups=src_groups, mags=mags, source_ids=source_ids,
