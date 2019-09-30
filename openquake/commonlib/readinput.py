@@ -598,7 +598,7 @@ def get_composite_source_model(oqparam, h5=None):
         logging.info('There is a logic tree on each source')
     smodels = []
     factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, h5)
-    for source_model in factory.get_models():
+    for source_model in factory.get_ltmodels():
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
         smodels.append(source_model)
