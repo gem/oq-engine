@@ -589,13 +589,9 @@ def get_composite_source_model(oqparam, h5=None):
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    smodels = []
-    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, h5)
-    for source_model in factory.get_ltmodels():
-        for src_group in source_model.src_groups:
-            src_group.sources = sorted(src_group, key=lambda s: s.source_id)
-        smodels.append(source_model)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
+    ltmodels = SourceModelFactory(
+        oqparam, gsim_lt, source_model_lt, h5).get_ltmodels()
+    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, ltmodels)
     if oqparam.is_event_based():
         # initialize the rupture rup_id numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
