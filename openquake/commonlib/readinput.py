@@ -554,13 +554,6 @@ def get_source_model_lt(oqparam, validate=True):
     return smlt
 
 
-def getid(src):
-    try:
-        return src.source_id
-    except AttributeError:
-        return src['id']
-
-
 def get_composite_source_model(oqparam, h5=None):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -600,19 +593,9 @@ def get_composite_source_model(oqparam, h5=None):
     factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, h5)
     for source_model in factory.get_ltmodels():
         for src_group in source_model.src_groups:
-            src_group.sources = sorted(src_group, key=getid)
+            src_group.sources = sorted(src_group, key=lambda s: s.source_id)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
-    for sm in csm.source_models:
-        counter = collections.Counter()
-        for sg in sm.src_groups:
-            for srcid in map(getid, sg):
-                counter[srcid] += 1
-        dupl = [srcid for srcid in counter if counter[srcid] > 1]
-        if dupl:
-            raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
-                                    % (sm, dupl))
-
     if oqparam.is_event_based():
         # initialize the rupture rup_id numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
