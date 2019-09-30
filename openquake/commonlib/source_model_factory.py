@@ -89,13 +89,11 @@ class SourceModelFactory(object):
     A class able to build source models from the logic tree and to store
     them inside the `source_info` dataset.
     """
-    def __init__(self, oqparam, gsim_lt, source_model_lt, h5=None,
-                 in_memory=True):
+    def __init__(self, oqparam, gsim_lt, source_model_lt, h5=None):
         self.oqparam = oqparam
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.hdf5 = h5
-        self.in_memory = in_memory
         if 'OQ_SAMPLE_SOURCES' in os.environ:
             self.srcfilter = calc.filters.SourceFilter(
                 h5['sitecol'], h5['oqparam'].maximum_distance)
@@ -144,36 +142,30 @@ class SourceModelFactory(object):
         smlt_dir = os.path.dirname(self.source_model_lt.filename)
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            if self.in_memory:
-                newsm = self(fname, dic[fname], apply_unc,
-                             self.oqparam.investigation_time)
-                for sg in newsm:
-                    # sample a source for each group
-                    if os.environ.get('OQ_SAMPLE_SOURCES'):
-                        sg.sources = random_filtered_sources(
-                            sg.sources, self.srcfilter, sg.id +
-                            self.oqparam.random_seed)
-                    for src in sg:
-                        if hasattr(src, 'data'):  # nonparametric
-                            srcmags = [item[0].mag for item in src.data]
-                        else:
-                            srcmags = [item[0] for item in
-                                       src.get_annual_occurrence_rates()]
-                        self.mags.update(srcmags)
-                        self.source_ids.add(src.source_id)
-                        src.src_group_id = self.grp_id
-                        src.id = idx
-                        idx += 1
-                    sg.id = self.grp_id
-                    self.grp_id += 1
-                    src_groups.append(sg)
-                if self.hdf5:
-                    self.store_sm(newsm)
-            else:  # just collect the TRT models
-                groups = logictree.read_source_groups(fname)
-                for group in groups:
-                    self.source_ids.update(src['id'] for src in group)
-                src_groups.extend(groups)
+            newsm = self(fname, dic[fname], apply_unc,
+                         self.oqparam.investigation_time)
+            for sg in newsm:
+                # sample a source for each group
+                if os.environ.get('OQ_SAMPLE_SOURCES'):
+                    sg.sources = random_filtered_sources(
+                        sg.sources, self.srcfilter, sg.id +
+                        self.oqparam.random_seed)
+                for src in sg:
+                    if hasattr(src, 'data'):  # nonparametric
+                        srcmags = [item[0].mag for item in src.data]
+                    else:
+                        srcmags = [item[0] for item in
+                                   src.get_annual_occurrence_rates()]
+                    self.mags.update(srcmags)
+                    self.source_ids.add(src.source_id)
+                    src.src_group_id = self.grp_id
+                    src.id = idx
+                    idx += 1
+                sg.id = self.grp_id
+                self.grp_id += 1
+                src_groups.append(sg)
+            if self.hdf5:
+                self.store_sm(newsm)
 
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
@@ -214,12 +206,11 @@ class SourceModelFactory(object):
         for sg in smodel:
             srcs = []
             for src in sg:
-                dic = {k: v for k, v in vars(src).items()
-                       if k != 'id' and k != 'src_group_id'}
-                src.checksum = zlib.adler32(pickle.dumps(dic))
+                toml = sourcewriter.tomldump(src)
+                src.checksum = zlib.adler32(toml.encode('utf8'))
                 srcs.append((sg.id, src.source_id, src.code,
                              src.num_ruptures, 0, 0, 0,
-                             src.checksum, sourcewriter.tomldump(src)))
+                             src.checksum, toml))
             if sources:
                 hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
@@ -231,6 +222,10 @@ class SourceModelFactory(object):
         spinning_off = self.oqparam.pointsource_distance == {'default': 0.0}
         if spinning_off:
             logging.info('Removing nodal plane and hypocenter distributions')
+        # NB: the source models file are often NOT in the shared directory
+        # (for instance in oq-engine/demos) so the processpool must be used
+        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                else 'processpool')
         smlt_dir = os.path.dirname(self.source_model_lt.filename)
         converter = sourceconverter.SourceConverter(
             oq.investigation_time,
@@ -241,29 +236,15 @@ class SourceModelFactory(object):
             oq.minimum_magnitude,
             not spinning_off,
             oq.source_id)
-        if oq.calculation_mode.startswith('ucerf'):
-            [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-            dic = {'ucerf': grp}
-        elif self.in_memory:
-            logging.info('Reading the source model(s) in parallel')
-            smap = parallel.Starmap(nrml.read_source_models,
-                                    h5=self.hdf5 if self.hdf5 else None)
-            # NB: h5 is None in logictree_test.py
-            for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
-                for name in sm.names.split():
-                    fname = os.path.abspath(os.path.join(smlt_dir, name))
-                    smap.submit([fname], converter)
-            dic = {sm.fname: sm for sm in smap}
-        else:
-            dic = {}
-        # consider only the effective realizations
         idx = 0
         if self.hdf5:
             sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
         grp_id = 0
-        for sm in self.source_model_lt.gen_source_models(self.gsim_lt):
-            if 'ucerf' in dic:
-                sg = copy.copy(dic['ucerf'])
+        lt_models = list(self.source_model_lt.gen_source_models(self.gsim_lt))
+        if oq.calculation_mode.startswith('ucerf'):
+            [grp] = nrml.to_python(oq.inputs["source_model"], converter)
+            for sm in lt_models:
+                sg = copy.copy(grp)
                 sm.src_groups = [sg]
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
@@ -277,9 +258,20 @@ class SourceModelFactory(object):
                 data = [((sg.id, src.source_id, src.code, 0, 0, -1,
                           src.num_ruptures, idx, ''))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
-            else:
+                yield sm
+        else:
+            logging.info('Reading the source model(s) in parallel')
+            smap = parallel.Starmap(nrml.read_source_models, distribute=dist,
+                                    h5=self.hdf5 if self.hdf5 else None)
+            # NB: h5 is None in logictree_test.py
+            for ltm in lt_models:
+                for name in ltm.names.split():
+                    fname = os.path.abspath(os.path.join(smlt_dir, name))
+                    smap.submit([fname], converter)
+            dic = {sm.fname: sm for sm in smap}
+            for sm in lt_models:
                 self.apply_uncertainties(sm, idx, dic)
-            yield sm
+                yield sm
 
         if self.hdf5:
             self.hdf5['source_mags'] = sorted(self.mags)
