@@ -20,9 +20,7 @@ import random
 import os.path
 import functools
 import collections
-import operator
 import logging
-import pickle
 import zlib
 import numpy
 
@@ -172,16 +170,15 @@ class SourceModelFactory(object):
         for sg in smodel:
             srcs = []
             for src in sg:
-                dic = {k: v for k, v in vars(src).items()
-                       if k != 'id' and k != 'src_group_id'}
-                src.checksum = zlib.adler32(pickle.dumps(dic))
+                toml = sourcewriter.tomldump(src)
+                src.checksum = zlib.adler32(toml.encode('utf8'))
                 srcs.append((sg.id, src.source_id, src.code,
                              src.num_ruptures, 0, 0, 0,
-                             src.checksum, sourcewriter.tomldump(src)))
+                             src.checksum, toml))
             if sources:
                 hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
-    def get_models(self):
+    def get_ltmodels(self):
         """
         :yields: :class:`openquake.commonlib.logictree.LtSourceModel` tuples
         """
@@ -189,6 +186,10 @@ class SourceModelFactory(object):
         spinning_off = self.oqparam.pointsource_distance == {'default': 0.0}
         if spinning_off:
             logging.info('Removing nodal plane and hypocenter distributions')
+        # NB: the source models file are often NOT in the shared directory
+        # (for instance in oq-engine/demos) so the processpool must be used
+        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                else 'processpool')
         smlt_dir = os.path.dirname(self.source_model_lt.filename)
         converter = sourceconverter.SourceConverter(
             oq.investigation_time,
@@ -202,31 +203,24 @@ class SourceModelFactory(object):
         mags = set()
         changes = 0
         fname_hits = collections.Counter()
-        idx = 0
         if self.hdf5:
             sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
-        grp_id = 0
         lt_models = list(self.source_model_lt.gen_source_models(self.gsim_lt))
         if oq.calculation_mode.startswith('ucerf'):
             [grp] = nrml.to_python(oq.inputs["source_model"], converter)
             for sm in lt_models:
                 sg = copy.copy(grp)
                 sm.src_groups = [sg]
-                sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
-                src.src_group_id = grp_id
-                src.id = idx
                 if oq.number_of_logic_tree_samples:
                     src.samples = sm.samples
                 sg.sources = [src]
-                idx += 1
-                grp_id += 1
                 data = [((sg.id, src.source_id, src.code, 0, 0, -1,
-                          src.num_ruptures, idx, ''))]
+                          src.num_ruptures, 0, ''))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
-                yield sm
         else:
             logging.info('Reading the source model(s) in parallel')
+            smap = parallel.Starmap(nrml.read_source_models, distribute=dist)
             allargs = []
             for ltm in lt_models:
                 apply_unc = functools.partial(
@@ -238,7 +232,7 @@ class SourceModelFactory(object):
             smap = parallel.Starmap(
                 reader, allargs, h5=self.hdf5 if self.hdf5 else None)
             # NB: h5 is None in logictree_test.py
-            for dic in sorted(smap, key=operator.itemgetter('ordinal')):
+            for dic in smap:
                 ltm = lt_models[dic['ordinal']]
                 ltm.src_groups.extend(dic['src_groups'])
                 fname_hits += dic['fname_hits']
@@ -252,17 +246,6 @@ class SourceModelFactory(object):
                                 "Found in %r a tectonic region type %r "
                                 "inconsistent with the ones in %r" %
                                 (ltm, src_group.trt, gsim_file))
-                for src_group in dic['src_groups']:
-                    src_group.id = grp_id
-                    for src in src_group:
-                        src.src_group_id = grp_id
-                        src.idx = idx
-                        idx += 1
-                    grp_id += 1
-                if grp_id >= TWO16:
-                    # the limit is needed only for event based calculations
-                    raise ValueError('There is a limit of %d src groups!' %
-                                     TWO16)
 
                 # check applyToSources
                 for brid, srcids in self.source_model_lt.info.\
@@ -275,6 +258,22 @@ class SourceModelFactory(object):
                                     " please fix applyToSources in %s or the "
                                     "source model" % (
                                         srcid, self.source_model_lt.filename))
+        # global checks
+        idx = 0
+        grp_id = 0
+        for ltm in lt_models:
+            for grp in ltm.src_groups:
+                grp.id = grp_id
+                for src in grp:
+                    src.src_group_id = grp_id
+                    src.idx = idx
+                    idx += 1
+                grp.sources.sort(key=lambda s: s.source_id)
+                grp_id += 1
+                if grp_id >= TWO16:
+                    # the limit is needed only for event based calculations
+                    raise ValueError('There is a limit of %d src groups!' %
+                                     TWO16)
 
         if self.hdf5:
             self.hdf5['source_mags'] = sorted(dic['mags'])
@@ -288,3 +287,4 @@ class SourceModelFactory(object):
         if changes:
             logging.info('Applied %d changes to the composite source model',
                          changes)
+        return lt_models
