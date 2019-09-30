@@ -119,35 +119,33 @@ class SourceReader(object):
                         src.num_ruptures = src.count_ruptures()
         return newsm
 
-    def __call__(self, ltmodel, apply_unc, fname, monitor):
+    def __call__(self, ltmodel, apply_unc, fname, fileno, monitor):
         changes = 0
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
         source_ids = set()
         src_groups = []
-        for name in ltmodel.names.split():
-            fname = os.path.abspath(os.path.join(self.smlt_dir, name))
-            [sm] = nrml.read_source_models([fname], self.converter, monitor)
-            newsm = self.makesm(fname, sm, apply_unc)
-            fname_hits[fname] += 1
-            changes += newsm.changes
-            for sg in newsm:
-                # sample a source for each group
-                if os.environ.get('OQ_SAMPLE_SOURCES'):
-                    sg.sources = random_filtered_sources(
-                        sg.sources, self.srcfilter, sg.id)
-                for src in sg:
-                    if hasattr(src, 'data'):  # nonparametric
-                        srcmags = [item[0].mag for item in src.data]
-                    else:
-                        srcmags = [item[0] for item in
-                                   src.get_annual_occurrence_rates()]
-                    mags.update(srcmags)
-                    source_ids.add(src.source_id)
-                src_groups.append(sg)
+        [sm] = nrml.read_source_models([fname], self.converter, monitor)
+        newsm = self.makesm(fname, sm, apply_unc)
+        fname_hits[fname] += 1
+        changes += newsm.changes
+        for sg in newsm:
+            # sample a source for each group
+            if os.environ.get('OQ_SAMPLE_SOURCES'):
+                sg.sources = random_filtered_sources(
+                    sg.sources, self.srcfilter, sg.id)
+            for src in sg:
+                if hasattr(src, 'data'):  # nonparametric
+                    srcmags = [item[0].mag for item in src.data]
+                else:
+                    srcmags = [item[0] for item in
+                               src.get_annual_occurrence_rates()]
+                mags.update(srcmags)
+                source_ids.add(src.source_id)
+            src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=changes,
                     src_groups=src_groups, mags=mags, source_ids=source_ids,
-                    ordinal=ltmodel.ordinal)
+                    ordinal=ltmodel.ordinal, fileno=fileno)
 
 
 class SourceModelFactory(object):
@@ -222,19 +220,22 @@ class SourceModelFactory(object):
             logging.info('Reading the source model(s) in parallel')
             smap = parallel.Starmap(nrml.read_source_models, distribute=dist)
             allargs = []
+            fileno = 0
             for ltm in lt_models:
                 apply_unc = functools.partial(
                     self.source_model_lt.apply_uncertainties, ltm.path)
                 for name in ltm.names.split():
                     fname = os.path.abspath(os.path.join(smlt_dir, name))
-                    allargs.append((ltm, apply_unc, fname))
+                    fileno += 1
+                    allargs.append((ltm, apply_unc, fname, fileno))
             reader = SourceReader(converter, smlt_dir, self.hdf5)
             smap = parallel.Starmap(
                 reader, allargs, h5=self.hdf5 if self.hdf5 else None)
             # NB: h5 is None in logictree_test.py
+            groups = [[] for _ in lt_models]  # (fileno, src_groups)
             for dic in smap:
                 ltm = lt_models[dic['ordinal']]
-                ltm.src_groups.extend(dic['src_groups'])
+                groups[ltm.ordinal].append((dic['fileno'], dic['src_groups']))
                 fname_hits += dic['fname_hits']
                 changes += dic['changes']
                 mags.update(dic['mags'])
@@ -262,18 +263,20 @@ class SourceModelFactory(object):
         idx = 0
         grp_id = 0
         for ltm in lt_models:
-            for grp in ltm.src_groups:
-                grp.id = grp_id
-                for src in grp:
-                    src.src_group_id = grp_id
-                    src.id = idx
-                    idx += 1
-                grp.sources.sort(key=lambda s: s.source_id)
-                grp_id += 1
-                if grp_id >= TWO16:
-                    # the limit is needed only for event based calculations
-                    raise ValueError('There is a limit of %d src groups!' %
-                                     TWO16)
+            for fileno, grps in sorted(groups[ltm.ordinal]):
+                for grp in grps:
+                    grp.id = grp_id
+                    for src in grp:
+                        src.src_group_id = grp_id
+                        src.id = idx
+                        idx += 1
+                    grp.sources.sort(key=lambda s: s.source_id)
+                    ltm.src_groups.append(grp)
+                    grp_id += 1
+                    if grp_id >= TWO16:
+                        # the limit is only for event based calculations
+                        raise ValueError('There is a limit of %d src groups!' %
+                                         TWO16)
             if self.hdf5:
                 self.store_groups(ltm.src_groups)
 
