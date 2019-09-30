@@ -824,7 +824,7 @@ def view_act_ruptures_by_src(token, dstore):
 
 
 Source = collections.namedtuple(
-    'Source', 'source_id code num_ruptures toml')
+    'Source', 'source_id code num_ruptures checksum')
 
 
 class String(str):
@@ -840,13 +840,13 @@ def view_dupl_sources(token, dstore):
     """
     Show the sources with the same ID and the truly duplicated sources
     """
-    array = dstore['source_info']['source_id', 'toml', 'num_ruptures']
-    dic = group_array(array, 'source_id', 'toml')
+    array = dstore['source_info']['source_id', 'checksum', 'num_ruptures']
+    dic = group_array(array, 'source_id', 'checksum')
     dupl = []
     uniq = []
     muls = []
     nr = 0
-    for (source_id, toml), group in dic.items():
+    for (source_id, checksum), group in dic.items():
         mul = len(group)
         nr += group[0]['num_ruptures']
         if mul > 1:  # duplicate
