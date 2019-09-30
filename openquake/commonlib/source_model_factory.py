@@ -21,10 +21,13 @@ import os.path
 import functools
 import collections
 import logging
+import pickle
+import zlib
 import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.hazardlib import nrml, sourceconverter, sourcewriter, calc
+from openquake.commonlib import logictree
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
@@ -35,7 +38,8 @@ source_info_dt = numpy.dtype([
     ('calc_time', numpy.float32),      # 5
     ('num_sites', numpy.float32),      # 6
     ('eff_ruptures', numpy.float32),   # 7
-    ('toml', hdf5.vstr),               # 8
+    ('checksum', numpy.uint32),        # 8
+    ('toml', hdf5.vstr),               # 9
 ])
 
 
@@ -203,8 +207,10 @@ class SourceModelFactory(object):
             srcs = []
             for src in sg:
                 toml = sourcewriter.tomldump(src)
+                src.checksum = zlib.adler32(toml.encode('utf8'))
                 srcs.append((sg.id, src.source_id, src.code,
-                             src.num_ruptures, 0, 0, 0, toml))
+                             src.num_ruptures, 0, 0, 0,
+                             src.checksum, toml))
             if sources:
                 hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
@@ -246,7 +252,7 @@ class SourceModelFactory(object):
                 idx += 1
                 grp_id += 1
                 data = [((sg.id, src.source_id, src.code, 0, 0, -1,
-                          src.num_ruptures, ''))]
+                          src.num_ruptures, idx, ''))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
                 yield sm
         else:
