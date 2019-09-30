@@ -207,7 +207,7 @@ class SourceModelFactory(object):
             srcs = []
             for src in sg:
                 toml = sourcewriter.tomldump(src)
-                src.checksum = zlib.adler32(toml)
+                src.checksum = zlib.adler32(toml.encode('utf8'))
                 srcs.append((sg.id, src.source_id, src.code,
                              src.num_ruptures, 0, 0, 0,
                              src.checksum, toml))
