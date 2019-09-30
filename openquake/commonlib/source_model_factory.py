@@ -222,6 +222,10 @@ class SourceModelFactory(object):
         spinning_off = self.oqparam.pointsource_distance == {'default': 0.0}
         if spinning_off:
             logging.info('Removing nodal plane and hypocenter distributions')
+        # NB: the source models file are often NOT in the shared directory
+        # (for instance in oq-engine/demos) so the processpool must be used
+        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                else 'processpool')
         smlt_dir = os.path.dirname(self.source_model_lt.filename)
         converter = sourceconverter.SourceConverter(
             oq.investigation_time,
@@ -257,7 +261,7 @@ class SourceModelFactory(object):
                 yield sm
         else:
             logging.info('Reading the source model(s) in parallel')
-            smap = parallel.Starmap(nrml.read_source_models,
+            smap = parallel.Starmap(nrml.read_source_models, distribute=dist,
                                     h5=self.hdf5 if self.hdf5 else None)
             # NB: h5 is None in logictree_test.py
             for ltm in lt_models:
