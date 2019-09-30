@@ -28,4 +28,4 @@ do
 done
 
 # Start celery
-/opt/openquake/bin/celery worker --workdir /opt/openquake/lib/python3.6/site-packages/openquake/engine --purge -Ofair
+exec /opt/openquake/bin/celery worker --workdir /opt/openquake/lib/python3.6/site-packages/openquake/engine --purge -Ofair
