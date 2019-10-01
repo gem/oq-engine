@@ -18,19 +18,21 @@ sudo yum install epel-release
 
 ## Add the OpenQuake packages repository
 
+The following commands add the **official stable builds** package repository:
+
 ### RHEL/CentOS 8
 
-The following command adds the official stable builds package repository:
 ```bash
 sudo yum copr enable gem/openquake-stable 
 ```
 
 ### RHEL/CentOS 7
 
-The following command adds the official stable builds package repository:
 ```bash
 curl -sL https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
 ```
+
+If you want to install a **nightly build** please read the guide about installing the **[nightly build packages on RHEL/CentOS](rhel-nightly.md)**.
 
 ## Install packages from the OpenQuake repository
 
