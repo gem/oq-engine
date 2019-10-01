@@ -3,8 +3,8 @@ classical damage hazard
 
 ============== ===================
 checksum32     3,129,914,875      
-date           2019-10-01T06:32:23
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:54
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 7, num_levels = 79, num_rlzs = 8
@@ -98,22 +98,22 @@ tax3     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ ======
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
-========= ====== ==== ============ ========= ========= ============ ======
-1         2      S    482          0.00640   7.00000   482          75,303
-1         0      S    482          0.00611   7.00000   482          78,842
-2         1      S    4            0.00611   7.00000   4.00000      654   
-2         3      X    1            2.124E-04 7.00000   1.00000      4,707 
-========= ====== ==== ============ ========= ========= ============ ======
+========= ====== ==== ============ ========= ========= ============ =======
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
+========= ====== ==== ============ ========= ========= ============ =======
+1         0      S    482          0.00580   7.00000   482          83,038 
+2         1      S    4            0.00471   7.00000   4.00000      849    
+1         2      S    482          0.00324   7.00000   482          148,607
+2         3      X    1            1.850E-04 7.00000   1.00000      5,405  
+========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.01862   3     
-X    2.124E-04 1     
+S    0.01375   3     
+X    1.850E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -124,8 +124,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.01611 0.00459   0.01287 0.01936 2      
-preclassical       0.00684 1.827E-04 0.00663 0.00696 3      
+SourceReader       0.01300 4.166E-04 0.01270 0.01329 2      
+preclassical       0.00509 0.00141   0.00355 0.00634 3      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -139,12 +139,12 @@ preclassical srcs=13.56 KB params=3.74 KB gsims=810 B    1.05 KB
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6411              time_sec  memory_mb counts
+calc_6566              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.03310   0.0       1     
-total SourceReader     0.03223   0.0       2     
-total preclassical     0.02052   0.0       3     
-store source_info      0.00250   0.0       1     
-aggregate curves       9.704E-04 0.0       3     
-reading exposure       6.478E-04 0.0       1     
+composite source model 0.03468   0.0       1     
+total SourceReader     0.02600   0.0       2     
+total preclassical     0.01526   0.0       3     
+store source_info      0.00258   0.0       1     
+aggregate curves       9.222E-04 0.0       3     
+reading exposure       6.289E-04 0.0       1     
 ====================== ========= ========= ======

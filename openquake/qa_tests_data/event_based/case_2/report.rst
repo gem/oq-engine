@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 2
 
 ============== ===================
 checksum32     3,182,629,131      
-date           2019-10-01T06:32:28
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:59
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = ?
@@ -39,6 +39,14 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       3,000        0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
@@ -58,7 +66,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00657 NaN    0.00657 0.00657 1      
+SourceReader       0.00666 NaN    0.00666 0.00666 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -71,8 +79,8 @@ SourceReader      28.96 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6445              time_sec memory_mb counts
+calc_6600              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.01429  0.0       1     
-total SourceReader     0.00657  0.0       1     
+composite source model 0.01451  0.0       1     
+total SourceReader     0.00666  0.0       1     
 ====================== ======== ========= ======

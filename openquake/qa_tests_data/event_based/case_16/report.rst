@@ -3,8 +3,8 @@ Reduced Hazard Italy
 
 ============== ===================
 checksum32     1,879,307,037      
-date           2019-10-01T06:32:26
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:57
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 148, num_levels = 30, num_rlzs = ?
@@ -40,6 +40,14 @@ job_ini                 `job.ini <job.ini>`_
 site_model              `site_model.csv <site_model.csv>`_                          
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
+
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       2,295        0.0         
+====== ========= ============ ============
 
 Exposure model
 --------------
@@ -89,7 +97,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.01852 NaN    0.01852 0.01852 1      
+SourceReader       0.01919 NaN    0.01919 0.01919 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -102,9 +110,9 @@ SourceReader      4.82 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6433              time_sec memory_mb counts
+calc_6588              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.02932  0.0       1     
-total SourceReader     0.01852  0.0       1     
-reading exposure       0.00260  0.0       1     
+composite source model 0.03025  0.0       1     
+total SourceReader     0.01919  0.0       1     
+reading exposure       0.00259  0.0       1     
 ====================== ======== ========= ======

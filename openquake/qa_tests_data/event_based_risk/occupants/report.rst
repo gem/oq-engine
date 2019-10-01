@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     687,330,760        
-date           2019-10-01T06:32:30
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:01
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -94,7 +94,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =====
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
 ========= ====== ==== ============ ========= ========= ============ =====
-1         0      S    482          0.05173   7.00000   2.00000      38   
+1         0      S    482          0.04193   7.00000   2.00000      47   
 ========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
@@ -102,15 +102,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.05173   1     
+S    0.04193   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00446 NaN    0.00446 0.00446 1      
-sample_ruptures    0.08668 NaN    0.08668 0.08668 1      
+SourceReader       0.00346 NaN    0.00346 0.00346 1      
+sample_ruptures    0.07018 NaN    0.07018 0.07018 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -124,14 +124,14 @@ sample_ruptures      69.7 KB
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_6449                time_sec  memory_mb counts
+calc_6604                time_sec  memory_mb counts
 ======================== ========= ========= ======
-EventBasedCalculator.run 0.17098   0.0       1     
-total sample_ruptures    0.08668   0.0       1     
-saving events            0.02432   0.0       1     
-composite source model   0.01300   0.0       1     
-total SourceReader       0.00446   0.0       1     
-saving ruptures          0.00266   0.0       1     
-store source_info        0.00238   0.0       1     
-reading exposure         6.137E-04 0.0       1     
+EventBasedCalculator.run 0.17511   0.0       1     
+total sample_ruptures    0.07018   0.0       1     
+saving events            0.02216   0.0       1     
+composite source model   0.01167   0.0       1     
+total SourceReader       0.00346   0.0       1     
+saving ruptures          0.00223   0.0       1     
+store source_info        0.00204   0.0       1     
+reading exposure         7.594E-04 0.0       1     
 ======================== ========= ========= ======

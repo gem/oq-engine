@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     3,403,305,238      
-date           2019-10-01T06:32:38
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:09
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 1, num_levels = 6, num_rlzs = 1
@@ -75,21 +75,21 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =====
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
 ========= ====== ==== ============ ========= ========= ============ =====
-case_08   0      N    1            0.00129   1.00000   1.00000      772  
-case_04   0      N    1            0.00123   1.00000   1.00000      810  
-case_12   0      N    2            0.00114   1.00000   1.00000      876  
-case_01   0      N    1            0.00113   1.00000   1.00000      888  
-case_14   0      N    2            0.00103   1.00000   1.00000      968  
-case_03   0      N    1            0.00102   1.00000   1.00000      981  
-case_02   0      N    1            9.933E-04 1.00000   1.00000      1,007
-case_13   0      N    2            9.878E-04 1.00000   1.00000      1,012
-case_15   0      N    2            9.770E-04 1.00000   1.00000      1,024
-case_06   0      N    1            9.573E-04 1.00000   1.00000      1,045
-case_10   0      N    1            9.489E-04 1.00000   1.00000      1,054
-case_07   0      N    1            8.972E-04 1.00000   1.00000      1,115
-case_05   0      N    1            8.335E-04 1.00000   1.00000      1,200
-case_09   0      N    1            8.192E-04 1.00000   1.00000      1,221
-case_11   0      N    1            4.020E-04 0.0       0.0          0.0  
+case_04   0      N    1            0.00142   1.00000   1.00000      704  
+case_01   0      N    1            0.00130   1.00000   1.00000      771  
+case_14   0      N    2            0.00126   1.00000   1.00000      793  
+case_08   0      N    1            0.00123   1.00000   1.00000      813  
+case_12   0      N    2            0.00123   1.00000   1.00000      815  
+case_13   0      N    2            0.00122   1.00000   1.00000      821  
+case_02   0      N    1            0.00119   1.00000   1.00000      840  
+case_15   0      N    2            0.00119   1.00000   1.00000      842  
+case_03   0      N    1            0.00117   1.00000   1.00000      854  
+case_06   0      N    1            0.00113   1.00000   1.00000      883  
+case_10   0      N    1            0.00113   1.00000   1.00000      888  
+case_07   0      N    1            0.00100   1.00000   1.00000      995  
+case_05   0      N    1            9.971E-04 1.00000   1.00000      1,003
+case_09   0      N    1            9.680E-04 1.00000   1.00000      1,033
+case_11   0      N    1            4.623E-04 0.0       0.0          0.0  
 ========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
@@ -97,15 +97,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    0.01466   15    
+N    0.01689   15    
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.67553 NaN    0.67553 0.67553 1      
-classical          0.01647 NaN    0.01647 0.01647 1      
+SourceReader       0.66992 NaN    0.66992 0.66992 1      
+classical          0.01873 NaN    0.01873 0.01873 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -119,14 +119,14 @@ classical    group=2.38 MB param=533 B src_filter=222 B 2.66 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6477              time_sec memory_mb counts
+calc_6632              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.69430  4.58594   1     
-total SourceReader     0.67553  3.20703   1     
-total classical        0.01647  1.03125   1     
-aggregate curves       0.01142  0.0       1     
-make_contexts          0.00596  0.0       19    
-store source_info      0.00503  3.08594   1     
-computing mean_std     0.00150  0.0       14    
-get_poes               0.00148  0.0       14    
+composite source model 0.68821  4.71484   1     
+total SourceReader     0.66992  3.70703   1     
+total classical        0.01873  1.03125   1     
+aggregate curves       0.00996  0.0       1     
+make_contexts          0.00707  0.0       19    
+store source_info      0.00435  3.08594   1     
+get_poes               0.00175  0.0       14    
+computing mean_std     0.00155  0.0       14    
 ====================== ======== ========= ======
