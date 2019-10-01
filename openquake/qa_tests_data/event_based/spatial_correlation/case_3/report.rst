@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 
 ============== ===================
 checksum32     1,038,141,016      
-date           2019-09-24T15:21:04
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T06:08:19
+engine_version 3.8.0-gite0871b5c35
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -58,20 +58,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00155 NaN    0.00155 0.00155 1      
+SourceReader       0.00199 NaN    0.00199 0.00199 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=128 B 1.53 KB 
-================== ============================ ========
+============ ==== ========
+task         sent received
+SourceReader      2.58 KB 
+============ ==== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_1778                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.00155  0.0       1     
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_23120             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.01461  0.0       1     
+total SourceReader     0.00199  0.0       1     
+====================== ======== ========= ======

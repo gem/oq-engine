@@ -3,8 +3,8 @@ Event Based PSHA
 
 ============== ===================
 checksum32     269,549,222        
-date           2019-09-24T15:21:04
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T06:08:14
+engine_version 3.8.0-gite0871b5c35
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -58,20 +58,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.02420 NaN    0.02420 0.02420 1      
+SourceReader       0.02206 NaN    0.02206 0.02206 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=102 B 23.88 KB
-================== ============================ ========
+============ ==== ========
+task         sent received
+SourceReader      25.36 KB
+============ ==== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_1776                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.02420  0.0       1     
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_23104             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.12963  0.0       1     
+total SourceReader     0.02206  0.0       1     
+====================== ======== ========= ======

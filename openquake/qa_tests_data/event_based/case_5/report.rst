@@ -3,8 +3,8 @@ Germany_SHARE Combined Model event_based
 
 ============== ===================
 checksum32     1,250,935,976      
-date           2019-09-24T15:21:03
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T06:08:14
+engine_version 3.8.0-gite0871b5c35
 ============== ===================
 
 num_sites = 100, num_levels = 1, num_rlzs = ?
@@ -61,20 +61,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.05323 0.06518 0.00871 0.12804 3      
+SourceReader       0.05802 0.06167 0.01128 0.12792 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=942 B fnames=383 B 47.22 KB
-================== ============================ ========
+============ ======================================== =========
+task         sent                                     received 
+SourceReader apply_unc=6 KB ltmodel=620 B fname=353 B 106.54 KB
+============ ======================================== =========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_1772                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.15968  0.40625   3     
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_23102             time_sec memory_mb counts
+====================== ======== ========= ======
+total SourceReader     0.17407  0.77344   3     
+composite source model 0.14608  0.29297   1     
+====================== ======== ========= ======
