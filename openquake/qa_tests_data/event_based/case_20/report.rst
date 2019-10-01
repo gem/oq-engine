@@ -3,8 +3,8 @@ British Columbia With Vs30
 
 ============== ===================
 checksum32     226,163,923        
-date           2019-10-01T06:08:18
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:27
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -78,22 +78,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.10582 0.02424 0.07539 0.13416 5      
+SourceReader       0.05502 0.01303 0.04311 0.07097 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-============ ========================================== ========
-task         sent                                       received
-SourceReader apply_unc=8.4 KB ltmodel=985 B fname=535 B 22.79 KB
-============ ========================================== ========
+============ =========================================== ========
+task         sent                                        received
+SourceReader apply_unc=8.64 KB ltmodel=985 B fname=570 B 22.82 KB
+============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_23117             time_sec memory_mb counts
+calc_6437              time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.52911  0.0       5     
-composite source model 0.22089  0.0       1     
-reading exposure       0.00178  0.0       1     
+total SourceReader     0.27510  0.0       5     
+composite source model 0.08910  0.0       1     
+reading exposure       0.00189  0.0       1     
 ====================== ======== ========= ======
