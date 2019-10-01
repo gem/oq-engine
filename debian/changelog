@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Removed an obsolete check on dependent calculations
+  * Fixed the check on dependent calculations
   * Specifying at the same time both a grid and individual sites is an error
 
   [Daniele Viganò]
