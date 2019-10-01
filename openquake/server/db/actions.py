@@ -339,6 +339,13 @@ def del_calc(db, job_id, user, force=False):
     :returns: None if everything went fine or an error message
     """
     job_id = int(job_id)
+    dependent = db(
+        "SELECT id FROM job WHERE hazard_calculation_id=?x "
+        "AND status != 'deleted'", job_id)
+    if not force and dependent:
+        return {"error": 'Cannot delete calculation %d: there '
+                'are calculations '
+                'dependent from it: %s' % (job_id, [j.id for j in dependent])}
     try:
         owner, path = db('SELECT user_name, ds_calc_dir FROM job WHERE id=?x',
                          job_id, one=True)
