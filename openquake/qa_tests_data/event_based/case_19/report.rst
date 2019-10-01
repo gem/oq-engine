@@ -3,8 +3,8 @@ Vancouver - 5 branches - 5 Years
 
 ============== ===================
 checksum32     2,220,417,399      
-date           2019-10-01T06:32:28
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:59
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -40,6 +40,16 @@ site_model              `Vs30_Vancouver.xml <Vs30_Vancouver.xml>`_
 source_model_logic_tree `ssmLT_0.xml <ssmLT_0.xml>`_                  
 ======================= ==============================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       1,971        0.0         
+1      0.0       42,533       0.0         
+2      0.0       54,576       0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
@@ -60,7 +70,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.64021 NaN    0.64021 0.64021 1      
+SourceReader       0.64034 NaN    0.64034 0.64034 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -73,8 +83,8 @@ SourceReader      17.96 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6447              time_sec memory_mb counts
+calc_6602              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.65307  0.0       1     
-total SourceReader     0.64021  0.0       1     
+composite source model 0.65391  0.50391   1     
+total SourceReader     0.64034  0.0       1     
 ====================== ======== ========= ======

@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     4,129,458,072      
-date           2019-10-01T06:32:31
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:01
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 281, num_levels = 50, num_rlzs = 1
@@ -103,8 +103,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
 ========= ====== ==== ============ ========= ========= ============ =======
-D         1      C    3,345        3.68852   281       2.00000      0.54222
-F         0      C    2,348        2.33714   281       2.00000      0.85575
+D         1      C    3,345        3.81940   281       2.00000      0.52364
+F         0      C    2,348        2.34640   281       2.00000      0.85237
 ========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
@@ -112,15 +112,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    6.02566   2     
+C    6.16580   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.19165 NaN     0.19165 0.19165 1      
-sample_ruptures    3.02943 0.96598 2.34638 3.71248 2      
+SourceReader       0.19787 NaN     0.19787 0.19787 1      
+sample_ruptures    3.10067 1.05358 2.35567 3.84566 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -134,14 +134,14 @@ sample_ruptures param=9.4 KB sources=2.39 KB srcfilter=444 B 45.82 KB
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_6456                time_sec memory_mb counts
+calc_6611                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    6.05887  3.43750   2     
-EventBasedCalculator.run 4.33460  3.41406   1     
-composite source model   0.19951  0.0       1     
-total SourceReader       0.19165  0.0       1     
-reading exposure         0.04463  0.0       1     
-saving events            0.02595  0.25781   1     
-saving ruptures          0.00920  0.0       2     
-store source_info        0.00236  0.0       1     
+total sample_ruptures    6.20133  2.78516   2     
+EventBasedCalculator.run 4.48683  2.73828   1     
+composite source model   0.20699  0.25391   1     
+total SourceReader       0.19787  0.25391   1     
+reading exposure         0.04460  0.0       1     
+saving events            0.02570  0.25781   1     
+saving ruptures          0.00865  0.0       2     
+store source_info        0.00279  0.77344   1     
 ======================== ======== ========= ======

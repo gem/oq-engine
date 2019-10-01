@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     1,634,090,954      
-date           2019-10-01T06:32:30
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:01
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 7, num_levels = 46, num_rlzs = 8
@@ -108,10 +108,10 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =====
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
 ========= ====== ==== ============ ========= ========= ============ =====
-1         0      S    482          0.05523   7.00000   0.0          0.0  
-1         2      S    482          0.04186   7.00000   0.0          0.0  
-2         1      S    4            0.00483   7.00000   2.00000      413  
-2         3      X    1            3.946E-04 7.00000   0.0          0.0  
+1         2      S    482          0.05688   7.00000   0.0          0.0  
+1         0      S    482          0.05201   7.00000   0.0          0.0  
+2         1      S    4            0.00469   7.00000   2.00000      426  
+2         3      X    1            1.948E-04 7.00000   0.0          0.0  
 ========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
@@ -119,8 +119,8 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.10192   3     
-X    3.946E-04 1     
+S    0.11357   3     
+X    1.948E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -129,12 +129,12 @@ Found 2 unique sources and 1 duplicate sources with multiplicity 2.0: ['1']
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-SourceReader       0.01227 0.00167   0.01109 0.01345 2      
-compute_gmfs       0.03150 7.574E-04 0.03083 0.03232 3      
-sample_ruptures    0.03046 0.02742   0.00326 0.06144 4      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+SourceReader       0.01135 0.00816 0.00558 0.01711 2      
+compute_gmfs       0.02891 0.00344 0.02534 0.03220 3      
+sample_ruptures    0.03377 0.03151 0.00173 0.06319 4      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
@@ -148,21 +148,21 @@ sample_ruptures param=21.88 KB sources=14.04 KB srcfilter=888 B  2.3 KB
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_6454                time_sec  memory_mb counts
+calc_6609                time_sec  memory_mb counts
 ======================== ========= ========= ======
-EventBasedCalculator.run 0.33936   0.77344   1     
-total sample_ruptures    0.12185   0.31641   4     
-total compute_gmfs       0.09451   0.06250   3     
-building hazard          0.03306   0.0       3     
-getting ruptures         0.03232   0.06250   3     
-composite source model   0.03196   0.51562   1     
-total SourceReader       0.02453   0.0       2     
-building hazard curves   0.01837   0.0       80    
-saving events            0.00910   0.0       1     
-saving gmfs              0.00695   0.0       3     
-saving gmf_data/indices  0.00564   0.0       1     
-aggregating hcurves      0.00395   0.0       3     
-store source_info        0.00246   0.0       1     
-saving ruptures          0.00227   0.0       1     
-reading exposure         6.835E-04 0.0       1     
+EventBasedCalculator.run 0.31275   1.03125   1     
+total sample_ruptures    0.13507   0.0       4     
+total compute_gmfs       0.08674   1.02734   3     
+composite source model   0.03848   1.03125   1     
+building hazard          0.03572   0.0       3     
+total SourceReader       0.02269   0.0       2     
+getting ruptures         0.02221   1.02734   3     
+building hazard curves   0.01981   0.0       80    
+saving events            0.00922   0.0       1     
+saving gmfs              0.00640   0.0       3     
+saving gmf_data/indices  0.00565   0.0       1     
+aggregating hcurves      0.00338   0.0       3     
+saving ruptures          0.00279   0.0       1     
+store source_info        0.00251   0.0       1     
+reading exposure         6.385E-04 0.0       1     
 ======================== ========= ========= ======

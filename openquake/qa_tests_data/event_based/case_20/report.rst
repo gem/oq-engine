@@ -3,8 +3,8 @@ British Columbia With Vs30
 
 ============== ===================
 checksum32     226,163,923        
-date           2019-10-01T06:32:27
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:58
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -40,6 +40,18 @@ job_ini                 `job.ini <job.ini>`_
 site_model              `vs30_a.xml <vs30_a.xml>`_ `vs30_b.xml <vs30_b.xml>`_
 source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_                             
 ======================= =====================================================
+
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       8,778        0.0         
+1      0.0       15,618       0.0         
+2      0.0       8,778        0.0         
+3      0.0       8,778        0.0         
+4      0.0       15,618       0.0         
+====== ========= ============ ============
 
 Exposure model
 --------------
@@ -78,7 +90,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.05502 0.01303 0.04311 0.07097 5      
+SourceReader       0.05762 0.01266 0.04683 0.07271 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -91,9 +103,9 @@ SourceReader apply_unc=8.64 KB ltmodel=985 B fname=570 B 22.82 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6437              time_sec memory_mb counts
+calc_6592              time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.27510  0.0       5     
-composite source model 0.08910  0.0       1     
-reading exposure       0.00189  0.0       1     
+total SourceReader     0.28811  0.23828   5     
+composite source model 0.09005  0.0       1     
+reading exposure       0.00191  0.0       1     
 ====================== ======== ========= ======

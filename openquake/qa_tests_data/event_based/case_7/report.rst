@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     1,264,506,295      
-date           2019-10-01T06:32:27
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:58
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 3, num_levels = 7, num_rlzs = ?
@@ -39,6 +39,15 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       2,456        0.0         
+1      0.0       2,456        0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
@@ -56,10 +65,10 @@ A    0.0       2
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-SourceReader       0.05626 0.00276 0.05431 0.05821 2      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.06429 5.304E-04 0.06391 0.06466 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
@@ -71,8 +80,8 @@ SourceReader apply_unc=2.28 KB ltmodel=378 B fname=212 B 12.63 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6440              time_sec memory_mb counts
+calc_6595              time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.11253  0.0       2     
-composite source model 0.08519  0.25781   1     
+total SourceReader     0.12857  0.0       2     
+composite source model 0.08730  0.25781   1     
 ====================== ======== ========= ======

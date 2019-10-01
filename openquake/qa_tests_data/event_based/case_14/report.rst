@@ -3,8 +3,8 @@ Hazard South Africa
 
 ============== ===================
 checksum32     3,741,932,100      
-date           2019-10-01T06:32:27
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:57
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 18, num_levels = 1, num_rlzs = ?
@@ -40,6 +40,23 @@ site_model              `Site_model_South_Africa.xml <Site_model_South_Africa.xm
 source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_                                    
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       480          0.0         
+1      0.0       12,690       0.0         
+2      0.0       23,199       0.0         
+3      0.0       84           0.0         
+4      0.0       8            0.0         
+5      0.0       320          0.0         
+6      0.0       6,345        0.0         
+7      0.0       12,654       0.0         
+8      0.0       168          0.0         
+9      0.0       52           0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
@@ -59,7 +76,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.11040 0.12279 0.00415 0.30939 10     
+SourceReader       0.10403 0.11809 0.00412 0.30501 10     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -72,8 +89,8 @@ SourceReader apply_unc=40.83 KB ltmodel=3.29 KB fname=1.04 KB 41.29 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6436              time_sec memory_mb counts
+calc_6591              time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     1.10403  0.58984   10    
-composite source model 0.33345  0.0       1     
+total SourceReader     1.04034  0.25391   10    
+composite source model 0.33184  0.0       1     
 ====================== ======== ========= ======

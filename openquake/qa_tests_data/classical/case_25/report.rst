@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2019-10-01T06:32:36
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:07
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 6, num_levels = 3, num_rlzs = 1
@@ -76,7 +76,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
 ========= ====== ==== ============ ========= ========= ============ =======
-1         0      A    440          0.00226   6.00000   440          194,283
+1         0      A    440          0.00227   6.00000   440          194,058
 ========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
@@ -84,15 +84,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00226   1     
+A    0.00227   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00940 NaN    0.00940 0.00940 1      
-preclassical       0.00280 NaN    0.00280 0.00280 1      
+SourceReader       0.00961 NaN    0.00961 0.00961 1      
+preclassical       0.00279 NaN    0.00279 0.00279 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -106,11 +106,11 @@ preclassical srcs=2.03 KB params=517 B srcfilter=222 B 342 B
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6466              time_sec  memory_mb counts
+calc_6621              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01821   0.0       1     
-total SourceReader     0.00940   0.0       1     
-total preclassical     0.00280   0.0       1     
-store source_info      0.00238   0.0       1     
-aggregate curves       2.425E-04 0.0       1     
+composite source model 0.01842   0.0       1     
+total SourceReader     0.00961   0.0       1     
+total preclassical     0.00279   0.0       1     
+store source_info      0.00255   0.0       1     
+aggregate curves       2.635E-04 0.0       1     
 ====================== ========= ========= ======
