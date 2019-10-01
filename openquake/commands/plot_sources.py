@@ -18,6 +18,7 @@
 import shapely.wkt
 from openquake.baselib import sap
 from openquake.commonlib import util
+from openquake.hazardlib.geo.utils import cross_idl
 
 
 @sap.script
@@ -29,25 +30,39 @@ def plot_sources(calc_id=-1):
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
     dstore = util.read(calc_id)
-    wkts = dstore['source_info']['wkt']
+    info = dstore['source_info'][()]
+    sitecol = dstore['sitecol']
+    lons, lats = sitecol.lons, sitecol.lats
+    if len(lons) > 1 and cross_idl(*lons):
+        lons %= 360
     fig, ax = p.subplots()
     ax.grid(True)
     minxs = []
     maxxs = []
     minys = []
     maxys = []
-    for wkt in wkts:
-        if wkt.startswith('POLYGON'):
-            poly = shapely.wkt.loads(wkt)
+    n = 0
+    tot = 0
+    for rec in info:
+        if rec['wkt'].startswith('POLYGON'):
+            poly = shapely.wkt.loads(rec['wkt'])
             minx, miny, maxx, maxy = poly.bounds
             minxs.append(minx)
             maxxs.append(maxx)
             minys.append(miny)
             maxys.append(maxy)
-            pp = PolygonPatch(poly, alpha=0.1)
+            if rec['num_sites']:  # not filtered out
+                alpha = .3
+                n += 1
+            else:
+                alpha = .1
+            pp = PolygonPatch(poly, alpha=alpha)
             ax.add_patch(pp)
+            tot += 1
+    ax.scatter(lons, lats, marker='o', color='red')
     ax.set_xlim(min(minxs), max(maxxs))
     ax.set_ylim(min(minys), max(maxys))
+    ax.set_title('%d/%d sources' % (n, tot))
     p.show()
 
 
