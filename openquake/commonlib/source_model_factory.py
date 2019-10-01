@@ -37,7 +37,8 @@ source_info_dt = numpy.dtype([
     ('num_sites', numpy.float32),      # 6
     ('eff_ruptures', numpy.float32),   # 7
     ('checksum', numpy.uint32),        # 8
-    ('toml', hdf5.vstr),               # 9
+    ('wkt', hdf5.vstr),                # 9
+    ('toml', hdf5.vstr),               # 10
 ])
 
 
@@ -145,9 +146,8 @@ class SourceReader(object):
                 source_ids.add(src.source_id)
                 toml = sourcewriter.tomldump(src)
                 checksum = zlib.adler32(toml.encode('utf8'))
-                src.wkt()
                 sg.info[i] = (0, src.source_id, src.code, src.num_ruptures,
-                              0, 0, 0, checksum, toml)
+                              0, 0, 0, checksum, src.wkt(), toml)
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=changes,
                     src_groups=src_groups, mags=mags, source_ids=source_ids,
@@ -190,7 +190,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
                 src.samples = ltm.samples
             sg.sources = [src]
             data = [((sg.id, src.source_id, src.code, 0, 0, -1,
-                      src.num_ruptures, 0, ''))]
+                      src.num_ruptures, 0, '', ''))]
             hdf5.extend(sources, numpy.array(data, source_info_dt))
         return lt_models
 
