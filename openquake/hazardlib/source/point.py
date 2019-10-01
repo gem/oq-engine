@@ -328,7 +328,7 @@ class PointSource(ParametricSeismicSource):
         :returns: the geometry as an array of shape (1, 3)
         """
         loc = self.location
-        return numpy.array([[loc.x, loc.y, loc.z]], numpy.float32)
+        return 'Point(%s %s)' % (loc.x, loc.y)
 
 
 def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
