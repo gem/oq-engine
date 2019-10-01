@@ -13,23 +13,35 @@ For Fedora please check ["Installing the OpenQuake Engine on Fedora"](fedora.md)
 The [Extra Packages for Enterprise Linux (EPEL)](https://fedoraproject.org/wiki/EPEL) repository is required: 
 
 ```bash
-sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo yum install epel-release
 ```
 
-The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
+## Add the OpenQuake packages repository
 
-## Install packages from the OpenQuake repository
-If you want to upgrade an existing installation see **[upgrading](../upgrading/rhel.md)**.
+### RHEL/CentOS 8
+
+The following command adds the official stable builds package repository:
+```bash
+sudo yum copr enable gem/openquake-stable 
+```
+
+### RHEL/CentOS 7
 
 The following command adds the official stable builds package repository:
 ```bash
 curl -sL https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
 ```
 
+## Install packages from the OpenQuake repository
+
+If you want to upgrade an existing installation see **[upgrading](../upgrading/rhel.md)**.
+
 Then to install the OpenQuake Engine and its libraries run
 ```bash
 sudo yum install python3-oq-engine
 ```
+
+The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
 
 ## Configure the system services
 
