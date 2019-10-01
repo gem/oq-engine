@@ -3,8 +3,8 @@ Test case for the SplitSigma modified GMPE
 
 ============== ===================
 checksum32     4,125,479,680      
-date           2019-10-01T06:08:17
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:25
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 36, num_levels = 40, num_rlzs = ?
@@ -58,7 +58,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.01529 NaN    0.01529 0.01529 1      
+SourceReader       0.01536 NaN    0.01536 0.01536 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -71,8 +71,8 @@ SourceReader      3.42 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_23112             time_sec memory_mb counts
+calc_6422              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.02727  0.0       1     
-total SourceReader     0.01529  0.0       1     
+composite source model 0.02503  0.0       1     
+total SourceReader     0.01536  0.0       1     
 ====================== ======== ========= ======

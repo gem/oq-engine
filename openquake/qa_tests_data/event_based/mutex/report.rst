@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     3,529,984,501      
-date           2019-10-01T06:08:15
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:27
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 1, num_levels = 46, num_rlzs = ?
@@ -58,7 +58,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.52289 NaN    0.52289 0.52289 1      
+SourceReader       0.46771 NaN    0.46771 0.46771 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -71,8 +71,8 @@ SourceReader      1.62 MB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_23106             time_sec memory_mb counts
+calc_6443              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.54782  7.54297   1     
-total SourceReader     0.52289  3.06250   1     
+composite source model 0.48292  7.79688   1     
+total SourceReader     0.46771  3.24219   1     
 ====================== ======== ========= ======

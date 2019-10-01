@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2019-10-01T06:08:40
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:37
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = 1
@@ -75,7 +75,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ ======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
 ========= ====== ==== ============ ========= ========= ============ ======
-1         0      C    49           0.00196   1.00000   49           25,048
+1         0      C    49           0.00442   1.00000   49           11,080
 ========= ====== ==== ============ ========= ========= ============ ======
 
 Computation times by source typology
@@ -83,15 +83,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    0.00196   1     
+C    0.00442   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.11822 NaN    0.11822 0.11822 1      
-preclassical       0.00225 NaN    0.00225 0.00225 1      
+SourceReader       0.09907 NaN    0.09907 0.09907 1      
+preclassical       0.00495 NaN    0.00495 0.00495 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -99,17 +99,17 @@ Data transfer
 ============ ========================================= ========
 task         sent                                      received
 SourceReader                                           2.59 KB 
-preclassical srcs=1.15 KB params=517 B srcfilter=223 B 342 B   
+preclassical srcs=1.15 KB params=517 B srcfilter=222 B 342 B   
 ============ ========================================= ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_23164             time_sec  memory_mb counts
+calc_6470              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.12597   0.0       1     
-total SourceReader     0.11822   0.0       1     
-total preclassical     0.00225   0.0       1     
-store source_info      0.00207   0.0       1     
-aggregate curves       2.091E-04 0.0       1     
+composite source model 0.10628   0.0       1     
+total SourceReader     0.09907   0.0       1     
+total preclassical     0.00495   0.0       1     
+store source_info      0.00215   0.0       1     
+aggregate curves       2.027E-04 0.0       1     
 ====================== ========= ========= ======
