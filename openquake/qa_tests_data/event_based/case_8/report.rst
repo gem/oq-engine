@@ -3,8 +3,8 @@ Event Based from NonParametric source
 
 ============== ===================
 checksum32     196,267,185        
-date           2019-09-24T15:21:04
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T06:08:17
+engine_version 3.8.0-gite0871b5c35
 ============== ===================
 
 num_sites = 3, num_levels = 7, num_rlzs = ?
@@ -58,20 +58,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.06329 NaN    0.06329 0.06329 1      
+SourceReader       0.04540 NaN    0.04540 0.04540 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=108 B 15.03 KB
-================== ============================ ========
+============ ==== ========
+task         sent received
+SourceReader      18.72 KB
+============ ==== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_1775                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.06329  0.38672   1     
-======================== ======== ========= ======
+====================== ======== ========= ======
+calc_23110             time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.05313  0.0       1     
+total SourceReader     0.04540  0.0       1     
+====================== ======== ========= ======
