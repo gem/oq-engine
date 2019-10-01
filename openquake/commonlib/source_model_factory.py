@@ -145,6 +145,7 @@ class SourceReader(object):
                 source_ids.add(src.source_id)
                 toml = sourcewriter.tomldump(src)
                 checksum = zlib.adler32(toml.encode('utf8'))
+                src.wkt()
                 sg.info[i] = (0, src.source_id, src.code, src.num_ruptures,
                               0, 0, 0, checksum, toml)
             src_groups.append(sg)

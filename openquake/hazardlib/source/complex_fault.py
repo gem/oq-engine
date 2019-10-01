@@ -263,7 +263,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         return ComplexFaultSurface.surface_projection_from_fault_data(
             self.edges)
 
-    def geom(self):
+    def wkt(self):
         """
         :returns: the geometry as a WKT string
         """
