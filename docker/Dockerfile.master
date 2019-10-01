@@ -18,7 +18,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 FROM openquake/engine
-MAINTAINER Daniele Viganò <daniele@openquake.org>
+LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
+      vendor="GEM Foundation"
 
 ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
 
