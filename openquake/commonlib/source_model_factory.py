@@ -153,148 +153,131 @@ class SourceReader(object):
                     ordinal=ltmodel.ordinal, fileno=fileno)
 
 
-class SourceModelFactory(object):
+def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
     """
-    A class able to build source models from the logic tree and to store
+    Build source models from the logic tree and to store
     them inside the `source_info` dataset.
     """
-    def __init__(self, oqparam, gsim_lt, source_model_lt, h5=None):
-        self.oqparam = oqparam
-        self.gsim_lt = gsim_lt
-        self.source_model_lt = source_model_lt
-        self.hdf5 = h5
-
-    def store_groups(self, src_groups):
-        """
-        :param src_groups: a list of source groups with attribute .info
-        """
-        sources = self.hdf5['source_info']
-        for sg in src_groups:
-            sg.info['grp_id'] = sg.id
-            hdf5.extend(sources, sg.info)
-
-    def get_ltmodels(self):
-        """
-        :yields: :class:`openquake.commonlib.logictree.LtSourceModel` tuples
-        """
-        oq = self.oqparam
-        spinning_off = self.oqparam.pointsource_distance == {'default': 0.0}
-        if spinning_off:
-            logging.info('Removing nodal plane and hypocenter distributions')
-        # NB: the source models file are often NOT in the shared directory
-        # (for instance in oq-engine/demos) so the processpool must be used
-        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-                else 'processpool')
-        smlt_dir = os.path.dirname(self.source_model_lt.filename)
-        converter = sourceconverter.SourceConverter(
-            oq.investigation_time,
-            oq.rupture_mesh_spacing,
-            oq.complex_fault_mesh_spacing,
-            oq.width_of_mfd_bin,
-            oq.area_source_discretization,
-            oq.minimum_magnitude,
-            not spinning_off,
-            oq.source_id)
-        mags = set()
-        changes = 0
-        fname_hits = collections.Counter()
-        if self.hdf5:
-            sources = hdf5.create(self.hdf5, 'source_info', source_info_dt)
-        lt_models = list(self.source_model_lt.gen_source_models(self.gsim_lt))
-        if oq.calculation_mode.startswith('ucerf'):
-            idx = 0
-            [grp] = nrml.to_python(oq.inputs["source_model"], converter)
-            for grp_id, sm in enumerate(lt_models):
-                sg = copy.copy(grp)
-                sg.id = grp_id
-                sm.src_groups = [sg]
-                src = sg[0].new(sm.ordinal, sm.names)  # one source
-                src.src_group_id = grp_id
-                src.id = idx
-                idx += 1
-                if oq.number_of_logic_tree_samples:
-                    src.samples = sm.samples
-                sg.sources = [src]
-                data = [((sg.id, src.source_id, src.code, 0, 0, -1,
-                          src.num_ruptures, 0, ''))]
-                hdf5.extend(sources, numpy.array(data, source_info_dt))
-            return lt_models
-
-        logging.info('Reading the source model(s) in parallel')
-        allargs = []
-        fileno = 0
-        for ltm in lt_models:
-            apply_unc = functools.partial(
-                self.source_model_lt.apply_uncertainties, ltm.path)
-            for name in ltm.names.split():
-                fname = os.path.abspath(os.path.join(smlt_dir, name))
-                allargs.append((ltm, apply_unc, fname, fileno))
-                fileno += 1
-        smap = parallel.Starmap(
-            SourceReader(converter, smlt_dir, self.hdf5),
-            allargs, distribute=dist, h5=self.hdf5 if self.hdf5 else None)
-        # NB: h5 is None in logictree_test.py
-        groups = [[] for _ in lt_models]  # (fileno, src_groups)
-        for dic in smap:
-            ltm = lt_models[dic['ordinal']]
-            groups[ltm.ordinal].append((dic['fileno'], dic['src_groups']))
-            fname_hits += dic['fname_hits']
-            changes += dic['changes']
-            mags.update(dic['mags'])
-            gsim_file = self.oqparam.inputs.get('gsim_logic_tree')
-            if gsim_file:  # check TRTs
-                for src_group in dic['src_groups']:
-                    if src_group.trt not in self.gsim_lt.values:
-                        raise ValueError(
-                            "Found in %r a tectonic region type %r "
-                            "inconsistent with the ones in %r" %
-                            (ltm, src_group.trt, gsim_file))
-       # global checks
+    spinning_off = oq.pointsource_distance == {'default': 0.0}
+    if spinning_off:
+        logging.info('Removing nodal plane and hypocenter distributions')
+    # NB: the source models file are often NOT in the shared directory
+    # (for instance in oq-engine/demos) so the processpool must be used
+    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+            else 'processpool')
+    smlt_dir = os.path.dirname(source_model_lt.filename)
+    converter = sourceconverter.SourceConverter(
+        oq.investigation_time, oq.rupture_mesh_spacing,
+        oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
+        oq.area_source_discretization, oq.minimum_magnitude,
+        not spinning_off, oq.source_id)
+    if h5:
+        sources = hdf5.create(h5, 'source_info', source_info_dt)
+    lt_models = list(source_model_lt.gen_source_models(gsim_lt))
+    if oq.calculation_mode.startswith('ucerf'):
         idx = 0
-        grp_id = 0
-        for ltm in lt_models:
-            for fileno, grps in sorted(groups[ltm.ordinal]):
-                for grp in grps:
-                    grp.id = grp_id
-                    for src in grp:
-                        src.src_group_id = grp_id
-                        src.id = idx
-                        idx += 1
-                    grp.sources.sort(key=lambda s: s.source_id)
-                    grp.info.sort(order='source_id')
-                    ltm.src_groups.append(grp)
-                    grp_id += 1
-                    if grp_id >= TWO16:
-                        # the limit is only for event based calculations
-                        raise ValueError('There is a limit of %d src groups!' %
-                                         TWO16)
-            # check applyToSources
-            source_ids = set(src.source_id for grp in ltm.src_groups
-                             for src in grp)
-            for brid, srcids in self.source_model_lt.info.\
-                    applytosources.items():
-                if brid in ltm.path:
-                    for srcid in srcids:
-                        if srcid not in source_ids:
-                            raise ValueError(
-                                "The source %s is not in the source model,"
-                                " please fix applyToSources in %s or the "
-                                "source model" % (
-                                    srcid, self.source_model_lt.filename))
-
-            if self.hdf5:
-                self.store_groups(ltm.src_groups)
-
-        if self.hdf5:
-            self.hdf5['source_mags'] = sorted(dic['mags'])
-        # log if some source file is being used more than once
-        dupl = 0
-        for fname, hits in fname_hits.items():
-            if hits > 1:
-                logging.info('%s has been considered %d times', fname, hits)
-                if not changes:
-                    dupl += hits
-        if changes:
-            logging.info('Applied %d changes to the composite source model',
-                         changes)
+        [grp] = nrml.to_python(oq.inputs["source_model"], converter)
+        for grp_id, ltm in enumerate(lt_models):
+            sg = copy.copy(grp)
+            sg.id = grp_id
+            ltm.src_groups = [sg]
+            src = sg[0].new(ltm.ordinal, ltm.names)  # one source
+            src.src_group_id = grp_id
+            src.id = idx
+            idx += 1
+            if oq.number_of_logic_tree_samples:
+                src.samples = ltm.samples
+            sg.sources = [src]
+            data = [((sg.id, src.source_id, src.code, 0, 0, -1,
+                      src.num_ruptures, 0, ''))]
+            hdf5.extend(sources, numpy.array(data, source_info_dt))
         return lt_models
+
+    logging.info('Reading the source model(s) in parallel')
+    allargs = []
+    fileno = 0
+    for ltm in lt_models:
+        apply_unc = functools.partial(
+            source_model_lt.apply_uncertainties, ltm.path)
+        for name in ltm.names.split():
+            fname = os.path.abspath(os.path.join(smlt_dir, name))
+            allargs.append((ltm, apply_unc, fname, fileno))
+            fileno += 1
+    smap = parallel.Starmap(
+        SourceReader(converter, smlt_dir, h5),
+        allargs, distribute=dist, h5=h5 if h5 else None)
+    # NB: h5 is None in logictree_test.py
+    return _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5)
+
+
+def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
+    mags = set()
+    changes = 0
+    fname_hits = collections.Counter()
+    groups = [[] for _ in lt_models]  # (fileno, src_groups)
+    for dic in smap:
+        ltm = lt_models[dic['ordinal']]
+        groups[ltm.ordinal].append((dic['fileno'], dic['src_groups']))
+        fname_hits += dic['fname_hits']
+        changes += dic['changes']
+        mags.update(dic['mags'])
+        gsim_file = oq.inputs.get('gsim_logic_tree')
+        if gsim_file:  # check TRTs
+            for src_group in dic['src_groups']:
+                if src_group.trt not in gsim_lt.values:
+                    raise ValueError(
+                        "Found in %r a tectonic region type %r "
+                        "inconsistent with the ones in %r" %
+                        (ltm, src_group.trt, gsim_file))
+    # global checks
+    idx = 0
+    grp_id = 0
+    for ltm in lt_models:
+        for fileno, grps in sorted(groups[ltm.ordinal]):
+            for grp in grps:
+                grp.id = grp_id
+                for src in grp:
+                    src.src_group_id = grp_id
+                    src.id = idx
+                    idx += 1
+                grp.sources.sort(key=lambda s: s.source_id)
+                grp.info.sort(order='source_id')
+                ltm.src_groups.append(grp)
+                grp_id += 1
+                if grp_id >= TWO16:
+                    # the limit is only for event based calculations
+                    raise ValueError('There is a limit of %d src groups!' %
+                                     TWO16)
+        # check applyToSources
+        source_ids = set(src.source_id for grp in ltm.src_groups
+                         for src in grp)
+        for brid, srcids in source_model_lt.info.\
+                applytosources.items():
+            if brid in ltm.path:
+                for srcid in srcids:
+                    if srcid not in source_ids:
+                        raise ValueError(
+                            "The source %s is not in the source model,"
+                            " please fix applyToSources in %s or the "
+                            "source model" % (
+                                srcid, source_model_lt.filename))
+
+        if h5:
+            sources = h5['source_info']
+            for sg in ltm.src_groups:
+                sg.info['grp_id'] = sg.id
+                hdf5.extend(sources, sg.info)
+
+    if h5:
+        h5['source_mags'] = sorted(dic['mags'])
+    # log if some source file is being used more than once
+    dupl = 0
+    for fname, hits in fname_hits.items():
+        if hits > 1:
+            logging.info('%s has been considered %d times', fname, hits)
+            if not changes:
+                dupl += hits
+    if changes:
+        logging.info('Applied %d changes to the composite source model',
+                     changes)
+    return lt_models
