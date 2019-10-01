@@ -945,7 +945,7 @@ def fast_agg2(tags, values=None, axis=0):
 def fast_agg3(structured_array, kfield, vfields):
     """
     Aggregate a structured array with an index field (the kfield)
-    and some value fiels (the vfields).
+    and some value fields (the vfields).
     """
     allnames = structured_array.dtype.names
     assert kfield in allnames, kfield
