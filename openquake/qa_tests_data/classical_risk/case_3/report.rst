@@ -3,8 +3,8 @@ Classical PSHA - Loss fractions QA test
 
 ============== ===================
 checksum32     177,006,542        
-date           2019-10-01T06:32:15
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:44
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 12, num_levels = 19, num_rlzs = 1
@@ -94,8 +94,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
 ========= ====== ==== ============ ========= ========= ============ =======
-359       0      A    2,314        1.93861   5,756     1,612        831    
-306       0      A    1,768        0.15984   1.00000   1.00000      6.25641
+359       0      A    2,314        1.95996   5,756     1,612        822    
+306       0      A    1,768        0.16066   1.00000   1.00000      6.22422
 ========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
@@ -103,16 +103,16 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    2.09845   15    
+A    2.12062   15    
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ====================== ======= ======= ======= ======= =======
 operation-duration     mean    stddev  min     max     outputs
-SourceReader           0.97793 NaN     0.97793 0.97793 1      
-build_hazard           0.00610 0.00158 0.00408 0.00813 12     
-classical_split_filter 0.54472 0.91910 0.02969 1.92132 4      
+SourceReader           0.96764 NaN     0.96764 0.96764 1      
+build_hazard           0.00616 0.00188 0.00324 0.00820 12     
+classical_split_filter 0.55177 0.92848 0.03385 1.94257 4      
 ====================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -127,24 +127,24 @@ classical_split_filter srcs=28.28 KB params=8.86 KB srcfilter=3.04 KB 4.76 KB
 Slowest operations
 ------------------
 ============================ ========= ========= ======
-calc_6358                    time_sec  memory_mb counts
+calc_6513                    time_sec  memory_mb counts
 ============================ ========= ========= ======
-ClassicalCalculator.run      3.11434   0.78906   1     
-total classical_split_filter 2.17888   0.82422   4     
-composite source model       0.98797   0.30078   1     
-make_contexts                0.97910   0.0       1,846 
-total SourceReader           0.97793   0.0       1     
-computing mean_std           0.24832   0.0       1,613 
-get_poes                     0.13004   0.0       1,613 
-filtering/splitting sources  0.07682   0.73438   2     
-total build_hazard           0.07321   1.39062   12    
-read PoEs                    0.06658   1.39062   12    
-building riskinputs          0.02871   0.07422   1     
-saving statistics            0.00643   0.0       12    
-store source_info            0.00235   0.0       1     
-aggregate curves             0.00179   0.0       4     
-saving probability maps      0.00165   0.0       1     
-compute stats                0.00122   0.0       9     
-combine pmaps                6.752E-04 0.0       12    
-reading exposure             5.033E-04 0.0       1     
+ClassicalCalculator.run      3.13077   0.81250   1     
+total classical_split_filter 2.20707   1.16797   4     
+make_contexts                0.99763   0.0       1,846 
+composite source model       0.97757   0.31641   1     
+total SourceReader           0.96764   0.31641   1     
+computing mean_std           0.24594   0.0       1,613 
+get_poes                     0.13398   0.0       1,613 
+filtering/splitting sources  0.08258   0.97656   2     
+total build_hazard           0.07394   1.25000   12    
+read PoEs                    0.06689   1.25000   12    
+building riskinputs          0.03014   0.11328   1     
+saving statistics            0.00683   0.0       12    
+store source_info            0.00231   0.0       1     
+saving probability maps      0.00160   0.0       1     
+aggregate curves             0.00156   0.0       4     
+compute stats                0.00140   0.0       9     
+combine pmaps                7.696E-04 0.0       12    
+reading exposure             4.756E-04 0.0       1     
 ============================ ========= ========= ======

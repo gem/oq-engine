@@ -3,8 +3,8 @@ Hazard Japan (HERP model 2014) reduced
 
 ============== ===================
 checksum32     2,896,463,652      
-date           2019-10-01T06:32:27
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:58
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 5, num_levels = 1, num_rlzs = ?
@@ -40,6 +40,15 @@ site_model              `Site_model_Japan.xml <Site_model_Japan.xml>`_
 source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_                      
 ======================= ==============================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       26           0.0         
+1      0.0       1            0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
@@ -60,7 +69,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00458 NaN    0.00458 0.00458 1      
+SourceReader       0.00389 NaN    0.00389 0.00389 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -73,8 +82,8 @@ SourceReader      13.3 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6438              time_sec memory_mb counts
+calc_6593              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.01358  0.25000   1     
-total SourceReader     0.00458  0.25000   1     
+composite source model 0.01143  0.0       1     
+total SourceReader     0.00389  0.0       1     
 ====================== ======== ========= ======

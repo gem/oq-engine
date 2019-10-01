@@ -3,8 +3,8 @@ Hazard France Reduced
 
 ============== ===================
 checksum32     3,844,410,873      
-date           2019-09-24T15:20:56
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T07:00:48
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 66, num_levels = 0, num_rlzs = 1
@@ -53,14 +53,6 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Exposure model
 --------------
 =========== ==
@@ -108,7 +100,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_1713        time_sec memory_mb counts
+calc_6521        time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.01318  0.0       1     
+reading exposure 0.01331  0.0       1     
 ================ ======== ========= ======

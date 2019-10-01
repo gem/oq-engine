@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     2,390,181,475      
-date           2019-10-01T06:32:31
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:01
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = ?
@@ -40,6 +40,14 @@ job_ini                 `job_h.ini <job_h.ini>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       482          0.0         
+====== ========= ============ ============
+
 Exposure model
 --------------
 =========== =
@@ -71,7 +79,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00432 NaN    0.00432 0.00432 1      
+SourceReader       0.00450 NaN    0.00450 0.00450 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -84,9 +92,9 @@ SourceReader      2.62 KB
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6455              time_sec  memory_mb counts
+calc_6610              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01348   0.0       1     
-total SourceReader     0.00432   0.0       1     
-reading exposure       8.214E-04 0.0       1     
+composite source model 0.01346   0.0       1     
+total SourceReader     0.00450   0.0       1     
+reading exposure       6.993E-04 0.0       1     
 ====================== ========= ========= ======

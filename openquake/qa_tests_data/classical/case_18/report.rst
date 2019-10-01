@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     572,206,371        
-date           2019-10-01T06:32:47
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:18
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 3, num_levels = 36, num_rlzs = 3
@@ -76,7 +76,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =========
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
 ========= ====== ==== ============ ========= ========= ============ =========
-VICM      0      A    2,430        0.00185   3.00000   2,430        1,316,646
+VICM      0      A    2,430        0.00163   3.00000   2,430        1,492,482
 ========= ====== ==== ============ ========= ========= ============ =========
 
 Computation times by source typology
@@ -84,15 +84,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00185   1     
+A    0.00163   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.01119 NaN    0.01119 0.01119 1      
-preclassical       0.00232 NaN    0.00232 0.00232 1      
+SourceReader       0.00992 NaN    0.00992 0.00992 1      
+preclassical       0.00203 NaN    0.00203 0.00203 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -106,11 +106,11 @@ preclassical gsims=157.45 KB srcs=2.16 KB params=926 B 342 B
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6501              time_sec  memory_mb counts
+calc_6656              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.03519   0.0       1     
-total SourceReader     0.01119   0.0       1     
-store source_info      0.00255   0.0       1     
-total preclassical     0.00232   0.0       1     
-aggregate curves       2.716E-04 0.0       1     
+composite source model 0.03241   0.0       1     
+total SourceReader     0.00992   0.0       1     
+store source_info      0.00208   0.0       1     
+total preclassical     0.00203   0.24609   1     
+aggregate curves       2.177E-04 0.0       1     
 ====================== ========= ========= ======

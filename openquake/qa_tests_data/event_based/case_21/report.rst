@@ -3,8 +3,8 @@ Event Based PSHA
 
 ============== ===================
 checksum32     269,549,222        
-date           2019-10-01T06:32:26
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:57
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -39,6 +39,14 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 ======================= ========================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       2            0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
@@ -58,7 +66,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.01668 NaN    0.01668 0.01668 1      
+SourceReader       0.01623 NaN    0.01623 0.01623 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -71,8 +79,8 @@ SourceReader      25.37 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6429              time_sec memory_mb counts
+calc_6584              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.11514  0.0       1     
-total SourceReader     0.01668  0.0       1     
+composite source model 0.11049  0.0       1     
+total SourceReader     0.01623  0.0       1     
 ====================== ======== ========= ======
