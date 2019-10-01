@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     687,330,760        
-date           2019-09-24T15:21:08
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T06:09:04
+engine_version 3.8.0-gite0871b5c35
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -65,17 +65,17 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1            482         
-================ ====== ==================== ============ ============
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      7.00000   482          2.00000     
+====== ========= ============ ============
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 20 tasks = 1.09 KB
+7 asset(s) x 1 realization(s) x 1 loss type(s) losses x 8 bytes x 8 tasks = 448 B
 
 Exposure model
 --------------
@@ -94,7 +94,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =====
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
 ========= ====== ==== ============ ========= ========= ============ =====
-1         0      S    482          0.05587   7.00000   2.00000      35   
+1         0      S    482          0.05122   7.00000   2.00000      39   
 ========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
@@ -102,35 +102,36 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.05587   1     
+S    0.05122   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00818 NaN    0.00818 0.00818 1      
-sample_ruptures    0.09005 NaN    0.09005 0.09005 1      
+SourceReader       0.00469 NaN    0.00469 0.00469 1      
+sample_ruptures    0.08529 NaN    0.08529 0.08529 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=306 B fnames=116 B 1.5 KB  
-sample_ruptures                                 69.7 KB 
-================== ============================ ========
+=============== ==== ========
+task            sent received
+SourceReader         2.62 KB 
+sample_ruptures      69.7 KB 
+=============== ==== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_1796                time_sec  memory_mb counts
+calc_23212               time_sec  memory_mb counts
 ======================== ========= ========= ======
-EventBasedCalculator.run 0.18834   0.16016   1     
-total sample_ruptures    0.09005   0.16016   1     
-saving events            0.02817   0.0       1     
-total read_source_models 0.00818   0.0       1     
-saving ruptures          0.00275   0.0       1     
-store source_info        0.00253   0.0       1     
-reading exposure         5.958E-04 0.0       1     
+EventBasedCalculator.run 0.19149   0.25391   1     
+total sample_ruptures    0.08529   0.0       1     
+saving events            0.02441   0.0       1     
+composite source model   0.01768   0.0       1     
+saving ruptures          0.00542   0.0       1     
+total SourceReader       0.00469   0.0       1     
+store source_info        0.00201   0.0       1     
+reading exposure         6.270E-04 0.0       1     
 ======================== ========= ========= ======

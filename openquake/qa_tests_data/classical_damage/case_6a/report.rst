@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     2,806,154,443      
-date           2019-09-24T15:21:00
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T06:09:15
+engine_version 3.8.0-gite0871b5c35
 ============== ===================
 
 num_sites = 7, num_levels = 8, num_rlzs = 1
@@ -64,13 +64,13 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 482          482         
-================ ====== ==================== ============ ============
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      7.00000   482          482         
+====== ========= ============ ============
 
 Exposure model
 --------------
@@ -89,7 +89,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
 ========= ====== ==== ============ ========= ========= ============ =======
-1         0      S    482          0.00384   7.00000   482          125,631
+1         0      S    482          0.00237   7.00000   482          203,406
 ========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
@@ -97,34 +97,34 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.00384   1     
+S    0.00237   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-preclassical       0.00436 NaN    0.00436 0.00436 1      
-read_source_models 0.00825 NaN    0.00825 0.00825 1      
+SourceReader       0.00820 NaN    0.00820 0.00820 1      
+preclassical       0.00265 NaN    0.00265 0.00265 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ========================================= ========
-task               sent                                      received
-preclassical       srcs=1.14 KB srcfilter=872 B params=557 B 342 B   
-read_source_models converter=314 B fnames=106 B              1.49 KB 
-================== ========================================= ========
+============ ========================================= ========
+task         sent                                      received
+SourceReader                                           2.61 KB 
+preclassical srcs=1.12 KB params=557 B srcfilter=223 B 342 B   
+============ ========================================= ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_1752                time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 0.00825   0.0       1     
-total preclassical       0.00436   0.0       1     
-store source_info        0.00232   0.0       1     
-reading exposure         4.582E-04 0.0       1     
-managing sources         3.667E-04 0.0       1     
-aggregate curves         2.346E-04 0.0       1     
-======================== ========= ========= ======
+====================== ========= ========= ======
+calc_23230             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.01569   0.0       1     
+total SourceReader     0.00820   0.0       1     
+total preclassical     0.00265   0.0       1     
+reading exposure       0.00221   0.0       1     
+store source_info      0.00212   0.0       1     
+aggregate curves       2.105E-04 0.0       1     
+====================== ========= ========= ======
