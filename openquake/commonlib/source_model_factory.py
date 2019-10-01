@@ -37,7 +37,8 @@ source_info_dt = numpy.dtype([
     ('num_sites', numpy.float32),      # 6
     ('eff_ruptures', numpy.float32),   # 7
     ('checksum', numpy.uint32),        # 8
-    ('toml', hdf5.vstr),               # 9
+    ('wkt', hdf5.vstr),                # 9
+    ('toml', hdf5.vstr),               # 10
 ])
 
 
@@ -120,7 +121,6 @@ class SourceReader(object):
         return newsm
 
     def __call__(self, ltmodel, apply_unc, fname, fileno, monitor):
-        changes = 0
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
         source_ids = set()
@@ -128,7 +128,6 @@ class SourceReader(object):
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
         newsm = self.makesm(fname, sm, apply_unc)
         fname_hits[fname] += 1
-        changes += newsm.changes
         for sg in newsm:
             # sample a source for each group
             if os.environ.get('OQ_SAMPLE_SOURCES'):
@@ -146,9 +145,9 @@ class SourceReader(object):
                 toml = sourcewriter.tomldump(src)
                 checksum = zlib.adler32(toml.encode('utf8'))
                 sg.info[i] = (0, src.source_id, src.code, src.num_ruptures,
-                              0, 0, 0, checksum, toml)
+                              0, 0, 0, checksum, src.wkt(), toml)
             src_groups.append(sg)
-        return dict(fname_hits=fname_hits, changes=changes,
+        return dict(fname_hits=fname_hits, changes=newsm.changes,
                     src_groups=src_groups, mags=mags, source_ids=source_ids,
                     ordinal=ltmodel.ordinal, fileno=fileno)
 
@@ -189,7 +188,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
                 src.samples = ltm.samples
             sg.sources = [src]
             data = [((sg.id, src.source_id, src.code, 0, 0, -1,
-                      src.num_ruptures, 0, ''))]
+                      src.num_ruptures, 0, '', ''))]
             hdf5.extend(sources, numpy.array(data, source_info_dt))
         return lt_models
 
