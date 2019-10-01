@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Specifying at the same time both a grid and individual sites is an error
+
   [Daniele Viganò]
   * Introduced support for RHEL/CentOS 8
 
