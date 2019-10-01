@@ -445,7 +445,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_applyToSources(self):
         oq = readinput.get_oqparam('job.ini', case_21)
         with mock.patch('logging.info') as info:
-            readinput.get_composite_source_model(oq)
+            with mock.patch.dict(os.environ, OQ_DISTRIBUTE='no'):
+                readinput.get_composite_source_model(oq)
         self.assertEqual(
             info.call_args[0],
             ('Applied %d changes to the composite source model', 81))
