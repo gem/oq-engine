@@ -18,7 +18,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 FROM openquake/base
-MAINTAINER Daniele Viganò <daniele@openquake.org>
+LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
+      vendor="GEM Foundation"
 
 ARG oq_branch=master
 ARG tools_branch=master
