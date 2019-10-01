@@ -327,7 +327,6 @@ class SimpleFaultSource(ParametricSeismicSource):
 
     def geom(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        return numpy.array([(p.x, p.y, p.z) for p in self.fault_trace],
-                           numpy.float32)
+        return self.polygon.wkt
