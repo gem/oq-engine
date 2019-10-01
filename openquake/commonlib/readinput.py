@@ -35,7 +35,6 @@ from openquake.baselib.general import random_filter
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -43,7 +42,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_model_factory import SourceModelFactory
+from openquake.commonlib.source_model_factory import get_ltmodels
 from openquake.commonlib import logictree, source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
@@ -555,15 +554,7 @@ def get_source_model_lt(oqparam, validate=True):
     return smlt
 
 
-def getid(src):
-    try:
-        return src.source_id
-    except AttributeError:
-        return src['id']
-
-
-def get_composite_source_model(oqparam, h5=None, in_memory=True,
-                               srcfilter=SourceFilter(None, {})):
+def get_composite_source_model(oqparam, h5=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -571,10 +562,6 @@ def get_composite_source_model(oqparam, h5=None, in_memory=True,
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param h5:
          an open hdf5.File where to store the source info
-    :param in_memory:
-        if False, just parse the XML without instantiating the sources
-    :param srcfilter:
-        if not None, use it to prefilter the sources
     """
     ucerf = oqparam.calculation_mode.startswith('ucerf')
     source_model_lt = get_source_model_lt(oqparam, validate=not ucerf)
@@ -602,33 +589,8 @@ def get_composite_source_model(oqparam, h5=None, in_memory=True,
 
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
-    smodels = []
-    factory = SourceModelFactory(oqparam, gsim_lt, source_model_lt, h5,
-                                 in_memory, srcfilter)
-    for source_model in factory.get_models():
-        for src_group in source_model.src_groups:
-            src_group.sources = sorted(src_group, key=getid)
-            for src in src_group:
-                # there are two cases depending on the flag in_memory:
-                # 1) src is a hazardlib source and has a src_group_id
-                #    attribute; in that case the source has to be numbered
-                # 2) src is a Node object, then nothing must be done
-                if isinstance(src, Node):
-                    continue
-        smodels.append(source_model)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
-    for sm in csm.source_models:
-        counter = collections.Counter()
-        for sg in sm.src_groups:
-            for srcid in map(getid, sg):
-                counter[srcid] += 1
-        dupl = [srcid for srcid in counter if counter[srcid] > 1]
-        if dupl:
-            raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
-                                    % (sm, dupl))
-    if not in_memory:
-        return csm
-
+    ltmodels = get_ltmodels(oqparam, gsim_lt, source_model_lt, h5)
+    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, ltmodels)
     if oqparam.is_event_based():
         # initialize the rupture rup_id numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
