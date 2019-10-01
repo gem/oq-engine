@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 35 - Cluster model
 
 ============== ===================
 checksum32     1,518,465,114      
-date           2019-09-24T15:21:17
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T06:08:56
+engine_version 3.8.0-gite0871b5c35
 ============== ===================
 
 num_sites = 1, num_levels = 5, num_rlzs = 1
@@ -62,21 +62,21 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 2            2           
-================ ====== ==================== ============ ============
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      2.00000   2            2.00000     
+====== ========= ============ ============
 
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
 ========= ====== ==== ============ ========= ========= ============ =====
-0         0      X    1            0.00151   1.00000   1.00000      662  
-1         0      X    1            0.00116   1.00000   1.00000      861  
+0         0      X    1            6.576E-04 1.00000   1.00000      1,521
+1         0      X    1            4.518E-04 1.00000   1.00000      2,213
 ========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
@@ -84,36 +84,36 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00267   2     
+X    0.00111   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-classical          0.04072 NaN    0.04072 0.04072 1      
-read_source_models 0.01090 NaN    0.01090 0.01090 1      
+SourceReader       0.00445 NaN    0.00445 0.00445 1      
+classical          0.03927 NaN    0.03927 0.03927 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ========================================= ========
-task               sent                                      received
-classical          group=3.4 KB src_filter=647 B param=533 B 1.3 KB  
-read_source_models converter=314 B fnames=107 B              3.57 KB 
-================== ========================================= ========
+============ ========================================== ========
+task         sent                                       received
+SourceReader                                            4.98 KB 
+classical    group=4.79 KB param=533 B src_filter=223 B 1.3 KB  
+============ ========================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-calc_1825                time_sec  memory_mb counts
-======================== ========= ========= ======
-total classical          0.04072   0.0       1     
-aggregate curves         0.01299   0.0       1     
-total read_source_models 0.01090   0.0       1     
-store source_info        0.00263   0.0       1     
-make_contexts            6.044E-04 0.0       2     
-computing mean_std       3.784E-04 0.0       2     
-get_poes                 3.510E-04 0.0       2     
-managing sources         3.257E-04 0.0       1     
-======================== ========= ========= ======
+====================== ========= ========= ======
+calc_23183             time_sec  memory_mb counts
+====================== ========= ========= ======
+total classical        0.03927   0.0       1     
+composite source model 0.01517   0.0       1     
+aggregate curves       0.00742   0.0       1     
+total SourceReader     0.00445   0.0       1     
+store source_info      0.00207   0.0       1     
+make_contexts          2.539E-04 0.0       2     
+computing mean_std     1.583E-04 0.0       2     
+get_poes               1.514E-04 0.0       2     
+====================== ========= ========= ======

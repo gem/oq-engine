@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib.general import (
     humansize, groupby, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg)
+    get_array, group_array, fast_agg, fast_agg3)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid
@@ -224,32 +224,12 @@ def view_csm_info(token, dstore):
     return rst_table(rows, header)
 
 
-@view.add('ruptures_per_trt')
-def view_ruptures_per_trt(token, dstore):
-    tbl = []
-    header = ('source_model grp_id trt eff_ruptures tot_ruptures'.split())
-    num_trts = 0
-    eff_ruptures = 0
-    tot_ruptures = 0
-    csm_info = dstore['csm_info']
-    for i, sm in enumerate(csm_info.source_models):
-        for src_group in sm.src_groups:
-            trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures
-            if er:
-                num_trts += 1
-                eff_ruptures += er
-                tbl.append(
-                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
-            tot_ruptures += src_group.tot_ruptures
-    rows = [('#TRT models', num_trts),
-            ('#eff_ruptures', eff_ruptures),
-            ('#tot_ruptures', tot_ruptures)]
-    if len(tbl) > 1:
-        summary = '\n\n' + rst_table(rows)
-    else:
-        summary = ''
-    return rst_table(tbl, header=header) + summary
+@view.add('ruptures_per_grp')
+def view_ruptures_per_grp(token, dstore):
+    info = dstore['source_info'][()]
+    agg = fast_agg3(
+        info, 'grp_id', ['num_sites', 'num_ruptures', 'eff_ruptures'])
+    return rst_table(agg)
 
 
 @view.add('short_source_info')

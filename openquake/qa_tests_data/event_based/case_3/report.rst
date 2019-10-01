@@ -3,8 +3,8 @@ Event Based QA Test, Case 3
 
 ============== ===================
 checksum32     2,879,210,841      
-date           2019-09-24T15:21:05
-engine_version 3.7.0-git749bb363b3
+date           2019-10-01T06:08:14
+engine_version 3.8.0-gite0871b5c35
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -56,22 +56,23 @@ P    0.0       1
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.00126 NaN    0.00126 0.00126 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+SourceReader       9.553E-04 NaN    9.553E-04 9.553E-04 1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=314 B fnames=108 B 1.56 KB 
-================== ============================ ========
+============ ==== ========
+task         sent received
+SourceReader      2.57 KB 
+============ ==== ========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-calc_1789                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.00126  0.0       1     
-======================== ======== ========= ======
+====================== ========= ========= ======
+calc_23100             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.00941   0.0       1     
+total SourceReader     9.553E-04 0.0       1     
+====================== ========= ========= ======
