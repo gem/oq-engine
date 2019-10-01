@@ -3,8 +3,8 @@ Hazard South Africa
 
 ============== ===================
 checksum32     3,741,932,100      
-date           2019-10-01T06:08:19
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:27
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 18, num_levels = 1, num_rlzs = ?
@@ -59,21 +59,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.17295 0.19384 0.00917 0.50980 10     
+SourceReader       0.11040 0.12279 0.00415 0.30939 10     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-============ ============================================== ========
-task         sent                                           received
-SourceReader apply_unc=40.35 KB ltmodel=3.29 KB fname=990 B 41.22 KB
-============ ============================================== ========
+============ ================================================ ========
+task         sent                                             received
+SourceReader apply_unc=40.83 KB ltmodel=3.29 KB fname=1.04 KB 41.29 KB
+============ ================================================ ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_23123             time_sec memory_mb counts
+calc_6436              time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     1.72948  0.36719   10    
-composite source model 0.55055  0.0       1     
+total SourceReader     1.10403  0.58984   10    
+composite source model 0.33345  0.0       1     
 ====================== ======== ========= ======

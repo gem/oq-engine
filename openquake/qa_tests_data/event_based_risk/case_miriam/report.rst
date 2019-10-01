@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     1,273,728,909      
-date           2019-10-01T06:09:07
-engine_version 3.8.0-gite0871b5c35
+checksum32     4,129,458,072      
+date           2019-10-01T06:32:31
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 281, num_levels = 50, num_rlzs = 1
@@ -103,8 +103,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
 ========= ====== ==== ============ ========= ========= ============ =======
-D         1      C    3,345        4.91173   281       2.00000      0.40719
-F         0      C    2,348        3.18087   281       2.00000      0.62876
+D         1      C    3,345        3.68852   281       2.00000      0.54222
+F         0      C    2,348        2.33714   281       2.00000      0.85575
 ========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
@@ -112,36 +112,36 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    8.09259   2     
+C    6.02566   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.25281 NaN     0.25281 0.25281 1      
-sample_ruptures    4.06964 1.23724 3.19478 4.94450 2      
+SourceReader       0.19165 NaN     0.19165 0.19165 1      
+sample_ruptures    3.02943 0.96598 2.34638 3.71248 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-=============== ============================================= ========
-task            sent                                          received
-SourceReader                                                  4.18 KB 
-sample_ruptures param=9.32 KB sources=2.39 KB srcfilter=446 B 45.82 KB
-=============== ============================================= ========
+=============== ============================================ ========
+task            sent                                         received
+SourceReader                                                 4.18 KB 
+sample_ruptures param=9.4 KB sources=2.39 KB srcfilter=444 B 45.82 KB
+=============== ============================================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_23217               time_sec memory_mb counts
+calc_6456                time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    8.13928  1.85938   2     
-EventBasedCalculator.run 5.74646  0.25000   1     
-composite source model   0.26635  0.0       1     
-total SourceReader       0.25281  0.0       1     
-reading exposure         0.05934  0.0       1     
-saving events            0.03151  0.25000   1     
-saving ruptures          0.00479  0.0       2     
-store source_info        0.00212  0.0       1     
+total sample_ruptures    6.05887  3.43750   2     
+EventBasedCalculator.run 4.33460  3.41406   1     
+composite source model   0.19951  0.0       1     
+total SourceReader       0.19165  0.0       1     
+reading exposure         0.04463  0.0       1     
+saving events            0.02595  0.25781   1     
+saving ruptures          0.00920  0.0       2     
+store source_info        0.00236  0.0       1     
 ======================== ======== ========= ======
