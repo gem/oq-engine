@@ -249,19 +249,7 @@ class SourceModelFactory(object):
                             "Found in %r a tectonic region type %r "
                             "inconsistent with the ones in %r" %
                             (ltm, src_group.trt, gsim_file))
-
-            # check applyToSources
-            for brid, srcids in self.source_model_lt.info.\
-                    applytosources.items():
-                if brid in ltm.path:
-                    for srcid in srcids:
-                        if srcid not in dic['source_ids']:
-                            raise ValueError(
-                                "The source %s is not in the source model,"
-                                " please fix applyToSources in %s or the "
-                                "source model" % (
-                                    srcid, self.source_model_lt.filename))
-        # global checks
+       # global checks
         idx = 0
         grp_id = 0
         for ltm in lt_models:
@@ -280,6 +268,20 @@ class SourceModelFactory(object):
                         # the limit is only for event based calculations
                         raise ValueError('There is a limit of %d src groups!' %
                                          TWO16)
+            # check applyToSources
+            source_ids = set(src.source_id for grp in ltm.src_groups
+                             for src in grp)
+            for brid, srcids in self.source_model_lt.info.\
+                    applytosources.items():
+                if brid in ltm.path:
+                    for srcid in srcids:
+                        if srcid not in source_ids:
+                            raise ValueError(
+                                "The source %s is not in the source model,"
+                                " please fix applyToSources in %s or the "
+                                "source model" % (
+                                    srcid, self.source_model_lt.filename))
+
             if self.hdf5:
                 self.store_groups(ltm.src_groups)
 
