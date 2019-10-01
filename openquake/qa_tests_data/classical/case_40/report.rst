@@ -3,8 +3,8 @@ Classical PSHA — Area Source
 
 ============== ===================
 checksum32     3,698,079,752      
-date           2019-10-01T06:32:38
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:09
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 16, num_levels = 45, num_rlzs = 1
@@ -75,7 +75,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =====
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
 ========= ====== ==== ============ ========= ========= ============ =====
-1         0      A    8            0.00249   16        8.00000      3,208
+1         0      A    8            0.00206   16        8.00000      3,892
 ========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
@@ -83,15 +83,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00249   1     
+A    0.00206   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00293 NaN    0.00293 0.00293 1      
-preclassical       0.00302 NaN    0.00302 0.00302 1      
+SourceReader       0.00302 NaN    0.00302 0.00302 1      
+preclassical       0.00243 NaN    0.00243 0.00243 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -105,11 +105,11 @@ preclassical gsims=1.12 MB srcs=1.92 KB params=860 B 342 B
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6475              time_sec  memory_mb counts
+calc_6630              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01767   0.77344   1     
-total preclassical     0.00302   0.25391   1     
-total SourceReader     0.00293   0.0       1     
-store source_info      0.00273   0.0       1     
-aggregate curves       3.271E-04 0.0       1     
+composite source model 0.01850   1.02734   1     
+total SourceReader     0.00302   0.0       1     
+store source_info      0.00264   0.0       1     
+total preclassical     0.00243   0.51562   1     
+aggregate curves       3.061E-04 0.0       1     
 ====================== ========= ========= ======

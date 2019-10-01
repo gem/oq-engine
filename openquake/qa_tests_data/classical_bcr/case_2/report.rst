@@ -3,8 +3,8 @@ Classical BCR test
 
 ============== ===================
 checksum32     1,551,058,886      
-date           2019-10-01T06:32:18
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:47
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 11, num_levels = 8, num_rlzs = 3
@@ -94,9 +94,9 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =====
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
 ========= ====== ==== ============ ========= ========= ============ =====
-231       0      A    414          0.68198   3,562     414          607  
-229       0      A    264          0.35672   810       180          504  
-232       0      A    150          0.28513   1,218     150          526  
+231       0      A    414          0.67386   3,562     414          614  
+229       0      A    264          0.34740   810       180          518  
+232       0      A    150          0.27812   1,218     150          539  
 ========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
@@ -104,16 +104,16 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    1.32383   3     
+A    1.29938   3     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ====================== ======= ======= ======= ======= =======
 operation-duration     mean    stddev  min     max     outputs
-SourceReader           0.04523 NaN     0.04523 0.04523 1      
-build_hazard           0.00590 0.00207 0.00332 0.00911 11     
-classical_split_filter 0.23432 0.25328 0.03213 0.67150 6      
+SourceReader           0.04563 NaN     0.04563 0.04563 1      
+build_hazard           0.00683 0.00376 0.00327 0.01594 11     
+classical_split_filter 0.22954 0.25013 0.03123 0.66314 6      
 ====================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -128,24 +128,24 @@ classical_split_filter srcs=5.83 KB params=1.63 KB gsims=1.12 KB 18.29 KB
 Slowest operations
 ------------------
 ============================ ========= ========= ======
-calc_6359                    time_sec  memory_mb counts
+calc_6514                    time_sec  memory_mb counts
 ============================ ========= ========= ======
-total classical_split_filter 1.40593   0.82812   6     
-ClassicalCalculator.run      0.89363   0.49219   1     
-make_contexts                0.50389   0.0       792   
-computing mean_std           0.30114   0.0       744   
-get_poes                     0.15134   0.0       744   
-filtering/splitting sources  0.07753   0.51562   3     
-total build_hazard           0.06494   1.49609   11    
-composite source model       0.05531   0.49219   1     
-read PoEs                    0.05351   1.49609   11    
-total SourceReader           0.04523   0.0       1     
-building riskinputs          0.02212   0.0       1     
-saving statistics            0.00925   0.0       11    
-compute stats                0.00578   0.0       11    
+total classical_split_filter 1.37726   0.44141   6     
+ClassicalCalculator.run      0.88893   0.49609   1     
+make_contexts                0.49424   0.0       792   
+computing mean_std           0.29188   0.0       744   
+get_poes                     0.14897   0.0       744   
+total build_hazard           0.07508   1.51172   11    
+filtering/splitting sources  0.07330   0.44141   3     
+read PoEs                    0.06423   1.51172   11    
+composite source model       0.05592   0.49609   1     
+total SourceReader           0.04563   0.0       1     
+building riskinputs          0.02697   0.0       1     
+saving statistics            0.00965   0.0       11    
+compute stats                0.00548   0.0       11    
 aggregate curves             0.00287   0.0       6     
-store source_info            0.00232   0.0       1     
-saving probability maps      0.00169   0.0       1     
-combine pmaps                0.00126   0.0       11    
-reading exposure             6.027E-04 0.0       1     
+store source_info            0.00230   0.0       1     
+saving probability maps      0.00166   0.0       1     
+combine pmaps                0.00114   0.0       11    
+reading exposure             6.149E-04 0.0       1     
 ============================ ========= ========= ======

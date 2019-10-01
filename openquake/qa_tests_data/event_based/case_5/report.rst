@@ -3,8 +3,8 @@ Germany_SHARE Combined Model event_based
 
 ============== ===================
 checksum32     1,250,935,976      
-date           2019-10-01T06:32:25
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:56
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 100, num_levels = 1, num_rlzs = ?
@@ -40,6 +40,18 @@ sites                   `sites.csv <sites.csv>`_
 source_model_logic_tree `combined_logic-tree-source-model.xml <combined_logic-tree-source-model.xml>`_
 ======================= ==============================================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       14           0.0         
+1      0.0       4,385        0.0         
+2      0.0       75           0.0         
+3      0.0       78           0.0         
+4      0.0       640          0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
@@ -61,7 +73,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.05883 0.06499 0.01019 0.13264 3      
+SourceReader       0.05847 0.06750 0.00460 0.13418 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -74,8 +86,8 @@ SourceReader apply_unc=6.1 KB ltmodel=620 B fname=374 B 106.56 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6425              time_sec memory_mb counts
+calc_6580              time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.17649  0.47266   3     
-composite source model 0.15642  0.0       1     
+total SourceReader     0.17542  0.58594   3     
+composite source model 0.15650  0.51562   1     
 ====================== ======== ========= ======

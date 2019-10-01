@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     1,136,041,000      
-date           2019-10-01T06:32:21
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:52
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
@@ -77,8 +77,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ ======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
 ========= ====== ==== ============ ========= ========= ============ ======
-buc06pt05 0      N    7            0.00274   1.00000   7.00000      2,558 
-buc16pt75 1      N    8            6.299E-04 1.00000   8.00000      12,700
+buc06pt05 0      N    7            0.00330   1.00000   7.00000      2,121 
+buc16pt75 1      N    8            6.821E-04 1.00000   8.00000      11,728
 ========= ====== ==== ============ ========= ========= ============ ======
 
 Computation times by source typology
@@ -86,15 +86,15 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    0.00337   2     
+N    0.00398   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.00919 0.00793 0.00358 0.01479 2      
-preclassical       0.00395 NaN     0.00395 0.00395 1      
+SourceReader       0.01145 0.00429 0.00841 0.01448 2      
+preclassical       0.00457 NaN     0.00457 0.00457 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -108,11 +108,11 @@ preclassical srcs=11.14 KB params=647 B srcfilter=222 B  392 B
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6390              time_sec  memory_mb counts
+calc_6545              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.02885   0.0       1     
-total SourceReader     0.01837   0.17188   2     
-total preclassical     0.00395   0.0       1     
-store source_info      0.00250   0.0       1     
-aggregate curves       2.129E-04 0.0       1     
+composite source model 0.02810   0.0       1     
+total SourceReader     0.02289   0.24609   2     
+total preclassical     0.00457   0.48828   1     
+store source_info      0.00268   0.0       1     
+aggregate curves       4.706E-04 0.0       1     
 ====================== ========= ========= ======

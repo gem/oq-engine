@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     561,276,680        
-date           2019-10-01T06:32:48
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:19
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 1, num_levels = 78, num_rlzs = 4
@@ -83,7 +83,7 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =========
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
 ========= ====== ==== ============ ========= ========= ============ =========
-s46       4      A    7,770        0.00218   1.00000   7,770        3,565,617
+s46       4      A    7,770        0.00141   1.00000   7,770        5,530,246
 ========= ====== ==== ============ ========= ========= ============ =========
 
 Computation times by source typology
@@ -91,7 +91,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00218   16    
+A    0.00141   16    
 C    0.0       2     
 ==== ========= ======
 
@@ -99,8 +99,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       5.59039 NaN     5.59039 5.59039 1      
-preclassical       0.00392 0.00311 0.00162 0.01310 17     
+SourceReader       5.48816 NaN     5.48816 5.48816 1      
+preclassical       0.00378 0.00309 0.00167 0.01367 17     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -114,11 +114,11 @@ preclassical srcs=58.66 KB params=21.05 KB gsims=7.63 KB 4.9 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6503              time_sec memory_mb counts
+calc_6658              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 5.60715  0.0       1     
-total SourceReader     5.59039  0.41016   1     
-total preclassical     0.06663  0.25391   17    
-aggregate curves       0.00387  0.0       17    
-store source_info      0.00260  0.0       1     
+composite source model 5.50442  0.0       1     
+total SourceReader     5.48816  0.15625   1     
+total preclassical     0.06419  0.0       17    
+aggregate curves       0.00403  0.0       17    
+store source_info      0.00259  0.0       1     
 ====================== ======== ========= ======

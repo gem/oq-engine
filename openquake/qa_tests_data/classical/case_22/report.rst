@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,152,338,418      
-date           2019-10-01T06:32:36
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:01:07
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 21, num_levels = 114, num_rlzs = 4
@@ -78,8 +78,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
 ========= ====== ==== ============ ========= ========= ============ =======
-2         1      M    1,104        0.00336   21        1,104        328,545
-1         0      M    160          0.00135   3.00000   160          118,861
+2         1      M    1,104        0.00177   21        1,104        622,464
+1         0      M    160          0.00163   3.00000   160          98,184 
 ========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
@@ -87,16 +87,16 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-M    0.00471   2     
+M    0.00340   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-SourceReader       0.00448 0.00178 0.00323 0.00574 2      
-preclassical       0.00275 0.00163 0.00160 0.00390 2      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.00451 0.00182   0.00323 0.00580 2      
+preclassical       0.00200 7.232E-05 0.00195 0.00205 2      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
@@ -109,11 +109,11 @@ preclassical srcs=5.96 KB params=3.45 KB gsims=1.07 KB   684 B
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6465              time_sec  memory_mb counts
+calc_6620              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01660   0.0       1     
-total SourceReader     0.00897   0.0       2     
-total preclassical     0.00550   0.0       2     
-store source_info      0.00245   0.0       1     
-aggregate curves       6.299E-04 0.0       2     
+composite source model 0.02427   0.0       1     
+total SourceReader     0.00903   0.0       2     
+total preclassical     0.00400   0.0       2     
+store source_info      0.00234   0.0       1     
+aggregate curves       9.480E-04 0.0       2     
 ====================== ========= ========= ======

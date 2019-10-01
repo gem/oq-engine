@@ -3,8 +3,8 @@ Test case for the SplitSigma modified GMPE
 
 ============== ===================
 checksum32     4,125,479,680      
-date           2019-10-01T06:32:25
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:55
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 36, num_levels = 40, num_rlzs = ?
@@ -39,6 +39,14 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `ssmLt.xml <ssmLt.xml>`_
 ======================= ========================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       416          0.0         
+====== ========= ============ ============
+
 Slowest sources
 ---------------
 ========= ====== ==== ============ ========= ========= ============ =====
@@ -58,7 +66,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.01536 NaN    0.01536 0.01536 1      
+SourceReader       0.01575 NaN    0.01575 0.01575 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -71,8 +79,8 @@ SourceReader      3.42 KB
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6422              time_sec memory_mb counts
+calc_6577              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.02503  0.0       1     
-total SourceReader     0.01536  0.0       1     
+composite source model 0.02491  0.0       1     
+total SourceReader     0.01575  0.0       1     
 ====================== ======== ========= ======

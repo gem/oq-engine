@@ -3,8 +3,8 @@ Event Based Bogota
 
 ============== ===================
 checksum32     4,020,014,859      
-date           2019-10-01T06:32:25
-engine_version 3.8.0-git66affb82eb
+date           2019-10-01T07:00:56
+engine_version 3.8.0-gitbd71c2f960
 ============== ===================
 
 num_sites = 5, num_levels = 104, num_rlzs = ?
@@ -42,6 +42,15 @@ source_model_logic_tree  `logic_tree_source_model.xml <logic_tree_source_model.x
 structural_vulnerability `vulnerability_model_bog.xml <vulnerability_model_bog.xml>`_      
 ======================== ==================================================================
 
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      0.0       5,370        0.0         
+1      0.0       7,860        0.0         
+====== ========= ============ ============
+
 Exposure model
 --------------
 =========== =
@@ -78,7 +87,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.28643 0.28812 0.08270 0.49016 2      
+SourceReader       0.28280 0.28338 0.08242 0.48317 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -91,9 +100,9 @@ SourceReader apply_unc=5.08 KB ltmodel=454 B fname=235 B 202.86 KB
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6427              time_sec  memory_mb counts
+calc_6582              time_sec  memory_mb counts
 ====================== ========= ========= ======
-total SourceReader     0.57286   0.92578   2     
-composite source model 0.52215   0.49609   1     
-reading exposure       5.727E-04 0.0       1     
+total SourceReader     0.56560   1.46094   2     
+composite source model 0.51796   1.51953   1     
+reading exposure       5.808E-04 0.0       1     
 ====================== ========= ========= ======
