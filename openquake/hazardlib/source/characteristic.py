@@ -119,9 +119,8 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         """
         return self.surface.mesh.get_convex_hull()
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        return numpy.array([(p.x, p.y, p.z) for p in self.surface.mesh],
-                           numpy.float32)
+        return self.surface.mesh.get_convex_hull().wkt
