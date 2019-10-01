@@ -161,7 +161,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
 
-    def geom(self):
+    def wkt(self):
         """
         :returns: the geometry as an array of shape (N, 3)
         """
