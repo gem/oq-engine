@@ -32,7 +32,7 @@ from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util, source, calc
+from openquake.commonlib import util, calc
 from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators import getters
 from openquake.calculators.extract import extract

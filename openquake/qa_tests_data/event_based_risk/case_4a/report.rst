@@ -3,8 +3,8 @@ Event Based Hazard
 
 ============== ===================
 checksum32     2,621,435,700      
-date           2019-10-01T06:09:05
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:30
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 1, num_levels = 11, num_rlzs = ?
@@ -74,7 +74,7 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.01428 NaN    0.01428 0.01428 1      
+SourceReader       0.01027 NaN    0.01027 0.01027 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -87,9 +87,9 @@ SourceReader      13.42 KB
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_23215             time_sec  memory_mb counts
+calc_6451              time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.02208   0.0       1     
-total SourceReader     0.01428   0.0       1     
-reading exposure       6.316E-04 0.0       1     
+composite source model 0.01727   0.0       1     
+total SourceReader     0.01027   0.0       1     
+reading exposure       5.751E-04 0.0       1     
 ====================== ========= ========= ======

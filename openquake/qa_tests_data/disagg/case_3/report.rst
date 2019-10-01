@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     3,490,620,350      
-date           2019-10-01T06:08:23
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:22
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
@@ -70,7 +70,7 @@ Number of ruptures per source group
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
 0      1.00000   2,308        2,308       
-4      4.00000   624          624         
+1      4.00000   624          624         
 ====== ========= ============ ============
 
 Slowest sources
@@ -78,11 +78,11 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
 ========= ====== ==== ============ ========= ========= ============ =======
-f1        0      C    2,308        0.00568   1.00000   2,308        406,247
-p3        1      P    156          0.00180   1.00000   156          86,779 
-p1        1      P    156          0.00148   1.00000   156          105,398
-p4        1      P    156          6.130E-04 1.00000   156          254,497
-p2        1      P    156          1.860E-04 1.00000   156          838,861
+f1        0      C    2,308        0.00255   1.00000   2,308        903,364
+p1        1      P    156          0.00239   1.00000   156          65,320 
+p3        1      P    156          0.00238   1.00000   156          65,484 
+p4        1      P    156          0.00238   1.00000   156          65,674 
+p2        1      P    156          0.00215   1.00000   156          72,460 
 ========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
@@ -90,34 +90,34 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    0.00568   1     
-P    0.00408   4     
+C    0.00255   1     
+P    0.00930   4     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-SourceReader       0.05536 0.07039 0.00559 0.10514 2      
-preclassical       0.00393 0.00201 0.00208 0.00607 3      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.06224 0.07759   0.00738 0.11711 2      
+preclassical       0.00285 1.291E-04 0.00262 0.00294 5      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.38 KB ltmodel=406 B fname=210 B 14.15 KB
-preclassical params=6.8 KB srcs=6.27 KB gsims=1.41 KB    1.09 KB 
+SourceReader apply_unc=2.43 KB ltmodel=406 B fname=224 B 14.17 KB
+preclassical params=11.33 KB srcs=7.9 KB gsims=2.34 KB   1.67 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
-====================== ========= ========= ======
-calc_23141             time_sec  memory_mb counts
-====================== ========= ========= ======
-composite source model 0.12081   0.0       1     
-total SourceReader     0.11073   0.36719   2     
-total preclassical     0.01179   0.0       3     
-store source_info      0.00212   0.0       1     
-aggregate curves       8.829E-04 0.0       3     
-====================== ========= ========= ======
+====================== ======== ========= ======
+calc_6394              time_sec memory_mb counts
+====================== ======== ========= ======
+composite source model 0.13396  0.0       1     
+total SourceReader     0.12448  0.23438   2     
+total preclassical     0.01426  0.0       5     
+store source_info      0.00223  0.0       1     
+aggregate curves       0.00150  0.0       5     
+====================== ======== ========= ======
