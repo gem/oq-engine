@@ -308,11 +308,9 @@ class OqParam(valid.ParamSet):
                                  self.number_of_logic_tree_samples)
 
         # check grid + sites
-        if (self.region_grid_spacing and 'site_model' in self.inputs
-                and 'exposure' in self.inputs):
-            logging.warning(
-                'You are specifying a grid, a site model and an exposure at '
-                'the same time: consider using `oq prepare_site_model`')
+        if self.region_grid_spacing and ('sites' in self.inputs or self.sites):
+            raise ValueError('You are specifying grid and sites at the same '
+                             'time: which one do you want?')
 
     def check_gsims(self, gsims):
         """
