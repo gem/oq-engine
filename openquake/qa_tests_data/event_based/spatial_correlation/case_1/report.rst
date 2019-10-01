@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 
 ============== ===================
 checksum32     2,162,355,116      
-date           2019-10-01T06:08:19
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:26
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -56,23 +56,23 @@ P    0.0       1
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-SourceReader       0.00143 NaN    0.00143 0.00143 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+SourceReader       8.039E-04 NaN    8.039E-04 8.039E-04 1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
 ============ ==== ========
 task         sent received
-SourceReader      2.58 KB 
+SourceReader      2.59 KB 
 ============ ==== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_23121             time_sec memory_mb counts
-====================== ======== ========= ======
-composite source model 0.01339  0.51172   1     
-total SourceReader     0.00143  0.0       1     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_6430              time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.00774   0.0       1     
+total SourceReader     8.039E-04 0.0       1     
+====================== ========= ========= ======

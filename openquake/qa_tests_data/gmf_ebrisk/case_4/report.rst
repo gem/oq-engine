@@ -3,11 +3,11 @@ event based two source models
 
 ============== ===================
 checksum32     1,852,256,743      
-date           2019-10-01T06:08:36
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:19
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
-num_sites = 173, num_levels = 11, num_rlzs = ?
+num_sites = 1, num_levels = 11, num_rlzs = ?
 
 Parameters
 ----------
@@ -43,19 +43,15 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Exposure model
 --------------
-=========== ===
-#assets     174
-#taxonomies 4  
-=========== ===
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
-============= ======= ======= === === ========= ==========
-taxonomy      mean    stddev  min max num_sites num_assets
-Moderate_roof 1.02778 0.16667 1   2   36        37        
-Heavy_roof    1.00000 0.0     1   1   35        35        
-Weak_roof     1.00000 0.0     1   1   43        43        
-Slab_roof     1.00000 0.0     1   1   59        59        
-*ALL*         1.00578 0.07603 1   2   173       174       
-============= ======= ======= === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+tax1     1.00000 NaN    1   1   1         1         
+======== ======= ====== === === ========= ==========
 
 Slowest sources
 ---------------
@@ -81,22 +77,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.01171 0.00695 0.00680 0.01663 2      
+SourceReader       0.01661 0.00479 0.01323 0.02000 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-============ =========================================== ========
-task         sent                                        received
-SourceReader apply_unc=2.35 KB ltmodel=378 B fname=198 B 17.21 KB
-============ =========================================== ========
+============ ========================================== ========
+task         sent                                       received
+SourceReader apply_unc=2.4 KB ltmodel=378 B fname=212 B 17.22 KB
+============ ========================================== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_23155             time_sec memory_mb counts
-====================== ======== ========= ======
-composite source model 0.02952  0.0       1     
-total SourceReader     0.02343  0.0       2     
-reading exposure       0.00407  0.0       1     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_6360              time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.03593   0.48828   1     
+total SourceReader     0.03323   0.19141   2     
+reading exposure       5.033E-04 0.0       1     
+====================== ========= ========= ======
