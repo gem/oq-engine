@@ -3,8 +3,8 @@ Ucerf test
 
 ============== ===================
 checksum32     87,673,300         
-date           2019-10-01T06:08:25
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:22
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 155, num_levels = 6, num_rlzs = ?
@@ -69,7 +69,7 @@ task sent received
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_23148             time_sec memory_mb counts
+calc_6404              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.05466  0.0       1     
+composite source model 0.02761  0.49219   1     
 ====================== ======== ========= ======

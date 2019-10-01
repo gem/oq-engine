@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     1,264,506,295      
-date           2019-10-01T06:08:18
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:27
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 3, num_levels = 7, num_rlzs = ?
@@ -56,23 +56,23 @@ A    0.0       2
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-SourceReader       0.06167 8.413E-05 0.06161 0.06173 2      
-================== ======= ========= ======= ======= =======
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+SourceReader       0.05626 0.00276 0.05431 0.05821 2      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.23 KB ltmodel=378 B fname=198 B 12.62 KB
+SourceReader apply_unc=2.28 KB ltmodel=378 B fname=212 B 12.63 KB
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_23114             time_sec memory_mb counts
+calc_6440              time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.12333  0.0       2     
-composite source model 0.08572  0.0       1     
+total SourceReader     0.11253  0.0       2     
+composite source model 0.08519  0.25781   1     
 ====================== ======== ========= ======
