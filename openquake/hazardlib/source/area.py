@@ -201,7 +201,7 @@ class AreaSource(ParametricSeismicSource):
             pt.num_ruptures = pt.count_ruptures()
             yield pt
 
-    def geom(self):
+    def wkt(self):
         """
         :returns: the geometry as a WKT string
         """

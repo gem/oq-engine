@@ -325,7 +325,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip)
 
-    def geom(self):
+    def wkt(self):
         """
         :returns: the geometry as a WKT string
         """
