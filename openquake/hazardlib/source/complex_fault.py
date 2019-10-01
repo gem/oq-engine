@@ -263,11 +263,8 @@ class ComplexFaultSource(ParametricSeismicSource):
         return ComplexFaultSurface.surface_projection_from_fault_data(
             self.edges)
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        points = []
-        for edge in self.edges:
-            points.extend((p.x, p.y, p.z) for p in edge)
-        return numpy.array(points, numpy.float32)
+        return self.polygon.wkt
