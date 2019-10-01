@@ -7,7 +7,7 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 ### Linux
 
 - Ubuntu 18.04 LTS (Bionic)
-- RedHat Enterprise Linux 7 / CentOS 7 / Scientific Linux 7
+- RedHat Enterprise Linux 8 / CentOS 8 / Scientific Linux 8
 - Fedora 29/30/31
 
 This guide may work also on other Linux releases/distributions.
@@ -18,6 +18,7 @@ This guide may work also on other Linux releases/distributions.
 - macOS 10.12 (Sierra)
 - macOS 10.13 (High Sierra)
 - macOS 10.14 (Mojave)
+- macOS 10.15 (Catalina)
 
 See also the [FAQ about SSL certificate validation on macOS](../faq.md#ertificate-verification-on-macOS).
 
@@ -33,19 +34,10 @@ Some software prerequisites are needed to build the development environment. Pyt
 sudo apt install git python3.6 python3.6-venv python3-pip
 ```
 
-### RedHat and clones
-
-On RedHat and its clones (CentOS/SL) Python 3.6 isn't available in the standard repositories, but it can be installed via [RedHat Software Collections](https://access.redhat.com/documentation/en-US/Red_Hat_Developer_Toolset/1/html-single/Software_Collections_Guide/).
+### RedHat 8 and clones
 
 ```bash
-## RedHat
-sudo yum install git scl-utils scl-utils-build
-
-## CentOS/SL
-sudo yum install git centos-release-scl
-
-sudo yum install rh-python36
-scl enable rh-python36 bash
+sudo dnf install python3
 ```
 
 ### Fedora
