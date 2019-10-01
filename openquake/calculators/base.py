@@ -229,8 +229,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.eids = None
 
                 # cleanup epsilons, if any
-                if os.path.exists(self.datastore.filename[:-4] + 'eps.hdf5'):
-                    os.remove(self.datastore.filename[:-4] + 'eps.hdf5')
+                if os.path.exists(self.datastore.tempname):
+                    os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -358,7 +358,11 @@ class HazardCalculator(BaseCalculator):
         :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
-        sitecol = self.sitecol.complete if self.sitecol else None
+        if getattr(self, 'sitecol', None):
+            sitecol = self.sitecol.complete
+        else:  # can happen to the ruptures-only calculator
+            sitecol = None
+            filename = None
         if 'ucerf' in oq.calculation_mode:
             return UcerfFilter(sitecol, oq.maximum_distance, filename)
         return SourceFilter(sitecol, oq.maximum_distance, filename)
@@ -398,13 +402,18 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
+        if getattr(self, 'sitecol', None):
+            # can be None for the ruptures-only calculator
+            with hdf5.File(self.datastore.tempname, 'w') as tmp:
+                tmp['sitecol'] = self.sitecol
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
-            self.csm = readinput.get_composite_source_model(
-                oq, self.datastore.hdf5, srcfilter=self.src_filter())
-            res = views.view('dupl_sources', self.datastore)
-            logging.info(f'The composite source model has {res.val:,d} '
-                         'ruptures')
+            with self.monitor('composite source model', measuremem=True):
+                self.csm = readinput.get_composite_source_model(
+                    oq, self.datastore.hdf5)
+                res = views.view('dupl_sources', self.datastore)
+                logging.info(f'The composite source model has {res.val:,d} '
+                             'ruptures')
             if res:
                 logging.info(res)
         self.init()  # do this at the end of pre-execute
@@ -731,7 +740,7 @@ class HazardCalculator(BaseCalculator):
             self.csm.info.update_eff_ruptures(eff_ruptures)
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
                 self.oqparam.sm_lt_path)
-            if not self.rlzs_assoc:
+            if not self.rlzs_assoc.realizations:
                 raise RuntimeError('Empty logic tree: too much filtering?')
             self.datastore['csm_info'] = self.csm.info
             self.datastore['source_model_lt'] = self.csm.source_model_lt
@@ -871,6 +880,10 @@ class RiskCalculator(HazardCalculator):
             getter = getters.PmapGetter(dstore, ws, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
+            if len(dstore['gmf_data/data']) == 0:
+                raise RuntimeError(
+                    'There are no GMFs available: perhaps you set '
+                    'ground_motion_fields=False or a large minimum_intensity')
         if dstore is self.datastore:
             getter.init()
         return getter

@@ -192,14 +192,19 @@ class PointSource(ParametricSeismicSource):
                 if not npdist:
                     break
 
+    def count_nphc(self):
+        """
+        :returns: the number of nodal planes times the number of hypocenters
+        """
+        return len(self.nodal_plane_distribution.data) * len(
+            self.hypocenter_distribution.data)
+
     def count_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
-        return (len(self.get_annual_occurrence_rates()) *
-                len(self.nodal_plane_distribution.data) *
-                len(self.hypocenter_distribution.data))
+        return len(self.get_annual_occurrence_rates()) * self.count_nphc()
 
     def _get_rupture_surface(self, mag, nodal_plane, hypocenter):
         """
