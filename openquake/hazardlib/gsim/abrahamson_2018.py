@@ -320,6 +320,9 @@ class AbrahamsonEtAl2018SSlab(AbrahamsonEtAl2018SInter):
     to subduction in-slab earthquakes.
     """
 
+    #: Supported tectonic region type is subduction in-slab
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
     #: Required rupture parameters for the in-slab model are magnitude and top
     # of rupture depth
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))

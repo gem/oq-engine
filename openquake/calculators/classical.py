@@ -212,11 +212,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
+        smap = parallel.Starmap(self.core_task.__func__)
+        smap.task_queue = list(self.gen_task_queue())  # really fast
         self.datastore.swmr_on()
-        smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5)
-        with self.monitor('managing sources'):
-            smap.task_queue = list(self.gen_task_queue())
+        smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.get_results().reduce(self.agg_dicts, self.acc0())
@@ -235,8 +234,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         task_no, (0, 0, U32([])))
                 self.datastore['sources_by_task'] = sbt
                 self.sources_by_task.clear()
-        if not self.calc_times:
-            raise RuntimeError('All sources were filtered away!')
         self.calc_times.clear()  # save a bit of memory
         return acc
 
@@ -247,8 +244,8 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol)
         trt_sources = self.csm.get_trt_sources(optimize_dupl=True)
-        maxweight = min(self.csm.get_maxweight(
-            trt_sources, weight, oq.concurrent_tasks), 1E6)
+        maxweight = self.csm.get_maxweight(
+            trt_sources, weight, oq.concurrent_tasks)
         maxdist = int(max(oq.maximum_distance.values()))
         if oq.task_duration is None:  # inferred
             # from 1 minute up to 1 day
@@ -263,8 +260,7 @@ class ClassicalCalculator(base.HazardCalculator):
             task_duration=td, maxweight=maxweight)
         logging.info(f'ruptures_per_task={maxweight}, '
                      f'maxdist={maxdist} km, task_duration={td} s')
-
-        srcfilter = self.src_filter()
+        srcfilter = self.src_filter(self.datastore.tempname)
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
@@ -334,8 +330,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
-            self.datastore.close()  # for SWMR safety
-            self.datastore.open('r+')
             self.calc_stats()
 
     def calc_stats(self):
