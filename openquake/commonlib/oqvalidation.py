@@ -39,7 +39,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
-                'shakemap', 'gmfs', 'gsim_logic_tree',
+                'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
                 'source_model_logic_tree',
                 'hazard_curves', 'insurance', 'sites', 'job_ini',
                 'multi_peril', 'taxonomy_mapping',
