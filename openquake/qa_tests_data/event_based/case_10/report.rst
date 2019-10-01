@@ -3,8 +3,8 @@ Event Based Bogota
 
 ============== ===================
 checksum32     4,020,014,859      
-date           2019-10-01T06:08:20
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:25
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 5, num_levels = 104, num_rlzs = ?
@@ -78,22 +78,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.33309 0.35983 0.07865 0.58753 2      
+SourceReader       0.28643 0.28812 0.08270 0.49016 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== =========
 task         sent                                        received 
-SourceReader apply_unc=5.02 KB ltmodel=454 B fname=221 B 202.84 KB
+SourceReader apply_unc=5.08 KB ltmodel=454 B fname=235 B 202.86 KB
 ============ =========================================== =========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_23125             time_sec  memory_mb counts
+calc_6427              time_sec  memory_mb counts
 ====================== ========= ========= ======
-total SourceReader     0.66617   1.29297   2     
-composite source model 0.61792   0.16797   1     
-reading exposure       4.897E-04 0.0       1     
+total SourceReader     0.57286   0.92578   2     
+composite source model 0.52215   0.49609   1     
+reading exposure       5.727E-04 0.0       1     
 ====================== ========= ========= ======

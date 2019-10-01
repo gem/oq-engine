@@ -3,8 +3,8 @@ Vancouver - 5 branches - 5 Years
 
 ============== ===================
 checksum32     2,220,417,399      
-date           2019-10-01T06:08:15
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:28
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -60,21 +60,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.78402 NaN    0.78402 0.78402 1      
+SourceReader       0.64021 NaN    0.64021 0.64021 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ==== ========
 task         sent received
-SourceReader      17.95 KB
+SourceReader      17.96 KB
 ============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_23107             time_sec memory_mb counts
+calc_6447              time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.80156  0.0       1     
-total SourceReader     0.78402  0.0       1     
+composite source model 0.65307  0.0       1     
+total SourceReader     0.64021  0.0       1     
 ====================== ======== ========= ======

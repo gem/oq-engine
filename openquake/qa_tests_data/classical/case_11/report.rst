@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 11
 
 ============== ===================
 checksum32     2,496,930,815      
-date           2019-10-01T06:08:57
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:46
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = 3
@@ -81,9 +81,9 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =======
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
 ========= ====== ==== ============ ========= ========= ============ =======
-1         0      P    3,500        0.00987   1.00000   3,500        354,762
-1         1      P    3,000        0.00940   1.00000   3,000        319,315
-1         2      P    2,500        0.00338   1.00000   2,500        739,006
+1         1      P    3,000        0.01071   1.00000   3,000        280,068
+1         0      P    3,500        0.00582   1.00000   3,500        601,741
+1         2      P    2,500        0.00551   1.00000   2,500        453,517
 ========= ====== ==== ============ ========= ========= ============ =======
 
 Computation times by source typology
@@ -91,33 +91,33 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.02264   3     
+P    0.02204   3     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.01781 0.00485 0.01225 0.02122 3      
-preclassical       0.00819 0.00390 0.00369 0.01068 3      
+SourceReader       0.01807 0.00240 0.01534 0.01983 3      
+preclassical       0.00775 0.00302 0.00590 0.01124 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=3.65 KB ltmodel=576 B fname=291 B 87.39 KB
-preclassical srcs=3.47 KB params=1.54 KB srcfilter=669 B 1 KB    
+SourceReader apply_unc=3.71 KB ltmodel=576 B fname=312 B 87.41 KB
+preclassical srcs=3.47 KB params=1.54 KB srcfilter=666 B 1 KB    
 ============ =========================================== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_23185             time_sec memory_mb counts
-====================== ======== ========= ======
-total SourceReader     0.05343  0.0       3     
-composite source model 0.03967  0.0       1     
-total preclassical     0.02456  0.0       3     
-store source_info      0.00209  0.0       1     
-aggregate curves       0.00137  0.0       3     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_6497              time_sec  memory_mb counts
+====================== ========= ========= ======
+total SourceReader     0.05422   0.0       3     
+composite source model 0.03889   0.0       1     
+total preclassical     0.02326   0.45703   3     
+store source_info      0.00207   0.0       1     
+aggregate curves       9.661E-04 0.0       3     
+====================== ========= ========= ======
