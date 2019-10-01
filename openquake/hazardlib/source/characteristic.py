@@ -121,6 +121,6 @@ class CharacteristicFaultSource(ParametricSeismicSource):
 
     def wkt(self):
         """
-        :returns: the geometry as WKT
+        :returns: the geometry as a WKT string
         """
         return self.surface.mesh.get_convex_hull().wkt

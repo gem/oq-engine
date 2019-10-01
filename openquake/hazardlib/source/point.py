@@ -325,7 +325,7 @@ class PointSource(ParametricSeismicSource):
 
     def wkt(self):
         """
-        :returns: the geometry as an array of shape (1, 3)
+        :returns: the geometry as a WKT string
         """
         loc = self.location
         return 'POINT(%s %s)' % (loc.x, loc.y)
