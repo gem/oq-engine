@@ -38,17 +38,25 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
-KNOWN_INPUTS = {'rupture_model', 'nonstructural_vulnerability', 'fragility',
-                'structural_vulnerability', 'multi_peril', 'taxonomy_mapping',
-                'structural_consequence', 'contents_fragility',
-                'gsim_logic_tree', 'structural_vulnerability_retrofitted',
-                'shakemap', 'gmfs', 'occupants_vulnerability',
-                'source_model_logic_tree', 'contents_consequence',
-                'site_model', 'nonstructural_consequence',
-                'structural_fragility', 'nonstructural_fragility',
-                'business_interruption_vulnerability', 'exposure',
+KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
+                'shakemap', 'gmfs', 'gsim_logic_tree',
+                'source_model_logic_tree',
                 'hazard_curves', 'insurance', 'sites', 'job_ini',
-                'contents_vulnerability'}
+                'multi_peril', 'taxonomy_mapping',
+                'fragility', 'reqv',
+                'nonstructural_vulnerability',
+                'structural_vulnerability',
+                'contents_vulnerability',
+                'business_interruption_vulnerability',
+                'structural_vulnerability_retrofitted',
+                'occupants_vulnerability',
+                'structural_consequence',
+                'structural_fragility',
+                'nonstructural_fragility',
+                'contents_fragility',
+                'contents_consequence',
+                'nonstructural_consequence',
+                }
 
 
 class OqParam(valid.ParamSet):
