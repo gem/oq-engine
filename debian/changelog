@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Introduced support for RHEL/CentOS 8
+
   [Michele Simionato]
   * Added a check for no GMFs in event_based_risk
   * Avoided transferring the site collection
