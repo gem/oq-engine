@@ -38,6 +38,18 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
+KNOWN_INPUTS = {'rupture_model', 'nonstructural_vulnerability', 'fragility',
+                'structural_vulnerability', 'multi_peril', 'taxonomy_mapping',
+                'structural_consequence', 'contents_fragility',
+                'gsim_logic_tree', 'structural_vulnerability_retrofitted',
+                'shakemap', 'gmfs', 'occupants_vulnerability',
+                'source_model_logic_tree', 'contents_consequence',
+                'site_model', 'nonstructural_consequence',
+                'structural_fragility', 'nonstructural_fragility',
+                'business_interruption_vulnerability', 'exposure',
+                'hazard_curves', 'insurance', 'sites', 'job_ini',
+                'contents_vulnerability'}
+
 
 class OqParam(valid.ParamSet):
     siteparam = dict(
@@ -252,6 +264,12 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([valid.gsim(self.gsim)])
+
+        # check inputs
+        unknown = set(self.inputs) - KNOWN_INPUTS
+        if unknown:
+            raise ValueError('Unknown key %s_file in %s' %
+                             (unknown.pop(), self.inputs['job_ini']))
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
