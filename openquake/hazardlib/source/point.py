@@ -323,7 +323,7 @@ class PointSource(ParametricSeismicSource):
         radius = self._get_max_rupture_projection_radius()
         return get_bounding_box([self.location], maxdist + radius)
 
-    def geom(self):
+    def wkt(self):
         """
         :returns: the geometry as an array of shape (1, 3)
         """
