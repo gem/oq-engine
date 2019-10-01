@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 35 - Cluster model
 
 ============== ===================
 checksum32     1,518,465,114      
-date           2019-10-01T06:08:56
-engine_version 3.8.0-gite0871b5c35
+date           2019-10-01T06:32:39
+engine_version 3.8.0-git66affb82eb
 ============== ===================
 
 num_sites = 1, num_levels = 5, num_rlzs = 1
@@ -75,8 +75,8 @@ Slowest sources
 ========= ====== ==== ============ ========= ========= ============ =====
 source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
 ========= ====== ==== ============ ========= ========= ============ =====
-0         0      X    1            6.576E-04 1.00000   1.00000      1,521
-1         0      X    1            4.518E-04 1.00000   1.00000      2,213
+0         0      X    1            0.00161   1.00000   1.00000      620  
+1         0      X    1            0.00124   1.00000   1.00000      808  
 ========= ====== ==== ============ ========= ========= ============ =====
 
 Computation times by source typology
@@ -84,36 +84,36 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00111   2     
+X    0.00285   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00445 NaN    0.00445 0.00445 1      
-classical          0.03927 NaN    0.03927 0.03927 1      
+SourceReader       0.00563 NaN    0.00563 0.00563 1      
+classical          0.04707 NaN    0.04707 0.04707 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ========================================== ========
 task         sent                                       received
-SourceReader                                            4.98 KB 
-classical    group=4.79 KB param=533 B src_filter=223 B 1.3 KB  
+SourceReader                                            4.99 KB 
+classical    group=4.79 KB param=533 B src_filter=222 B 1.3 KB  
 ============ ========================================== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_23183             time_sec  memory_mb counts
+calc_6478              time_sec  memory_mb counts
 ====================== ========= ========= ======
-total classical        0.03927   0.0       1     
-composite source model 0.01517   0.0       1     
-aggregate curves       0.00742   0.0       1     
-total SourceReader     0.00445   0.0       1     
-store source_info      0.00207   0.0       1     
-make_contexts          2.539E-04 0.0       2     
-computing mean_std     1.583E-04 0.0       2     
-get_poes               1.514E-04 0.0       2     
+total classical        0.04707   0.0       1     
+composite source model 0.01466   0.0       1     
+aggregate curves       0.01128   0.0       1     
+total SourceReader     0.00563   0.0       1     
+store source_info      0.00264   0.0       1     
+make_contexts          6.804E-04 0.0       2     
+computing mean_std     4.041E-04 0.0       2     
+get_poes               3.817E-04 0.0       2     
 ====================== ========= ========= ======
