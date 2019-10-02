@@ -127,6 +127,11 @@ class WorkerMaster(object):
                 stopped.append(host)
         for popen in self.popens:
             popen.terminate()
+            # To have Popen fully dealocate the file descriptors for
+            # the spawned ssh process we must call wait() after terminate().
+            # This is due because we are not consuming any output
+            # from the spawned processes
+            popen.wait()
         self.popens = []
         return 'stopped %s' % stopped
 
