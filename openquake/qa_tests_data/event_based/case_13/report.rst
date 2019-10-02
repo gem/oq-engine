@@ -3,8 +3,8 @@ Event Based QA Test, Case 13
 
 ============== ===================
 checksum32     3,389,862,408      
-date           2019-10-01T07:00:58
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:19
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -49,10 +49,10 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -66,21 +66,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00124 NaN    0.00124 0.00124 1      
+SourceReader       0.00123 NaN    0.00123 0.00123 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ==== ========
 task         sent received
-SourceReader      2.59 KB 
+SourceReader      2.65 KB 
 ============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6596              time_sec memory_mb counts
+calc_29483             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.00853  0.77344   1     
-total SourceReader     0.00124  0.0       1     
+composite source model 0.00925  0.0       1     
+total SourceReader     0.00123  0.0       1     
 ====================== ======== ========= ======

@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     687,330,760        
-date           2019-10-01T07:01:01
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:22
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -91,47 +91,47 @@ tax1     1.00000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-1         0      S    482          0.04193   7.00000   2.00000      47   
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+1         0      S    482          0.05220   3.50000   2.00000     
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.04193   1     
+S    0.05220   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00346 NaN    0.00346 0.00346 1      
-sample_ruptures    0.07018 NaN    0.07018 0.07018 1      
+SourceReader       0.00531 NaN    0.00531 0.00531 1      
+sample_ruptures    0.08572 NaN    0.08572 0.08572 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 =============== ==== ========
 task            sent received
-SourceReader         2.62 KB 
+SourceReader         2.92 KB 
 sample_ruptures      69.7 KB 
 =============== ==== ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_6604                time_sec  memory_mb counts
+calc_29491               time_sec  memory_mb counts
 ======================== ========= ========= ======
-EventBasedCalculator.run 0.17511   0.0       1     
-total sample_ruptures    0.07018   0.0       1     
-saving events            0.02216   0.0       1     
-composite source model   0.01167   0.0       1     
-total SourceReader       0.00346   0.0       1     
-saving ruptures          0.00223   0.0       1     
-store source_info        0.00204   0.0       1     
-reading exposure         7.594E-04 0.0       1     
+EventBasedCalculator.run 0.17358   0.0       1     
+total sample_ruptures    0.08572   0.0       1     
+saving events            0.02262   0.0       1     
+composite source model   0.01603   0.0       1     
+total SourceReader       0.00531   0.0       1     
+saving ruptures          0.00226   0.0       1     
+store source_info        0.00210   0.0       1     
+reading exposure         8.214E-04 0.0       1     
 ======================== ========= ========= ======

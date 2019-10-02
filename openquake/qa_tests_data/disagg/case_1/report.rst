@@ -3,8 +3,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 
 ============== ===================
 checksum32     1,811,660,702      
-date           2019-10-01T07:00:52
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:13
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 38, num_rlzs = 1
@@ -78,50 +78,50 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =======
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
-========= ====== ==== ============ ========= ========= ============ =======
-3         2      S    617          0.00602   1.00000   617          102,482
-4         3      C    164          0.00395   1.00000   164          41,528 
-1         0      P    15           0.00254   1.00000   15           5,895  
-2         1      A    1,440        0.00242   1.00000   1,440        595,406
-========= ====== ==== ============ ========= ========= ============ =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+3         2      S    617          0.00532   0.00162   617         
+4         3      C    164          0.00478   0.00610   164         
+1         0      P    15           0.00253   0.06667   15          
+2         1      A    1,440        0.00236   6.944E-04 1,440       
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00242   1     
-C    0.00395   1     
-P    0.00254   1     
-S    0.00602   1     
+A    0.00236   1     
+C    0.00478   1     
+P    0.00253   1     
+S    0.00532   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.04279 NaN     0.04279 0.04279 1      
-preclassical       0.00424 0.00167 0.00295 0.00656 4      
+SourceReader       0.04446 NaN     0.04446 0.04446 1      
+preclassical       0.00427 0.00151 0.00290 0.00579 4      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader                                             7.03 KB 
-preclassical srcs=5.24 KB params=3.43 KB srcfilter=888 B 1.34 KB 
+SourceReader                                             7.68 KB 
+preclassical srcs=5.24 KB params=3.43 KB srcfilter=892 B 1.34 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6548              time_sec memory_mb counts
+calc_29435             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.05361  0.0       1     
-total SourceReader     0.04279  0.0       1     
-total preclassical     0.01696  0.32812   4     
-store source_info      0.00287  0.0       1     
-aggregate curves       0.00117  0.0       4     
+composite source model 0.05705  0.0       1     
+total SourceReader     0.04446  0.0       1     
+total preclassical     0.01709  0.0       4     
+store source_info      0.00254  0.0       1     
+aggregate curves       0.00110  0.0       4     
 ====================== ======== ========= ======

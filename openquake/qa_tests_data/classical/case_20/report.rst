@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 20
 
 ============== ===================
 checksum32     1,888,120,170      
-date           2019-10-01T07:01:13
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:35
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 4, num_rlzs = 12
@@ -105,39 +105,39 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ ======
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed 
-========= ====== ==== ============ ========= ========= ============ ======
-COMFLT1   3      C    62           0.00593   1.00000   62           10,461
-SFLT1     8      S    58           0.00578   1.00000   58           10,033
-SFLT1     3      S    56           0.00572   1.00000   56           9,789 
-SFLT1     4      S    56           0.00567   1.00000   56           9,868 
-SFLT1     9      S    58           0.00547   1.00000   58           10,610
-COMFLT1   5      C    62           0.00475   1.00000   62           13,052
-COMFLT1   9      C    62           0.00458   1.00000   62           13,544
-SFLT1     5      S    56           0.00439   1.00000   56           12,765
-COMFLT1   10     C    62           0.00411   1.00000   62           15,075
-SFLT1     7      S    58           0.00359   1.00000   58           16,144
-COMFLT1   11     C    62           0.00314   1.00000   62           19,729
-COMFLT1   2      C    29           0.00309   1.00000   29           9,376 
-SFLT1     0      S    56           0.00308   1.00000   56           18,171
-COMFLT1   0      C    29           0.00293   1.00000   29           9,908 
-SFLT1     6      S    58           0.00266   1.00000   58           21,824
-SFLT1     10     S    58           0.00259   1.00000   58           22,394
-COMFLT1   1      C    29           0.00258   1.00000   29           11,238
-SFLT1     11     S    58           0.00239   1.00000   58           24,225
-COMFLT1   4      C    62           0.00239   1.00000   62           25,976
-CHAR1     0      X    1            0.00224   1.00000   1.00000      445   
-========= ====== ==== ============ ========= ========= ============ ======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+SFLT1     6      S    58           0.00606   0.01724   58          
+SFLT1     4      S    56           0.00564   0.01786   56          
+SFLT1     5      S    56           0.00559   0.01786   56          
+SFLT1     3      S    56           0.00558   0.01786   56          
+COMFLT1   1      C    29           0.00496   0.03448   29          
+COMFLT1   4      C    62           0.00483   0.01613   62          
+SFLT1     11     S    58           0.00475   0.01724   58          
+COMFLT1   3      C    62           0.00470   0.01613   62          
+COMFLT1   11     C    62           0.00430   0.01613   62          
+SFLT1     10     S    58           0.00421   0.01724   58          
+COMFLT1   9      C    62           0.00419   0.01613   62          
+SFLT1     8      S    58           0.00416   0.01724   58          
+SFLT1     9      S    58           0.00411   0.01724   58          
+COMFLT1   5      C    62           0.00403   0.01613   62          
+SFLT1     1      S    56           0.00341   0.01786   56          
+COMFLT1   10     C    62           0.00292   0.01613   62          
+SFLT1     7      S    58           0.00263   0.01724   58          
+COMFLT1   6      C    29           0.00249   0.03448   29          
+COMFLT1   2      C    29           0.00244   0.03448   29          
+COMFLT1   7      C    29           0.00243   0.03448   29          
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    0.03784   12    
-S    0.04514   12    
-X    0.00441   12    
+C    0.04015   12    
+S    0.04992   12    
+X    0.00383   12    
 ==== ========= ======
 
 Duplicated sources
@@ -148,26 +148,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.15222 0.01638 0.13225 0.19499 12     
-preclassical       0.00535 0.00168 0.00263 0.00919 18     
+SourceReader       0.15289 0.01442 0.13390 0.17751 12     
+preclassical       0.00572 0.00177 0.00326 0.00944 18     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ ================================================= =========
 task         sent                                              received 
-SourceReader apply_unc=249.08 KB ltmodel=2.53 KB fname=1.22 KB 132.02 KB
-preclassical srcs=99.25 KB params=9.23 KB srcfilter=3.9 KB     6.85 KB  
+SourceReader apply_unc=249.08 KB ltmodel=2.53 KB fname=1.22 KB 141.46 KB
+preclassical srcs=99.25 KB params=9.23 KB srcfilter=3.92 KB    6.85 KB  
 ============ ================================================= =========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6643              time_sec memory_mb counts
+calc_29530             time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     1.82664  0.25391   12    
-composite source model 0.39808  0.0       1     
-total preclassical     0.09622  0.0       18    
-aggregate curves       0.00475  0.0       18    
-store source_info      0.00208  0.0       1     
+total SourceReader     1.83466  0.28125   12    
+composite source model 0.37125  0.0       1     
+total preclassical     0.10291  0.0       18    
+aggregate curves       0.00528  0.0       18    
+store source_info      0.00273  0.0       1     
 ====================== ======== ========= ======

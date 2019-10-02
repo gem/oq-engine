@@ -3,8 +3,8 @@ Vancouver - 5 branches - 5 Years
 
 ============== ===================
 checksum32     2,220,417,399      
-date           2019-10-01T07:00:59
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:20
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -52,10 +52,10 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -70,21 +70,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.64034 NaN    0.64034 0.64034 1      
+SourceReader       0.67476 NaN    0.67476 0.67476 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ==== ========
 task         sent received
-SourceReader      17.96 KB
+SourceReader      18.94 KB
 ============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6602              time_sec memory_mb counts
+calc_29489             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.65391  0.50391   1     
-total SourceReader     0.64034  0.0       1     
+composite source model 0.68996  0.0       1     
+total SourceReader     0.67476  0.0       1     
 ====================== ======== ========= ======

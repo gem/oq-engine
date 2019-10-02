@@ -3,8 +3,8 @@ Event Based QA Test, Case 12
 
 ============== ===================
 checksum32     811,315,715        
-date           2019-10-01T07:00:59
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:20
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -50,10 +50,10 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -74,14 +74,14 @@ Data transfer
 -------------
 ============ ==== ========
 task         sent received
-SourceReader      3.62 KB 
+SourceReader      3.7 KB  
 ============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6599              time_sec memory_mb counts
+calc_29486             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.00896  0.0       1     
+composite source model 0.01029  0.0       1     
 total SourceReader     0.00143  0.0       1     
 ====================== ======== ========= ======
