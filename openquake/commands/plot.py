@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
+import shapely
 from openquake.baselib import sap
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo.utils import get_bounding_box
@@ -138,30 +139,6 @@ def make_figure_disagg(extractors, what):
     return plt
 
 
-# FIXME: not working right now
-def make_figure_source_geom(extractors, what):
-    """
-    Extract the geometry of a given sources
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/source_geom/1,2,3
-    """
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    [ex] = extractors
-    sitecol = ex.get('sitecol')
-    geom_by_src = vars(ex.get(what))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.grid(True)
-    ax.set_xlabel('Source')
-    bmap = basemap('cyl', sitecol)
-    for src, geom in geom_by_src.items():
-        if src != 'array':
-            bmap.plot(geom['lon'], geom['lat'], label=src)
-    bmap.plot(sitecol['lon'], sitecol['lat'], 'x')
-    ax.legend()
-    return plt
-
-
 def make_figure_task_info(extractors, what):
     """
     Plot an histogram with the task distribution. Example:
@@ -238,6 +215,49 @@ def make_figure_event_based_mfd(extractors, what):
                 *expected.get_annual_occurrence_rates())
             ax.plot(magnitudes, frequencies, label='expected')
         ax.legend()
+    return plt
+
+
+@sap.script
+def make_figure_sources(extractors, what):
+    """
+    Plot the sources (except point sources)
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    from openquake.hmtk.plotting.patch import PolygonPatch
+    [ex] = extractors
+    info = ex.get(what)
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    # sitecol = ex.get('sitecol')
+    # bmap = basemap('cyl', sitecol)
+    # bmap.plot(sitecol['lon'], sitecol['lat'], 'x')
+    minxs = []
+    maxxs = []
+    minys = []
+    maxys = []
+    n = 0
+    tot = 0
+    for rec in info:
+        if not rec['wkt'].startswith('POINT'):
+            poly = shapely.wkt.loads(rec['wkt'])
+            minx, miny, maxx, maxy = poly.bounds
+            minxs.append(minx)
+            maxxs.append(maxx)
+            minys.append(miny)
+            maxys.append(maxy)
+            if rec['eff_ruptures']:  # not filtered out
+                alpha = .3
+                n += 1
+            else:
+                alpha = .1
+            pp = PolygonPatch(poly, alpha=alpha)
+            ax.add_patch(pp)
+            tot += 1
+    ax.set_xlim(min(minxs), max(maxxs))
+    ax.set_ylim(min(minys), max(maxys))
+    ax.set_title('%d/%d sources for source model #%d' % (n, tot, info.sm_id))
     return plt
 
 
