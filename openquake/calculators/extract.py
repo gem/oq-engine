@@ -28,7 +28,7 @@ from h5py._hl.group import Group
 import numpy
 from openquake.baselib import config, hdf5
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import group_array, println
+from openquake.baselib.general import group_array, get_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.commonlib import calc, util, oqvalidation
@@ -445,6 +445,20 @@ def extract_uhs(dstore, what):
         for k in params['k']:
             yield stats[k], hdf5.extract(dset, sids, k, periods, ALL)[:, 0]
     yield from params.items()
+
+
+@extract.add('sources')
+def extract_sources(dstore, what):
+    """
+    Extract information about a source model.
+    Use it as /extract/source_info?sm_id=0
+    """
+    qdict = parse(what)
+    sm_id = int(qdict['sm_id'][0])
+    arr = dstore['source_info'][()][['sm_id', 'num_sites', 'wkt']]
+    if sm_id not in numpy.unique(arr['sm_id']):
+        raise ValueError('There is no source model #%d' % sm_id)
+    return ArrayWrapper(get_array(arr, sm_id=sm_id), {'sm_id': sm_id})
 
 
 @extract.add('task_info')
