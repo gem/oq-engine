@@ -127,9 +127,10 @@ class WorkerMaster(object):
                 stopped.append(host)
         for popen in self.popens:
             popen.terminate()
-            # since we are not consuming any output from the spawned process,
+            # since we are not consuming any output from the spawned process
             # we must call wait() after terminate() to have Popen()
-            # fully dealocate the process file descriptors
+            # fully deallocate the process file descriptors, otherwise
+            # zombies will arise
             popen.wait()
         self.popens = []
         return 'stopped %s' % stopped
