@@ -21,7 +21,7 @@ import operator
 import numpy as np
 from openquake.baselib import parallel, general
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.commonlib.source_model_factory import random_filtered_sources
+from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import base
 from openquake.calculators.classical import (
     ClassicalCalculator, classical_split_filter)

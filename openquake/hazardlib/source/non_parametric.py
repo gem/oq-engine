@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
+import shapely
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -161,16 +162,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        # the rupture can have a faultSurface which is a 3D array
-        # or can be a griddedSurface which is a 2D array or others
-        arr = numpy.concatenate([rup.surface.mesh.array.reshape(3, -1)
-                                 for rup, pmf in self.data],
-                                axis=1)  # shape (3, N)
-        return arr.T
+        polys = [rup.surface.mesh.get_convex_hull()._polygon2d
+                 for rup, pmf in self.data]
+        return shapely.geometry.MultiPolygon(polys).wkt
 
     def get_one_rupture(self, rupture_mutex=False):
         """

@@ -1,34 +1,49 @@
-# Installing the OpenQuake Engine on RedHat Linux 7 and its clones 
+# Installing the OpenQuake Engine on RedHat Linux and its clones 
 
-<a href="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python-oq-engine/"><img src="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python-oq-engine/status_image/last_build.png" /></a>
+<a href="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python3-oq-engine/"><img src="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python3-oq-engine/status_image/last_build.png" /></a>
 
 The OpenQuake Engine is available in the form of *rpm* binary packages for the following RHEL based distributions:
 - RedHat Enterprise Linux 7 
 - CentOS 7
-- Scientific Linux 7
+- RedHat Enterprise Linux 8 
+- CentOS 8
 
 For Fedora please check ["Installing the OpenQuake Engine on Fedora"](fedora.md).
 
 The [Extra Packages for Enterprise Linux (EPEL)](https://fedoraproject.org/wiki/EPEL) repository is required: 
 
 ```bash
-sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo yum install epel-release
 ```
 
-The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
+## Add the OpenQuake packages repository
 
-## Install packages from the OpenQuake repository
-If you want to upgrade an existing installation see **[upgrading](../upgrading/rhel.md)**.
+The following commands add the **official stable builds** package repository:
 
-The following command adds the official stable builds package repository:
+### RHEL/CentOS 8
+
+```bash
+sudo yum copr enable gem/openquake-stable 
+```
+
+### RHEL/CentOS 7
+
 ```bash
 curl -sL https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
 ```
+
+If you want to install a **nightly build** please read the guide about installing the **[nightly build packages on RHEL/CentOS](rhel-nightly.md)**.
+
+## Install packages from the OpenQuake repository
+
+If you want to upgrade an existing installation see **[upgrading](../upgrading/rhel.md)**.
 
 Then to install the OpenQuake Engine and its libraries run
 ```bash
 sudo yum install python3-oq-engine
 ```
+
+The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
 
 ## Configure the system services
 

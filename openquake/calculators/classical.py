@@ -29,7 +29,7 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
 from openquake.commonlib import calc, util
-from openquake.commonlib.source_model_factory import random_filtered_sources
+from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -108,12 +108,12 @@ def preclassical(srcs, srcfilter, gsims, params, monitor):
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
-    for src in srcs:
+    for src, _sites in srcfilter(srcs):
         t0 = time.time()
-        if srcfilter.get_close_sites(src) is None:
-            continue
-        dt = time.time() - t0
-        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt])
+        splits, _stime = split_sources([src])
+        for s, _sites in srcfilter(splits):
+            calc_times[src.id] += F32([s.num_ruptures, s.nsites, 0])
+        calc_times[src.id][2] = time.time() - t0  # delta t
         for grp_id in src.src_group_ids:
             pmap[grp_id] += 0
     return dict(pmap=pmap, calc_times=calc_times, rup_data={'grp_id': []},
@@ -260,15 +260,18 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(f'ruptures_per_task={maxweight}, '
                      f'maxdist={maxdist} km, task_duration={td} s')
         srcfilter = self.src_filter(self.datastore.tempname)
+        if oq.calculation_mode == 'preclassical':
+            f1 = f2 = preclassical
+        else:
+            f1, f2 = classical, classical_split_filter
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
                 # do not split atomic groups
-                yield classical, sources, srcfilter, gsims, param
+                yield f1, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
-                    yield (self.core_task.__func__, block, srcfilter, gsims,
-                           param)
+                    yield f2, block, srcfilter, gsims, param
 
     def save_hazard(self, acc, pmap_by_kind):
         """
