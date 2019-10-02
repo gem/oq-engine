@@ -216,7 +216,7 @@ class ClassicalTestCase(CalculatorTestCase):
 ====== ========= ============ ============
 grp_id num_sites num_ruptures eff_ruptures
 ====== ========= ============ ============
-0      150       447          447         
+0      0.33557   447          447         
 ====== ========= ============ ============""")
 
     def test_case_15(self):
