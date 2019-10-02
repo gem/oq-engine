@@ -1,5 +1,7 @@
 # Running the OpenQuake Engine on multiple nodes (cluster configuration)
 
+This configuration is supported only by Linux.
+
 ## Overall architecture
 The nodes must all be able to communicate with the OpenQuake Engine *DbServer* and a *RabbitMQ* server.
 Both services run on a single "master" node. It is not necessary and not recommended to run *RabbitMQ* on a worker node and *Celery* on master node.

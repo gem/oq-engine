@@ -38,6 +38,27 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
+KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
+                'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+                'source_model_logic_tree', 'hazard_curves', 'insurance',
+                'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
+                'fragility', 'reqv', 'input_zip',
+                'nonstructural_vulnerability',
+                'nonstructural_fragility',
+                'nonstructural_consequence',
+                'structural_vulnerability',
+                'structural_fragility',
+                'structural_consequence',
+                'contents_vulnerability',
+                'contents_fragility',
+                'contents_consequence',
+                'business_interruption_vulnerability',
+                'business_interruption_fragility',
+                'business_interruption_consequence',
+                'structural_vulnerability_retrofitted',
+                'occupants_vulnerability',
+                }
+
 
 class OqParam(valid.ParamSet):
     siteparam = dict(
@@ -253,6 +274,12 @@ class OqParam(valid.ParamSet):
         elif self.gsim is not None:
             self.check_gsims([valid.gsim(self.gsim)])
 
+        # check inputs
+        unknown = set(self.inputs) - KNOWN_INPUTS
+        if unknown:
+            raise ValueError('Unknown key %s_file in %s' %
+                             (unknown.pop(), self.inputs['job_ini']))
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and not self.iml_disagg:
@@ -308,11 +335,9 @@ class OqParam(valid.ParamSet):
                                  self.number_of_logic_tree_samples)
 
         # check grid + sites
-        if (self.region_grid_spacing and 'site_model' in self.inputs
-                and 'exposure' in self.inputs):
-            logging.warning(
-                'You are specifying a grid, a site model and an exposure at '
-                'the same time: consider using `oq prepare_site_model`')
+        if self.region_grid_spacing and ('sites' in self.inputs or self.sites):
+            raise ValueError('You are specifying grid and sites at the same '
+                             'time: which one do you want?')
 
     def check_gsims(self, gsims):
         """
