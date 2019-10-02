@@ -261,15 +261,18 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(f'ruptures_per_task={maxweight}, '
                      f'maxdist={maxdist} km, task_duration={td} s')
         srcfilter = self.src_filter(self.datastore.tempname)
+        if oq.calculation_mode == 'preclassical':
+            f1 = f2 = preclassical
+        else:
+            f1, f2 = classical, classical_split_filter
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
                 # do not split atomic groups
-                yield classical, sources, srcfilter, gsims, param
+                yield f1, sources, srcfilter, gsims, param
             else:  # regroup the sources in blocks
                 for block in block_splitter(sources, maxweight, weight):
-                    yield (self.core_task.__func__, block, srcfilter, gsims,
-                           param)
+                    yield f2, block, srcfilter, gsims, param
 
     def save_hazard(self, acc, pmap_by_kind):
         """
