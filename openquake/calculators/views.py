@@ -27,12 +27,12 @@ import numpy
 
 from openquake.baselib.general import (
     humansize, groupby, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg)
+    get_array, group_array, fast_agg, fast_agg3)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util, source, calc
+from openquake.commonlib import util, calc
 from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators import getters
 from openquake.calculators.extract import extract
@@ -186,13 +186,12 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     info = dstore['source_info']['source_id', 'grp_id', 'code', 'num_ruptures',
                                  'calc_time', 'num_sites', 'eff_ruptures']
-    info = info[info['calc_time'] > 0]
+    info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
-    data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names]
-                       + [('speed', float)])
+    data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names])
     for name in info.dtype.names:
         data[name] = info[name]
-    data['speed'] = info['eff_ruptures'] / info['calc_time']
+    data['num_sites'] /= data['eff_ruptures']
     return rst_table(data[::-1][:maxrows])
 
 
@@ -224,32 +223,12 @@ def view_csm_info(token, dstore):
     return rst_table(rows, header)
 
 
-@view.add('ruptures_per_trt')
-def view_ruptures_per_trt(token, dstore):
-    tbl = []
-    header = ('source_model grp_id trt eff_ruptures tot_ruptures'.split())
-    num_trts = 0
-    eff_ruptures = 0
-    tot_ruptures = 0
-    csm_info = dstore['csm_info']
-    for i, sm in enumerate(csm_info.source_models):
-        for src_group in sm.src_groups:
-            trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures
-            if er:
-                num_trts += 1
-                eff_ruptures += er
-                tbl.append(
-                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
-            tot_ruptures += src_group.tot_ruptures
-    rows = [('#TRT models', num_trts),
-            ('#eff_ruptures', eff_ruptures),
-            ('#tot_ruptures', tot_ruptures)]
-    if len(tbl) > 1:
-        summary = '\n\n' + rst_table(rows)
-    else:
-        summary = ''
-    return rst_table(tbl, header=header) + summary
+@view.add('ruptures_per_grp')
+def view_ruptures_per_grp(token, dstore):
+    info = dstore['source_info'][()]
+    agg = fast_agg3(
+        info, 'grp_id', ['num_sites', 'num_ruptures', 'eff_ruptures'])
+    return rst_table(agg)
 
 
 @view.add('short_source_info')
