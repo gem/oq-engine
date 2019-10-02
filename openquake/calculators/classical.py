@@ -29,7 +29,7 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import (
     ProbabilityMap, ProbabilityCurve)
 from openquake.commonlib import calc, util
-from openquake.commonlib.source_model_factory import random_filtered_sources
+from openquake.commonlib.source_reader import random_filtered_sources
 from openquake.calculators import getters
 from openquake.calculators import base
 
