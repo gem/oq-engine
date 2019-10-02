@@ -34,6 +34,7 @@ MPLBACKEND=Agg oq plot 'uhs?kind=stats' -1
 MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' 16
 MPLBACKEND=Agg oq plot_sites -1
 MPLBACKEND=Agg oq plot memory?
+MPLBACKEND=Agg oq plot sources?sm_id=0
 
 # fake a failed/executing calculation to check that it is not exported
 oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
