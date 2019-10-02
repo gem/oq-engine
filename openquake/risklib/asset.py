@@ -165,16 +165,6 @@ class Asset(object):
         self.calc = calc
         self._cost = {}  # cache for the costs
 
-    @property
-    def taxonomy(self):
-        return self.tagvalue('taxonomy')
-
-    def tagvalue(self, tagname):
-        """
-        :returns: the tagvalue associated to the given tagname
-        """
-        return self.tagidxs[self.calc.tagi[tagname]]
-
     def value(self, loss_type, time_event=None):
         """
         :returns: the total asset value for `loss_type`
@@ -194,16 +184,6 @@ class Asset(object):
         """
         return self.calc('structural', {'structural': self._retrofitted},
                          self.area, self.number)
-
-    def tagmask(self, tags):
-        """
-        :returns: a boolean array with True where the assets has tags
-        """
-        mask = numpy.zeros(len(tags), bool)
-        for t, tag in enumerate(tags):
-            tagname, tagvalue = tag.split('=')
-            mask[t] = self.tagvalue(tagname) == tagvalue
-        return mask
 
     def __lt__(self, other):
         return self.ordinal < other.ordinal
