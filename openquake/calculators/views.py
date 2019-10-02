@@ -228,6 +228,7 @@ def view_ruptures_per_grp(token, dstore):
     info = dstore['source_info'][()]
     agg = fast_agg3(
         info, 'grp_id', ['num_sites', 'num_ruptures', 'eff_ruptures'])
+    agg['num_sites'] /= agg['eff_ruptures']
     return rst_table(agg)
 
 
