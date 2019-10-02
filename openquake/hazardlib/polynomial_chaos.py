@@ -41,16 +41,17 @@ def get_hermite(sg):
     return numpy.array(deg)
 
 
-def get_coeff(m_mu, sigma, sigma_mu, imls):
+def get_coeff(im_mu, isigma, isigma_mu, iimls):
     """
-    Compute the PCE coefficients for a given 'scenario' as described in
+    Compute the PCE coefficients for a given 'rupture' as described in
     Lacour and Abrahanson (2019). The input parameters are the mean hazard
     computed using the combined epistemic and aleatory standard deviation,
     the aleatory std, the epistemic std and the intensity measure levels
     considered.
 
     :param gmvs:
-        A :class:`numpy.ndarray` instance containing the ground motion values
+        A :class:`numpy.ndarray` instance containing the ground motion values.
+        For a single site im_mu is a scalar. Otherwise it has shape
     :param sigma:
         A :class:`numpy.ndarray` instance containing the aleatory std
     :param sigma_mu:
@@ -61,19 +62,24 @@ def get_coeff(m_mu, sigma, sigma_mu, imls):
     :return:
         A :class:`numpy.ndarray` instance containing the PC coefficients. The
         shape of this array is N x M x K:
-            - N is the degree of the PC expansion (typically 6)
-            - M is the
-            - K is the number of IMLs
+            - N is the number of sites
+            - M is the number of IMLs
+            - K where N is the degree of the PC expansion (typically 6)
     """
     # sigma_mu is the epistemic std
     # sigma is the total aleatory std
-    assert sigma.shape == sigma_mu.shape
-    # common terms
+    assert isigma.shape == isigma_mu.shape
+    # Vectorising the calculation per site
+    m_mu = numpy.broadcast_to(im_mu, (len(iimls), len(im_mu)))
+    sigma = numpy.broadcast_to(isigma, (len(iimls), len(im_mu)))
+    sigma_mu = numpy.broadcast_to(isigma_mu, (len(iimls), len(im_mu)))
+    imls = numpy.broadcast_to(iimls, (len(im_mu), len(iimls))).T
+    # Computing common terms
     az = -1*sigma_mu**2/(2*sigma**2)-0.5
     bz = (numpy.log(imls) - m_mu) * sigma_mu / (sigma**2)
     cz = -1*(numpy.log(imls) - m_mu)**2 / (2*sigma**2)
     alpha = sigma_mu/(2*sigma*pi)*numpy.sqrt(pi)*numpy.exp(cz-bz**2/(4*az))
-    # coefficients list
+    # Coefficients list
     coeff = []
     # c1
     coeff.append(alpha / ((-az)**(0.5)))
@@ -95,4 +101,7 @@ def get_coeff(m_mu, sigma, sigma_mu, imls):
     num = bz*(60*az**2*(1+2*az)**2-20*az*(1+2*az)*bz**2+bz**4)
     den = 32*(-az)**5.5
     coeff.append(alpha/720 * num / den)
+    coeff = numpy.squeeze(coeff)
+    if len(coeff.shape) > 2:
+        coeff = numpy.swapaxes(coeff, 0, 2)
     return numpy.array(coeff)

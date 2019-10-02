@@ -549,10 +549,13 @@ class AbrahamsonEtAl2014NonErgodic(AbrahamsonEtAl2014):
     Path Effects into the NGA-West2 Ground-Motion Prediction Equations"
     published on BSSA, Vol. 109, No. 2, pp. 575–585, April 2019,
     doi: 10.1785/0120180260.
-
-    :param filename:
-        The name of the .hdf5 file containing the anelastic coefficients
     """
+
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
+        PGA,
+        PGV,
+        SA
+    ])
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
@@ -579,20 +582,16 @@ class AbrahamsonEtAl2014NonErgodic(AbrahamsonEtAl2014):
         C = self.COEFFS[imt]
         # Tests are green without this modification
         mean -= C['a17']*dists.rrup
-
         # Open data file
         fle = h5py.File(self.TABLENAME, 'r')
         inverted_fle = hdf5.File(self.INVERTED_FILE, 'r')
-
         # Find distance index
         distances = fle['distances'][:]['distance']
         i_distance = _get_closest_index(distances, dists.rrup)
-
         # Find azimuth index - The azimuth is from the site to the closest
         # point on the rupture
         azimuths = fle['azimuths'][:]['azimuth']
         i_azimuth = _get_closest_index(azimuths, dists.azimuth_cp)
-
         # Find site indexes
         spatial_index = index.Rtree(self.SPATIAL_INDEX_FILE)
         i_site = []
@@ -601,13 +600,16 @@ class AbrahamsonEtAl2014NonErgodic(AbrahamsonEtAl2014):
             la = site.location.latitude
             i_site.append(list(spatial_index.nearest((lo, la, lo, la), 1))[0])
         spatial_index.close()
-
         # Get mean and epistemic standard deviation
         # key:  site id - dst id - azi id
         tmpimt = '0.01'
         for t_site, t_dst, t_azi in zip(i_site, i_distance, i_azimuth):
+            # Create the key
             key = '{:d}_{:d}_{:d}'.format(t_site, t_dst, t_azi)
+            # Given a key get the corresponding index from the inverted file
             idx = inverted_fle['/'][key]
+            # Get mean of anelastic attenuation term and epistemic standard
+            # deviation
             mean_anelastic = fle['mean'][:][tmpimt][idx]
             std_epistemic = fle['std'][:][tmpimt][idx]
         fle.close()
@@ -617,7 +619,7 @@ class AbrahamsonEtAl2014NonErgodic(AbrahamsonEtAl2014):
         stdout = []
         stdout.append(stds[0])
         stdout.append(std_epistemic)
-        return mean+mean_anelastic, stds
+        return mean+mean_anelastic, stdout
 
 
 def _get_closest_index(reference, values):

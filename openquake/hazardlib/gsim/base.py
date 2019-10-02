@@ -280,18 +280,29 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     def get_mean_std(self, sctx, rctx, dctx, imts):
         """
         :returns:
-            An array of shape (2, N, M) with mean and total standard
-            deviation. N is the number of sites and M is the number of
-            intensity measure types.
+            By default: an array of shape (2, N, M) with mean and total
+            standard deviation. N is the number of sites and M is the number of
+            intensity measure types. If a GSIM also contains epistemic
+            uncertainty: an array of shape (3, N, M) where the addtional
+            column is epistemic uncertainty.
         """
         N = len(sctx.sids)
         M = len(imts)
-        arr = numpy.zeros((2, N, M))
+        num_rows = 2
+        std_list = [const.StdDev.TOTAL]
+        add_epistemic = False
+        if const.StdDev.EPISTEMIC in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
+            std_list.append(const.StdDev.EPISTEMIC)
+            num_rows += 1
+            add_epistemic = True
+        arr = numpy.zeros((num_rows, N, M))
         for m, imt in enumerate(imts):
-            mean, [std] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                    [const.StdDev.TOTAL])
+            mean, stds = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                   std_list)
             arr[0, :, m] = mean
-            arr[1, :, m] = std
+            arr[1, :, m] = stds[0]
+            if add_epistemic:
+                arr[2, :, m] = stds[1]
         return arr
 
     def get_poes(self, mean_std, imls, truncation_level):

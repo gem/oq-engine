@@ -16,76 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-""":mod:`openquake.hazardlib.calc.hazard_curve` implements
-:func:`calc_hazard_curves`. Here is an example of a classical PSHA
-parallel calculator computing the hazard curves per each realization in less
-than 20 lines of code:
-
-.. code-block:: python
-
-   import sys
-   import logging
-   from openquake.baselib import parallel
-   from openquake.hazardlib.calc.filters import SourceFilter
-   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-   from openquake.commonlib import readinput
-
-   def main(job_ini):
-       logging.basicConfig(level=logging.INFO)
-       oq = readinput.get_oqparam(job_ini)
-       sitecol = readinput.get_site_collection(oq)
-       src_filter = SourceFilter(sitecol, oq.maximum_distance)
-       csm = readinput.get_composite_source_model(oq, srcfilter=src_filter)
-       rlzs_assoc = csm.info.get_rlzs_assoc()
-       for i, sm in enumerate(csm.source_models):
-           for rlz in rlzs_assoc.rlzs_by_smodel[i]:
-               gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz.ordinal]
-               hcurves = calc_hazard_curves(
-                   sm.src_groups, src_filter, oq.imtls,
-                   gsim_by_trt, oq.truncation_level,
-                   parallel.Starmap.apply)
-           print('rlz=%s, hcurves=%s' % (rlz, hcurves))
-
-   if __name__ == '__main__':
-       main(sys.argv[1])  # path to a job.ini file
-
-NB: the implementation in the engine is smarter and more
-efficient. Here we start a parallel computation per each realization,
-the engine manages all the realizations at once.
+""":mod:`openquake.hazardlib.calc.hazard_curve_ne` implements
+:func:`calc_hazard_curves`
 """
 
 import operator
+from openquake.hazardlib.contexts_ne import ContextMakerNonErgodic
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
-from openquake.baselib.general import DictArray, groupby, AccumDict
+from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import FatedTOM
-
-
-def _cluster(imtls, tom, gsims, pmap):
-    """
-    Computes the probability map in case of a cluster group
-    """
-    L, G = len(imtls.array), len(gsims)
-    pmapclu = AccumDict(accum=ProbabilityMap(L, G))
-    # Get temporal occurrence model
-    # Number of occurrences for the cluster
-    first = True
-    for nocc in range(0, 50):
-        # TODO fix this once the occurrence rate will be used just as
-        # an object attribute
-        ocr = tom.occurrence_rate
-        prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
-        if first:
-            pmapclu = prob_n_occ * (~pmap)**nocc
-            first = False
-        else:
-            pmapclu += prob_n_occ * (~pmap)**nocc
-    pmap = ~pmapclu
-    return pmap
 
 
 def classical(group, src_filter, gsims, param, monitor=Monitor()):
@@ -122,23 +65,12 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     [trt] = trts  # there must be a single tectonic region type
     # Create contexts. This is advantageous since we compute rupture to site
     # distances only once.
-    cmaker = ContextMaker(trt, gsims, param, monitor)
+    cmaker = ContextMakerNonErgodic(trt, gsims, param, monitor)
     # Compute the probability map. The probability map is a
     # :class:`openquake.baselib.general.AccumDict` instance i.e. a specialised
     # dictionary
-    pmap, rup_data, calc_times = cmaker.get_pmap_by_grp(
-        src_filter(group), src_mutex, rup_mutex)
-    # Now we prepare for computation of hazard.
-    group_probability = getattr(group, 'grp_probability', None)
-    if src_mutex and group_probability:
-        pmap[src.src_group_id] *= group_probability
-
-    if cluster:
-        tom = getattr(group, 'temporal_occurrence_model')
-        pmap = _cluster(param['imtls'], tom, gsims, pmap)
-
-    return dict(pmap=pmap, calc_times=calc_times, rup_data=rup_data,
-                task_no=getattr(monitor, 'task_no', 0))
+    pmap, pcec = cmaker.get_pmap_by_src(src_filter(group), src_mutex, rup_mutex)
+    return pmap, pcec
 
 
 def calc_hazard_curves(
@@ -198,15 +130,8 @@ def calc_hazard_curves(
     # Processing groups with homogeneous tectonic region
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     mon = Monitor()
-    for group in groups:
-        if group.atomic:  # do not split
-            it = [classical(group, srcfilter, [gsim], param, mon)]
-        else:  # split the group and apply `classical` in parallel
-            it = apply(
-                classical, (group.sources, srcfilter, [gsim], param, mon),
-                weight=operator.attrgetter('weight'))
-        for dic in it:
-            for grp_id, pval in dic['pmap'].items():
-                pmap |= pval
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
-    return pmap.convert(imtls, len(sitecol.complete))
+    for group in groups:
+        for src in group.sources:
+            poemap, pcecff = classical([src], srcfilter, [gsim], param, mon)
+            yield pcecff

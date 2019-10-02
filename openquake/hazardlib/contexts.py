@@ -204,7 +204,7 @@ class ContextMaker(object):
                 sites, distances = sites.filter(mask), distances[mask]
             else:
                 raise FarAwayRupture(
-                    '%d: %d km' % (rupture.serial, distances.min()))
+                    '%d: %d km' % (rupture.rup_id, distances.min()))
         return sites, DistancesContext([(self.filter_distance, distances)])
 
     def add_rup_params(self, rupture):
@@ -294,7 +294,8 @@ class ContextMaker(object):
                 mean_std = numpy.zeros((G, 2, len(sctx), M))
                 for i, gsim in enumerate(self.gsims):
                     dctx_ = dctx.roundup(gsim.minimum_distance)
-                    mean_std[i] = gsim.get_mean_std(sctx, rup, dctx_, imts)
+                    tmp = gsim.get_mean_std(sctx, rup, dctx_, imts)
+                    mean_std[i] = tmp[0:2, :, :]
             with self.poe_mon:
                 for sid, pne in self._make_pnes(rup, sctx.sids, mean_std):
                     pcurve = poemap.setdefault(sid, rup_indep)
@@ -314,7 +315,7 @@ class ContextMaker(object):
     def _gen_rup_sites(self, src, sites):
         # implements the pointsource_distance feature
         pdist = self.pointsource_distance.get(src.tectonic_region_type)
-        if hasattr(src, 'location') and pdist:
+        if hasattr(src, 'location') and pdist and src.count_nphc() > 1:
             close_sites, far_sites = sites.split(src.location, pdist)
             if close_sites is None:  # all is far
                 for rup in src.iter_ruptures(False, False):
