@@ -129,7 +129,6 @@ class SourceReader(object):
     def __call__(self, ltmodel, apply_unc, fname, fileno, monitor):
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
-        source_ids = set()
         src_groups = []
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
         newsm = self.makesm(fname, sm, apply_unc)
@@ -147,7 +146,6 @@ class SourceReader(object):
                     srcmags = [item[0] for item in
                                src.get_annual_occurrence_rates()]
                 mags.update(srcmags)
-                source_ids.add(src.source_id)
                 toml = sourcewriter.tomldump(src)
                 checksum = zlib.adler32(toml.encode('utf8'))
                 sg.info[i] = (ltmodel.ordinal, 0, src.source_id,
@@ -155,7 +153,7 @@ class SourceReader(object):
                               src.wkt(), toml)
             src_groups.append(sg)
         return dict(fname_hits=fname_hits, changes=newsm.changes,
-                    src_groups=src_groups, mags=mags, source_ids=source_ids,
+                    src_groups=src_groups, mags=mags,
                     ordinal=ltmodel.ordinal, fileno=fileno)
 
 
