@@ -340,7 +340,8 @@ def del_calc(db, job_id, user, force=False):
     """
     job_id = int(job_id)
     dependent = db(
-        'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
+        "SELECT id FROM job WHERE hazard_calculation_id=?x "
+        "AND status != 'deleted'", job_id)
     if not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
@@ -358,19 +359,11 @@ def del_calc(db, job_id, user, force=False):
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
 
-    # try to delete datastore and associated file
-    # path has typically the form /home/user/oqdata/calc_XXX
     fname = path + ".hdf5"
-    cache = fname.replace('calc_', 'cache_')
-    if os.path.exists(cache):
-        fnames = [fname, cache]
-    else:
-        fnames = [fname]
-    for fname in fnames:
-        try:
-            os.remove(fname)
-        except OSError as exc:  # permission error
-            return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    try:
+        os.remove(fname)
+    except OSError as exc:  # permission error
+        return {"error": 'Could not remove %s: %s' % (fname, exc)}
     return {"success": fname}
 
 

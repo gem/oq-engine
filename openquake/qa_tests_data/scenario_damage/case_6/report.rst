@@ -3,8 +3,8 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     1,635,481,027      
-date           2019-09-24T15:21:00
-engine_version 3.7.0-git749bb363b3
+date           2019-10-02T10:07:14
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 40, num_rlzs = 1
@@ -55,14 +55,6 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Exposure model
 --------------
 =========== =
@@ -93,7 +85,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ========= ========= ======
-calc_1743        time_sec  memory_mb counts
+calc_29438       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 4.253E-04 0.0       1     
+reading exposure 4.120E-04 0.0       1     
 ================ ========= ========= ======
