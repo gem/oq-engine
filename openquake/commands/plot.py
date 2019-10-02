@@ -247,7 +247,7 @@ def make_figure_sources(extractors, what):
             maxxs.append(maxx)
             minys.append(miny)
             maxys.append(maxy)
-            if rec['num_sites']:  # not filtered out
+            if rec['eff_ruptures']:  # not filtered out
                 alpha = .3
                 n += 1
             else:
