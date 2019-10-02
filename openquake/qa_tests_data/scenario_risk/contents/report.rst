@@ -3,8 +3,8 @@ Scenario QA Test for contents
 
 ============== ===================
 checksum32     241,725,599        
-date           2019-10-01T07:00:51
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:12
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 3, num_levels = 15, num_rlzs = 1
@@ -83,7 +83,7 @@ task sent received
 Slowest operations
 ------------------
 ================ ========= ========= ======
-calc_6539        time_sec  memory_mb counts
+calc_29426       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 3.967E-04 0.0       1     
+reading exposure 3.877E-04 0.0       1     
 ================ ========= ========= ======

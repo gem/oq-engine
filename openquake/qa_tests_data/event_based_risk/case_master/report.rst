@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     1,634,090,954      
-date           2019-10-01T07:01:01
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:23
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 7, num_levels = 46, num_rlzs = 8
@@ -105,22 +105,19 @@ tax3     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-1         2      S    482          0.05688   7.00000   0.0          0.0  
-1         0      S    482          0.05201   7.00000   0.0          0.0  
-2         1      S    4            0.00469   7.00000   2.00000      426  
-2         3      X    1            1.948E-04 7.00000   0.0          0.0  
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+2         1      S    4            0.00482   3.50000   2.00000     
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.11357   3     
-X    1.948E-04 1     
+S    0.11385   3     
+X    1.924E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -129,40 +126,40 @@ Found 2 unique sources and 1 duplicate sources with multiplicity 2.0: ['1']
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-SourceReader       0.01135 0.00816 0.00558 0.01711 2      
-compute_gmfs       0.02891 0.00344 0.02534 0.03220 3      
-sample_ruptures    0.03377 0.03151 0.00173 0.06319 4      
-================== ======= ======= ======= ======= =======
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+SourceReader       0.01920 0.00741   0.01396 0.02444 2      
+compute_gmfs       0.03192 2.276E-04 0.03176 0.03218 3      
+sample_ruptures    0.03388 0.03151   0.00168 0.06180 4      
+================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 =============== ================================================ ========
 task            sent                                             received
-SourceReader    apply_unc=2.45 KB ltmodel=378 B fname=234 B      17.24 KB
-compute_gmfs    param=16.51 KB rupgetter=4.72 KB srcfilter=666 B 55.07 KB
-sample_ruptures param=21.88 KB sources=14.04 KB srcfilter=888 B  2.3 KB  
+SourceReader    apply_unc=2.45 KB ltmodel=378 B fname=234 B      20.33 KB
+compute_gmfs    param=16.51 KB rupgetter=4.72 KB srcfilter=669 B 55.07 KB
+sample_ruptures param=21.88 KB sources=14.04 KB srcfilter=892 B  2.3 KB  
 =============== ================================================ ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
-calc_6609                time_sec  memory_mb counts
+calc_29496               time_sec  memory_mb counts
 ======================== ========= ========= ======
-EventBasedCalculator.run 0.31275   1.03125   1     
-total sample_ruptures    0.13507   0.0       4     
-total compute_gmfs       0.08674   1.02734   3     
-composite source model   0.03848   1.03125   1     
-building hazard          0.03572   0.0       3     
-total SourceReader       0.02269   0.0       2     
-getting ruptures         0.02221   1.02734   3     
-building hazard curves   0.01981   0.0       80    
-saving events            0.00922   0.0       1     
-saving gmfs              0.00640   0.0       3     
-saving gmf_data/indices  0.00565   0.0       1     
-aggregating hcurves      0.00338   0.0       3     
-saving ruptures          0.00279   0.0       1     
-store source_info        0.00251   0.0       1     
-reading exposure         6.385E-04 0.0       1     
+EventBasedCalculator.run 0.32026   1.28906   1     
+total sample_ruptures    0.13554   0.0       4     
+total compute_gmfs       0.09576   0.49219   3     
+composite source model   0.04150   0.0       1     
+total SourceReader       0.03839   0.0       2     
+building hazard          0.03507   0.0       3     
+getting ruptures         0.02901   0.23828   3     
+building hazard curves   0.02040   0.0       80    
+saving events            0.00920   0.0       1     
+saving gmfs              0.00624   0.0       3     
+saving gmf_data/indices  0.00563   0.0       1     
+aggregating hcurves      0.00345   0.0       3     
+store source_info        0.00252   0.0       1     
+saving ruptures          0.00247   0.0       1     
+reading exposure         6.974E-04 0.0       1     
 ======================== ========= ========= ======

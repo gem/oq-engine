@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     1,429,593,239      
-date           2019-10-01T07:00:51
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:12
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 8, num_rlzs = 1
@@ -81,11 +81,11 @@ task sent received
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6542              time_sec  memory_mb counts
+calc_29429             time_sec  memory_mb counts
 ====================== ========= ========= ======
-ScenarioCalculator.run 0.04568   1.02734   1     
-building riskinputs    0.00439   0.0       1     
-saving gmfs            0.00359   0.0       1     
-reading exposure       5.658E-04 0.0       1     
-computing gmfs         4.163E-04 0.0       1     
+ScenarioCalculator.run 0.04605   0.76953   1     
+building riskinputs    0.00400   0.0       1     
+saving gmfs            0.00358   0.0       1     
+reading exposure       5.405E-04 0.0       1     
+computing gmfs         4.184E-04 0.0       1     
 ====================== ========= ========= ======

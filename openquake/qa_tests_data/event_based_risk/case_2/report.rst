@@ -3,8 +3,8 @@ Event Based Risk QA Test 2
 
 ============== ===================
 checksum32     1,772,081,114      
-date           2019-10-01T07:01:07
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:28
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 3, num_levels = 15, num_rlzs = 1
@@ -94,49 +94,49 @@ W/1      1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-1         0      P    6            0.00148   1.00000   4.00000      2,700
-2         0      P    6            0.00145   1.00000   2.00000      1,379
-3         0      P    6            9.646E-04 1.00000   8.00000      8,293
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+1         0      P    6            0.00152   0.25000   4.00000     
+2         0      P    6            0.00130   0.50000   2.00000     
+3         0      P    6            8.054E-04 0.12500   8.00000     
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.00390   3     
+P    0.00362   3     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00206 NaN    0.00206 0.00206 1      
-sample_ruptures    0.00676 NaN    0.00676 0.00676 1      
+SourceReader       0.00205 NaN    0.00205 0.00205 1      
+sample_ruptures    0.00623 NaN    0.00623 0.00623 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 =============== ==== ========
 task            sent received
-SourceReader         4.58 KB 
+SourceReader         4.7 KB  
 sample_ruptures      2 KB    
 =============== ==== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_6616                time_sec memory_mb counts
+calc_29503               time_sec memory_mb counts
 ======================== ======== ========= ======
-EventBasedCalculator.run 0.08174  0.76953   1     
-composite source model   0.01164  0.0       1     
-saving events            0.00677  0.0       1     
-total sample_ruptures    0.00676  0.0       1     
-store source_info        0.00245  0.0       1     
-saving ruptures          0.00208  0.0       1     
-total SourceReader       0.00206  0.0       1     
-reading exposure         0.00169  0.0       1     
+EventBasedCalculator.run 0.07714  0.76953   1     
+composite source model   0.01282  0.0       1     
+total sample_ruptures    0.00623  0.0       1     
+saving events            0.00594  0.0       1     
+store source_info        0.00230  0.0       1     
+total SourceReader       0.00205  0.0       1     
+saving ruptures          0.00174  0.0       1     
+reading exposure         0.00166  0.0       1     
 ======================== ======== ========= ======

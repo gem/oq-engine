@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 
 ============== ===================
 checksum32     2,398,350,176      
-date           2019-10-01T07:00:57
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:18
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -49,10 +49,10 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -64,23 +64,23 @@ P    0.0       1
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-SourceReader       0.00103 NaN    0.00103 0.00103 1      
-================== ======= ====== ======= ======= =======
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+SourceReader       7.753E-04 NaN    7.753E-04 7.753E-04 1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
 ============ ==== ========
 task         sent received
-SourceReader      2.59 KB 
+SourceReader      2.65 KB 
 ============ ==== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_6587              time_sec memory_mb counts
-====================== ======== ========= ======
-composite source model 0.00807  0.0       1     
-total SourceReader     0.00103  0.0       1     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_29474             time_sec  memory_mb counts
+====================== ========= ========= ======
+composite source model 0.00916   0.77344   1     
+total SourceReader     7.753E-04 0.0       1     
+====================== ========= ========= ======
