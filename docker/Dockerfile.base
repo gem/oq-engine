@@ -18,12 +18,22 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 FROM centos:7
-MAINTAINER Daniele Viganò <daniele@openquake.org>
+LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
+      vendor="GEM Foundation"
 
-RUN curl -so /etc/yum.repos.d/gem-openquake-stable-epel-7.repo \
-    https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo
-RUN yum -q -y install sysvinit-tools oq-python36 && \
+ARG repo=openquake-stable
+
+## CentOS 7
+RUN curl -so /etc/yum.repos.d/gem-${repo}-epel-7.repo \
+    https://copr.fedorainfracloud.org/coprs/gem/${repo}/repo/epel-7/gem-${repo}-epel-7.repo && \
+    yum -q -y install oq-python36 && \
     yum -q -y clean all
+
+## Fedora / CentOS 8
+# RUN dnf install -y dnf-plugins-core && \
+#     dnf copr enable -y gem/$repo && \
+#     dnf install -y oq-python36 && \
+#     dnf clean all
 
 RUN useradd -u 1000 openquake && \
     mkdir /etc/openquake

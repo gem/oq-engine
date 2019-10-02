@@ -29,15 +29,17 @@ from openquake.hazardlib import nrml, sourceconverter, sourcewriter, calc
 
 TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
-    ('grp_id', numpy.uint16),          # 0
-    ('source_id', hdf5.vstr),          # 1
-    ('code', (numpy.string_, 1)),      # 2
-    ('num_ruptures', numpy.uint32),    # 3
+    ('sm_id', numpy.uint16),           # 0
+    ('grp_id', numpy.uint16),          # 1
+    ('source_id', hdf5.vstr),          # 2
+    ('code', (numpy.string_, 1)),      # 3
+    ('num_ruptures', numpy.uint32),    # 4
     ('calc_time', numpy.float32),      # 5
     ('num_sites', numpy.float32),      # 6
     ('eff_ruptures', numpy.float32),   # 7
     ('checksum', numpy.uint32),        # 8
-    ('toml', hdf5.vstr),               # 9
+    ('wkt', hdf5.vstr),                # 9
+    ('toml', hdf5.vstr),               # 10
 ])
 
 
@@ -83,7 +85,12 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
 
 
 class SourceReader(object):
-    def __init__(self, converter, smlt_dir, h5):
+    """
+    :param converter: a SourceConverter instance
+    :param smlt_dir: directory where the source model logic tree file is
+    :param h5: if any, HDF5 file with datasets sitecol and oqparam
+    """
+    def __init__(self, converter, smlt_dir, h5=None):
         self.converter = converter
         self.smlt_dir = smlt_dir
         self.__name__ = 'SourceReader'
@@ -120,7 +127,6 @@ class SourceReader(object):
         return newsm
 
     def __call__(self, ltmodel, apply_unc, fname, fileno, monitor):
-        changes = 0
         fname_hits = collections.Counter()  # fname -> number of calls
         mags = set()
         source_ids = set()
@@ -128,7 +134,6 @@ class SourceReader(object):
         [sm] = nrml.read_source_models([fname], self.converter, monitor)
         newsm = self.makesm(fname, sm, apply_unc)
         fname_hits[fname] += 1
-        changes += newsm.changes
         for sg in newsm:
             # sample a source for each group
             if os.environ.get('OQ_SAMPLE_SOURCES'):
@@ -145,10 +150,11 @@ class SourceReader(object):
                 source_ids.add(src.source_id)
                 toml = sourcewriter.tomldump(src)
                 checksum = zlib.adler32(toml.encode('utf8'))
-                sg.info[i] = (0, src.source_id, src.code, src.num_ruptures,
-                              0, 0, 0, checksum, toml)
+                sg.info[i] = (ltmodel.ordinal, 0, src.source_id, src.code,
+                              src.num_ruptures, 0, 0, 0, checksum,
+                              src.wkt(), toml)
             src_groups.append(sg)
-        return dict(fname_hits=fname_hits, changes=changes,
+        return dict(fname_hits=fname_hits, changes=newsm.changes,
                     src_groups=src_groups, mags=mags, source_ids=source_ids,
                     ordinal=ltmodel.ordinal, fileno=fileno)
 
@@ -188,8 +194,8 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
             if oq.number_of_logic_tree_samples:
                 src.samples = ltm.samples
             sg.sources = [src]
-            data = [((sg.id, src.source_id, src.code, 0, 0, -1,
-                      src.num_ruptures, 0, ''))]
+            data = [((grp_id, grp_id, src.source_id, src.code, 0, 0, -1,
+                      src.num_ruptures, 0, '', ''))]
             hdf5.extend(sources, numpy.array(data, source_info_dt))
         return lt_models
 
