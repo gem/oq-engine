@@ -22,6 +22,12 @@ jobs:
         - pip install sphinx==1.6.5
         - sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk
         - cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
+        - if [[ "$BRANCH" == "master" ]]; then
+            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
+            chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
+            eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
+            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
+          fi
   - stage: tests
     env: ENGINE
     before_script:
@@ -34,13 +40,6 @@ jobs:
         - pytest --doctest-modules -xv openquake/commonlib --tb=short
         - pytest --doctest-modules -xv openquake/commands --tb=short
         - oq webui migrate
-    after_success:
-        - if [[ "$BRANCH" == "master" ]]; then
-            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d &&
-            chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa &&
-            eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa &&
-            rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
-          fi
     after_script:
         - oq reset -y
   - stage: tests

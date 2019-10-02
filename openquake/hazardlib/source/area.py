@@ -201,9 +201,8 @@ class AreaSource(ParametricSeismicSource):
             pt.num_ruptures = pt.count_ruptures()
             yield pt
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a WKT string
         """
-        return numpy.array([(lon, lat, 0) for lon, lat in zip(
-            self.polygon.lons, self.polygon.lats)])
+        return self.polygon.wkt

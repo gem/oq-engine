@@ -1,18 +1,27 @@
 Advanced risk features
 ======================
 
-Here we document some new risk features which are not mentioned in
-the manual.
+Here we document some new risk features which have not yet made it
+into the engine manual. These are new features and cannot be
+considered fully-tested and stable yet. Once they become stable,
+these features will be documented in the manual.
+
 
 Taxonomy mapping
 ---------------------------------
 
-In an ideal world for each taxonomy in the exposure there is a taxonomy
-in the risk functions (vulnerability/fragility). In the real world there
-may be less risk functions than taxonomies in the exposure and so
-different taxonomies must be mapped to the same risk function.
-For instance we may have buildings in the exposure of different
-kind of woods, but only a generic risk function for wood.
+In an ideal world, for every building type represented in the 
+exposure model, there would be a unique matching function
+in the vulnerability or fragility models. However, often it may
+not be possible to have a one-to-one mapping of the taxonomy strings
+in the exposure and those in the vulnerability or fragility models.
+For cases where the exposure model has richer detail, many taxonomy
+strings in the exposure would need to be mapped onto a single 
+vulnerability or fragility function. In other cases where building
+classes in the exposure are more generic and the fragility or vulnerability
+functions are available for more specific building types, a modeller
+may wish to assign more than one vulnerability or fragility function
+to the same building type in the exposure with different weights.
 
 We may encode such information into a `taxonomy_mapping.csv`
 file like the following:
@@ -49,12 +58,15 @@ Wood       Wood Type B  0.3
 Wood       Wood Type C  0.5
 ========= ============ =======
 
-The engine will read such file and when performing the risk calculation
-will use all three kinds of risk functions and compute a single result
+The engine will read this mapping file and when performing the risk calculation
+will use all three kinds of risk functions to compute a single result
 with a weighted mean algorithm. The sums of the weights must be 1
 for each exposure taxonomy, otherwise the engine will raise an error.
 In this case the taxonomy mapping file works like a risk logic tree.
 
 Internally both the first usage and the second usage are treated in
 the same way, since the first usage is a special case of the second
-when all the weights are equal to 1
+when all the weights are equal to 1.
+
+Currently, this taxonomy mapping feature has been tested only for the scenario
+and event based risk calculators.
