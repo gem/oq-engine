@@ -68,5 +68,5 @@ Internally both the first usage and the second usage are treated in
 the same way, since the first usage is a special case of the second
 when all the weights are equal to 1.
 
-Currently, this taxonomy mapping feature has been testes onlu for the scenario
+Currently, this taxonomy mapping feature has been tested only for the scenario
 and event based risk calculators.
