@@ -31,16 +31,15 @@ TWO16 = 2 ** 16  # 65,536
 source_info_dt = numpy.dtype([
     ('sm_id', numpy.uint16),           # 0
     ('grp_id', numpy.uint16),          # 1
-    ('id', numpy.uint32),              # 2
-    ('source_id', hdf5.vstr),          # 3
-    ('code', (numpy.string_, 1)),      # 4
-    ('num_ruptures', numpy.uint32),    # 5
-    ('calc_time', numpy.float32),      # 6
-    ('num_sites', numpy.float32),      # 7
-    ('eff_ruptures', numpy.float32),   # 8
-    ('checksum', numpy.uint32),        # 9
-    ('wkt', hdf5.vstr),                # 10
-    ('toml', hdf5.vstr),               # 11
+    ('source_id', hdf5.vstr),          # 2
+    ('code', (numpy.string_, 1)),      # 3
+    ('num_ruptures', numpy.uint32),    # 4
+    ('calc_time', numpy.float32),      # 5
+    ('num_sites', numpy.float32),      # 6
+    ('eff_ruptures', numpy.float32),   # 7
+    ('checksum', numpy.uint32),        # 8
+    ('wkt', hdf5.vstr),                # 9
+    ('toml', hdf5.vstr),               # 10
 ])
 
 
@@ -151,7 +150,7 @@ class SourceReader(object):
                 source_ids.add(src.source_id)
                 toml = sourcewriter.tomldump(src)
                 checksum = zlib.adler32(toml.encode('utf8'))
-                sg.info[i] = (ltmodel.ordinal, 0, 0, src.source_id,
+                sg.info[i] = (ltmodel.ordinal, 0, src.source_id,
                               src.code, src.num_ruptures, 0, 0, 0, checksum,
                               src.wkt(), toml)
             src_groups.append(sg)
@@ -195,7 +194,7 @@ def get_ltmodels(oq, gsim_lt, source_model_lt, h5=None):
             if oq.number_of_logic_tree_samples:
                 src.samples = ltm.samples
             sg.sources = [src]
-            data = [((grp_id, grp_id, src.id, src.source_id, src.code,
+            data = [((grp_id, grp_id, src.source_id, src.code,
                       0, 0, -1, src.num_ruptures, 0, '', ''))]
             hdf5.extend(sources, numpy.array(data, source_info_dt))
         return lt_models
@@ -247,9 +246,6 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
                     src.src_group_id = grp_id
                     src.id = idx
                     idx += 1
-                grp.info['id'] = [src.id for src in grp]
-                grp.sources.sort(key=lambda s: s.source_id)
-                grp.info.sort(order='source_id')
                 ltm.src_groups.append(grp)
                 grp_id += 1
                 if grp_id >= TWO16:
@@ -278,9 +274,6 @@ def _store_results(smap, lt_models, source_model_lt, gsim_lt, oq, h5):
 
     if h5:
         h5['source_mags'] = sorted(dic['mags'])
-        source_info = h5['source_info'][()]
-        source_info.sort(order='id')
-        h5['source_info'][:] = source_info
 
     # log if some source file is being used more than once
     dupl = 0
