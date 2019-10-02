@@ -3,8 +3,8 @@ Classical PSHA — Area Source
 
 ============== ===================
 checksum32     3,283,112,543      
-date           2019-10-01T07:01:07
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:29
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
@@ -72,44 +72,44 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =========
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
-========= ====== ==== ============ ========= ========= ============ =========
-1         0      A    11,132       0.00227   1.00000   11,132       4,910,190
-========= ====== ==== ============ ========= ========= ============ =========
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+1         0      A    11,132       0.00219   8.983E-05 11,132      
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00227   1     
+A    0.00219   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.04140 NaN    0.04140 0.04140 1      
-preclassical       0.00278 NaN    0.00278 0.00278 1      
+SourceReader       0.03860 NaN    0.03860 0.03860 1      
+preclassical       0.00272 NaN    0.00272 0.00272 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ========================================= ========
 task         sent                                      received
-SourceReader                                           3.62 KB 
-preclassical srcs=1.97 KB params=652 B srcfilter=222 B 342 B   
+SourceReader                                           3.73 KB 
+preclassical srcs=1.97 KB params=652 B srcfilter=223 B 342 B   
 ============ ========================================= ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6617              time_sec  memory_mb counts
+calc_29504             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.04938   0.0       1     
-total SourceReader     0.04140   0.0       1     
-total preclassical     0.00278   0.0       1     
-store source_info      0.00213   0.0       1     
-aggregate curves       1.998E-04 0.0       1     
+composite source model 0.04744   0.0       1     
+total SourceReader     0.03860   0.0       1     
+total preclassical     0.00272   0.0       1     
+store source_info      0.00215   0.0       1     
+aggregate curves       2.170E-04 0.0       1     
 ====================== ========= ========= ======

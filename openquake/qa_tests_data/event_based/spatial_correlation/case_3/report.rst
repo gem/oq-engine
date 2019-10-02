@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 
 ============== ===================
 checksum32     1,038,141,016      
-date           2019-10-01T07:00:57
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:18
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 1, num_rlzs = ?
@@ -49,10 +49,10 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -66,21 +66,21 @@ Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =======
 operation-duration mean      stddev min       max       outputs
-SourceReader       8.540E-04 NaN    8.540E-04 8.540E-04 1      
+SourceReader       7.923E-04 NaN    7.923E-04 7.923E-04 1      
 ================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
 ============ ==== ========
 task         sent received
-SourceReader      2.59 KB 
+SourceReader      2.65 KB 
 ============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6586              time_sec  memory_mb counts
+calc_29473             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.00790   0.0       1     
-total SourceReader     8.540E-04 0.0       1     
+composite source model 0.00908   0.25781   1     
+total SourceReader     7.923E-04 0.0       1     
 ====================== ========= ========= ======

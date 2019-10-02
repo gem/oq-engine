@@ -3,8 +3,8 @@ Event Based Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     2,756,942,605      
-date           2019-10-01T07:00:57
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:18
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 3, num_rlzs = ?
@@ -50,10 +50,10 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -67,21 +67,21 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.00253 2.971E-04 0.00232 0.00274 2      
+SourceReader       0.00230 1.618E-04 0.00219 0.00242 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.29 KB ltmodel=378 B fname=216 B 6.02 KB 
+SourceReader apply_unc=2.29 KB ltmodel=378 B fname=216 B 6.14 KB 
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6590              time_sec memory_mb counts
+calc_29477             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.01474  0.0       1     
-total SourceReader     0.00506  0.0       2     
+composite source model 0.01661  1.28906   1     
+total SourceReader     0.00460  0.0       2     
 ====================== ======== ========= ======

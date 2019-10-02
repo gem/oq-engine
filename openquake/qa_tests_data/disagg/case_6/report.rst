@@ -3,8 +3,8 @@ GEM model for PAC, 0.10 in 50 years, Suva, testing IDL
 
 ============== ===================
 checksum32     2,604,004,363      
-date           2019-10-01T07:00:51
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:12
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 20, num_rlzs = 3
@@ -72,48 +72,48 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-32        0      S    80           0.03004   1.00000   86           2,863
-39        0      S    61           0.02796   1.00000   80           2,861
-19        0      S    86           0.02671   1.00000   67           2,508
-28        0      S    55           0.02570   1.00000   61           2,374
-36        0      S    67           0.01294   1.00000   55           4,251
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+32        0      S    80           0.02602   0.01250   80          
+36        0      S    67           0.02586   0.01493   67          
+19        0      S    86           0.02569   0.01163   86          
+39        0      S    61           0.02262   0.01639   61          
+28        0      S    55           0.02103   0.01818   55          
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.12335   5     
+S    0.12122   5     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.06106 NaN     0.06106 0.06106 1      
-preclassical       0.02504 0.00680 0.01321 0.03043 5      
+SourceReader       0.10014 NaN     0.10014 0.10014 1      
+preclassical       0.02462 0.00228 0.02141 0.02644 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ ======================================= ========
 task         sent                                    received
-SourceReader                                         44.64 KB
+SourceReader                                         47.36 KB
 preclassical srcs=31 KB params=3.71 KB gsims=1.83 KB 1.67 KB 
 ============ ======================================= ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6544              time_sec memory_mb counts
+calc_29431             time_sec memory_mb counts
 ====================== ======== ========= ======
-total preclassical     0.12518  0.16406   5     
-composite source model 0.07081  0.23047   1     
-total SourceReader     0.06106  0.23047   1     
-store source_info      0.00245  0.0       1     
-aggregate curves       0.00179  0.0       5     
+total preclassical     0.12312  0.48438   5     
+composite source model 0.11153  0.0       1     
+total SourceReader     0.10014  0.0       1     
+store source_info      0.00293  0.98438   1     
+aggregate curves       0.00176  0.0       5     
 ====================== ======== ========= ======

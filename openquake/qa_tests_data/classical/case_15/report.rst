@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     905,885,649        
-date           2019-10-01T07:01:14
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:36
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 3, num_levels = 17, num_rlzs = 8
@@ -80,48 +80,48 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =======
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
-========= ====== ==== ============ ========= ========= ============ =======
-1         0      P    15           0.00236   3.00000   15           6,348  
-2         1      P    15           0.00228   3.00000   15           6,592  
-1         2      A    240          0.00222   3.00000   240          108,298
-1         3      A    240          0.00155   3.00000   240          154,676
-========= ====== ==== ============ ========= ========= ============ =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+1         0      P    15           0.00239   0.20000   15          
+1         3      A    240          0.00235   0.01250   240         
+1         2      A    240          0.00139   0.01250   240         
+2         1      P    15           0.00137   0.20000   15          
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00377   2     
-P    0.00464   2     
+A    0.00374   2     
+P    0.00376   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.00903 0.00600   0.00237 0.01402 3      
-preclassical       0.00258 4.426E-04 0.00192 0.00288 4      
+SourceReader       0.00824 0.00550   0.00334 0.01418 3      
+preclassical       0.00229 7.055E-04 0.00166 0.00292 4      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ ========================================== ========
 task         sent                                       received
-SourceReader apply_unc=4.4 KB ltmodel=590 B fname=318 B 10.96 KB
+SourceReader apply_unc=4.4 KB ltmodel=590 B fname=318 B 11.25 KB
 preclassical srcs=6.12 KB params=2.74 KB gsims=1.09 KB  1.34 KB 
 ============ ========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6644              time_sec memory_mb counts
+calc_29531             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 0.02791  0.0       1     
-total SourceReader     0.02709  0.0       3     
-total preclassical     0.01033  0.40625   4     
-store source_info      0.00242  0.0       1     
-aggregate curves       0.00153  0.0       4     
+composite source model 0.03230  0.0       1     
+total SourceReader     0.02473  0.0       3     
+total preclassical     0.00918  0.0       4     
+store source_info      0.00239  0.0       1     
+aggregate curves       0.00141  0.0       4     
 ====================== ======== ========= ======

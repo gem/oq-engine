@@ -3,8 +3,8 @@ PEER 2015 Validation Project, Set 3, Test 3.1a as Characteristic Source w/SERA S
 
 ============== ===================
 checksum32     2,245,592,391      
-date           2019-10-01T07:01:11
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:34
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 12, num_rlzs = 6
@@ -73,44 +73,44 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-======================= ====== ==== ============ ========= ========= ============ =====
-source_id               grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-======================= ====== ==== ============ ========= ========= ============ =====
-PEERWestDipBendingFault 0      X    1            0.00135   2.00000   1.00000      740  
-======================= ====== ==== ============ ========= ========= ============ =====
+======================= ====== ==== ============ ========= ========= ============
+source_id               grp_id code num_ruptures calc_time num_sites eff_ruptures
+======================= ====== ==== ============ ========= ========= ============
+PEERWestDipBendingFault 0      X    1            0.00250   2.00000   1.00000     
+======================= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-X    0.00135   1     
+X    0.00250   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00690 NaN    0.00690 0.00690 1      
-preclassical       0.00163 NaN    0.00163 0.00163 1      
+SourceReader       0.01190 NaN    0.01190 0.01190 1      
+preclassical       0.00303 NaN    0.00303 0.00303 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ======================================= ========
 task         sent                                    received
-SourceReader                                         8.74 KB 
+SourceReader                                         10.6 KB 
 preclassical srcs=7.28 KB gsims=3.88 KB params=660 B 342 B   
 ============ ======================================= ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6638              time_sec  memory_mb counts
+calc_29525             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01656   0.0       1     
-total SourceReader     0.00690   0.0       1     
-store source_info      0.00233   0.0       1     
-total preclassical     0.00163   0.0       1     
-aggregate curves       4.711E-04 0.0       1     
+composite source model 0.02478   0.0       1     
+total SourceReader     0.01190   0.0       1     
+total preclassical     0.00303   0.0       1     
+store source_info      0.00247   0.0       1     
+aggregate curves       2.480E-04 0.0       1     
 ====================== ========= ========= ======

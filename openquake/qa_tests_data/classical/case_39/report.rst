@@ -3,8 +3,8 @@ Reduced USGS 1998 Hawaii model
 
 ============== ===================
 checksum32     4,283,469,194      
-date           2019-10-01T07:01:08
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:30
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 80, num_rlzs = 8
@@ -76,48 +76,48 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========== ====== ==== ============ ========= ========= ============ =========
-source_id  grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
-========== ====== ==== ============ ========= ========= ============ =========
-HLEKAOSFL  1      C    104          0.00492   1.00000   104          21,140   
-HLE        0      A    6,945        0.00205   1.00000   6,945        3,389,904
-Deep_10014 2      P    45           0.00138   1.00000   45           32,638   
-========== ====== ==== ============ ========= ========= ============ =========
+========== ====== ==== ============ ========= ========= ============
+source_id  grp_id code num_ruptures calc_time num_sites eff_ruptures
+========== ====== ==== ============ ========= ========= ============
+HLEKAOSFL  1      C    104          0.00477   0.00962   104         
+Deep_10014 2      P    45           0.00231   0.02222   45          
+HLE        0      A    6,945        0.00222   1.440E-04 6,945       
+========== ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00205   1     
-C    0.00492   1     
-P    0.00138   1     
+A    0.00222   1     
+C    0.00477   1     
+P    0.00231   1     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.04800 0.05722 0.00241 0.11222 3      
-preclassical       0.00323 0.00198 0.00168 0.00547 3      
+SourceReader       0.04767 0.05370 0.00281 0.10717 3      
+preclassical       0.00366 0.00143 0.00279 0.00531 3      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=4.15 KB ltmodel=813 B fname=362 B 11.79 KB
+SourceReader apply_unc=4.15 KB ltmodel=813 B fname=362 B 12.29 KB
 preclassical srcs=5.17 KB params=4.28 KB gsims=1.87 KB   1 KB    
 ============ =========================================== ========
 
 Slowest operations
 ------------------
-====================== ======== ========= ======
-calc_6628              time_sec memory_mb counts
-====================== ======== ========= ======
-total SourceReader     0.14401  0.0       3     
-composite source model 0.13171  0.0       1     
-total preclassical     0.00970  0.0       3     
-store source_info      0.00260  0.0       1     
-aggregate curves       0.00110  0.0       3     
-====================== ======== ========= ======
+====================== ========= ========= ======
+calc_29515             time_sec  memory_mb counts
+====================== ========= ========= ======
+total SourceReader     0.14302   0.43750   3     
+composite source model 0.12808   0.0       1     
+total preclassical     0.01097   0.0       3     
+store source_info      0.00221   0.0       1     
+aggregate curves       6.900E-04 0.0       3     
+====================== ========= ========= ======

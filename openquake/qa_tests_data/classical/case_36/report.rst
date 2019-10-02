@@ -3,8 +3,8 @@ applyToSources with multiple sources
 
 ============== ===================
 checksum32     3,235,130,248      
-date           2019-10-01T07:01:12
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:34
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = 9
@@ -90,13 +90,13 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =======
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
-========= ====== ==== ============ ========= ========= ============ =======
-1         7      C    633          0.00849   1.00000   633          74,568 
-1         4      C    656          0.00777   1.00000   656          84,401 
-1         1      C    633          0.00468   1.00000   633          135,149
-========= ====== ==== ============ ========= ========= ============ =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+1         1      C    633          0.00813   0.00158   633         
+1         4      C    656          0.00674   0.00152   656         
+1         7      C    633          0.00660   0.00158   633         
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -104,7 +104,7 @@ Computation times by source typology
 code calc_time counts
 ==== ========= ======
 A    0.0       21    
-C    0.02095   3     
+C    0.02147   3     
 S    0.0       9     
 ==== ========= ======
 
@@ -112,26 +112,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.46992 0.03264 0.43507 0.49979 3      
-preclassical       0.00560 0.00274 0.00175 0.00990 18     
+SourceReader       0.46163 0.01648 0.44704 0.47951 3      
+preclassical       0.00573 0.00304 0.00142 0.01052 18     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =============================================== ========
 task         sent                                            received
-SourceReader apply_unc=10.92 KB ltmodel=753 B fname=312 B    90.24 KB
-preclassical srcs=57.49 KB params=10.49 KB srcfilter=5.73 KB 5.28 KB 
+SourceReader apply_unc=10.92 KB ltmodel=753 B fname=312 B    97.15 KB
+preclassical srcs=57.49 KB params=10.49 KB srcfilter=5.75 KB 5.28 KB 
 ============ =============================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6640              time_sec memory_mb counts
+calc_29527             time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     1.40975  0.98047   3     
-composite source model 0.53638  0.0       1     
-total preclassical     0.10085  0.0       18    
-aggregate curves       0.00445  0.0       18    
-store source_info      0.00247  0.0       1     
+total SourceReader     1.38489  0.81641   3     
+composite source model 0.51479  0.0       1     
+total preclassical     0.10308  0.0       18    
+aggregate curves       0.00453  0.0       18    
+store source_info      0.00240  0.0       1     
 ====================== ======== ========= ======

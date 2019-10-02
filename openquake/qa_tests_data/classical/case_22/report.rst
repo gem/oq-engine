@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,152,338,418      
-date           2019-10-01T07:01:07
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:29
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 21, num_levels = 114, num_rlzs = 4
@@ -75,45 +75,45 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =======
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
-========= ====== ==== ============ ========= ========= ============ =======
-2         1      M    1,104        0.00177   21        1,104        622,464
-1         0      M    160          0.00163   3.00000   160          98,184 
-========= ====== ==== ============ ========= ========= ============ =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+2         1      M    1,104        0.00338   0.01902   1,104       
+1         0      M    160          0.00264   0.01875   160         
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-M    0.00340   2     
+M    0.00602   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-SourceReader       0.00451 0.00182   0.00323 0.00580 2      
-preclassical       0.00200 7.232E-05 0.00195 0.00205 2      
+SourceReader       0.00634 0.00215   0.00483 0.00786 2      
+preclassical       0.00353 5.498E-04 0.00314 0.00392 2      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=2.36 KB ltmodel=492 B fname=227 B 14.73 KB
+SourceReader apply_unc=2.36 KB ltmodel=492 B fname=227 B 15.44 KB
 preclassical srcs=5.96 KB params=3.45 KB gsims=1.07 KB   684 B   
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6620              time_sec  memory_mb counts
+calc_29507             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.02427   0.0       1     
-total SourceReader     0.00903   0.0       2     
-total preclassical     0.00400   0.0       2     
-store source_info      0.00234   0.0       1     
-aggregate curves       9.480E-04 0.0       2     
+composite source model 0.02279   1.02734   1     
+total SourceReader     0.01269   0.0       2     
+total preclassical     0.00706   0.0       2     
+store source_info      0.00272   0.0       1     
+aggregate curves       5.150E-04 0.0       2     
 ====================== ========= ========= ======

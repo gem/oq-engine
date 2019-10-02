@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     910,118,000        
-date           2019-10-01T07:01:06
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:28
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 1, num_rlzs = ?
@@ -62,10 +62,10 @@ tax1     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -79,22 +79,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-SourceReader       0.00408 NaN    0.00408 0.00408 1      
+SourceReader       0.00550 NaN    0.00550 0.00550 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ============ ==== ========
 task         sent received
-SourceReader      2.62 KB 
+SourceReader      2.92 KB 
 ============ ==== ========
 
 Slowest operations
 ------------------
 ====================== ========= ========= ======
-calc_6612              time_sec  memory_mb counts
+calc_29499             time_sec  memory_mb counts
 ====================== ========= ========= ======
-composite source model 0.01181   0.0       1     
-total SourceReader     0.00408   0.0       1     
-reading exposure       6.180E-04 0.0       1     
+composite source model 0.01582   0.0       1     
+total SourceReader     0.00550   0.0       1     
+reading exposure       6.216E-04 0.0       1     
 ====================== ========= ========= ======
