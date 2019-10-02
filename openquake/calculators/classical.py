@@ -264,7 +264,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.calculation_mode == 'preclassical':
             f1 = f2 = preclassical
         else:
-            f1, f2 = classical_split_filter, classical
+            f1, f2 = classical, classical_split_filter
         for trt, sources in trt_sources:
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             if hasattr(sources, 'atomic') and sources.atomic:
