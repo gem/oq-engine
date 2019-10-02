@@ -68,6 +68,5 @@ Internally both the first usage and the second usage are treated in
 the same way, since the first usage is a special case of the second
 when all the weights are equal to 1.
 
-Currently, this taxonomy mapping feature is available for the scenario
-and event based risk calculators. The feature hasn't been added to the
-classical damage and risk calculators.
+Currently, this taxonomy mapping feature has been testes onlu for the scenario
+and event based risk calculators.
