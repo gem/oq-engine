@@ -3,8 +3,8 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     1,419,232,840      
-date           2019-10-01T07:00:51
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:12
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 7, num_levels = 3, num_rlzs = 1
@@ -66,7 +66,7 @@ task sent received
 
 Slowest operations
 ------------------
-========= ======== ========= ======
-calc_6537 time_sec memory_mb counts
-========= ======== ========= ======
-========= ======== ========= ======
+========== ======== ========= ======
+calc_29424 time_sec memory_mb counts
+========== ======== ========= ======
+========== ======== ========= ======

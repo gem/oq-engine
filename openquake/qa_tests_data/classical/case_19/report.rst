@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     561,276,680        
-date           2019-10-01T07:01:19
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:41
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 1, num_levels = 78, num_rlzs = 4
@@ -80,18 +80,18 @@ grp_id num_sites num_ruptures eff_ruptures
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =========
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed    
-========= ====== ==== ============ ========= ========= ============ =========
-s46       4      A    7,770        0.00141   1.00000   7,770        5,530,246
-========= ====== ==== ============ ========= ========= ============ =========
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+s46       4      A    7,770        0.00235   1.287E-04 7,770       
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    0.00141   16    
+A    0.00235   16    
 C    0.0       2     
 ==== ========= ======
 
@@ -99,26 +99,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       5.48816 NaN     5.48816 5.48816 1      
-preclassical       0.00378 0.00309 0.00167 0.01367 17     
+SourceReader       5.60654 NaN     5.60654 5.60654 1      
+preclassical       0.00348 0.00231 0.00163 0.01077 17     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader                                             77.09 KB
+SourceReader                                             86.46 KB
 preclassical srcs=58.66 KB params=21.05 KB gsims=7.63 KB 4.9 KB  
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6658              time_sec memory_mb counts
+calc_29545             time_sec memory_mb counts
 ====================== ======== ========= ======
-composite source model 5.50442  0.0       1     
-total SourceReader     5.48816  0.15625   1     
-total preclassical     0.06419  0.0       17    
-aggregate curves       0.00403  0.0       17    
-store source_info      0.00259  0.0       1     
+composite source model 5.62539  0.47656   1     
+total SourceReader     5.60654  0.72656   1     
+total preclassical     0.05909  0.25781   17    
+aggregate curves       0.00442  0.0       17    
+store source_info      0.00264  0.0       1     
 ====================== ======== ========= ======

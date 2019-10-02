@@ -3,8 +3,8 @@ British Columbia With Vs30
 
 ============== ===================
 checksum32     226,163,923        
-date           2019-10-01T07:00:58
-engine_version 3.8.0-gitbd71c2f960
+date           2019-10-02T10:07:19
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 2, num_levels = 3, num_rlzs = ?
@@ -69,10 +69,10 @@ RES1-W1-LC 1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =====
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed
-========= ====== ==== ============ ========= ========= ============ =====
-========= ====== ==== ============ ========= ========= ============ =====
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
@@ -90,22 +90,22 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-SourceReader       0.05762 0.01266 0.04683 0.07271 5      
+SourceReader       0.05781 0.01443 0.04257 0.07552 5      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
 ============ =========================================== ========
 task         sent                                        received
-SourceReader apply_unc=8.64 KB ltmodel=985 B fname=570 B 22.82 KB
+SourceReader apply_unc=8.64 KB ltmodel=985 B fname=570 B 23.67 KB
 ============ =========================================== ========
 
 Slowest operations
 ------------------
 ====================== ======== ========= ======
-calc_6592              time_sec memory_mb counts
+calc_29479             time_sec memory_mb counts
 ====================== ======== ========= ======
-total SourceReader     0.28811  0.23828   5     
-composite source model 0.09005  0.0       1     
-reading exposure       0.00191  0.0       1     
+total SourceReader     0.28904  0.0       5     
+composite source model 0.09604  0.0       1     
+reading exposure       0.00187  0.0       1     
 ====================== ======== ========= ======
