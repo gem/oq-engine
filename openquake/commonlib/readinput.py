@@ -196,6 +196,8 @@ def get_params(job_inis, **kw):
         job_inis = extract_from_zip(
             job_inis[0], ['job_hazard.ini', 'job_haz.ini',
                           'job.ini', 'job_risk.ini'])
+        if not job_inis:
+            raise NameError('Could not find job.ini inside %s' % input_zip)
 
     not_found = [ini for ini in job_inis if not os.path.exists(ini)]
     if not_found:  # something was not found
