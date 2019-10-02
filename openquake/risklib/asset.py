@@ -163,7 +163,6 @@ class Asset(object):
         self.area = area
         self._retrofitted = retrofitted
         self.calc = calc
-        self._cost = {}  # cache for the costs
 
     def value(self, loss_type, time_event=None):
         """
@@ -171,12 +170,7 @@ class Asset(object):
         """
         if loss_type == 'occupants':
             return self.values['occupants_' + str(time_event)]
-        try:  # extract from the cache
-            val = self._cost[loss_type]
-        except KeyError:  # compute
-            val = self.calc(loss_type, self.values, self.area, self.number)
-            self._cost[loss_type] = val
-        return val
+        return self.calc(loss_type, self.values, self.area, self.number)
 
     def retrofitted(self):
         """
@@ -184,9 +178,6 @@ class Asset(object):
         """
         return self.calc('structural', {'structural': self._retrofitted},
                          self.area, self.number)
-
-    def __lt__(self, other):
-        return self.ordinal < other.ordinal
 
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal
