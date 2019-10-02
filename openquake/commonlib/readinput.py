@@ -42,7 +42,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_models
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_model_factory import get_ltmodels
+from openquake.commonlib.source_reader import get_ltmodels
 from openquake.commonlib import logictree, source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
