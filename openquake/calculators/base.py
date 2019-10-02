@@ -775,7 +775,9 @@ class HazardCalculator(BaseCalculator):
         if calc_times:
             source_info = self.datastore['source_info']
             arr = numpy.zeros((len(source_info), 3), F32)
-            ids, vals = zip(*sorted(calc_times.items()))
+            # NB: the zip magic is needed for performance,
+            # looping would be too slow
+            ids, vals = zip(*calc_times.items())
             arr[numpy.array(ids)] = vals
             source_info['eff_ruptures'] += arr[:, 0]
             source_info['num_sites'] += arr[:, 1]

@@ -44,7 +44,7 @@ class ReportWriter(object):
         'dupl_sources': 'Duplicated sources',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
-        'ruptures_per_trt': 'Number of ruptures per tectonic region type',
+        'ruptures_per_grp': 'Number of ruptures per source group',
         'ruptures_events': 'Specific information for event based',
         'rlzs_assoc': 'Realizations per (GRP, GSIM)',
         'job_info': 'Data transfer',
@@ -94,8 +94,8 @@ class ReportWriter(object):
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
             self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
-        if 'csm_info' in ds:
-            self.add('ruptures_per_trt')
+        if 'source_info' in ds:
+            self.add('ruptures_per_grp')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
