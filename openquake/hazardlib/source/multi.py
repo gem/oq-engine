@@ -168,9 +168,8 @@ class MultiPointSource(ParametricSeismicSource):
         kw['kind'] = mfd_kind
         self.mfd = MultiMFD(**kw)
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (N, 3)
+        :returns: the geometry as a wkt string
         """
-        return numpy.array([(p.x, p.y, p.z) for p in self.mesh],
-                           numpy.float32)
+        return self.mesh.get_convex_hull().wkt

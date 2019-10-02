@@ -1,9 +1,25 @@
 #!/bin/bash
-
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2019 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 # This is required to load a custom  local_settings.py when 'oq webui' is used.
 export PYTHONPATH=$HOME
 
-oq dbserver start
+oq dbserver start &
 
 # Wait the DbServer to come up; may be replaced with a "oq dbserver wait"
 while :
@@ -21,12 +37,11 @@ if [ -n "$LOCKDOWN" ]; then
     oq webui migrate
     echo "from django.contrib.auth.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'admin')" | oq shell 2>&1 >/dev/null
 fi
-
 if [ -t 1 ]; then
     # TTY mode
-    oq webui start 0.0.0.0:8800 &> /tmp/webui.log &
+    exec oq webui start 0.0.0.0:8800 -s &>> $HOME/oqdata/webui.log &
     /bin/bash
 else
     # Headless mode
-    oq webui start 0.0.0.0:8800 2>&1 | tee /tmp/webui.log
+    exec oq webui start 0.0.0.0:8800 -s
 fi

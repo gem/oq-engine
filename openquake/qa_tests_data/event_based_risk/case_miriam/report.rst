@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     1,273,728,909      
-date           2019-09-24T15:21:09
-engine_version 3.7.0-git749bb363b3
+checksum32     4,129,458,072      
+date           2019-10-02T10:07:23
+engine_version 3.8.0-git6f03622c6e
 ============== ===================
 
 num_sites = 281, num_levels = 50, num_rlzs = 1
@@ -66,20 +66,14 @@ Realizations per (GRP, GSIM)
 
   <RlzsAssoc(size=2, rlzs=1)>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1            2,348       
-source_model.xml 1      Subduction Interface 1            3,345       
-================ ====== ==================== ============ ============
-
-============= =====
-#TRT models   2    
-#eff_ruptures 2    
-#tot_ruptures 5,693
-============= =====
+Number of ruptures per source group
+-----------------------------------
+====== ========= ============ ============
+grp_id num_sites num_ruptures eff_ruptures
+====== ========= ============ ============
+0      281       2,348        2.00000     
+1      281       3,345        2.00000     
+====== ========= ============ ============
 
 Exposure model
 --------------
@@ -106,47 +100,48 @@ PCR-SLSB-1 1.00000 0.0     1   1   3         3
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============ =======
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures speed  
-========= ====== ==== ============ ========= ========= ============ =======
-D         1      C    3,345        3.82876   281       2.00000      0.52236
-F         0      C    2,348        2.32774   281       2.00000      0.85920
-========= ====== ==== ============ ========= ========= ============ =======
+========= ====== ==== ============ ========= ========= ============
+source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
+========= ====== ==== ============ ========= ========= ============
+D         1      C    3,345        3.93102   140       2.00000     
+F         0      C    2,348        2.57370   140       2.00000     
+========= ====== ==== ============ ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    6.15650   2     
+C    6.50472   2     
 ==== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.22782 NaN     0.22782 0.22782 1      
-sample_ruptures    3.09467 1.07428 2.33504 3.85430 2      
+SourceReader       0.20213 NaN     0.20213 0.20213 1      
+sample_ruptures    3.27122 0.97213 2.58382 3.95862 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== =============================================== ========
-task               sent                                            received
-read_source_models converter=378 B fnames=118 B                    2.25 KB 
-sample_ruptures    srcfilter=21.51 KB param=9.4 KB sources=2.42 KB 45.82 KB
-================== =============================================== ========
+=============== ============================================ ========
+task            sent                                         received
+SourceReader                                                 4.52 KB 
+sample_ruptures param=9.4 KB sources=2.39 KB srcfilter=446 B 45.82 KB
+=============== ============================================ ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
-calc_1803                time_sec memory_mb counts
+calc_29498               time_sec memory_mb counts
 ======================== ======== ========= ======
-total sample_ruptures    6.18934  1.74609   2     
-EventBasedCalculator.run 4.52004  3.04688   1     
-total read_source_models 0.22782  0.0       1     
-reading exposure         0.04737  0.0       1     
-saving events            0.02654  0.0       1     
-saving ruptures          0.00922  0.0       2     
-store source_info        0.00259  0.0       1     
+total sample_ruptures    6.54245  3.76562   2     
+EventBasedCalculator.run 4.62999  1.86328   1     
+composite source model   0.21190  0.14453   1     
+total SourceReader       0.20213  0.14453   1     
+reading exposure         0.05207  0.0       1     
+saving events            0.02632  0.18359   1     
+saving ruptures          0.00748  0.0       2     
+store source_info        0.00250  0.0       1     
 ======================== ======== ========= ======

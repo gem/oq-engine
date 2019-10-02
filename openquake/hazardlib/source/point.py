@@ -329,12 +329,12 @@ class PointSource(ParametricSeismicSource):
         radius = self._get_max_rupture_projection_radius()
         return get_bounding_box([self.location], maxdist + radius)
 
-    def geom(self):
+    def wkt(self):
         """
-        :returns: the geometry as an array of shape (1, 3)
+        :returns: the geometry as a WKT string
         """
         loc = self.location
-        return numpy.array([[loc.x, loc.y, loc.z]], numpy.float32)
+        return 'POINT(%s %s)' % (loc.x, loc.y)
 
 
 def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),

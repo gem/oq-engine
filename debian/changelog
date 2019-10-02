@@ -1,4 +1,17 @@
   [Michele Simionato]
+  * Added an API `/extract/sources` and an experimental `oq plot sources`
+  * Added a check on valid input keys in the job.ini
+  * Fixed the check on dependent calculations
+  * Specifying at the same time both a grid and individual sites is an error
+
+  [Daniele Viganò]
+  * Docker containers rebased on CentOS 8
+  * Fixed an issue causing zombie `ssh` processes
+    when using `zmq` as task distribution mechanism
+  * Introduced support for RHEL/CentOS 8
+
+  [Michele Simionato]
+  * Added a check for no GMFs in event_based_risk
   * Avoided transferring the site collection
   * Storing the sources in TOML format
 
